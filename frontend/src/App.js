@@ -278,15 +278,31 @@ const SpecialtyPage = () => {
 // --- Glossary ---
 const Glossary = () => {
   const [terms, setTerms] = useState([]);
+  const [q, setQ] = useState("");
   useEffect(()=>{ axios.get(`${API}/glossary`).then(r=>setTerms(r.data)); },[]);
+  const CATEGORY_ORDER = ["Land & Zoning","Valuation","Financing","Strata","Property Types","Estate & Probate","First-Time Buyers","Legal","Regulations","Ownership","Taxes","Construction"];
+  const filtered = terms.filter(t => !q || t.term.toLowerCase().includes(q.toLowerCase()) || (t.definition||"").toLowerCase().includes(q.toLowerCase()) || (t.category||"").toLowerCase().includes(q.toLowerCase()));
+  const byCat = {};
+  filtered.forEach(t => { const c = t.category || "Other"; (byCat[c] = byCat[c] || []).push(t); });
+  Object.values(byCat).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
+  const orderedCats = [...CATEGORY_ORDER.filter(c => byCat[c]), ...Object.keys(byCat).filter(c => !CATEGORY_ORDER.includes(c)).sort()];
   return (<section className="section"><div className="container-x">
-    <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Every term you'll encounter buying or selling in British Columbia — with 10 FAQs per term.</p></div>
-    <div className="glossary-list" data-testid="glossary-list">
-      {terms.map(t => <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`term-${t.slug}`}>
-        <div><div style={{fontWeight:600,fontSize:"1.05rem",fontFamily:"Inter,sans-serif"}}>{t.term}</div><div className="cat">{t.category}</div></div>
-        <span style={{color:"var(--brand-blue)"}}>→</span>
-      </Link>)}
-    </div>
+    <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Every term you'll encounter buying or selling in British Columbia — with 10 FAQs per term.</p></div>
+    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search glossary — term, definition, or category…" style={{width:"100%",maxWidth:560,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}} data-testid="glossary-search"/>
+    {filtered.length===0 && <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>No terms match your search.</p>}
+    {orderedCats.map(cat => (
+      <div key={cat} style={{marginBottom:"2.5rem"}} data-testid={`glossary-cat-${cat.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}>
+        <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"0.75rem",color:"var(--brand-navy)"}}>
+          {cat} <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.8rem",color:"var(--muted)",fontWeight:400}}>({byCat[cat].length})</span>
+        </h3>
+        <div className="glossary-list">
+          {byCat[cat].map(t => <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`term-${t.slug}`}>
+            <div><div style={{fontWeight:600,fontSize:"1.05rem",fontFamily:"Inter,sans-serif"}}>{t.term}</div><div className="cat">{t.category}</div></div>
+            <span style={{color:"var(--brand-blue)"}}>→</span>
+          </Link>)}
+        </div>
+      </div>
+    ))}
   </div></section>);
 };
 const GlossaryTerm = () => {
