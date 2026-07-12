@@ -488,6 +488,7 @@ const AdminShell = ({children,active}) => {
       <a onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
       <a onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
+      <a onClick={()=>nav("/admin/amenities")} className={active==="amenities"?"active":""} data-testid="admin-nav-amenities">📍 Community Amenities</a>
       <a onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
@@ -627,7 +628,13 @@ const CommunityPage = () => {
           <h3 className="font-display" style={{fontSize:"1.25rem",marginBottom:"0.5rem"}}>{s.icon} {s.label} <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",fontWeight:400}}>({items.length})</span></h3>
           <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
             {items.slice(0, 24).map((it, i) => (
-              <a key={i} href={`https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lon}`} target="_blank" rel="noopener noreferrer" className="chip" style={{textDecoration:"none",fontSize:"0.85rem"}}>{it.name}</a>
+              <a key={i} href={`https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lon}`} target="_blank" rel="noopener noreferrer" className="chip" style={{textDecoration:"none",fontSize:"0.85rem",display:"inline-flex",gap:"0.35rem",alignItems:"center"}}>
+                {it.name}
+                {it.level && it.level !== "School" && <span style={{fontSize:"0.7rem",background:"var(--brand-blue)",color:"white",padding:"0.1rem 0.4rem",borderRadius:6}}>{it.level}</span>}
+                {it.operator === "Private" && <span style={{fontSize:"0.7rem",background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.1rem 0.4rem",borderRadius:6}}>Private</span>}
+                {it.authority && <span style={{fontSize:"0.7rem",background:"var(--brand-green-dark)",color:"white",padding:"0.1rem 0.4rem",borderRadius:6}}>{it.authority.replace(" Health","")}</span>}
+                {it.admin_added && <span style={{fontSize:"0.7rem",color:"var(--brand-green-dark)"}}>★</span>}
+              </a>
             ))}
           </div>
           {items.length > 24 && <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.5rem"}}>+{items.length-24} more</p>}
@@ -803,6 +810,122 @@ const ComplianceStrip = () => (
   </div>
 );
 
+// --- Admin Amenity Editor ---
+const AdminAmenities = () => {
+  const {headers} = useAdmin();
+  const [communities, setCommunities] = useState({});
+  const [slug, setSlug] = useState("langley-township");
+  const [name, setName] = useState("Langley Township");
+  const [data, setData] = useState(null);
+  const [overrides, setOverrides] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [f, setF] = useState({category:"schools", name:"", address:"", notes:""});
+
+  useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)); }, []);
+  const load = async () => {
+    setBusy(true); setMsg("");
+    const [amRes, ovRes] = await Promise.all([
+      axios.get(`${API}/community/${slug}/amenities`).catch(() => ({data:null})),
+      axios.get(`${API}/admin/amenity-overrides`, {headers, params:{slug}}).catch(() => ({data:[]}))
+    ]);
+    setData(amRes.data); setOverrides(ovRes.data); setBusy(false);
+  };
+  useEffect(() => { if(slug) load(); /* eslint-disable-next-line */ }, [slug]);
+
+  const hideItem = async (category, itemName) => {
+    if(!window.confirm(`Hide "${itemName}" from ${name}?`)) return;
+    await axios.post(`${API}/admin/amenity-overrides`, {slug, category, action:"hide", name:itemName}, {headers});
+    setMsg("Hidden."); load();
+  };
+  const addItem = async e => {
+    e.preventDefault();
+    if(!f.name.trim()) return;
+    await axios.post(`${API}/admin/amenity-overrides`, {slug, category:f.category, action:"add", name:f.name, address:f.address, notes:f.notes}, {headers});
+    setF({category:f.category, name:"", address:"", notes:""}); setMsg("Added."); load();
+  };
+  const removeOverride = async oid => {
+    if(!window.confirm("Remove this override?")) return;
+    await axios.delete(`${API}/admin/amenity-overrides/${oid}`, {headers});
+    setMsg("Removed."); load();
+  };
+  const refresh = async () => {
+    if(!window.confirm(`Refresh OSM cache for ${name}?`)) return;
+    await axios.post(`${API}/admin/community/${slug}/refresh`, {}, {headers});
+    setMsg("Cache cleared. Next visit re-fetches from OSM."); load();
+  };
+
+  const sections = [
+    {key:"schools", icon:"🏫", label:"Schools"},
+    {key:"hospitals", icon:"🏥", label:"Hospitals & Clinics"},
+    {key:"malls", icon:"🛍️", label:"Shopping Centres"},
+    {key:"parks", icon:"🌳", label:"Parks"},
+    {key:"recreation", icon:"🏋️", label:"Recreation"}
+  ];
+
+  return <AdminShell active="amenities">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Community Amenities Editor</h1>
+    <p style={{color:"var(--muted)",marginTop:0}}>Curate the schools, hospitals, malls, parks & rec centres on each community page. OpenStreetMap data first; add or hide as needed.</p>
+
+    <div className="paper" style={{marginTop:"1rem"}}>
+      <label style={{display:"block",marginBottom:"0.5rem",fontWeight:600}}>Select community</label>
+      <select value={slug} onChange={e=>{const s=e.target.value;setSlug(s);const opt=e.target.options[e.target.selectedIndex];setName(opt.text);}} data-testid="admin-amen-picker" style={{padding:"0.6rem 0.85rem",borderRadius:8,border:"1.5px solid rgba(15,42,91,0.15)",width:"100%",maxWidth:420,fontFamily:"Inter,sans-serif"}}>
+        {Object.entries(communities).map(([region, list]) => (
+          <optgroup key={region} label={region}>
+            {list.map(c => <option key={c} value={c.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}>{c}</option>)}
+          </optgroup>
+        ))}
+      </select>
+      <button onClick={refresh} className="btn btn-outline" style={{marginLeft:"0.75rem",padding:"0.5rem 1rem"}} data-testid="admin-amen-refresh">↻ Refresh OSM</button>
+      {msg && <span style={{marginLeft:"1rem",color:"var(--brand-green-dark)"}}>{msg}</span>}
+    </div>
+
+    {busy && <p style={{marginTop:"1rem"}}>Loading…</p>}
+    {!busy && data && <>
+      {overrides.length > 0 && <div className="paper" style={{marginTop:"1.5rem",background:"#FFF8E8"}}>
+        <h3 style={{marginTop:0,fontSize:"1.1rem"}}>Active overrides for {name} ({overrides.length})</h3>
+        <table className="admin-table" style={{fontSize:"0.85rem"}}>
+          <thead><tr><th>Action</th><th>Category</th><th>Name</th><th></th></tr></thead>
+          <tbody>{overrides.map(o => <tr key={o.id}>
+            <td><span style={{background:o.action==="hide"?"#FEE2E2":"#DCFCE7",padding:"0.2rem 0.5rem",borderRadius:6,fontSize:"0.75rem"}}>{o.action}</span></td>
+            <td>{o.category}</td>
+            <td>{o.name}</td>
+            <td><button onClick={()=>removeOverride(o.id)} style={{background:"transparent",border:"none",color:"#DC2626",cursor:"pointer"}}>Remove</button></td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
+
+      <div className="paper" style={{marginTop:"1.5rem"}}>
+        <h3 style={{marginTop:0,fontSize:"1.15rem"}}>+ Add a custom amenity</h3>
+        <form onSubmit={addItem} style={{display:"grid",gridTemplateColumns:"1fr 2fr 2fr 1fr",gap:"0.75rem",alignItems:"end"}}>
+          <div className="field"><label>Category</label><select value={f.category} onChange={e=>setF({...f,category:e.target.value})} data-testid="admin-amen-add-cat">{sections.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}</select></div>
+          <div className="field"><label>Name *</label><input required value={f.name} onChange={e=>setF({...f,name:e.target.value})} placeholder="e.g. Walnut Grove Secondary" data-testid="admin-amen-add-name"/></div>
+          <div className="field"><label>Address</label><input value={f.address} onChange={e=>setF({...f,address:e.target.value})}/></div>
+          <button type="submit" className="btn btn-green" data-testid="admin-amen-add-btn">Add</button>
+        </form>
+      </div>
+
+      {sections.map(s => {
+        const items = (data[s.key] || []);
+        if(items.length === 0) return null;
+        return (<div key={s.key} style={{marginTop:"1.5rem"}}>
+          <h3 className="font-display" style={{fontSize:"1.15rem",marginBottom:"0.5rem"}}>{s.icon} {s.label} ({items.length})</h3>
+          <table className="admin-table" style={{fontSize:"0.85rem"}}>
+            <thead><tr><th style={{width:"40%"}}>Name</th><th>Details</th><th style={{width:120}}>Source</th><th style={{width:80}}></th></tr></thead>
+            <tbody>{items.map((it, i) => <tr key={i}>
+              <td><strong>{it.name}</strong></td>
+              <td style={{color:"var(--muted)"}}>{it.level ? `${it.level}${it.operator?` · ${it.operator}`:""}` : ""}{it.type ? `${it.type}${it.authority?` · ${it.authority}`:""}` : ""}{it.address && <div>{it.address}</div>}</td>
+              <td>{it.admin_added ? <span style={{color:"var(--brand-green-dark)"}}>✓ Custom</span> : <span style={{color:"var(--muted)"}}>OSM</span>}</td>
+              <td>{!it.admin_added && <button onClick={()=>hideItem(s.key, it.name)} style={{background:"transparent",border:"1px solid #DC2626",color:"#DC2626",cursor:"pointer",padding:"0.25rem 0.5rem",borderRadius:6,fontSize:"0.78rem"}}>Hide</button>}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>);
+      })}
+    </>}
+  </AdminShell>;
+};
+
+
 // --- App ---
 // --- Back/Home nav bar ---
 const BackHomeBar = () => {
@@ -855,6 +978,7 @@ function App() {
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>
+      <Route path="/admin/amenities" element={<AdminAmenities/>}/>
     </Routes>
   </BrowserRouter>);
 }

@@ -381,7 +381,7 @@ async def geocode(name: str):
     return doc
 
 async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
-    """Query Overpass API for BC amenities near coords."""
+    """Query Overpass API for BC amenities near coords, with enrichment."""
     query = f"""
     [out:json][timeout:25];
     (
@@ -399,7 +399,7 @@ async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
       node["amenity"="community_centre"](around:{radius},{lat},{lon});
       way["amenity"="community_centre"](around:{radius},{lat},{lon});
     );
-    out center tags 100;
+    out center tags 200;
     """
     async with httpx.AsyncClient(timeout=30) as c:
         r = await c.post(OVERPASS, data={"data": query}, headers={"User-Agent": UA})
@@ -411,10 +411,37 @@ async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
         if not name: continue
         latc = el.get("lat") or el.get("center", {}).get("lat")
         lonc = el.get("lon") or el.get("center", {}).get("lon")
-        item = {"name": name, "lat": latc, "lon": lonc, "address": tags.get("addr:street", "") + (" " + tags.get("addr:housenumber","") if tags.get("addr:housenumber") else "")}
+        item = {"name": name, "lat": latc, "lon": lonc, "address": (tags.get("addr:housenumber","")+" "+tags.get("addr:street","")).strip()}
         amenity = tags.get("amenity"); shop = tags.get("shop"); leisure = tags.get("leisure")
-        if amenity == "school": out["schools"].append(item)
-        elif amenity in ("hospital", "clinic"): out["hospitals"].append(item)
+        if amenity == "school":
+            # Tier 2 enrichment: school level + operator type
+            level = tags.get("isced:level") or ""
+            op_type = tags.get("operator:type") or ""
+            school_type = tags.get("school:type") or ""
+            grades = tags.get("grades") or ""
+            # infer level from name
+            nm = name.lower()
+            if "elementary" in nm or "primary" in nm: item["level"] = "Elementary"
+            elif "secondary" in nm or "high school" in nm: item["level"] = "Secondary"
+            elif "middle" in nm: item["level"] = "Middle"
+            elif "0" in level or "1" in level: item["level"] = "Elementary"
+            elif "2" in level or "3" in level: item["level"] = "Secondary"
+            else: item["level"] = "School"
+            item["operator"] = "Private" if op_type == "private" or school_type == "private" else ("Public" if op_type == "public" or op_type == "government" else "")
+            item["grades"] = grades
+            out["schools"].append(item)
+        elif amenity in ("hospital", "clinic"):
+            # Tier 2: attach BC Health Authority based on region
+            # rough boundaries (lat/lon based) — Fraser Health, VCH, Island Health, Interior, Northern
+            if lat > 55: ha = "Northern Health"
+            elif lon < -125.5: ha = "Island Health"
+            elif -123.3 < lon < -121.8 and 49.0 < lat < 49.6: ha = "Fraser Health"
+            elif -123.6 < lon < -122.7 and 49.1 < lat < 49.6: ha = "Vancouver Coastal Health"
+            elif lon > -119: ha = "Interior Health"
+            else: ha = "Interior Health"
+            item["type"] = "Hospital" if amenity == "hospital" else "Clinic"
+            item["authority"] = ha
+            out["hospitals"].append(item)
         elif shop == "mall": out["malls"].append(item)
         elif leisure == "park": out["parks"].append(item)
         elif leisure == "sports_centre" or amenity == "community_centre": out["recreation"].append(item)
@@ -429,38 +456,89 @@ async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
 
 @api.get("/community/{slug}/amenities")
 async def community_amenities(slug: str):
-    """Return schools/hospitals/malls/parks/recreation for a BC community. Cached 30 days."""
+    """Return schools/hospitals/malls/parks/recreation for a BC community. Cached 30 days. Includes admin overrides."""
     # Look up community name from slug
     all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
     name = None; region = None
     for r, lst in all_comm.items():
         for c in lst:
-            if c.lower().replace("[^a-z0-9]+","-").replace(" ","-") == slug or re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
                 name = c; region = r; break
         if name: break
     if not name: raise HTTPException(404, "Community not found")
 
     # Cache check
     cached = await db.amenities_cache.find_one({"slug": slug}, {"_id": 0})
+    amenities = None
     if cached:
         age = datetime.now(timezone.utc) - datetime.fromisoformat(cached["ts"])
         if age.days < 30:
-            return {"community": name, "region": region, "cached": True, **cached["data"]}
+            amenities = cached["data"]
 
-    # Geocode
-    geo = await geocode(name)
-    if not geo: raise HTTPException(404, "Could not geocode community")
+    if amenities is None:
+        # Geocode
+        geo = await geocode(name)
+        if not geo: raise HTTPException(404, "Could not geocode community")
+        try:
+            amenities = await fetch_amenities(geo["lat"], geo["lon"])
+        except Exception as e:
+            logger.error(f"Overpass fetch failed for {name}: {e}")
+            raise HTTPException(503, "Amenity data temporarily unavailable")
+        await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
 
-    # Fetch
-    try:
-        amenities = await fetch_amenities(geo["lat"], geo["lon"])
-    except Exception as e:
-        logger.error(f"Overpass fetch failed for {name}: {e}")
-        raise HTTPException(503, "Amenity data temporarily unavailable")
+    # Merge admin overrides
+    overrides = await db.amenity_overrides.find({"slug": slug}, {"_id": 0}).to_list(500)
+    hidden = {(o["category"], o["name"]) for o in overrides if o.get("action") == "hide"}
+    additions = [o for o in overrides if o.get("action") == "add"]
 
-    # Cache
-    await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
-    return {"community": name, "region": region, "cached": False, **amenities}
+    merged = {k: [] for k in ["schools","hospitals","malls","parks","recreation"]}
+    for cat, items in amenities.items():
+        for it in items:
+            if (cat, it["name"]) in hidden: continue
+            merged[cat].append(it)
+    # Add admin-added items
+    for a in additions:
+        cat = a.get("category")
+        if cat in merged:
+            merged[cat].insert(0, {"name": a["name"], "lat": a.get("lat"), "lon": a.get("lon"), "address": a.get("address",""), "admin_added": True, "notes": a.get("notes","")})
+
+    return {"community": name, "region": region, **merged}
+
+# --- Admin: amenity override CRUD ---
+class AmenityOverride(BaseModel):
+    slug: str
+    category: str  # schools/hospitals/malls/parks/recreation
+    action: str  # add / hide
+    name: str
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    address: Optional[str] = ""
+    notes: Optional[str] = ""
+
+@api.get("/admin/amenity-overrides")
+async def list_overrides(slug: Optional[str] = None, _=Depends(verify_admin)):
+    q = {"slug": slug} if slug else {}
+    return await db.amenity_overrides.find(q, {"_id":0}).to_list(1000)
+
+@api.post("/admin/amenity-overrides")
+async def add_override(body: AmenityOverride, _=Depends(verify_admin)):
+    if body.action not in ("add","hide"): raise HTTPException(400, "action must be add or hide")
+    if body.category not in ("schools","hospitals","malls","parks","recreation"): raise HTTPException(400, "invalid category")
+    doc = {"id": str(uuid.uuid4()), **body.model_dump(), "created_at": now_iso()}
+    await db.amenity_overrides.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.delete("/admin/amenity-overrides/{oid}")
+async def delete_override(oid: str, _=Depends(verify_admin)):
+    r = await db.amenity_overrides.delete_one({"id": oid})
+    return {"success": True, "deleted": r.deleted_count}
+
+@api.post("/admin/community/{slug}/refresh")
+async def refresh_amenities(slug: str, _=Depends(verify_admin)):
+    """Force-refresh OSM data for a community (bypass 30-day cache)."""
+    await db.amenities_cache.delete_one({"slug": slug})
+    return {"success": True, "message": "Cache cleared. Next visit will re-fetch."}
 
 # =============== SEED ===============
 @app.on_event("startup")
