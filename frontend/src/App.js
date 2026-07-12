@@ -772,7 +772,20 @@ const ComplianceStrip = () => (
 );
 
 // --- App ---
-const AppLayout = ({children}) => (<><ComplianceStrip/><Nav/>{children}<Footer/><DoogieChat/><CookieBanner/></>);
+// --- Back/Home nav bar ---
+const BackHomeBar = () => {
+  const nav = useNavigate();
+  return (
+    <div style={{background:"white",borderBottom:"1px solid rgba(15,42,91,0.06)",padding:"0.6rem 0"}}>
+      <div className="container-x" style={{display:"flex",gap:"0.5rem",alignItems:"center"}}>
+        <button onClick={()=>nav(-1)} className="btn btn-ghost" style={{padding:"0.4rem 0.9rem",fontSize:"0.88rem"}} data-testid="btn-back">← Back</button>
+        <button onClick={()=>nav("/")} className="btn btn-ghost" style={{padding:"0.4rem 0.9rem",fontSize:"0.88rem"}} data-testid="btn-home">🏠 Home</button>
+      </div>
+    </div>
+  );
+};
+
+const AppLayout = ({children}) => (<><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/></>);
 const AdminLayout = ({children}) => children;
 
 function App() {
