@@ -148,7 +148,7 @@ const Home = () => {
         </div>
       </div>
       <div style={{textAlign:"center"}}>
-        <img src={DOOGIE_LAPTOP} alt="Doogie mascot" style={{maxWidth:"420px",width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+        <img src="/images/doogie-laptop.png" alt="Doogie mascot" style={{maxWidth:"420px",width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 
