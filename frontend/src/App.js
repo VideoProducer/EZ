@@ -201,7 +201,7 @@ const Listings = () => (
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">Live BC Listings</div>
       <h1 className="section-title">Search all British Columbia MLS® listings.</h1>
-      <p className="section-sub">Powered by Greater Vancouver For Sale — the same MLS® data our REALTORS® use daily. Data compliant with CREA, GVR &amp; MLS® rules.</p>
+      <p className="section-sub">Powered by www.GreaterVancouver.ForSale — the same MLS® data our REALTORS® use daily. Data compliant with CREA, GVR &amp; MLS® rules.</p>
     </div>
     <div style={{background:"white",borderRadius:16,overflow:"hidden",border:"1px solid rgba(15,42,91,0.1)",boxShadow:"0 8px 24px rgba(15,42,91,0.05)"}}>
       <iframe src="https://www.greatervancouver.forsale/mapsearchapp" title="BC MLS Listings" style={{width:"100%",height:"800px",border:"none",display:"block"}} data-testid="listings-iframe"/>
