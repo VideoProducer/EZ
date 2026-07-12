@@ -200,7 +200,7 @@ const Listings = () => (
   <section className="section"><div className="container-x">
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">Live BC Listings</div>
-      <h1 className="section-title">Search all MLS® listings.</h1>
+      <h1 className="section-title">Search all British Columbia MLS® listings.</h1>
       <p className="section-sub">Powered by Greater Vancouver For Sale — the same MLS® data our REALTORS® use daily. Data compliant with CREA, GVR &amp; MLS® rules.</p>
     </div>
     <div style={{background:"white",borderRadius:16,overflow:"hidden",border:"1px solid rgba(15,42,91,0.1)",boxShadow:"0 8px 24px rgba(15,42,91,0.05)"}}>
