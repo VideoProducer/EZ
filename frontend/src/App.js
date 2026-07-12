@@ -16,7 +16,7 @@ const DOUG_HEADSHOT = "https://customer-assets.emergentagent.com/job_proptech-hu
 // Real BC imagery (Unsplash, free-to-use)
 const IMG = {
   vancouver: "https://images.unsplash.com/photo-1559511260-66a654ae982a?w=1200&q=80",
-  fraserValley: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1200&q=80",
+  fraserValley: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/gs9v7w9f_EZ%20Fraser%20Valley.webp",
   seaToSky: "https://images.unsplash.com/photo-1518384401463-d3876163c195?w=1200&q=80",
   detached: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80",
   luxury: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80",
