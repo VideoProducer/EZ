@@ -540,6 +540,48 @@ async def refresh_amenities(slug: str, _=Depends(verify_admin)):
     await db.amenities_cache.delete_one({"slug": slug})
     return {"success": True, "message": "Cache cleared. Next visit will re-fetch."}
 
+# Warm-up: internal helper (no auth) — used by the one-time bulk warm script.
+# Guarded: only runs if a special header is present.
+import asyncio as _asyncio
+@api.post("/admin/warmup-all-communities")
+async def warmup_all(force: bool = False, _=Depends(verify_admin)):
+    """Bulk-fetch OSM amenities for every BC community. Rate-limited. Runs in background."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    total = sum(len(v) for v in all_comm.values())
+    async def worker():
+        done = 0; failed = 0
+        for region, lst in all_comm.items():
+            for community in lst:
+                slug = re.sub(r"[^a-z0-9]+","-", community.lower()).strip("-")
+                try:
+                    cached = await db.amenities_cache.find_one({"slug": slug})
+                    if cached and not force:
+                        age = datetime.now(timezone.utc) - datetime.fromisoformat(cached["ts"])
+                        if age.days < 30:
+                            done += 1; continue
+                    geo = await geocode(community)
+                    if not geo: failed += 1; continue
+                    amenities = await fetch_amenities(geo["lat"], geo["lon"])
+                    await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
+                    done += 1
+                    await _asyncio.sleep(1.2)  # OSM/Overpass fair-use pacing
+                except Exception as e:
+                    logger.error(f"Warmup fail {community}: {e}")
+                    failed += 1
+                    await _asyncio.sleep(0.5)
+        logger.info(f"Warmup complete: {done} done, {failed} failed")
+        await db.warmup_log.insert_one({"ts": now_iso(), "total": total, "done": done, "failed": failed})
+    _asyncio.create_task(worker())
+    return {"success": True, "message": f"Warm-up started in background for {total} communities. Will take ~15 minutes. Check /api/admin/warmup-status."}
+
+@api.get("/admin/warmup-status")
+async def warmup_status(_=Depends(verify_admin)):
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    total = sum(len(v) for v in all_comm.values())
+    cached_count = await db.amenities_cache.count_documents({})
+    last_log = await db.warmup_log.find_one({}, {"_id":0}, sort=[("ts",-1)])
+    return {"total_communities": total, "cached": cached_count, "progress_pct": round(100*cached_count/max(total,1),1), "last_run": last_log}
+
 # =============== SEED ===============
 @app.on_event("startup")
 async def startup():
