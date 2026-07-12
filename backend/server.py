@@ -3,12 +3,13 @@ from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, json, uuid, logging, bcrypt, jwt
+import os, json, uuid, logging, bcrypt, jwt, re
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -361,6 +362,105 @@ Rules:
 async def list_communities():
     p = ROOT_DIR / "data" / "communities_seed.json"
     return json.loads(p.read_text())
+
+# =============== COMMUNITY AMENITIES (OpenStreetMap) ===============
+NOMINATIM = "https://nominatim.openstreetmap.org/search"
+OVERPASS = "https://overpass-api.de/api/interpreter"
+UA = "EZtoFind.ca/1.0 (contact info@eztofind.ca)"
+
+async def geocode(name: str):
+    """Geocode BC community via Nominatim. Cached forever."""
+    cached = await db.geo_cache.find_one({"name": name}, {"_id": 0})
+    if cached: return cached
+    async with httpx.AsyncClient(timeout=15) as c:
+        r = await c.get(NOMINATIM, params={"q": f"{name}, British Columbia, Canada", "format": "json", "limit": 1}, headers={"User-Agent": UA})
+        arr = r.json()
+    if not arr: return None
+    doc = {"name": name, "lat": float(arr[0]["lat"]), "lon": float(arr[0]["lon"])}
+    await db.geo_cache.insert_one(dict(doc))
+    return doc
+
+async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
+    """Query Overpass API for BC amenities near coords."""
+    query = f"""
+    [out:json][timeout:25];
+    (
+      node["amenity"="school"](around:{radius},{lat},{lon});
+      way["amenity"="school"](around:{radius},{lat},{lon});
+      node["amenity"="hospital"](around:{radius},{lat},{lon});
+      way["amenity"="hospital"](around:{radius},{lat},{lon});
+      node["amenity"="clinic"](around:{radius},{lat},{lon});
+      node["shop"="mall"](around:{radius},{lat},{lon});
+      way["shop"="mall"](around:{radius},{lat},{lon});
+      node["leisure"="park"](around:{radius},{lat},{lon});
+      way["leisure"="park"](around:{radius},{lat},{lon});
+      node["leisure"="sports_centre"](around:{radius},{lat},{lon});
+      way["leisure"="sports_centre"](around:{radius},{lat},{lon});
+      node["amenity"="community_centre"](around:{radius},{lat},{lon});
+      way["amenity"="community_centre"](around:{radius},{lat},{lon});
+    );
+    out center tags 100;
+    """
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post(OVERPASS, data={"data": query}, headers={"User-Agent": UA})
+        data = r.json()
+    out = {"schools": [], "hospitals": [], "malls": [], "parks": [], "recreation": []}
+    for el in data.get("elements", []):
+        tags = el.get("tags", {})
+        name = tags.get("name")
+        if not name: continue
+        latc = el.get("lat") or el.get("center", {}).get("lat")
+        lonc = el.get("lon") or el.get("center", {}).get("lon")
+        item = {"name": name, "lat": latc, "lon": lonc, "address": tags.get("addr:street", "") + (" " + tags.get("addr:housenumber","") if tags.get("addr:housenumber") else "")}
+        amenity = tags.get("amenity"); shop = tags.get("shop"); leisure = tags.get("leisure")
+        if amenity == "school": out["schools"].append(item)
+        elif amenity in ("hospital", "clinic"): out["hospitals"].append(item)
+        elif shop == "mall": out["malls"].append(item)
+        elif leisure == "park": out["parks"].append(item)
+        elif leisure == "sports_centre" or amenity == "community_centre": out["recreation"].append(item)
+    # dedupe by name per category
+    for k in out:
+        seen = set(); u = []
+        for it in out[k]:
+            if it["name"] in seen: continue
+            seen.add(it["name"]); u.append(it)
+        out[k] = u
+    return out
+
+@api.get("/community/{slug}/amenities")
+async def community_amenities(slug: str):
+    """Return schools/hospitals/malls/parks/recreation for a BC community. Cached 30 days."""
+    # Look up community name from slug
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if c.lower().replace("[^a-z0-9]+","-").replace(" ","-") == slug or re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+                name = c; region = r; break
+        if name: break
+    if not name: raise HTTPException(404, "Community not found")
+
+    # Cache check
+    cached = await db.amenities_cache.find_one({"slug": slug}, {"_id": 0})
+    if cached:
+        age = datetime.now(timezone.utc) - datetime.fromisoformat(cached["ts"])
+        if age.days < 30:
+            return {"community": name, "region": region, "cached": True, **cached["data"]}
+
+    # Geocode
+    geo = await geocode(name)
+    if not geo: raise HTTPException(404, "Could not geocode community")
+
+    # Fetch
+    try:
+        amenities = await fetch_amenities(geo["lat"], geo["lon"])
+    except Exception as e:
+        logger.error(f"Overpass fetch failed for {name}: {e}")
+        raise HTTPException(503, "Amenity data temporarily unavailable")
+
+    # Cache
+    await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
+    return {"community": name, "region": region, "cached": False, **amenities}
 
 # =============== SEED ===============
 @app.on_event("startup")
