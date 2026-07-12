@@ -184,6 +184,46 @@ const Home = () => {
       </div>
     </div></section>
 
+    <section className="section"><div className="container-x">
+      <div style={{textAlign:"center",marginBottom:"3rem"}}>
+        <div className="eyebrow">What Our Clients Say</div>
+        <h2 className="section-title">Real People. Real Results.<br/>Real BC Real Estate.</h2>
+        <p className="section-sub">Doug LeMaire, REALTOR® helps buyers and sellers in BC achieve their real estate goals. Here is what they say.</p>
+      </div>
+      <div className="grid-2" style={{maxWidth:"1000px",margin:"0 auto",gap:"1.5rem"}}>
+        {[
+          {stars:5,quote:"Doug was an absolute pleasure to work with! As a buyer, we truly appreciated his patience, professionalism, and thorough approach throughout the entire process. Doug took the time to understand our needs, provided valuable insights, and guided us every step of the way with clear communication and expert advice. Doug's attention to detail and dedication made the experience smooth and stress-free. We couldn't have asked for a better realtor and highly recommend Doug to anyone looking to buy or sell a home!",initials:"JM",name:"J&M",role:"Buyers"},
+          {stars:5,quote:"As a home seller, deciding which agent to work with can seem daunting. There are so many agents that sound great on paper, but will they truly understand YOUR needs and work to fulfill YOUR goals. Doug LeMaire is a real estate agent of an elite caliber who truly cares about his clients and will not stop until YOU are satisfied. Doug sold my home as an off sale listing, demonstrating to me that he never stopped working on my behalf, even when the home was not actually listed for sale. He did so by establishing strong connections with buyer agents and got the sale done. We are now looking to buy a home and will be using Doug for our next move. Thank you Doug for all your help.",initials:"MC",name:"M.C.",role:"Seller"}
+        ].map((t,i) => (
+          <div key={i} style={{background:"#E8EEF9",borderRadius:20,padding:"2rem",fontFamily:"Inter,sans-serif",position:"relative"}} data-testid={`testimonial-${i}`}>
+            <div style={{color:"var(--brand-gold)",fontSize:"1.1rem",letterSpacing:"0.15em",marginBottom:"1rem"}}>{"★".repeat(t.stars)}</div>
+            <div style={{fontSize:"3rem",fontFamily:"Fraunces,serif",color:"var(--brand-blue)",lineHeight:0.5,marginBottom:"0.25rem"}}>&ldquo;</div>
+            <p style={{fontStyle:"italic",lineHeight:1.6,color:"var(--ink)",fontSize:"0.95rem",margin:"0 0 1.5rem"}}>{t.quote}</p>
+            <div style={{display:"flex",alignItems:"center",gap:"0.85rem",marginTop:"1.5rem"}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:"var(--brand-navy)",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600,fontSize:"0.9rem"}}>{t.initials}</div>
+              <div>
+                <div style={{fontWeight:600,color:"var(--ink)"}}>{t.name}</div>
+                <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>{t.role}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"center",gap:"3rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center"}}>
+        {[
+          {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
+          {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
+          {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
+        ].map((b,i) => (
+          <div key={i} style={{maxWidth:220}}>
+            <div style={{fontSize:"1.75rem",marginBottom:"0.5rem"}}>{b.icon}</div>
+            <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
+            <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem"}}>{b.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div></section>
+
     <section className="section"><div className="container-x" style={{textAlign:"center"}}>
       <img src={DOOGIE_CELEBRATE} alt="Doogie celebrating" style={{width:180,margin:"0 auto 1rem"}}/>
       <h2 className="section-title">Ready to start?</h2>
