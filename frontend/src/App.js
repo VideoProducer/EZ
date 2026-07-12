@@ -618,7 +618,7 @@ const Valuation = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
     <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">What's your BC home worth?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will prepare a professional comparative market analysis (CMA) using recent MLS® sales in your area — not an automated estimate. Response within 1 business day.</p>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will provide you with an estimated valuation in your area — Within 24 hours.</p>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
