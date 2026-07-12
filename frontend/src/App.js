@@ -23,6 +23,7 @@ const IMG = {
   equestrian: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800&q=80",
   estate: "https://images.unsplash.com/photo-1523217582562-09d0def993a6?w=800&q=80",
   condo: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80",
+  townhomes: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/d8ucxa1f_image.png",
   bcHero: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1600&q=80"
 };
 
@@ -175,7 +176,7 @@ const Home = () => {
         <h2 className="section-title">Five areas of deep expertise.</h2>
       </div>
       <div className="grid-3">
-        {[{s:"detached",t:"Detached Homes",i:IMG.detached},{s:"luxury",t:"Luxury",i:IMG.luxury},{s:"equestrian",t:"Equestrian & Acreage",i:IMG.equestrian},{s:"estate-sales",t:"Estate Sales / Probate",i:IMG.estate},{s:"condos",t:"Condos",i:IMG.condo}].map(sp =>
+        {[{s:"detached",t:"Detached Homes",i:IMG.detached},{s:"luxury",t:"Luxury",i:IMG.luxury},{s:"equestrian",t:"Equestrian & Acreage",i:IMG.equestrian},{s:"estate-sales",t:"Estate Sales / Probate",i:IMG.estate},{s:"condos",t:"Condos",i:IMG.condo},{s:"townhomes",t:"Townhomes",i:IMG.townhomes}].map(sp =>
           <Link to={`/specialties/${sp.s}`} key={sp.s} className="card" data-testid={`spec-${sp.s}`}>
             <img src={sp.i} alt={sp.t} className="card-img"/>
             <div className="card-body"><h3 className="card-title">{sp.t}</h3></div>
@@ -256,7 +257,8 @@ const SPECIALTIES = {
   "luxury":{t:"Luxury Real Estate",i:IMG.luxury,c:"BC's luxury tier — waterfront estates in West Van, mountain chalets in Whistler, custom-built homes on private acreages. Discreet, professional representation for high-net-worth buyers and sellers."},
   "equestrian":{t:"Equestrian & Acreage",i:IMG.equestrian,c:"Horse properties, hobby farms, and rural acreage — from Langley's ALR to Sea-to-Sky's ranch country. Deep knowledge of ALR rules, water rights, well/septic considerations, and equestrian facility valuation."},
   "estate-sales":{t:"Estate Sales / Probate",i:IMG.estate,c:"Sensitive, compliant representation for executors administering a BC estate under WESA. Coordination with legal counsel, understanding of Grant of Probate timelines, and 'as-is' sale expertise."},
-  "condos":{t:"Condos",i:IMG.condo,c:"Strata-lot expertise across BC — Form B, Form F, depreciation reports, contingency reserve funds, bylaw review. Metro Vancouver, Fraser Valley, and resort condos."}
+  "condos":{t:"Condos",i:IMG.condo,c:"Strata-lot expertise across BC — Form B, Form F, depreciation reports, contingency reserve funds, bylaw review. Metro Vancouver, Fraser Valley, and resort condos."},
+  "townhomes":{t:"Townhomes",i:IMG.townhomes,c:"Townhome expertise across the Lower Mainland — strata townhouse complexes, freehold row homes, half-duplexes. Understanding of restrictive covenants, shared-amenity fees, bareland strata, and unit-entitlement calculations."}
 };
 const SpecialtiesIndex = () => (<section className="section"><div className="container-x">
   <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Doug's Specialties</div><h1 className="section-title">Five focused expertises.</h1></div>
