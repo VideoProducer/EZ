@@ -380,8 +380,8 @@ async def geocode(name: str):
     await db.geo_cache.insert_one(dict(doc))
     return doc
 
-async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
-    """Query Overpass API for BC amenities near coords, with enrichment."""
+async def fetch_amenities(lat: float, lon: float, radius: int = 5000, retries: int = 3):
+    """Query Overpass API for BC amenities near coords, with enrichment. Retries on rate-limit."""
     query = f"""
     [out:json][timeout:25];
     (
@@ -401,9 +401,33 @@ async def fetch_amenities(lat: float, lon: float, radius: int = 5000):
     );
     out center tags 200;
     """
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(OVERPASS, data={"data": query}, headers={"User-Agent": UA})
-        data = r.json()
+    endpoints = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"]
+    last_err = None
+    for attempt in range(retries):
+        endpoint = endpoints[attempt % len(endpoints)]
+        try:
+            async with httpx.AsyncClient(timeout=40) as c:
+                r = await c.post(endpoint, data={"data": query}, headers={"User-Agent": UA})
+            if r.status_code == 429 or "too many requests" in r.text.lower():
+                await _asyncio.sleep(15 * (attempt+1))
+                continue
+            if r.status_code != 200:
+                last_err = f"HTTP {r.status_code} from {endpoint}"
+                await _asyncio.sleep(5)
+                continue
+            try:
+                data = r.json()
+            except Exception:
+                last_err = "Non-JSON response (rate-limited?)"
+                await _asyncio.sleep(15 * (attempt+1))
+                continue
+            break
+        except Exception as e:
+            last_err = str(e)
+            await _asyncio.sleep(5)
+    else:
+        raise RuntimeError(f"Overpass unavailable after {retries} attempts: {last_err}")
+
     out = {"schools": [], "hospitals": [], "malls": [], "parks": [], "recreation": []}
     for el in data.get("elements", []):
         tags = el.get("tags", {})
@@ -564,7 +588,7 @@ async def warmup_all(force: bool = False, _=Depends(verify_admin)):
                     amenities = await fetch_amenities(geo["lat"], geo["lon"])
                     await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
                     done += 1
-                    await _asyncio.sleep(1.2)  # OSM/Overpass fair-use pacing
+                    await _asyncio.sleep(10.0)  # OSM fair-use pacing — polite, respectful, no rate-limit
                 except Exception as e:
                     logger.error(f"Warmup fail {community}: {e}")
                     failed += 1
@@ -590,10 +614,11 @@ async def startup():
     if count == 0:
         seed = json.loads((ROOT_DIR/"data"/"glossary_seed.json").read_text())
         for item in seed:
-            item["id"] = str(uuid.uuid4())
-            item["faqs"] = []
+            item.setdefault("id", str(uuid.uuid4()))
+            item.setdefault("faqs", [])
             await db.glossary.insert_one(item)
-        logger.info(f"Seeded {len(seed)} glossary terms")
+        logger.info(f"Seeded {count} glossary terms")
+    # Amenity warm-up disabled per user request
 
 @api.get("/")
 async def root():
