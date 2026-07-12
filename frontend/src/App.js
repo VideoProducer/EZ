@@ -280,12 +280,11 @@ const Glossary = () => {
   const [terms, setTerms] = useState([]);
   const [q, setQ] = useState("");
   useEffect(()=>{ axios.get(`${API}/glossary`).then(r=>setTerms(r.data)); },[]);
-  const CATEGORY_ORDER = ["Land & Zoning","Valuation","Financing","Strata","Property Types","Estate & Probate","First-Time Buyers","Legal","Regulations","Ownership","Taxes","Construction"];
   const filtered = terms.filter(t => !q || t.term.toLowerCase().includes(q.toLowerCase()) || (t.definition||"").toLowerCase().includes(q.toLowerCase()) || (t.category||"").toLowerCase().includes(q.toLowerCase()));
   const byCat = {};
   filtered.forEach(t => { const c = t.category || "Other"; (byCat[c] = byCat[c] || []).push(t); });
   Object.values(byCat).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
-  const orderedCats = [...CATEGORY_ORDER.filter(c => byCat[c]), ...Object.keys(byCat).filter(c => !CATEGORY_ORDER.includes(c)).sort()];
+  const orderedCats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
   return (<section className="section"><div className="container-x">
     <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Every term you'll encounter buying or selling in British Columbia — with 10 FAQs per term.</p></div>
     <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search glossary — term, definition, or category…" style={{width:"100%",maxWidth:560,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}} data-testid="glossary-search"/>
