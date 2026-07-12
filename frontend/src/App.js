@@ -36,7 +36,7 @@ const Nav = () => (
     </Link>
     <div style={{display:"flex",gap:"0.25rem",alignItems:"center"}}>
       <NavLink to="/listings" data-testid="nav-listings">Listings</NavLink>
-      <NavLink to="/neighbourhoods" data-testid="nav-neighbourhoods">Neighbourhoods</NavLink>
+      <NavLink to="/communities" data-testid="nav-communities">Communities</NavLink>
       <NavLink to="/specialties" data-testid="nav-specialties">Specialties</NavLink>
       <NavLink to="/glossary" data-testid="nav-glossary">Glossary</NavLink>
       <NavLink to="/valuation" data-testid="nav-valuation">Home Value</NavLink>
@@ -61,7 +61,7 @@ const Footer = () => (
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
-        <li><Link to="/neighbourhoods">Neighbourhoods</Link></li>
+        <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/specialties">Specialties</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
@@ -556,29 +556,29 @@ const AdminClients = () => {
   </AdminShell>;
 };
 
-// --- Neighbourhoods (all of BC) ---
-const Neighbourhoods = () => {
+// --- Communities (all of BC) ---
+const Communities = () => {
   const [data, setData] = useState({}); const [q, setQ] = useState("");
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
   const filt = (arr) => q ? arr.filter(c => c.toLowerCase().includes(q.toLowerCase())) : arr;
   return (<section className="section"><div className="container-x">
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">All of British Columbia</div>
-      <h1 className="section-title">BC Neighbourhoods</h1>
+      <h1 className="section-title">BC Communities</h1>
       <p className="section-sub">Every incorporated municipality, village, town, district, and community across British Columbia. Doug's primary practice: Greater Vancouver, Fraser Valley, Sea-to-Sky. Elsewhere in BC? Our referral network can help.</p>
     </div>
-    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search 400+ BC communities…" className="search-bar" style={{width:"100%",maxWidth:520,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none"}} data-testid="nbhd-search"/>
+    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search 400+ BC communities…" className="search-bar" style={{width:"100%",maxWidth:520,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none"}} data-testid="communities-search"/>
     {Object.entries(data).map(([region, list]) => {
       const f = filt(list); if(f.length===0) return null;
       return (<div key={region} style={{marginBottom:"2.5rem"}}>
         <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"0.75rem"}}>{region} <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.8rem",color:"var(--muted)",fontWeight:400}}>({f.length})</span></h3>
-        <div className="chip-grid">{f.map(c => <Link key={c} to={`/neighbourhood/${encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g,"-"))}`} state={{name:c, region}} className="chip" style={{textDecoration:"none",cursor:"pointer"}}>{c}</Link>)}</div>
+        <div className="chip-grid">{f.map(c => <Link key={c} to={`/community/${encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g,"-"))}`} state={{name:c, region}} className="chip" style={{textDecoration:"none",cursor:"pointer"}}>{c}</Link>)}</div>
       </div>);
     })}
   </div></section>);
 };
 
-const NeighbourhoodPage = () => {
+const CommunityPage = () => {
   const {slug} = useParams();
   const [data, setData] = useState({});
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
@@ -587,7 +587,7 @@ const NeighbourhoodPage = () => {
   const isFocus = region && ["Greater Vancouver","Fraser Valley","Sea-to-Sky"].includes(region);
   const jsonLd = found ? {"@context":"https://schema.org","@type":"Place","name":`${found}, British Columbia`,"containedInPlace":{"@type":"AdministrativeArea","name":region}} : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
-    <Link to="/neighbourhoods" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All neighbourhoods</Link>
+    <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>
       <h1 className="section-title">{found}, BC</h1>
@@ -793,8 +793,10 @@ function App() {
     <Routes>
       <Route path="/" element={<AppLayout><HomeSchema/><Home/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
-      <Route path="/neighbourhoods" element={<AppLayout><Neighbourhoods/></AppLayout>}/>
-      <Route path="/neighbourhood/:slug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
+      <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
+      <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
+      <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
+      <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>
       <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
