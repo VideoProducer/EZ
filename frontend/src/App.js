@@ -700,8 +700,6 @@ const CommunityPage = () => {
         </> : <Link to="/referral-request" className="btn btn-primary">Request a Referral REALTOR® in {found}</Link>}
         <Link to="/listings" className="btn btn-outline">View Listings</Link>
       </div>
-      <div className="notice" style={{marginTop:"2rem"}}>This is general information. For advice specific to a property in {found}, consult a licensed REALTOR®.</div>
-
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
       {!loading && syn?.synopsis && <>
