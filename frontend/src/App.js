@@ -67,7 +67,6 @@ const Footer = () => (
         <li><Link to="/specialties">Specialties</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
-        <li><Link to="/calculators">Calculators</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
         <li><Link to="/realtors">Referral Network</Link></li>
@@ -184,6 +183,8 @@ const Home = () => {
           </Link>)}
       </div>
     </div></section>
+
+    <Calculators/>
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
@@ -926,7 +927,6 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
-      <Route path="/calculators" element={<AppLayout><Calculators/></AppLayout>}/>
       <Route path="/realtors" element={<AppLayout><RealtorApply/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
