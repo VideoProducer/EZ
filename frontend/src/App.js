@@ -758,7 +758,7 @@ const ReferralRequest = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Referral request received!</h1><p className="section-sub">We'll match you with a vetted REALTOR® active in your area within 1 business day.</p></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">BC-Wide Referral</div><h1 className="section-title">Need a REALTOR® outside Doug's focus area?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky. For any other BC community, we'll connect you with a vetted REALTOR® from our referral network — no cost to you.</p>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky. For any other BC community, we'll connect you with a vetted REALTOR® from our referral network.</p>
     <form onSubmit={submit} className="paper" data-testid="referral-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
