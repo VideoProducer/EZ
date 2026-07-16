@@ -368,21 +368,22 @@ async def generate_community_synopsis(name: str, region: str) -> str:
     """Generate a 300-450 word BC community synopsis using Claude Sonnet 4.6."""
     prompt = f"""Write a factual, informative synopsis of {name}, a community in the {region} region of British Columbia, Canada.
 
-Length: 300-450 words in 3-4 paragraphs.
+Length: 300-450 words in 3 paragraphs.
 
-Cover:
-1. Geography & location — where in BC it sits, nearby larger centres, distance from Vancouver or the nearest regional hub.
-2. Character & lifestyle — is it urban / suburban / rural / remote? Population scale (small village, town, city). Notable geographic features (mountains, ocean, lakes, rivers, farmland). Climate.
-3. Economy & community — main industries, notable amenities in general terms (do NOT list specific businesses, schools, or hospitals by name), lifestyle appeal.
-4. Real estate context — general market character (rural acreage market? Urban condo market? Vacation/recreational? Family suburbs?). Who is typically drawn to buy here.
+Cover ONLY these three topics — one per paragraph:
+1. Geography & location — where in BC it sits, nearby larger centres, distance from Vancouver or the nearest regional hub, notable geographic features (mountains, ocean, lakes, rivers, farmland), climate.
+2. Character & lifestyle — is it urban / suburban / rural / remote? Population scale (small village, town, city). Community feel, notable landmarks or heritage in general terms.
+3. Economy — main industries, employment base, general amenities available in the area (do NOT list specific businesses, schools, or hospitals by name).
 
-Rules:
+Strict rules:
 - Factual and informational only. NO advice.
-- NO specific property prices or predictions.
+- NO real estate market commentary, NO price predictions, NO property recommendations, NO commentary on who should buy here.
 - NO specific school/hospital/business names — keep it general.
-- End with: "For real estate advice specific to {name}, consult a licensed REALTOR®."
 - Plain prose, no headers, no bullet points, no markdown.
-- Written in warm, professional tone suitable for a REALTOR®'s website."""
+- Warm, professional tone suitable for a REALTOR®'s website.
+- End the final paragraph with EXACTLY this sentence (verbatim, no changes):
+"For real estate advice specific to {name}, ask to be referred to a REALTOR® through our Referral REALTOR® link."
+"""
     try:
         chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"syn-{uuid.uuid4()}", system_message="You are a BC real estate content writer producing factual community synopses.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
