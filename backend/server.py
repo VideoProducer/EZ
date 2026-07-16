@@ -417,6 +417,55 @@ async def community_synopsis(slug: str):
     await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": synopsis, "ts": now_iso()}, upsert=True)
     return {"community": name, "region": region, "synopsis": synopsis, "source":"fresh"}
 
+async def generate_community_weather(name: str, region: str) -> str:
+    """Generate a 150-200 word BC community weather synopsis using Claude Sonnet 4.6."""
+    prompt = f"""Write a factual weather and climate synopsis for {name}, a community in the {region} region of British Columbia, Canada.
+
+Length: 150-200 words in 2 short paragraphs.
+
+Cover:
+1. First paragraph — climate classification (e.g., temperate rainforest, semi-arid, alpine, sub-boreal), typical winter conditions (average temperature range in °C, snowfall, rain, notable phenomena like Arctic outflows or freezing rain if applicable).
+2. Second paragraph — typical summer conditions (average temperature range in °C, precipitation, wildfire smoke tendency where relevant), notable transitional weather patterns (fog, wind corridors, wet/dry seasons), and any distinctive features (e.g., "sunniest in Canada", "highest snowfall in BC", "known for micro-climates").
+
+Strict rules:
+- Factual, informational, general climate summary only.
+- Use approximate temperature ranges (°C), not day-by-day forecasts.
+- NO property/real estate mentions. NO advice.
+- Plain prose. No headers, no bullets, no markdown.
+- Warm, professional tone."""
+    try:
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"wx-{uuid.uuid4()}", system_message="You are a BC climate writer producing factual community weather summaries.").with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        return full.strip()
+    except Exception as e:
+        logger.error(f"Weather gen failed for {name}: {e}")
+        return ""
+
+@api.get("/community/{slug}/weather")
+async def community_weather(slug: str):
+    """Return a Claude-authored weather synopsis. Cached permanently after first generation."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+                name = c; region = r; break
+        if name: break
+    if not name: raise HTTPException(404, "Community not found")
+
+    cached = await db.community_weather.find_one({"slug": slug}, {"_id":0})
+    if cached and cached.get("weather"):
+        return {"community": name, "region": region, "weather": cached["weather"], "source":"cache"}
+
+    weather = await generate_community_weather(name, region)
+    if not weather:
+        return {"community": name, "region": region, "weather": "", "source":"unavailable", "note":"Weather summary is being generated — please refresh in a moment."}
+    await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": weather, "ts": now_iso()}, upsert=True)
+    return {"community": name, "region": region, "weather": weather, "source":"fresh"}
+
 # =============== SEED ===============
 @app.on_event("startup")
 async def startup():

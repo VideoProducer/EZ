@@ -664,11 +664,14 @@ const CommunityPage = () => {
   const {slug} = useParams();
   const [data, setData] = useState({});
   const [syn, setSyn] = useState(null);
+  const [wx, setWx] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingWx, setLoadingWx] = useState(true);
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
   useEffect(() => {
-    setLoading(true); setSyn(null);
+    setLoading(true); setSyn(null); setLoadingWx(true); setWx(null);
     axios.get(`${API}/community/${slug}/synopsis`, {timeout: 90000}).then(r => { setSyn(r.data); setLoading(false); }).catch(() => setLoading(false));
+    axios.get(`${API}/community/${slug}/weather`, {timeout: 90000}).then(r => { setWx(r.data); setLoadingWx(false); }).catch(() => setLoadingWx(false));
   }, [slug]);
   let found = null, region = null;
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => c.toLowerCase().replace(/[^a-z0-9]+/g,"-") === slug); if(m) { found = m; region = r; break; } }
@@ -711,6 +714,11 @@ const CommunityPage = () => {
         </div>
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
+
+      <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>☀️ Weather in {found}</h2>
+      {loadingWx && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is preparing the local climate summary…</div>}
+      {!loadingWx && wx?.weather && <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-weather">{wx.weather}</div>}
+      {!loadingWx && wx?.note && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
