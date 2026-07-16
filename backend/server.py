@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+import httpx, re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -361,6 +362,116 @@ Rules:
 async def list_communities():
     p = ROOT_DIR / "data" / "communities_seed.json"
     return json.loads(p.read_text())
+
+# =============== COMMUNITY AMENITIES (OSM, lazy on-demand only) ===============
+NOMINATIM = "https://nominatim.openstreetmap.org/search"
+OVERPASS_ENDPOINTS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
+UA = "EZtoFind.ca/1.0 (contact info@eztofind.ca)"
+
+async def geocode_community(name: str):
+    cached = await db.geo_cache.find_one({"name": name}, {"_id": 0})
+    if cached: return cached
+    async with httpx.AsyncClient(timeout=20) as c:
+        r = await c.get(NOMINATIM, params={"q": f"{name}, British Columbia, Canada", "format":"json", "limit":1}, headers={"User-Agent": UA})
+        try: arr = r.json()
+        except Exception: return None
+    if not arr: return None
+    doc = {"name": name, "lat": float(arr[0]["lat"]), "lon": float(arr[0]["lon"])}
+    await db.geo_cache.insert_one(dict(doc))
+    return doc
+
+async def fetch_osm_amenities(lat: float, lon: float, radius: int = 6000):
+    q = f"""[out:json][timeout:25];(
+      node["amenity"="school"](around:{radius},{lat},{lon}); way["amenity"="school"](around:{radius},{lat},{lon});
+      node["amenity"="hospital"](around:{radius},{lat},{lon}); way["amenity"="hospital"](around:{radius},{lat},{lon});
+      node["amenity"="clinic"](around:{radius},{lat},{lon});
+      node["shop"="mall"](around:{radius},{lat},{lon}); way["shop"="mall"](around:{radius},{lat},{lon});
+      node["leisure"="park"](around:{radius},{lat},{lon}); way["leisure"="park"](around:{radius},{lat},{lon});
+      node["leisure"="sports_centre"](around:{radius},{lat},{lon}); way["leisure"="sports_centre"](around:{radius},{lat},{lon});
+      node["amenity"="community_centre"](around:{radius},{lat},{lon}); way["amenity"="community_centre"](around:{radius},{lat},{lon});
+    );out center tags 300;"""
+    for endpoint in OVERPASS_ENDPOINTS:
+        try:
+            async with httpx.AsyncClient(timeout=40) as c:
+                r = await c.post(endpoint, data={"data": q}, headers={"User-Agent": UA})
+            if r.status_code != 200: continue
+            try: data = r.json()
+            except Exception: continue
+            break
+        except Exception: continue
+    else:
+        return None
+    out = {"schools": [], "hospitals": [], "malls": [], "parks": [], "recreation": []}
+    for el in data.get("elements", []):
+        tags = el.get("tags", {}); name = tags.get("name")
+        if not name: continue
+        latc = el.get("lat") or el.get("center", {}).get("lat")
+        lonc = el.get("lon") or el.get("center", {}).get("lon")
+        item = {"name": name, "lat": latc, "lon": lonc, "address": (tags.get("addr:housenumber","")+" "+tags.get("addr:street","")).strip()}
+        amenity = tags.get("amenity"); shop = tags.get("shop"); leisure = tags.get("leisure")
+        if amenity == "school":
+            nm = name.lower()
+            level = tags.get("isced:level") or ""
+            if "elementary" in nm or "primary" in nm: item["level"] = "Elementary"
+            elif "secondary" in nm or "high school" in nm: item["level"] = "Secondary"
+            elif "middle" in nm: item["level"] = "Middle"
+            elif "0" in level or "1" in level: item["level"] = "Elementary"
+            elif "2" in level or "3" in level: item["level"] = "Secondary"
+            else: item["level"] = "School"
+            op = tags.get("operator:type",""); st = tags.get("school:type","")
+            item["operator"] = "Private" if op == "private" or st == "private" else ""
+            out["schools"].append(item)
+        elif amenity in ("hospital","clinic"):
+            if lat > 55: ha = "Northern Health"
+            elif lon < -125.5: ha = "Island Health"
+            elif -123.3 < lon < -121.8 and 49.0 < lat < 49.6: ha = "Fraser Health"
+            elif -123.6 < lon < -122.7 and 49.1 < lat < 49.6: ha = "Vancouver Coastal Health"
+            elif lon > -119: ha = "Interior Health"
+            else: ha = "Interior Health"
+            item["type"] = "Hospital" if amenity == "hospital" else "Clinic"
+            item["authority"] = ha
+            out["hospitals"].append(item)
+        elif shop == "mall": out["malls"].append(item)
+        elif leisure == "park": out["parks"].append(item)
+        elif leisure == "sports_centre" or amenity == "community_centre": out["recreation"].append(item)
+    for k in out:
+        seen = set(); u = []
+        for it in out[k]:
+            if it["name"] in seen: continue
+            seen.add(it["name"]); u.append(it)
+        out[k] = u
+    return out
+
+@api.get("/community/{slug}/amenities")
+async def community_amenities(slug: str):
+    """Lazy on-demand fetch. Cached 30 days per community. NO bulk operations."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+                name = c; region = r; break
+        if name: break
+    if not name: raise HTTPException(404, "Community not found")
+
+    cached = await db.amenities_cache.find_one({"slug": slug}, {"_id":0})
+    if cached:
+        age = datetime.now(timezone.utc) - datetime.fromisoformat(cached["ts"])
+        if age.days < 30:
+            return {"community": name, "region": region, "source":"cache", **cached["data"]}
+
+    geo = await geocode_community(name)
+    if not geo:
+        return {"community": name, "region": region, "source":"none", "schools":[],"hospitals":[],"malls":[],"parks":[],"recreation":[], "note":"Location could not be geocoded."}
+    amenities = await fetch_osm_amenities(geo["lat"], geo["lon"])
+    if amenities is None:
+        return {"community": name, "region": region, "source":"unavailable", "schools":[],"hospitals":[],"malls":[],"parks":[],"recreation":[], "note":"Amenity data is temporarily unavailable. Please refresh in a few minutes."}
+    await db.amenities_cache.replace_one({"slug": slug}, {"slug": slug, "ts": now_iso(), "data": amenities}, upsert=True)
+    return {"community": name, "region": region, "source":"fresh", **amenities}
 
 # =============== SEED ===============
 @app.on_event("startup")

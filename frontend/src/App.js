@@ -663,11 +663,24 @@ const Communities = () => {
 const CommunityPage = () => {
   const {slug} = useParams();
   const [data, setData] = useState({});
+  const [amenities, setAmenities] = useState(null);
+  const [loadingAm, setLoadingAm] = useState(true);
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
+  useEffect(() => {
+    setLoadingAm(true); setAmenities(null);
+    axios.get(`${API}/community/${slug}/amenities`, {timeout: 60000}).then(r => { setAmenities(r.data); setLoadingAm(false); }).catch(() => setLoadingAm(false));
+  }, [slug]);
   let found = null, region = null;
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => c.toLowerCase().replace(/[^a-z0-9]+/g,"-") === slug); if(m) { found = m; region = r; break; } }
   const isFocus = region && ["Greater Vancouver","Fraser Valley","Sea-to-Sky"].includes(region);
   const jsonLd = found ? {"@context":"https://schema.org","@type":"Place","name":`${found}, British Columbia`,"containedInPlace":{"@type":"AdministrativeArea","name":region}} : null;
+  const sections = [
+    {key:"schools", icon:"🏫", label:"Schools"},
+    {key:"hospitals", icon:"🏥", label:"Hospitals & Clinics"},
+    {key:"malls", icon:"🛍️", label:"Shopping Centres"},
+    {key:"parks", icon:"🌳", label:"Parks"},
+    {key:"recreation", icon:"🏋️", label:"Recreation Centres"}
+  ];
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
@@ -686,6 +699,30 @@ const CommunityPage = () => {
         <Link to="/listings" className="btn btn-outline">View Listings</Link>
       </div>
       <div className="notice" style={{marginTop:"2rem"}}>This is general information. For advice specific to a property in {found}, consult a licensed REALTOR®.</div>
+
+      <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>Local amenities in {found}</h2>
+      {loadingAm && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is fetching the latest schools, hospitals, malls, parks &amp; rec centres for {found} from OpenStreetMap… (first visit takes 4–8 seconds, then instant forever)</div>}
+      {!loadingAm && amenities && amenities.note && <div className="notice" style={{marginTop:"1rem"}}>{amenities.note}</div>}
+      {!loadingAm && amenities && sections.map(s => {
+        const items = amenities[s.key] || [];
+        if(items.length === 0) return null;
+        return (<div key={s.key} style={{marginTop:"1.5rem"}} data-testid={`amenity-${s.key}`}>
+          <h3 className="font-display" style={{fontSize:"1.25rem",marginBottom:"0.5rem"}}>{s.icon} {s.label} <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",fontWeight:400}}>({items.length})</span></h3>
+          <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
+            {items.slice(0, 30).map((it, i) => (
+              <a key={i} href={`https://www.google.com/maps/search/?api=1&query=${it.lat},${it.lon}`} target="_blank" rel="noopener noreferrer" className="chip" style={{textDecoration:"none",fontSize:"0.85rem",display:"inline-flex",gap:"0.35rem",alignItems:"center"}}>
+                {it.name}
+                {it.level && it.level !== "School" && <span style={{fontSize:"0.7rem",background:"var(--brand-blue)",color:"white",padding:"0.1rem 0.4rem",borderRadius:6}}>{it.level}</span>}
+                {it.operator === "Private" && <span style={{fontSize:"0.7rem",background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.1rem 0.4rem",borderRadius:6}}>Private</span>}
+                {it.authority && <span style={{fontSize:"0.7rem",background:"var(--brand-green-dark)",color:"white",padding:"0.1rem 0.4rem",borderRadius:6}}>{it.authority.replace(" Health","")}</span>}
+              </a>
+            ))}
+          </div>
+          {items.length > 30 && <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.5rem"}}>+{items.length-30} more</p>}
+        </div>);
+      })}
+      {!loadingAm && amenities && sections.every(s => (amenities[s.key]||[]).length===0) && !amenities.note && <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Amenity data for this small community is limited on OpenStreetMap. Try a nearby larger centre.</p>}
+      {!loadingAm && amenities && !amenities.note && <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"1.5rem"}}>Amenity data: © OpenStreetMap contributors. Verify locally before relying.</p>}
 
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
     </> : <><h1 className="section-title">Loading…</h1></>}
