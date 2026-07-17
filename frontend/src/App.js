@@ -805,50 +805,77 @@ const ReferralRequest = () => {
   </div></section>);
 };
 
-// --- Calculators (Mortgage + PTT) ---
-const Calculators = () => {
-  const [price,setPrice]=useState(1000000); const [down,setDown]=useState(200000); const [rate,setRate]=useState(5.25); const [amort,setAmort]=useState(25);
+// --- Calculators (Mortgage + PTT — stacked, independent) ---
+const fmtDollar = n => "$"+Math.round(n).toLocaleString();
+
+const MortgageCalculator = () => {
+  const [price,setPrice]=useState(1000000);
+  const [down,setDown]=useState(200000);
+  const [rate,setRate]=useState(5.25);
+  const [amort,setAmort]=useState(25);
   const principal = Math.max(price - down, 0);
   const r = (rate/100)/12; const n = amort*12;
-  const monthly = r>0 ? (principal*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1) : principal/n;
-  // BC PTT
+  const monthly = r>0 ? (principal*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1) : (n>0 ? principal/n : 0);
+  return (
+    <div className="paper" data-testid="mortgage-calculator">
+      <h2 className="section-title" style={{fontSize:"1.75rem",marginBottom:"1.25rem"}}>Mortgage Calculator</h2>
+      <div className="form-grid">
+        <div className="field"><label>Purchase Price ($)</label><input type="number" value={price} onChange={e=>setPrice(+e.target.value)} data-testid="mortgage-price"/></div>
+        <div className="field"><label>Down Payment ($)</label><input type="number" value={down} onChange={e=>setDown(+e.target.value)} data-testid="mortgage-down"/></div>
+        <div className="field"><label>Interest Rate (%)</label><input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value)} data-testid="mortgage-rate"/></div>
+        <div className="field"><label>Amortization (years)</label><select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="mortgage-amort"><option>15</option><option>20</option><option>25</option><option>30</option></select></div>
+      </div>
+      <div style={{marginTop:"2rem"}}>
+        <div style={{background:"#F5F0E1",padding:"1.5rem",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
+          <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>Estimated Monthly Payment</div>
+          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="calc-monthly">{fmtDollar(monthly)}</div>
+          <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.5rem"}}>Principal + interest only. Excludes taxes, strata, insurance.</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PTTCalculator = () => {
+  const [price,setPrice]=useState(1000000);
+  const [ftbFirstTime,setFtb]=useState(false);
+  const [newBuilt,setNew]=useState(false);
   const ptt = (p) => { let t=0; if(p<=200000) return p*0.01; t+=200000*0.01; if(p<=2000000) return t+(p-200000)*0.02; t+=1800000*0.02; if(p<=3000000) return t+(p-2000000)*0.03; t+=1000000*0.03; return t+(p-3000000)*0.05; };
-  const [ftbFirstTime,setFtb]=useState(false); const [newBuilt,setNew]=useState(false);
   let pttOwed = ptt(price);
   if(ftbFirstTime && price <= 835000) pttOwed = 0;
   else if(ftbFirstTime && price <= 860000) pttOwed = pttOwed * ((860000-price)/25000);
   if(newBuilt && price <= 1100000) pttOwed = 0;
   else if(newBuilt && price <= 1150000) pttOwed = pttOwed * ((1150000-price)/50000);
-  const fmt = n => "$"+Math.round(n).toLocaleString();
-  return (<section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
-    <div className="eyebrow">BC Calculators</div><h1 className="section-title">Mortgage & Property Transfer Tax</h1>
-    <div className="paper">
+  return (
+    <div className="paper" data-testid="ptt-calculator" style={{marginTop:"2rem"}}>
+      <h2 className="section-title" style={{fontSize:"1.75rem",marginBottom:"1.25rem"}}>Property Transfer Tax Calculator</h2>
       <div className="form-grid">
-        <div className="field"><label>Purchase Price ($)</label><input type="number" value={price} onChange={e=>setPrice(+e.target.value)} data-testid="calc-price"/></div>
-        <div className="field"><label>Down Payment ($)</label><input type="number" value={down} onChange={e=>setDown(+e.target.value)}/></div>
-        <div className="field"><label>Interest Rate (%)</label><input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value)}/></div>
-        <div className="field"><label>Amortization (years)</label><select value={amort} onChange={e=>setAmort(+e.target.value)}><option>15</option><option>20</option><option>25</option><option>30</option></select></div>
+        <div className="field"><label>Purchase Price ($)</label><input type="number" value={price} onChange={e=>setPrice(+e.target.value)} data-testid="ptt-price"/></div>
       </div>
       <div style={{marginTop:"1rem",display:"flex",gap:"1.5rem",flexWrap:"wrap"}}>
-        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={ftbFirstTime} onChange={e=>setFtb(e.target.checked)}/> First-time home buyer</label>
-        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={newBuilt} onChange={e=>setNew(e.target.checked)}/> Newly built home</label>
+        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={ftbFirstTime} onChange={e=>setFtb(e.target.checked)} data-testid="ptt-ftb"/> First-time home buyer</label>
+        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={newBuilt} onChange={e=>setNew(e.target.checked)} data-testid="ptt-newbuilt"/> Newly built home</label>
       </div>
-      <div className="grid-2" style={{marginTop:"2rem",gap:"1rem"}}>
-        <div style={{background:"#F5F0E1",padding:"1.5rem",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
-          <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>Estimated Monthly Payment</div>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="calc-monthly">{fmt(monthly)}</div>
-          <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.5rem"}}>Principal + interest only. Excludes taxes, strata, insurance.</div>
-        </div>
+      <div style={{marginTop:"2rem"}}>
         <div style={{background:"#E8F5E9",padding:"1.5rem",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
           <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>BC Property Transfer Tax</div>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-green-dark)"}} data-testid="calc-ptt">{fmt(pttOwed)}</div>
+          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-green-dark)"}} data-testid="calc-ptt">{fmtDollar(pttOwed)}</div>
           <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.5rem"}}>Based on 2026 rates. Full/partial exemptions applied if eligible.</div>
         </div>
       </div>
     </div>
-    <div className="notice" style={{marginTop:"1.5rem"}}>Estimates only. Not financial or legal advice. Consult a mortgage broker and REALTOR® for your specific situation.</div>
-  </div></section>);
+  );
 };
+
+const Calculators = () => (
+  <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
+    <div className="eyebrow">BC Calculators</div>
+    <h1 className="section-title" style={{marginBottom:"2rem"}}>Mortgage &amp; Property Transfer Tax</h1>
+    <MortgageCalculator/>
+    <PTTCalculator/>
+    <div className="notice" style={{marginTop:"1.5rem"}}>Estimates only. Not financial or legal advice. Consult a mortgage broker and REALTOR® for your specific situation.</div>
+  </div></section>
+);
 
 // --- Data Attribution (7 boards) ---
 const DataAttribution = () => (<Legal title="MLS® Data Attribution" body={<>
