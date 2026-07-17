@@ -321,11 +321,16 @@ async def list_glossary():
 async def get_term(slug: str):
     t = await db.glossary.find_one({"slug": slug}, {"_id":0})
     if not t: raise HTTPException(404, "Term not found")
-    # Generate FAQs on demand if none exist
+    # Generate FAQs on demand if none exist (saved as unapproved by default)
     if not t.get("faqs"):
         faqs = await generate_faqs_for_term(t["term"], t["definition"])
-        await db.glossary.update_one({"slug": slug}, {"$set": {"faqs": faqs}})
+        await db.glossary.update_one({"slug": slug}, {"$set": {"faqs": faqs, "faqs_approved": False}})
         t["faqs"] = faqs
+        t["faqs_approved"] = False
+    # Public API: hide unapproved FAQs
+    if not t.get("faqs_approved"):
+        t["faqs"] = []
+        t["faqs_pending_review"] = True
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
@@ -409,13 +414,15 @@ async def community_synopsis(slug: str):
 
     cached = await db.community_synopses.find_one({"slug": slug}, {"_id":0})
     if cached and cached.get("synopsis"):
+        if not cached.get("approved"):
+            return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication."}
         return {"community": name, "region": region, "synopsis": cached["synopsis"], "source":"cache"}
 
     synopsis = await generate_community_synopsis(name, region)
     if not synopsis:
         return {"community": name, "region": region, "synopsis": "", "source":"unavailable", "note":"Synopsis is being generated — please refresh in a moment."}
-    await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": synopsis, "ts": now_iso()}, upsert=True)
-    return {"community": name, "region": region, "synopsis": synopsis, "source":"fresh"}
+    await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": synopsis, "approved": False, "ts": now_iso()}, upsert=True)
+    return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication."}
 
 async def generate_community_weather(name: str, region: str) -> str:
     """Generate a 150-200 word BC community weather synopsis using Claude Sonnet 4.6."""
@@ -458,13 +465,15 @@ async def community_weather(slug: str):
 
     cached = await db.community_weather.find_one({"slug": slug}, {"_id":0})
     if cached and cached.get("weather"):
+        if not cached.get("approved"):
+            return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication."}
         return {"community": name, "region": region, "weather": cached["weather"], "source":"cache"}
 
     weather = await generate_community_weather(name, region)
     if not weather:
         return {"community": name, "region": region, "weather": "", "source":"unavailable", "note":"Weather summary is being generated — please refresh in a moment."}
-    await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": weather, "ts": now_iso()}, upsert=True)
-    return {"community": name, "region": region, "weather": weather, "source":"fresh"}
+    await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": weather, "approved": False, "ts": now_iso()}, upsert=True)
+    return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication."}
 
 # =============== SEED ===============
 @app.on_event("startup")
@@ -483,6 +492,89 @@ async def startup():
 @api.get("/")
 async def root():
     return {"app": "EZtoFind.ca", "status": "ok"}
+
+# =============== ADMIN: AI CONTENT APPROVAL QUEUE (BCFSA compliance) ===============
+@api.get("/admin/approvals/summary")
+async def approvals_summary(_=Depends(verify_admin)):
+    pending_faqs = await db.glossary.count_documents({"faqs.0": {"$exists": True}, "faqs_approved": {"$ne": True}})
+    pending_syn = await db.community_synopses.count_documents({"approved": {"$ne": True}})
+    pending_wx = await db.community_weather.count_documents({"approved": {"$ne": True}})
+    return {"pending_glossary_faqs": pending_faqs, "pending_synopses": pending_syn, "pending_weather": pending_wx}
+
+@api.get("/admin/approvals/glossary")
+async def pending_glossary(_=Depends(verify_admin)):
+    items = await db.glossary.find({"faqs.0": {"$exists": True}, "faqs_approved": {"$ne": True}}, {"_id":0}).to_list(1000)
+    return items
+
+@api.get("/admin/approvals/synopses")
+async def pending_synopses(_=Depends(verify_admin)):
+    return await db.community_synopses.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(1000)
+
+@api.get("/admin/approvals/weather")
+async def pending_weather(_=Depends(verify_admin)):
+    return await db.community_weather.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(1000)
+
+class ApproveGlossary(BaseModel):
+    slug: str
+    faqs: Optional[List[dict]] = None  # allow editing before approval
+
+@api.post("/admin/approvals/glossary/approve")
+async def approve_glossary(body: ApproveGlossary, _=Depends(verify_admin)):
+    update = {"faqs_approved": True, "faqs_approved_at": now_iso()}
+    if body.faqs is not None: update["faqs"] = body.faqs
+    r = await db.glossary.update_one({"slug": body.slug}, {"$set": update})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/glossary/{slug}/regenerate")
+async def regenerate_glossary_faqs(slug: str, _=Depends(verify_admin)):
+    t = await db.glossary.find_one({"slug": slug}, {"_id":0})
+    if not t: raise HTTPException(404, "Term not found")
+    faqs = await generate_faqs_for_term(t["term"], t["definition"])
+    await db.glossary.update_one({"slug": slug}, {"$set": {"faqs": faqs, "faqs_approved": False}})
+    return {"success": True, "faqs": faqs}
+
+class ApproveSynopsis(BaseModel):
+    slug: str
+    synopsis: Optional[str] = None
+
+@api.post("/admin/approvals/synopses/approve")
+async def approve_synopsis(body: ApproveSynopsis, _=Depends(verify_admin)):
+    update = {"approved": True, "approved_at": now_iso()}
+    if body.synopsis is not None: update["synopsis"] = body.synopsis
+    r = await db.community_synopses.update_one({"slug": body.slug}, {"$set": update})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/synopses/{slug}/regenerate")
+async def regenerate_synopsis(slug: str, _=Depends(verify_admin)):
+    d = await db.community_synopses.find_one({"slug": slug}, {"_id":0})
+    if not d: raise HTTPException(404, "Not found")
+    s = await generate_community_synopsis(d["name"], d["region"])
+    await db.community_synopses.update_one({"slug": slug}, {"$set": {"synopsis": s, "approved": False, "ts": now_iso()}})
+    return {"success": True, "synopsis": s}
+
+class ApproveWeather(BaseModel):
+    slug: str
+    weather: Optional[str] = None
+
+@api.post("/admin/approvals/weather/approve")
+async def approve_weather(body: ApproveWeather, _=Depends(verify_admin)):
+    update = {"approved": True, "approved_at": now_iso()}
+    if body.weather is not None: update["weather"] = body.weather
+    r = await db.community_weather.update_one({"slug": body.slug}, {"$set": update})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/weather/{slug}/regenerate")
+async def regenerate_weather(slug: str, _=Depends(verify_admin)):
+    d = await db.community_weather.find_one({"slug": slug}, {"_id":0})
+    if not d: raise HTTPException(404, "Not found")
+    w = await generate_community_weather(d["name"], d["region"])
+    await db.community_weather.update_one({"slug": slug}, {"$set": {"weather": w, "approved": False, "ts": now_iso()}})
+    return {"success": True, "weather": w}
+
+@api.post("/admin/approvals/glossary/approve-all")
+async def approve_all_glossary(_=Depends(verify_admin)):
+    r = await db.glossary.update_many({"faqs.0": {"$exists": True}}, {"$set": {"faqs_approved": True, "faqs_approved_at": now_iso()}})
+    return {"success": True, "modified": r.modified_count}
 
 app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
