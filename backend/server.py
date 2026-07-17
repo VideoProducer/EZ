@@ -683,6 +683,57 @@ async def approve_all_glossary(_=Depends(verify_admin)):
     r = await db.glossary.update_many({"faqs.0": {"$exists": True}}, {"$set": {"faqs_approved": True, "faqs_approved_at": now_iso()}})
     return {"success": True, "modified": r.modified_count}
 
+@api.post("/admin/approvals/synopses/approve-all")
+async def approve_all_synopses(_=Depends(verify_admin)):
+    r = await db.community_synopses.update_many({"approved": {"$ne": True}, "synopsis": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/weather/approve-all")
+async def approve_all_weather(_=Depends(verify_admin)):
+    r = await db.community_weather.update_many({"approved": {"$ne": True}, "weather": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/generate-all")
+async def generate_all_missing(_=Depends(verify_admin)):
+    """Generate synopsis + weather for EVERY BC community that doesn't have them yet. Runs in background."""
+    import asyncio as _a
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    todo = []
+    for region, lst in all_comm.items():
+        for community in lst:
+            slug = re.sub(r"[^a-z0-9]+","-", community.lower()).strip("-")
+            todo.append((slug, community, region))
+
+    async def worker():
+        SEM = _a.Semaphore(4)  # up to 4 concurrent Claude calls
+        async def gen_syn(slug, name, region):
+            async with SEM:
+                if await db.community_synopses.find_one({"slug": slug, "synopsis": {"$ne": ""}}): return
+                s = await generate_community_synopsis(name, region)
+                if s: await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": s, "approved": False, "ts": now_iso()}, upsert=True)
+        async def gen_wx(slug, name, region):
+            async with SEM:
+                if await db.community_weather.find_one({"slug": slug, "weather": {"$ne": ""}}): return
+                w = await generate_community_weather(name, region)
+                if w: await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": w, "approved": False, "ts": now_iso()}, upsert=True)
+        tasks = []
+        for slug, name, region in todo:
+            tasks.append(gen_syn(slug, name, region))
+            tasks.append(gen_wx(slug, name, region))
+        await _a.gather(*tasks, return_exceptions=True)
+        logger.info(f"Bulk generation complete for {len(todo)} communities")
+
+    _a.create_task(worker())
+    return {"success": True, "message": f"Generating synopsis + weather for {len(todo)} communities in background. Refresh the approval queues in ~15-30 minutes.", "total": len(todo)}
+
+@api.get("/admin/approvals/generation-progress")
+async def generation_progress(_=Depends(verify_admin)):
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    total = sum(len(v) for v in all_comm.values())
+    syn_done = await db.community_synopses.count_documents({"synopsis": {"$ne": ""}})
+    wx_done = await db.community_weather.count_documents({"weather": {"$ne": ""}})
+    return {"total": total, "synopses_generated": syn_done, "weather_generated": wx_done, "synopses_pct": round(100*syn_done/max(total,1),1), "weather_pct": round(100*wx_done/max(total,1),1)}
+
 # =============== MANAGING BROKER POLICIES (Print to PDF) ===============
 from policies import POLICIES
 

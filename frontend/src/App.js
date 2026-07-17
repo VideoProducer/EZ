@@ -959,10 +959,31 @@ const AdminApprovals = () => {
     await axios.post(`${API}/admin/approvals/glossary/approve-all`, {}, {headers});
     await loadSummary(); await loadItems("glossary");
   };
+  const bulkApproveSynopses = async () => {
+    if(!window.confirm(`Approve ALL ${items.length} pending community synopses at once?`)) return;
+    await axios.post(`${API}/admin/approvals/synopses/approve-all`, {}, {headers});
+    await loadSummary(); await loadItems("synopses");
+  };
+  const bulkApproveWeather = async () => {
+    if(!window.confirm(`Approve ALL ${items.length} pending weather summaries at once?`)) return;
+    await axios.post(`${API}/admin/approvals/weather/approve-all`, {}, {headers});
+    await loadSummary(); await loadItems("weather");
+  };
+  const generateAll = async () => {
+    if(!window.confirm("Generate synopsis + weather for ALL 243 BC communities that don't have them yet? This runs in the background and takes ~15-30 minutes. Then refresh this page to see them all queued for approval.")) return;
+    const r = await axios.post(`${API}/admin/approvals/generate-all`, {}, {headers});
+    alert(r.data.message);
+    setTimeout(() => { loadSummary(); loadItems(tab); }, 3000);
+  };
 
   return <AdminShell active="approvals">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>AI Content Approvals</h1>
     <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>BCFSA compliance: as the licensed REALTOR®, you are responsible for all AI-generated content. Review, edit if needed, then approve before publication. Unapproved content stays hidden from the public site.</p>
+
+    <div className="paper" style={{marginTop:"1rem",background:"#F5F0E1",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{flex:1,minWidth:240}}><strong>Populate all 243 BC communities at once</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate synopsis + weather drafts for every community, then approve in bulk below.</span></div>
+      <button onClick={generateAll} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-btn">🚀 Generate All Missing</button>
+    </div>
 
     <div style={{display:"flex",gap:"0.5rem",marginTop:"1.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
       {[
@@ -978,7 +999,12 @@ const AdminApprovals = () => {
 
     {!busy && tab === "synopses" && (
       items.length === 0 ? <p style={{color:"var(--muted)"}}>✓ No pending community synopses.</p> :
-      items.map(it => (
+      <>
+      {items.length > 3 && <div className="paper" style={{marginBottom:"1rem",background:"#FFF8E8"}}>
+        <p style={{margin:"0 0 0.75rem",fontSize:"0.9rem"}}><strong>Bulk approve:</strong> Approve all {items.length} pending community synopses at once.</p>
+        <button onClick={bulkApproveSynopses} className="btn btn-green" style={{padding:"0.5rem 1rem"}} data-testid="approve-all-syn">✓ Approve all {items.length}</button>
+      </div>}
+      {items.map(it => (
         <div key={it.slug} className="paper" style={{marginBottom:"1rem"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
             <strong style={{fontSize:"1.1rem",color:"var(--brand-navy)"}}>{it.name}, {it.region}</strong>
@@ -989,12 +1015,18 @@ const AdminApprovals = () => {
           </div>
           <textarea defaultValue={it.synopsis} onChange={e=>setEdited({...edited,[it.slug]:e.target.value})} rows={10} style={{width:"100%",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6,padding:"0.75rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,resize:"vertical"}}/>
         </div>
-      ))
+      ))}
+      </>
     )}
 
     {!busy && tab === "weather" && (
       items.length === 0 ? <p style={{color:"var(--muted)"}}>✓ No pending weather summaries.</p> :
-      items.map(it => (
+      <>
+      {items.length > 3 && <div className="paper" style={{marginBottom:"1rem",background:"#FFF8E8"}}>
+        <p style={{margin:"0 0 0.75rem",fontSize:"0.9rem"}}><strong>Bulk approve:</strong> Approve all {items.length} pending weather summaries at once.</p>
+        <button onClick={bulkApproveWeather} className="btn btn-green" style={{padding:"0.5rem 1rem"}} data-testid="approve-all-wx">✓ Approve all {items.length}</button>
+      </div>}
+      {items.map(it => (
         <div key={it.slug} className="paper" style={{marginBottom:"1rem"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
             <strong style={{fontSize:"1.1rem",color:"var(--brand-navy)"}}>{it.name}, {it.region}</strong>
@@ -1005,7 +1037,8 @@ const AdminApprovals = () => {
           </div>
           <textarea defaultValue={it.weather} onChange={e=>setEdited({...edited,[it.slug]:e.target.value})} rows={7} style={{width:"100%",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6,padding:"0.75rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,resize:"vertical"}}/>
         </div>
-      ))
+      ))}
+      </>
     )}
 
     {!busy && tab === "glossary" && (
