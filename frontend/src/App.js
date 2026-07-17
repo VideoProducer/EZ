@@ -525,7 +525,6 @@ const About = () => (<section className="section"><div className="container-x" s
   <div style={{display:"flex",gap:"2rem",flexWrap:"wrap",alignItems:"flex-start",marginTop:"2rem"}}>
     <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
     <div style={{flex:1,minWidth:280,fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}>
-      <p><strong>13 years</strong> serving British Columbia real estate. Licensed with BCFSA. Member of CREA and Greater Vancouver REALTORS.</p>
       <p>Doug specializes in <strong>detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and condos</strong> across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
       <p><strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd.</p>
     </div>
