@@ -44,7 +44,6 @@ const Nav = () => (
       <NavLink to="/valuation" data-testid="nav-valuation">Home Estimate</NavLink>
       <span style={{width:1,height:24,background:"rgba(15,42,91,0.15)",margin:"0 0.5rem"}} aria-hidden="true"/>
       <NavLink to="/realtors" data-testid="nav-realtors">REALTORS®</NavLink>
-      <Link to="/contact" className="btn btn-primary" style={{marginLeft:"0.5rem"}} data-testid="nav-contact">Contact</Link>
     </div>
   </div></nav>
 );
