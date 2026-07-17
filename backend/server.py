@@ -160,23 +160,87 @@ DOUG'S SPECIALTIES: Detached, Luxury, Equestrian, Estate Sales/Probate, Condos.
 
 Keep responses concise (2-4 short paragraphs max). Be friendly but professional."""
 
+# =============== PII REDACTION (before MongoDB storage) ===============
+def redact_pii(text: str) -> tuple[str, list[str]]:
+    """Strip likely PII from text before storing. Returns (redacted_text, list_of_flags)."""
+    if not text: return text, []
+    flags = []
+    # SIN (Canadian Social Insurance Number: 3-3-3 digits with optional separators)
+    if re.search(r"\b\d{3}[-\s]?\d{3}[-\s]?\d{3}\b", text):
+        text = re.sub(r"\b\d{3}[-\s]?\d{3}[-\s]?\d{3}\b", "[SIN_REDACTED]", text)
+        flags.append("SIN")
+    # Credit card (13-19 digits, allowing spaces/dashes)
+    def _cc_check(m):
+        digits = re.sub(r"\D", "", m.group(0))
+        if 13 <= len(digits) <= 19:
+            # Luhn check
+            s = 0
+            for i, d in enumerate(reversed(digits)):
+                n = int(d)
+                if i % 2 == 1: n *= 2; n = n - 9 if n > 9 else n
+                s += n
+            if s % 10 == 0:
+                flags.append("CC")
+                return "[CC_REDACTED]"
+        return m.group(0)
+    text = re.sub(r"\b(?:\d[\s-]?){13,19}\b", _cc_check, text)
+    # Email
+    if re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", text):
+        text = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "[EMAIL_REDACTED]", text)
+        flags.append("EMAIL")
+    # North American phone number (various formats: 604-555-1234, (604) 555-1234, 6045551234)
+    phone_re = r"\b(?:\+?1[-.\s]?)?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"
+    if re.search(phone_re, text):
+        text = re.sub(phone_re, "[PHONE_REDACTED]", text)
+        flags.append("PHONE")
+    # Canadian postal code (A1A 1A1 pattern)
+    postal_re = r"\b[A-Za-z]\d[A-Za-z][-\s]?\d[A-Za-z]\d\b"
+    if re.search(postal_re, text):
+        text = re.sub(postal_re, "[POSTAL_REDACTED]", text)
+        flags.append("POSTAL")
+    # Street address (number followed by 1-4 words then street/ave/road/blvd/dr/way/lane/court/etc.)
+    addr_re = r"\b\d{1,6}\s+([A-Z][a-z]+\s+){0,4}(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Way|Lane|Ln|Court|Ct|Place|Pl|Crescent|Cres|Terrace|Ter|Highway|Hwy)\b"
+    if re.search(addr_re, text):
+        text = re.sub(addr_re, "[ADDRESS_REDACTED]", text)
+        flags.append("ADDRESS")
+    return text, flags
+
 @api.post("/doogie/chat")
 async def doogie_chat(body: ChatIn):
     session_id = body.session_id or str(uuid.uuid4())
-    await db.chat_messages.insert_one({"session_id": session_id, "role": "user", "content": body.message, "ts": now_iso()})
+    # Redact PII BEFORE storing (BCFSA/PIPA compliance)
+    redacted_msg, pii_flags = redact_pii(body.message)
+    if pii_flags:
+        logger.warning(f"Doogie chat: PII detected & redacted before storage. Flags={pii_flags} session={session_id}")
+    expires = datetime.now(timezone.utc) + timedelta(days=30)
+    await db.chat_messages.insert_one({
+        "session_id": session_id, "role": "user",
+        "content": redacted_msg,  # only redacted stored
+        "pii_flags": pii_flags,
+        "ts": now_iso(),
+        "expires_at": expires  # BSON date for TTL index
+    })
     chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=DOOGIE_SYSTEM).with_model("anthropic", "claude-sonnet-4-6")
 
     async def gen():
         full = ""
         try:
+            # Send ORIGINAL (unredacted) to Claude so the AI can respond naturally
             async for ev in chat.stream_message(UserMessage(text=body.message)):
                 if isinstance(ev, TextDelta):
                     full += ev.content
                     yield f"data: {json.dumps({'delta': ev.content})}\n\n"
                 elif isinstance(ev, StreamDone):
                     break
-            await db.chat_messages.insert_one({"session_id": session_id, "role": "assistant", "content": full, "ts": now_iso()})
-            yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
+            # Also redact any PII from Claude's reply before storage (defense in depth)
+            redacted_reply, _ = redact_pii(full)
+            await db.chat_messages.insert_one({
+                "session_id": session_id, "role": "assistant",
+                "content": redacted_reply,
+                "ts": now_iso(),
+                "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
+            })
+            yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'pii_redacted': bool(pii_flags)})}\n\n"
         except Exception as e:
             logger.error(f"Doogie error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
@@ -487,6 +551,13 @@ async def startup():
             item.setdefault("faqs", [])
             await db.glossary.insert_one(item)
         logger.info(f"Seeded {count} glossary terms")
+
+    # MongoDB TTL index: auto-delete chat messages after 30 days (BCFSA/PIPA compliance)
+    try:
+        await db.chat_messages.create_index("expires_at", expireAfterSeconds=0)
+        logger.info("chat_messages TTL index ensured (30-day auto-purge)")
+    except Exception as e:
+        logger.error(f"TTL index setup failed: {e}")
     # Amenity warm-up disabled per user request
 
 @api.get("/")
@@ -575,6 +646,47 @@ async def regenerate_weather(slug: str, _=Depends(verify_admin)):
 async def approve_all_glossary(_=Depends(verify_admin)):
     r = await db.glossary.update_many({"faqs.0": {"$exists": True}}, {"$set": {"faqs_approved": True, "faqs_approved_at": now_iso()}})
     return {"success": True, "modified": r.modified_count}
+
+# =============== ADMIN: DOOGIE CHAT LOGS (PIPA compliance) ===============
+@api.get("/admin/chats")
+async def list_chat_sessions(_=Depends(verify_admin), limit: int = 100):
+    """List recent chat sessions with counts + PII flag summary."""
+    pipeline = [
+        {"$sort": {"ts": -1}},
+        {"$group": {
+            "_id": "$session_id",
+            "messages": {"$sum": 1},
+            "last_ts": {"$first": "$ts"},
+            "first_ts": {"$last": "$ts"},
+            "pii_flags": {"$addToSet": "$pii_flags"}
+        }},
+        {"$sort": {"last_ts": -1}},
+        {"$limit": limit}
+    ]
+    sessions = await db.chat_messages.aggregate(pipeline).to_list(limit)
+    for s in sessions:
+        s["session_id"] = s.pop("_id")
+        # flatten pii_flags
+        flags = set()
+        for f in s.get("pii_flags", []):
+            if isinstance(f, list): flags.update(f)
+        s["pii_flags"] = sorted(flags)
+    return sessions
+
+@api.get("/admin/chats/{session_id}")
+async def get_chat_session(session_id: str, _=Depends(verify_admin)):
+    msgs = await db.chat_messages.find({"session_id": session_id}, {"_id":0, "expires_at":0}).sort("ts", 1).to_list(500)
+    return {"session_id": session_id, "messages": msgs}
+
+@api.delete("/admin/chats/{session_id}")
+async def delete_chat_session(session_id: str, _=Depends(verify_admin)):
+    r = await db.chat_messages.delete_many({"session_id": session_id})
+    return {"success": True, "deleted": r.deleted_count}
+
+@api.post("/admin/chats/purge-all")
+async def purge_all_chats(_=Depends(verify_admin)):
+    r = await db.chat_messages.delete_many({})
+    return {"success": True, "deleted": r.deleted_count}
 
 app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

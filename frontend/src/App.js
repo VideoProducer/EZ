@@ -585,6 +585,7 @@ const AdminShell = ({children,active}) => {
       <a onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
       <a onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
       <a onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
+      <a onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
@@ -1021,6 +1022,73 @@ const AdminApprovals = () => {
           </div>
         ))}
       </>
+
+// --- Admin Doogie Chat Logs (PIPA compliance) ---
+const AdminChats = () => {
+  const {headers} = useAdmin();
+  const [sessions, setSessions] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [msgs, setMsgs] = useState([]);
+  const load = async () => {
+    const r = await axios.get(`${API}/admin/chats`, {headers}).catch(()=>({data:[]}));
+    setSessions(r.data);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  const openSession = async sid => {
+    setSelected(sid);
+    const r = await axios.get(`${API}/admin/chats/${sid}`, {headers}).catch(()=>({data:{messages:[]}}));
+    setMsgs(r.data.messages || []);
+  };
+  const deleteSession = async sid => {
+    if(!window.confirm("Delete this chat session? PIPA-compliant hard delete.")) return;
+    await axios.delete(`${API}/admin/chats/${sid}`, {headers});
+    setSelected(null); setMsgs([]); load();
+  };
+  const purgeAll = async () => {
+    if(!window.confirm("PURGE ALL chat logs? This cannot be undone.")) return;
+    await axios.post(`${API}/admin/chats/purge-all`, {}, {headers});
+    setSelected(null); setMsgs([]); load();
+  };
+  return <AdminShell active="chats">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <div>
+        <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>Doogie Chat Logs</h1>
+        <p style={{color:"var(--muted)",margin:"0.25rem 0 0",fontSize:"0.9rem"}}>PIPA compliance: PII automatically redacted before storage · 30-day TTL auto-purge · Manual delete available.</p>
+      </div>
+      <button onClick={purgeAll} className="btn btn-outline" style={{color:"#DC2626",borderColor:"#DC2626",padding:"0.5rem 1rem"}} data-testid="chats-purge-all">🗑️ Purge All</button>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:"1rem",marginTop:"1.5rem"}}>
+      <div className="paper" style={{maxHeight:"70vh",overflowY:"auto",padding:"0.5rem"}}>
+        {sessions.length === 0 ? <p style={{color:"var(--muted)",padding:"1rem"}}>No chat sessions yet.</p> :
+          sessions.map(s => (
+            <div key={s.session_id} onClick={()=>openSession(s.session_id)} style={{padding:"0.75rem",border:"1px solid rgba(15,42,91,0.08)",borderRadius:8,marginBottom:"0.4rem",cursor:"pointer",background:selected===s.session_id?"#F5F0E1":"white"}} data-testid={`chat-session-${s.session_id}`}>
+              <div style={{fontFamily:"monospace",fontSize:"0.75rem",color:"var(--muted)"}}>{s.session_id.slice(0,20)}…</div>
+              <div style={{fontSize:"0.85rem",marginTop:"0.25rem"}}><strong>{s.messages}</strong> messages · <span style={{color:"var(--muted)"}}>{new Date(s.last_ts).toLocaleString()}</span></div>
+              {s.pii_flags && s.pii_flags.length > 0 && <div style={{marginTop:"0.35rem",display:"flex",gap:"0.25rem",flexWrap:"wrap"}}>
+                {s.pii_flags.map(f => <span key={f} style={{fontSize:"0.7rem",background:"#FEE2E2",color:"#991B1B",padding:"0.1rem 0.4rem",borderRadius:4}}>{f} redacted</span>)}
+              </div>}
+            </div>
+          ))}
+      </div>
+      <div className="paper" style={{maxHeight:"70vh",overflowY:"auto"}}>
+        {!selected ? <p style={{color:"var(--muted)"}}>Select a session to view messages.</p> :
+          <>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+              <div style={{fontFamily:"monospace",fontSize:"0.75rem",color:"var(--muted)"}}>{selected}</div>
+              <button onClick={()=>deleteSession(selected)} style={{background:"transparent",border:"1px solid #DC2626",color:"#DC2626",padding:"0.35rem 0.75rem",borderRadius:6,cursor:"pointer",fontSize:"0.82rem"}}>Delete session</button>
+            </div>
+            {msgs.map((m,i)=><div key={i} style={{padding:"0.6rem 0.85rem",borderRadius:10,marginBottom:"0.5rem",background:m.role==="user"?"#E8EEF9":"#F5F0E1",fontSize:"0.9rem",lineHeight:1.5}}>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.25rem"}}>{m.role} · {new Date(m.ts).toLocaleString()}</div>
+              {m.content}
+              {m.pii_flags && m.pii_flags.length > 0 && <div style={{marginTop:"0.35rem",fontSize:"0.72rem",color:"#991B1B"}}>PII redacted: {m.pii_flags.join(", ")}</div>}
+            </div>)}
+          </>
+        }
+      </div>
+    </div>
+  </AdminShell>;
+};
+
     )}
   </AdminShell>;
 };
@@ -1078,6 +1146,7 @@ function App() {
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
+      <Route path="/admin/chats" element={<AdminChats/>}/>
     </Routes>
   </BrowserRouter>);
 }
