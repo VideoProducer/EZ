@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -247,24 +247,60 @@ async def doogie_chat(body: ChatIn):
 
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
 
+def get_consent_meta(request: Request) -> dict:
+    """Capture IP + User-Agent for CASL consent proof (3-year retention)."""
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "").split(",")[0].strip()
+    ua = request.headers.get("user-agent", "")[:500]
+    return {"consent_ip": ip, "consent_ua": ua, "consent_at": now_iso()}
+
 # =============== LEADS ===============
 @api.post("/leads/buyer")
-async def create_buyer_lead(lead: BuyerLead):
+async def create_buyer_lead(lead: BuyerLead, request: Request):
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
-    doc = lead.model_dump()
+    doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.buyer_leads.insert_one(doc)
     logger.info(f"Buyer lead from {lead.email}")
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
 @api.post("/leads/seller")
-async def create_seller_lead(lead: SellerLead):
+async def create_seller_lead(lead: SellerLead, request: Request):
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
-    doc = lead.model_dump()
+    doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.seller_leads.insert_one(doc)
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
+# =============== UNSUBSCRIBE (working, updates lead records) ===============
+class UnsubscribeIn(BaseModel):
+    email: EmailStr
+
+@api.post("/unsubscribe")
+async def unsubscribe(body: UnsubscribeIn, request: Request):
+    email = body.email.lower()
+    result_b = await db.buyer_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso(), "unsubscribed_ip": get_consent_meta(request)["consent_ip"]}})
+    result_s = await db.seller_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso(), "unsubscribed_ip": get_consent_meta(request)["consent_ip"]}})
+    result_r = await db.realtor_applications.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso()}})
+    total = result_b.modified_count + result_s.modified_count + result_r.modified_count
+    await db.unsubscribe_log.insert_one({"email": email, "ts": now_iso(), "records_updated": total, "ip": get_consent_meta(request)["consent_ip"]})
+    return {"success": True, "records_updated": total, "message": "You have been unsubscribed. It may take up to 10 business days to remove you from all lists, per CASL."}
+
+# =============== BREACH RESPONSE (PIPA audit log) ===============
+class BreachReport(BaseModel):
+    description: str
+    affected_records: Optional[int] = 0
+    reported_by: Optional[str] = "Admin"
+
+@api.post("/admin/breach-report")
+async def log_breach(body: BreachReport, _=Depends(verify_admin)):
+    doc = {"id": str(uuid.uuid4()), **body.model_dump(), "ts": now_iso(), "status": "open"}
+    await db.breach_log.insert_one(doc)
+    logger.warning(f"BREACH REPORTED: {body.description[:100]}")
+    return {"success": True, "id": doc["id"], "next_steps": "Notify OIPC BC (privacyhelp@oipc.bc.ca) and affected individuals within 72 hours."}
+
+@api.get("/admin/breach-log")
+async def get_breach_log(_=Depends(verify_admin)):
+    return await db.breach_log.find({}, {"_id":0}).sort("ts", -1).to_list(200)
 @api.get("/admin/leads/buyer")
 async def list_buyer_leads(_=Depends(verify_admin)):
     return await db.buyer_leads.find({}, {"_id":0}).sort("created_at", -1).to_list(1000)
