@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -683,7 +683,29 @@ async def approve_all_glossary(_=Depends(verify_admin)):
     r = await db.glossary.update_many({"faqs.0": {"$exists": True}}, {"$set": {"faqs_approved": True, "faqs_approved_at": now_iso()}})
     return {"success": True, "modified": r.modified_count}
 
-# =============== ADMIN: DOOGIE CHAT LOGS (PIPA compliance) ===============
+# =============== MANAGING BROKER POLICIES (Print to PDF) ===============
+from policies import POLICIES
+
+@api.get("/admin/policies")
+async def list_policies(_=Depends(verify_admin)):
+    return [
+        {"slug":"ai-use-policy","title":"AI Use Policy","desc":"Brokerage-level AI policy aligned with BCFSA guidelines and RESA Rules 28, 30, 33, 34, 40, 41."},
+        {"slug":"licensee-training-memo","title":"Licensee Training Memo","desc":"Confirmation Doug has been trained on AI features and understands responsibilities."},
+        {"slug":"eo-insurance-letter","title":"E&O Insurance Disclosure Letter","desc":"Template letter to your E&O provider disclosing AI use for coverage confirmation."},
+        {"slug":"vendor-due-diligence","title":"Vendor Due Diligence Memo","desc":"Documented review of Anthropic + Emergent per BCFSA vendor DD guidance."}
+    ]
+
+@api.get("/admin/policies/{slug}", response_class=HTMLResponse)
+async def get_policy(slug: str, token: Optional[str] = None):
+    # Support both Bearer token in header AND ?token= query param for print-preview
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            if payload.get("email") != ADMIN_EMAIL: raise HTTPException(403, "Forbidden")
+        except jwt.InvalidTokenError:
+            raise HTTPException(401, "Invalid token")
+    if slug not in POLICIES: raise HTTPException(404, "Policy not found")
+    return HTMLResponse(POLICIES[slug])
 @api.get("/admin/chats")
 async def list_chat_sessions(_=Depends(verify_admin), limit: int = 100):
     """List recent chat sessions with counts + PII flag summary."""

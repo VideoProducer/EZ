@@ -588,6 +588,7 @@ const AdminShell = ({children,active}) => {
       <a onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
       <a onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
+      <a onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
@@ -1085,6 +1086,31 @@ const AdminChats = () => {
               <button onClick={()=>deleteSession(selected)} style={{background:"transparent",border:"1px solid #DC2626",color:"#DC2626",padding:"0.35rem 0.75rem",borderRadius:6,cursor:"pointer",fontSize:"0.82rem"}}>Delete session</button>
             </div>
             {msgs.map((m,i)=><div key={i} style={{padding:"0.6rem 0.85rem",borderRadius:10,marginBottom:"0.5rem",background:m.role==="user"?"#E8EEF9":"#F5F0E1",fontSize:"0.9rem",lineHeight:1.5}}>
+
+// --- Admin Broker Policies (printable PDFs) ---
+const AdminPolicies = () => {
+  const {headers} = useAdmin();
+  const [items, setItems] = useState([]);
+  useEffect(() => { axios.get(`${API}/admin/policies`, {headers}).then(r => setItems(r.data)).catch(()=>{}); /* eslint-disable-next-line */ }, []);
+  const token = localStorage.getItem("eztoken");
+  const openPolicy = (slug) => {
+    window.open(`${API}/admin/policies/${slug}?token=${encodeURIComponent(token)}`, "_blank");
+  };
+  return <AdminShell active="policies">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Managing Broker Policy Documents</h1>
+    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>Print-ready policy templates for Fraser Property Management Realty Services Ltd. Open each, review, then <strong>File → Print → Save as PDF</strong> to hand to your Managing Broker or E&amp;O provider.</p>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:"1rem",marginTop:"1.5rem"}}>
+      {items.map(p => (
+        <div key={p.slug} className="paper" data-testid={`policy-${p.slug}`}>
+          <h3 style={{marginTop:0,color:"var(--brand-navy)"}}>{p.title}</h3>
+          <p style={{color:"var(--muted)",fontSize:"0.9rem",lineHeight:1.5}}>{p.desc}</p>
+          <button onClick={()=>openPolicy(p.slug)} className="btn btn-primary" style={{padding:"0.5rem 1rem"}} data-testid={`open-policy-${p.slug}`}>📄 Open & Print</button>
+        </div>
+      ))}
+    </div>
+  </AdminShell>;
+};
+
               <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.25rem"}}>{m.role} · {new Date(m.ts).toLocaleString()}</div>
               {m.content}
               {m.pii_flags && m.pii_flags.length > 0 && <div style={{marginTop:"0.35rem",fontSize:"0.72rem",color:"#991B1B"}}>PII redacted: {m.pii_flags.join(", ")}</div>}
@@ -1155,6 +1181,7 @@ function App() {
       <Route path="/admin/clients" element={<AdminClients/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
+      <Route path="/admin/policies" element={<AdminPolicies/>}/>
     </Routes>
   </BrowserRouter>);
 }
