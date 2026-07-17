@@ -37,11 +37,11 @@ const Nav = () => (
     </Link>
     <div style={{display:"flex",gap:"0.25rem",alignItems:"center"}}>
       <NavLink to="/listings" data-testid="nav-listings">Search Listings</NavLink>
-      <NavLink to="/specialties" data-testid="nav-specialties">Specialties</NavLink>
+      <NavLink to="/specialties" data-testid="nav-specialties">Doug's Specialties</NavLink>
       <NavLink to="/communities" data-testid="nav-communities">Communities</NavLink>
       <NavLink to="/glossary" data-testid="nav-glossary">Glossary</NavLink>
       <NavLink to="/about" data-testid="nav-about">About</NavLink>
-      <NavLink to="/valuation" data-testid="nav-valuation">Home Value</NavLink>
+      <NavLink to="/valuation" data-testid="nav-valuation">Home Estimate</NavLink>
       <span style={{width:1,height:24,background:"rgba(15,42,91,0.15)",margin:"0 0.5rem"}} aria-hidden="true"/>
       <NavLink to="/realtors" data-testid="nav-realtors">REALTORS®</NavLink>
       <Link to="/contact" className="btn btn-primary" style={{marginLeft:"0.5rem"}} data-testid="nav-contact">Contact</Link>
