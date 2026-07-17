@@ -149,14 +149,14 @@ const Home = () => {
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia · Powered by Doogie AI</div>
-        <h1><span className="accent">Real estate</span>,<br/>made <span className="green">EZ to find.</span></h1>
-        <p className="lead">The AI-powered research platform for buyers &amp; sellers across all of British Columbia — with Doug's primary practice in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor. Anywhere else in BC? Our vetted referral network has you covered.</p>
+        <h1><span className="accent">Real estate</span>,<br/>made <span className="green">EZ to find.ca</span></h1>
+        <p className="lead">A BC real estate research platform for buyers and sellers — free market information and terminology for the whole province. Real estate services provided by Doug LeMaire of Fraser Property Management Realty Services Ltd., serving Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
         <form onSubmit={e=>{e.preventDefault();nav("/listings"); }} className="search-bar" data-testid="hero-search">
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Try: '3 bedroom detached in Langley under $1.5M'" data-testid="hero-search-input"/>
           <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
         </form>
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-          {["Detached","Luxury","Equestrian","Estate Sales","Condos","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
+          {["Detached","Luxury","Equestrian","Estate Sales","Residential Stratas","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
         </div>
       </div>
       <div style={{textAlign:"center"}}>
