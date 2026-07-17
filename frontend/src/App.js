@@ -529,6 +529,19 @@ const About = () => (<section className="section"><div className="container-x" s
       <p><strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd.</p>
     </div>
   </div>
+  <div style={{display:"flex",justifyContent:"center",gap:"3rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center"}} data-testid="about-trust-badges">
+    {[
+      {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
+      {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
+      {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
+    ].map((b,i) => (
+      <div key={i} style={{maxWidth:220}}>
+        <div style={{fontSize:"1.75rem",marginBottom:"0.5rem"}}>{b.icon}</div>
+        <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
+        <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem"}}>{b.sub}</div>
+      </div>
+    ))}
+  </div>
 </div></section>);
 
 // --- Contact ---
