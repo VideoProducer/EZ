@@ -313,16 +313,28 @@ async def list_seller_leads(_=Depends(verify_admin)):
 class RealtorInitial(BaseModel):
     full_name: str
     email: EmailStr
+    brokerage: Optional[str] = None
+    realtor_number: Optional[str] = None
 
 @api.post("/realtors/apply")
 async def realtor_apply(body: RealtorInitial):
     existing = await db.realtor_applications.find_one({"email": body.email})
     if existing:
-        return {"success": True, "id": existing["id"], "message": "You've already applied. Check your email for the next form."}
-    app_obj = RealtorApplication(full_name=body.full_name, email=body.email, stage="initial")
+        # Update existing with any new fields
+        await db.realtor_applications.update_one({"email": body.email}, {"$set": {**body.model_dump(exclude_none=True), "updated_at": now_iso()}})
+        return {"success": True, "id": existing["id"], "message": "Application updated. Doug will review and be in touch."}
+    app_obj = RealtorApplication(full_name=body.full_name, email=body.email, brokerage=body.brokerage, realtor_number=body.realtor_number, stage="applied")
     await db.realtor_applications.insert_one(app_obj.model_dump())
-    # In production: send email from realtors@eztofind.ca with credentials form link
-    return {"success": True, "id": app_obj.id, "message": "Thank you! Check your email — we'll send you the credentials form shortly.", "next_form_url": f"/realtors/credentials/{app_obj.id}"}
+    # Log for admin queue; email dispatch to realtors@eztofind.ca happens when SMTP is wired
+    logger.info(f"REALTOR APPLICATION → realtors@eztofind.ca: {body.full_name} ({body.email}) — {body.brokerage} — #{body.realtor_number}")
+    await db.email_outbox.insert_one({
+        "to": "realtors@eztofind.ca",
+        "subject": f"New REALTOR® application — {body.full_name}",
+        "body": f"Name: {body.full_name}\nEmail: {body.email}\nBrokerage: {body.brokerage}\nMembership #: {body.realtor_number}",
+        "ts": now_iso(),
+        "sent": False
+    })
+    return {"success": True, "id": app_obj.id, "message": "Thank you! Your application has been received. Doug will review and be in touch."}
 
 class RealtorCredentials(BaseModel):
     brokerage: str

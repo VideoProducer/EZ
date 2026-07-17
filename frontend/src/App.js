@@ -482,18 +482,18 @@ const SellerForm = () => {
 
 // --- REALTOR® network (3 stages) ---
 const RealtorApply = () => {
-  const [f,setF]=useState({full_name:"",email:""}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
+  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:""}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
   const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For REALTORS® Only</div><h1 className="section-title">Join our BC referral network</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get vetted, qualified BC buyer &amp; seller leads outside Doug's focus areas. <strong>You pay 25% of your gross commission on successful closings — no upfront fees, no subscriptions.</strong> No referral fees paid out by us; we only get paid when you get paid.</p>
-    <div className="notice" style={{marginBottom:"1.5rem"}}><strong>3-step vetting:</strong> (1) Submit name + email · (2) We email you the credentials form (brokerage + BCFSA REALTOR® number) · (3) Once verified, you complete the profile form and sign the referral agreement.</div>
-    {res ? <div className="paper"><h3 style={{marginTop:0}}>Step 1 complete ✓</h3><p style={{fontFamily:"Inter,sans-serif"}}>{res.message}</p><Link to={res.next_form_url} className="btn btn-primary" data-testid="realtor-step2-link">Continue to Step 2 →</Link></div>
+    {res ? <div className="paper"><h3 style={{marginTop:0}}>Application received ✓</h3><p style={{fontFamily:"Inter,sans-serif"}}>{res.message}</p></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
           <div className="form-grid">
             <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-name"/></div>
             <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-email"/></div>
+            <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-brokerage"/></div>
+            <div className="field"><label>Membership Number *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-number"/></div>
           </div>
           {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
           <button type="submit" className="btn btn-primary" style={{marginTop:"1.25rem"}} data-testid="realtor-submit">Submit</button>
