@@ -1030,6 +1030,9 @@ const AdminApprovals = () => {
           </div>
         ))}
       </>
+    )}
+  </AdminShell>;
+};
 
 // --- Admin Doogie Chat Logs (PIPA compliance) ---
 const AdminChats = () => {
@@ -1086,6 +1089,16 @@ const AdminChats = () => {
               <button onClick={()=>deleteSession(selected)} style={{background:"transparent",border:"1px solid #DC2626",color:"#DC2626",padding:"0.35rem 0.75rem",borderRadius:6,cursor:"pointer",fontSize:"0.82rem"}}>Delete session</button>
             </div>
             {msgs.map((m,i)=><div key={i} style={{padding:"0.6rem 0.85rem",borderRadius:10,marginBottom:"0.5rem",background:m.role==="user"?"#E8EEF9":"#F5F0E1",fontSize:"0.9rem",lineHeight:1.5}}>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.25rem"}}>{m.role} · {new Date(m.ts).toLocaleString()}</div>
+              {m.content}
+              {m.pii_flags && m.pii_flags.length > 0 && <div style={{marginTop:"0.35rem",fontSize:"0.72rem",color:"#991B1B"}}>PII redacted: {m.pii_flags.join(", ")}</div>}
+            </div>)}
+          </>
+        }
+      </div>
+    </div>
+  </AdminShell>;
+};
 
 // --- Admin Broker Policies (printable PDFs) ---
 const AdminPolicies = () => {
@@ -1111,20 +1124,6 @@ const AdminPolicies = () => {
   </AdminShell>;
 };
 
-              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.25rem"}}>{m.role} · {new Date(m.ts).toLocaleString()}</div>
-              {m.content}
-              {m.pii_flags && m.pii_flags.length > 0 && <div style={{marginTop:"0.35rem",fontSize:"0.72rem",color:"#991B1B"}}>PII redacted: {m.pii_flags.join(", ")}</div>}
-            </div>)}
-          </>
-        }
-      </div>
-    </div>
-  </AdminShell>;
-};
-
-    )}
-  </AdminShell>;
-};
 
 
 // --- App ---
