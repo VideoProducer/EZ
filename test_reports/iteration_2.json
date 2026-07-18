@@ -1,0 +1,29 @@
+{
+  "summary": "Independently verified Doogie referral rules across 10 BC communities (5 out-of-focus + 5 in-focus) via SSE streaming endpoint. All 40 tests passed (100%). Doogie now consistently ends location responses with the correct referral question.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_doogie_referral.py",
+    "/app/test_reports/pytest/doogie_referral_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DOOGIE_SYSTEM prompt is well-structured with an explicit REFERRAL RULES section that closes the previously-reported gap; both branches (in-focus 'connect with Doug LeMaire' vs. out-of-focus 'refer to vetted REALTOR in [CITY]') behaved consistently across 10 different city prompts.",
+    "SSE endpoint /api/doogie/chat correctly streams TextDelta chunks and emits a terminal `data: {done: true}` event with proper text/event-stream content-type.",
+    "Nice-to-have: consider adding a lightweight server-side validator that scans the outbound reply for '?' + focus-area logic before emitting `done`, so any future prompt drift is caught automatically instead of relying on the LLM to always follow instructions.",
+    "server.py has grown to 820+ lines - the earlier note about modularising routes (leads / realtors / glossary / doogie / admin) is still valid."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_doogie_referral.py"
+  ],
+  "success_rate": {"backend": "100% (40/40 doogie referral tests; earlier suite 19/19 unaffected)", "frontend": "not tested (skipped per request)"},
+  "test_credentials": "N/A - the doogie chat endpoint is unauthenticated.",
+  "seed_data_creation": "Each streamed session inserts one user + one assistant row into db.chat_messages (TTL 30 days per existing code). No manual cleanup needed - auto-purge covers it.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New file /app/backend/tests/test_doogie_referral.py contains 40 parametrised tests (10 cities x 4 assertions). It uses module-level caching so each city is streamed exactly once. All tests validated: (a) SSE stream returns 200 + text/event-stream + delta events + terminal done, (b) out-of-focus replies contain 'refer' + 'REALTOR' + city name + '?' in the tail, (c) in-focus replies contain 'Doug LeMaire' + 'connect' + '?' in the tail, (d) every substantive reply contains the 'general information only' disclaimer. Runs in ~40s under pytest-xdist. Combined with the earlier suite the backend has 59/59 passing.",
+  "rca of the issue": "Not a bug fix run - this was verification of a prompt-engineering change made in DOOGIE_SYSTEM (server.py L142-168). The new REFERRAL RULES block explicitly instructs the assistant to end every location-related reply with a yes/no referral question, using two branches based on whether the mentioned community is inside or outside Doug's focus areas. Verified with 5 out-of-focus BC cities (Osoyoos, Kelowna, Victoria, Prince George, Nelson) and 5 in-focus BC cities (Langley, Surrey, Squamish, Whistler, West Vancouver). All 10 replies conformed to the expected branch."
+}
