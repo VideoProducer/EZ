@@ -296,7 +296,7 @@ const RegionPage = () => {
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.copy}</p>
     </div>
     <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"1rem"}}>Communities we serve</h3>
-    <div className="chip-grid">{list.map(c => <span key={c} className="chip">{c}</span>)}</div>
+    <div className="chip-grid">{list.map(c => <Link key={c} to={`/community/${encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g,"-"))}`} state={{name:c, region:d.key}} className="chip" style={{textDecoration:"none",cursor:"pointer"}} data-testid={`region-community-${c}`}>{c}</Link>)}</div>
     <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
       <Link to="/listings" className="btn btn-primary">View Listings</Link>
       <Link to="/buyer" className="btn btn-outline">I'm Buying Here</Link>
