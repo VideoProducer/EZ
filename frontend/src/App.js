@@ -736,12 +736,7 @@ const CommunityPage = () => {
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
       {!loading && syn?.synopsis && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>')}}></div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted, reviewed and approved by Doug LeMaire, REALTOR®</div>
-        <div style={{marginTop:"1.5rem",padding:"0.85rem 1rem",background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:10,fontFamily:"Inter,sans-serif",display:"flex",gap:"0.75rem",alignItems:"center",fontSize:"0.88rem"}}>
-          <img src="/images/doogie-laptop.png" alt="EZtoFind.ca" style={{width:40,height:40,borderRadius:"50%",background:"var(--brand-navy)",padding:2}}/>
-          <div><strong>Published by Doug LeMaire, REALTOR®</strong><br/>
-          <span style={{color:"var(--muted)"}}>EZtoFind.ca · Fraser Property Management Realty Services Ltd.</span></div>
-        </div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>Published by Doug LeMaire, REALTOR® · <strong>AI Disclaimer:</strong> This content was drafted with the assistance of AI (Anthropic Claude). While reviewed for accuracy before publication, information may be incomplete, out-of-date, or contain errors. Verify anything material with a licensed REALTOR® or authoritative source before relying on it.</div>
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
@@ -749,7 +744,7 @@ const CommunityPage = () => {
       {loadingWx && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is preparing the local climate summary…</div>}
       {!loadingWx && wx?.weather && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-weather">{wx.weather}</div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted, reviewed and approved by Doug LeMaire, REALTOR®</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>Published by Doug LeMaire, REALTOR® · <strong>AI Disclaimer:</strong> This content was drafted with the assistance of AI (Anthropic Claude). While reviewed for accuracy before publication, information may be incomplete, out-of-date, or contain errors. Verify anything material with a licensed REALTOR® or authoritative source before relying on it.</div>
       </>}
       {!loadingWx && wx?.note && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
