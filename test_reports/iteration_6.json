@@ -1,0 +1,75 @@
+{
+  "summary": "Mobile responsiveness sweep across iPhone (390x844), iPad (768x1024) and Desktop (1440x900). 6 of 7 test scenarios PASS. One functional deviation found: mobile buyer-form inputs render at 15.2px (0.95rem) instead of the required >=16px, meaning iOS Safari WILL trigger auto-zoom on focus — contradicting the claim in the feature list. All other requirements verified: hamburger drawer, 7 nav testids, drawer opens/closes correctly, no horizontal scroll on 390, doogie-fab visible at 60x60, cookie-banner stacked above FAB, compliance strip full lead-in hidden on mobile, tablet grid-3 single-column, desktop nav restored, all 10 regression routes return 200.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BuyerIntake form (.field input/select/textarea) — and by extension every form using the .field wrapper (seller, admin, valuation, etc.)",
+        "issue": "Computed font-size on mobile is 15.2px (0.95rem) on buyer-name, buyer-email, buyer-phone, buyer-type, buyer-under-contract, buyer-casl, buyer-pipa, and all <select>/<textarea>. iOS Safari triggers input auto-zoom whenever a focused form control is <16px. The global rule at /app/frontend/src/index.css:156 `input, textarea, select, button { font-size: 16px; }` is being overridden by the more specific rule at line 116 `.field input, .field select, .field textarea { ... font-size: 0.95rem; }`. Requirement #3 in the review request (verify computed font-size >=16px on any input) FAILS.",
+        "selector": "[data-testid='buyer-name'], [data-testid='buyer-email'], [data-testid='buyer-phone'], [data-testid='buyer-type']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In /app/frontend/src/index.css, either bump `.field input, .field select, .field textarea` (line 116) to `font-size: 16px;` OR add an override in the mobile-first block, e.g.: `@media(max-width: 700px) { .field input, .field select, .field textarea { font-size: 16px; } }`. Same rule should apply to the search-bar input (line 190 currently sets 0.95rem on mobile → 15.2px, will also auto-zoom on iOS)."
+  ],
+  "critical_code_review_comments": [
+    "The global mobile-zoom-prevention rule `input, textarea, select, button { font-size: 16px; }` is defeated by every more-specific existing rule (.field input, .search-bar input, .doogie-panel form input). Either use `!important` on the global mobile rule inside a `@media(max-width: 700px)` block, or bump the base font-size on those specific selectors to 16px at mobile breakpoint. Currently the claimed iOS-auto-zoom prevention is only partially working.",
+    "App.js is still ~1482 lines (previously flagged in iteration_5). Splitting into pages/, components/, forms/, legal/ modules would improve maintainability. Not a functional issue.",
+    "BCFSA licence number is still literal '[Doug to add]' placeholder (data-testid=licence-num). Must be filled in before production launch to actually satisfy BCFSA advertising rules (already flagged in iteration_5)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "86% (6/7 scenarios pass)"},
+  "test_credentials": "n/a — all mobile UI checks are public frontend",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Mobile responsiveness sweep is 86% complete. Remaining bug: mobile form inputs are 15.2px (not 16px) — iOS auto-zoom NOT actually prevented on .field-wrapped inputs and .search-bar input. Confirm fix by re-running the buyer /buyer 390x844 test and asserting `parseFloat(getComputedStyle(el).fontSize) >= 16` for buyer-name, buyer-email, buyer-phone, buyer-type. All other mobile/tablet/desktop assertions passed (see detailed_verification below).",
+  "detailed_verification": {
+    "iphone_390x844_home": {
+      "hamburger_visible_and_44x44": "PASS (box: 330,45,44,44)",
+      "nav_links_hidden_initially": "PASS (display:none)",
+      "nav_links_open_shows_7_testids": "PASS (all 7 visible: nav-listings, nav-communities, nav-glossary, nav-specialties, nav-about, nav-valuation, nav-realtors)",
+      "nav_link_click_navigates_and_closes_drawer": "PASS (clicked nav-listings → URL /listings, nav-links display back to none)",
+      "no_horizontal_overflow": "PASS (scrollWidth=390, clientWidth=390)",
+      "compliance_strip_full_hidden_on_mobile": "PASS (compliance-strip-full display:none)",
+      "compliance_strip_short_tail_visible": "PASS (visible screenshot text 'BCFSA · CREA · GVR · PIPA · CASL compliant')",
+      "doogie_fab_60x60_bottom_right": "PASS (box: 314,766,60,60)",
+      "cookie_banner_above_fab": "PASS (banner bottom edge y=756, FAB top y=766 — banner sits above FAB, no overlap)"
+    },
+    "iphone_390x844_buyer": {
+      "buyer_form_testids_present": "PASS (buyer-form, buyer-name, buyer-email, buyer-phone, buyer-dorts-notice all present)",
+      "buyer_dorts_notice_readable": "PASS (contains 'BCFSA Consumer Notice — Please read before submitting: Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules...')",
+      "no_horizontal_overflow": "PASS (sw=cw=390)",
+      "input_font_size_gte_16px": "FAIL — buyer-name, buyer-email, buyer-phone all render at 15.2px (0.95rem from .field input rule at index.css:116). iOS will trigger auto-zoom.",
+      "form_fill_works": "PASS (name, email, phone filled successfully)"
+    },
+    "iphone_390x844_calculators": {
+      "mortgage_calculator_renders": "PASS (data-testid present, box 358x836)",
+      "ptt_calculator_renders": "PASS (data-testid present, box 358x1073)",
+      "tap_targets_gte_32px": "PASS (no .btn or .chip below 32px height)"
+    },
+    "ipad_768x1024": {
+      "hamburger_still_visible": "PASS (display:flex — breakpoint is 980px so tablet correctly shows hamburger)",
+      "nav_links_hidden_by_default": "PASS (display:none)",
+      "grid_3_stacks_single_column": "PASS (grid-template-columns=720px, single column)",
+      "no_horizontal_overflow": "PASS (sw=768)"
+    },
+    "desktop_1440x900": {
+      "hamburger_hidden": "PASS (display:none)",
+      "nav_links_visible_as_flex_row": "PASS (display:flex, all 7 testids visible)",
+      "compliance_strip_full_visible": "PASS (compliance-strip-full display:inline)"
+    },
+    "desktop_regression_routes": "PASS 10/10 — /listings, /communities, /glossary, /specialties, /about, /valuation, /realtors, /regions, /regions/vancouver-island, /admin/login all returned status 200 with non-empty content and zero elements matching .error/[class*='error']"
+  },
+  "rca_of_the_issue": {
+    "bug": "iOS Safari auto-zoom NOT actually prevented on .field-wrapped form inputs and .search-bar input",
+    "reproduction": "1) Open https://proptech-hub-111.preview.emergentagent.com/buyer at viewport 390x844. 2) Evaluate `parseFloat(getComputedStyle(document.querySelector('[data-testid=\"buyer-name\"]')).fontSize)` in the console. 3) Result is 15.2 (expected >=16).",
+    "root_cause": "CSS specificity — the global rule `input, textarea, select, button { font-size: 16px; }` at /app/frontend/src/index.css:156 has selector-specificity (0,0,1) while `.field input, .field select, .field textarea { font-size: 0.95rem; }` at line 116 has specificity (0,1,1) and therefore wins. Same problem for `.search-bar input { font-size: 1rem; }` desktop and `.search-bar input { font-size: 0.95rem; }` mobile (line 190).",
+    "mitigation": "Option A (recommended): inside the existing `@media(max-width: 700px)` block, add `.field input, .field select, .field textarea, .search-bar input { font-size: 16px; }`. Option B: change `.field input, .field select, .field textarea` base rule to `font-size: 1rem` (16px). Option A is preferred — it only touches mobile and preserves desktop density."
+  }
+}

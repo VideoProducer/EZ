@@ -146,3 +146,75 @@ footer ul li { padding: 0.35rem 0; font-size: 0.9rem; }
 .admin-table { width: 100%; background: white; border-radius: 12px; overflow: hidden; border-collapse: collapse; }
 .admin-table th, .admin-table td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid rgba(15,42,91,0.08); font-size: 0.9rem; }
 .admin-table th { background: #F1EEE3; font-weight: 600; color: var(--ink); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ============================================================ */
+/* MOBILE-FIRST RESPONSIVE ENHANCEMENTS                          */
+/* ============================================================ */
+
+html, body { overflow-x: hidden; max-width: 100vw; }
+img, video { max-width: 100%; height: auto; }
+input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
+
+/* Nav links row (desktop) */
+.nav-links { display: flex; gap: 0.25rem; align-items: center; }
+.nav-links .nav-divider { width: 1px; height: 24px; background: rgba(15,42,91,0.15); margin: 0 0.5rem; }
+.nav-hamburger { display: none; background: transparent; border: none; padding: 0.5rem; cursor: pointer; width: 44px; height: 44px; flex-direction: column; gap: 5px; align-items: center; justify-content: center; }
+.nav-hamburger span { display: block; width: 26px; height: 3px; background: var(--brand-navy); border-radius: 3px; transition: transform 0.25s, opacity 0.25s; }
+.nav[aria-expanded] .nav-hamburger[aria-expanded="true"] span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.nav-hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.nav-hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+@media(max-width: 980px) {
+  .nav-hamburger { display: flex; }
+  .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; align-items: stretch; padding: 0.5rem; border-bottom: 1px solid rgba(15,42,91,0.1); box-shadow: 0 12px 28px rgba(15,42,91,0.12); gap: 0; max-height: calc(100vh - 80px); overflow-y: auto; }
+  .nav-links.open { display: flex; }
+  .nav-links a { padding: 0.9rem 1rem; border-radius: 10px; font-size: 1rem; min-height: 44px; display: flex; align-items: center; }
+  .nav-links .nav-divider { width: auto; height: 1px; margin: 0.5rem 0; }
+  .nav { position: relative; }
+}
+
+/* Tap targets — WCAG 2.5.5 (44x44 min) */
+@media(max-width: 700px) {
+  .btn { min-height: 44px; padding: 0.75rem 1.25rem; font-size: 0.95rem; }
+  .chip { min-height: 36px; padding: 0.5rem 0.85rem; font-size: 0.88rem; }
+  .pill { padding: 0.5rem 1rem; font-size: 0.85rem; }
+  .glossary-list a { padding: 0.9rem 1rem; min-height: 60px; }
+  .paper { padding: 1.25rem; border-radius: 14px; }
+  section.section { padding: 3rem 0; }
+  .container-x { padding: 0 1rem; }
+  .hero { padding: 2rem 0 3rem; }
+  .card-img { height: 180px; }
+  .card-body { padding: 1.1rem; }
+  .card-title { font-size: 1.15rem; }
+  .search-bar { padding: 0.35rem; flex-wrap: nowrap; }
+  .search-bar input { padding: 0.7rem 0.9rem; font-size: 0.95rem; }
+  .search-bar button { padding: 0.7rem 1rem; font-size: 0.9rem; }
+  .footer-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .footer-grid > div { text-align: left; }
+  .doogie-panel { bottom: 5rem; right: 0.5rem; left: 0.5rem; width: auto; max-width: none; height: calc(100vh - 6rem); border-radius: 16px; }
+  .doogie-fab { width: 60px; height: 60px; bottom: 1rem; right: 1rem; }
+  /* Cookie banner stacks above chat FAB */
+  [data-testid="cookie-banner"] { left: 0.5rem !important; right: 0.5rem !important; bottom: 5.5rem !important; max-width: none !important; padding: 0.85rem 1rem !important; font-size: 0.85rem !important; }
+  /* Compliance strip — shorter text on mobile */
+  .compliance-strip { font-size: 0.7rem !important; padding: 0.5rem 1rem !important; }
+}
+
+/* Compliance strip — hide long lead-in on mobile */
+@media(max-width: 700px) {
+  .compliance-strip-full { display: none; }
+}
+/* Very small screens */
+@media(max-width: 380px) {
+  .hero h1 { font-size: 2.1rem; }
+  .card-img { height: 140px; }
+  .paper { padding: 1rem; }
+  .container-x { padding: 0 0.85rem; }
+}
+
+/* Admin — keep tables scrollable on mobile, not broken */
+@media(max-width: 900px) {
+  .admin-shell { grid-template-columns: 1fr; }
+  .admin-sidebar { padding: 1rem; }
+  .admin-main { padding: 1rem; }
+  .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+}

@@ -30,25 +30,32 @@ const IMG = {
 };
 
 // --- Nav / Footer ---
-const Nav = () => (
-  <nav className="nav"><div className="container-x nav-inner">
-    <Link to="/" style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
-      <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
-      <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)"}}>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span></div>
-      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>ALL OF BRITISH COLUMBIA</div></div>
-    </Link>
-    <div style={{display:"flex",gap:"0.25rem",alignItems:"center"}}>
-      <NavLink to="/listings" data-testid="nav-listings">Search Listings</NavLink>
-      <NavLink to="/communities" data-testid="nav-communities">Communities</NavLink>
-      <NavLink to="/glossary" data-testid="nav-glossary">Glossary</NavLink>
-      <NavLink to="/specialties" data-testid="nav-specialties">Doug's Specialties</NavLink>
-      <NavLink to="/about" data-testid="nav-about">About</NavLink>
-      <NavLink to="/valuation" data-testid="nav-valuation">Home Estimate</NavLink>
-      <span style={{width:1,height:24,background:"rgba(15,42,91,0.15)",margin:"0 0.5rem"}} aria-hidden="true"/>
-      <NavLink to="/realtors" data-testid="nav-realtors">REALTORS®</NavLink>
-    </div>
-  </div></nav>
-);
+const Nav = () => {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  return (
+    <nav className="nav"><div className="container-x nav-inner">
+      <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
+        <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
+        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)"}}>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span></div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>ALL OF BRITISH COLUMBIA</div></div>
+      </Link>
+      <button className="nav-hamburger" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} onClick={()=>setOpen(o=>!o)} data-testid="nav-hamburger">
+        <span/><span/><span/>
+      </button>
+      <div className={`nav-links${open?" open":""}`}>
+        <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
+        <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
+        <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
+        <NavLink to="/specialties" onClick={close} data-testid="nav-specialties">Doug's Specialties</NavLink>
+        <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
+        <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
+        <span className="nav-divider" aria-hidden="true"/>
+        <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">REALTORS®</NavLink>
+      </div>
+    </div></nav>
+  );
+};
 
 const Footer = () => (
   <footer><div className="container-x">
@@ -1141,8 +1148,8 @@ const HomeSchema = () => {
 
 // --- Compliance strip ---
 const ComplianceStrip = () => (
-  <div style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
-    Doogie provides general information only. Not financial, legal, or investment advice. Consult a licensed REALTOR®. | BCFSA · CREA · GVR · PIPA · CASL compliant
+  <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
+    <span className="compliance-strip-full">Doogie provides general information only. Not financial, legal, or investment advice. Consult a licensed REALTOR®. | </span>BCFSA · CREA · GVR · PIPA · CASL compliant
   </div>
 );
 
