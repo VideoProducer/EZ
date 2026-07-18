@@ -975,7 +975,19 @@ const PTTCalculator = () => {
 
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,textAlign:"center",marginBottom:"2rem"}}>Estimate your mortgage payment and BC Property Transfer Tax — free, instant, no sign-up.</p>
+    <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
+      <div className="eyebrow" style={{marginBottom:"0.5rem"}}>BC Calculators</div>
+      <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
+        Estimate your <span className="accent">mortgage payment</span> and <span className="green">BC Property Transfer Tax</span>.
+      </h2>
+      <div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
+        {[{i:"⚡",t:"Instant"},{i:"🆓",t:"Free"},{i:"🔓",t:"No sign-up"}].map(b => (
+          <span key={b.t} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",padding:"0.4rem 0.9rem",background:"rgba(15,42,91,0.06)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,fontSize:"0.82rem",fontWeight:600,color:"var(--brand-navy)"}}>
+            <span style={{fontSize:"0.95rem"}} aria-hidden="true">{b.i}</span>{b.t}
+          </span>
+        ))}
+      </div>
+    </div>
     <MortgageCalculator/>
     <PTTCalculator/>
   </div></section>
