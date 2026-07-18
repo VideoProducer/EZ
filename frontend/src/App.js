@@ -156,7 +156,7 @@ const Home = () => {
           <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
         </form>
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-          {["Detached","Luxury","Equestrian","Estate Sales","Residential Stratas","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
+          {["Detached","Luxury","Equestrian","Estate Sales","Condos","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
         </div>
       </div>
       <div style={{textAlign:"center"}}>
