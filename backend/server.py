@@ -462,19 +462,31 @@ async def get_term(slug: str):
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
-    """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs for a glossary term."""
-    prompt = f"""Generate exactly 10 frequently asked questions (with answers) about the BC real estate term "{term}".
+    """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs for a glossary term.
+    Prompt is engineered for regulatory accuracy against BCFSA, Strata Property Act (BC), ALR/ALC, RESA, PIPA, CASL."""
+    prompt = f"""Generate exactly 10 frequently asked questions (with answers) about the British Columbia real estate term "{term}".
 
 Definition context: {definition}
 
-Rules:
-- Questions must be BC-specific (British Columbia, Canada)
-- Answers should be 2-3 sentences, factual, informational only (no advice)
-- Do NOT append any disclaimer or "consult a REALTOR" line — the page shows one site-wide disclaimer already
-- Return ONLY valid JSON: an array of 10 objects with "q" and "a" keys.
-- No preamble, no markdown, just the JSON array."""
+ACCURACY & COMPLIANCE RULES — READ CAREFULLY:
+1. Every answer must be factually accurate for British Columbia, Canada as of 2026. If you are not certain of a specific numeric threshold, dollar figure, percentage, deadline, section number, or rule, DO NOT invent one — instead phrase the answer generically (e.g. "consult the current BC Government or BCFSA guidance for exact thresholds").
+2. When the term touches licensee conduct, agency, disclosure, trust accounts, remuneration, or dispute resolution: cite the correct authority — the **British Columbia Financial Services Authority (BCFSA)** and the **Real Estate Services Act (RESA)** and its Rules. Never confuse BCFSA with the former Real Estate Council of BC (RECBC), which merged into BCFSA on August 1, 2021.
+3. When the term touches strata lots, common property, limited common property, strata corporations, bylaws, Form B / Form F / Form I, depreciation reports, or contingency reserve funds: cite the **Strata Property Act (SBC 1998, c. 43)** and its Regulation. Do NOT cite "Condominium Act" (that is Ontario/other-province terminology and does not apply in BC).
+4. When the term touches farmland, agricultural land, subdivision restrictions, or non-farm use: cite the **Agricultural Land Commission Act (SBC 2002, c. 36)** and the **Agricultural Land Reserve (ALR)** administered by the **Agricultural Land Commission (ALC)**. Reference specific ALR restrictions accurately (e.g., minimum lot sizes, non-farm-use applications, non-adhering residential use rules) only when you are certain — otherwise refer readers to the ALC directly.
+5. When the term touches Property Transfer Tax, First-Time Home Buyers' Program, Newly Built Home Exemption, Speculation and Vacancy Tax, or Additional PTT (Foreign Buyer Tax): cite the **BC Property Transfer Tax Act** and the current BC Ministry of Finance thresholds. If you cite a numeric threshold, use only the values you are highly confident are current for 2026 (e.g. First-Time Home Buyer full exemption up to $835,000; Newly Built Home exemption up to $1,100,000; PTT tiers of 1% / 2% / 3% / additional 2% on residential value over $3,000,000).
+6. When the term touches personal information, consent, or privacy: cite the **Personal Information Protection Act (PIPA)** of BC. For unsolicited commercial electronic messages, cite **Canada's Anti-Spam Legislation (CASL)**.
+7. When the term touches wills, estates, probate, or executor duties: cite the **Wills, Estates and Succession Act (WESA)** of BC.
+8. When the term touches foreclosure or judicial sale: cite the **BC Supreme Court Civil Rules** and the **Law and Equity Act** (foreclosure in BC is judicial, not power-of-sale).
+9. Do NOT provide legal, tax, mortgage-specific, or investment ADVICE. Provide accurate, neutral, educational information only. Do NOT recommend or discourage specific actions.
+10. Answers must be 2–4 sentences. Plain-language but precise. Prefer citing the correct BC statute name over vague references like "the law".
+
+FORMAT RULES:
+- Questions must be BC-specific (British Columbia, Canada) and directly relevant to "{term}"
+- Do NOT append any disclaimer or "consult a REALTOR" line — the page carries one site-wide disclaimer already
+- Return ONLY valid JSON: an array of exactly 10 objects, each with "q" and "a" keys
+- No preamble, no markdown, no code fences, just the JSON array."""
     try:
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be accurate under BC statutes (BCFSA/RESA, Strata Property Act, Agricultural Land Commission Act, Property Transfer Tax Act, PIPA, CASL, WESA). You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
         async for ev in chat.stream_message(UserMessage(text=prompt)):
             if isinstance(ev, TextDelta): full += ev.content
