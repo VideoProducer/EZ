@@ -642,7 +642,7 @@ const AdminClients = () => {
   const [rows,setRows]=useState([]); const [show,setShow]=useState(false);
   const [f,setF]=useState({full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:""});
   const load=()=>axios.get(`${API}/admin/clients`,{headers}).then(r=>setRows(r.data)).catch(()=>{});
-  useEffect(load,[]);
+  useEffect(()=>{ load(); },[]);
   const add=async e=>{e.preventDefault(); await axios.post(`${API}/admin/clients`,f,{headers}); setShow(false); setF({full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:""}); load();};
   const del=async id=>{if(!window.confirm("Delete?"))return; await axios.delete(`${API}/admin/clients/${id}`,{headers}); load();};
   return <AdminShell active="clients">
