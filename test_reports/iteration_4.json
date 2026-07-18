@@ -1,0 +1,21 @@
+{
+  "summary": "Verified two bug fixes on Glossary term pages: (1) AuthorBlock 'EZtoFind.ca' link now uses React Router <Link to='/'> with data-testid='author-block-home-link' and correctly navigates to site root (no 404, no external domain jump). (2) Approved glossary terms (property-transfer-tax-ptt and agricultural-land-reserve-alr) render 10 real FAQ <details> elements each — the 'awaiting review' placeholder is NOT shown on approved terms.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: AuthorBlock is rendered twice on term pages (top and compact at bottom), so data-testid='author-block-home-link' appears 2x in the DOM. Not a bug (both work), but if tests need to target one specifically, consider suffixing testids (e.g., -top / -bottom).",
+    "Nit: articleSchema JSON-LD (App.js lines 391-394) still references external 'https://eztofind.ca/...' URLs for author.url, publisher.url, and mainEntity URL. These are structured-data references for SEO — acceptable if that domain is the eventual production URL, but flag that if the production domain differs, these will need updating too."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both reported bugs are fixed and verified in preview. AuthorBlock home link href='/' works via React Router. Approved terms show real FAQs (verified on PTT and ALR — 10 FAQ entries each). Unapproved terms will still show the 'awaiting review' placeholder as expected background-job behavior; not tested explicitly since ~329/401 terms are approved and hard to reliably pick an unapproved one without admin access. The JSON-LD schema still has external eztofind.ca URLs (informational only)."
+}
