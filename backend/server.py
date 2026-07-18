@@ -754,13 +754,46 @@ async def generate_all_missing(_=Depends(verify_admin)):
     _a.create_task(worker())
     return {"success": True, "message": f"Generating synopsis + weather for {len(todo)} communities in background. Refresh the approval queues in ~15-30 minutes.", "total": len(todo)}
 
+@api.post("/admin/approvals/generate-all-glossary")
+async def generate_all_glossary(_=Depends(verify_admin)):
+    """Generate FAQs for EVERY glossary term missing them. Runs in background. ~30-60 min for 400+ terms."""
+    import asyncio as _a
+    todo = await db.glossary.find({"$or":[{"faqs":{"$exists":False}},{"faqs":[]}]}, {"_id":0,"slug":1,"term":1,"definition":1}).to_list(2000)
+
+    async def worker():
+        SEM = _a.Semaphore(4)
+        async def gen(t):
+            async with SEM:
+                if await db.glossary.find_one({"slug": t["slug"], "faqs.0": {"$exists": True}}): return
+                faqs = await generate_faqs_for_term(t["term"], t["definition"])
+                if faqs:
+                    await db.glossary.update_one({"slug": t["slug"]}, {"$set": {"faqs": faqs, "faqs_approved": False, "faqs_generated_at": now_iso()}})
+        await _a.gather(*[gen(t) for t in todo], return_exceptions=True)
+        logger.info(f"Bulk FAQ generation complete for {len(todo)} glossary terms")
+
+    _a.create_task(worker())
+    return {"success": True, "message": f"Generating FAQs for {len(todo)} glossary terms in background. Refresh the Glossary tab in ~30-60 minutes.", "total": len(todo)}
+
+@api.post("/admin/approvals/glossary/unapprove-all")
+async def unapprove_all_glossary(_=Depends(verify_admin)):
+    """Reset approval flag on every glossary term so they re-queue for review."""
+    r = await db.glossary.update_many({"faqs_approved": True}, {"$set": {"faqs_approved": False}})
+    return {"success": True, "modified": r.modified_count}
+
 @api.get("/admin/approvals/generation-progress")
 async def generation_progress(_=Depends(verify_admin)):
     all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
-    total = sum(len(v) for v in all_comm.values())
+    total_comm = sum(len(v) for v in all_comm.values())
     syn_done = await db.community_synopses.count_documents({"synopsis": {"$ne": ""}})
     wx_done = await db.community_weather.count_documents({"weather": {"$ne": ""}})
-    return {"total": total, "synopses_generated": syn_done, "weather_generated": wx_done, "synopses_pct": round(100*syn_done/max(total,1),1), "weather_pct": round(100*wx_done/max(total,1),1)}
+    gloss_total = await db.glossary.count_documents({})
+    gloss_done = await db.glossary.count_documents({"faqs.0": {"$exists": True}})
+    return {
+        "total": total_comm, "synopses_generated": syn_done, "weather_generated": wx_done,
+        "synopses_pct": round(100*syn_done/max(total_comm,1),1), "weather_pct": round(100*wx_done/max(total_comm,1),1),
+        "glossary_total": gloss_total, "glossary_generated": gloss_done,
+        "glossary_pct": round(100*gloss_done/max(gloss_total,1),1)
+    }
 
 # =============== MANAGING BROKER POLICIES (Print to PDF) ===============
 from policies import POLICIES

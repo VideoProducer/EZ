@@ -1008,6 +1008,18 @@ const AdminApprovals = () => {
     alert(r.data.message);
     setTimeout(() => { loadSummary(); loadItems(tab); }, 3000);
   };
+  const generateAllGlossary = async () => {
+    if(!window.confirm("Generate FAQs for EVERY glossary term that doesn't have them yet (~394 terms). Runs in the background and takes ~30-60 minutes. Refresh the Glossary tab periodically to see them queued for approval.")) return;
+    const r = await axios.post(`${API}/admin/approvals/generate-all-glossary`, {}, {headers});
+    alert(r.data.message);
+    setTimeout(() => { loadSummary(); if(tab==="glossary") loadItems("glossary"); }, 3000);
+  };
+  const unapproveAllGlossary = async () => {
+    if(!window.confirm("Re-queue every previously-approved glossary term for review? Their FAQs will be hidden from the public site until you approve them again.")) return;
+    const r = await axios.post(`${API}/admin/approvals/glossary/unapprove-all`, {}, {headers});
+    alert(`${r.data.modified} terms re-queued for review.`);
+    await loadSummary(); if(tab==="glossary") await loadItems("glossary");
+  };
 
   return <AdminShell active="approvals">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>AI Content Approvals</h1>
@@ -1016,6 +1028,12 @@ const AdminApprovals = () => {
     <div className="paper" style={{marginTop:"1rem",background:"#F5F0E1",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
       <div style={{flex:1,minWidth:240}}><strong>Populate all 243 BC communities at once</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate synopsis + weather drafts for every community, then approve in bulk below.</span></div>
       <button onClick={generateAll} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-btn">🚀 Generate All Missing</button>
+    </div>
+
+    <div className="paper" style={{marginTop:"1rem",background:"#EEF7EF",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
+      <div style={{flex:1,minWidth:240}}><strong>Populate FAQs for all 401 Glossary Terms</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate 10 BC-specific FAQs per term (background job, ~30-60 min). Then review + approve in the Glossary tab below.</span></div>
+      <button onClick={generateAllGlossary} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-glossary-btn">📖 Generate All Glossary FAQs</button>
+      <button onClick={unapproveAllGlossary} className="btn btn-outline" style={{padding:"0.6rem 1.2rem"}} data-testid="unapprove-all-glossary-btn">↻ Re-queue Approved</button>
     </div>
 
     <div style={{display:"flex",gap:"0.5rem",marginTop:"1.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
