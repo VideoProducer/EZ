@@ -764,8 +764,8 @@ const Valuation = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
-    <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">What's your BC home worth?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will provide you with an estimated valuation in your area — Within 24 hours.</p>
+    <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">Curious what your home could be worth?</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get a free market estimate from Doug within 24 hours.</p>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
