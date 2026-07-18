@@ -199,9 +199,11 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
   .compliance-strip { font-size: 0.7rem !important; padding: 0.5rem 1rem !important; }
 }
 
-/* Compliance strip — hide long lead-in on mobile */
+/* Compliance strip — hide long lead-in on mobile + iOS auto-zoom prevention */
 @media(max-width: 700px) {
   .compliance-strip-full { display: none; }
+  /* Force 16px on all form controls at mobile — beats .field/.search-bar/.doogie-panel specificity */
+  .field input, .field select, .field textarea, .search-bar input, .doogie-panel form input { font-size: 16px; }
 }
 /* Very small screens */
 @media(max-width: 380px) {

@@ -118,6 +118,7 @@ const DoogieChat = () => {
     if(!input.trim() || busy) return;
     const q = input; setInput(""); setBusy(true);
     setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:""}]);
+    let gotAnyContent = false;
     try {
       const res = await fetch(`${API}/doogie/chat`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,message:q})});
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -127,10 +128,15 @@ const DoogieChat = () => {
         const lines = buf.split("\n\n"); buf = lines.pop();
         for(const line of lines) {
           if(!line.startsWith("data:")) continue;
-          try { const j = JSON.parse(line.slice(5).trim()); if(j.delta) setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:c[c.length-1].content+j.delta}; return c; }); } catch{}
+          try {
+            const j = JSON.parse(line.slice(5).trim());
+            if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:c[c.length-1].content+j.delta}; return c; }); }
+            else if(j.error) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: "+String(j.error).slice(0,180)+")"}; return c; }); }
+          } catch{}
         }
       }
-    } catch(err) { setMsgs(m => [...m.slice(0,-1),{role:"assistant",content:"Woof — I had trouble connecting. Please try again."}]); }
+      if(!gotAnyContent) setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I didn't receive a response. Please try again, or contact Doug directly."}; return c; });
+    } catch(err) { setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I had trouble connecting. Please try again."}; return c; }); }
     setBusy(false);
   };
 

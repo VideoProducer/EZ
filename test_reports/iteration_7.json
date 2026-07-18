@@ -1,0 +1,58 @@
+{
+  "summary": "Frontend regression for two fixes: (1) Doogie chat error surfacing when Emergent LLM key hits daily budget, and (2) mobile input font-size >= 16px to prevent iOS auto-zoom. Both fixes VERIFIED. All 4 test scenarios PASS. LLM daily-cap is still active (out-of-scope), and the client-side fallback now correctly renders the friendly 'Woof — Doogie's brain is temporarily unavailable' bubble instead of an empty one. Mobile inputs now compute to exactly 16px on all sampled selectors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "App.js is still ~1482 lines — carried over from iteration_5/6. Refactor into pages/components/forms/legal modules for maintainability. Not a functional issue.",
+    "BCFSA licence number is still literal placeholder '[Doug to add]' at data-testid=licence-num — must be filled in before production launch to satisfy BCFSA advertising rules (carried over).",
+    "DoogieChat.send() sets gotAnyContent=true inside the j.error branch and then overwrites the bubble with a fallback each frame — if the backend ever sends multiple SSE data frames containing 'error', the last one wins (acceptable but could be defensive: break out of the loop after first error). Non-blocking.",
+    "The 'catch' clause on line 139 catches network-level failures and renders 'Woof — I had trouble connecting.' but leaves busy=false only after — currently correct but no timeout guard: if fetch never completes, the send button stays disabled indefinitely. Consider an AbortController with a 30s timeout. Non-blocking."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% (4/4 scenarios pass)"},
+  "test_credentials": "n/a — all tests are public frontend",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both iteration_6 outstanding items are now closed: mobile-form auto-zoom prevention verified (buyer-name/email/phone/type + hero-search-input all compute to 16px at 390x844), and Doogie error resilience verified (assistant bubble now contains 'Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: Failed to start streaming completion: litellm.APIError: APIError: OpenAIException - Daily spend limit reached)' — 242 chars, non-empty). The Emergent LLM key is STILL over daily budget at time of testing — user must top up via Emergent Profile → Universal Key → Add Balance to restore real Doogie answers. Consent modal, panel-close via ×, hamburger drawer open/close, no horizontal overflow, and cookie-banner-stacked-above-FAB all still pass.",
+  "detailed_verification": {
+    "test1_doogie_error_surfacing_desktop_1440x900": {
+      "panel_opens": "PASS",
+      "consent_bypass_via_localStorage": "PASS (ez_doogie_consent=1)",
+      "message_sent_and_response_received_within_15s": "PASS",
+      "last_assistant_bubble_non_empty": "PASS (242 chars)",
+      "fallback_text_matches_expected": "PASS — starts with 'Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: ...Daily spend limit reached)'",
+      "close_via_x_button": "PASS (panel removed from DOM)"
+    },
+    "test1b_consent_modal_first_time_user": {
+      "consent_modal_visible_after_localStorage_removed": "PASS ([data-testid='doogie-consent'] present)",
+      "consent_accept_reveals_chat_form": "PASS"
+    },
+    "test2_mobile_input_font_size_390x844_buyer": {
+      "buyer-name": "PASS (16px)",
+      "buyer-email": "PASS (16px)",
+      "buyer-phone": "PASS (16px)",
+      "buyer-type (select)": "PASS (16px)"
+    },
+    "test2b_mobile_home_search_bar_input": {
+      "hero-search-input": "PASS (16px)"
+    },
+    "test3_mobile_regression_390x844": {
+      "no_horizontal_overflow": "PASS (sw=cw=390)",
+      "hamburger_visible": "PASS",
+      "drawer_opens_shows_nav_links": "PASS (nav-listings visible after click)",
+      "drawer_closes_on_second_hamburger_click": "PASS",
+      "cookie_banner_above_doogie_fab": "PASS (banner bottom y=756, FAB top y=762 — no overlap)"
+    }
+  },
+  "rca_of_the_issue": {
+    "prior_bug_1": "Empty Doogie bubble on error — RESOLVED. The frontend now parses SSE 'error' frames in DoogieChat.send() (App.js line 134) and swaps in a friendly fallback. A second guard (line 138) replaces any empty final bubble with 'Woof — I didn't receive a response...'. Verified live against real backend which is still returning 'Daily spend limit reached'.",
+    "prior_bug_2": "Mobile inputs 15.2px causing iOS auto-zoom — RESOLVED. New CSS rule at /app/frontend/src/index.css:206 `.field input, .field select, .field textarea, .search-bar input, .doogie-panel form input { font-size: 16px }` inside the existing @media(max-width:700px) block wins on specificity+cascade order. Verified computed style = 16px on all sampled selectors."
+  }
+}
