@@ -59,7 +59,7 @@ const Footer = () => (
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>The AI-powered real estate research platform for all of British Columbia. Primary practice area: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor. Referral network covers all of BC.</p>
-        <p style={{fontSize:"0.78rem",opacity:0.7,marginTop:"1rem"}}>Fraser Property Management Realty Services Ltd.</p>
+        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/>Licensee of the British Columbia Financial Services Authority (BCFSA)<br/>BCFSA Licence #: <span data-testid="licence-num">[Doug to add]</span><br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>Member: Greater Vancouver REALTORS® (GVR) &amp; Canadian Real Estate Association (CREA)</p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
@@ -73,6 +73,12 @@ const Footer = () => (
         <li><Link to="/about">About Doug</Link></li>
         <li><Link to="/contact">Contact</Link></li>
       </ul></div>
+      <div><h4>Consumer Protection</h4><ul>
+        <li><Link to="/complaints">Complaints & Concerns</Link></li>
+        <li><Link to="/dorts">Disclosure of Representation</Link></li>
+        <li><Link to="/working-with-a-realtor">Working with a REALTOR®</Link></li>
+        <li><Link to="/code-of-ethics">REALTOR® Code of Ethics</Link></li>
+      </ul></div>
       <div><h4>Contact</h4><ul>
         <li>info@eztofind.ca</li>
         <li>realtors@eztofind.ca</li>
@@ -80,7 +86,7 @@ const Footer = () => (
       </ul></div>
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.7}}>
-      <div>© 2026 EZtoFind.ca — All rights reserved. REALTOR® &amp; MLS® are trademarks of CREA.</div>
+      <div>© 2026 EZtoFind.ca — All rights reserved. REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link></div>
     </div>
   </div></footer>
@@ -428,6 +434,7 @@ const BuyerForm = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">Buyer Intake</div><h1 className="section-title">Tell us what you're looking for</h1>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services. Please also review <Link to="/working-with-a-realtor" style={{color:"var(--brand-blue)",fontWeight:600}}>Working with a REALTOR®</Link> to understand your rights as a consumer.</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="buyer-name"/></div>
@@ -459,6 +466,7 @@ const SellerForm = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">Seller Intake</div><h1 className="section-title">Let's talk about your property</h1>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services. Please also review <Link to="/working-with-a-realtor" style={{color:"var(--brand-blue)",fontWeight:600}}>Working with a REALTOR®</Link> to understand your rights as a consumer.</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
@@ -564,6 +572,72 @@ const Privacy = () => <Legal title="Privacy Policy (PIPA)" body={<><p>EZtoFind.c
 
 const BreachPolicy = () => <Legal title="Privacy Breach Response Policy" body={<><p>EZtoFind.ca is committed to protecting personal information collected under the BC Personal Information Protection Act (PIPA). This policy outlines the steps we will take in the event of a privacy breach.</p><h3>What constitutes a breach</h3><p>A privacy breach means the unauthorized access, collection, use, disclosure, disposal, or loss of personal information. Examples: a database misconfiguration exposing lead information, unauthorized access to admin systems, phishing that compromises an account, or loss of a device containing personal information.</p><h3>Response steps</h3><p><strong>Step 1 — Contain (immediate):</strong> Isolate affected systems, revoke exposed credentials, stop the ongoing loss.</p><p><strong>Step 2 — Assess (within 24 hours):</strong> Determine scope: what data, how many individuals, what risk of significant harm.</p><p><strong>Step 3 — Notify (within 72 hours if significant harm is reasonably possible):</strong> Notify the Office of the Information and Privacy Commissioner for BC (OIPC) at <a href="mailto:privacyhelp@oipc.bc.ca" style={{color:"var(--brand-blue)"}}>privacyhelp@oipc.bc.ca</a> and each affected individual, describing what happened, what data was involved, and what steps we are taking.</p><p><strong>Step 4 — Remediate:</strong> Fix the root cause, update controls, document lessons learned.</p><p><strong>Step 5 — Record:</strong> All breaches are logged internally with description, affected records, and remediation steps, retained for 3 years.</p><h3>Privacy Officer</h3><p>Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. — info@eztofind.ca. Report a suspected breach anytime, including outside business hours.</p></>}/>;
 const Terms = () => <Legal title="Terms of Use" body={<><p>EZtoFind.ca provides general information about British Columbia real estate. Doogie (our AI assistant) does not provide financial, legal, tax, or investment advice. For advice, consult a licensed REALTOR®, lawyer, or accountant.</p><p>Listings data is provided under license from participating MLS® systems via an embedded iframe from Greater Vancouver For Sale. REALTOR® and MLS® are certification marks owned by the Canadian Real Estate Association (CREA).</p></>}/>;
+
+const Complaints = () => <Legal title="Complaints & Concerns" body={<>
+  <p>EZtoFind.ca is committed to the highest standards of consumer protection. If you have a concern about our conduct, the content on this site, or a real estate service provided by Doug LeMaire, REALTOR®, please raise it as follows:</p>
+  <h3 style={{marginTop:"1.5rem"}}>Step 1 — Contact us directly</h3>
+  <p>Email <strong>info@eztofind.ca</strong> with your concern. We will acknowledge receipt within 2 business days and respond within 10 business days.</p>
+  <h3 style={{marginTop:"1.5rem"}}>Step 2 — Escalate to the brokerage</h3>
+  <p>If your concern is not resolved, contact the Managing Broker at <strong>Fraser Property Management Realty Services Ltd.</strong></p>
+  <h3 style={{marginTop:"1.5rem"}}>Step 3 — External regulators</h3>
+  <ul>
+    <li><strong>Real Estate Services complaint:</strong> British Columbia Financial Services Authority (BCFSA) — <a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>bcfsa.ca</a> · Toll-free 1-866-206-3030 · complaints@bcfsa.ca</li>
+    <li><strong>REALTOR® Code of Ethics complaint:</strong> Greater Vancouver REALTORS® (GVR) — <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>gvrealtors.ca</a></li>
+    <li><strong>Privacy complaint:</strong> Office of the Information and Privacy Commissioner for BC (OIPC) — <a href="https://www.oipc.bc.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>oipc.bc.ca</a> · 1-800-663-7867 · info@oipc.bc.ca</li>
+    <li><strong>Unwanted commercial email (CASL) complaint:</strong> Canadian Radio-television and Telecommunications Commission (CRTC) Spam Reporting Centre — <a href="https://fightspam.gc.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>fightspam.gc.ca</a></li>
+    <li><strong>Errors & Omissions Insurance:</strong> BCFSA Real Estate Errors and Omissions Insurance Corporation coverage applies to all licensed BC REALTORS®.</li>
+  </ul>
+  <p style={{marginTop:"1.5rem",fontSize:"0.9rem",color:"var(--muted)"}}>You have the right to escalate directly to any of the above authorities without contacting us first. We will not retaliate against any person who files a complaint.</p>
+</>}/>;
+
+const DoRTS = () => <Legal title="Disclosure of Representation in Trading Services (DoRTS)" body={<>
+  <p><strong>Under the Real Estate Services Rules of the British Columbia Financial Services Authority (BCFSA), a REALTOR® must provide you with a formal Disclosure of Representation in Trading Services form at the earliest reasonable opportunity — before providing any real estate service.</strong></p>
+  <p>This disclosure explains:</p>
+  <ul>
+    <li>Whether the REALTOR® will be representing you as a client (with fiduciary duties: loyalty, avoid conflicts, full disclosure, confidentiality, use reasonable skill and care) — or whether the REALTOR® will only be providing services to you as an unrepresented consumer (no fiduciary duties, and any information you share can be used to benefit the other party in a transaction).</li>
+    <li>The name of the licensee and their brokerage.</li>
+    <li>Your right to seek independent legal advice.</li>
+  </ul>
+  <h3 style={{marginTop:"1.5rem"}}>Doug's practice</h3>
+  <p>Doug LeMaire, REALTOR® will deliver a signed BCFSA-issued <em>Disclosure of Representation in Trading Services</em> form before providing any real estate service to you. Nothing on this website — including any Doogie AI response, buyer intake form submission, or general glossary/community content — creates a REALTOR®-client relationship.</p>
+  <h3 style={{marginTop:"1.5rem"}}>Download the official BCFSA form</h3>
+  <p><a href="https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/forms" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA Real Estate Forms Library →</a></p>
+</>}/>;
+
+const WorkingWithRealtor = () => <Legal title="Working with a REALTOR®" body={<>
+  <p><strong>Before you engage a REALTOR® in British Columbia, you have important consumer protections and rights.</strong> BCFSA and CREA publish a consumer guide titled <em>Working with a REALTOR®</em> explaining these protections.</p>
+  <h3 style={{marginTop:"1.5rem"}}>Your key rights</h3>
+  <ul>
+    <li><strong>Right to representation:</strong> You may choose to be represented as a client, or to remain unrepresented. A REALTOR® must disclose their role at the earliest opportunity (see <Link to="/dorts" style={{color:"var(--brand-blue)"}}>DoRTS</Link>).</li>
+    <li><strong>Right to written agreements:</strong> Any buyer's or seller's agency relationship must be documented in a written service agreement.</li>
+    <li><strong>Right to confidentiality:</strong> A REALTOR® who represents you as a client owes you a fiduciary duty of confidentiality, even after the relationship ends.</li>
+    <li><strong>Right to disclosure of remuneration:</strong> The REALTOR® must disclose all forms of remuneration and any referral fees before you sign.</li>
+    <li><strong>Right to independent legal advice:</strong> You may consult a lawyer or notary at any point.</li>
+  </ul>
+  <h3 style={{marginTop:"1.5rem"}}>Referral fees</h3>
+  <p>If Doug refers you to another licensed BC REALTOR® in our referral network, a referral fee may be paid to Doug LeMaire by the receiving REALTOR® (typically 25% of the receiving REALTOR's commission). This does not increase the cost to you as the consumer. The receiving REALTOR® will disclose this in writing before you sign a service agreement.</p>
+  <h3 style={{marginTop:"1.5rem"}}>Download the official brochures</h3>
+  <ul>
+    <li><a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA — Working with a REALTOR® (consumer guide)</a></li>
+    <li><a href="https://www.crea.ca/working-with-a-realtor/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>CREA — Working with a REALTOR®</a></li>
+  </ul>
+</>}/>;
+
+const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
+  <p>Doug LeMaire, REALTOR® is a member of the <strong>Canadian Real Estate Association (CREA)</strong> and the <strong>Greater Vancouver REALTORS® (GVR)</strong>. As a REALTOR® — a designation carrying trademark protection — Doug is bound by the <strong>REALTOR® Code of Ethics and Standards of Business Practice</strong>.</p>
+  <h3 style={{marginTop:"1.5rem"}}>Key articles applicable to this website</h3>
+  <ul>
+    <li><strong>Article 3 — Competent Service:</strong> REALTORS® shall render a skilled and conscientious service, in conformity with the standards of practice of their profession.</li>
+    <li><strong>Article 4 — Discovery of Facts:</strong> REALTORS® shall endeavor to discover facts pertaining to every property they list or for which they act.</li>
+    <li><strong>Article 7 — Advertising:</strong> Advertising shall be honest and truthful. Doug's licensee identification, brokerage, and CREA trademark notices appear on every page of this website.</li>
+    <li><strong>Article 16 — Respect for other REALTORS®' clients:</strong> A REALTOR® shall not solicit a buyer or seller who is currently under a written service agreement with another REALTOR®. If you have signed a buyer's agency agreement with another REALTOR®, the Buyer Intake form on this site is blocked from submission (see the checkbox on <Link to="/buyer" style={{color:"var(--brand-blue)"}}>the Buyer form</Link>).</li>
+    <li><strong>Article 17 — Cooperation between REALTORS®:</strong> REALTORS® must cooperate on transactions in a manner consistent with client interests.</li>
+  </ul>
+  <h3 style={{marginTop:"1.5rem"}}>Full Code</h3>
+  <p><a href="https://www.crea.ca/realtor-code/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Read the full REALTOR® Code on CREA.ca →</a></p>
+  <h3 style={{marginTop:"1.5rem"}}>Concerns about a REALTOR®?</h3>
+  <p>Ethics complaints against a REALTOR® in the Greater Vancouver area may be filed with <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Greater Vancouver REALTORS® (GVR)</a>. Complaints about a licensee's conduct as a real estate licensee may be filed with <a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA</a>. See our <Link to="/complaints" style={{color:"var(--brand-blue)"}}>Complaints & Concerns</Link> page.</p>
+</>}/>;
 const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are displayed via a compliant iframe from a licensed data source.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p></>}/>;
 
 // --- Admin ---
@@ -1028,13 +1102,18 @@ const Unsubscribe = () => {
   </div></section>);
 };
 
-// --- Cookie banner ---
+// --- Cookie banner (PIPA-tracked consent) ---
 const CookieBanner = () => {
   const [show, setShow] = useState(() => !localStorage.getItem("ez_cookie"));
+  const accept = () => {
+    const record = {accepted:true, at: new Date().toISOString(), ua: navigator.userAgent};
+    localStorage.setItem("ez_cookie", JSON.stringify(record));
+    setShow(false);
+  };
   if(!show) return null;
-  return <div style={{position:"fixed",bottom:20,left:20,right:20,maxWidth:520,background:"var(--brand-navy)",color:"white",padding:"1rem 1.25rem",borderRadius:12,zIndex:59,boxShadow:"0 20px 40px rgba(0,0,0,0.3)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
-    <div style={{flex:1,minWidth:220}}>We use minimal essential cookies. See our <Link to="/privacy" style={{color:"var(--brand-gold)"}}>Privacy Policy</Link>.</div>
-    <button className="btn btn-green" onClick={()=>{localStorage.setItem("ez_cookie","1");setShow(false);}} style={{padding:"0.5rem 1rem"}} data-testid="cookie-accept">OK</button>
+  return <div role="dialog" aria-label="Cookie & Privacy Notice" style={{position:"fixed",bottom:20,left:20,right:20,maxWidth:520,background:"var(--brand-navy)",color:"white",padding:"1rem 1.25rem",borderRadius:12,zIndex:59,boxShadow:"0 20px 40px rgba(0,0,0,0.3)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}} data-testid="cookie-banner">
+    <div style={{flex:1,minWidth:220}}>EZtoFind.ca uses only essential cookies (session, consent state). Under BC's <strong>Personal Information Protection Act (PIPA)</strong>, we ask you to acknowledge our <Link to="/privacy" style={{color:"var(--brand-gold)"}}>Privacy Policy</Link>. Clicking "I acknowledge" records your acceptance timestamp locally.</div>
+    <button className="btn btn-green" onClick={accept} style={{padding:"0.5rem 1rem"}} data-testid="cookie-accept">I acknowledge</button>
   </div>;
 };
 
@@ -1364,6 +1443,10 @@ function App() {
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
       <Route path="/compliance" element={<AppLayout><Compliance/></AppLayout>}/>
+      <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
+      <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
+      <Route path="/working-with-a-realtor" element={<AppLayout><WorkingWithRealtor/></AppLayout>}/>
+      <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
       <Route path="/unsubscribe" element={<AppLayout><Unsubscribe/></AppLayout>}/>
       <Route path="/breach-policy" element={<AppLayout><BreachPolicy/></AppLayout>}/>
