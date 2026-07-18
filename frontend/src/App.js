@@ -816,29 +816,77 @@ const ReferralRequest = () => {
 const fmtDollar = n => "$"+Math.round(n).toLocaleString();
 
 const MortgageCalculator = () => {
-  const [price,setPrice]=useState(1000000);
-  const [down,setDown]=useState(200000);
-  const [rate,setRate]=useState(5.25);
+  const [priceStr,setPriceStr]=useState("850,000");
+  const [downStr,setDownStr]=useState("170,000");
+  const [rate,setRate]=useState(5.5);
   const [amort,setAmort]=useState(25);
+  const price = Number(priceStr.replace(/[^0-9]/g,""))||0;
+  const down = Number(downStr.replace(/[^0-9]/g,""))||0;
   const principal = Math.max(price - down, 0);
   const r = (rate/100)/12; const n = amort*12;
   const monthly = r>0 ? (principal*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1) : (n>0 ? principal/n : 0);
-  return (
-    <div className="paper" data-testid="mortgage-calculator">
-      <h2 className="section-title" style={{fontSize:"1.75rem",marginBottom:"1.25rem"}}>Mortgage Calculator</h2>
-      <div className="form-grid">
-        <div className="field"><label>Purchase Price ($)</label><input type="number" value={price} onChange={e=>setPrice(+e.target.value)} data-testid="mortgage-price"/></div>
-        <div className="field"><label>Down Payment ($)</label><input type="number" value={down} onChange={e=>setDown(+e.target.value)} data-testid="mortgage-down"/></div>
-        <div className="field"><label>Interest Rate (%)</label><input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value)} data-testid="mortgage-rate"/></div>
-        <div className="field"><label>Amortization (years)</label><select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="mortgage-amort"><option>15</option><option>20</option><option>25</option><option>30</option></select></div>
+  const totalCost = monthly * n;
+  const totalInterest = Math.max(totalCost - principal, 0);
+  const onMoney = setter => e => {
+    const raw = e.target.value.replace(/[^0-9]/g,"");
+    setter(raw ? Number(raw).toLocaleString() : "");
+  };
+  const FieldBox = ({label, prefix, children}) => (
+    <div style={{flex:"1 1 240px",minWidth:220}}>
+      <label style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.9rem",display:"block",marginBottom:"0.4rem"}}>{label}</label>
+      <div style={{position:"relative",background:"rgba(240,244,251,0.5)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,padding:"0.85rem 1rem 0.85rem 2.4rem",fontFamily:"Inter,sans-serif"}}>
+        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",fontSize:"1rem"}}>{prefix}</span>
+        {children}
       </div>
-      <div style={{marginTop:"2rem"}}>
-        <div style={{background:"#F5F0E1",padding:"1.5rem",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
-          <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>Estimated Monthly Payment</div>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="calc-monthly">{fmtDollar(monthly)}</div>
-          <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.5rem"}}>Principal + interest only. Excludes taxes, strata, insurance.</div>
+    </div>
+  );
+  return (
+    <div className="paper" data-testid="mortgage-calculator" style={{background:"#F7FAFF"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
+        <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <div>
+          <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>Mortgage Calculator</h2>
+          <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your monthly payments.</div>
         </div>
       </div>
+
+      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
+        <FieldBox label="Home Price" prefix="$">
+          <input value={priceStr} onChange={onMoney(setPriceStr)} inputMode="numeric" data-testid="mortgage-price" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        </FieldBox>
+        <FieldBox label="Down Payment" prefix="$">
+          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" data-testid="mortgage-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        </FieldBox>
+      </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem"}}>
+        <FieldBox label="Interest Rate (%)" prefix="%">
+          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="mortgage-rate" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        </FieldBox>
+        <FieldBox label="Amortization (years)" prefix="📅">
+          <select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="mortgage-amort" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
+            <option value={15}>15 years</option>
+            <option value={20}>20 years</option>
+            <option value={25}>25 years</option>
+            <option value={30}>30 years</option>
+          </select>
+        </FieldBox>
+      </div>
+
+      <div style={{background:"#F0F4FB",borderRadius:12,marginTop:"1.5rem",padding:"1.25rem 1rem",display:"flex",flexWrap:"wrap",justifyContent:"space-around",gap:"1rem",fontFamily:"Inter,sans-serif"}}>
+        {[
+          {label:"MONTHLY PAYMENT", val:fmtDollar(monthly), big:true, tid:"calc-monthly"},
+          {label:"PRINCIPAL", val:fmtDollar(principal), tid:"calc-principal"},
+          {label:"TOTAL INTEREST", val:fmtDollar(totalInterest), tid:"calc-interest"},
+          {label:"TOTAL COST", val:fmtDollar(totalCost), tid:"calc-total"}
+        ].map(c => (
+          <div key={c.label} style={{textAlign:"center",minWidth:110}}>
+            <div style={{fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.06em",color:"var(--muted)"}}>{c.label}</div>
+            <div data-testid={c.tid} style={{fontSize:c.big?"1.85rem":"1.35rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.35rem"}}>{c.val}</div>
+          </div>
+        ))}
+      </div>
+
+      <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0,textAlign:"center"}}>This calculator provides estimates only. Actual rates and terms may vary. Contact a mortgage professional for accurate figures.</p>
     </div>
   );
 };
@@ -926,11 +974,8 @@ const PTTCalculator = () => {
 
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
-    <div className="eyebrow">BC Calculators</div>
-    <h1 className="section-title" style={{marginBottom:"2rem"}}>Mortgage &amp; Property Transfer Tax</h1>
     <MortgageCalculator/>
     <PTTCalculator/>
-    <div className="notice" style={{marginTop:"1.5rem"}}>Estimates only. Not financial or legal advice. Consult a mortgage broker and REALTOR® for your specific situation.</div>
   </div></section>
 );
 
