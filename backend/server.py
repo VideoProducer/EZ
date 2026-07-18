@@ -265,6 +265,8 @@ def get_consent_meta(request: Request) -> dict:
 async def create_buyer_lead(lead: BuyerLead, request: Request):
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
+    if lead.working_with_realtor:
+        raise HTTPException(400, "Because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.buyer_leads.insert_one(doc)
     logger.info(f"Buyer lead from {lead.email}")
