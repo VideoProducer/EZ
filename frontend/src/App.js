@@ -975,6 +975,7 @@ const PTTCalculator = () => {
 
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,textAlign:"center",marginBottom:"2rem"}}>Estimate your mortgage payment and BC Property Transfer Tax — free, instant, no sign-up.</p>
     <MortgageCalculator/>
     <PTTCalculator/>
   </div></section>
