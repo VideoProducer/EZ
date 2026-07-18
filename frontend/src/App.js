@@ -375,7 +375,7 @@ const GlossaryTerm = () => {
         <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
         <div style={{fontWeight:700,color:"var(--ink)"}} itemProp="name">Doug LeMaire, REALTOR®</div>
         <div style={{fontSize:"0.88rem",color:"var(--brand-blue)"}}>
-          <Link to="/" itemProp="url" style={{color:"inherit",textDecoration:"none",fontWeight:600}} data-testid="author-block-home-link">EZtoFind.ca</Link>
+          <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}} data-testid="author-block-home-link">EZtoFind.ca</a>
           <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
         </div>
       </div>
