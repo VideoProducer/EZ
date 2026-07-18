@@ -844,32 +844,82 @@ const MortgageCalculator = () => {
 };
 
 const PTTCalculator = () => {
-  const [price,setPrice]=useState(1000000);
+  const [priceStr,setPriceStr]=useState("850,000");
+  const price = Number(priceStr.replace(/[^0-9]/g,""))||0;
   const [ftbFirstTime,setFtb]=useState(false);
   const [newBuilt,setNew]=useState(false);
+  const [foreign,setForeign]=useState(false);
   const ptt = (p) => { let t=0; if(p<=200000) return p*0.01; t+=200000*0.01; if(p<=2000000) return t+(p-200000)*0.02; t+=1800000*0.02; if(p<=3000000) return t+(p-2000000)*0.03; t+=1000000*0.03; return t+(p-3000000)*0.05; };
-  let pttOwed = ptt(price);
-  if(ftbFirstTime && price <= 835000) pttOwed = 0;
-  else if(ftbFirstTime && price <= 860000) pttOwed = pttOwed * ((860000-price)/25000);
-  if(newBuilt && price <= 1100000) pttOwed = 0;
-  else if(newBuilt && price <= 1150000) pttOwed = pttOwed * ((1150000-price)/50000);
+  let basePtt = ptt(price);
+  if(ftbFirstTime && price <= 835000) basePtt = 0;
+  else if(ftbFirstTime && price <= 860000) basePtt = basePtt * ((860000-price)/25000);
+  if(newBuilt && price <= 1100000) basePtt = 0;
+  else if(newBuilt && price <= 1150000) basePtt = basePtt * ((1150000-price)/50000);
+  const additional = foreign ? price * 0.20 : 0;
+  const total = basePtt + additional;
+  const onPrice = e => {
+    const raw = e.target.value.replace(/[^0-9]/g,"");
+    setPriceStr(raw ? Number(raw).toLocaleString() : "");
+  };
+  const Toggle = ({on, onChange, tid}) => (
+    <button type="button" onClick={()=>onChange(!on)} data-testid={tid}
+      style={{width:44,height:24,borderRadius:999,border:"none",padding:2,cursor:"pointer",background:on?"var(--brand-blue)":"#D1D5DB",transition:"background 0.2s"}}>
+      <div style={{width:20,height:20,borderRadius:"50%",background:"#fff",transform:on?"translateX(20px)":"translateX(0)",transition:"transform 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+    </button>
+  );
+  const Row = ({title, sub, on, onChange, tid}) => (
+    <div style={{background:"rgba(240,244,251,0.5)",border:"1px solid rgba(15,42,91,0.08)",borderRadius:12,padding:"1rem 1.25rem",marginTop:"0.75rem",display:"flex",gap:"1rem",alignItems:"flex-start",justifyContent:"space-between"}}>
+      <div style={{flex:1}}>
+        <div style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{title}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem",lineHeight:1.5}}>{sub}</div>
+      </div>
+      <Toggle on={on} onChange={onChange} tid={tid}/>
+    </div>
+  );
   return (
-    <div className="paper" data-testid="ptt-calculator" style={{marginTop:"2rem"}}>
-      <h2 className="section-title" style={{fontSize:"1.75rem",marginBottom:"1.25rem"}}>Property Transfer Tax Calculator</h2>
-      <div className="form-grid">
-        <div className="field"><label>Purchase Price ($)</label><input type="number" value={price} onChange={e=>setPrice(+e.target.value)} data-testid="ptt-price"/></div>
-      </div>
-      <div style={{marginTop:"1rem",display:"flex",gap:"1.5rem",flexWrap:"wrap"}}>
-        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={ftbFirstTime} onChange={e=>setFtb(e.target.checked)} data-testid="ptt-ftb"/> First-time home buyer</label>
-        <label className="check" style={{fontFamily:"Inter,sans-serif"}}><input type="checkbox" checked={newBuilt} onChange={e=>setNew(e.target.checked)} data-testid="ptt-newbuilt"/> Newly built home</label>
-      </div>
-      <div style={{marginTop:"2rem"}}>
-        <div style={{background:"#E8F5E9",padding:"1.5rem",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
-          <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>BC Property Transfer Tax</div>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-green-dark)"}} data-testid="calc-ptt">{fmtDollar(pttOwed)}</div>
-          <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.5rem"}}>Based on 2026 rates. Full/partial exemptions applied if eligible.</div>
+    <div className="paper" data-testid="ptt-calculator" style={{marginTop:"2rem",background:"#F7FAFF"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
+        <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <div>
+          <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>BC Property Transfer Tax Calculator</h2>
+          <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your one-time BC PTT at completion.</div>
         </div>
       </div>
+
+      <label style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.9rem",display:"block",marginBottom:"0.4rem"}}>Purchase Price</label>
+      <div style={{position:"relative",background:"rgba(240,244,251,0.5)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:10,padding:"0.85rem 1rem 0.85rem 2.4rem",fontFamily:"Inter,sans-serif"}}>
+        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",fontSize:"1rem"}}>$</span>
+        <input value={priceStr} onChange={onPrice} inputMode="numeric" data-testid="ptt-price" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+      </div>
+
+      <Row title="I'm a first-time home buyer"
+           sub="Eligibility: Canadian citizen or permanent resident, lived in BC 12+ months, never owned a principal residence anywhere in the world."
+           on={ftbFirstTime} onChange={setFtb} tid="ptt-ftb"/>
+      <Row title="This is a newly built home"
+           sub="Home must be newly constructed, buyer must use as principal residence."
+           on={newBuilt} onChange={setNew} tid="ptt-newbuilt"/>
+      <Row title="I'm a foreign national or foreign-controlled entity"
+           sub="Triggers an additional 20% PTT in specified BC areas (Metro Vancouver, Fraser Valley, CRD, Nanaimo, Central Okanagan)."
+           on={foreign} onChange={setForeign} tid="ptt-foreign"/>
+
+      <div style={{background:"#F0F4FB",borderRadius:12,marginTop:"1.25rem",padding:"1rem 1.25rem",fontFamily:"Inter,sans-serif"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0.4rem 0",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
+          <span style={{color:"var(--muted)",fontSize:"0.82rem",letterSpacing:"0.06em",fontWeight:600}}>BASE PTT</span>
+          <span style={{color:"var(--brand-navy)",fontSize:"1.35rem",fontWeight:600}} data-testid="calc-ptt-base">{fmtDollar(basePtt)}</span>
+        </div>
+        {foreign && (
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0.4rem 0",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
+            <span style={{color:"var(--muted)",fontSize:"0.82rem",letterSpacing:"0.06em",fontWeight:600}}>ADDITIONAL PTT (20%)</span>
+            <span style={{color:"var(--brand-navy)",fontSize:"1.35rem",fontWeight:600}} data-testid="calc-ptt-additional">{fmtDollar(additional)}</span>
+          </div>
+        )}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0.6rem 0 0.2rem"}}>
+          <span style={{color:"var(--muted)",fontSize:"0.82rem",letterSpacing:"0.06em",fontWeight:600}}>TOTAL PTT OWED</span>
+          <span style={{color:"var(--brand-navy)",fontSize:"1.75rem",fontWeight:700}} data-testid="calc-ptt">{fmtDollar(total)}</span>
+        </div>
+      </div>
+
+      <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0}}>This calculator provides estimates only based on current BC PTT rates as of April 2026. Actual PTT owed depends on your specific transaction, residency status, and property details. Informational only — not tax or legal advice. For your specific transaction, consult a BC notary or real estate lawyer.</p>
     </div>
   );
 };
