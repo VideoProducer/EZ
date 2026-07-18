@@ -11,7 +11,7 @@ const DOOGIE_LAPTOP = "https://customer-assets.emergentagent.com/job_proptech-hu
 const DOOGIE_POINT_R = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/9lnyn1tx_Doogie%20Pointing%20Right.png";
 const DOOGIE_POINT_L = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/686tnkdh_Doogie%20Pointing%20Left.jpeg";
 const DOOGIE_CELEBRATE = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/4g6serdu_Doogie%20Celebrating.png";
-const DOUG_HEADSHOT = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/2ql7b3c9_portuguese-real-estate-website.md"; // placeholder — replace
+const DOOGIE_THINKING = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png";
 
 // Real BC imagery (Unsplash, free-to-use)
 const IMG = {
@@ -121,10 +121,10 @@ const DoogieChat = () => {
 
   return (<>
     <button className="doogie-fab" onClick={()=>setOpen(o=>!o)} data-testid="doogie-fab" aria-label="Chat with Doogie">
-      <img src={DOOGIE_LAPTOP} alt="Doogie"/>
+      <img src={DOOGIE_THINKING} alt="Doogie"/>
     </button>
     {open && <div className="doogie-panel" data-testid="doogie-panel">
-      <header><img src={DOOGIE_LAPTOP} alt="Doogie"/><div><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85}}>AI Helper · General Info Only</div></div>
+      <header><img src={DOOGIE_THINKING} alt="Doogie"/><div><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85}}>AI Helper · General Info Only</div></div>
         <button onClick={()=>setOpen(false)} style={{marginLeft:"auto",background:"transparent",border:"none",color:"white",fontSize:"1.5rem",cursor:"pointer"}}>×</button></header>
       {!consented ? <div style={{padding:"1.25rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6,background:"#FFF8E8",flex:1,overflowY:"auto"}} data-testid="doogie-consent">
         <div style={{fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem"}}>Before we chat…</div>
