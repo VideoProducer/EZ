@@ -470,7 +470,7 @@ Definition context: {definition}
 Rules:
 - Questions must be BC-specific (British Columbia, Canada)
 - Answers should be 2-3 sentences, factual, informational only (no advice)
-- Each answer must end with: "For advice specific to your situation, consult a licensed REALTOR®."
+- Do NOT append any disclaimer or "consult a REALTOR" line — the page shows one site-wide disclaimer already
 - Return ONLY valid JSON: an array of 10 objects with "q" and "a" keys.
 - No preamble, no markdown, just the JSON array."""
     try:
