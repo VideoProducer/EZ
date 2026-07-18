@@ -1141,8 +1141,9 @@ const AdminApprovals = () => {
     </div>
 
     <div className="paper" style={{marginTop:"1rem",background:"#EEF7EF",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
-      <div style={{flex:1,minWidth:240}}><strong>Populate FAQs for all 401 Glossary Terms</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate 10 BC-specific FAQs per term (background job, ~30-60 min). Then review + approve in the Glossary tab below.</span></div>
-      <button onClick={generateAllGlossary} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-glossary-btn">📖 Generate All Glossary FAQs</button>
+      <div style={{flex:1,minWidth:240}}><strong>Populate FAQs for all 401 Glossary Terms</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate 10 BC-specific FAQs per term (background job, ~30-60 min). Then review + approve.</span></div>
+      <button onClick={generateAllGlossary} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-glossary-btn">📖 Generate All FAQs</button>
+      <button onClick={bulkApproveGlossary} className="btn btn-green" style={{padding:"0.6rem 1.2rem",background:"var(--brand-green-dark)",color:"white",border:"none"}} data-testid="top-approve-all-glossary-btn">✓ Approve All Pending FAQs{summary && summary.pending_glossary_faqs>0 ? ` (${summary.pending_glossary_faqs})` : ""}</button>
       <button onClick={unapproveAllGlossary} className="btn btn-outline" style={{padding:"0.6rem 1.2rem"}} data-testid="unapprove-all-glossary-btn">↻ Re-queue Approved</button>
     </div>
 
