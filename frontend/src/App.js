@@ -25,7 +25,8 @@ const IMG = {
   estate: "https://images.unsplash.com/photo-1523217582562-09d0def993a6?w=800&q=80",
   condo: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80",
   townhomes: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/d8ucxa1f_image.png",
-  bcHero: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1600&q=80"
+  bcHero: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1600&q=80",
+  vancouverIsland: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1200&q=80"
 };
 
 // --- Nav / Footer ---
@@ -279,13 +280,18 @@ const RegionsIndex = () => (
       {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky}].map(r =>
         <Link to={`/regions/${r.s}`} key={r.s} className="card"><img src={r.i} className="card-img" alt={r.t}/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
     </div>
+    <div style={{textAlign:"center",marginTop:"3.5rem",marginBottom:"2rem"}}><div className="eyebrow">Referral Network</div><h2 className="section-title" style={{fontSize:"1.8rem"}}>Covered by our vetted REALTORS® across BC</h2></div>
+    <div className="grid-3">
+      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
+    </div>
   </div></section>
 );
 
 const REGION_DATA = {
   "greater-vancouver": {title:"Greater Vancouver", img:IMG.vancouver, key:"Greater Vancouver", copy:"The Greater Vancouver market spans 22 municipalities, from downtown Vancouver highrises to West Vancouver waterfront estates and the sprawling suburbs of Surrey and Coquitlam. It's Canada's most valuable real estate corridor — and one of the most tightly regulated. Doug's local expertise means you get someone who reads Form B's daily and knows every community's zoning quirks."},
   "fraser-valley": {title:"Fraser Valley", img:IMG.fraserValley, key:"Fraser Valley", copy:"The Fraser Valley — Langley, Abbotsford, Chilliwack, Mission — is BC's fastest-growing residential region. Detached homes, acreages, and family communities are the heart of the market. Doug specializes in equestrian and estate acreage properties across the Valley."},
-  "sea-to-sky": {title:"Sea-to-Sky Corridor", img:IMG.seaToSky, key:"Sea-to-Sky", copy:"Squamish, Whistler, Pemberton — the Sea-to-Sky corridor blends mountain lifestyle with world-class recreation. Recreational homes, luxury chalets, and primary residences with a view. Financing, zoning, and STR rules here differ significantly from Metro Van."}
+  "sea-to-sky": {title:"Sea-to-Sky Corridor", img:IMG.seaToSky, key:"Sea-to-Sky", copy:"Squamish, Whistler, Pemberton — the Sea-to-Sky corridor blends mountain lifestyle with world-class recreation. Recreational homes, luxury chalets, and primary residences with a view. Financing, zoning, and STR rules here differ significantly from Metro Van."},
+  "vancouver-island": {title:"Vancouver Island & Gulf Islands", img:IMG.vancouverIsland, key:"Vancouver Island & Gulf Islands", referral:true, copy:"Vancouver Island — from Victoria's heritage character to Tofino's surf coast, Nanaimo's growing urban core, and the retirement-friendly Comox Valley. Includes the Gulf Islands (Salt Spring, Galiano, Mayne, Pender, Saturna) with their unique zoning and community trust boundaries. Vancouver Island is outside Doug's primary practice area — but EZtoFind.ca's referral network connects you with a vetted, BC-licensed REALTOR® active in the specific community you're interested in. No cost to you; the receiving REALTOR® pays a referral fee to Doug at closing."}
 };
 
 const RegionPage = () => {
@@ -298,15 +304,17 @@ const RegionPage = () => {
   return (<section className="section"><div className="container-x">
     <img src={d.img} alt={d.title} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
-      <div className="eyebrow">Focus Area</div>
+      <div className="eyebrow">{d.referral ? "Referral Network Coverage" : "Focus Area"}</div>
       <h1 className="section-title">{d.title}</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.copy}</p>
+      {d.referral && <div className="notice" style={{background:"#F5F0E1",borderColor:"var(--brand-gold)",marginBottom:"2rem",fontFamily:"Inter,sans-serif"}} data-testid="referral-region-notice"><strong>How the referral works:</strong> Submit our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral Request form</Link> with your city and property criteria. Doug's team matches you with a vetted, BC-licensed REALTOR® active in that community, introduces you by email, and steps aside. You work directly with the local REALTOR® — same pricing, better local knowledge.</div>}
     </div>
-    <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"1rem"}}>Communities we serve</h3>
+    <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"1rem"}}>{d.referral ? "Communities covered by our network" : "Communities we serve"}</h3>
     <div className="chip-grid">{list.map(c => <Link key={c} to={`/community/${encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g,"-"))}`} state={{name:c, region:d.key}} className="chip" style={{textDecoration:"none",cursor:"pointer"}} data-testid={`region-community-${c}`}>{c}</Link>)}</div>
     <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
-      <Link to="/listings" className="btn btn-primary">View Listings</Link>
-      <Link to="/buyer" className="btn btn-outline">I'm Buying Here</Link>
+      {d.referral
+        ? <Link to="/referral-request" className="btn btn-primary" data-testid="referral-cta">Request a Referral</Link>
+        : <><Link to="/listings" className="btn btn-primary">View Listings</Link><Link to="/buyer" className="btn btn-outline">I'm Buying Here</Link></>}
     </div>
   </div></section>);
 };
