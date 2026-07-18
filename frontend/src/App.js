@@ -12,6 +12,7 @@ const DOOGIE_POINT_R = "https://customer-assets.emergentagent.com/job_proptech-h
 const DOOGIE_POINT_L = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/686tnkdh_Doogie%20Pointing%20Left.jpeg";
 const DOOGIE_CELEBRATE = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/4g6serdu_Doogie%20Celebrating.png";
 const DOOGIE_THINKING = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png";
+const DOOGIE_POINT_L_T = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png";
 
 // Real BC imagery (Unsplash, free-to-use)
 const IMG = {
@@ -843,7 +844,7 @@ const MortgageCalculator = () => {
   return (
     <div className="paper" data-testid="mortgage-calculator" style={{background:"#F7FAFF"}}>
       <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
-        <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
         <div>
           <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>Mortgage Calculator</h2>
           <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your monthly payments.</div>
@@ -927,7 +928,7 @@ const PTTCalculator = () => {
   return (
     <div className="paper" data-testid="ptt-calculator" style={{marginTop:"2rem",background:"#F7FAFF"}}>
       <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
-        <img src={DOOGIE_LAPTOP} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
         <div>
           <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>BC Property Transfer Tax Calculator</h2>
           <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your one-time BC PTT at completion.</div>
