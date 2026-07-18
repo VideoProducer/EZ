@@ -978,7 +978,7 @@ const Calculators = () => (
     <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
       <div className="eyebrow" style={{marginBottom:"0.5rem"}}>BC Calculators</div>
       <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
-        Estimate your <span className="accent">mortgage payment</span> and <span className="green">BC Property Transfer Tax</span>.
+        Estimate your <span className="accent">Mortgage Payment</span> and <span className="green">BC Property Transfer Tax</span>.
       </h2>
       <div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
         {[{i:"⚡",t:"Instant"},{i:"🆓",t:"Free"},{i:"🔓",t:"No sign-up"}].map(b => (
