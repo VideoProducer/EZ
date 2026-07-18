@@ -724,7 +724,7 @@ const CommunityPage = () => {
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
         {isFocus
           ? `${found} sits within Doug LeMaire's primary practice area. As a licensed BC REALTOR® with 13 years' experience specializing in detached, luxury, equestrian, estate-sale, and condo properties, Doug can represent buyers and sellers here directly.`
-          : `${found} is served by EZtoFind's vetted BC-wide referral network. Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky — but we'll connect you with a qualified REALTOR® active in ${found}.`}
+          : `Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky — but we'll connect you with a qualified REALTOR® active in ${found} if you like.`}
       </p>
       <div style={{marginTop:"2rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
         {isFocus ? <>
