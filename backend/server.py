@@ -19,9 +19,47 @@ mongo_client = AsyncIOMotorClient(mongo_url)
 db = mongo_client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ['EMERGENT_LLM_KEY']
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')  # Optional — Doug's direct Anthropic key
 JWT_SECRET = os.environ['JWT_SECRET']
 ADMIN_EMAIL = os.environ['ADMIN_EMAIL']
 ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+
+# ============================================================
+# LLM abstraction — prefers Doug's direct Anthropic key when set.
+# Presents the same .stream_message() interface as LlmChat so we
+# only had to change ONE thing (this factory), not the 4 call sites.
+# ============================================================
+if ANTHROPIC_API_KEY:
+    import anthropic
+    _anthropic_client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+    class _DirectAnthropicChat:
+        def __init__(self, system_message: str, model: str = "claude-sonnet-4-5-20250929"):
+            self.system = system_message
+            self.model = model
+            self.history = []  # list of {role, content}
+        def with_model(self, provider, model):
+            # Map Emergent-style model names to real Anthropic ones
+            m = {"claude-sonnet-4-6":"claude-sonnet-4-5-20250929","claude-sonnet-4-5":"claude-sonnet-4-5-20250929"}.get(model, model)
+            self.model = m
+            return self
+        async def stream_message(self, user_msg):
+            self.history.append({"role":"user","content":user_msg.text})
+            async with _anthropic_client.messages.stream(model=self.model, max_tokens=4096, system=self.system, messages=self.history) as stream:
+                full = ""
+                async for text in stream.text_stream:
+                    full += text
+                    yield TextDelta(content=text)
+            self.history.append({"role":"assistant","content":full})
+            yield StreamDone()
+
+    def make_chat(api_key, session_id, system_message):
+        return _DirectAnthropicChat(system_message=system_message)
+    print(f"[LLM] Using Doug's direct Anthropic API key (bypasses Emergent daily cap)")
+else:
+    def make_chat(api_key, session_id, system_message):
+        return LlmChat(api_key=api_key, session_id=session_id, system_message=system_message)
+    print(f"[LLM] Using Emergent Universal Key")
 
 app = FastAPI(title="EZtoFind.ca API")
 api = APIRouter(prefix="/api")
@@ -234,7 +272,7 @@ async def doogie_chat(body: ChatIn):
         "ts": now_iso(),
         "expires_at": expires  # BSON date for TTL index
     })
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=DOOGIE_SYSTEM).with_model("anthropic", "claude-sonnet-4-6")
+    chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=DOOGIE_SYSTEM).with_model("anthropic", "claude-sonnet-4-6")
 
     async def gen():
         full = ""
@@ -486,7 +524,7 @@ FORMAT RULES:
 - Return ONLY valid JSON: an array of exactly 10 objects, each with "q" and "a" keys
 - No preamble, no markdown, no code fences, just the JSON array."""
     try:
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be accurate under BC statutes (BCFSA/RESA, Strata Property Act, Agricultural Land Commission Act, Property Transfer Tax Act, PIPA, CASL, WESA). You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be accurate under BC statutes (BCFSA/RESA, Strata Property Act, Agricultural Land Commission Act, Property Transfer Tax Act, PIPA, CASL, WESA). You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
         async for ev in chat.stream_message(UserMessage(text=prompt)):
             if isinstance(ev, TextDelta): full += ev.content
@@ -530,7 +568,7 @@ Strict rules:
 "For real estate advice specific to {name}, ask to be referred to a REALTOR® through our Referral REALTOR® link."
 """
     try:
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"syn-{uuid.uuid4()}", system_message="You are a BC real estate content writer producing factual community synopses.").with_model("anthropic", "claude-sonnet-4-6")
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"syn-{uuid.uuid4()}", system_message="You are a BC real estate content writer producing factual community synopses.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
         async for ev in chat.stream_message(UserMessage(text=prompt)):
             if isinstance(ev, TextDelta): full += ev.content
@@ -581,7 +619,7 @@ Strict rules:
 - Plain prose. No headers, no bullets, no markdown.
 - Warm, professional tone."""
     try:
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=f"wx-{uuid.uuid4()}", system_message="You are a BC climate writer producing factual community weather summaries.").with_model("anthropic", "claude-sonnet-4-6")
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"wx-{uuid.uuid4()}", system_message="You are a BC climate writer producing factual community weather summaries.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
         async for ev in chat.stream_message(UserMessage(text=prompt)):
             if isinstance(ev, TextDelta): full += ev.content
