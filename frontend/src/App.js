@@ -182,7 +182,7 @@ const Home = () => {
         </div>
       </div>
       <div style={{textAlign:"center",overflow:"visible"}}>
-        <img src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",maxWidth:"none",transform:"scale(1.4)",transformOrigin:"center center",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+        <img src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",maxWidth:"none",transform:"scale(1.9)",transformOrigin:"center center",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 
