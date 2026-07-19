@@ -164,18 +164,61 @@ const DoogieChat = () => {
 };
 
 // --- HOME ---
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const Home = () => {
   const [q, setQ] = useState("");
+  const [terms, setTerms] = useState([]);
+  const [comms, setComms] = useState([]); // [{name, region}]
+  const [focus, setFocus] = useState(false);
+  const [hi, setHi] = useState(0); // highlighted suggestion index
   const nav = useNavigate();
+  useEffect(() => {
+    axios.get(`${API}/glossary`).then(r => setTerms(r.data.map(t => ({slug:t.slug, term:t.term})))).catch(()=>{});
+    axios.get(`${API}/communities`).then(r => {
+      const list = [];
+      Object.entries(r.data || {}).forEach(([region, arr]) => arr.forEach(name => list.push({name, region})));
+      setComms(list);
+    }).catch(()=>{});
+  }, []);
+  const query = q.trim().toLowerCase();
+  const suggestions = !query ? [] : [
+    ...comms.filter(c => c.name.toLowerCase().includes(query)).slice(0, 6).map(c => ({type:"Community", label:c.name, sub:c.region, path:`/community/${slugify(c.name)}`})),
+    ...terms.filter(t => t.term.toLowerCase().includes(query)).slice(0, 6).map(t => ({type:"Glossary", label:t.term, sub:"BC Real Estate Term", path:`/glossary/${t.slug}`}))
+  ].slice(0, 8);
+  const go = (path) => { setQ(""); setFocus(false); nav(path); };
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if(suggestions.length > 0) return go(suggestions[Math.min(hi, suggestions.length-1)].path);
+    if(query) nav("/listings");
+  };
+  const onKeyDown = (e) => {
+    if(!suggestions.length) return;
+    if(e.key === "ArrowDown") { e.preventDefault(); setHi(i => Math.min(i+1, suggestions.length-1)); }
+    else if(e.key === "ArrowUp") { e.preventDefault(); setHi(i => Math.max(i-1, 0)); }
+    else if(e.key === "Escape") setFocus(false);
+  };
   return (<>
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia · Powered by Doogie AI</div>
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'Sora',sans-serif",fontWeight:800}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'Sora',sans-serif",fontWeight:800}}>.ca</span></h1>
         <p className="lead">A BC real estate research platform for buyers and sellers — free market information and terminology for the whole province. Real estate services provided by Doug LeMaire of Fraser Property Management Realty Services Ltd., serving Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
-        <form onSubmit={e=>{e.preventDefault();nav("/listings"); }} className="search-bar" data-testid="hero-search">
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Try: '3 bedroom detached in Langley under $1.5M'" data-testid="hero-search-input"/>
+        <form onSubmit={onSubmit} className="search-bar" data-testid="hero-search" style={{position:"relative"}} autoComplete="off">
+          <input value={q} onChange={e=>{setQ(e.target.value); setHi(0);}} onFocus={()=>setFocus(true)} onBlur={()=>setTimeout(()=>setFocus(false),200)} onKeyDown={onKeyDown} placeholder="Type a community or BC real estate term…" data-testid="hero-search-input"/>
           <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
+          {focus && suggestions.length > 0 && (
+            <div data-testid="hero-search-suggestions" style={{position:"absolute",top:"calc(100% + 0.35rem)",left:0,right:0,background:"white",borderRadius:14,boxShadow:"0 20px 40px rgba(15,42,91,0.2)",border:"1px solid rgba(15,42,91,0.1)",overflow:"hidden",zIndex:10,fontFamily:"Inter,sans-serif",maxHeight:"22rem",overflowY:"auto"}}>
+              {suggestions.map((s, i) => (
+                <button type="button" key={s.type+"-"+s.label} onMouseDown={(e)=>{e.preventDefault(); go(s.path);}} onMouseEnter={()=>setHi(i)} data-testid={`suggestion-${s.type.toLowerCase()}-${slugify(s.label)}`} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"1rem",padding:"0.75rem 1rem",background:i===hi?"#F5F0E1":"transparent",border:"none",cursor:"pointer",textAlign:"left"}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:600,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{s.label}</div>
+                    <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{s.sub}</div>
+                  </div>
+                  <span style={{fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.06em",color:s.type==="Community"?"#16A34A":"#0EA5E9",background:s.type==="Community"?"rgba(22,163,74,0.08)":"rgba(14,165,233,0.08)",padding:"0.2rem 0.55rem",borderRadius:999,flexShrink:0}}>{s.type.toUpperCase()}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </form>
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
           {["Detached","Luxury","Equestrian","Estate Sales","Condos","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
