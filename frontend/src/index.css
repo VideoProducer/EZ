@@ -98,7 +98,7 @@ footer ul li { padding: 0.35rem 0; font-size: 0.9rem; }
 
 .doogie-panel { position: fixed; bottom: 6.5rem; right: 1.5rem; width: 380px; max-width: calc(100vw - 2rem); height: 540px; max-height: calc(100vh - 8rem); z-index: 61; background: white; border-radius: 20px; box-shadow: 0 30px 60px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; }
 .doogie-panel header { background: var(--brand-navy); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem; }
-.doogie-panel header img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--brand-gold); }
+.doogie-panel header img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--brand-gold); background: white; }
 .doogie-panel .msgs { flex: 1; overflow-y: auto; padding: 1rem; font-family: 'Inter',sans-serif; font-size: 0.92rem; background: white; }
 .doogie-panel .msg { padding: 0.7rem 1rem; border-radius: 16px; margin-bottom: 0.75rem; max-width: 85%; line-height: 1.5; }
 .doogie-panel .msg.user { background: var(--brand-blue); color: white; margin-left: auto; border-bottom-right-radius: 4px; }
