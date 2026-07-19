@@ -188,9 +188,7 @@ const Home = () => {
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
-        <div className="eyebrow">Our Focus Areas</div>
-        <h2 className="section-title">Three regions. One trusted REALTOR®.</h2>
-        <p className="section-sub">Doug LeMaire works in the three most sought-after real estate corridors in British Columbia.</p>
+        <p className="section-sub">Doug LeMaire serves clients across three of British Columbia's most desirable real estate corridors.</p>
       </div>
       <div className="grid-3">
         {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,d:"From downtown highrises to West Van estates — 22 communities covered."},
