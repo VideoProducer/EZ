@@ -12,6 +12,7 @@ const DOOGIE_POINT_R = "https://customer-assets.emergentagent.com/job_proptech-h
 const DOOGIE_POINT_L = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/686tnkdh_Doogie%20Pointing%20Left.jpeg";
 const DOOGIE_CELEBRATE = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/4g6serdu_Doogie%20Celebrating.png";
 const DOOGIE_THINKING = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png";
+const DOOGIE_MAGNIFY = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/6phrhs00_Doogie%20Magnifying%20Glass%20Transparent.png";
 const DOOGIE_POINT_L_T = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png";
 
 // Real BC imagery (Unsplash, free-to-use)
@@ -181,7 +182,7 @@ const Home = () => {
         </div>
       </div>
       <div style={{textAlign:"center"}}>
-        <img src="/images/doogie-laptop.png" alt="Doogie mascot" style={{maxWidth:"420px",width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+        <img src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{maxWidth:"460px",width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 
@@ -1155,7 +1156,7 @@ const HomeSchema = () => {
 // --- Compliance strip ---
 const ComplianceStrip = () => (
   <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
-    <span className="compliance-strip-full">Doogie provides general information only. Not financial, legal, or investment advice. Consult a licensed REALTOR®. | </span>BCFSA · CREA · GVR · PIPA · CASL compliant
+    Doogie provides general information only. Not financial, legal, real estate or investment advice.
   </div>
 );
 
