@@ -244,16 +244,16 @@ const Home = () => {
           </div>
         ))}
       </div>
-      <div style={{display:"flex",justifyContent:"center",gap:"3rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"flex-start"}}>
         {[
           {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
           {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
           {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
         ].map((b,i) => (
-          <div key={i} style={{maxWidth:220}}>
-            <div style={{fontSize:"1.75rem",marginBottom:"0.5rem"}}>{b.icon}</div>
-            <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
-            <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem"}}>{b.sub}</div>
+          <div key={i} style={{flex:"0 0 220px",maxWidth:220}}>
+            <div style={{fontSize:"1.75rem",marginBottom:"0.5rem",lineHeight:1}}>{b.icon}</div>
+            <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem",minHeight:"1.4em"}}>{b.title}</div>
+            <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em"}}>{b.sub}</div>
           </div>
         ))}
       </div>
@@ -502,12 +502,13 @@ const SellerForm = () => {
         <div className="field"><label>Timeline to List *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">Select…</option><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just exploring</option></select></div>
         <div className="field"><label>Estimated Value *</label><select required value={f.estimated_value} onChange={e=>setF({...f,estimated_value:e.target.value})}><option value="">Select…</option><option>Under $750K</option><option>$750K – $1.5M</option><option>$1.5M – $3M</option><option>$3M – $5M</option><option>$5M+</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})}/> The property is currently listed with another REALTOR®</label></div>
+      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="seller-currently-listed"/> The property is currently listed with another REALTOR®</label></div>
+      {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Thank you — but because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>Communities</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>Glossary</Link> pages.</div>}
       <div style={{marginTop:"1rem"}} className="field"><label>Reason for selling (optional)</label><textarea rows="3" value={f.reason} onChange={e=>setF({...f,reason:e.target.value})}/></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> I consent to receive commercial electronic messages (CASL).</label></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
-      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-submit">Submit</button>
+      <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">Submit</button>
     </form>
   </div></section>);
 };
@@ -561,16 +562,16 @@ const About = () => (<section className="section"><div className="container-x" s
       <p><strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd.</p>
     </div>
   </div>
-  <div style={{display:"flex",justifyContent:"center",gap:"3rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center"}} data-testid="about-trust-badges">
+  <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"flex-start"}} data-testid="about-trust-badges">
     {[
       {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
       {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
       {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
     ].map((b,i) => (
-      <div key={i} style={{maxWidth:220}}>
-        <div style={{fontSize:"1.75rem",marginBottom:"0.5rem"}}>{b.icon}</div>
-        <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
-        <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem"}}>{b.sub}</div>
+      <div key={i} style={{flex:"0 0 220px",maxWidth:220}}>
+        <div style={{fontSize:"1.75rem",marginBottom:"0.5rem",lineHeight:1}}>{b.icon}</div>
+        <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem",minHeight:"1.4em"}}>{b.title}</div>
+        <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em"}}>{b.sub}</div>
       </div>
     ))}
   </div>

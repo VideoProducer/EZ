@@ -1,0 +1,24 @@
+{
+  "summary": "Verified the newly-added Seller intake hard-block (mirrors Buyer form) end-to-end. All 4 scenarios PASS: (1) Seller valid submit with currently_listed=false lands on Thank-you page; (2) Ticking [data-testid='seller-currently-listed'] reveals the amber warning block containing 'Doug isn't able to help you directly' plus Communities & Glossary links, and [data-testid='seller-submit'] becomes disabled (opacity=0.5, cursor=not-allowed); (3) Buyer regression (working_with_realtor) still hard-blocks; (4) Backend POST /api/leads/seller returns HTTP 400 with detail containing 'currently listed with another REALTOR' when currently_listed=true, and 200 with success:true when false.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_seller_hardblock.py",
+    "/app/test_reports/pytest/seller_hardblock_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "App.js is still ~1400+ lines — refactor into pages/components/forms/legal modules for maintainability (carried over from iteration_5-7).",
+    "Seller form form-fields use bare <label>Text</label><input/> siblings without id/for association or wrapping label — this breaks Playwright get_by_label() and screen-reader label linking. Consider adding htmlFor + id (or wrap the input inside the label) for accessibility and testability. Non-blocking, but tests had to fall back to positional selectors.",
+    "BCFSA licence number is still literal placeholder '[Doug to add]' at data-testid=licence-num — must be filled before production launch to satisfy BCFSA advertising rules.",
+    "Backend endpoints /api/leads/buyer and /api/leads/seller silently accept unknown Pydantic fields (default). Not a bug, but consider `model_config = ConfigDict(extra='forbid')` on lead models to catch payload drift early."
+  ],
+  "updated_files": ["/app/backend/tests/test_seller_hardblock.py"],
+  "success_rate": {"backend": "100% (5/5 pytest)", "frontend": "100% (3/3 UI scenarios)"},
+  "test_credentials": "n/a — public endpoints only",
+  "seed_data_creation": "Two TEST_-prefixed seller lead + one TEST_ buyer lead created in MongoDB via UI/API (safe to leave; identifiable by TEST_ prefix and testseller_*/testbuyer_* email).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Seller hard-block matches Buyer hard-block behaviour on both UX layer (amber warning + disabled submit) and API layer (HTTP 400 with 'currently listed with another REALTOR®' detail). Regression on buyer flow (working_with_realtor) still works. Pytest lives at /app/backend/tests/test_seller_hardblock.py and can be re-run as a regression via `python -m pytest backend/tests/test_seller_hardblock.py -v`. Frontend labels are NOT associated to inputs via for/id — future tests should use `.field:has(> label:text-is(\"Label *\")) input/select` selectors or add testids on each field.",
+  "rca_of_the_issue": "n/a — feature verification, not a bug. Implementation mirrors iteration_5 buyer form (App.js lines 484-513 for UI, server.py lines 320-328 for backend rejection)."
+}

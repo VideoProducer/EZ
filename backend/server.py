@@ -321,6 +321,8 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
 async def create_seller_lead(lead: SellerLead, request: Request):
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
+    if lead.currently_listed:
+        raise HTTPException(400, "Because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.seller_leads.insert_one(doc)
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
