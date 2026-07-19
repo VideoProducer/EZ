@@ -244,16 +244,16 @@ const Home = () => {
           </div>
         ))}
       </div>
-      <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"flex-start"}}>
+      <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}}>
         {[
           {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
           {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
           {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
         ].map((b,i) => (
-          <div key={i} style={{flex:"0 0 220px",maxWidth:220}}>
+          <div key={i} style={{flex:"0 0 220px",maxWidth:220,display:"flex",flexDirection:"column",alignItems:"center"}}>
             <div style={{fontSize:"1.75rem",marginBottom:"0.5rem",lineHeight:1}}>{b.icon}</div>
-            <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem",minHeight:"1.4em"}}>{b.title}</div>
-            <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em"}}>{b.sub}</div>
+            <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
+            <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em",display:"flex",alignItems:"center",justifyContent:"center"}}>{b.sub}</div>
           </div>
         ))}
       </div>
@@ -553,7 +553,7 @@ const RealtorCredentials = () => {
 };
 
 // --- About ---
-const About = () => (<section className="section"><div className="container-x" style={{maxWidth:"48rem"}}>
+const About = () => (<section className="section"><div className="container-x" style={{maxWidth:"56rem"}}>
   <div className="eyebrow">About</div><h1 className="section-title">Doug LeMaire, REALTOR®</h1>
   <div style={{display:"flex",gap:"2rem",flexWrap:"wrap",alignItems:"flex-start",marginTop:"2rem"}}>
     <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
@@ -562,16 +562,16 @@ const About = () => (<section className="section"><div className="container-x" s
       <p><strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd.</p>
     </div>
   </div>
-  <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"flex-start"}} data-testid="about-trust-badges">
+  <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}} data-testid="about-trust-badges">
     {[
       {icon:"🛡️",title:"Licensed REALTOR®",sub:"BC Financial Services Authority"},
       {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
       {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
     ].map((b,i) => (
-      <div key={i} style={{flex:"0 0 220px",maxWidth:220}}>
+      <div key={i} style={{flex:"0 0 220px",maxWidth:220,display:"flex",flexDirection:"column",alignItems:"center"}}>
         <div style={{fontSize:"1.75rem",marginBottom:"0.5rem",lineHeight:1}}>{b.icon}</div>
-        <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem",minHeight:"1.4em"}}>{b.title}</div>
-        <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em"}}>{b.sub}</div>
+        <div style={{fontWeight:700,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{b.title}</div>
+        <div style={{fontSize:"0.82rem",color:"var(--muted)",lineHeight:1.4,marginTop:"0.25rem",minHeight:"2.8em",display:"flex",alignItems:"center",justifyContent:"center"}}>{b.sub}</div>
       </div>
     ))}
   </div>
