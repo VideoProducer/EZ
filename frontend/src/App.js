@@ -171,7 +171,7 @@ const Home = () => {
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia · Powered by Doogie AI</div>
-        <h1><span className="accent" style={{color:"#16A34A"}}>Real estate</span>,<br/>made <span className="brand-blue" style={{color:"#0EA5E9"}}>EZ to Find</span><span className="green" style={{color:"#FDB813"}}>.ca</span></h1>
+        <h1><span className="accent" style={{color:"#16A34A"}}>Real estate</span><span style={{color:"#000080"}}>,</span><br/><span style={{color:"#000080"}}>made </span><span className="brand-blue" style={{color:"#0EA5E9"}}>EZ to Find</span><span className="green" style={{color:"#FDB813"}}>.ca</span></h1>
         <p className="lead">A BC real estate research platform for buyers and sellers — free market information and terminology for the whole province. Real estate services provided by Doug LeMaire of Fraser Property Management Realty Services Ltd., serving Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
         <form onSubmit={e=>{e.preventDefault();nav("/listings"); }} className="search-bar" data-testid="hero-search">
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Try: '3 bedroom detached in Langley under $1.5M'" data-testid="hero-search-input"/>
