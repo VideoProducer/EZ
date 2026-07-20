@@ -200,7 +200,7 @@ const Home = () => {
   return (<>
     <section className="hero"><div className="container-x hero-grid">
       <div>
-        <div className="eyebrow">🏔️ British Columbia · Powered by Doogie AI</div>
+        <div className="eyebrow">🏔️ British Columbia</div>
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'Sora',sans-serif",fontWeight:800}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'Sora',sans-serif",fontWeight:800}}>.ca</span></h1>
         <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate, now or in the future.</p>
         <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted chatbot designed to help provide information, answer general real estate questions, explain terminology, and navigate the EZtoFind.ca platform. Doogie provides general information only and is not a substitute for professional real estate advice.</p>
