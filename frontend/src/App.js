@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import "./App.css";
 
@@ -189,7 +189,7 @@ const Home = () => {
   const onSubmit = (e) => {
     e.preventDefault();
     if(suggestions.length > 0) return go(suggestions[Math.min(hi, suggestions.length-1)].path);
-    if(query) nav("/listings");
+    if(query) nav(`/listings?q=${encodeURIComponent(q.trim())}`);
   };
   const onKeyDown = (e) => {
     if(!suggestions.length) return;
@@ -202,7 +202,9 @@ const Home = () => {
       <div>
         <div className="eyebrow">🏔️ British Columbia · Powered by Doogie AI</div>
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'Sora',sans-serif",fontWeight:800}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'Sora',sans-serif",fontWeight:800}}>.ca</span></h1>
-        <p className="lead">A BC real estate research platform for buyers and sellers — free market information and terminology for the whole province. Real estate services provided by Doug LeMaire of Fraser Property Management Realty Services Ltd., serving Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
+        <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate, now or in the future.</p>
+        <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted chatbot designed to help provide information, answer general real estate questions, explain terminology, and navigate the EZtoFind.ca platform. Doogie provides general information only and is not a substitute for professional real estate advice.</p>
+        <p className="lead" style={{marginTop:"1rem"}}>Real estate services are provided by Doug LeMaire, Licensed REALTOR®, with Fraser Property Management Realty Services Ltd., serving Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>
         <form onSubmit={onSubmit} className="search-bar" data-testid="hero-search" style={{position:"relative"}} autoComplete="off">
           <input value={q} onChange={e=>{setQ(e.target.value); setHi(0);}} onFocus={()=>setFocus(true)} onBlur={()=>setTimeout(()=>setFocus(false),200)} onKeyDown={onKeyDown} placeholder="Type a community or BC real estate term…" data-testid="hero-search-input"/>
           <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
@@ -313,19 +315,23 @@ const Home = () => {
 };
 
 // --- Listings iframe page ---
-const Listings = () => (
+const Listings = () => {
+  const [params] = useSearchParams();
+  const q = params.get("q");
+  return (
   <section className="section"><div className="container-x">
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">Live BC Listings</div>
       <h1 className="section-title">Search all British Columbia MLS® listings.</h1>
+      {q && <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.95rem",color:"var(--brand-navy)",background:"#F5F0E1",padding:"0.75rem 1.25rem",borderRadius:999,display:"inline-block",margin:"0 auto 1rem"}} data-testid="listings-query-tag">🔍 Your search: <strong>"{q}"</strong> — type this into the map search below to filter results.</p>}
       <p className="section-sub">Powered by www.GreaterVancouver.ForSale — the same MLS® data our REALTORS® use daily. Data compliant with CREA, GVR &amp; MLS® rules.</p>
     </div>
     <div style={{background:"white",borderRadius:16,overflow:"hidden",border:"1px solid rgba(15,42,91,0.1)",boxShadow:"0 8px 24px rgba(15,42,91,0.05)"}}>
       <iframe src="https://www.greatervancouver.forsale/mapsearchapp" title="BC MLS Listings" style={{width:"100%",height:"800px",border:"none",display:"block"}} data-testid="listings-iframe"/>
     </div>
     <div className="notice" style={{marginTop:"1.5rem"}}>Listings data is provided under license from participating MLS® systems in British Columbia. The Doogie AI on this website does not directly query or manipulate this listings feed.</div>
-  </div></section>
-);
+  </div></section>);
+};
 
 // --- Regions ---
 const RegionsIndex = () => (
