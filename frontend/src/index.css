@@ -81,6 +81,7 @@ section.section { padding: 5rem 0; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
 @media(max-width: 900px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+@media(max-width: 900px) { .featured-grid { grid-template-columns: 1fr !important; } }
 
 /* Footer */
 footer { background: var(--brand-navy); color: #DCE3F1; padding: 3rem 0 2rem; margin-top: 4rem; font-family: 'Inter',sans-serif; }
