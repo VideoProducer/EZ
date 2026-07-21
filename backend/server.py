@@ -10,6 +10,7 @@ from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 import re
+from glossary_sources import get_sources_for_term
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -499,6 +500,8 @@ async def get_term(slug: str):
     if not t.get("faqs_approved"):
         t["faqs"] = []
         t["faqs_pending_review"] = True
+    # Attach authoritative sources (statute + primary regulator) — factually cited
+    t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
