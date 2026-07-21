@@ -51,7 +51,7 @@ if ANTHROPIC_API_KEY:
                     full += text
                     yield TextDelta(content=text)
             self.history.append({"role":"assistant","content":full})
-            yield StreamDone()
+            # Stream ends naturally — no need to yield StreamDone (its signature requires 5+ args)
 
     def make_chat(api_key, session_id, system_message):
         return _DirectAnthropicChat(system_message=system_message)
