@@ -65,7 +65,6 @@ const Nav = () => {
         <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
-        <NavLink to="/specialties" onClick={close} data-testid="nav-specialties">Doug's Specialties</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <span className="nav-divider" aria-hidden="true"/>
