@@ -263,20 +263,6 @@ const Home = () => {
       </div>
     </div></section>
 
-    <section className="section" style={{background:"#F5F0E1"}}><div className="container-x">
-      <div style={{textAlign:"center",marginBottom:"3rem"}}>
-        <div className="eyebrow">Doug's Specialties</div>
-        <h2 className="section-title">Five areas of deep expertise.</h2>
-      </div>
-      <div className="grid-3">
-        {[{s:"detached",t:"Detached Homes",i:IMG.detached},{s:"luxury",t:"Luxury",i:IMG.luxury},{s:"equestrian",t:"Equestrian & Acreage",i:IMG.equestrian},{s:"estate-sales",t:"Estate Sales / Probate",i:IMG.estate},{s:"condos",t:"Condos",i:IMG.condo},{s:"townhomes",t:"Townhomes",i:IMG.townhomes}].map(sp =>
-          <Link to={`/specialties/${sp.s}`} key={sp.s} className="card" data-testid={`spec-${sp.s}`}>
-            <img src={sp.i} alt={sp.t} className="card-img"/>
-            <div className="card-body"><h3 className="card-title">{sp.t}</h3></div>
-          </Link>)}
-      </div>
-    </div></section>
-
     <Calculators/>
 
     <section className="section"><div className="container-x">
