@@ -16,6 +16,75 @@ const DOOGIE_MAGNIFY = "https://customer-assets-lqy194kg.emergentagent.net/job_p
 const DOOGIE_POINT_L_T = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png";
 const DOUG_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg";
 
+// Shared "Authoritative Sources" block — used on glossary + community pages
+const SourcesBlock = ({title, intro, sources, testid}) => (
+  <div data-testid={testid||"authoritative-sources"} style={{marginTop:"2rem",padding:"1.5rem 1.75rem",background:"#F8FAFC",border:"1px solid rgba(15,42,91,0.12)",borderLeft:"4px solid var(--brand-blue)",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
+    <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.85rem"}}>{title||"Authoritative Sources"}</div>
+    {intro && <p style={{fontSize:"0.88rem",color:"var(--muted)",marginBottom:"1rem",lineHeight:1.6}}>{intro}</p>}
+    <ul style={{listStyle:"none",padding:0,margin:0,display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+      {sources.map((s,i)=>(
+        <li key={i} style={{fontSize:"0.92rem",lineHeight:1.5}}>
+          <a href={s.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"none"}}>{s.title} ↗</a>
+          <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.15rem"}}>{s.publisher}</div>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+// Real ECCC Climate Normals table — replaces AI weather text when live data is available
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtNum = (v, digits=1) => (v===null || v===undefined) ? "—" : Number(v).toFixed(digits);
+const ClimateNormalsTable = ({data, community}) => {
+  const m = data.monthly || {};
+  const st = data.station || {};
+  const period = data.period || {};
+  const rows = [
+    {label: "Mean daily temp (°C)",   values: m.mean_temp_c,     digits: 1},
+    {label: "Mean daily max (°C)",    values: m.max_temp_c,      digits: 1},
+    {label: "Mean daily min (°C)",    values: m.min_temp_c,      digits: 1},
+    {label: "Total precipitation (mm)", values: m.total_precip_mm, digits: 0},
+    {label: "Total rainfall (mm)",    values: m.rainfall_mm,     digits: 0},
+    {label: "Total snowfall (cm)",    values: m.snowfall_cm,     digits: 1},
+  ];
+  return (
+    <div data-testid="climate-normals-table" style={{fontFamily:"Inter,sans-serif",marginTop:"0.5rem"}}>
+      <div style={{background:"#F0F7FF",border:"1px solid rgba(15,42,91,0.15)",borderLeft:"4px solid var(--brand-green-dark)",padding:"1rem 1.25rem",borderRadius:10,marginBottom:"1rem"}}>
+        <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,color:"var(--brand-navy)"}}>Environment Canada Climate Normals · {period.begin}–{period.end}</div>
+        <div style={{fontSize:"0.95rem",color:"var(--ink)",marginTop:"0.35rem"}}>
+          Nearest official weather station to <strong>{community}</strong>: <strong>{st.name}</strong>{st.region_label ? <span style={{color:"var(--muted)"}}> · {st.region_label}</span> : null}
+        </div>
+        <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem"}}>
+          Source: <a href={st.eccc_url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>Environment and Climate Change Canada — Canadian Climate Normals ↗</a>
+        </div>
+      </div>
+      <div style={{overflowX:"auto",border:"1px solid rgba(15,42,91,0.1)",borderRadius:10}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.85rem",background:"white"}}>
+          <thead>
+            <tr style={{background:"#F5F0E1"}}>
+              <th style={{textAlign:"left",padding:"0.6rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.15)",fontWeight:700,color:"var(--brand-navy)"}}>Metric</th>
+              {MONTH_ABBR.map(mo => <th key={mo} style={{padding:"0.6rem 0.4rem",borderBottom:"1px solid rgba(15,42,91,0.15)",fontWeight:700,color:"var(--brand-navy)",textAlign:"center"}}>{mo}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row,ri) => (
+              <tr key={ri} style={{borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+                <td style={{padding:"0.5rem 0.75rem",fontWeight:600,color:"var(--ink)"}}>{row.label}</td>
+                {(row.values||Array(12).fill(null)).map((v,mi)=>(
+                  <td key={mi} style={{padding:"0.5rem 0.4rem",textAlign:"center",color:"var(--ink)",fontVariantNumeric:"tabular-nums"}}>{fmtNum(v,row.digits)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",lineHeight:1.5}}>
+        Values are 30-year averages calculated by Environment and Climate Change Canada from observations at station <strong>{st.name}</strong> (Climate ID {st.climate_id}) for the period {period.begin}–{period.end}. These are historical climate normals — not a current-day forecast.
+      </div>
+    </div>
+  );
+};
+
 // Shared "Published by Doug LeMaire, REALTOR®" attribution block
 // Renders at the bottom of glossary term pages, community pages, and weather sections
 const PublishedByDoug = ({compact=false}) => (
@@ -491,20 +560,7 @@ const GlossaryTerm = () => {
       : <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>FAQs are being generated by Doogie — refresh in a few seconds.</p>)}
 
     {t.sources && t.sources.length>0 && (
-      <div data-testid="glossary-sources" style={{marginTop:"3rem",padding:"1.5rem 1.75rem",background:"#F8FAFC",border:"1px solid rgba(15,42,91,0.12)",borderLeft:"4px solid var(--brand-blue)",borderRadius:12,fontFamily:"Inter,sans-serif"}}>
-        <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.85rem"}}>Authoritative Sources</div>
-        <p style={{fontSize:"0.88rem",color:"var(--muted)",marginBottom:"1rem",lineHeight:1.6}}>
-          Verify the specific statutory language, thresholds, deadlines and current guidance directly with the governing authority:
-        </p>
-        <ul style={{listStyle:"none",padding:0,margin:0,display:"flex",flexDirection:"column",gap:"0.75rem"}}>
-          {t.sources.map((s,i)=>(
-            <li key={i} style={{fontSize:"0.92rem",lineHeight:1.5}}>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"none"}} data-testid={`source-link-${i}`}>{s.title} ↗</a>
-              <div style={{fontSize:"0.8rem",color:"var(--muted)",marginTop:"0.15rem"}}>{s.publisher}</div>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <SourcesBlock title="Authoritative Sources" intro="Verify the specific statutory language, thresholds, deadlines and current guidance directly with the governing authority:" sources={t.sources} testid="glossary-sources"/>
     )}
 
     <div className="notice" style={{marginTop:"1.5rem"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
@@ -859,13 +915,15 @@ const CommunityPage = () => {
   const [data, setData] = useState({});
   const [syn, setSyn] = useState(null);
   const [wx, setWx] = useState(null);
+  const [climate, setClimate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingWx, setLoadingWx] = useState(true);
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
   useEffect(() => {
-    setLoading(true); setSyn(null); setLoadingWx(true); setWx(null);
+    setLoading(true); setSyn(null); setLoadingWx(true); setWx(null); setClimate(null);
     axios.get(`${API}/community/${slug}/synopsis`, {timeout: 90000}).then(r => { setSyn(r.data); setLoading(false); }).catch(() => setLoading(false));
     axios.get(`${API}/community/${slug}/weather`, {timeout: 90000}).then(r => { setWx(r.data); setLoadingWx(false); }).catch(() => setLoadingWx(false));
+    axios.get(`${API}/community/${slug}/climate-normals`, {timeout: 30000}).then(r => setClimate(r.data)).catch(() => setClimate(null));
   }, [slug]);
   let found = null, region = null;
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => c.toLowerCase().replace(/[^a-z0-9]+/g,"-") === slug); if(m) { found = m; region = r; break; } }
@@ -902,18 +960,21 @@ const CommunityPage = () => {
       {!loading && syn?.synopsis && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>')}}></div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
+        {syn.sources && syn.sources.length>0 && <SourcesBlock title="Authoritative Sources — Community Data" intro={`Verify official demographic, economic, and municipal information for ${found} directly with the governing authority:`} sources={syn.sources} testid="community-sources"/>}
         <PublishedByDoug compact/>
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
-      <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>☀️ Weather in {found}</h2>
-      {loadingWx && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is preparing the local climate summary…</div>}
-      {!loadingWx && wx?.weather && <>
+      <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>☀️ Weather &amp; Climate in {found}</h2>
+      {climate?.available && climate.monthly && <ClimateNormalsTable data={climate} community={found}/>}
+      {loadingWx && !climate?.available && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is preparing the local climate summary…</div>}
+      {!loadingWx && !climate?.available && wx?.weather && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-weather">{wx.weather}</div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
-        <PublishedByDoug compact/>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted climate summary. For authoritative data, see the Environment Canada sources below.</div>
       </>}
-      {!loadingWx && wx?.note && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
+      {(climate?.available || (!loadingWx && wx?.weather)) && wx?.sources && wx.sources.length>0 && <SourcesBlock title="Authoritative Sources — Climate & Weather" intro={`Verify current weather, alerts, and historical climate records with Environment and Climate Change Canada:`} sources={wx.sources} testid="weather-sources"/>}
+      {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact/>}
+      {!loadingWx && wx?.note && !climate?.available && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}

@@ -10,7 +10,10 @@ from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 import re
+import httpx
 from glossary_sources import get_sources_for_term
+from community_sources import get_community_sources, get_weather_sources
+from bc_stations import get_station_for_community, eccc_station_page_url, eccc_normals_search_url
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -595,17 +598,19 @@ async def community_synopsis(slug: str):
         if name: break
     if not name: raise HTTPException(404, "Community not found")
 
+    community_srcs = get_community_sources(name, region)
+
     cached = await db.community_synopses.find_one({"slug": slug}, {"_id":0})
     if cached and cached.get("synopsis"):
         if not cached.get("approved"):
-            return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication."}
-        return {"community": name, "region": region, "synopsis": cached["synopsis"], "source":"cache"}
+            return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.", "sources": community_srcs}
+        return {"community": name, "region": region, "synopsis": cached["synopsis"], "source":"cache", "sources": community_srcs}
 
     synopsis = await generate_community_synopsis(name, region)
     if not synopsis:
-        return {"community": name, "region": region, "synopsis": "", "source":"unavailable", "note":"Synopsis is being generated — please refresh in a moment."}
+        return {"community": name, "region": region, "synopsis": "", "source":"unavailable", "note":"Synopsis is being generated — please refresh in a moment.", "sources": community_srcs}
     await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": synopsis, "approved": False, "ts": now_iso()}, upsert=True)
-    return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication."}
+    return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.", "sources": community_srcs}
 
 async def generate_community_weather(name: str, region: str) -> str:
     """Generate a 150-200 word BC community weather synopsis using Claude Sonnet 4.6."""
@@ -646,17 +651,155 @@ async def community_weather(slug: str):
         if name: break
     if not name: raise HTTPException(404, "Community not found")
 
+    weather_sources = get_weather_sources(name, region)
+
     cached = await db.community_weather.find_one({"slug": slug}, {"_id":0})
     if cached and cached.get("weather"):
         if not cached.get("approved"):
-            return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication."}
-        return {"community": name, "region": region, "weather": cached["weather"], "source":"cache"}
+            return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication.", "sources": weather_sources}
+        return {"community": name, "region": region, "weather": cached["weather"], "source":"cache", "sources": weather_sources}
 
     weather = await generate_community_weather(name, region)
     if not weather:
-        return {"community": name, "region": region, "weather": "", "source":"unavailable", "note":"Weather summary is being generated — please refresh in a moment."}
+        return {"community": name, "region": region, "weather": "", "source":"unavailable", "note":"Weather summary is being generated — please refresh in a moment.", "sources": weather_sources}
     await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": weather, "approved": False, "ts": now_iso()}, upsert=True)
-    return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication."}
+    return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication.", "sources": weather_sources}
+
+
+# =============== ECCC LIVE CLIMATE NORMALS ===============
+# Real 1981-2010 Canadian Climate Normals fetched from Environment and Climate
+# Change Canada's MSC GeoMet API. Cached permanently in MongoDB per station
+# (climate normals are stable 30-year averages that only change every decade).
+NORMAL_ELEMENTS = {
+    1:  "mean_temp_c",       # Mean daily temperature (°C)
+    5:  "max_temp_c",        # Mean daily max temperature (°C)
+    8:  "min_temp_c",        # Mean daily min temperature (°C)
+    52: "rainfall_mm",       # Total rainfall (mm)
+    54: "snowfall_cm",       # Total snowfall (cm)
+    56: "total_precip_mm",   # Total precipitation (mm)
+}
+
+async def fetch_eccc_normals(station_id: int) -> Optional[dict]:
+    """Fetch 1981-2010 climate normals for a station from ECCC MSC GeoMet API.
+
+    Returns a dict:
+      {"station_name","period_begin","period_end",
+       "monthly": {"mean_temp_c":[jan..dec], "max_temp_c":[...], ...}}
+    or None on failure. Cached forever after first success.
+    """
+    url = f"https://api.weather.gc.ca/collections/climate-normals/items?STN_ID={station_id}&f=json&limit=2000"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            data = r.json()
+    except Exception as e:
+        logger.warning(f"ECCC normals fetch failed for STN_ID={station_id}: {e}")
+        return None
+
+    monthly = {v: [None]*12 for v in NORMAL_ELEMENTS.values()}
+    station_name = None
+    period_begin = None
+    period_end = None
+    for f in data.get("features", []):
+        p = f.get("properties", {})
+        nid = p.get("NORMAL_ID")
+        month = p.get("MONTH")
+        if nid not in NORMAL_ELEMENTS or not month or not (1 <= month <= 12):
+            continue
+        station_name = p.get("STATION_NAME") or station_name
+        period_begin = p.get("PERIOD_BEGIN") or period_begin
+        period_end = p.get("PERIOD_END") or period_end
+        monthly[NORMAL_ELEMENTS[nid]][month-1] = p.get("VALUE")
+
+    if not station_name:
+        return None
+    return {
+        "station_name": station_name,
+        "period_begin": period_begin,
+        "period_end": period_end,
+        "monthly": monthly,
+    }
+
+@api.get("/community/{slug}/climate-normals")
+async def community_climate_normals(slug: str):
+    """Return real ECCC 1981-2010 Canadian Climate Normals for the nearest station."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+                name = c; region = r; break
+        if name: break
+    if not name: raise HTTPException(404, "Community not found")
+
+    station = get_station_for_community(name, region)
+    if not station:
+        return {"community": name, "region": region, "available": False, "note": "No ECCC station mapping for this community."}
+
+    # Cache check: permanent per-station cache
+    cached = await db.eccc_normals.find_one({"station_id": station["station_id"]}, {"_id":0})
+    if cached and cached.get("monthly"):
+        return {
+            "community": name,
+            "region": region,
+            "available": True,
+            "station": {
+                "id": station["station_id"],
+                "climate_id": station.get("climate_id"),
+                "name": cached.get("station_name") or station["name"],
+                "region_label": station.get("region_label"),
+                "eccc_url": eccc_station_page_url(station["station_id"]),
+            },
+            "period": {"begin": cached.get("period_begin"), "end": cached.get("period_end")},
+            "monthly": cached["monthly"],
+            "source": {
+                "title": "Environment Canada — Canadian Climate Normals 1981-2010",
+                "publisher": "Environment and Climate Change Canada (ECCC)",
+                "api": "https://api.weather.gc.ca/collections/climate-normals",
+            },
+        }
+
+    normals = await fetch_eccc_normals(station["station_id"])
+    if not normals:
+        return {
+            "community": name,
+            "region": region,
+            "available": False,
+            "station": {
+                "id": station["station_id"],
+                "name": station["name"],
+                "eccc_url": eccc_station_page_url(station["station_id"]),
+                "search_url": eccc_normals_search_url(name),
+            },
+            "note": "Live climate normals could not be fetched from Environment Canada at this time.",
+        }
+
+    # Persist forever
+    await db.eccc_normals.replace_one(
+        {"station_id": station["station_id"]},
+        {"station_id": station["station_id"], **normals, "ts": now_iso()},
+        upsert=True,
+    )
+    return {
+        "community": name,
+        "region": region,
+        "available": True,
+        "station": {
+            "id": station["station_id"],
+            "climate_id": station.get("climate_id"),
+            "name": normals["station_name"],
+            "region_label": station.get("region_label"),
+            "eccc_url": eccc_station_page_url(station["station_id"]),
+        },
+        "period": {"begin": normals["period_begin"], "end": normals["period_end"]},
+        "monthly": normals["monthly"],
+        "source": {
+            "title": "Environment Canada — Canadian Climate Normals 1981-2010",
+            "publisher": "Environment and Climate Change Canada (ECCC)",
+            "api": "https://api.weather.gc.ca/collections/climate-normals",
+        },
+    }
 
 # =============== SEED ===============
 @app.on_event("startup")
