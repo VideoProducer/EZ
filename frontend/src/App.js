@@ -14,6 +14,23 @@ const DOOGIE_CELEBRATE = "https://customer-assets.emergentagent.com/job_proptech
 const DOOGIE_THINKING = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png";
 const DOOGIE_MAGNIFY = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/6phrhs00_Doogie%20Magnifying%20Glass%20Transparent.png";
 const DOOGIE_POINT_L_T = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png";
+const DOUG_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg";
+
+// Shared "Published by Doug LeMaire, REALTOR®" attribution block
+// Renders at the bottom of glossary term pages, community pages, and weather sections
+const PublishedByDoug = ({compact=false}) => (
+  <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0"}} data-testid="published-by-doug">
+    <img src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
+    <div style={{lineHeight:1.5}}>
+      <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
+      <div style={{fontWeight:700,color:"var(--ink)"}} itemProp="name">Doug LeMaire, REALTOR®</div>
+      <div style={{fontSize:"0.88rem",color:"var(--brand-blue)"}}>
+        <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}}>EZtoFind.ca</a>
+        <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
+      </div>
+    </div>
+  </div>
+);
 
 // Real BC imagery (Unsplash, free-to-use)
 const IMG = {
@@ -443,19 +460,7 @@ const GlossaryTerm = () => {
   if(loading) return <div className="section container-x"><p>Loading…</p></div>;
   if(!t) return <div className="section container-x"><h2>Term not found</h2><Link to="/glossary">← Back</Link></div>;
 
-  const AuthorBlock = ({compact=false}) => (
-    <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0"}} data-testid="author-block">
-      <img src="/images/doogie-laptop.png" alt="EZtoFind.ca" style={{width:48,height:48,borderRadius:"50%",background:"var(--brand-navy)",padding:2,flexShrink:0}}/>
-      <div style={{lineHeight:1.5}}>
-        <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
-        <div style={{fontWeight:700,color:"var(--ink)"}} itemProp="name">Doug LeMaire, REALTOR®</div>
-        <div style={{fontSize:"0.88rem",color:"var(--brand-blue)"}}>
-          <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}} data-testid="author-block-home-link">EZtoFind.ca</a>
-          <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
-        </div>
-      </div>
-    </div>
-  );
+  const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact}/>;
 
   // AEO / LLM Article schema — combines definition, author, publisher, FAQPage
   const articleSchema = {
@@ -912,6 +917,7 @@ const CommunityPage = () => {
       {!loading && syn?.synopsis && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>')}}></div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
+        <PublishedByDoug compact/>
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
@@ -920,6 +926,7 @@ const CommunityPage = () => {
       {!loadingWx && wx?.weather && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-weather">{wx.weather}</div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
+        <PublishedByDoug compact/>
       </>}
       {!loadingWx && wx?.note && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
