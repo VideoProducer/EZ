@@ -111,7 +111,7 @@ def _get_reply(city: str, prompt: str) -> dict:
 @pytest.mark.parametrize("city,prompt", OUT_OF_FOCUS, ids=[c for c, _ in OUT_OF_FOCUS])
 class TestOutOfFocusReferral:
     """For any BC city outside Doug's focus areas, Doogie must ask a yes/no
-    referral question naming the city and offering a vetted REALTOR."""
+    referral question naming the city and offering a REALTOR."""
 
     def test_stream_completes(self, city, prompt):
         r = _get_reply(city, prompt)
