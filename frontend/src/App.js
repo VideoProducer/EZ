@@ -153,30 +153,23 @@ const Footer = () => (
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>The AI-powered real estate research platform for all of British Columbia. Primary practice area: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor. Referral network covers all of BC.</p>
-        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/>Licensee of the British Columbia Financial Services Authority (BCFSA)<br/>BCFSA Licence #: <span data-testid="licence-num">[Doug to add]</span><br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>Member: Greater Vancouver REALTORS® (GVR) &amp; Canadian Real Estate Association (CREA)</p>
+        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong></p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
-        <li><Link to="/specialties">Specialties</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
         <li><Link to="/realtors">Referral Network</Link></li>
-        <li><Link to="/about">About Doug</Link></li>
-        <li><Link to="/contact">Contact</Link></li>
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
-        <li><Link to="/complaints">Complaints & Concerns</Link></li>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
         <li><Link to="/working-with-a-realtor">Working with a REALTOR®</Link></li>
-        <li><Link to="/code-of-ethics">REALTOR® Code of Ethics</Link></li>
       </ul></div>
       <div><h4>Contact</h4><ul>
         <li>info@eztofind.ca</li>
-        <li>realtors@eztofind.ca</li>
-        <li>referral@eztofind.ca</li>
       </ul></div>
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.7}}>
