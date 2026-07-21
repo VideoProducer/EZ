@@ -122,7 +122,7 @@ const IMG = {
 // To HIDE the featured section entirely, set enabled: false.
 // =============================================================
 const FEATURED_LISTING = {
-  enabled: true,
+  enabled: false,
   status: "NEW LISTING",             // e.g. "NEW LISTING", "JUST SOLD", "OPEN HOUSE SAT"
   address: "1234 Sample Crescent",
   city: "West Vancouver",
