@@ -973,7 +973,6 @@ const DoRTS = () => <Legal title="Disclosure of Representation in Trading Servic
     <li>The name of the licensee and their brokerage.</li>
     <li>Your right to seek independent legal advice.</li>
   </ul>
-  <h3 style={{marginTop:"1.5rem"}}>Doug's practice</h3>
   <p>Doug LeMaire, REALTOR® will deliver a signed BCFSA-issued <em>Disclosure of Representation in Trading Services</em> form before providing any real estate service to you.</p>
   <p>Nothing on this website — including any Doogie AI response, buyer intake form submission, or general glossary/community content — creates a REALTOR®-client relationship.</p>
   <h3 style={{marginTop:"1.5rem"}}>About this form</h3>
