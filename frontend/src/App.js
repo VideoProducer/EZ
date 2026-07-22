@@ -1,10 +1,37 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import "./App.css";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const SITE_URL = "https://eztofind.ca";
+
+// Reusable SEO/meta component — injects per-route <title>, meta description,
+// canonical, OpenGraph, Twitter Card, and optional JSON-LD schema.
+const SEO = ({ title, description, path, image, schema }) => {
+  const url = `${SITE_URL}${path || ""}`;
+  const img = image || `${SITE_URL}/images/og-default.png`;
+  return (
+    <Helmet>
+      <title>{title}</title>
+      <meta name="description" content={description}/>
+      <link rel="canonical" href={url}/>
+      <meta property="og:type" content="website"/>
+      <meta property="og:title" content={title}/>
+      <meta property="og:description" content={description}/>
+      <meta property="og:url" content={url}/>
+      <meta property="og:image" content={img}/>
+      <meta property="og:site_name" content="EZtoFind.ca"/>
+      <meta name="twitter:card" content="summary_large_image"/>
+      <meta name="twitter:title" content={title}/>
+      <meta name="twitter:description" content={description}/>
+      <meta name="twitter:image" content={img}/>
+      {schema && <script type="application/ld+json">{JSON.stringify(schema)}</script>}
+    </Helmet>
+  );
+};
 
 // --- Doogie Assets ---
 const DOOGIE_LAPTOP = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/vo8679bv_Doogie%20Laptop.png";
@@ -404,6 +431,11 @@ const Home = () => {
     else if(e.key === "Escape") setFocus(false);
   };
   return (<>
+    <SEO
+      title="EZtoFind.ca — BC Real Estate Research, Glossary & Community Insights"
+      description="Free BC real estate information platform: 396 glossary terms with authoritative sources, 239 community profiles with real Environment Canada climate data, and BC-wide REALTOR® referral network. By Doug LeMaire, REALTOR®."
+      path="/"
+    />
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
@@ -611,6 +643,11 @@ const Glossary = () => {
   Object.values(byCat).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
   const orderedCats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
   return (<section className="section"><div className="container-x">
+    <SEO
+      title="BC Real Estate Glossary — 396 Terms with Authoritative Sources | EZtoFind.ca"
+      description="Comprehensive glossary of 396 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
+      path="/glossary"
+    />
     <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Term's you may encounter buying or selling in British Columbia — with 10 FAQs per term.</p></div>
     <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search glossary — term, definition, or category…" style={{width:"100%",maxWidth:560,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}} data-testid="glossary-search"/>
     {filtered.length===0 && <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>No terms match your search.</p>}
@@ -655,6 +692,13 @@ const GlossaryTerm = () => {
   const faqSchema = (t.faqs && t.faqs.length>0) ? {"@context":"https://schema.org","@type":"FAQPage","mainEntity":t.faqs.map(f=>({"@type":"Question","name":f.q,"acceptedAnswer":{"@type":"Answer","text":f.a}})),"author":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},"publisher":{"@type":"Organization","name":"EZtoFind.ca"}} : null;
 
   return (<section className="section"><div className="container-x" style={{maxWidth:"48rem"}} itemScope itemType="https://schema.org/Article">
+    <SEO
+      title={`${t.term} — BC Real Estate Glossary | EZtoFind.ca`}
+      description={(t.definition || `Learn about ${t.term} in BC real estate — plain-English definition, FAQs, and authoritative sources from the governing statute or regulator.`).substring(0, 200)}
+      path={`/glossary/${t.slug}`}
+      schema={articleSchema}
+    />
+    {faqSchema && <Helmet><script type="application/ld+json">{JSON.stringify(faqSchema)}</script></Helmet>}
     <Link to="/glossary" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All terms</Link>
     <div className="eyebrow" style={{marginTop:"1rem"}}>{t.category}</div>
     <h1 className="section-title" itemProp="headline">{t.term}</h1>
@@ -799,6 +843,11 @@ const RealtorCredentials = () => {
 
 // --- About ---
 const About = () => (<section className="section"><div className="container-x" style={{maxWidth:"56rem"}}>
+  <SEO
+    title="About Doug LeMaire, REALTOR® — 13 Years in BC Real Estate | EZtoFind.ca"
+    description="Meet Doug LeMaire — a licensed BC REALTOR® with Fraser Property Management Realty Services Ltd. 13 years serving Greater Vancouver, Fraser Valley & Sea-to-Sky. Specializes in detached, luxury, equestrian, and probate/estate sales."
+    path="/about"
+  />
   <div className="eyebrow">About</div><h1 className="section-title">Doug LeMaire, REALTOR®</h1>
   <div style={{display:"flex",gap:"2rem",flexWrap:"wrap",alignItems:"flex-start",marginTop:"2rem"}}>
     <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
@@ -1007,6 +1056,11 @@ const Communities = () => {
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
   const filt = (arr) => q ? arr.filter(c => c.toLowerCase().includes(q.toLowerCase())) : arr;
   return (<section className="section"><div className="container-x">
+    <SEO
+      title="BC Communities — 239 Community Profiles with Live Climate Data | EZtoFind.ca"
+      description="Explore every incorporated BC community — 239 profiles across 12 regions with real Environment Canada climate normals, geography, and referral REALTOR® coverage."
+      path="/communities"
+    />
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">All of British Columbia</div>
       <h1 className="section-title">BC Communities</h1>
@@ -1052,6 +1106,12 @@ const CommunityPage = () => {
     "articleBody":syn.synopsis
   } : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
+    {found && <SEO
+      title={`${found}, BC — Community Profile with Live Climate Data | EZtoFind.ca`}
+      description={syn?.synopsis ? syn.synopsis.substring(0, 200) : `Community profile for ${found}, British Columbia (${region}) — geography, climate normals from Environment Canada, and REALTOR® coverage.`}
+      path={`/community/${slug}`}
+      schema={jsonLd}
+    />}
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>

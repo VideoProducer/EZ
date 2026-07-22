@@ -1,0 +1,98 @@
+"""
+Generate a real sitemap.xml for eztofind.ca from live MongoDB data.
+
+Writes to: /app/frontend/public/sitemap.xml
+
+Ping-friendly: search engines expect the sitemap to be reachable at
+https://eztofind.ca/sitemap.xml — which robots.txt already points to.
+
+Run on backend startup and after any admin update (via /api/admin/regenerate-sitemap).
+"""
+from __future__ import annotations
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Iterable
+
+BASE_URL = "https://eztofind.ca"
+
+STATIC_URLS = [
+    ("/",                  "1.0", "daily"),
+    ("/listings",          "0.9", "daily"),
+    ("/communities",       "0.9", "weekly"),
+    ("/glossary",          "0.9", "weekly"),
+    ("/valuation",         "0.7", "monthly"),
+    ("/about",             "0.7", "monthly"),
+    ("/realtors",          "0.7", "monthly"),
+    ("/referral-request",  "0.7", "monthly"),
+    ("/buyer",             "0.7", "monthly"),
+    ("/seller",            "0.7", "monthly"),
+    ("/contact",           "0.6", "yearly"),
+    ("/privacy",           "0.4", "yearly"),
+    ("/terms",             "0.4", "yearly"),
+    ("/dorts",             "0.5", "yearly"),
+    ("/code-of-ethics",    "0.4", "yearly"),
+    ("/complaints",        "0.4", "yearly"),
+]
+
+def _url_tag(loc: str, lastmod: str, changefreq: str, priority: str) -> str:
+    # Escape ampersands for XML safety
+    loc = loc.replace("&", "&amp;")
+    return (
+        "  <url>\n"
+        f"    <loc>{loc}</loc>\n"
+        f"    <lastmod>{lastmod}</lastmod>\n"
+        f"    <changefreq>{changefreq}</changefreq>\n"
+        f"    <priority>{priority}</priority>\n"
+        "  </url>\n"
+    )
+
+async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.xml") -> dict:
+    """Regenerate sitemap.xml from live DB. Returns stats dict."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    parts: list[str] = [
+        '<?xml version="1.0" encoding="UTF-8"?>\n',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n',
+    ]
+
+    # Static pages
+    static_count = 0
+    for path, priority, changefreq in STATIC_URLS:
+        parts.append(_url_tag(f"{BASE_URL}{path}", today, changefreq, priority))
+        static_count += 1
+
+    # Glossary terms
+    gterms = await db.glossary.find({}, {"slug": 1, "last_curated_at": 1, "_id": 0}).to_list(2000)
+    for t in gterms:
+        slug = t.get("slug")
+        if not slug: continue
+        lastmod = (t.get("last_curated_at") or today)[:10]  # ISO date only
+        parts.append(_url_tag(f"{BASE_URL}/glossary/{slug}", lastmod, "monthly", "0.8"))
+
+    # Community pages: enumerate from the seed file (source of truth for community list)
+    import json
+    community_seed = Path("/app/backend/data/communities_seed.json")
+    community_count = 0
+    if community_seed.exists():
+        comms = json.loads(community_seed.read_text())
+        for region, names in comms.items():
+            for name in names:
+                slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                parts.append(_url_tag(f"{BASE_URL}/community/{slug}", today, "weekly", "0.7"))
+                community_count += 1
+
+    parts.append("</urlset>\n")
+    xml = "".join(parts)
+
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(xml, encoding="utf-8")
+
+    return {
+        "static": static_count,
+        "glossary": len(gterms),
+        "communities": community_count,
+        "total": static_count + len(gterms) + community_count,
+        "path": str(out),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }

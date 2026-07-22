@@ -966,6 +966,19 @@ async def startup():
         logger.error(f"TTL index setup failed: {e}")
     # Amenity warm-up disabled per user request
 
+    # Generate sitemap.xml on startup so search engines get a fresh copy
+    try:
+        from sitemap_generator import generate_sitemap
+        stats = await generate_sitemap(db)
+        logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities)")
+    except Exception as e:
+        logger.error(f"sitemap generation failed: {e}")
+
+@api.post("/admin/regenerate-sitemap")
+async def admin_regen_sitemap(_=Depends(verify_admin)):
+    from sitemap_generator import generate_sitemap
+    return await generate_sitemap(db)
+
 @api.get("/")
 async def root():
     return {"app": "EZtoFind.ca", "status": "ok"}
