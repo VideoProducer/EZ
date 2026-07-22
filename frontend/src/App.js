@@ -44,29 +44,35 @@ const CommunityMap = ({ name, region }) => {
           }
         } catch(e) {}
       }
-      if (!coords || cancelled) { setFailed(true); setLoading(false); return; }
+      if (!coords || cancelled || !containerRef.current) { setFailed(true); setLoading(false); return; }
 
       // Clean up any prior map instance (React re-renders)
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
 
-      const map = window.L.map(containerRef.current, {
-        center: [coords.lat, coords.lng],
-        zoom: 11,
-        scrollWheelZoom: false,
-        attributionControl: true,
-      });
-      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 18,
-        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
-      }).addTo(map);
-      window.L.marker([coords.lat, coords.lng])
-        .addTo(map)
-        .bindPopup(`<strong>${name}, BC</strong><br/><span style="color:#6B7280">${region}</span>`);
-      mapRef.current = map;
-      setLoading(false);
+      try {
+        const map = window.L.map(containerRef.current, {
+          center: [coords.lat, coords.lng],
+          zoom: 11,
+          scrollWheelZoom: false,
+          attributionControl: true,
+        });
+        window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
+        }).addTo(map);
+        window.L.marker([coords.lat, coords.lng])
+          .addTo(map)
+          .bindPopup(`<strong>${name}, BC</strong><br/><span style="color:#6B7280">${region}</span>`);
+        mapRef.current = map;
+        setLoading(false);
+      } catch (e) {
+        console.warn("Leaflet init failed:", e);
+        setFailed(true);
+        setLoading(false);
+      }
     };
     init();
-    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
+    return () => { cancelled = true; if (mapRef.current) { try { mapRef.current.remove(); } catch(e){} mapRef.current = null; } };
   }, [name, region]);
 
   if (failed) return null;
