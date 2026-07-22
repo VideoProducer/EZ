@@ -81,7 +81,7 @@ const CommunityMap = ({ name, region }) => {
       <h2 style={{fontSize:"1.75rem"}}>📍 Map of {name}</h2>
       <div ref={containerRef} data-testid="community-map" style={{height:"340px",width:"100%",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)",background:"#F5F0E1"}}></div>
       {loading && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Loading map…</div>}
-      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem"}}>Map data © OpenStreetMap contributors · <a href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(name+", BC")}`} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Open fullscreen on OSM ↗</a></div>
+      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem"}}>Map data © OpenStreetMap contributors · <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name+", BC, Canada")}`} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}} data-testid="community-map-fullscreen-link">Open fullscreen in Google Maps ↗</a></div>
     </div>
   );
 };
