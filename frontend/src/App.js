@@ -295,7 +295,6 @@ const Footer = () => (
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
-        <li><Link to="/working-with-a-realtor">Working with a REALTOR®</Link></li>
       </ul></div>
       <div><h4>Contact</h4><ul>
         <li>info@eztofind.ca</li>
@@ -702,7 +701,7 @@ const BuyerForm = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">Buyer Intake</div><h1 className="section-title">Tell us what you're looking for</h1>
-    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services. Please also review <Link to="/working-with-a-realtor" style={{color:"var(--brand-blue)",fontWeight:600}}>Working with a REALTOR®</Link> to understand your rights as a consumer.</div>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services.</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="buyer-name"/></div>
@@ -734,7 +733,7 @@ const SellerForm = () => {
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">Seller Intake</div><h1 className="section-title">Let's talk about your property</h1>
-    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services. Please also review <Link to="/working-with-a-realtor" style={{color:"var(--brand-blue)",fontWeight:600}}>Working with a REALTOR®</Link> to understand your rights as a consumer.</div>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services.</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
@@ -862,6 +861,13 @@ const Complaints = () => <Legal title="Complaints & Concerns" body={<>
 </>}/>;
 
 const DoRTS = () => <Legal title="Disclosure of Representation in Trading Services (DoRTS)" body={<>
+  <div style={{background:"#F5F0E1",border:"2px solid var(--brand-gold)",borderRadius:12,padding:"1.25rem 1.5rem",margin:"0 0 1.75rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap"}}>
+    <div style={{flex:"1 1 auto",minWidth:220}}>
+      <div style={{fontSize:"0.78rem",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)"}}>Official BCFSA Form</div>
+      <div style={{fontSize:"1.05rem",fontWeight:600,color:"var(--brand-navy)",marginTop:"0.2rem"}}>Disclosure of Representation in Trading Services (Rev. 06/2021)</div>
+    </div>
+    <a href="/downloads/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" className="btn btn-primary" data-testid="dorts-pdf-download" style={{whiteSpace:"nowrap"}}>📄 Download / Print PDF</a>
+  </div>
   <p><strong>Under the Real Estate Services Rules of the British Columbia Financial Services Authority (BCFSA), a REALTOR® must provide you with a formal Disclosure of Representation in Trading Services form at the earliest reasonable opportunity — before providing any real estate service.</strong></p>
   <p>This disclosure explains:</p>
   <ul>
@@ -872,26 +878,7 @@ const DoRTS = () => <Legal title="Disclosure of Representation in Trading Servic
   <h3 style={{marginTop:"1.5rem"}}>Doug's practice</h3>
   <p>Doug LeMaire, REALTOR® will deliver a signed BCFSA-issued <em>Disclosure of Representation in Trading Services</em> form before providing any real estate service to you. Nothing on this website — including any Doogie AI response, buyer intake form submission, or general glossary/community content — creates a REALTOR®-client relationship.</p>
   <h3 style={{marginTop:"1.5rem"}}>Download the official BCFSA form</h3>
-  <p><a href="https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/forms" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA Real Estate Forms Library →</a></p>
-</>}/>;
-
-const WorkingWithRealtor = () => <Legal title="Working with a REALTOR®" body={<>
-  <p><strong>Before you engage a REALTOR® in British Columbia, you have important consumer protections and rights.</strong> BCFSA and CREA publish a consumer guide titled <em>Working with a REALTOR®</em> explaining these protections.</p>
-  <h3 style={{marginTop:"1.5rem"}}>Your key rights</h3>
-  <ul>
-    <li><strong>Right to representation:</strong> You may choose to be represented as a client, or to remain unrepresented. A REALTOR® must disclose their role at the earliest opportunity (see <Link to="/dorts" style={{color:"var(--brand-blue)"}}>DoRTS</Link>).</li>
-    <li><strong>Right to written agreements:</strong> Any buyer's or seller's agency relationship must be documented in a written service agreement.</li>
-    <li><strong>Right to confidentiality:</strong> A REALTOR® who represents you as a client owes you a fiduciary duty of confidentiality, even after the relationship ends.</li>
-    <li><strong>Right to disclosure of remuneration:</strong> The REALTOR® must disclose all forms of remuneration and any referral fees before you sign.</li>
-    <li><strong>Right to independent legal advice:</strong> You may consult a lawyer or notary at any point.</li>
-  </ul>
-  <h3 style={{marginTop:"1.5rem"}}>Referral fees</h3>
-  <p>If Doug refers you to another licensed BC REALTOR® in our referral network, a referral fee may be paid to Doug LeMaire by the receiving REALTOR® (typically 25% of the receiving REALTOR's commission). This does not increase the cost to you as the consumer. The receiving REALTOR® will disclose this in writing before you sign a service agreement.</p>
-  <h3 style={{marginTop:"1.5rem"}}>Download the official brochures</h3>
-  <ul>
-    <li><a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA — Working with a REALTOR® (consumer guide)</a></li>
-    <li><a href="https://www.crea.ca/working-with-a-realtor/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>CREA — Working with a REALTOR®</a></li>
-  </ul>
+  <p>Print or download the official BCFSA form using the button above, or visit the <a href="https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/forms" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA Real Estate Forms Library →</a> for the latest revision.</p>
 </>}/>;
 
 const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
@@ -1723,7 +1710,6 @@ function App() {
       <Route path="/compliance" element={<AppLayout><Compliance/></AppLayout>}/>
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
       <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
-      <Route path="/working-with-a-realtor" element={<AppLayout><WorkingWithRealtor/></AppLayout>}/>
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
       <Route path="/unsubscribe" element={<AppLayout><Unsubscribe/></AppLayout>}/>
