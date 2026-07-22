@@ -436,6 +436,41 @@ const Home = () => {
       description="Free BC real estate information platform: 396 glossary terms with authoritative sources, 239 community profiles with real Environment Canada climate data, and BC-wide REALTOR® referral network. By Doug LeMaire, REALTOR®."
       path="/"
     />
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify({
+        "@context":"https://schema.org","@type":"WebSite",
+        "name":"EZtoFind.ca","url":"https://eztofind.ca","inLanguage":"en-CA",
+        "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+        "potentialAction":{"@type":"SearchAction","target":"https://eztofind.ca/listings?q={search_term_string}","query-input":"required name=search_term_string"}
+      })}</script>
+      <script type="application/ld+json">{JSON.stringify({
+        "@context":"https://schema.org","@type":"RealEstateAgent",
+        "name":"Doug LeMaire, REALTOR®",
+        "image":"https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
+        "url":"https://eztofind.ca/about",
+        "worksFor":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
+        "areaServed":[
+          {"@type":"AdministrativeArea","name":"Greater Vancouver, British Columbia"},
+          {"@type":"AdministrativeArea","name":"Fraser Valley, British Columbia"},
+          {"@type":"AdministrativeArea","name":"Sea-to-Sky Corridor, British Columbia"}
+        ],
+        "memberOf":[
+          {"@type":"Organization","name":"Canadian Real Estate Association (CREA)"},
+          {"@type":"Organization","name":"Greater Vancouver REALTORS® (GVR)"},
+          {"@type":"Organization","name":"BC Financial Services Authority (BCFSA)"}
+        ],
+        "knowsAbout":["Detached homes","Luxury real estate","Equestrian and acreage properties","Residential strata's","Probate and estate sales"],
+        "inLanguage":"en-CA"
+      })}</script>
+      <script type="application/ld+json">{JSON.stringify({
+        "@context":"https://schema.org","@type":"Organization",
+        "name":"EZtoFind.ca","url":"https://eztofind.ca","inLanguage":"en-CA",
+        "logo":"https://eztofind.ca/images/doogie-laptop.png",
+        "founder":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},
+        "areaServed":{"@type":"AdministrativeArea","name":"British Columbia, Canada"},
+        "description":"AI-powered British Columbia real estate research platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network."
+      })}</script>
+    </Helmet>
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
@@ -677,17 +712,30 @@ const GlossaryTerm = () => {
   const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact}/>;
 
   // AEO / LLM Article schema — combines definition, author, publisher, FAQPage
+  const now = new Date().toISOString();
+  const dateMod = t.last_curated_at || now;
   const articleSchema = {
     "@context":"https://schema.org",
     "@type":"Article",
     "headline":`${t.term} — BC Real Estate`,
     "description":t.definition.substring(0,200),
+    "datePublished": dateMod,
+    "dateModified": dateMod,
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     "mainEntity":{"@type":"DefinedTerm","name":t.term,"description":t.definition,"inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":"https://eztofind.ca/glossary"}},
     "url":`https://eztofind.ca/glossary/${t.slug}`,
     "inLanguage":"en-CA",
     "about":{"@type":"Place","name":"British Columbia, Canada"}
+  };
+  const breadcrumbSchema = {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Home","item":"https://eztofind.ca/"},
+      {"@type":"ListItem","position":2,"name":"Glossary","item":"https://eztofind.ca/glossary"},
+      {"@type":"ListItem","position":3,"name":t.term,"item":`https://eztofind.ca/glossary/${t.slug}`}
+    ]
   };
   const faqSchema = (t.faqs && t.faqs.length>0) ? {"@context":"https://schema.org","@type":"FAQPage","mainEntity":t.faqs.map(f=>({"@type":"Question","name":f.q,"acceptedAnswer":{"@type":"Answer","text":f.a}})),"author":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},"publisher":{"@type":"Organization","name":"EZtoFind.ca"}} : null;
 
@@ -699,6 +747,7 @@ const GlossaryTerm = () => {
       schema={articleSchema}
     />
     {faqSchema && <Helmet><script type="application/ld+json">{JSON.stringify(faqSchema)}</script></Helmet>}
+    <Helmet><script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script></Helmet>
     <Link to="/glossary" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All terms</Link>
     <div className="eyebrow" style={{marginTop:"1rem"}}>{t.category}</div>
     <h1 className="section-title" itemProp="headline">{t.term}</h1>
@@ -1112,6 +1161,14 @@ const CommunityPage = () => {
       path={`/community/${slug}`}
       schema={jsonLd}
     />}
+    {found && <Helmet><script type="application/ld+json">{JSON.stringify({
+      "@context":"https://schema.org","@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://eztofind.ca/"},
+        {"@type":"ListItem","position":2,"name":"Communities","item":"https://eztofind.ca/communities"},
+        {"@type":"ListItem","position":3,"name":`${found}, BC`,"item":`https://eztofind.ca/community/${slug}`}
+      ]
+    })}</script></Helmet>}
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>

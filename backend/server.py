@@ -886,7 +886,16 @@ async def public_upsert_term(slug: str, item: GlossaryUpsert, request: Request, 
     """Push a single glossary term update (Lovable.dev → EZtoFind)."""
     item.slug = slug
     ip = request.client.host if request.client else "unknown"
-    return await _apply_upsert(item, ip)
+    result = await _apply_upsert(item, ip)
+    # SEO push (silent-fail)
+    try:
+        from sitemap_generator import generate_sitemap
+        from indexnow import notify_indexnow
+        await generate_sitemap(db)
+        await notify_indexnow([f"https://eztofind.ca/glossary/{slug}"])
+    except Exception as e:
+        logger.warning(f"post-update SEO push failed (silent-fail): {e}")
+    return result
 
 @api.post("/public/glossary/bulk")
 async def public_bulk_upsert(body: GlossaryBulkUpsert, request: Request, _=Depends(verify_lovable_key)):
@@ -904,6 +913,16 @@ async def public_bulk_upsert(body: GlossaryBulkUpsert, request: Request, _=Depen
     created = sum(1 for r in results if r.get("status") == "created")
     updated = sum(1 for r in results if r.get("status") == "updated")
     errors  = sum(1 for r in results if r.get("status") == "error")
+    # SEO push: regenerate sitemap + notify IndexNow of changed URLs
+    try:
+        from sitemap_generator import generate_sitemap
+        from indexnow import notify_indexnow
+        await generate_sitemap(db)
+        changed_urls = [f"https://eztofind.ca/glossary/{r['slug']}" for r in results if r.get("status") in ("created","updated") and r.get("slug")]
+        if changed_urls:
+            await notify_indexnow(changed_urls)
+    except Exception as e:
+        logger.warning(f"post-ingest SEO push failed (silent-fail): {e}")
     return {"total": len(results), "created": created, "updated": updated, "errors": errors, "results": results}
 
 @api.get("/public/glossary")

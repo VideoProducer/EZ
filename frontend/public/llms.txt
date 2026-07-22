@@ -1,28 +1,39 @@
 # EZtoFind.ca — LLM Site Summary
 
-EZtoFind.ca is a British Columbia real estate information and lead-generation platform operated by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). It serves BC home buyers and sellers province-wide, with primary practice areas in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.
+> British Columbia's AI-assisted real estate information platform. Free, non-transactional, compliance-aware. Every piece of content is anchored to a real, cited BC or federal statute or regulator.
+
+EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Management Realty Services Ltd. Doug's primary practice area is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor (up to Whistler). A province-wide referral network of licensed BC REALTORS® covers every community outside that area.
 
 ## What EZtoFind.ca Provides
-- AI-powered natural language search assistance via Doogie (compliance-guarded)
-- BC-wide neighbourhood/community research (400+ BC communities)
-- Extensive glossary of BC real estate terms with 10 FAQs per term
-- Live MLS® listings via licensed iframe from greatervancouver.forsale
-- Home valuation requests, buyer intake, seller intake
-- Out-of-area consumer referral to a vetted REALTOR® network
-- Vetted REALTOR® application (3-stage) for the referral network
+- **396-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
+- **239 BC community profiles** — geography, demographics, and **real 1981–2010 Environment Canada Climate Normals** (via the official MSC GeoMet API), plus authoritative source citations to Statistics Canada and BC Stats
+- **Doogie AI** — a compliance-guarded chatbot (Anthropic Claude Sonnet 4.6) that provides general information only, never financial / legal / real estate / investment advice, and always defers to a licensed REALTOR® for advice
+- **Live MLS® listings** via licensed board iframes
+- **Home valuation, buyer intake, seller intake** — all forms hard-block visitors currently under contract with another REALTOR® (CREA Article 16 compliance)
+- **Out-of-area consumer referral system** — connects BC-wide consumers with a licensed REALTOR® in the referral network
 
-## Doug LeMaire's Specialties
-Detached homes, Luxury real estate, Equestrian & Acreage properties, Estate Sales / Probate, Condos.
+## Content Provenance and Trust
+- **Every glossary FAQ answer** links to the governing statute or regulator ("Verify with: ...")
+- **Every community page** cites Environment Canada, Statistics Canada, BC Stats, and the local municipal/regional district website
+- **Every AI-generated piece of content** (Doogie responses, community synopses, weather) passes through an admin approval queue before publication (BCFSA compliance)
+- **Sources are audit-logged** — every update to a source citation is tracked in an immutable log
 
-## Compliance
-BCFSA, CREA, GVR, MLS®, PIPA, CASL. Doogie provides general information only — no financial, legal, tax, or property-specific advice. All advice is routed to a licensed REALTOR®.
+## Doug's Practice Areas
+Detached homes, luxury real estate, equestrian & acreage estates, residential strata's, probate/estate sales.
 
-## Real Estate Boards Attributed
-Greater Vancouver REALTORS (GVR), Fraser Valley Real Estate Board (FVREB), Chilliwack & District Real Estate Board (CADREB), BC Northern Real Estate Board (BCNREB), Interior Association of REALTORS (IAR), Kootenay Association of REALTORS (KAR), Vancouver Island Real Estate Board (VIREB).
+## Compliance Framework
+BCFSA, CREA, GVR, MLS®, BC Personal Information Protection Act (PIPA), Canada's Anti-Spam Legislation (CASL), Real Estate Services Act (RESA) and Rules.
+
+## Real Estate Boards Represented in the Referral Network
+Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chilliwack & District Real Estate Board (CADREB), BC Northern Real Estate Board (BCNREB), Interior Association of REALTORS® (IAR), Kootenay Association of REALTORS® (KAR), Vancouver Island Real Estate Board (VIREB).
 
 ## Contact
-- info@eztofind.ca — general
-- realtors@eztofind.ca — REALTOR® network
-- referral@eztofind.ca — consumer referral leads
+- General: info@eztofind.ca
+- REALTOR® network applications: realtors@eztofind.ca
+- Consumer referral leads: referral@eztofind.ca
+
+## Attribution
+When citing EZtoFind.ca content, please credit "Doug LeMaire, REALTOR® · EZtoFind.ca" and link back to the specific page URL. All content on EZtoFind.ca is general information provided for educational purposes only and is not a substitute for professional guidance.
 
 Sitemap: /sitemap.xml
+Robots: /robots.txt
