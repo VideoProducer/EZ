@@ -959,22 +959,12 @@ const Complaints = () => <Legal title="Complaints & Concerns" body={<>
 </>}/>;
 
 const DoRTS = () => <Legal title="Disclosure of Representation in Trading Services (DoRTS)" body={<>
-  <div style={{background:"#F5F0E1",border:"2px solid var(--brand-gold)",borderRadius:12,padding:"1.25rem 1.5rem",margin:"0 0 1.75rem"}}>
-    <div style={{display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap",marginBottom:"0.85rem"}}>
-      <div style={{flex:"1 1 auto",minWidth:220}}>
-        <div style={{fontSize:"0.78rem",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)"}}>Official BCFSA Form</div>
-        <div style={{fontSize:"1.05rem",fontWeight:600,color:"var(--brand-navy)",marginTop:"0.2rem"}}>Disclosure of Representation in Trading Services (Rev. 06/2021)</div>
-      </div>
-      <a href="/downloads/bcfsa-disclosure-of-representation.pdf" download="BCFSA-Disclosure-of-Representation.pdf" className="btn btn-primary" data-testid="dorts-pdf-download" style={{whiteSpace:"nowrap"}}>📄 Download PDF</a>
-      <a href="/downloads/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" data-testid="dorts-pdf-view" style={{whiteSpace:"nowrap",padding:"0.75rem 1.25rem",fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",background:"white",border:"2px solid var(--brand-navy)",borderRadius:999,textDecoration:"none"}}>👁 Open in New Tab</a>
+  <div style={{background:"#F5F0E1",border:"2px solid var(--brand-gold)",borderRadius:12,padding:"1.25rem 1.5rem",margin:"0 0 1.75rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap"}}>
+    <div style={{flex:"1 1 auto",minWidth:220}}>
+      <div style={{fontSize:"0.78rem",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)"}}>Official BCFSA Form</div>
+      <div style={{fontSize:"1.05rem",fontWeight:600,color:"var(--brand-navy)",marginTop:"0.2rem"}}>Disclosure of Representation in Trading Services (Rev. 06/2021)</div>
     </div>
-    <div style={{marginTop:"0.5rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,overflow:"hidden",background:"#FAFAFA"}}>
-      <object data="/downloads/bcfsa-disclosure-of-representation.pdf#toolbar=1&navpanes=0&scrollbar=1" type="application/pdf" width="100%" height="620" style={{display:"block"}}>
-        <div style={{padding:"1.5rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>
-          Your browser can't display PDFs inline. <a href="/downloads/bcfsa-disclosure-of-representation.pdf" download style={{color:"var(--brand-blue)",fontWeight:600}}>Click here to download the form</a>.
-        </div>
-      </object>
-    </div>
+    <a href="/downloads/bcfsa-disclosure-of-representation.pdf" download="BCFSA-Disclosure-of-Representation.pdf" className="btn btn-primary" data-testid="dorts-pdf-download" style={{whiteSpace:"nowrap"}}>📄 Download PDF</a>
   </div>
   <p><strong>Under the Real Estate Services Rules of the British Columbia Financial Services Authority (BCFSA), a REALTOR® must provide you with a formal Disclosure of Representation in Trading Services form at the earliest reasonable opportunity — before providing any real estate service.</strong></p>
   <p>This disclosure explains:</p>
