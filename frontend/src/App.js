@@ -308,7 +308,8 @@ const Footer = () => (
           <div><div className="font-display" style={{fontSize:"1.3rem",color:"white"}}>EZtoFind.ca</div>
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
-        <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>The AI-powered real estate research platform for all of British Columbia. Primary practice area: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor. Referral network covers all of BC.</p>
+        <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
+        <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85,marginTop:"0.75rem"}}>Doogie is an AI-assisted chatbot designed to help provide information, answer general real estate questions, explain terminology, and navigate the EZtoFind.ca platform. Doogie provides general information only and is not a substitute for professional real estate advice. Interacting with Doogie does not create a REALTOR®-client relationship.</p>
         <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong></p>
       </div>
       <div><h4>Explore</h4><ul>
