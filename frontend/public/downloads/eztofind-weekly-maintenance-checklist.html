@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8"/>
+<title>EZtoFind.ca — Weekly Maintenance Checklist for Doug LeMaire, REALTOR®</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  @page { size: Letter; margin: 0.4in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', Segoe UI, sans-serif;
+    color: #1F2937;
+    background: #FFFFFF;
+    padding: 0.3in 0.35in;
+    font-size: 9.5pt;
+    line-height: 1.35;
+  }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #0F2A5B; padding-bottom: 0.15in; margin-bottom: 0.15in; }
+  .brand { font-family: 'Playfair Display', Georgia, serif; font-size: 20pt; color: #0F2A5B; font-weight: 700; line-height: 1; }
+  .brand small { font-family: 'Inter', sans-serif; display: block; font-size: 8pt; font-weight: 400; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .doc-title { text-align: right; font-size: 10pt; color: #0F2A5B; font-weight: 700; }
+  .doc-title small { display: block; color: #6B7280; font-weight: 400; font-size: 8pt; margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.16in; }
+  .col-full { grid-column: 1 / -1; }
+
+  .card { border: 1.5px solid #0F2A5B; border-radius: 6px; padding: 8px 10px; break-inside: avoid; }
+  .card.gold { border-color: #FDB813; background: #FDF9EE; }
+  .card.green { border-color: #16A34A; background: #F0FDF4; }
+  .card.blue { border-color: #0EA5E9; background: #F0F9FF; }
+  .card.gray { border-color: #6B7280; background: #F9FAFB; }
+
+  .cadence { font-family: 'Inter', sans-serif; font-size: 7.5pt; font-weight: 700; color: #FFFFFF; background: #0F2A5B; display: inline-block; padding: 2px 7px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .card.gold .cadence { background: #FDB813; color: #0F2A5B; }
+  .card.green .cadence { background: #16A34A; }
+  .card.blue .cadence { background: #0EA5E9; }
+  .card.gray .cadence { background: #6B7280; }
+
+  .card h3 { font-size: 10.5pt; color: #0F2A5B; margin: 5px 0 4px; font-weight: 700; }
+  .card p.time { font-size: 8pt; color: #6B7280; margin: 0 0 6px; font-style: italic; }
+  ul.tasks { margin: 0; padding: 0; list-style: none; }
+  ul.tasks li { padding: 3px 0 3px 22px; position: relative; font-size: 9pt; line-height: 1.4; }
+  ul.tasks li::before {
+    content: ""; position: absolute; left: 0; top: 5px;
+    width: 12px; height: 12px; border: 1.5px solid #0F2A5B; border-radius: 2px;
+  }
+  ul.tasks li strong { color: #0F2A5B; }
+  ul.tasks li code { font-family: 'SF Mono', Consolas, monospace; font-size: 8.5pt; background: #E5E7EB; padding: 1px 4px; border-radius: 3px; color: #0F2A5B; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+  .kpi { background: #FFFFFF; border: 1px solid rgba(15,42,91,0.2); border-radius: 4px; padding: 4px 6px; text-align: center; }
+  .kpi .label { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.06em; color: #6B7280; font-weight: 600; }
+  .kpi .val { font-size: 9pt; color: #0F2A5B; font-weight: 700; margin-top: 1px; }
+
+  .footer-strip { margin-top: 0.15in; padding-top: 0.1in; border-top: 1.5px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; font-size: 7.5pt; color: #6B7280; }
+  .footer-strip strong { color: #0F2A5B; }
+  .footer-strip .disclaimer { font-style: italic; max-width: 60%; text-align: right; }
+
+  @media print {
+    body { padding: 0; }
+    a { color: #0F2A5B; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">EZtoFind.ca<small>Weekly Maintenance Checklist</small></div>
+  <div class="doc-title">Doug LeMaire, REALTOR®<small>Fraser Property Management Realty Services Ltd. · Target: 2–4 hrs/week</small></div>
+</div>
+
+<div class="grid">
+
+  <div class="card gold">
+    <span class="cadence">Mon · 30 min</span>
+    <h3>Admin Approval Queue</h3>
+    <p class="time">Approve or reject AI-drafted content awaiting publication</p>
+    <ul class="tasks">
+      <li>Open <code>/admin</code> and log in</li>
+      <li>Review new <strong>community synopses</strong> — approve or edit</li>
+      <li>Review new <strong>weather narratives</strong> — approve or reject (fallback: ECCC data)</li>
+      <li>Review <strong>glossary FAQs</strong> pending review; bulk-approve trusted categories</li>
+      <li>Reject anything referencing specific $ thresholds you can't verify</li>
+    </ul>
+  </div>
+
+  <div class="card green">
+    <span class="cadence">Weekly · 45 min</span>
+    <h3>Publish One Short Piece</h3>
+    <p class="time">300–500 words on a BC real estate topic. Ask Doogie to draft, then edit.</p>
+    <ul class="tasks">
+      <li>Pick a topic from BCFSA / gov.bc.ca / CREA news feed</li>
+      <li>Write 300 words in your voice; add a personal example</li>
+      <li>Post to LinkedIn (personal profile + company page)</li>
+      <li>Cross-link to relevant glossary term(s) or community page</li>
+      <li>Optional: paste same content into a blog section on the site</li>
+    </ul>
+  </div>
+
+  <div class="card blue">
+    <span class="cadence">Weekly · 30 min</span>
+    <h3>Lead Follow-Up</h3>
+    <p class="time">Every hot lead responded to within 24 hours</p>
+    <ul class="tasks">
+      <li>Open <code>/admin</code> → Leads tab</li>
+      <li>Contact buyer/seller leads by phone or email within 24 hrs</li>
+      <li>Approve or route referral-request leads to network REALTOR®</li>
+      <li>Mark cold or unresponsive leads as "closed"</li>
+      <li>Note referral commissions expected in a simple tracking sheet</li>
+    </ul>
+  </div>
+
+  <div class="card gray">
+    <span class="cadence">Monthly · 60 min</span>
+    <h3>Performance &amp; Regulatory Review</h3>
+    <p class="time">First Monday of the month</p>
+    <ul class="tasks">
+      <li>Google Search Console — top queries + click-through rate</li>
+      <li>Google Business Profile — respond to reviews, post one update</li>
+      <li>Review new REALTOR® applications to referral network</li>
+      <li>Skim BCFSA / CREA / gov.bc.ca updates → note glossary terms to refresh</li>
+      <li>Send updates back to Lovable → re-import to EZtoFind</li>
+    </ul>
+  </div>
+
+  <div class="card col-full" style="border-color:#0F2A5B;background:#F5F0E1;">
+    <span class="cadence">Quarterly · 2 hrs</span>
+    <h3>Growth Sprint</h3>
+    <p class="time">First Friday of each quarter (Jan · Apr · Jul · Oct)</p>
+    <ul class="tasks" style="display:grid;grid-template-columns:1fr 1fr;column-gap:0.15in;">
+      <li>Refresh <strong>Featured Listing</strong> section (or hide if between listings)</li>
+      <li>Update <strong>About page</strong> if credentials or focus changed</li>
+      <li>Reach out to <strong>2–3 media contacts</strong> with a story hook</li>
+      <li>Send <strong>newsletter</strong> to subscribers (if list active)</li>
+      <li>Review <strong>Environment Canada</strong> station mappings for accuracy</li>
+      <li>Rotate any <strong>PDFs</strong> (BCFSA forms, brokerage docs) to latest revision</li>
+      <li>Audit any <strong>changed Doug practice areas</strong> in Doogie's system prompt</li>
+      <li>Backup verification — confirm MongoDB backups are running</li>
+    </ul>
+  </div>
+
+  <div class="card col-full" style="border-color:#0EA5E9;background:#F0F9FF;">
+    <span class="cadence">Monthly KPI Snapshot</span>
+    <h3>Numbers to Watch</h3>
+    <div class="kpi-row">
+      <div class="kpi"><div class="label">Sessions / mo</div><div class="val">Google Analytics</div></div>
+      <div class="kpi"><div class="label">Indexed pages</div><div class="val">Search Console</div></div>
+      <div class="kpi"><div class="label">Leads captured</div><div class="val">Admin → Leads</div></div>
+      <div class="kpi"><div class="label">AI referrals</div><div class="val">GA4 Referrer</div></div>
+      <div class="kpi"><div class="label">Network REALTORs</div><div class="val">Admin → Applications</div></div>
+      <div class="kpi"><div class="label">Doogie chats / day</div><div class="val">Admin → Chat Sessions</div></div>
+      <div class="kpi"><div class="label">Curated FAQs %</div><div class="val">Admin → Glossary</div></div>
+      <div class="kpi"><div class="label">Featured Listing?</div><div class="val">Home page</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-strip">
+  <div><strong>EZtoFind.ca</strong> · Published by Doug LeMaire, REALTOR® · info@eztofind.ca</div>
+  <div class="disclaimer">All content on EZtoFind.ca is general information provided for educational purposes and is not a substitute for professional guidance.</div>
+</div>
+
+</body>
+</html>
