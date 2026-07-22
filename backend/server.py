@@ -27,6 +27,7 @@ ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')  # Optional — Doug's d
 JWT_SECRET = os.environ['JWT_SECRET']
 ADMIN_EMAIL = os.environ['ADMIN_EMAIL']
 ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+LOVABLE_API_KEY = os.environ.get('LOVABLE_API_KEY')  # Shared with Lovable.dev for glossary ingest
 
 # ============================================================
 # LLM abstraction — prefers Doug's direct Anthropic key when set.
@@ -503,8 +504,15 @@ async def get_term(slug: str):
     if not t.get("faqs_approved"):
         t["faqs"] = []
         t["faqs_pending_review"] = True
-    # Attach authoritative sources (statute + primary regulator) — factually cited
-    t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
+    # Attach authoritative sources — prefer stored per-term override (curated
+    # via the Lovable.dev pipeline), else fall back to the algorithmic default.
+    override = t.get("sources_override")
+    if override and isinstance(override, list) and len(override) > 0:
+        t["sources"] = override
+        t["sources_source"] = "curated"
+    else:
+        t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
+        t["sources_source"] = "default"
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
@@ -800,6 +808,142 @@ async def community_climate_normals(slug: str):
             "api": "https://api.weather.gc.ca/collections/climate-normals",
         },
     }
+
+
+# =============== PUBLIC INGEST API (Lovable.dev integration) ===============
+# Secure API-key-gated endpoints for a partner site (e.g. a Lovable.dev
+# curation app) to push verified glossary edits + authoritative sources
+# into EZtoFind. Every write is audit-logged.
+
+def verify_lovable_key(x_ez_api_key: Optional[str] = Header(None)):
+    if not LOVABLE_API_KEY:
+        raise HTTPException(503, "Ingest API not configured on this deployment.")
+    if not x_ez_api_key or x_ez_api_key != LOVABLE_API_KEY:
+        raise HTTPException(401, "Invalid or missing X-EZ-API-Key header.")
+    return True
+
+class SourceItem(BaseModel):
+    title: str
+    url: str
+    publisher: Optional[str] = None
+
+class GlossaryUpsert(BaseModel):
+    term: Optional[str] = None
+    slug: Optional[str] = None            # if omitted, derived from term
+    category: Optional[str] = None
+    definition: Optional[str] = None
+    sources: Optional[List[SourceItem]] = None
+    faqs: Optional[List[dict]] = None      # each: {q, a}
+    faqs_approved: Optional[bool] = None
+
+class GlossaryBulkUpsert(BaseModel):
+    terms: List[GlossaryUpsert]
+
+def _slugify(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+async def _apply_upsert(item: GlossaryUpsert, request_ip: str) -> dict:
+    if not item.slug and not item.term:
+        return {"status": "error", "error": "slug or term required"}
+    slug = item.slug or _slugify(item.term)
+    existing = await db.glossary.find_one({"slug": slug}, {"_id": 0})
+    update = {}
+    if item.term is not None:       update["term"] = item.term
+    if item.category is not None:   update["category"] = item.category
+    if item.definition is not None: update["definition"] = item.definition
+    if item.sources is not None:
+        update["sources_override"] = [s.dict() for s in item.sources]
+    if item.faqs is not None:
+        update["faqs"] = item.faqs
+    if item.faqs_approved is not None:
+        update["faqs_approved"] = item.faqs_approved
+    update["last_curated_at"] = now_iso()
+    if existing:
+        await db.glossary.update_one({"slug": slug}, {"$set": update})
+        action = "updated"
+    else:
+        update["slug"] = slug
+        update["id"] = str(uuid.uuid4())
+        update.setdefault("term", item.term or slug)
+        update.setdefault("category", item.category or "General")
+        update.setdefault("definition", item.definition or "")
+        update.setdefault("faqs", item.faqs or [])
+        await db.glossary.insert_one(update)
+        action = "created"
+    # Audit log
+    await db.glossary_updates.insert_one({
+        "slug": slug,
+        "action": action,
+        "changed_fields": list(update.keys()),
+        "ts": now_iso(),
+        "source_ip": request_ip,
+        "via": "lovable_api",
+    })
+    return {"slug": slug, "status": action}
+
+@api.put("/public/glossary/{slug}")
+async def public_upsert_term(slug: str, item: GlossaryUpsert, request: Request, _=Depends(verify_lovable_key)):
+    """Push a single glossary term update (Lovable.dev → EZtoFind)."""
+    item.slug = slug
+    ip = request.client.host if request.client else "unknown"
+    return await _apply_upsert(item, ip)
+
+@api.post("/public/glossary/bulk")
+async def public_bulk_upsert(body: GlossaryBulkUpsert, request: Request, _=Depends(verify_lovable_key)):
+    """Bulk upsert up to 500 terms in one request."""
+    if len(body.terms) > 500:
+        raise HTTPException(400, "Max 500 terms per bulk request.")
+    ip = request.client.host if request.client else "unknown"
+    results = []
+    for t in body.terms:
+        try:
+            r = await _apply_upsert(t, ip)
+            results.append(r)
+        except Exception as e:
+            results.append({"slug": t.slug, "status": "error", "error": str(e)})
+    created = sum(1 for r in results if r.get("status") == "created")
+    updated = sum(1 for r in results if r.get("status") == "updated")
+    errors  = sum(1 for r in results if r.get("status") == "error")
+    return {"total": len(results), "created": created, "updated": updated, "errors": errors, "results": results}
+
+@api.get("/public/glossary")
+async def public_list_glossary(since: Optional[str] = None, limit: int = 500, offset: int = 0):
+    """Public read of all terms (no auth). Optional ?since=ISO8601 for incremental sync."""
+    q = {}
+    if since:
+        q["last_curated_at"] = {"$gte": since}
+    total = await db.glossary.count_documents(q)
+    items = await db.glossary.find(q, {"_id": 0}).sort("term", 1).skip(offset).limit(limit).to_list(limit)
+    # For each, if no sources_override, resolve the default source list so consumers see final rendered sources
+    for it in items:
+        if not it.get("sources_override"):
+            it["sources"] = get_sources_for_term(it.get("term",""), it.get("category",""))
+            it["sources_source"] = "default"
+        else:
+            it["sources"] = it["sources_override"]
+            it["sources_source"] = "curated"
+        # Hide unapproved FAQs from public read
+        if not it.get("faqs_approved"):
+            it["faqs"] = []
+            it["faqs_pending_review"] = True
+    return {"total": total, "count": len(items), "offset": offset, "limit": limit, "terms": items}
+
+@api.get("/public/glossary/{slug}")
+async def public_get_term(slug: str):
+    """Public read of a single term (no auth). Same shape as list, single item."""
+    t = await db.glossary.find_one({"slug": slug}, {"_id": 0})
+    if not t: raise HTTPException(404, "Term not found")
+    if not t.get("sources_override"):
+        t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
+        t["sources_source"] = "default"
+    else:
+        t["sources"] = t["sources_override"]
+        t["sources_source"] = "curated"
+    if not t.get("faqs_approved"):
+        t["faqs"] = []
+        t["faqs_pending_review"] = True
+    return t
+
 
 # =============== SEED ===============
 @app.on_event("startup")
