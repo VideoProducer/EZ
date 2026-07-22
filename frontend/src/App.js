@@ -974,9 +974,10 @@ const DoRTS = () => <Legal title="Disclosure of Representation in Trading Servic
     <li>Your right to seek independent legal advice.</li>
   </ul>
   <h3 style={{marginTop:"1.5rem"}}>Doug's practice</h3>
-  <p>Doug LeMaire, REALTOR® will deliver a signed BCFSA-issued <em>Disclosure of Representation in Trading Services</em> form before providing any real estate service to you. Nothing on this website — including any Doogie AI response, buyer intake form submission, or general glossary/community content — creates a REALTOR®-client relationship.</p>
+  <p>Doug LeMaire, REALTOR® will deliver a signed BCFSA-issued <em>Disclosure of Representation in Trading Services</em> form before providing any real estate service to you.</p>
+  <p>Nothing on this website — including any Doogie AI response, buyer intake form submission, or general glossary/community content — creates a REALTOR®-client relationship.</p>
   <h3 style={{marginTop:"1.5rem"}}>About this form</h3>
-  <p>This is the current official BCFSA form (Rev. 06/2021). Use the Download button above to save a copy, or Open in New Tab to view it fullscreen. The form is available in the same version at any BCFSA-licensed brokerage.</p>
+  <p>This is the current official BCFSA <em>Disclosure of Representation in Trading Services</em> form (Rev. 06/2021). Use the Download button above to save a copy.</p>
 </>}/>;
 
 const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
