@@ -857,7 +857,7 @@ const RealtorApply = () => {
   const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
-    <div className="eyebrow">For REALTORS® Only</div><h1 className="section-title">Join our BC referral network</h1>
+    <div className="eyebrow">For REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Application received ✓</h3><p style={{fontFamily:"Inter,sans-serif"}}>{res.message}</p></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
           <div className="form-grid">
@@ -904,7 +904,7 @@ const About = () => (<section className="section"><div className="container-x" s
       <p>I'm Doug LeMaire, a licensed REALTOR® with Fraser Property Management Realty Services Ltd. For 13 years I've helped people buy and sell across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor up to Whistler.</p>
       <p>My work centres on detached homes, acreages and equestrian properties, luxury real estate, residential strata's and probate/estate sales — and it's work I genuinely enjoy.</p>
       <p>I also built <strong>EZtoFind.ca</strong>, a British Columbia real estate information platform that gives buyers and sellers straight, well-sourced answers about the market, the terminology, and the process of buying and selling — anywhere in the province. It reflects how I like to work: informed clients make better decisions, and my job is to make good information easy to find and easy to trust.</p>
-      <p>If you're buying or selling in Greater Vancouver, the Fraser Valley, or Sea-to-Sky, I'd be glad to help. For enquiries beyond my service area, I can connect you with a trusted, licensed professional.</p>
+      <p>If you're buying or selling in Greater Vancouver, the Fraser Valley, or Sea-to-Sky, I'd be glad to help. For enquiries beyond my service area, I can connect you with a trusted, licensed professional. Ask to be referred to a REALTOR® through our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral REALTOR®</Link> link.</p>
     </div>
   </div>
   <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}} data-testid="about-trust-badges">
