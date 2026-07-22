@@ -8,6 +8,78 @@ import "./App.css";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const SITE_URL = "https://eztofind.ca";
 
+// Reusable OpenStreetMap component — free, no API key, no tracking pixels.
+// Geocodes the community name on-the-fly via Nominatim (rate-limited to 1 req/s
+// but we cache per-session so re-visits are instant).
+const CommunityMap = ({ name, region }) => {
+  const mapRef = useRef(null);
+  const containerRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      // Wait for Leaflet CDN to load
+      let tries = 0;
+      while (typeof window.L === "undefined" && tries < 50) {
+        await new Promise(r => setTimeout(r, 100));
+        tries += 1;
+      }
+      if (typeof window.L === "undefined" || cancelled) { setFailed(true); setLoading(false); return; }
+
+      // Geocode via Nominatim (cache in sessionStorage)
+      const cacheKey = `geocode:${name},BC`;
+      let coords = null;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) { try { coords = JSON.parse(cached); } catch(e) {} }
+      if (!coords) {
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(name+", British Columbia, Canada")}`,
+            { headers: { "Accept-Language": "en-CA" } });
+          const data = await r.json();
+          if (data && data[0]) {
+            coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display: data[0].display_name };
+            sessionStorage.setItem(cacheKey, JSON.stringify(coords));
+          }
+        } catch(e) {}
+      }
+      if (!coords || cancelled) { setFailed(true); setLoading(false); return; }
+
+      // Clean up any prior map instance (React re-renders)
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+
+      const map = window.L.map(containerRef.current, {
+        center: [coords.lat, coords.lng],
+        zoom: 11,
+        scrollWheelZoom: false,
+        attributionControl: true,
+      });
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
+      }).addTo(map);
+      window.L.marker([coords.lat, coords.lng])
+        .addTo(map)
+        .bindPopup(`<strong>${name}, BC</strong><br/><span style="color:#6B7280">${region}</span>`);
+      mapRef.current = map;
+      setLoading(false);
+    };
+    init();
+    return () => { cancelled = true; if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
+  }, [name, region]);
+
+  if (failed) return null;
+  return (
+    <div style={{marginTop:"2rem"}} data-testid="community-map-wrap">
+      <h2 style={{fontSize:"1.75rem"}}>📍 Map of {name}</h2>
+      <div ref={containerRef} data-testid="community-map" style={{height:"340px",width:"100%",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)",background:"#F5F0E1"}}></div>
+      {loading && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Loading map…</div>}
+      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem"}}>Map data © OpenStreetMap contributors · <a href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(name+", BC")}`} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Open fullscreen on OSM ↗</a></div>
+    </div>
+  );
+};
+
 // Convert Doogie's markdown-ish chat output into safe HTML with clickable
 // internal links (/referral-request, /buyer, /seller, /glossary/xxx, etc.),
 // external URLs, **bold**, and line breaks.
@@ -1230,6 +1302,7 @@ const CommunityPage = () => {
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted climate summary. For authoritative data, see the Environment Canada sources below.</div>
       </>}
       {(climate?.available || (!loadingWx && wx?.weather)) && wx?.sources && wx.sources.length>0 && <SourcesBlock title="Authoritative Sources — Climate & Weather" intro={`Verify current weather, alerts, and historical climate records with Environment and Climate Change Canada:`} sources={wx.sources} testid="weather-sources"/>}
+      {found && <CommunityMap name={found} region={region}/>}
       {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact/>}
       {!loadingWx && wx?.note && !climate?.available && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
