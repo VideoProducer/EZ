@@ -8,6 +8,32 @@ import "./App.css";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const SITE_URL = "https://eztofind.ca";
 
+// Convert Doogie's markdown-ish chat output into safe HTML with clickable
+// internal links (/referral-request, /buyer, /seller, /glossary/xxx, etc.),
+// external URLs, **bold**, and line breaks.
+const renderChatContent = (raw) => {
+  if (!raw) return "";
+  // 1. HTML-escape everything first (safety)
+  let s = String(raw)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  // 2. **bold** and *italic* first (so paths wrapped in ** still get linked below)
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  // 3. Full URLs → external link
+  s = s.replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
+  // 4. Internal paths — /path or /path/subpath — link to same-origin route.
+  //    Negative lookbehind excludes: word chars, quotes, slashes, and < (to skip HTML closing tags like </strong>).
+  s = s.replace(/(?<![a-zA-Z0-9="'/<])(\/[a-z][a-z0-9\-/]*[a-z0-9])(?![a-zA-Z0-9>])/gi,
+    '<a href="$1" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
+  // 5. Line breaks
+  s = s.replace(/\n/g, "<br/>");
+  return s;
+};
+
 // Reusable SEO/meta component — injects per-route <title>, meta description,
 // canonical, OpenGraph, Twitter Card, and optional JSON-LD schema.
 const SEO = ({ title, description, path, image, schema }) => {
@@ -390,7 +416,7 @@ const DoogieChat = () => {
         <button onClick={acceptConsent} className="btn btn-primary" style={{width:"100%"}} data-testid="doogie-consent-accept">I understand — start chatting</button>
       </div>
       : <>
-      <div className="msgs" ref={scrollRef}>{msgs.map((m,i)=><div key={i} className={`msg ${m.role}`}>{m.content || (busy && i===msgs.length-1 ? "…" : "")}</div>)}</div>
+      <div className="msgs" ref={scrollRef}>{msgs.map((m,i)=><div key={i} className={`msg ${m.role}`}>{m.content ? <span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/> : (busy && i===msgs.length-1 ? "…" : "")}</div>)}</div>
       <form onSubmit={send}><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask Doogie…" data-testid="doogie-input"/><button type="submit" disabled={busy} data-testid="doogie-send">Send</button></form>
       </>}
     </div>}
