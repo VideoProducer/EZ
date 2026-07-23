@@ -586,6 +586,117 @@ async def list_communities():
     p = ROOT_DIR / "data" / "communities_seed.json"
     return json.loads(p.read_text())
 
+
+# =============== LIVE FORECAST (Open-Meteo, no key, 1-hour cache) ===============
+@api.get("/community/{slug}/forecast")
+async def community_forecast(slug: str):
+    """Live current-conditions + 7-day forecast for a community.
+
+    Data source: Open-Meteo forecast API (free, no key, ECCC among its sources).
+    Cached 1 hour in Mongo to avoid hammering the free tier.
+    """
+    all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    name = None
+    region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-") == slug:
+                name = c
+                region = r
+                break
+        if name:
+            break
+    if not name:
+        raise HTTPException(404, "Community not found")
+
+    # Cache lookup (1-hour TTL)
+    cached = await db.community_forecasts.find_one({"slug": slug}, {"_id": 0})
+    if cached and cached.get("expires_at") and now_iso() < cached["expires_at"]:
+        return cached
+
+    # Geocode + forecast
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            geo_r = await client.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": name, "count": 5, "language": "en", "format": "json", "country": "CA"},
+            )
+            geo = geo_r.json() if geo_r.status_code == 200 else {}
+            hit = None
+            for res in geo.get("results", []):
+                if res.get("admin1") in ("British Columbia",):
+                    hit = res
+                    break
+            if not hit and geo.get("results"):
+                hit = geo["results"][0]
+            if not hit:
+                raise HTTPException(502, "Geocoding failed for community")
+            lat = hit["latitude"]
+            lon = hit["longitude"]
+
+            fx_r = await client.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "current": "temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature",
+                    "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max",
+                    "timezone": "America/Vancouver",
+                    "forecast_days": 7,
+                },
+            )
+            fx = fx_r.json() if fx_r.status_code == 200 else None
+            if not fx or "current" not in fx:
+                raise HTTPException(502, "Forecast unavailable")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"forecast fetch failed for {name}: {e}")
+        raise HTTPException(502, "Forecast unavailable")
+
+    cur = fx["current"]
+    daily = fx["daily"]
+    result = {
+        "slug": slug,
+        "community": name,
+        "region": region,
+        "lat": lat,
+        "lon": lon,
+        "current": {
+            "temp_c": cur.get("temperature_2m"),
+            "feels_like_c": cur.get("apparent_temperature"),
+            "code": cur.get("weather_code"),
+            "wind_kmh": cur.get("wind_speed_10m"),
+            "humidity_pct": cur.get("relative_humidity_2m"),
+        },
+        "daily": [
+            {
+                "date": d,
+                "code": c,
+                "max_c": tmax,
+                "min_c": tmin,
+                "precip_mm": pp,
+                "precip_prob_pct": pprob,
+            }
+            for d, c, tmax, tmin, pp, pprob in zip(
+                daily.get("time", []),
+                daily.get("weather_code", []),
+                daily.get("temperature_2m_max", []),
+                daily.get("temperature_2m_min", []),
+                daily.get("precipitation_sum", []),
+                daily.get("precipitation_probability_max", [None] * 7),
+            )
+        ],
+        "updated_at": now_iso(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        "eccc_forecast_url": f"https://weather.gc.ca/city/pages/bc-1_metric_e.html",  # generic BC page
+        "eccc_search_url": f"https://weather.gc.ca/mainmenu/weather_menu_e.html",
+        "attribution": "Weather data © Open-Meteo (free & open-source; sources include ECCC)",
+    }
+    await db.community_forecasts.replace_one({"slug": slug}, result, upsert=True)
+    result.pop("_id", None)
+    return result
+
 # =============== COMMUNITY SYNOPSIS (Claude Sonnet 4.6, cached) ===============
 async def generate_community_synopsis(name: str, region: str) -> str:
     """Generate a 300-450 word BC community synopsis using Claude Sonnet 4.6."""

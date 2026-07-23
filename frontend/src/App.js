@@ -112,6 +112,83 @@ const SourcesBlock = ({title, intro, sources, testid}) => (
 // Real ECCC Climate Normals table — replaces AI weather text when live data is available
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtNum = (v, digits=1) => (v===null || v===undefined) ? "—" : Number(v).toFixed(digits);
+
+// WMO weather-code → { emoji, label } — used by <CurrentWeather>
+const WMO = (code) => {
+  if (code === 0) return { icon:"☀️", label:"Clear sky" };
+  if (code === 1) return { icon:"🌤️", label:"Mainly clear" };
+  if (code === 2) return { icon:"⛅", label:"Partly cloudy" };
+  if (code === 3) return { icon:"☁️", label:"Overcast" };
+  if (code === 45 || code === 48) return { icon:"🌫️", label:"Fog" };
+  if (code >= 51 && code <= 55) return { icon:"🌦️", label:"Drizzle" };
+  if (code === 56 || code === 57) return { icon:"🌧️", label:"Freezing drizzle" };
+  if (code >= 61 && code <= 65) return { icon:"🌧️", label:"Rain" };
+  if (code === 66 || code === 67) return { icon:"🌨️", label:"Freezing rain" };
+  if (code >= 71 && code <= 77) return { icon:"❄️", label:"Snow" };
+  if (code >= 80 && code <= 82) return { icon:"🌦️", label:"Rain showers" };
+  if (code === 85 || code === 86) return { icon:"🌨️", label:"Snow showers" };
+  if (code >= 95) return { icon:"⛈️", label:"Thunderstorm" };
+  return { icon:"🌡️", label:"—" };
+};
+
+const CurrentWeather = ({ slug, community }) => {
+  const [fx, setFx] = useState(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setFx(null); setErr(false);
+    axios.get(`${API}/community/${slug}/forecast`)
+      .then(r => { if (alive) setFx(r.data); })
+      .catch(() => { if (alive) setErr(true); });
+    return () => { alive = false; };
+  }, [slug]);
+  if (err) return null;
+  if (!fx) return <div data-testid="community-forecast-loading" style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.75rem"}}>🐾 Doogie is fetching the current forecast for {community}…</div>;
+  const cur = fx.current || {};
+  const w = WMO(cur.code);
+  const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return (
+    <div data-testid="community-current-weather" style={{marginTop:"1rem",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif"}}>
+      {/* Current conditions banner */}
+      <div style={{display:"flex",alignItems:"center",gap:"1.25rem",flexWrap:"wrap",background:"linear-gradient(135deg,#0F2A5B 0%,#1E4180 100%)",color:"#fff",padding:"1.25rem 1.5rem",borderRadius:14,boxShadow:"0 8px 24px rgba(15,42,91,0.18)"}}>
+        <div style={{fontSize:"3.5rem",lineHeight:1}}>{w.icon}</div>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",opacity:0.75,fontWeight:600}}>Right now in {community}</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:"0.6rem",marginTop:"0.15rem"}}>
+            <span data-testid="cw-temp" style={{fontSize:"2.6rem",fontWeight:700,fontFamily:"'Sora',sans-serif"}}>{Math.round(cur.temp_c)}°C</span>
+            <span style={{fontSize:"1rem",opacity:0.85}}>{w.label}</span>
+          </div>
+          <div style={{fontSize:"0.85rem",opacity:0.85,marginTop:"0.35rem",display:"flex",gap:"1.25rem",flexWrap:"wrap"}}>
+            <span>Feels like {Math.round(cur.feels_like_c)}°C</span>
+            <span>Wind {Math.round(cur.wind_kmh)} km/h</span>
+            <span>Humidity {Math.round(cur.humidity_pct)}%</span>
+          </div>
+        </div>
+      </div>
+      {/* 7-day strip */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7, minmax(0, 1fr))",gap:"0.5rem",marginTop:"0.75rem"}} data-testid="cw-7day">
+        {(fx.daily || []).map((d,i) => {
+          const dt = new Date(d.date + "T12:00:00");
+          const dw = WMO(d.code);
+          const isToday = i === 0;
+          return (
+            <div key={d.date} style={{background:isToday?"#F5F0E1":"#FFFFFF",border:"1px solid rgba(15,42,91,0.12)",borderRadius:10,padding:"0.65rem 0.4rem",textAlign:"center"}}>
+              <div style={{fontSize:"0.72rem",fontWeight:700,color:"var(--brand-navy)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{isToday ? "Today" : dayNames[dt.getDay()]}</div>
+              <div style={{fontSize:"1.6rem",lineHeight:1.1,marginTop:"0.2rem"}}>{dw.icon}</div>
+              <div style={{fontSize:"0.82rem",marginTop:"0.15rem",color:"var(--ink)"}}><strong>{Math.round(d.max_c)}°</strong> <span style={{color:"var(--muted)"}}>{Math.round(d.min_c)}°</span></div>
+              {d.precip_prob_pct !== null && d.precip_prob_pct !== undefined && d.precip_prob_pct > 10 && (
+                <div style={{fontSize:"0.68rem",color:"#2563EB",marginTop:"0.1rem"}}>💧 {d.precip_prob_pct}%</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.5rem",lineHeight:1.5}}>
+        Forecast updated hourly. Data © Open-Meteo (free & open-source). For authoritative forecasts and severe-weather alerts, visit <a href={`https://weather.gc.ca/mainmenu/weather_menu_e.html`} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>Environment Canada ↗</a>.
+      </div>
+    </div>
+  );
+};
 const ClimateNormalsTable = ({data, community}) => {
   const m = data.monthly || {};
   const st = data.station || {};
@@ -1248,6 +1325,7 @@ const CommunityPage = () => {
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>☀️ Weather &amp; Climate in {found}</h2>
+      {slug && found && <CurrentWeather slug={slug} community={found}/>}
       {climate?.available && climate.monthly && <ClimateNormalsTable data={climate} community={found}/>}
       {loadingWx && !climate?.available && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is preparing the local climate summary…</div>}
       {!loadingWx && !climate?.available && wx?.weather && <>
