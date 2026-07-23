@@ -15,6 +15,22 @@ from glossary_sources import get_sources_for_term
 from community_sources import get_community_sources, get_weather_sources
 from bc_stations import get_station_for_community, eccc_station_page_url, eccc_normals_search_url
 
+
+def _merge_sources(override, term: str, category: str) -> list:
+    """Merge curated Lovable sources_override with algorithmic default sources.
+    Deduped by URL (trailing-slash + case insensitive). Curator's picks come first."""
+    override = override if isinstance(override, list) else []
+    default = get_sources_for_term(term or "", category or "") or []
+    seen, merged = set(), []
+    for s in list(override) + list(default):
+        if not isinstance(s, dict):
+            continue
+        url = (s.get("url") or "").rstrip("/").lower()
+        if url and url not in seen:
+            seen.add(url)
+            merged.append(s)
+    return merged
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -509,15 +525,12 @@ async def get_term(slug: str):
     if not t.get("faqs_approved"):
         t["faqs"] = []
         t["faqs_pending_review"] = True
-    # Attach authoritative sources — prefer stored per-term override (curated
-    # via the Lovable.dev pipeline), else fall back to the algorithmic default.
-    override = t.get("sources_override")
-    if override and isinstance(override, list) and len(override) > 0:
-        t["sources"] = override
-        t["sources_source"] = "curated"
-    else:
-        t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
-        t["sources_source"] = "default"
+    # Attach authoritative sources — MERGE the curated Lovable override with the
+    # algorithmic category defaults (deduped by URL). This ensures every term
+    # shows both the curator's primary source AND 2–4 authoritative BC statutes/
+    # regulators, so users see real "well-sourced" verification links.
+    t["sources"] = _merge_sources(t.get("sources_override"), t.get("term",""), t.get("category",""))
+    t["sources_source"] = "curated+default" if t.get("sources_override") else "default"
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
@@ -938,14 +951,10 @@ async def public_list_glossary(since: Optional[str] = None, limit: int = 500, of
         q["last_curated_at"] = {"$gte": since}
     total = await db.glossary.count_documents(q)
     items = await db.glossary.find(q, {"_id": 0}).sort("term", 1).skip(offset).limit(limit).to_list(limit)
-    # For each, if no sources_override, resolve the default source list so consumers see final rendered sources
+    # For each, merge sources_override + defaults (deduped by URL)
     for it in items:
-        if not it.get("sources_override"):
-            it["sources"] = get_sources_for_term(it.get("term",""), it.get("category",""))
-            it["sources_source"] = "default"
-        else:
-            it["sources"] = it["sources_override"]
-            it["sources_source"] = "curated"
+        it["sources"] = _merge_sources(it.get("sources_override"), it.get("term",""), it.get("category",""))
+        it["sources_source"] = "curated+default" if it.get("sources_override") else "default"
         # Hide unapproved FAQs from public read
         if not it.get("faqs_approved"):
             it["faqs"] = []
@@ -957,12 +966,8 @@ async def public_get_term(slug: str):
     """Public read of a single term (no auth). Same shape as list, single item."""
     t = await db.glossary.find_one({"slug": slug}, {"_id": 0})
     if not t: raise HTTPException(404, "Term not found")
-    if not t.get("sources_override"):
-        t["sources"] = get_sources_for_term(t.get("term",""), t.get("category",""))
-        t["sources_source"] = "default"
-    else:
-        t["sources"] = t["sources_override"]
-        t["sources_source"] = "curated"
+    t["sources"] = _merge_sources(t.get("sources_override"), t.get("term",""), t.get("category",""))
+    t["sources_source"] = "curated+default" if t.get("sources_override") else "default"
     if not t.get("faqs_approved"):
         t["faqs"] = []
         t["faqs_pending_review"] = True

@@ -42,6 +42,10 @@ SRC = {
     "manufactured_home_act":      {"title": "Manufactured Home Act (RSBC 1996, c. 280)",              "url": f"{BCLAWS}/civix/document/id/complete/statreg/96280_01",       "publisher": "Province of British Columbia — BC Laws"},
     "homeowner_protection_act":   {"title": "Homeowner Protection Act (SBC 1998, c. 31)",             "url": f"{BCLAWS}/civix/document/id/complete/statreg/98031_01",       "publisher": "Province of British Columbia — BC Laws"},
     "building_act":               {"title": "Building Act (SBC 2015, c. 2)",                          "url": f"{BCLAWS}/civix/document/id/complete/statreg/15002_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "residential_tenancy_act":    {"title": "Residential Tenancy Act (SBC 2002, c. 78)",              "url": f"{BCLAWS}/civix/document/id/complete/statreg/02078_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "gov_bc_rtb":                 {"title": "BC Government — Residential Tenancy Branch",             "url": "https://www2.gov.bc.ca/gov/content/housing-tenancy/residential-tenancies",                                                                          "publisher": "Government of British Columbia"},
+    "redma":                      {"title": "Real Estate Development Marketing Act (SBC 2004, c. 41)","url": f"{BCLAWS}/civix/document/id/complete/statreg/04041_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "bcfsa_agency_disclosure":    {"title": "BCFSA — Agency and Disclosure Forms (DoRTS, DoLC)",     "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/forms-and-templates",                                    "publisher": "BC Financial Services Authority (BCFSA)"},
 
     # Federal statutes
     "non_canadians_act":          {"title": "Prohibition on the Purchase of Residential Property by Non-Canadians Act (S.C. 2022, c. 10, s. 235)", "url": "https://laws-lois.justice.gc.ca/eng/acts/P-25.2/",  "publisher": "Justice Laws — Government of Canada"},
@@ -168,6 +172,158 @@ CATEGORY_SOURCES: Dict[str, List[dict]] = {
         SRC["resa_rules"],
         SRC["bcfsa"],
         SRC["ltsa"],
+    ],
+
+    # ---- Aliases used by the Lovable-ingested taxonomy (post-2026 curation) ----
+    "Agency & Disclosure": [
+        SRC["bcfsa_agency_disclosure"],
+        SRC["resa_rules"],
+        SRC["resa"],
+        SRC["bcfsa"],
+    ],
+    "Disclosure": [
+        SRC["bcfsa_agency_disclosure"],
+        SRC["resa_rules"],
+        SRC["bcfsa"],
+    ],
+    "Appraisal & Value": [
+        SRC["aic"],
+        SRC["bc_assessment"],
+        SRC["ltsa"],
+    ],
+    "Property Value": [
+        SRC["aic"],
+        SRC["bc_assessment"],
+        SRC["ltsa"],
+    ],
+    "BC Specific": [
+        SRC["bcfsa"],
+        SRC["resa"],
+        SRC["ltsa"],
+    ],
+    "Building Code": [
+        SRC["building_act"],
+        SRC["gov_bc_building_code"],
+        SRC["homeowner_protection_act"],
+    ],
+    "Buying & Selling": [
+        SRC["resa"],
+        SRC["resa_rules"],
+        SRC["bcfsa"],
+        SRC["ltsa"],
+    ],
+    "Government & Tax": [
+        SRC["ptt_act"],
+        SRC["gov_bc_ptt"],
+        SRC["svt_act"],
+        SRC["gov_bc_svt"],
+        SRC["gov_bc_home_owner_grant"],
+    ],
+    "Taxation": [
+        SRC["ptt_act"],
+        SRC["gov_bc_ptt"],
+        SRC["income_tax_act"],
+        SRC["cra"],
+    ],
+    "Taxes & Costs": [
+        SRC["ptt_act"],
+        SRC["gov_bc_ptt"],
+        SRC["gov_bc_home_owner_grant"],
+        SRC["cra"],
+    ],
+    "Inspection & Home Condition": [
+        SRC["homeowner_protection_act"],
+        SRC["bc_housing"],
+        SRC["building_act"],
+    ],
+    "Inspections": [
+        SRC["homeowner_protection_act"],
+        SRC["bc_housing"],
+        SRC["building_act"],
+    ],
+    "Investing": [
+        SRC["bcfsa"],
+        SRC["cra"],
+        SRC["income_tax_act"],
+    ],
+    "Land & Rural": [
+        SRC["alr_act"],
+        SRC["alc"],
+        SRC["gov_bc_zoning"],
+        SRC["local_government_act"],
+    ],
+    "Rural & Acreage": [
+        SRC["alr_act"],
+        SRC["alc"],
+        SRC["gov_bc_zoning"],
+        SRC["local_government_act"],
+    ],
+    "Land Use": [
+        SRC["local_government_act"],
+        SRC["community_charter"],
+        SRC["gov_bc_zoning"],
+        SRC["alc"],
+    ],
+    "Legal & Contract": [
+        SRC["property_law_act"],
+        SRC["land_title_act"],
+        SRC["resa"],
+    ],
+    "Legal & Conveyancing": [
+        SRC["land_title_act"],
+        SRC["property_law_act"],
+        SRC["ltsa"],
+    ],
+    "Legal & Title": [
+        SRC["land_title_act"],
+        SRC["property_law_act"],
+        SRC["ltsa"],
+    ],
+    "Legislation": [
+        SRC["resa"],
+        SRC["resa_rules"],
+        SRC["bcfsa"],
+        SRC["strata_property_act"],
+        SRC["land_title_act"],
+    ],
+    "Presale & Development": [
+        SRC["redma"],
+        SRC["bcfsa"],
+        SRC["homeowner_protection_act"],
+    ],
+    "Process & General": [
+        SRC["resa"],
+        SRC["resa_rules"],
+        SRC["bcfsa"],
+        SRC["ltsa"],
+    ],
+    "Strata & Condo": [
+        SRC["strata_property_act"],
+        SRC["strata_property_regulation"],
+        SRC["gov_bc_strata"],
+        SRC["choa"],
+        SRC["civil_resolution_tribunal"],
+    ],
+    "Strata Documents": [
+        SRC["strata_property_act"],
+        SRC["strata_property_regulation"],
+        SRC["gov_bc_strata"],
+        SRC["choa"],
+    ],
+    "Tenancy": [
+        SRC["residential_tenancy_act"],
+        SRC["gov_bc_rtb"],
+    ],
+    "Title & Ownership": [
+        SRC["land_title_act"],
+        SRC["ltsa"],
+        SRC["property_law_act"],
+    ],
+    "Transaction & Closing": [
+        SRC["resa"],
+        SRC["ltsa"],
+        SRC["land_title_act"],
+        SRC["bcfsa"],
     ],
 }
 
