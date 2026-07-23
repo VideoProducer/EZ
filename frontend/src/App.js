@@ -1164,7 +1164,7 @@ const Communities = () => {
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
       <div className="eyebrow">All of British Columbia</div>
       <h1 className="section-title">BC Communities</h1>
-      <p className="section-sub">Every incorporated municipality, village, town, district, and community across British Columbia. Doug's primary practice: Greater Vancouver, Fraser Valley, Sea-to-Sky. Elsewhere in BC? Our referral network can help.</p>
+      <p className="section-sub">Every incorporated municipality, village, town, district, and community across British Columbia. For enquiries beyond my service area, I can connect you with a licensed REALTOR®. Ask to be referred through our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral REALTOR®</Link> link.</p>
     </div>
     <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search 400+ BC communities…" className="search-bar" style={{width:"100%",maxWidth:520,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none"}} data-testid="communities-search"/>
     {Object.entries(data).map(([region, list]) => {
