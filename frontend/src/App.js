@@ -13,8 +13,7 @@ const SITE_URL = "https://eztofind.ca";
 const CommunityMap = ({ name, region }) => {
   const q = encodeURIComponent(`${name}, BC, Canada`);
   return (
-    <div style={{marginTop:"2rem"}} data-testid="community-map-wrap">
-      <h2 style={{fontSize:"1.75rem"}}>📍 Map of {name}</h2>
+    <div style={{marginTop:"1.25rem",marginBottom:"1.5rem"}} data-testid="community-map-wrap">
       <div style={{height:"340px",width:"100%",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)",background:"#F5F0E1"}}>
         <iframe
           title={`Map of ${name}, BC`}
@@ -1223,6 +1222,7 @@ const CommunityPage = () => {
     })}</script></Helmet>}
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
+      {found && <CommunityMap name={found} region={region}/>}
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>
       <h1 className="section-title">{found}, BC</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
@@ -1255,7 +1255,6 @@ const CommunityPage = () => {
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted climate summary. For authoritative data, see the Environment Canada sources below.</div>
       </>}
       {(climate?.available || (!loadingWx && wx?.weather)) && wx?.sources && wx.sources.length>0 && <SourcesBlock title="Authoritative Sources — Climate & Weather" intro={`Verify current weather, alerts, and historical climate records with Environment and Climate Change Canada:`} sources={wx.sources} testid="weather-sources"/>}
-      {found && <CommunityMap name={found} region={region}/>}
       {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact/>}
       {!loadingWx && wx?.note && !climate?.available && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
 
