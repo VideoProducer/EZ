@@ -1567,7 +1567,7 @@ const HomeSchema = () => {
 
 // --- Compliance strip ---
 const ComplianceStrip = () => (
-  <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--ink)",fontWeight:700,textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
+  <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"1.28rem",color:"var(--ink)",fontWeight:700,textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
     Doogie is an AI-assisted chatbot and EZtoFind.ca is an AI Assisted platform that provides general information only. Not financial, legal, real estate or investment advice. For advice, consult a licensed REALTOR®, lawyer, notary accountant, or mortgage broker.
   </div>
 );
