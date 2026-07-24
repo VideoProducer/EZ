@@ -2140,7 +2140,7 @@ const Calculators = () => (
       <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
         Estimate Your <span className="accent">Home-Buying Costs</span>
       </h2>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,maxWidth:"38rem",margin:"0 auto 1.25rem"}}>See your <span className="green" style={{fontWeight:600}}>maximum home price</span> based on your income and savings, and the <span className="green" style={{fontWeight:600}}>Property Transfer Tax</span> you'll owe at closing — all under current BC stress-test rules.</p>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,maxWidth:"38rem",margin:"0 auto 1.25rem"}}>See your <span className="green" style={{fontWeight:600}}>maximum home price</span>, monthly payment, and all closing costs — instantly, under current BC stress-test rules.</p>
       <div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
         {[{i:"⚡",t:"Instant"},{i:"🆓",t:"Free"},{i:"🔓",t:"No sign-up"}].map(b => (
           <span key={b.t} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",padding:"0.4rem 0.9rem",background:"rgba(15,42,91,0.06)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,fontSize:"0.82rem",fontWeight:600,color:"var(--brand-navy)"}}>
@@ -2150,7 +2150,6 @@ const Calculators = () => (
       </div>
     </div>
     <AffordabilityCalculator/>
-    <PTTCalculator/>
   </div></section>
 );
 
