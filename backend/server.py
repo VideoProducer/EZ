@@ -308,6 +308,7 @@ async def doogie_chat(body: ChatIn):
         "zh-Hans":  "The user prefers Simplified Chinese (简体中文, Mandarin-speaker convention). Reply entirely in Simplified Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Simplified Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
         "pa":       "The user prefers Punjabi (ਪੰਜਾਬੀ, Gurmukhi script). Reply entirely in Punjabi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Punjabi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
         "fa":       "The user prefers Farsi (فارسی, right-to-left). Reply entirely in Farsi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Farsi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+        "pt-PT":    "The user prefers European Portuguese (Português de Portugal). Reply entirely in European Portuguese — use European spelling and idioms (e.g. 'casa de banho' not 'banheiro', 'apartamento' not 'apartamento', 'a decorrer' not 'em andamento', 'você' or 'o senhor/a senhora' as polite form, informal 'tu' only if the user is clearly casual). Keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the European Portuguese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
     }
     lang = (body.language or "en").strip()
     lang_addon = LANG_INSTRUCT.get(lang, "")
@@ -1771,7 +1772,7 @@ async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("
     openai_key = os.environ.get("OPENAI_API_KEY", "")
     if not openai_key:
         return {"text": "", "error": "Voice input is coming soon — configure OPENAI_API_KEY to enable Whisper."}
-    lang_map = {"en":"en", "zh-Hant":"zh", "zh-Hans":"zh", "pa":"pa", "fa":"fa"}
+    lang_map = {"en":"en", "zh-Hant":"zh", "zh-Hans":"zh", "pa":"pa", "fa":"fa", "pt-PT":"pt"}
     try:
         data = await audio.read()
         async with httpx.AsyncClient(timeout=60.0) as client:

@@ -561,6 +561,7 @@ const DOOGIE_LANGUAGES = [
   { code: "zh-Hans", label: "简", name: "简体中文 (Simplified / Mandarin)"   },
   { code: "pa",      label: "ਪੰ",  name: "ਪੰਜਾਬੀ (Punjabi)"           },
   { code: "fa",      label: "فا",  name: "فارسی (Farsi)"              },
+  { code: "pt-PT",   label: "PT",  name: "Português (European)"       },
 ];
 
 const DoogieChat = () => {
