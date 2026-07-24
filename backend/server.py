@@ -1537,6 +1537,119 @@ async def admin_ddf_sync_now(_=Depends(verify_admin)):
     """Manual trigger for a DDF® sync (no-op until credentials are configured)."""
     return await _ddf_sync(db)
 
+
+# =============== DOOGIE MLS® SEARCH (natural language → filters → listings) ===============
+FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
+Read the user's request and output a SINGLE JSON object with these fields (all optional):
+{
+  "city": string | null,          // BC city/community name; capitalize properly
+  "property_type": string | null, // one of: Detached, Condo, Townhouse, Acreage
+  "beds_min": integer | null,     // minimum bedrooms
+  "baths_min": integer | null,    // minimum bathrooms
+  "price_min": integer | null,    // minimum in CAD dollars (no commas)
+  "price_max": integer | null,    // maximum in CAD dollars (no commas)
+  "keyword": string | null,       // free-text feature keyword (e.g. "ocean view", "suite", "top floor")
+  "sort": string | null           // "price_asc" | "price_desc" | "newest"
+}
+RULES:
+- Return ONLY the JSON object, no explanation, no markdown fences.
+- If user says "under $800K" set price_max=800000. "over $2M" set price_min=2000000.
+- If user says "2-bed" or "2 bedroom" set beds_min=2.
+- Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage.
+- Location: BC cities only. If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver").
+- Descriptive terms like "top floor", "ocean view", "waterfront", "suite" go into keyword.
+- If nothing extracted, return {"city":null,"property_type":null,"beds_min":null,"baths_min":null,"price_min":null,"price_max":null,"keyword":null,"sort":null}."""
+
+async def _extract_listing_filters(user_query: str) -> dict:
+    """Use Claude to extract structured search filters from a natural-language query."""
+    if not ANTHROPIC_API_KEY:
+        return {}
+    try:
+        r = await _anthropic_client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=400,
+            system=FILTER_EXTRACTION_SYSTEM,
+            messages=[{"role": "user", "content": user_query}],
+        )
+        text = r.content[0].text if r.content else "{}"
+        # Strip any accidental fences
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1] if "```" in text[3:] else text[3:]
+            if text.startswith("json"): text = text[4:]
+        return json.loads(text.strip())
+    except Exception as e:
+        logger.warning(f"filter extraction failed: {e}")
+        return {}
+
+@api.post("/doogie/mls-search")
+@_limiter.limit("30/minute")
+async def doogie_mls_search(request: Request, payload: dict):
+    """Doogie's natural-language MLS® search. Takes a raw user query, extracts
+    structured filters via Claude, then queries the listings collection.
+
+    Body: {"message": "4-bedroom homes in Whistler"}
+    Returns: {"intent_matched": bool, "filters": {...}, "count": N, "listings": [...], "summary": str}
+    """
+    q = (payload.get("message") or "").strip()
+    if not q or len(q) > 500:
+        return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": ""}
+
+    filters = await _extract_listing_filters(q)
+    if not any(v for v in filters.values() if v not in (None, "", [])):
+        return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
+
+    query: dict = {"status": "Active"}
+    if filters.get("city"):          query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
+    if filters.get("property_type"): query["property_type"] = {"$regex": f"^{re.escape(filters['property_type'])}$", "$options": "i"}
+    if filters.get("beds_min"):      query["beds"] = {"$gte": int(filters["beds_min"])}
+    if filters.get("baths_min"):     query["baths"] = {"$gte": int(filters["baths_min"])}
+    pr = {}
+    if filters.get("price_min"): pr["$gte"] = int(filters["price_min"])
+    if filters.get("price_max"): pr["$lte"] = int(filters["price_max"])
+    if pr: query["list_price"] = pr
+    if filters.get("keyword"):
+        query["$text"] = {"$search": filters["keyword"]}
+
+    sort_key = [("created_at", -1)]
+    if filters.get("sort") == "price_asc":  sort_key = [("list_price", 1)]
+    if filters.get("sort") == "price_desc": sort_key = [("list_price", -1)]
+
+    cursor = db.listings.find(query).sort(sort_key).limit(6)
+    listings = [_sanitize_listing(d) for d in await cursor.to_list(6)]
+    total = await db.listings.count_documents(query)
+
+    # Log impressions
+    for l in listings:
+        try:
+            await _log_event(db, l.get("listing_key",""), "impression", {"path": "/doogie/mls-search"})
+        except Exception: pass
+
+    # Craft summary
+    parts = []
+    if filters.get("beds_min"): parts.append(f"{filters['beds_min']}+ bed")
+    if filters.get("property_type"): parts.append(str(filters["property_type"]).lower() + ("s" if not str(filters["property_type"]).lower().endswith("s") else ""))
+    if filters.get("city"): parts.append(f"in {filters['city']}")
+    price_note = ""
+    if filters.get("price_max"): price_note = f" under ${int(filters['price_max']):,}"
+    elif filters.get("price_min"): price_note = f" over ${int(filters['price_min']):,}"
+    criteria = " ".join(parts) + price_note if parts else "listings matching your search"
+    if total == 0:
+        summary = f"I couldn't find any {criteria.strip()} right now. Try broadening the price or beds, or ask me to search a nearby community."
+    elif total <= 6:
+        summary = f"Here {'is' if total==1 else 'are'} {total} {criteria.strip()}:"
+    else:
+        summary = f"I found {total} matching {criteria.strip()} — showing the top 6. Refine your search on the full listings page for more."
+
+    return {
+        "intent_matched": True,
+        "filters": filters,
+        "count": total,
+        "listings": listings,
+        "summary": summary,
+        "using_mock_data": not _ddf_ready(),
+    }
+
 app.include_router(api)
 
 @app.on_event("shutdown")

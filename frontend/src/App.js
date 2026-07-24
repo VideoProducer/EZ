@@ -463,10 +463,31 @@ const Footer = () => (
 );
 
 // --- Doogie AI Chat Widget ---
+// Detect listing-search intent so we can fire the MLS filter extractor alongside Doogie's chat stream.
+const LISTING_INTENT_REGEX = /\b(listing|listings|for\s+sale|homes?\s+in|houses?\s+in|condos?|townhomes?|townhouses?|acreage|find\s+.*(bed|bath|home|condo)|show\s+me|looking\s+for|search|properties?\s+in)\b/i;
+const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
+
+// Compact listing card used inside Doogie chat (smaller than the search-page card).
+const DoogieListingCard = ({ listing }) => {
+  const price = (listing.list_price || 0).toLocaleString("en-CA");
+  const photo = (listing.photos && listing.photos[0]) || "";
+  return (
+    <Link to={`/listing/${listing.listing_key}`} data-testid={`doogie-listing-${listing.listing_key}`}
+      style={{display:"flex",gap:"0.6rem",background:"#fff",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.5rem",textDecoration:"none",color:"inherit",marginTop:"0.5rem",boxShadow:"0 2px 6px rgba(15,42,91,0.06)"}}>
+      {photo && <img src={photo} alt="" style={{width:78,height:78,objectFit:"cover",borderRadius:6,flexShrink:0}} loading="lazy"/>}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.98rem",fontWeight:700,color:"var(--brand-navy)"}}>${price}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--ink)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{listing.street_address}, {listing.city}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.15rem"}}>{listing.beds}bd · {listing.baths}ba · {listing.property_type}</div>
+      </div>
+    </Link>
+  );
+};
+
 const DoogieChat = () => {
   const [open, setOpen] = useState(false);
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
-  const [msgs, setMsgs] = useState([{role:"assistant",content:"Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. What can I help you find today?"}]);
+  const [msgs, setMsgs] = useState([{role:"assistant",content:"Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\"."}]);
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => "sess-" + Math.random().toString(36).slice(2));
   const [busy, setBusy] = useState(false);
@@ -481,6 +502,14 @@ const DoogieChat = () => {
     const q = input; setInput(""); setBusy(true);
     setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:""}]);
     let gotAnyContent = false;
+
+    // Fire an MLS search in parallel if the message looks like a listing query
+    let mlsPromise = null;
+    if (looksLikeListingSearch(q)) {
+      mlsPromise = axios.post(`${API}/doogie/mls-search`, { message: q })
+        .then(r => r.data).catch(() => null);
+    }
+
     try {
       const res = await fetch(`${API}/doogie/chat`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,message:q})});
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -499,6 +528,14 @@ const DoogieChat = () => {
       }
       if(!gotAnyContent) setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I didn't receive a response. Please try again, or contact Doug directly."}; return c; });
     } catch(err) { setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I had trouble connecting. Please try again."}; return c; }); }
+
+    // Append MLS results (if any) as a listing-card message
+    if (mlsPromise) {
+      const mls = await mlsPromise;
+      if (mls && mls.intent_matched && mls.listings && mls.listings.length > 0) {
+        setMsgs(m => [...m, { role:"assistant", type:"listings", summary: mls.summary, listings: mls.listings, filters: mls.filters, count: mls.count, using_mock: mls.using_mock_data }]);
+      }
+    }
     setBusy(false);
   };
 
@@ -517,7 +554,27 @@ const DoogieChat = () => {
         <button onClick={acceptConsent} className="btn btn-primary" style={{width:"100%"}} data-testid="doogie-consent-accept">I understand — start chatting</button>
       </div>
       : <>
-      <div className="msgs" ref={scrollRef}>{msgs.map((m,i)=><div key={i} className={`msg ${m.role}`}>{m.content ? <span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/> : (busy && i===msgs.length-1 ? "…" : "")}</div>)}</div>
+      <div className="msgs" ref={scrollRef}>{msgs.map((m,i)=>{
+        if (m.type === "listings") {
+          return (<div key={i} className={`msg assistant`} data-testid={`doogie-listings-msg-${i}`}>
+            <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem"}}>{m.summary}</div>
+            {m.listings.map(l => <DoogieListingCard key={l.listing_key} listing={l}/>)}
+            {m.count > m.listings.length && (
+              <Link to={`/listings?${new URLSearchParams(Object.entries({
+                city: m.filters?.city, property_type: m.filters?.property_type,
+                beds_min: m.filters?.beds_min, baths_min: m.filters?.baths_min,
+                price_min: m.filters?.price_min, price_max: m.filters?.price_max,
+                q: m.filters?.keyword,
+              }).filter(([,v])=>v)).toString()}`}
+                style={{display:"block",marginTop:"0.6rem",textAlign:"center",fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--brand-blue)",fontWeight:600,textDecoration:"none"}} data-testid={`doogie-see-all-${i}`}>
+                See all {m.count} matches →
+              </Link>
+            )}
+            {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
+          </div>);
+        }
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+      })}</div>
       <form onSubmit={send}><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask Doogie…" data-testid="doogie-input"/><button type="submit" disabled={busy} data-testid="doogie-send">Send</button></form>
       </>}
     </div>}
@@ -848,7 +905,17 @@ const ListingFilters = ({ filters, setFilters, facets, onSubmit }) => {
 
 const Listings = () => {
   const [params] = useSearchParams();
-  const [filters, setFilters] = useState({ q: params.get("q") || "", sort: "newest" });
+  const [filters, setFilters] = useState({
+    q: params.get("q") || "",
+    city: params.get("city") || params.get("community") || "",
+    community: params.get("community") || "",
+    property_type: params.get("property_type") || "",
+    beds_min: params.get("beds_min") || "",
+    baths_min: params.get("baths_min") || "",
+    price_min: params.get("price_min") || "",
+    price_max: params.get("price_max") || "",
+    sort: params.get("sort") || "newest",
+  });
   const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
   const [facets, setFacets] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1586,6 +1653,11 @@ const CommunityPage = () => {
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
       {found && <CommunityMap name={found} region={region}/>}
+      <div style={{display:"flex",justifyContent:"center",marginBottom:"1.75rem"}}>
+        <Link to={`/listings?community=${encodeURIComponent(found)}`} className="btn btn-primary" data-testid={`view-listings-in-${slug}`} style={{padding:"0.85rem 1.75rem",fontSize:"1rem"}}>
+          🏡 View Active Listings in {found}
+        </Link>
+      </div>
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>
       <h1 className="section-title">{found}, BC</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
