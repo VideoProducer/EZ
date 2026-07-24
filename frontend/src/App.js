@@ -500,16 +500,34 @@ const DoogieChat = () => {
     e.preventDefault();
     if(!input.trim() || busy) return;
     const q = input; setInput(""); setBusy(true);
-    setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:""}]);
-    let gotAnyContent = false;
 
-    // Fire an MLS search in parallel if the message looks like a listing query
-    let mlsPromise = null;
+    // LISTING SEARCH INTENT: skip the conversational chat entirely and only show listing results.
+    // This avoids Doogie explaining "how to search" alongside the actual results.
     if (looksLikeListingSearch(q)) {
-      mlsPromise = axios.post(`${API}/doogie/mls-search`, { message: q })
-        .then(r => r.data).catch(() => null);
+      setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
+      try {
+        const r = await axios.post(`${API}/doogie/mls-search`, { message: q });
+        const mls = r.data;
+        if (mls && mls.intent_matched && mls.listings && mls.listings.length > 0) {
+          setMsgs(m => {
+            const c = [...m];
+            c[c.length-1] = { role:"assistant", type:"listings", summary: mls.summary, listings: mls.listings, filters: mls.filters, count: mls.count, using_mock: mls.using_mock_data };
+            return c;
+          });
+        } else {
+          const fallback = mls?.summary || "I couldn't find any listings matching that. Try broadening the price, community, or beds — or ask about a different area.";
+          setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:fallback}; return c; });
+        }
+      } catch(err) {
+        setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I couldn't reach the listings service. Please try again."}; return c; });
+      }
+      setBusy(false);
+      return;
     }
 
+    // Non-listing intent → normal streaming conversational chat
+    setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:""}]);
+    let gotAnyContent = false;
     try {
       const res = await fetch(`${API}/doogie/chat`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,message:q})});
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
@@ -528,14 +546,6 @@ const DoogieChat = () => {
       }
       if(!gotAnyContent) setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I didn't receive a response. Please try again, or contact Doug directly."}; return c; });
     } catch(err) { setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — I had trouble connecting. Please try again."}; return c; }); }
-
-    // Append MLS results (if any) as a listing-card message
-    if (mlsPromise) {
-      const mls = await mlsPromise;
-      if (mls && mls.intent_matched && mls.listings && mls.listings.length > 0) {
-        setMsgs(m => [...m, { role:"assistant", type:"listings", summary: mls.summary, listings: mls.listings, filters: mls.filters, count: mls.count, using_mock: mls.using_mock_data }]);
-      }
-    }
     setBusy(false);
   };
 
