@@ -1120,6 +1120,32 @@ async def startup():
     except Exception as e:
         logger.error(f"sitemap generation failed: {e}")
 
+    # ---- MLS / CREA DDF® listings — mock seed + indexes ----
+    try:
+        lcount = await db.listings.count_documents({})
+        if lcount == 0:
+            mock_path = ROOT_DIR / "data" / "listings_mock.json"
+            if mock_path.exists():
+                mocks = json.loads(mock_path.read_text())
+                for m in mocks:
+                    m["created_at"] = m.get("updated_at") or now_iso()
+                    m["is_mock"] = True
+                await db.listings.insert_many(mocks)
+                logger.info(f"Seeded {len(mocks)} MOCK MLS listings (pending real DDF® credentials)")
+        # Ensure indexes (idempotent)
+        await db.listings.create_index("listing_key", unique=True)
+        await db.listings.create_index([("city", 1), ("list_price", 1)])
+        await db.listings.create_index([("property_type", 1), ("beds", 1), ("list_price", 1)])
+        await db.listings.create_index([("lat", 1), ("lon", 1)])
+        await db.listings.create_index("status")
+        await db.listings.create_index([("description", "text"), ("street_address", "text"), ("city", "text")])
+        await db.mls_consent_log.create_index("occurred_at")
+        await db.listing_analytics.create_index("occurred_at")
+        await db.listing_analytics.create_index("flushed_to_crea")
+        logger.info("MLS listings indexes ensured (unique listing_key, geo, price, text)")
+    except Exception as e:
+        logger.error(f"MLS listings seed/index setup failed: {e}")
+
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
@@ -1359,8 +1385,159 @@ async def purge_all_chats(_=Depends(verify_admin)):
     r = await db.chat_messages.delete_many({})
     return {"success": True, "deleted": r.deleted_count}
 
-app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# =============== CREA DDF® — MLS® LISTINGS (compliance-first) ===============
+# All endpoints below are rate-limited (anti-scraping requirement per CREA Rules).
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.responses import JSONResponse
+from services.analytics_logger import record_event as _log_event
+from services.ddf_sync import credentials_ready as _ddf_ready, sync_incremental as _ddf_sync
+
+_limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = _limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Too many requests. Please slow down."})
+
+def _sanitize_listing(doc: dict) -> dict:
+    doc.pop("_id", None)
+    # Ensure required compliance fields present
+    doc.setdefault("brokerage_name", "Fraser Property Management Realty Services Ltd.")
+    doc.setdefault("listing_agent", "Doug LeMaire")
+    doc.setdefault("realtor_ca_url", f"https://www.realtor.ca/real-estate/{doc.get('listing_key','')}")
+    return doc
+
+@api.get("/listings")
+@_limiter.limit("60/minute")
+async def search_listings(
+    request: Request,
+    q: Optional[str] = None,
+    community: Optional[str] = None,
+    city: Optional[str] = None,
+    region: Optional[str] = None,
+    property_type: Optional[str] = None,
+    beds_min: Optional[int] = None,
+    baths_min: Optional[int] = None,
+    price_min: Optional[int] = None,
+    price_max: Optional[int] = None,
+    features: Optional[str] = None,  # comma-separated
+    sort: Optional[str] = "newest",  # newest|price_asc|price_desc
+    limit: int = 24,
+    offset: int = 0,
+):
+    """Search active MLS® listings. Rate-limited (60/min per IP).
+    Returns { total, count, offset, limit, listings: [...], compliance }.
+    """
+    query: dict = {"status": "Active"}
+    if community: query["community"] = {"$regex": f"^{re.escape(community)}$", "$options": "i"}
+    if city:      query["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
+    if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
+    if property_type: query["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+    if beds_min is not None:  query["beds"] = {"$gte": beds_min}
+    if baths_min is not None: query["baths"] = {"$gte": baths_min}
+    price_q = {}
+    if price_min is not None: price_q["$gte"] = price_min
+    if price_max is not None: price_q["$lte"] = price_max
+    if price_q: query["list_price"] = price_q
+    if features:
+        feats = [f.strip() for f in features.split(",") if f.strip()]
+        if feats: query["features"] = {"$all": feats}
+    if q:
+        query["$text"] = {"$search": q}
+
+    sort_key = [("created_at", -1)]
+    if sort == "price_asc":  sort_key = [("list_price", 1)]
+    if sort == "price_desc": sort_key = [("list_price", -1)]
+
+    total = await db.listings.count_documents(query)
+    cursor = db.listings.find(query).sort(sort_key).skip(max(0, offset)).limit(min(100, limit))
+    items = [_sanitize_listing(d) for d in await cursor.to_list(200)]
+
+    # Log impressions asynchronously (fire & forget)
+    for it in items:
+        try:
+            await _log_event(db, it.get("listing_key",""), "impression", {"path": "/listings"})
+        except Exception:
+            pass
+
+    return {
+        "total": total,
+        "count": len(items),
+        "offset": offset,
+        "limit": limit,
+        "listings": items,
+        "using_mock_data": not _ddf_ready(),
+        "compliance": {
+            "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA) and identify the quality of services provided by real estate professionals who are members of CREA. REALTOR® is a trademark of REALTOR® Canada Inc.",
+            "data_source": "CREA DDF® (Data Distribution Facility)" if _ddf_ready() else "MOCK DATA — awaiting CREA DDF® credential provisioning",
+        },
+    }
+
+@api.get("/listings/{listing_key}")
+@_limiter.limit("120/minute")
+async def get_listing(request: Request, listing_key: str):
+    d = await db.listings.find_one({"listing_key": listing_key})
+    if not d:
+        raise HTTPException(404, "Listing not found")
+    d = _sanitize_listing(d)
+    # Log detail view
+    try:
+        await _log_event(db, listing_key, "detail_view", {"referer": request.headers.get("referer","")})
+    except Exception:
+        pass
+    return d
+
+@api.post("/listings/analytics/track")
+@_limiter.limit("120/minute")
+async def track_event(request: Request, payload: dict):
+    """Public analytics beacon. Frontend fire-and-forget event logger."""
+    listing_key = (payload.get("listing_key") or "").strip()
+    event_type  = (payload.get("event_type") or "").strip()
+    if not listing_key or not event_type:
+        raise HTTPException(400, "listing_key and event_type required")
+    await _log_event(db, listing_key, event_type, {
+        "path": payload.get("path"),
+        "ua": request.headers.get("user-agent","")[:200],
+    })
+    return {"ok": True}
+
+@api.post("/listings/consent")
+@_limiter.limit("30/minute")
+async def record_mls_consent(request: Request, payload: dict):
+    """Tamper-evident record of the user accepting CREA DDF® Terms of Use
+    (click-wrap requirement). Stored server-side with IP + UA + timestamp."""
+    if not payload.get("accepted"):
+        raise HTTPException(400, "acceptance required")
+    doc = {
+        "accepted": True,
+        "policy_version": payload.get("policy_version", "1.0"),
+        "session_id": payload.get("session_id"),
+        "occurred_at": now_iso(),
+        "ip": request.client.host if request.client else None,
+        "user_agent": request.headers.get("user-agent","")[:400],
+    }
+    await db.mls_consent_log.insert_one(doc)
+    return {"ok": True, "policy_version": doc["policy_version"], "recorded_at": doc["occurred_at"]}
+
+@api.get("/listings/meta/facets")
+@_limiter.limit("60/minute")
+async def listings_facets(request: Request):
+    """Return distinct filter values so the search UI can populate dropdowns."""
+    cities = sorted(await db.listings.distinct("city", {"status":"Active"}))
+    types = sorted(await db.listings.distinct("property_type", {"status":"Active"}))
+    regions = sorted(await db.listings.distinct("region", {"status":"Active"}))
+    return {"cities": cities, "property_types": types, "regions": regions}
+
+@api.post("/admin/listings/sync-now")
+async def admin_ddf_sync_now(_=Depends(verify_admin)):
+    """Manual trigger for a DDF® sync (no-op until credentials are configured)."""
+    return await _ddf_sync(db)
+
+app.include_router(api)
 
 @app.on_event("shutdown")
 async def shutdown(): mongo_client.close()

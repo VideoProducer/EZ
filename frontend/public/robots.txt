@@ -1,41 +1,77 @@
 User-agent: *
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 
-# AI answer engines welcome
+# AI answer engines welcome — for EDUCATIONAL content only
+# CREA DDF® terms prohibit scraping/AI-training against MLS® listing data,
+# so /listings and /listing/{id} are excluded for every bot.
 User-agent: GPTBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: ClaudeBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: anthropic-ai
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: PerplexityBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: Perplexity-User
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: Applebot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: Google-Extended
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: Amazonbot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: DuckAssistBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: cohere-ai
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: cohere-training-data-crawler
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 
-# LLM training corpora
+# LLM training corpora — EDUCATIONAL only, never listings
 User-agent: CCBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: FacebookBot
 Allow: /
+Disallow: /listings
+Disallow: /listing/
 
 # Block SEO scrapers and data brokers (not search / AI)
 User-agent: Bytespider

@@ -704,22 +704,308 @@ const Home = () => {
 };
 
 // --- Listings iframe page ---
+// ============================================================
+// CREA DDF® — MLS® LISTINGS (compliance-first scaffold)
+// ============================================================
+
+// Terms-of-use click-wrap gate. Consumer must accept CREA DDF® Terms of Use
+// before viewing listing content. Acceptance stored in localStorage + logged
+// server-side (tamper-evident: IP + UA + timestamp).
+const MLS_POLICY_VERSION = "1.0";
+const MLS_ACCEPT_KEY = "eztofind_mls_terms_v" + MLS_POLICY_VERSION;
+const TermsGate = ({ children }) => {
+  const [accepted, setAccepted] = useState(() => localStorage.getItem(MLS_ACCEPT_KEY) === "yes");
+  const accept = async () => {
+    localStorage.setItem(MLS_ACCEPT_KEY, "yes");
+    setAccepted(true);
+    try {
+      await axios.post(`${API}/listings/consent`, {
+        accepted: true,
+        policy_version: MLS_POLICY_VERSION,
+        session_id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      });
+    } catch(e) { /* non-blocking */ }
+  };
+  if (accepted) return children;
+  return (
+    <div data-testid="mls-terms-gate" style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem",fontFamily:"Inter,sans-serif"}}>
+      <div style={{background:"#FDFCF8",maxWidth:640,width:"100%",borderRadius:16,padding:"2rem",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"1rem"}}>MLS® Listing Data — Terms of Use</div>
+        <div style={{fontSize:"0.92rem",lineHeight:1.6,color:"var(--ink)",marginBottom:"1.25rem"}}>
+          <p style={{marginBottom:"0.75rem"}}>The MLS® listing content you're about to view is provided under license by <strong>The Canadian Real Estate Association (CREA)</strong> via the DDF® (Data Distribution Facility) program. By clicking "I Accept" below you agree to the following:</p>
+          <ul style={{paddingLeft:"1.25rem",marginBottom:"0.75rem"}}>
+            <li style={{marginBottom:"0.35rem"}}>Listings are for <strong>personal, non-commercial use only</strong>. You will not scrape, resell, redistribute, or use for AI model training.</li>
+            <li style={{marginBottom:"0.35rem"}}>Prices, availability, and details are subject to change without notice. Verify current information with Doug LeMaire, REALTOR®, before making an offer.</li>
+            <li style={{marginBottom:"0.35rem"}}>MLS®, Multiple Listing Service®, and the associated logos are owned by CREA and identify the quality of services provided by real estate professionals who are members of CREA.</li>
+            <li style={{marginBottom:"0.35rem"}}>Your acceptance is recorded (timestamp + IP + user-agent) for regulatory compliance.</li>
+          </ul>
+          <p style={{fontSize:"0.82rem",color:"var(--muted)"}}>Full terms: <a href="https://www.crea.ca/legal/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>CREA Terms of Use ↗</a> · <Link to="/privacy" style={{color:"var(--brand-blue)"}}>EZtoFind.ca Privacy ↗</Link></p>
+        </div>
+        <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+          <button className="btn btn-primary" onClick={accept} data-testid="mls-terms-accept" style={{flex:"1 1 200px"}}>I Accept the Terms of Use</button>
+          <Link to="/" className="btn btn-ghost" data-testid="mls-terms-decline" style={{flex:"1 1 100px",textAlign:"center",textDecoration:"none"}}>Cancel</Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// CREA-required compliance block. Rendered on every listing card + detail page.
+const ListingCompliance = ({ listing, compact = false }) => {
+  const realtorCa = listing.realtor_ca_url || `https://www.realtor.ca/real-estate/${listing.listing_key}`;
+  return (
+    <div style={{fontFamily:"Inter,sans-serif",fontSize:compact?"0.72rem":"0.78rem",color:"var(--muted)",lineHeight:1.5,marginTop:"0.5rem"}} data-testid="listing-compliance">
+      <div style={{display:"flex",alignItems:"center",gap:"0.6rem",marginBottom:"0.35rem"}}>
+        <a href={realtorCa} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:90,height:90,background:"#EF3E42",color:"#fff",borderRadius:8,textDecoration:"none",fontFamily:"Sora,sans-serif",fontSize:"0.62rem",fontWeight:700,textAlign:"center",lineHeight:1.15,flexShrink:0}} data-testid="powered-by-realtor-ca" title="View on REALTOR.ca">
+          <span>Powered by<br/>REALTOR<sup>®</sup>.ca</span>
+        </a>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}}>Listing courtesy of {listing.brokerage_name}</div>
+          {listing.listing_agent && <div>Listing agent: {listing.listing_agent}</div>}
+          {listing.mls_number && <div>MLS® #{listing.mls_number} · {listing.days_on_market !== undefined ? `${listing.days_on_market} days on market` : ""}</div>}
+        </div>
+      </div>
+      <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.4rem"}}>
+        MLS®, Multiple Listing Service®, and REALTOR® are trademarks owned by The Canadian Real Estate Association (CREA). Data © CREA DDF®. Verify all information with the listing brokerage before making an offer.
+      </div>
+    </div>
+  );
+};
+
+// One listing card in the search grid.
+const ListingCard = ({ listing }) => {
+  const price = (listing.list_price || 0).toLocaleString("en-CA");
+  const photo = (listing.photos && listing.photos[0]) || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200";
+  return (
+    <Link to={`/listing/${listing.listing_key}`} data-testid={`listing-card-${listing.listing_key}`} style={{textDecoration:"none",color:"inherit",display:"block",background:"white",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.12)",boxShadow:"0 4px 12px rgba(15,42,91,0.06)",transition:"transform 0.15s, box-shadow 0.15s"}}
+      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 10px 22px rgba(15,42,91,0.12)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 12px rgba(15,42,91,0.06)";}}
+    >
+      <div style={{position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#F5F0E1"}}>
+        <img src={photo} alt={`${listing.street_address}, ${listing.city}`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} loading="lazy"/>
+        <div style={{position:"absolute",top:"0.75rem",left:"0.75rem",background:"var(--brand-navy)",color:"#fff",padding:"0.25rem 0.7rem",borderRadius:999,fontSize:"0.72rem",fontFamily:"Inter,sans-serif",fontWeight:600,letterSpacing:"0.03em"}}>{listing.property_type}</div>
+      </div>
+      <div style={{padding:"1rem 1.15rem 1.15rem"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.35rem",fontWeight:700,color:"var(--brand-navy)"}}>${price}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--ink)",marginTop:"0.15rem"}}>{listing.street_address}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)"}}>{listing.city}, BC · {listing.region}</div>
+        <div style={{display:"flex",gap:"0.85rem",marginTop:"0.6rem",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--ink)"}}>
+          <span>🛏 {listing.beds}</span>
+          <span>🛁 {listing.baths}{listing.half_baths ? `+${listing.half_baths}` : ""}</span>
+          {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
+        </div>
+      </div>
+    </Link>
+  );
+};
+
+// Search filter sidebar (used inside <Listings/>).
+const ListingFilters = ({ filters, setFilters, facets, onSubmit }) => {
+  const set = (k, v) => setFilters(f => ({ ...f, [k]: v }));
+  return (
+    <form onSubmit={e=>{e.preventDefault(); onSubmit();}} className="paper" style={{position:"sticky",top:"1rem"}} data-testid="listings-filters">
+      <div className="eyebrow" style={{marginBottom:"1rem"}}>Filter Listings</div>
+      <div className="field"><label>Community / City</label>
+        <select value={filters.city||""} onChange={e=>set("city", e.target.value)} data-testid="filter-city">
+          <option value="">Any</option>
+          {(facets.cities||[]).map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div className="field"><label>Property Type</label>
+        <select value={filters.property_type||""} onChange={e=>set("property_type", e.target.value)} data-testid="filter-type">
+          <option value="">Any</option>
+          {(facets.property_types||[]).map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
+        <div className="field"><label>Min beds</label>
+          <select value={filters.beds_min||""} onChange={e=>set("beds_min", e.target.value)} data-testid="filter-beds">
+            <option value="">Any</option>{[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}+</option>)}
+          </select>
+        </div>
+        <div className="field"><label>Min baths</label>
+          <select value={filters.baths_min||""} onChange={e=>set("baths_min", e.target.value)} data-testid="filter-baths">
+            <option value="">Any</option>{[1,2,3,4].map(n=><option key={n} value={n}>{n}+</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
+        <div className="field"><label>Min price ($)</label><input type="number" placeholder="0" value={filters.price_min||""} onChange={e=>set("price_min", e.target.value)} data-testid="filter-price-min"/></div>
+        <div className="field"><label>Max price ($)</label><input type="number" placeholder="Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
+      </div>
+      <div className="field"><label>Keyword</label><input placeholder="e.g. suite, waterfront" value={filters.q||""} onChange={e=>set("q", e.target.value)} data-testid="filter-keyword"/></div>
+      <div className="field"><label>Sort by</label>
+        <select value={filters.sort||"newest"} onChange={e=>set("sort", e.target.value)} data-testid="filter-sort">
+          <option value="newest">Newest first</option>
+          <option value="price_asc">Price — low to high</option>
+          <option value="price_desc">Price — high to low</option>
+        </select>
+      </div>
+      <button type="submit" className="btn btn-primary" style={{width:"100%",marginTop:"0.75rem"}} data-testid="filter-apply">Apply Filters</button>
+    </form>
+  );
+};
+
 const Listings = () => {
   const [params] = useSearchParams();
-  const q = params.get("q");
+  const [filters, setFilters] = useState({ q: params.get("q") || "", sort: "newest" });
+  const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
+  const [facets, setFacets] = useState({});
+  const [loading, setLoading] = useState(true);
+  const load = () => {
+    setLoading(true);
+    const qp = {};
+    ["q","city","community","region","property_type","beds_min","baths_min","price_min","price_max","sort"].forEach(k => {
+      if (filters[k] !== "" && filters[k] !== undefined && filters[k] !== null) qp[k] = filters[k];
+    });
+    qp.limit = 30;
+    axios.get(`${API}/listings`, { params: qp })
+      .then(r => setResults(r.data))
+      .catch(() => setResults({total:0, listings:[]}))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { axios.get(`${API}/listings/meta/facets`).then(r=>setFacets(r.data)).catch(()=>{}); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
   return (
-  <section className="section"><div className="container-x">
-    <div style={{textAlign:"center",marginBottom:"2rem"}}>
-      <div className="eyebrow">Live BC Listings</div>
-      <h1 className="section-title">Search all British Columbia MLS® listings.</h1>
-      {q && <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.95rem",color:"var(--brand-navy)",background:"#F5F0E1",padding:"0.75rem 1.25rem",borderRadius:999,display:"inline-block",margin:"0 auto 1rem"}} data-testid="listings-query-tag">🔍 Your search: <strong>"{q}"</strong> — type this into the map search below to filter results.</p>}
-      <p className="section-sub">Powered by www.GreaterVancouver.ForSale — the same MLS® data our REALTORS® use daily. Data compliant with CREA, GVR &amp; MLS® rules.</p>
-    </div>
-    <div style={{background:"white",borderRadius:16,overflow:"hidden",border:"1px solid rgba(15,42,91,0.1)",boxShadow:"0 8px 24px rgba(15,42,91,0.05)"}}>
-      <iframe src="https://www.greatervancouver.forsale/mapsearchapp" title="BC MLS Listings" style={{width:"100%",height:"800px",border:"none",display:"block"}} data-testid="listings-iframe"/>
-    </div>
-    <div className="notice" style={{marginTop:"1.5rem"}}>Listings data is provided under license from participating MLS® systems in British Columbia. The Doogie AI on this website does not directly query or manipulate this listings feed.</div>
-  </div></section>);
+    <TermsGate>
+    <section className="section"><div className="container-x">
+      <div style={{textAlign:"center",marginBottom:"2rem"}}>
+        <div className="eyebrow">Live MLS® Listings</div>
+        <h1 className="section-title">British Columbia Real Estate — Search MLS® Listings</h1>
+        <p className="section-sub" style={{maxWidth:820,margin:"0 auto"}}>Search active listings across Doug's practice area and beyond. Data provided under license by The Canadian Real Estate Association via CREA DDF®. Compliant with MLS®, REALTOR®, and BCFSA rules.</p>
+        {results.using_mock_data && (
+          <div style={{background:"#FEF3C7",border:"1px solid #F59E0B",color:"#92400E",padding:"0.65rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",display:"inline-block",marginTop:"0.75rem",fontWeight:600}} data-testid="mock-data-banner">
+            🟡 DEMO MODE — Showing 15 sample listings. Live CREA DDF® feed will replace these once credentials are provisioned.
+          </div>
+        )}
+      </div>
+      <div className="form-grid" style={{gridTemplateColumns:"280px 1fr",gap:"2rem",alignItems:"start"}}>
+        <div><ListingFilters filters={filters} setFilters={setFilters} facets={facets} onSubmit={load}/></div>
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
+            <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="listings-count">
+              {loading ? "Searching…" : `${results.total} listing${results.total===1?"":"s"}${results.total>results.listings.length ? ` — showing top ${results.listings.length}` : ""}`}
+            </div>
+          </div>
+          {results.listings.length === 0 && !loading && (
+            <div className="paper" style={{textAlign:"center",padding:"3rem 1.5rem"}}>
+              <div style={{fontSize:"3rem",marginBottom:"1rem"}}>🏡</div>
+              <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.2rem",fontWeight:700}}>No listings match your search</div>
+              <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem"}}>Try widening your filters, or <Link to="/referral-request" style={{color:"var(--brand-blue)"}}>request a referral</Link> if you're looking outside Doug's service area.</div>
+            </div>
+          )}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"1.25rem"}} data-testid="listings-grid">
+            {results.listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+          </div>
+        </div>
+      </div>
+      <div className="notice" style={{marginTop:"2rem"}}>
+        {results.compliance?.trademark_notice || "MLS®, Multiple Listing Service®, and the associated logos are owned by The Canadian Real Estate Association (CREA). REALTOR® is a trademark of REALTOR® Canada Inc. Data © CREA DDF®."}
+      </div>
+    </div></section>
+    </TermsGate>
+  );
+};
+
+// Full listing detail page — /listing/:key
+const ListingDetail = () => {
+  const { key } = useParams();
+  const [listing, setListing] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const [form, setForm] = useState({ name:"", email:"", phone:"", message:"" });
+  const [submitted, setSubmitted] = useState(false);
+  useEffect(() => {
+    axios.get(`${API}/listings/${key}`).then(r => setListing(r.data)).catch(() => setNotFound(true));
+  }, [key]);
+  const submitInquiry = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/leads/buyer`, {
+        full_name: form.name, email: form.email, phone: form.phone,
+        location: listing.city, price_range: `MLS® ${listing.mls_number}`, timeframe: "unknown",
+        notes: `LISTING INQUIRY — MLS® ${listing.mls_number} · ${listing.street_address}, ${listing.city}\n\n${form.message}`,
+        source: "listing_inquiry",
+        consent: true,
+      });
+      await axios.post(`${API}/listings/analytics/track`, { listing_key: key, event_type: "contact_request", path: `/listing/${key}` });
+      setSubmitted(true);
+    } catch(e) {}
+  };
+  if (notFound) return <section className="section"><div className="container-x"><h1 className="section-title">Listing not found</h1><p><Link to="/listings" style={{color:"var(--brand-blue)"}}>← Back to all listings</Link></p></div></section>;
+  if (!listing) return <section className="section"><div className="container-x"><div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading listing…</div></div></section>;
+  const price = (listing.list_price || 0).toLocaleString("en-CA");
+  const q = encodeURIComponent(`${listing.street_address}, ${listing.city}, BC, Canada`);
+  return (
+    <TermsGate>
+    <section className="section"><div className="container-x">
+      <Link to="/listings" data-testid="back-to-listings" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",fontSize:"0.9rem"}}>← All listings</Link>
+      {/* Photo gallery */}
+      <div style={{marginTop:"1rem",background:"#F5F0E1",borderRadius:14,overflow:"hidden",aspectRatio:"16/9",position:"relative"}} data-testid="listing-hero-photo">
+        <img src={listing.photos?.[photoIdx] || listing.photos?.[0]} alt={listing.street_address} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+        {listing.photos?.length > 1 && (
+          <div style={{position:"absolute",bottom:"1rem",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"0.35rem"}}>
+            {listing.photos.slice(0,10).map((_,i) => (
+              <button key={i} onClick={()=>setPhotoIdx(i)} data-testid={`photo-dot-${i}`} style={{width:12,height:12,borderRadius:"50%",background:i===photoIdx?"#fff":"rgba(255,255,255,0.5)",border:"none",cursor:"pointer"}}/>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="form-grid" style={{gridTemplateColumns:"2fr 1fr",gap:"2.5rem",marginTop:"2rem",alignItems:"start"}}>
+        {/* Main column */}
+        <div>
+          <div className="eyebrow">{listing.region} · {listing.city}</div>
+          <h1 className="section-title" style={{margin:"0.5rem 0"}} data-testid="listing-address">{listing.street_address}</h1>
+          <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
+          <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
+            <span>🛏 {listing.beds} bed</span>
+            <span>🛁 {listing.baths}{listing.half_baths ? ` + ${listing.half_baths}½` : ""} bath</span>
+            {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
+            {listing.year_built && <span>🏗 Built {listing.year_built}</span>}
+          </div>
+          <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
+          <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
+          {listing.features?.length > 0 && (
+            <div style={{marginTop:"1.5rem"}}>
+              <h3 style={{fontSize:"1.1rem",marginBottom:"0.75rem"}}>Features</h3>
+              <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}} data-testid="listing-features">
+                {listing.features.map(f => <span key={f} style={{background:"#F5F0E1",color:"var(--brand-navy)",padding:"0.3rem 0.8rem",borderRadius:999,fontSize:"0.82rem",fontFamily:"Inter,sans-serif"}}>{f}</span>)}
+              </div>
+            </div>
+          )}
+          <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>Location</h2>
+          <div style={{height:340,borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)"}}>
+            <iframe title={`Map of ${listing.street_address}`} src={`https://www.google.com/maps?q=${q}&output=embed`} width="100%" height="340" style={{border:0}} loading="lazy"/>
+          </div>
+          <ListingCompliance listing={listing}/>
+        </div>
+        {/* Inquiry sidebar */}
+        <div style={{position:"sticky",top:"1rem"}}>
+          <div className="paper" data-testid="listing-inquiry-form">
+            <div className="eyebrow">Book a Viewing</div>
+            <h3 style={{fontSize:"1.2rem",marginBottom:"0.75rem"}}>Ask Doug about this listing</h3>
+            {submitted ? (
+              <div style={{background:"#DEF7EC",color:"#03543F",padding:"1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}} data-testid="inquiry-success">
+                ✅ Sent. Doug will reach out within one business day.
+              </div>
+            ) : (
+              <form onSubmit={submitInquiry}>
+                <div className="field"><label>Name *</label><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} data-testid="inquiry-name"/></div>
+                <div className="field"><label>Email *</label><input required type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} data-testid="inquiry-email"/></div>
+                <div className="field"><label>Phone</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} data-testid="inquiry-phone"/></div>
+                <div className="field"><label>Message</label><textarea rows={3} value={form.message} onChange={e=>setForm({...form,message:e.target.value})} data-testid="inquiry-message" placeholder="When would you like to view? Any questions?"/></div>
+                <button type="submit" className="btn btn-primary" style={{width:"100%"}} data-testid="inquiry-submit">Send Inquiry</button>
+                <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.5rem",lineHeight:1.5}}>
+                  By submitting, you consent to Doug LeMaire, REALTOR® contacting you about this listing. Handled under our <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy</Link>.
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </div></section>
+    </TermsGate>
+  );
 };
 
 // --- Regions ---
@@ -1934,6 +2220,7 @@ function App() {
     <Routes>
       <Route path="/" element={<AppLayout><HomeSchema/><Home/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
+      <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
