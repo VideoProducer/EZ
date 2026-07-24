@@ -875,16 +875,41 @@ const ListingCard = ({ listing }) => {
 };
 
 // Search filter sidebar (used inside <Listings/>).
-const ListingFilters = ({ filters, setFilters, facets, onSubmit }) => {
+const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => {
   const set = (k, v) => setFilters(f => ({ ...f, [k]: v }));
+  const [cityFocus, setCityFocus] = useState(false);
+  const cityQ = (filters.city || "").trim().toLowerCase();
+  const suggestions = !cityQ ? [] : (allComms || [])
+    .filter(c => c.name.toLowerCase().includes(cityQ) && c.name.toLowerCase() !== cityQ)
+    .slice(0, 8);
   return (
     <form onSubmit={e=>{e.preventDefault(); onSubmit();}} className="paper" style={{position:"sticky",top:"1rem"}} data-testid="listings-filters">
       <div className="eyebrow" style={{marginBottom:"1rem"}}>Filter Listings</div>
-      <div className="field"><label>Community / City</label>
-        <select value={filters.city||""} onChange={e=>set("city", e.target.value)} data-testid="filter-city">
-          <option value="">Any</option>
-          {(facets.cities||[]).map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+      <div className="field" style={{position:"relative"}}><label>Community / City</label>
+        <input
+          type="text"
+          value={filters.city || ""}
+          onChange={e => set("city", e.target.value)}
+          onFocus={() => setCityFocus(true)}
+          onBlur={() => setTimeout(() => setCityFocus(false), 200)}
+          placeholder="Type any BC community (e.g. Whistler, Nelson, Kelowna)"
+          data-testid="filter-city"
+          autoComplete="off"
+        />
+        {cityFocus && suggestions.length > 0 && (
+          <div data-testid="filter-city-suggestions" style={{position:"absolute",top:"100%",left:0,right:0,background:"white",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,marginTop:"0.25rem",boxShadow:"0 10px 24px rgba(15,42,91,0.12)",maxHeight:240,overflowY:"auto",zIndex:20}}>
+            {suggestions.map(s => (
+              <button key={`${s.name}-${s.region}`} type="button" onMouseDown={e=>{e.preventDefault(); set("city", s.name); setCityFocus(false);}}
+                data-testid={`city-suggestion-${slugify(s.name)}`}
+                style={{display:"block",width:"100%",textAlign:"left",padding:"0.6rem 0.85rem",background:"transparent",border:"none",cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",borderBottom:"1px solid rgba(15,42,91,0.05)"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#F5F0E1"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{fontWeight:600,color:"var(--ink)"}}>{s.name}</div>
+                <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{s.region}</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="field"><label>Property Type</label>
         <select value={filters.property_type||""} onChange={e=>set("property_type", e.target.value)} data-testid="filter-type">
@@ -938,6 +963,7 @@ const Listings = () => {
   const [nlBanner, setNlBanner] = useState(null); // { original, extracted }
   const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
   const [facets, setFacets] = useState({});
+  const [allComms, setAllComms] = useState([]); // [{name, region}] — full BC list for typeahead
   const [loading, setLoading] = useState(true);
 
   const runSearch = (overrideFilters) => {
@@ -954,7 +980,16 @@ const Listings = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { axios.get(`${API}/listings/meta/facets`).then(r=>setFacets(r.data)).catch(()=>{}); }, []);
+  useEffect(() => {
+    axios.get(`${API}/listings/meta/facets`).then(r=>setFacets(r.data)).catch(()=>{});
+    // Full BC communities list (244+) for the typeahead filter
+    axios.get(`${API}/communities`).then(r => {
+      const list = [];
+      Object.entries(r.data || {}).forEach(([region, arr]) => arr.forEach(name => list.push({ name, region })));
+      list.sort((a,b) => a.name.localeCompare(b.name));
+      setAllComms(list);
+    }).catch(()=>{});
+  }, []);
   useEffect(() => {
     // If the URL ?q= contains a natural-language listing query, run it through the MLS extractor
     // and apply the parsed structured filters BEFORE searching. Otherwise plain search.
@@ -1008,7 +1043,7 @@ const Listings = () => {
         )}
       </div>
       <div className="listings-search-layout" style={{alignItems:"start"}}>
-        <div><ListingFilters filters={filters} setFilters={setFilters} facets={facets} onSubmit={load}/></div>
+        <div><ListingFilters filters={filters} setFilters={setFilters} facets={facets} allComms={allComms} onSubmit={load}/></div>
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
             <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="listings-count">
