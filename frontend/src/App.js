@@ -135,6 +135,64 @@ const WMO = (code) => {
   return { icon:"🌡️", label:"—" };
 };
 
+
+// Neighbourhood Vibe Score™ — 6-factor community livability index.
+const VibeScore = ({ slug, community }) => {
+  const [vs, setVs] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    axios.get(`${API}/community/${slug}/vibe`).then(r => { if (alive) setVs(r.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!vs) return null;
+  const gradeColor = vs.score >= 80 ? "#10B981" : vs.score >= 65 ? "#3B82F6" : vs.score >= 50 ? "#F59E0B" : "#EF4444";
+  const subs = vs.sub_scores || {};
+  return (
+    <div data-testid="community-vibe-score" style={{marginTop:"1.5rem",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"1.25rem",flexWrap:"wrap",background:"#FDFCF8",border:"2px solid rgba(15,42,91,0.12)",borderRadius:14,padding:"1.25rem 1.5rem",boxShadow:"0 6px 18px rgba(15,42,91,0.08)"}}>
+        <div style={{background:gradeColor,color:"#fff",width:110,height:110,borderRadius:"50%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 6px 18px ${gradeColor}55`}}>
+          <div style={{fontFamily:"Sora,sans-serif",fontSize:"2.4rem",fontWeight:700,lineHeight:1}} data-testid="vibe-score-value">{vs.score}</div>
+          <div style={{fontSize:"0.72rem",letterSpacing:"0.1em",fontWeight:600,marginTop:"0.15rem"}}>VIBE {vs.grade}</div>
+        </div>
+        <div style={{flex:1,minWidth:220}}>
+          <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--muted)",fontWeight:600}}>Neighbourhood Vibe Score™</div>
+          <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.35rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.2rem"}}>What's it like to live in {community}?</div>
+          <div style={{fontSize:"0.88rem",color:"var(--ink)",marginTop:"0.35rem",lineHeight:1.5}}>A composite of walkability, transit, air quality, wildfire &amp; flood safety, and climate comfort — built on BC-specific data.</div>
+          <button onClick={()=>setExpanded(e=>!e)} data-testid="vibe-toggle" style={{marginTop:"0.6rem",background:"transparent",border:"none",color:"var(--brand-blue)",cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",fontWeight:600,padding:0}}>
+            {expanded ? "Hide breakdown ▲" : "See the breakdown ▼"}
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div style={{marginTop:"0.75rem",background:"#F5F0E1",borderRadius:12,padding:"1rem",border:"1px solid rgba(15,42,91,0.08)"}} data-testid="vibe-breakdown">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(160px, 1fr))",gap:"0.6rem"}}>
+            {Object.entries(subs).map(([k, s]) => (
+              <div key={k} style={{background:"#fff",borderRadius:10,padding:"0.75rem",border:"1px solid rgba(15,42,91,0.08)"}} data-testid={`vibe-sub-${k}`}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontSize:"0.82rem",fontWeight:600,color:"var(--ink)"}}>{s.icon} {s.label}</div>
+                  <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.15rem",fontWeight:700,color: s.score>=80?"#10B981":s.score>=65?"#3B82F6":s.score>=50?"#F59E0B":"#EF4444"}}>{s.score}</div>
+                </div>
+                <div style={{height:6,background:"#F5F0E1",borderRadius:3,marginTop:"0.4rem",overflow:"hidden"}}>
+                  <div style={{width:`${s.score}%`,height:"100%",background: s.score>=80?"#10B981":s.score>=65?"#3B82F6":s.score>=50?"#F59E0B":"#EF4444"}}></div>
+                </div>
+                <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.35rem",lineHeight:1.4}}>{s.note}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.75rem",lineHeight:1.5}}>
+            {vs.methodology} · Sources:{" "}
+            {(vs.sources||[]).map((src,i) => (
+              <span key={src.url}>{i>0 && " · "}<a href={src.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>{src.label} ↗</a></span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CurrentWeather = ({ slug, community }) => {
   const [fx, setFx] = useState(null);
   const [err, setErr] = useState(false);
@@ -497,17 +555,67 @@ const DoogieListingCard = ({ listing }) => {
   );
 };
 
+const DOOGIE_LANGUAGES = [
+  { code: "en",      label: "EN",  name: "English"                    },
+  { code: "zh-Hant", label: "繁", name: "繁體中文 (Traditional / Cantonese)" },
+  { code: "zh-Hans", label: "简", name: "简体中文 (Simplified / Mandarin)"   },
+  { code: "pa",      label: "ਪੰ",  name: "ਪੰਜਾਬੀ (Punjabi)"           },
+  { code: "fa",      label: "فا",  name: "فارسی (Farsi)"              },
+];
+
 const DoogieChat = () => {
   const [open, setOpen] = useState(false);
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
+  const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
   const [msgs, setMsgs] = useState([{role:"assistant",content:"Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\"."}]);
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => "sess-" + Math.random().toString(36).slice(2));
   const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
   const scrollRef = useRef();
+  const mediaRef = useRef(null);
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
+  useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
+  // Pre-fill from affordability calculator handoff
+  useEffect(() => {
+    const pre = localStorage.getItem("ez_doogie_prefill");
+    if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
+  }, [open, consented]);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
+
+  // Voice input via MediaRecorder → OpenAI Whisper (backend endpoint /doogie/transcribe).
+  // Endpoint is a scaffold — activates once OPENAI_API_KEY is configured (see /app/backend/services/).
+  const toggleMic = async () => {
+    if (listening) {
+      try { mediaRef.current?.stop(); } catch {}
+      setListening(false); return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) { alert("Voice input isn't supported in this browser."); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const fd = new FormData();
+        fd.append("audio", blob, "voice.webm");
+        fd.append("language", lang);
+        try {
+          const r = await axios.post(`${API}/doogie/transcribe`, fd, { headers: {"Content-Type": "multipart/form-data"} });
+          if (r.data?.text) setInput(prev => prev ? `${prev} ${r.data.text}` : r.data.text);
+          else if (r.data?.error) alert("Voice: " + r.data.error);
+        } catch(e) { alert("Voice transcription unavailable right now — please type instead."); }
+      };
+      mediaRef.current = rec;
+      rec.start();
+      setListening(true);
+      // Auto-stop after 30s to avoid runaway recordings
+      setTimeout(() => { if (rec.state === "recording") { try { rec.stop(); } catch{} setListening(false); } }, 30000);
+    } catch (err) { alert("Microphone permission is needed for voice input."); }
+  };
 
   const send = async (e) => {
     e.preventDefault();
@@ -542,7 +650,7 @@ const DoogieChat = () => {
     setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:""}]);
     let gotAnyContent = false;
     try {
-      const res = await fetch(`${API}/doogie/chat`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,message:q})});
+      const res = await fetch(`${API}/doogie/chat`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({session_id:sessionId,message:q,language:lang})});
       const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = "";
       while(true) {
         const {done, value} = await reader.read(); if(done) break;
@@ -568,7 +676,12 @@ const DoogieChat = () => {
     </button>
     {open && <div className="doogie-panel" data-testid="doogie-panel">
       <header><img src={DOOGIE_THINKING} alt="Doogie"/><div><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85}}>AI Helper · General Info Only</div></div>
-        <button onClick={()=>setOpen(false)} style={{marginLeft:"auto",background:"transparent",border:"none",color:"white",fontSize:"1.5rem",cursor:"pointer"}}>×</button></header>
+        <select value={lang} onChange={e=>setLang(e.target.value)} data-testid="doogie-lang-select"
+          title="Chat language"
+          style={{marginLeft:"auto",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.5rem",fontSize:"0.85rem",cursor:"pointer",fontFamily:"Inter,sans-serif"}}>
+          {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label} · {l.name}</option>)}
+        </select>
+        <button onClick={()=>setOpen(false)} style={{background:"transparent",border:"none",color:"white",fontSize:"1.5rem",cursor:"pointer",padding:"0 0.35rem",marginLeft:"0.35rem"}}>×</button></header>
       {!consented ? <div style={{padding:"1.25rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6,background:"#FFF8E8",flex:1,overflowY:"auto"}} data-testid="doogie-consent">
         <div style={{fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem"}}>Before we chat…</div>
         <p style={{margin:"0 0 0.75rem"}}>Doogie is an AI assistant powered by Anthropic Claude. Doogie provides <strong>general information only</strong> — never financial, legal, tax, or property-specific advice.</p>
@@ -599,7 +712,16 @@ const DoogieChat = () => {
         }
         return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/>{m.role==="assistant" && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to="/privacy" style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
-      <form onSubmit={send}><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask Doogie…" data-testid="doogie-input"/><button type="submit" disabled={busy} data-testid="doogie-send">Send</button></form>
+      <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
+        <button type="button" onClick={toggleMic} data-testid="doogie-mic"
+          aria-label={listening ? "Stop recording" : "Start voice input"}
+          title={listening ? "Recording… tap to stop" : "Voice input (Whisper)"}
+          style={{width:44,height:44,borderRadius:"50%",border:"1px solid rgba(15,42,91,0.15)",background:listening?"#DC2626":"#F5F0E1",color:listening?"#fff":"var(--brand-navy)",cursor:"pointer",fontSize:"1.15rem",flexShrink:0}}>
+          {listening ? "⏺" : "🎤"}
+        </button>
+        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "Listening…" : "Ask Doogie…"} data-testid="doogie-input" style={{flex:1}}/>
+        <button type="submit" disabled={busy} data-testid="doogie-send">Send</button>
+      </form>
       </>}
     </div>}
   </>);
@@ -1783,6 +1905,7 @@ const CommunityPage = () => {
           🏡 View Active Listings in {found}
         </Link>
       </div>
+      {slug && found && <VibeScore slug={slug} community={found}/>}
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>
       <h1 className="section-title">{found}, BC</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>

@@ -172,6 +172,7 @@ class GlossaryTerm(BaseModel):
 class ChatIn(BaseModel):
     session_id: str
     message: str
+    language: Optional[str] = "en"  # en | zh-Hant | zh-Hans | pa | fa
 
 class AdminLogin(BaseModel):
     email: str
@@ -297,14 +298,30 @@ async def doogie_chat(body: ChatIn):
     if pii_flags:
         logger.warning(f"Doogie chat: PII detected & redacted before storage. Flags={pii_flags} session={session_id}")
     expires = datetime.now(timezone.utc) + timedelta(days=30)
+    # Language handling — Doug speaks English only, but Doogie can chat in
+    # any of BC's top-5 languages. When language != 'en', Doogie also flags
+    # the message so Doug's admin dashboard can surface it for bilingual
+    # referral routing (the "language mismatch = referral fee" pattern).
+    LANG_INSTRUCT = {
+        "en":       "",
+        "zh-Hant":  "The user prefers Traditional Chinese (繁體中文, Cantonese-speaker convention). Reply entirely in Traditional Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Traditional Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+        "zh-Hans":  "The user prefers Simplified Chinese (简体中文, Mandarin-speaker convention). Reply entirely in Simplified Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Simplified Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+        "pa":       "The user prefers Punjabi (ਪੰਜਾਬੀ, Gurmukhi script). Reply entirely in Punjabi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Punjabi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+        "fa":       "The user prefers Farsi (فارسی, right-to-left). Reply entirely in Farsi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Farsi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+    }
+    lang = (body.language or "en").strip()
+    lang_addon = LANG_INSTRUCT.get(lang, "")
+    system_prompt = DOOGIE_SYSTEM + ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon if lang_addon else "")
+
     await db.chat_messages.insert_one({
         "session_id": session_id, "role": "user",
         "content": redacted_msg,  # only redacted stored
         "pii_flags": pii_flags,
+        "language": lang,
         "ts": now_iso(),
         "expires_at": expires  # BSON date for TTL index
     })
-    chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=DOOGIE_SYSTEM).with_model("anthropic", "claude-sonnet-4-6")
+    chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=system_prompt).with_model("anthropic", "claude-sonnet-4-6")
 
     async def gen():
         full = ""
@@ -588,6 +605,29 @@ async def list_communities():
 
 
 # =============== LIVE FORECAST (Open-Meteo, no key, 1-hour cache) ===============
+@api.get("/community/{slug}/vibe")
+async def community_vibe(slug: str):
+    """Neighbourhood Vibe Score™ — 6-factor community livability index."""
+    from services.vibe_score import score_community
+    all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    name = region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-") == slug:
+                name = c; region = r; break
+        if name: break
+    if not name:
+        raise HTTPException(404, "Community not found")
+    # Try to enrich with real climate data if we have it cached
+    clim = await db.community_climate.find_one({"slug": slug}, {"_id":0, "monthly":1, "available":1})
+    avg_t = None; climate_available = False
+    if clim and clim.get("available") and clim.get("monthly"):
+        temps = [m.get("mean_c") for m in clim["monthly"] if m and m.get("mean_c") is not None]
+        if temps:
+            avg_t = sum(temps) / len(temps)
+            climate_available = True
+    return {"community": name, "region": region, **score_community(name, region, climate_available=climate_available, avg_temp_c=avg_t)}
+
 @api.get("/community/{slug}/forecast")
 async def community_forecast(slug: str):
     """Live current-conditions + 7-day forecast for a community.
@@ -1715,6 +1755,40 @@ async def doogie_mls_search(request: Request, payload: dict):
     }
 
 app.include_router(api)
+
+# =============== DOOGIE VOICE (Whisper) — scaffold ===============
+# Endpoint accepts audio blob from the frontend mic button. Activates once
+# OPENAI_API_KEY is configured. Until then, returns a graceful "not enabled"
+# response so the UI can show a friendly message instead of crashing.
+import base64
+from fastapi import File, UploadFile, Form
+
+@app.post("/api/doogie/transcribe")
+async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("en")):
+    """Transcribe voice input via OpenAI Whisper. Requires OPENAI_API_KEY in env.
+    Frontend sends a webm/opus blob (browser MediaRecorder default).
+    Language hint maps our codes → Whisper language codes."""
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if not openai_key:
+        return {"text": "", "error": "Voice input is coming soon — configure OPENAI_API_KEY to enable Whisper."}
+    lang_map = {"en":"en", "zh-Hant":"zh", "zh-Hans":"zh", "pa":"pa", "fa":"fa"}
+    try:
+        data = await audio.read()
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                files={"file": (audio.filename or "voice.webm", data, audio.content_type or "audio/webm")},
+                data={"model": "whisper-1", "language": lang_map.get(language, "en")},
+            )
+            if r.status_code != 200:
+                logger.warning(f"Whisper error {r.status_code}: {r.text[:200]}")
+                return {"text": "", "error": "Transcription service returned an error."}
+            js = r.json()
+            return {"text": js.get("text",""), "language": language}
+    except Exception as e:
+        logger.warning(f"Whisper transcribe failed: {e}")
+        return {"text": "", "error": "Transcription failed. Please try typing."}
 
 @app.on_event("shutdown")
 async def shutdown(): mongo_client.close()
