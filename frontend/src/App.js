@@ -53,6 +53,10 @@ const renderChatContent = (raw) => {
   //    Negative lookbehind excludes: word chars, quotes, slashes, and < (to skip HTML closing tags like </strong>).
   s = s.replace(/(?<![a-zA-Z0-9="'/<])(\/[a-z][a-z0-9\-/]*[a-z0-9])(?![a-zA-Z0-9>])/gi,
     '<a href="$1" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
+  // 4b. Auto-link the phrase "Referral REALTOR® link" (and common variants) to /referral-request.
+  //     Doogie's system prompt uses this phrase; make it clickable regardless of exact model output.
+  s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link)/gi,
+    '<a href="/referral-request" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
   // 5. Line breaks
   s = s.replace(/\n/g, "<br/>");
   return s;
