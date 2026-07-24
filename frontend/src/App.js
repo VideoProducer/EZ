@@ -606,6 +606,12 @@ const Home = () => {
   const go = (path) => { setQ(""); setFocus(false); nav(path); };
   const onSubmit = (e) => {
     e.preventDefault();
+    // If the query looks like a listing search (natural language), always route to /listings
+    // so the MLS filter extractor can parse it. This wins over community-name suggestions
+    // because typing "4 bedroom homes in Whistler" should surface listings, not the community page.
+    if (query && looksLikeListingSearch(q)) {
+      return nav(`/listings?q=${encodeURIComponent(q.trim())}`);
+    }
     if(suggestions.length > 0) return go(suggestions[Math.min(hi, suggestions.length-1)].path);
     if(query) nav(`/listings?q=${encodeURIComponent(q.trim())}`);
   };
@@ -664,7 +670,7 @@ const Home = () => {
         <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted chatbot designed to help provide information, answer general real estate questions, explain terminology, and navigate the EZtoFind.ca platform. Doogie provides general information only and is not a substitute for professional real estate advice. Interacting with Doogie does not create a REALTOR®-client relationship. Doug LeMaire, REALTOR® is accountable for the content Doogie provides, and any information you share with Doogie is handled under our <Link to="/privacy" style={{color:"inherit",fontWeight:"inherit",textDecoration:"none"}}>Privacy Policy</Link> in compliance with BC's Personal Information Protection Act (PIPA).</p>
         <p className="lead" style={{marginTop:"1rem"}}>Real Estate services are provided by Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. — He is a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential strata's. His primary practice areas are: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC.</p>
         <form onSubmit={onSubmit} className="search-bar" data-testid="hero-search" style={{position:"relative"}} autoComplete="off">
-          <input value={q} onChange={e=>{setQ(e.target.value); setHi(0);}} onFocus={()=>setFocus(true)} onBlur={()=>setTimeout(()=>setFocus(false),200)} onKeyDown={onKeyDown} placeholder="Type a community or BC real estate term…" data-testid="hero-search-input"/>
+          <input value={q} onChange={e=>{setQ(e.target.value); setHi(0);}} onFocus={()=>setFocus(true)} onBlur={()=>setTimeout(()=>setFocus(false),200)} onKeyDown={onKeyDown} placeholder="Try: '4-bed homes in Whistler', a community, or a real estate term…" data-testid="hero-search-input"/>
           <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
           {focus && suggestions.length > 0 && (
             <div data-testid="hero-search-suggestions" style={{position:"absolute",top:"calc(100% + 0.35rem)",left:0,right:0,background:"white",borderRadius:14,boxShadow:"0 20px 40px rgba(15,42,91,0.2)",border:"1px solid rgba(15,42,91,0.1)",overflow:"hidden",zIndex:10,fontFamily:"Inter,sans-serif",maxHeight:"22rem",overflowY:"auto"}}>
@@ -905,8 +911,9 @@ const ListingFilters = ({ filters, setFilters, facets, onSubmit }) => {
 
 const Listings = () => {
   const [params] = useSearchParams();
+  const rawQ = params.get("q") || "";
   const [filters, setFilters] = useState({
-    q: params.get("q") || "",
+    q: rawQ,
     city: params.get("city") || params.get("community") || "",
     community: params.get("community") || "",
     property_type: params.get("property_type") || "",
@@ -916,14 +923,17 @@ const Listings = () => {
     price_max: params.get("price_max") || "",
     sort: params.get("sort") || "newest",
   });
+  const [nlBanner, setNlBanner] = useState(null); // { original, extracted }
   const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
   const [facets, setFacets] = useState({});
   const [loading, setLoading] = useState(true);
-  const load = () => {
+
+  const runSearch = (overrideFilters) => {
+    const f = overrideFilters || filters;
     setLoading(true);
     const qp = {};
     ["q","city","community","region","property_type","beds_min","baths_min","price_min","price_max","sort"].forEach(k => {
-      if (filters[k] !== "" && filters[k] !== undefined && filters[k] !== null) qp[k] = filters[k];
+      if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
     qp.limit = 30;
     axios.get(`${API}/listings`, { params: qp })
@@ -931,8 +941,41 @@ const Listings = () => {
       .catch(() => setResults({total:0, listings:[]}))
       .finally(() => setLoading(false));
   };
+
   useEffect(() => { axios.get(`${API}/listings/meta/facets`).then(r=>setFacets(r.data)).catch(()=>{}); }, []);
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    // If the URL ?q= contains a natural-language listing query, run it through the MLS extractor
+    // and apply the parsed structured filters BEFORE searching. Otherwise plain search.
+    if (rawQ && looksLikeListingSearch(rawQ)) {
+      axios.post(`${API}/doogie/mls-search`, { message: rawQ })
+        .then(r => {
+          const d = r.data;
+          if (d && d.intent_matched && d.filters) {
+            const parsed = {
+              q: d.filters.keyword || "",
+              city: d.filters.city || "",
+              community: "",
+              property_type: d.filters.property_type || "",
+              beds_min: d.filters.beds_min || "",
+              baths_min: d.filters.baths_min || "",
+              price_min: d.filters.price_min || "",
+              price_max: d.filters.price_max || "",
+              sort: d.filters.sort || "newest",
+            };
+            setFilters(parsed);
+            setNlBanner({ original: rawQ, extracted: d.filters });
+            runSearch(parsed);
+          } else {
+            runSearch(); // fallback: plain search with q= as text
+          }
+        })
+        .catch(() => runSearch());
+    } else {
+      runSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const load = () => { setNlBanner(null); runSearch(); };
   return (
     <TermsGate>
     <section className="section"><div className="container-x">
@@ -943,6 +986,12 @@ const Listings = () => {
         {results.using_mock_data && (
           <div style={{background:"#FEF3C7",border:"1px solid #F59E0B",color:"#92400E",padding:"0.65rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",display:"inline-block",marginTop:"0.75rem",fontWeight:600}} data-testid="mock-data-banner">
             🟡 DEMO MODE — Showing 15 sample listings. Live CREA DDF® feed will replace these once credentials are provisioned.
+          </div>
+        )}
+        {nlBanner && (
+          <div style={{background:"#DBEAFE",border:"1px solid #2563EB",color:"#1E3A8A",padding:"0.75rem 1.25rem",borderRadius:10,fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.75rem",maxWidth:720,margin:"0.75rem auto 0",textAlign:"left"}} data-testid="nl-banner">
+            <div style={{fontWeight:700,marginBottom:"0.25rem"}}>🐾 Doogie parsed your search:</div>
+            <div style={{fontSize:"0.82rem"}}>"{nlBanner.original}" → {Object.entries(nlBanner.extracted).filter(([_k,v])=>v).map(([k,v])=>`${k.replace(/_/g," ")}: ${v}`).join(" · ")}</div>
           </div>
         )}
       </div>
