@@ -222,3 +222,52 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
   .admin-main { padding: 1rem; }
   .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
 }
+
+/* ===================== MLS® Listings — Mobile ===================== */
+/* Desktop: sidebar + results side-by-side. Mobile: stack. */
+.listings-search-layout { display: grid; grid-template-columns: 280px 1fr; gap: 2rem; }
+.listing-detail-layout  { display: grid; grid-template-columns: 2fr 1fr;   gap: 2.5rem; }
+
+@media(max-width: 900px) {
+  .listings-search-layout { grid-template-columns: 1fr; gap: 1.25rem; }
+  .listing-detail-layout  { grid-template-columns: 1fr; gap: 1.5rem; }
+  /* Filter sidebar on mobile: not sticky (would trap under browser chrome), full width */
+  .listings-search-layout > div:first-child > form { position: static !important; }
+  .listing-detail-layout  > div:last-child  > div  { position: static !important; }
+}
+
+@media(max-width: 700px) {
+  /* 7-day forecast: 4 tiles per row on small screens (7-wide doesn't fit) */
+  [data-testid="cw-7day"] { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+  /* MLS terms gate modal on mobile — full-height friendly */
+  [data-testid="mls-terms-gate"] > div { padding: 1.25rem !important; max-height: 88vh; overflow-y: auto; }
+  [data-testid="mls-terms-gate"] > div > div:first-child { font-size: 1.2rem !important; }
+  /* Filter card less bulky on mobile */
+  [data-testid="listings-filters"] .field { margin-bottom: 0.65rem; }
+  /* Listing detail hero photo — enforce sane aspect */
+  [data-testid="listing-hero-photo"] { aspect-ratio: 4/3 !important; }
+  /* Doogie in-chat listing cards — stack the photo tighter */
+  [data-testid^="doogie-listing-"] img { width: 64px !important; height: 64px !important; }
+  /* Community map: reduce height for mobile viewport */
+  [data-testid="community-map-wrap"] > div:first-of-type { height: 240px !important; }
+  [data-testid="community-map-wrap"] iframe { height: 240px !important; }
+  /* Current weather banner — vertical stack on narrow screens */
+  [data-testid="community-current-weather"] > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 0.75rem !important; padding: 1rem !important; }
+  [data-testid="community-current-weather"] > div:first-child > div:first-child { font-size: 2.5rem !important; }
+  /* View Active Listings button — full-width on mobile */
+  [data-testid^="view-listings-in-"] { width: 100%; max-width: 380px; text-align: center; }
+}
+
+@media(max-width: 480px) {
+  /* NL parsed-search banner smaller */
+  [data-testid="nl-banner"] { font-size: 0.82rem !important; padding: 0.6rem 0.85rem !important; }
+  /* Filter selects & inputs — bigger tap targets */
+  [data-testid="listings-filters"] select, [data-testid="listings-filters"] input { min-height: 44px; }
+  /* Compliance strip on tiny phones — smaller text so it fits */
+  .compliance-strip { font-size: 0.85rem !important; padding: 0.5rem 0.8rem !important; }
+  /* Listing card grid — single column on tiny phones for better readability */
+  [data-testid="listings-grid"] { grid-template-columns: 1fr !important; }
+  /* Listing detail page — smaller H1 */
+  [data-testid="listing-address"] { font-size: 1.6rem !important; }
+  [data-testid="listing-price"] { font-size: 1.6rem !important; }
+}

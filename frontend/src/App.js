@@ -1007,7 +1007,7 @@ const Listings = () => {
           </div>
         )}
       </div>
-      <div className="form-grid" style={{gridTemplateColumns:"280px 1fr",gap:"2rem",alignItems:"start"}}>
+      <div className="listings-search-layout" style={{alignItems:"start"}}>
         <div><ListingFilters filters={filters} setFilters={setFilters} facets={facets} onSubmit={load}/></div>
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
@@ -1079,7 +1079,7 @@ const ListingDetail = () => {
           </div>
         )}
       </div>
-      <div className="form-grid" style={{gridTemplateColumns:"2fr 1fr",gap:"2.5rem",marginTop:"2rem",alignItems:"start"}}>
+      <div className="listing-detail-layout" style={{marginTop:"2rem",alignItems:"start"}}>
         {/* Main column */}
         <div>
           <div className="eyebrow">{listing.region} · {listing.city}</div>
