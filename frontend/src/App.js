@@ -824,6 +824,8 @@ const TermsGate = ({ children }) => {
 };
 
 // CREA-required compliance block. Rendered on every listing card + detail page.
+// - Brokerage attribution and MLS® trademark line are mandatory per CREA DDF® Rules.
+// - Listing agent line only shown when the feed actually provides one (blank on mock data).
 const ListingCompliance = ({ listing, compact = false }) => {
   const realtorCa = listing.realtor_ca_url || `https://www.realtor.ca/real-estate/${listing.listing_key}`;
   return (
@@ -833,13 +835,13 @@ const ListingCompliance = ({ listing, compact = false }) => {
           <span>Powered by<br/>REALTOR<sup>®</sup>.ca</span>
         </a>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}}>Listing courtesy of {listing.brokerage_name}</div>
+          {listing.brokerage_name && <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}}>Listing brokerage: {listing.brokerage_name}</div>}
           {listing.listing_agent && <div>Listing agent: {listing.listing_agent}</div>}
-          {listing.mls_number && <div>MLS® #{listing.mls_number} · {listing.days_on_market !== undefined ? `${listing.days_on_market} days on market` : ""}</div>}
+          {listing.mls_number && <div>MLS® #{listing.mls_number}{listing.days_on_market !== undefined ? ` · ${listing.days_on_market} days on market` : ""}</div>}
         </div>
       </div>
       <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.4rem"}}>
-        MLS®, Multiple Listing Service®, and REALTOR® are trademarks owned by The Canadian Real Estate Association (CREA). Data © CREA DDF®. Verify all information with the listing brokerage before making an offer.
+        MLS®, Multiple Listing Service®, and REALTOR® are trademarks owned by The Canadian Real Estate Association (CREA). Data © CREA DDF®. Doug LeMaire, REALTOR® is not the listing agent — verify all information directly with the listing brokerage before making an offer.
       </div>
     </div>
   );

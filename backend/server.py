@@ -1405,9 +1405,9 @@ async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 def _sanitize_listing(doc: dict) -> dict:
     doc.pop("_id", None)
-    # Ensure required compliance fields present
-    doc.setdefault("brokerage_name", "Fraser Property Management Realty Services Ltd.")
-    doc.setdefault("listing_agent", "Doug LeMaire")
+    # CREA compliance: brokerage name is required. Listing agent is per-listing (from feed).
+    doc.setdefault("brokerage_name", "Listing Brokerage (see REALTOR.ca)")
+    # Do NOT default listing_agent — that field is only populated from real DDF feed data.
     doc.setdefault("realtor_ca_url", f"https://www.realtor.ca/real-estate/{doc.get('listing_key','')}")
     return doc
 

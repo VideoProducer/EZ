@@ -20,11 +20,19 @@
     "lat": 49.257,
     "lon": -123.183,
     "description": "Stunning craftsman home on quiet Dunbar street. Open-concept main, gourmet kitchen with quartz counters, gas range, oversized island. 4 bedrooms up, master with spa ensuite and walk-in. Legal basement suite for mortgage helper. South-facing yard, detached double garage. Steps to Lord Kitchener Elementary and Pacific Spirit Park.",
-    "features": ["Legal Suite", "Air Conditioning", "Garage", "Fenced Yard"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Legal Suite",
+      "Air Conditioning",
+      "Garage",
+      "Fenced Yard"
+    ],
+    "brokerage_name": "RE/MAX Select Properties",
     "days_on_market": 8,
-    "photos": ["https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200","https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200","https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200",
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851001/vancouver-british-columbia",
     "updated_at": "2026-02-20T18:00:00Z"
   },
@@ -49,11 +57,21 @@
     "lat": 49.276,
     "lon": -123.128,
     "description": "Sub-penthouse in the Arc, one of Yaletown's most sought-after towers. Floor-to-ceiling windows with False Creek and mountain views. Two proper bedrooms, den could be a third. Gourmet kitchen with Miele appliances. Building amenities: pool, gym, sky garden. One parking, one locker. Steps to seawall, Rogers Arena, downtown core.",
-    "features": ["Water View", "Mountain View", "Air Conditioning", "In-Suite Laundry", "Parking", "Storage"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Water View",
+      "Mountain View",
+      "Air Conditioning",
+      "In-Suite Laundry",
+      "Parking",
+      "Storage"
+    ],
+    "brokerage_name": "Sutton Group West Coast Realty",
     "days_on_market": 15,
-    "photos": ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200","https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200","https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200",
+      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851002/vancouver-british-columbia",
     "updated_at": "2026-02-19T12:00:00Z"
   },
@@ -78,11 +96,18 @@
     "lat": 49.132,
     "lon": -122.312,
     "description": "Newer end-unit townhome in family-friendly Mission Junction complex. Open-concept main with 9-foot ceilings, powder room, and walk-out to fenced patio. Three bedrooms up including primary with walk-in and full ensuite. Attached double garage with EV-ready outlet. Low strata fees. Walking distance to West Coast Express.",
-    "features": ["EV Charging", "Attached Garage", "Fenced Yard", "In-Suite Laundry"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "EV Charging",
+      "Attached Garage",
+      "Fenced Yard",
+      "In-Suite Laundry"
+    ],
+    "brokerage_name": "Macdonald Realty Ltd.",
     "days_on_market": 22,
-    "photos": ["https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200","https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200",
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851003/mission-british-columbia",
     "updated_at": "2026-02-18T09:00:00Z"
   },
@@ -107,11 +132,22 @@
     "lat": 49.101,
     "lon": -122.545,
     "description": "10-acre equestrian estate in Glen Valley. Custom-built 5-bed craftsman home with wrap-around veranda. Attached triple garage. Detached 6-stall barn with tack room, wash rack, hot water. Outdoor sand ring 200'x100', four grass paddocks. Riding trails from property to Fort-to-Fort. ALR-classified; potential for hobby farming.",
-    "features": ["Barn", "Riding Ring", "Paddocks", "ALR", "Rural Water", "Well", "Attached Garage"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Barn",
+      "Riding Ring",
+      "Paddocks",
+      "ALR",
+      "Rural Water",
+      "Well",
+      "Attached Garage"
+    ],
+    "brokerage_name": "Oakwyn Realty Downtown Ltd.",
     "days_on_market": 45,
-    "photos": ["https://images.unsplash.com/photo-1449844908441-8829872d2607?w=1200","https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=1200","https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1449844908441-8829872d2607?w=1200",
+      "https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?w=1200",
+      "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851004/langley-british-columbia",
     "updated_at": "2026-02-15T14:00:00Z"
   },
@@ -133,14 +169,21 @@
     "community": "Squamish",
     "region": "Sea-to-Sky",
     "postal_code": "V8B 0N1",
-    "lat": 49.700,
+    "lat": 49.7,
     "lon": -123.156,
     "description": "Well-maintained Valleycliffe home with mountain views on all sides. Recently updated kitchen and bathrooms. Wood-burning fireplace. Fully fenced backyard, mature landscaping, detached shop/garage. Perfect for the mountain-biking, climbing family. 5 minutes to downtown Squamish, 45 minutes to Whistler.",
-    "features": ["Mountain View", "Wood Fireplace", "Detached Shop", "Fenced Yard"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Mountain View",
+      "Wood Fireplace",
+      "Detached Shop",
+      "Fenced Yard"
+    ],
+    "brokerage_name": "Royal LePage Sussex",
     "days_on_market": 12,
-    "photos": ["https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=1200","https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1587061949409-02df41d5e562?w=1200",
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851005/squamish-british-columbia",
     "updated_at": "2026-02-19T18:00:00Z"
   },
@@ -165,11 +208,22 @@
     "lat": 49.336,
     "lon": -123.166,
     "description": "Architectural masterpiece in prestigious Sandy Cove. Panoramic ocean and Lions Gate views from every principal room. Elevator, wine cellar, home theatre, gym, indoor lap pool. Chef's kitchen with butler pantry. Primary suite with steam shower, dual vanities, boutique-style walk-in. Heated driveway. Concrete construction, geothermal heating.",
-    "features": ["Water View", "Ocean View", "Pool", "Elevator", "Wine Cellar", "Home Theatre", "Geothermal"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Water View",
+      "Ocean View",
+      "Pool",
+      "Elevator",
+      "Wine Cellar",
+      "Home Theatre",
+      "Geothermal"
+    ],
+    "brokerage_name": "Engel & Völkers Vancouver",
     "days_on_market": 33,
-    "photos": ["https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200","https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1200","https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200",
+      "https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1200",
+      "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851006/west-vancouver-british-columbia",
     "updated_at": "2026-02-17T10:00:00Z"
   },
@@ -194,11 +248,19 @@
     "lat": 49.259,
     "lon": -122.987,
     "description": "Bright 1-bed with den in Aviara by Bosa. Southeast exposure, city and mountain views. Modern kitchen with integrated appliances. Building amenities: gym, lounge, guest suite, concierge. One parking. Steps to Brentwood Skytrain, The Amazing Brentwood shops.",
-    "features": ["Mountain View", "In-Suite Laundry", "Parking", "Storage", "Concierge"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Mountain View",
+      "In-Suite Laundry",
+      "Parking",
+      "Storage",
+      "Concierge"
+    ],
+    "brokerage_name": "Stilhavn Real Estate Services",
     "days_on_market": 6,
-    "photos": ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200","https://images.unsplash.com/photo-1560448076-4fbc3d63c17f?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200",
+      "https://images.unsplash.com/photo-1560448076-4fbc3d63c17f?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851007/burnaby-british-columbia",
     "updated_at": "2026-02-20T08:00:00Z"
   },
@@ -220,14 +282,23 @@
     "community": "Pemberton",
     "region": "Sea-to-Sky",
     "postal_code": "V0N 2L2",
-    "lat": 50.320,
+    "lat": 50.32,
     "lon": -122.803,
     "description": "West Coast contemporary on private Pemberton acreage. Full-height windows framing Mt Currie. Great room with river-rock fireplace, chef's kitchen with island seating for six. Primary on main with soaker tub and view. Two bedrooms up plus a media loft. Legal 1-bed suite over the garage. 45 minutes to Whistler.",
-    "features": ["Mountain View", "Legal Suite", "River Rock Fireplace", "Detached Garage", "Rural Water", "Well"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Mountain View",
+      "Legal Suite",
+      "River Rock Fireplace",
+      "Detached Garage",
+      "Rural Water",
+      "Well"
+    ],
+    "brokerage_name": "Rennie & Associates Realty Ltd.",
     "days_on_market": 19,
-    "photos": ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200","https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200",
+      "https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851008/pemberton-british-columbia",
     "updated_at": "2026-02-19T15:00:00Z"
   },
@@ -252,11 +323,18 @@
     "lat": 49.114,
     "lon": -122.658,
     "description": "Modern 3-bed townhome in Willoughby's Arbor Rowhomes. Open main with quartz counters, gas cooktop, walk-in pantry. Three bedrooms up including sizable primary. Full-size double garage. Fenced patio for kids and dog. Steps to R.E. Mountain Elementary and Willoughby Community Park.",
-    "features": ["Attached Garage", "Fenced Yard", "In-Suite Laundry", "Gas Cooktop"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Attached Garage",
+      "Fenced Yard",
+      "In-Suite Laundry",
+      "Gas Cooktop"
+    ],
+    "brokerage_name": "Angell, Hasman & Associates Realty Ltd.",
     "days_on_market": 4,
-    "photos": ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200","https://images.unsplash.com/photo-1600566753086-00f18fe6ba85?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200",
+      "https://images.unsplash.com/photo-1600566753086-00f18fe6ba85?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851009/langley-british-columbia",
     "updated_at": "2026-02-20T20:00:00Z"
   },
@@ -281,11 +359,20 @@
     "lat": 50.116,
     "lon": -122.958,
     "description": "Newly-built ski-in/ski-out estate on Blackcomb Benchlands. Six bedrooms, all ensuited. Great room with soaring stone fireplace. Chef's kitchen with dual islands and secondary catering kitchen. Elevator to all four levels. Media room, wine room, home gym. Heated driveway, four-car garage. Mountain and valley views.",
-    "features": ["Ski-In/Ski-Out", "Mountain View", "Elevator", "Wine Cellar", "Home Theatre", "Heated Driveway"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Ski-In/Ski-Out",
+      "Mountain View",
+      "Elevator",
+      "Wine Cellar",
+      "Home Theatre",
+      "Heated Driveway"
+    ],
+    "brokerage_name": "Homelife Advantage Realty",
     "days_on_market": 60,
-    "photos": ["https://images.unsplash.com/photo-1600585154207-c99c34e00daf?w=1200","https://images.unsplash.com/photo-1613977257592-4a9a32f9141b?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1600585154207-c99c34e00daf?w=1200",
+      "https://images.unsplash.com/photo-1613977257592-4a9a32f9141b?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851010/whistler-british-columbia",
     "updated_at": "2026-02-10T11:00:00Z"
   },
@@ -310,11 +397,17 @@
     "lat": 49.049,
     "lon": -122.291,
     "description": "Well-priced 2-bed apartment in central Abbotsford. Updated flooring throughout. Bright southwest-facing balcony. Insuite laundry. Building has been well-maintained with a healthy contingency fund. Rentals allowed, pets with restrictions. Walking distance to Sevenoaks Mall and Mill Lake.",
-    "features": ["In-Suite Laundry", "Balcony", "Parking", "Storage"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "In-Suite Laundry",
+      "Balcony",
+      "Parking",
+      "Storage"
+    ],
+    "brokerage_name": "Sotheby's International Realty Canada",
     "days_on_market": 30,
-    "photos": ["https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851011/abbotsford-british-columbia",
     "updated_at": "2026-02-13T13:00:00Z"
   },
@@ -336,14 +429,21 @@
     "community": "Vancouver",
     "region": "Greater Vancouver",
     "postal_code": "V6M 2A3",
-    "lat": 49.230,
+    "lat": 49.23,
     "lon": -123.144,
     "description": "Solidly built family home in prime South Cambie. Formal living/dining, main-floor family room off kitchen. Four bedrooms up including primary with ensuite. Two-bedroom mortgage-helper suite down. South-facing backyard. Steps to Osler Elementary, Sir Winston Churchill Secondary catchment. Cambie corridor development potential.",
-    "features": ["Legal Suite", "Development Potential", "Detached Garage", "Fenced Yard"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Legal Suite",
+      "Development Potential",
+      "Detached Garage",
+      "Fenced Yard"
+    ],
+    "brokerage_name": "eXp Realty",
     "days_on_market": 11,
-    "photos": ["https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200","https://images.unsplash.com/photo-1600607688969-a5bfcd646154?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1200",
+      "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851012/vancouver-british-columbia",
     "updated_at": "2026-02-19T22:00:00Z"
   },
@@ -368,11 +468,18 @@
     "lat": 49.777,
     "lon": -123.156,
     "description": "Brackendale townhome minutes to Alice Lake, Cheekye and the Sea-to-Sky Trail. Open-concept main with 9-ft ceilings, gas fireplace, walk-out patio backing greenspace. Three bedrooms up, primary with ensuite. Attached single garage. Adventure ready.",
-    "features": ["Gas Fireplace", "Attached Garage", "Backing Greenspace", "In-Suite Laundry"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Gas Fireplace",
+      "Attached Garage",
+      "Backing Greenspace",
+      "In-Suite Laundry"
+    ],
+    "brokerage_name": "Coldwell Banker Prestige Realty",
     "days_on_market": 9,
-    "photos": ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200","https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200",
+      "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851013/squamish-british-columbia",
     "updated_at": "2026-02-20T02:00:00Z"
   },
@@ -397,11 +504,16 @@
     "lat": 49.264,
     "lon": -122.789,
     "description": "Split-level family home on a large lot in central Coquitlam. Five bedrooms, three baths, functional layout. Big backyard with mature trees. Detached workshop. Original condition — hold, renovate, or explore development options as this area moves toward SkyTrain-adjacent densification.",
-    "features": ["Development Potential", "Detached Workshop", "Fenced Yard"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Development Potential",
+      "Detached Workshop",
+      "Fenced Yard"
+    ],
+    "brokerage_name": "Century 21 In Town Realty",
     "days_on_market": 55,
-    "photos": ["https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851014/coquitlam-british-columbia",
     "updated_at": "2026-02-08T17:00:00Z"
   },
@@ -426,11 +538,19 @@
     "lat": 49.235,
     "lon": -123.048,
     "description": "Well-managed Collingwood Village 2-bed, 2-bath with functional split floorplan. Renovated kitchen with quartz. Insuite laundry. Two parking. Amenities include indoor pool, gym, sauna, guest suites. Directly across from Joyce-Collingwood Skytrain. Perfect starter or investment.",
-    "features": ["Pool", "Gym", "In-Suite Laundry", "Parking", "Storage", "Skytrain"],
-    "brokerage_name": "Fraser Property Management Realty Services Ltd.",
-    "listing_agent": "Doug LeMaire",
+    "features": [
+      "Pool",
+      "Gym",
+      "In-Suite Laundry",
+      "Parking",
+      "Storage",
+      "Skytrain"
+    ],
+    "brokerage_name": "Team 3000 Realty Ltd.",
     "days_on_market": 14,
-    "photos": ["https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1200"],
+    "photos": [
+      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1200"
+    ],
     "realtor_ca_url": "https://www.realtor.ca/real-estate/MOCK-R2851015/vancouver-british-columbia",
     "updated_at": "2026-02-19T09:00:00Z"
   }
