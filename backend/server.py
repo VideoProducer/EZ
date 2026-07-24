@@ -1538,6 +1538,70 @@ async def admin_ddf_sync_now(_=Depends(verify_admin)):
     return await _ddf_sync(db)
 
 
+# =============== AI CONTENT AUDIT TRAIL (CREA / BCFSA compliance) ===============
+@api.get("/admin/audit-trail.csv")
+async def export_audit_trail(_=Depends(verify_admin)):
+    """CSV export of every AI-generated content item + its licensee approval event.
+
+    Supports CREA/BCFSA audits: provides a full record of what AI produced, who
+    approved it (Doug LeMaire, REALTOR®), and when. Downloadable via the admin
+    console or curl for offline records.
+    """
+    from fastapi.responses import PlainTextResponse
+    import csv, io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Content Type", "Identifier", "Title/Slug", "AI Model", "First Generated", "Approved By", "Approved At", "Approval Status", "URL"])
+    # Glossary terms
+    async for t in db.glossary.find({}, {"_id":0, "slug":1, "term":1, "faqs_approved":1, "faqs_approved_at":1, "last_curated_at":1, "updated_at":1}):
+        approved = bool(t.get("faqs_approved"))
+        w.writerow([
+            "Glossary FAQ",
+            t.get("slug",""),
+            t.get("term",""),
+            "Claude Sonnet 4.5",
+            t.get("last_curated_at") or t.get("updated_at") or "",
+            "Doug LeMaire, REALTOR®" if approved else "",
+            t.get("faqs_approved_at") or "",
+            "APPROVED" if approved else "PENDING",
+            f"https://eztofind.ca/glossary/{t.get('slug','')}",
+        ])
+    # Community synopses
+    async for c in db.community_synopsis.find({}, {"_id":0, "slug":1, "name":1, "approved":1, "approved_at":1, "generated_at":1}):
+        approved = bool(c.get("approved"))
+        w.writerow([
+            "Community Synopsis",
+            c.get("slug",""),
+            c.get("name",""),
+            "Claude Sonnet 4.5",
+            c.get("generated_at") or "",
+            "Doug LeMaire, REALTOR®" if approved else "",
+            c.get("approved_at") or "",
+            "APPROVED" if approved else "PENDING",
+            f"https://eztofind.ca/community/{c.get('slug','')}",
+        ])
+    # Community weather summaries (if AI-generated)
+    async for w_row in db.community_weather.find({}, {"_id":0, "slug":1, "approved":1, "approved_at":1, "generated_at":1}):
+        approved = bool(w_row.get("approved"))
+        w.writerow([
+            "Community Weather Summary",
+            w_row.get("slug",""),
+            w_row.get("slug",""),
+            "Claude Sonnet 4.5 (superseded by ECCC live data)",
+            w_row.get("generated_at") or "",
+            "Doug LeMaire, REALTOR®" if approved else "",
+            w_row.get("approved_at") or "",
+            "APPROVED" if approved else "PENDING",
+            f"https://eztofind.ca/community/{w_row.get('slug','')}",
+        ])
+    csv_content = buf.getvalue()
+    return PlainTextResponse(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="eztofind-ai-audit-{now_iso()[:10]}.csv"'},
+    )
+
+
 # =============== DOOGIE MLS® SEARCH (natural language → filters → listings) ===============
 FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
 Read the user's request and output a SINGLE JSON object with these fields (all optional):

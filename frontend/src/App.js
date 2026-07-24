@@ -245,7 +245,15 @@ const ClimateNormalsTable = ({data, community}) => {
 
 // Shared "Published by Doug LeMaire, REALTOR®" attribution block
 // Renders at the bottom of glossary term pages, community pages, and weather sections
-const PublishedByDoug = ({compact=false}) => (
+const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
+  const fmt = (iso) => {
+    if (!iso) return null;
+    try { const d = new Date(iso); if (isNaN(d)) return null;
+      return d.toLocaleDateString("en-CA", { year:"numeric", month:"long", day:"numeric" });
+    } catch { return null; }
+  };
+  const reviewedTxt = fmt(lastReviewed);
+  return (
   <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0"}} data-testid="published-by-doug">
     <img src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
     <div style={{lineHeight:1.5}}>
@@ -255,9 +263,10 @@ const PublishedByDoug = ({compact=false}) => (
         <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}}>EZtoFind.ca</a>
         <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
       </div>
+      {reviewedTxt && <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.15rem",fontStyle:"italic"}} data-testid="last-reviewed">🤖 AI-assisted content · Last reviewed by Doug LeMaire, REALTOR® on {reviewedTxt}</div>}
     </div>
-  </div>
-);
+  </div>);
+};
 
 // Real BC imagery (Unsplash, free-to-use)
 const IMG = {
@@ -572,6 +581,7 @@ const DoogieChat = () => {
         if (m.type === "listings") {
           return (<div key={i} className={`msg assistant`} data-testid={`doogie-listings-msg-${i}`}>
             <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem"}}>{m.summary}</div>
+            <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic",padding:"0.4rem 0.6rem",background:"rgba(15,42,91,0.04)",borderRadius:6}}>🤖 Listings AI-selected from the MLS® feed based on parsing your query. Verify directly with the listing brokerage before making an offer.</div>
             {m.listings.map(l => <DoogieListingCard key={l.listing_key} listing={l}/>)}
             {m.count > m.listings.length && (
               <Link to={`/listings?${new URLSearchParams(Object.entries({
@@ -587,7 +597,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/>{m.role==="assistant" && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to="/privacy" style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send}><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask Doogie…" data-testid="doogie-input"/><button type="submit" disabled={busy} data-testid="doogie-send">Send</button></form>
       </>}
@@ -1290,7 +1300,7 @@ const GlossaryTerm = () => {
   if(loading) return <div className="section container-x"><p>Loading…</p></div>;
   if(!t) return <div className="section container-x"><h2>Term not found</h2><Link to="/glossary">← Back</Link></div>;
 
-  const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact}/>;
+  const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact} lastReviewed={t.faqs_approved_at || t.last_curated_at || t.updated_at}/>;
 
   // AEO / LLM Article schema — combines definition, author, publisher, FAQPage
   const now = new Date().toISOString();
@@ -1626,7 +1636,22 @@ const AdminDash = () => {
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
   },[]);
   return <AdminShell active="dash">
-    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Welcome back, Doug 🐾</h1>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,marginBottom:0}}>Welcome back, Doug 🐾</h1>
+      <a href={`${API}/admin/audit-trail.csv`} target="_blank" rel="noopener noreferrer"
+         onClick={async (e) => {
+           e.preventDefault();
+           try {
+             const r = await axios.get(`${API}/admin/audit-trail.csv`, {headers, responseType:"blob"});
+             const url = window.URL.createObjectURL(new Blob([r.data]));
+             const a = document.createElement("a"); a.href = url;
+             a.download = `eztofind-ai-audit-${new Date().toISOString().slice(0,10)}.csv`;
+             document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+           } catch { alert("Download failed."); }
+         }}
+         className="btn btn-ghost" data-testid="download-audit-csv"
+         style={{fontSize:"0.9rem",padding:"0.6rem 1rem"}}>📥 Download AI Content Audit Trail (CSV)</a>
+    </div>
     <div className="grid-3" style={{marginTop:"1.5rem"}}>
       {[["Buyer Leads",stats.buyers],["Seller Leads",stats.sellers],["REALTORS® Applied",stats.realtors]].map(([l,n])=><div key={l} className="paper" style={{textAlign:"center"}}><div style={{fontSize:"3rem",fontWeight:700,color:"var(--brand-blue)"}}>{n}</div><div style={{color:"var(--muted)"}}>{l}</div></div>)}
     </div>
