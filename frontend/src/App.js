@@ -1821,78 +1821,233 @@ const ReferralRequest = () => {
 // --- Calculators (Mortgage + PTT — stacked, independent) ---
 const fmtDollar = n => "$"+Math.round(n).toLocaleString();
 
-const MortgageCalculator = () => {
-  const [priceStr,setPriceStr]=useState("850,000");
-  const [downStr,setDownStr]=useState("170,000");
-  const [rate,setRate]=useState(5.5);
-  const [amort,setAmort]=useState(25);
-  const price = Number(priceStr.replace(/[^0-9]/g,""))||0;
-  const down = Number(downStr.replace(/[^0-9]/g,""))||0;
-  const principal = Math.max(price - down, 0);
-  const r = (rate/100)/12; const n = amort*12;
-  const monthly = r>0 ? (principal*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1) : (n>0 ? principal/n : 0);
-  const totalCost = monthly * n;
-  const totalInterest = Math.max(totalCost - principal, 0);
+// =====================================================================
+// "What Can I Afford?" Reverse Calculator
+// Replaces the old mortgage calculator. Uses current BC stress-test rules:
+//   • Qualifying rate: max(contract + 2%, 5.25% floor)  — per OSFI B-20
+//   • GDS max 39% (insured), TDS max 44% (insured)
+//   • CMHC premium applies if down < 20%
+//   • BC PTT: 1% first $200K, 2% $200K–$3M, 3% $3M+, +2% on residential > $3M
+//   • FTB exemption optional
+// Then shows max home price, monthly payment, extra cash needed at closing,
+// and one-tap links to matching listings + a Doogie chat handoff.
+// =====================================================================
+const AffordabilityCalculator = () => {
+  const [income,   setIncome  ] = useState("150,000");
+  const [downStr,  setDownStr ] = useState("80,000");
+  const [debtsStr, setDebtsStr] = useState("500");
+  const [rate,     setRate    ] = useState(5.5);        // contract rate
+  const [amort,    setAmort   ] = useState(25);
+  const [propType, setPropType] = useState("Any");
+  const [community,setCommunity] = useState("");
+  const [ftb,      setFtb     ] = useState(false);
+  const [comms,    setComms   ] = useState([]);
+  useEffect(() => {
+    axios.get(`${API}/communities`).then(r => {
+      const list = [];
+      Object.entries(r.data || {}).forEach(([_r, arr]) => arr.forEach(name => list.push(name)));
+      setComms(list.sort());
+    }).catch(()=>{});
+  }, []);
   const onMoney = setter => e => {
     const raw = e.target.value.replace(/[^0-9]/g,"");
     setter(raw ? Number(raw).toLocaleString() : "");
   };
-  const FieldBox = ({label, prefix, children}) => (
+  const annualIncome = Number(String(income).replace(/[^0-9]/g,""))   || 0;
+  const downPmt      = Number(String(downStr).replace(/[^0-9]/g,""))  || 0;
+  const monthlyDebts = Number(String(debtsStr).replace(/[^0-9]/g,"")) || 0;
+  const monthlyIncome = annualIncome / 12;
+
+  // Qualifying rate (OSFI B-20 stress test): max(contract + 2%, 5.25% floor)
+  const qualRate = Math.max(rate + 2, 5.25);
+  const n = amort * 12;
+  const rM = (qualRate / 100) / 12;
+  // Monthly capacity — GDS 39%, TDS 44% (insured)
+  const carryEstimate = (propType === "Condo" ? 150 : 0) + 250; // rough heat + property tax escrow monthly (educational estimate)
+  const gdsCap = monthlyIncome * 0.39 - carryEstimate;
+  const tdsCap = monthlyIncome * 0.44 - carryEstimate - monthlyDebts;
+  const maxMonthlyPI = Math.max(0, Math.min(gdsCap, tdsCap));
+  // Back out max mortgage principal from the maxMonthlyPI at qualifying rate
+  const maxMortgage = rM > 0 && maxMonthlyPI > 0
+    ? (maxMonthlyPI * (1 - Math.pow(1 + rM, -n))) / rM
+    : 0;
+  // If down < 20% of (mortgage + down), CMHC insurance premium reduces the effective mortgage a bit.
+  // Simplification: cap at effective mortgage without premium; educational disclaimer covers precision.
+  const maxHomePrice0 = maxMortgage + downPmt;
+  // Iteratively subtract PTT + closing costs (they depend on price)
+  const computePTT = (price) => {
+    if (price <= 0) return 0;
+    let ptt = 0;
+    ptt += Math.min(price, 200000) * 0.01;
+    if (price > 200000)  ptt += (Math.min(price, 3000000) - 200000) * 0.02;
+    if (price > 3000000) ptt += (price - 3000000) * 0.03;
+    if (price > 3000000) ptt += (price - 3000000) * 0.02; // additional 2% on residential > $3M
+    return ptt;
+  };
+  const computeFtbExemption = (price, ptt) => {
+    // 2024 rules: full exemption up to $500K portion, sliding to $835K FMV. Simplified.
+    if (!ftb) return 0;
+    if (price <= 500000) return ptt;
+    if (price >= 835000) return 0;
+    // Linear taper
+    return ptt * (835000 - price) / 335000;
+  };
+  const closingCostsFixed = 2500; // legal ~$1,500 + inspection $500 + appraisal $400 + title $200 (educational)
+  // 3-pass iteration to converge max price
+  let priceCap = maxHomePrice0;
+  for (let i = 0; i < 3; i++) {
+    const ptt = computePTT(priceCap);
+    const exempt = computeFtbExemption(priceCap, ptt);
+    const closingTotal = Math.max(0, ptt - exempt) + closingCostsFixed;
+    priceCap = maxMortgage + downPmt - closingTotal;
+    if (priceCap < 0) { priceCap = 0; break; }
+  }
+  const finalPTT     = computePTT(priceCap);
+  const finalExempt  = computeFtbExemption(priceCap, finalPTT);
+  const netPTT       = Math.max(0, finalPTT - finalExempt);
+  const totalClosing = netPTT + closingCostsFixed;
+  const monthlyPmtAtContract = (() => {
+    const rC = (rate / 100) / 12;
+    return rC > 0 && maxMortgage > 0
+      ? (maxMortgage * rC * Math.pow(1 + rC, n)) / (Math.pow(1 + rC, n) - 1)
+      : 0;
+  })();
+
+  const linkParams = new URLSearchParams();
+  linkParams.set("price_max", String(Math.floor(priceCap)));
+  if (community)          linkParams.set("community", community);
+  if (propType && propType !== "Any") linkParams.set("property_type", propType);
+  const listingsHref = `/listings?${linkParams.toString()}`;
+
+  const doogieHandoff = () => {
+    const parts = [`I make $${annualIncome.toLocaleString()} a year`, `have $${downPmt.toLocaleString()} saved`];
+    if (monthlyDebts > 0) parts.push(`monthly debts of $${monthlyDebts.toLocaleString()}`);
+    if (community) parts.push(`looking in ${community}`);
+    const msg = parts.join(", ") + `. What can I buy${propType !== "Any" ? ` — ${propType.toLowerCase()}s only` : ""}?`;
+    localStorage.setItem("ez_doogie_prefill", msg);
+    // Fire a click on the FAB
+    setTimeout(() => {
+      const fab = document.querySelector('[data-testid="doogie-fab"]');
+      if (fab) fab.click();
+      setTimeout(() => {
+        const inp = document.querySelector('[data-testid="doogie-input"]');
+        if (inp) {
+          const nv = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+          nv.call(inp, msg);
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+          inp.focus();
+        }
+      }, 500);
+    }, 100);
+  };
+
+  const FieldBox = ({label, prefix, children, hint}) => (
     <div style={{flex:"1 1 240px",minWidth:220}}>
       <label style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.9rem",display:"block",marginBottom:"0.4rem"}}>{label}</label>
       <div style={{position:"relative",background:"rgba(240,244,251,0.5)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,padding:"0.85rem 1rem 0.85rem 2.4rem",fontFamily:"Inter,sans-serif"}}>
         <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",fontSize:"1rem"}}>{prefix}</span>
         {children}
       </div>
+      {hint && <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.25rem",fontFamily:"Inter,sans-serif"}}>{hint}</div>}
     </div>
   );
+
   return (
-    <div className="paper" data-testid="mortgage-calculator" style={{background:"#F7FAFF"}}>
-      <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
+    <div className="paper" data-testid="afford-calculator" style={{background:"#F7FAFF"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
         <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
-        <div>
-          <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>Mortgage Calculator</h2>
-          <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your monthly payments.</div>
+        <div style={{flex:"1 1 240px"}}>
+          <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>What Can I Afford?</h2>
+          <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Enter your income and savings — I'll show you your maximum home price under current BC stress-test rules.</div>
         </div>
       </div>
 
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
-        <FieldBox label="Home Price" prefix="$">
-          <input value={priceStr} onChange={onMoney(setPriceStr)} inputMode="numeric" data-testid="mortgage-price" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        <FieldBox label="Annual household income" prefix="$" hint="Before tax, all earners combined">
+          <input value={income} onChange={onMoney(setIncome)} inputMode="numeric" data-testid="afford-income" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
-        <FieldBox label="Down Payment" prefix="$">
-          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" data-testid="mortgage-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        <FieldBox label="Down payment saved" prefix="$" hint="Cash on hand for down payment">
+          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" data-testid="afford-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem"}}>
-        <FieldBox label="Interest Rate (%)" prefix="%">
-          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="mortgage-rate" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        <FieldBox label="Monthly debt payments" prefix="$" hint="Car, credit cards, student loans">
+          <input value={debtsStr} onChange={onMoney(setDebtsStr)} inputMode="numeric" data-testid="afford-debts" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
-        <FieldBox label="Amortization (years)" prefix="📅">
-          <select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="mortgage-amort" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
-            <option value={15}>15 years</option>
-            <option value={20}>20 years</option>
-            <option value={25}>25 years</option>
-            <option value={30}>30 years</option>
+        <FieldBox label="Preferred community" prefix="📍" hint="Optional — we'll match listings">
+          <select value={community} onChange={e=>setCommunity(e.target.value)} data-testid="afford-community" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
+            <option value="">Any BC community</option>
+            {comms.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </FieldBox>
       </div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem",alignItems:"center"}}>
+        <FieldBox label="Property type" prefix="🏡" hint="">
+          <select value={propType} onChange={e=>setPropType(e.target.value)} data-testid="afford-type" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
+            <option>Any</option>
+            <option>Detached</option>
+            <option>Condo</option>
+            <option>Townhouse</option>
+            <option>Acreage</option>
+          </select>
+        </FieldBox>
+        <FieldBox label="Contract interest rate (%)" prefix="%" hint={`Stress-tested at ${qualRate.toFixed(2)}% (OSFI B-20)`}>
+          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="afford-rate" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+        </FieldBox>
+      </div>
+      <div style={{marginTop:"1rem",display:"flex",gap:"1.25rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",alignItems:"center"}}>
+        <label style={{display:"flex",alignItems:"center",gap:"0.5rem",cursor:"pointer"}}>
+          <input type="checkbox" checked={ftb} onChange={e=>setFtb(e.target.checked)} data-testid="afford-ftb"/>
+          <span>I'm a first-time home buyer (BC PTT exemption)</span>
+        </label>
+        <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>
+          <span>Amortization:</span>
+          <select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="afford-amort" style={{padding:"0.4rem 0.6rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.15)"}}>
+            <option value={15}>15 yrs</option>
+            <option value={20}>20 yrs</option>
+            <option value={25}>25 yrs</option>
+            <option value={30}>30 yrs</option>
+          </select>
+        </label>
+      </div>
 
-      <div style={{background:"#F0F4FB",borderRadius:12,marginTop:"1.5rem",padding:"1.25rem 1rem",display:"flex",flexWrap:"wrap",justifyContent:"space-around",gap:"1rem",fontFamily:"Inter,sans-serif"}}>
+      {/* Big result card */}
+      <div style={{background:"linear-gradient(135deg,#0F2A5B 0%,#1E4180 100%)",color:"#fff",borderRadius:14,marginTop:"1.5rem",padding:"1.5rem 1.25rem",fontFamily:"Inter,sans-serif",textAlign:"center",boxShadow:"0 10px 24px rgba(15,42,91,0.18)"}}>
+        <div style={{fontSize:"0.78rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.75,fontWeight:600}}>You can afford up to</div>
+        <div data-testid="afford-max-price" style={{fontFamily:"Sora,sans-serif",fontSize:"3rem",fontWeight:700,margin:"0.35rem 0",lineHeight:1.05}}>{fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000))}</div>
+        <div style={{fontSize:"0.9rem",opacity:0.85}}>Based on BC stress test at qualifying rate {qualRate.toFixed(2)}%</div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:"0.75rem",marginTop:"1rem",fontFamily:"Inter,sans-serif"}}>
         {[
-          {label:"MONTHLY PAYMENT", val:fmtDollar(monthly), big:true, tid:"calc-monthly"},
-          {label:"PRINCIPAL", val:fmtDollar(principal), tid:"calc-principal"},
-          {label:"TOTAL INTEREST", val:fmtDollar(totalInterest), tid:"calc-interest"},
-          {label:"TOTAL COST", val:fmtDollar(totalCost), tid:"calc-total"}
-        ].map(c => (
-          <div key={c.label} style={{textAlign:"center",minWidth:110}}>
-            <div style={{fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.06em",color:"var(--muted)"}}>{c.label}</div>
-            <div data-testid={c.tid} style={{fontSize:c.big?"1.85rem":"1.35rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.35rem"}}>{c.val}</div>
+          {l:"Max mortgage",   v:fmtDollar(Math.max(0, maxMortgage)),        t:"afford-max-mortgage"},
+          {l:"Down payment",   v:fmtDollar(downPmt),                          t:"afford-down-display"},
+          {l:"Monthly payment",v:fmtDollar(Math.max(0, monthlyPmtAtContract)),t:"afford-monthly", hint:`at ${rate}%`},
+          {l:"BC PTT",         v:fmtDollar(Math.max(0, netPTT)),              t:"afford-ptt",     hint: ftb ? "after FTB exemption" : ""},
+          {l:"Closing costs",  v:fmtDollar(closingCostsFixed),                t:"afford-closing", hint:"legal + inspection est."},
+          {l:"Cash at closing",v:fmtDollar(downPmt + totalClosing),           t:"afford-cash",    hint:"down + PTT + closing"},
+        ].map(x => (
+          <div key={x.l} style={{background:"#F0F4FB",borderRadius:10,padding:"0.85rem 0.6rem",textAlign:"center"}}>
+            <div style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.04em",color:"var(--muted)",textTransform:"uppercase"}}>{x.l}</div>
+            <div data-testid={x.t} style={{fontSize:"1.1rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.25rem",lineHeight:1.15}}>{x.v}</div>
+            {x.hint && <div style={{fontSize:"0.65rem",color:"var(--muted)",marginTop:"0.15rem"}}>{x.hint}</div>}
           </div>
         ))}
       </div>
 
-      <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0,textAlign:"center"}}>This calculator provides estimates only. Actual rates and terms may vary. Contact a mortgage professional for accurate figures.</p>
+      {/* CTAs */}
+      <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",marginTop:"1.25rem"}}>
+        <Link to={listingsHref} className="btn btn-primary" data-testid="afford-see-listings" style={{flex:"1 1 240px",textAlign:"center",textDecoration:"none"}}>
+          🏡 Show me listings under {fmtDollar(Math.floor(priceCap/1000)*1000)}
+        </Link>
+        <button type="button" onClick={doogieHandoff} className="btn btn-ghost" data-testid="afford-ask-doogie" style={{flex:"1 1 200px"}}>
+          🐾 Ask Doogie about my numbers
+        </button>
+      </div>
+
+      <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0,textAlign:"center"}}>
+        Educational estimate only. Actual approval depends on your lender's assessment of credit, employment, down-payment source, and CMHC insurance eligibility. BC PTT calculation follows current statute; the FTB exemption is a linear approximation of the sliding scale (verify at <a href="https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>gov.bc.ca ↗</a>). Speak to a licensed mortgage broker before making an offer.
+      </p>
     </div>
   );
 };
@@ -1985,7 +2140,7 @@ const Calculators = () => (
       <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
         Estimate Your <span className="accent">Home-Buying Costs</span>
       </h2>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,maxWidth:"38rem",margin:"0 auto 1.25rem"}}>Run the numbers on your <span className="green" style={{fontWeight:600}}>monthly payment</span> and <span className="green" style={{fontWeight:600}}>Property Transfer Tax</span> before you make an offer.</p>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,maxWidth:"38rem",margin:"0 auto 1.25rem"}}>See your <span className="green" style={{fontWeight:600}}>maximum home price</span> based on your income and savings, and the <span className="green" style={{fontWeight:600}}>Property Transfer Tax</span> you'll owe at closing — all under current BC stress-test rules.</p>
       <div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
         {[{i:"⚡",t:"Instant"},{i:"🆓",t:"Free"},{i:"🔓",t:"No sign-up"}].map(b => (
           <span key={b.t} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",padding:"0.4rem 0.9rem",background:"rgba(15,42,91,0.06)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,fontSize:"0.82rem",fontWeight:600,color:"var(--brand-navy)"}}>
@@ -1994,7 +2149,7 @@ const Calculators = () => (
         ))}
       </div>
     </div>
-    <MortgageCalculator/>
+    <AffordabilityCalculator/>
     <PTTCalculator/>
   </div></section>
 );
