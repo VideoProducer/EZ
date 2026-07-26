@@ -2485,22 +2485,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/anmore/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/belcarra</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/belcarra/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/bowen-island</loc>
@@ -2509,22 +2497,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/bowen-island/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/burnaby</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/burnaby/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/coquitlam</loc>
@@ -2533,22 +2509,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/coquitlam/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/delta</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/delta/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/langley-city</loc>
@@ -2557,22 +2521,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langley-city/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/langley-township</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/langley-township/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lions-bay</loc>
@@ -2581,22 +2533,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lions-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/maple-ridge</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/maple-ridge/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/new-westminster</loc>
@@ -2605,22 +2545,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/new-westminster/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/north-vancouver-city</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/north-vancouver-city/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/north-vancouver-district</loc>
@@ -2629,22 +2557,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/north-vancouver-district/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/pitt-meadows</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/pitt-meadows/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-coquitlam</loc>
@@ -2653,22 +2569,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-coquitlam/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/port-moody</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/port-moody/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/richmond</loc>
@@ -2677,22 +2581,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/richmond/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/surrey</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/surrey/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/university-endowment-lands</loc>
@@ -2701,22 +2593,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/university-endowment-lands/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vancouver</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/vancouver/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/west-vancouver</loc>
@@ -2725,22 +2605,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-vancouver/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/white-rock</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/white-rock/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/abbotsford</loc>
@@ -2749,22 +2617,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/abbotsford/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/boston-bar</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/boston-bar/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/bridal-falls</loc>
@@ -2773,22 +2629,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/bridal-falls/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/chilliwack</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/chilliwack/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/harrison-hot-springs</loc>
@@ -2797,22 +2641,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/harrison-hot-springs/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/hope</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/hope/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/kent</loc>
@@ -2821,22 +2653,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kent/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/mission</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/mission/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/spuzzum</loc>
@@ -2845,22 +2665,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/spuzzum/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/yale</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/yale/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/britannia-beach</loc>
@@ -2869,22 +2677,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/britannia-beach/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/furry-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/furry-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/pemberton</loc>
@@ -2893,22 +2689,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/pemberton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/squamish</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/squamish/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/whistler</loc>
@@ -2917,22 +2701,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/whistler/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/earls-cove</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/earls-cove/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/gibsons</loc>
@@ -2941,22 +2713,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/gibsons/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/langdale</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/langdale/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lund</loc>
@@ -2965,22 +2725,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lund/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/pender-harbour</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/pender-harbour/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-mellon</loc>
@@ -2989,22 +2737,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-mellon/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/powell-river</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/powell-river/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/refuge-cove</loc>
@@ -3013,22 +2749,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/refuge-cove/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/roberts-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/roberts-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sechelt</loc>
@@ -3037,22 +2761,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sechelt/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/van-anda</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/van-anda/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sh-sh-lh-nation-government-district</loc>
@@ -3061,22 +2773,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sh-sh-lh-nation-government-district/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/alert-bay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/alert-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/black-creek</loc>
@@ -3085,22 +2785,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/black-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/campbell-river</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/campbell-river/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/cedar</loc>
@@ -3109,22 +2797,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cedar/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/central-saanich</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/central-saanich/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/chemainus</loc>
@@ -3133,22 +2809,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/chemainus/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/cobble-hill</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/cobble-hill/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/colwood</loc>
@@ -3157,22 +2821,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/colwood/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/comox</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/comox/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/coombs</loc>
@@ -3181,22 +2833,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/coombs/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/courtenay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/courtenay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/crofton</loc>
@@ -3205,22 +2845,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/crofton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/cumberland</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/cumberland/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/duncan</loc>
@@ -3229,22 +2857,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/duncan/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/east-sooke</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/east-sooke/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/echo-bay</loc>
@@ -3253,22 +2869,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/echo-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/errington</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/errington/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/esquimalt</loc>
@@ -3277,22 +2881,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/esquimalt/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/ganges</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/ganges/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/gold-river</loc>
@@ -3301,22 +2893,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/gold-river/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/heriot-bay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/heriot-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/highlands</loc>
@@ -3325,22 +2905,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/highlands/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/ladysmith</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/ladysmith/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lake-cowichan</loc>
@@ -3349,22 +2917,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lake-cowichan/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/langford</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/langford/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lantzville</loc>
@@ -3373,22 +2929,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lantzville/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/metchosin</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/metchosin/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/nanaimo</loc>
@@ -3397,22 +2941,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanoose-bay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/nanoose-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/north-cowichan</loc>
@@ -3421,22 +2953,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/north-cowichan/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/north-saanich</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/north-saanich/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/oak-bay</loc>
@@ -3445,22 +2965,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/oak-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/parksville</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/parksville/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-alberni</loc>
@@ -3469,22 +2977,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alberni/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/port-alice</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/port-alice/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-hardy</loc>
@@ -3493,22 +2989,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-hardy/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/port-mcneill</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/port-mcneill/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/qualicum-beach</loc>
@@ -3517,22 +3001,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/qualicum-beach/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/saanich</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/saanich/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sayward</loc>
@@ -3541,22 +3013,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sayward/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/sidney</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/sidney/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sooke</loc>
@@ -3565,22 +3025,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tahsis</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tahsis/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/telegraph-cove</loc>
@@ -3589,22 +3037,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/telegraph-cove/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tofino</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tofino/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/ucluelet</loc>
@@ -3613,22 +3049,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/ucluelet/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/union-bay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/union-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/victoria</loc>
@@ -3637,22 +3061,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/view-royal</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/view-royal/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/winter-harbour</loc>
@@ -3661,22 +3073,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/winter-harbour/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/zeballos</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/zeballos/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/daajing-giids</loc>
@@ -3685,22 +3085,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/daajing-giids/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/masset</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/masset/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-clements</loc>
@@ -3709,22 +3097,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-clements/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/sandspit</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/sandspit/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/atnarko</loc>
@@ -3733,22 +3109,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/atnarko/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/bella-bella</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/bella-bella/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/bella-coola</loc>
@@ -3757,22 +3121,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/bella-coola/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/hagensborg</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/hagensborg/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/namu</loc>
@@ -3781,22 +3133,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/namu/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/atlin</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/atlin/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/burns-lake</loc>
@@ -3805,22 +3145,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/burns-lake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/chetwynd</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/chetwynd/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/dawson-creek</loc>
@@ -3829,22 +3157,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/dawson-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/fort-fraser</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/fort-fraser/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/fort-nelson</loc>
@@ -3853,22 +3169,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fort-nelson/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/fort-st-james</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/fort-st-james/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/fort-st-john</loc>
@@ -3877,22 +3181,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fort-st-john/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/fraser</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/fraser/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/fraser-lake</loc>
@@ -3901,22 +3193,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fraser-lake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/granisle</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/granisle/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/hazelton</loc>
@@ -3925,22 +3205,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/hazelton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/houston</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/houston/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/hudson-s-hope</loc>
@@ -3949,22 +3217,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/hudson-s-hope/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kitimat</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kitimat/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/kwadacha</loc>
@@ -3973,22 +3229,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kwadacha/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/mackenzie</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/mackenzie/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/mcbride</loc>
@@ -3997,22 +3241,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/mcbride/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/new-hazelton</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/new-hazelton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/northern-rockies</loc>
@@ -4021,22 +3253,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/northern-rockies/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/penny</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/penny/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/port-edward</loc>
@@ -4045,22 +3265,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-edward/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/pouce-coupe</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/pouce-coupe/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/prince-george</loc>
@@ -4069,22 +3277,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/prince-george/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/prince-rupert</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/prince-rupert/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/rose-prairie</loc>
@@ -4093,22 +3289,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/rose-prairie/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/smithers</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/smithers/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/stewart</loc>
@@ -4117,22 +3301,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/stewart/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tachie</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tachie/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/taylor</loc>
@@ -4141,22 +3313,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/taylor/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/telegraph-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/telegraph-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/telkwa</loc>
@@ -4165,22 +3325,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/telkwa/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/terrace</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/terrace/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/tomslake</loc>
@@ -4189,22 +3337,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/tomslake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tumbler-ridge</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tumbler-ridge/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/t-te-jaune-cache</loc>
@@ -4213,22 +3349,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/t-te-jaune-cache/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/usk</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/usk/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/valemount</loc>
@@ -4237,22 +3361,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/valemount/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vanderhoof</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/vanderhoof/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/witset</loc>
@@ -4261,22 +3373,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/witset/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/100-mile-house</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/100-mile-house/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/108-mile-ranch</loc>
@@ -4285,22 +3385,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/108-mile-ranch/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/cinema</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/cinema/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/cottonwood</loc>
@@ -4309,22 +3397,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cottonwood/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/glenora</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/glenora/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/quesnel</loc>
@@ -4333,22 +3409,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/quesnel/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/wells</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/wells/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/williams-lake</loc>
@@ -4357,22 +3421,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/williams-lake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/ashcroft</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/ashcroft/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/barriere</loc>
@@ -4381,22 +3433,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/barriere/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/blind-bay</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/blind-bay/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/blue-river</loc>
@@ -4405,22 +3445,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/blue-river/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/brookmere</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/brookmere/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/cache-creek</loc>
@@ -4429,22 +3457,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cache-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/chase</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/chase/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/clearwater</loc>
@@ -4453,22 +3469,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/clearwater/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/clinton</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/clinton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/craigellachie</loc>
@@ -4477,22 +3481,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/craigellachie/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kamloops/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/little-fort</loc>
@@ -4501,22 +3493,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/little-fort/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/logan-lake</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/logan-lake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lytton</loc>
@@ -4525,22 +3505,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lytton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/malakwa</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/malakwa/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/merritt</loc>
@@ -4549,22 +3517,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/merritt/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/revelstoke</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/revelstoke/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/salmon-arm</loc>
@@ -4573,22 +3529,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/salmon-arm/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/savona</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/savona/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sicamous</loc>
@@ -4597,22 +3541,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sicamous/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/spences-bridge</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/spences-bridge/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/sun-peaks</loc>
@@ -4621,22 +3553,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sun-peaks/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tappen</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tappen/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/three-valley-gap</loc>
@@ -4645,22 +3565,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/three-valley-gap/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/westwold</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/westwold/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/armstrong</loc>
@@ -4669,22 +3577,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/armstrong/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/cawston</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/cawston/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/coldstream</loc>
@@ -4693,22 +3589,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/coldstream/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/enderby</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/enderby/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/falkland</loc>
@@ -4717,22 +3601,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/falkland/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/hedley</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/hedley/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/kelowna</loc>
@@ -4741,22 +3613,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/keremeos</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/keremeos/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/lake-country</loc>
@@ -4765,22 +3625,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lake-country/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/lumby</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/lumby/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/oliver</loc>
@@ -4789,22 +3637,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/oliver/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/osoyoos</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/osoyoos/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/peachland</loc>
@@ -4813,22 +3649,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/peachland/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/penticton</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/penticton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/princeton</loc>
@@ -4837,22 +3661,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/princeton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/spallumcheen</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/spallumcheen/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/summerland</loc>
@@ -4861,22 +3673,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/summerland/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vernon</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/vernon/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/west-kelowna</loc>
@@ -4885,22 +3685,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/ainsworth-hot-springs</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/ainsworth-hot-springs/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/balfour</loc>
@@ -4909,22 +3697,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/balfour/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/brisco</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/brisco/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/canal-flats</loc>
@@ -4933,22 +3709,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/canal-flats/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/castledale</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/castledale/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/castlegar</loc>
@@ -4957,22 +3721,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/castlegar/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/cranbrook</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/cranbrook/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/creston</loc>
@@ -4981,22 +3733,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/creston/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/edgewater</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/edgewater/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/elkford</loc>
@@ -5005,22 +3745,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/elkford/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/fairmont-hot-springs</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/fairmont-hot-springs/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/fernie</loc>
@@ -5029,22 +3757,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fernie/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/field</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/field/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/fruitvale</loc>
@@ -5053,22 +3769,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fruitvale/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/golden</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/golden/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/grand-forks</loc>
@@ -5077,22 +3781,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/grand-forks/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/greenwood</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/greenwood/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/invermere</loc>
@@ -5101,22 +3793,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/invermere/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kaslo</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kaslo/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/kimberley</loc>
@@ -5125,22 +3805,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kimberley/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/lemon-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/lemon-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/midway</loc>
@@ -5149,22 +3817,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/midway/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/montrose</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/montrose/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/nakusp</loc>
@@ -5173,22 +3829,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nakusp/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nelson</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/nelson/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/new-denver</loc>
@@ -5197,22 +3841,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/new-denver/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/parson</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/parson/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/radium-hot-springs</loc>
@@ -5221,22 +3853,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/radium-hot-springs/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/robson</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/robson/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/rock-creek</loc>
@@ -5245,22 +3865,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/rock-creek/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/rossland</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/rossland/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/salmo</loc>
@@ -5269,22 +3877,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/salmo/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/silverton</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/silverton/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/slocan</loc>
@@ -5293,22 +3889,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/slocan/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/sparwood</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/sparwood/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/trail</loc>
@@ -5317,22 +3901,10 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/trail/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/trout-lake</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/trout-lake/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/warfield</loc>
@@ -5341,34 +3913,16 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/warfield/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/windermere</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/windermere/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/winlaw</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/winlaw/zoning</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/community/balfour/n/balfour-to-kaslo-west</loc>
@@ -5461,13 +4015,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/view-royal/n/hospital</loc>
+    <loc>https://eztofind.ca/community/cache-creek/n/cache-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cache-creek/n/cache-creek</loc>
+    <loc>https://eztofind.ca/community/view-royal/n/hospital</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5521,13 +4075,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/east-sooke</loc>
+    <loc>https://eztofind.ca/community/clearwater/n/little-fort</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/clearwater/n/little-fort</loc>
+    <loc>https://eztofind.ca/community/sooke/n/east-sooke</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6697,6 +5251,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/esquimalt/n/esquimalt</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/kamloops/n/westsyde</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -6704,12 +5264,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/lantzville/n/lower-lantzville</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/esquimalt/n/esquimalt</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -8251,13 +6805,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/enderby/n/ashton-crk-mabel-lk</loc>
+    <loc>https://eztofind.ca/community/duncan/n/cowichan-station-glenora</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/duncan/n/cowichan-station-glenora</loc>
+    <loc>https://eztofind.ca/community/enderby/n/ashton-crk-mabel-lk</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

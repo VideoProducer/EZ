@@ -2562,7 +2562,6 @@ const CommunityPage = () => {
           <Link to="/seller" className="btn btn-green">I'm Selling in {found}</Link>
         </> : <Link to={`/referral-request?city=${encodeURIComponent(found)}`} className="btn btn-primary">Request a Referral REALTOR® in {found}</Link>}
         <Link to={`/listings?city=${encodeURIComponent(found)}`} className="btn btn-outline" data-testid={`community-view-listings-${slug}`}>View Listings in {found}</Link>
-        <Link to={`/community/${slug}/zoning`} className="btn btn-outline" data-testid={`community-view-zoning-${slug}`}>🏛️ Zoning in {found}</Link>
       </div>
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
