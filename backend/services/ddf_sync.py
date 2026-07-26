@@ -1,75 +1,337 @@
 """
-CREA DDF® (RESO Web API / OData 4) sync worker — SCAFFOLD.
+CREA DDF® (RESO Web API / OData 4) sync worker — PRODUCTION.
 
-Real API calls will be plugged in once CREA provisions the endpoint + $metadata
-schema for eztofind.ca. Everything AROUND the fetch (auth, pagination shape,
-incremental filter, reconciliation, error handling, throttling) is in place so
-the swap-in is a one-liner change to `_fetch_page()`.
+Docs: https://ddfapi-docs.realtor.ca/
+Token URL: https://identity.crea.ca/connect/token   (grant_type=client_credentials,
+           scope=DDFApi_Read, client_id=<Destination username>,
+           client_secret=<Destination password>)
+API base:  https://ddfapi.realtor.ca/odata/v1/
+Property list: /Property   (paginated 20 default, 100 max via $top)
+Replication:   /Property/PropertyReplication()  (for master list + incremental)
 
 Compliance touchpoints:
-- Server-side ONLY: never call CREA from the browser (credentials would leak)
-- Domain-bound credentials stored in /app/backend/.env (never committed)
-- Incremental sync via LastUpdated timestamp
-- Reconciliation removes withdrawn listings from Mongo + sitemap-listings.xml
-- Runs every 4 hours by default (CREA min is 24h; we go tighter)
+- Server-side ONLY — credentials never leave /app/backend/.env
+- Domain-bound
+- Token cached for ~55 minutes (server-side token expires at 60m)
+- Incremental sync via ModificationTimestamp
+- Reconciliation removes withdrawn listings from Mongo
 - Analytics tracking hooked separately (see analytics_logger.py)
+- InternetEntireListingDisplayYN + InternetAddressDisplayYN honoured
 """
 from __future__ import annotations
 import os
+import time
+import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Any
+
+import httpx
 
 logger = logging.getLogger("ddf_sync")
 
 # Read from env — never hard-code
-DDF_ENDPOINT      = os.environ.get("CREA_DDF_ENDPOINT", "")
+DDF_TOKEN_URL     = os.environ.get("CREA_DDF_TOKEN_URL", "https://identity.crea.ca/connect/token")
+DDF_ENDPOINT      = os.environ.get("CREA_DDF_ENDPOINT", "https://ddfapi.realtor.ca").rstrip("/")
+DDF_ODATA_BASE    = f"{DDF_ENDPOINT}/odata/v1"
 DDF_CLIENT_ID     = os.environ.get("CREA_DDF_CLIENT_ID", "")
 DDF_CLIENT_SECRET = os.environ.get("CREA_DDF_CLIENT_SECRET", "")
-DDF_AGENT_ID      = os.environ.get("CREA_DDF_AGENT_ID", "")
+DDF_SCOPE         = os.environ.get("CREA_DDF_SCOPE", "DDFApi_Read")
+
+# BC-only filter (Doug's site scope). CREA accepts full province names.
+DDF_PROVINCE_FILTER = os.environ.get("CREA_DDF_PROVINCE", "British Columbia")
+
+# Token cache (module-level, single-worker friendly)
+_token_cache: dict[str, Any] = {"access_token": None, "expires_at": 0.0}
 
 
 def credentials_ready() -> bool:
     """Return True once DDF creds are configured. Until then, sync is a no-op."""
-    return all([DDF_ENDPOINT, DDF_CLIENT_ID, DDF_CLIENT_SECRET])
+    return bool(DDF_CLIENT_ID and DDF_CLIENT_SECRET and DDF_TOKEN_URL and DDF_ENDPOINT)
 
 
-async def _fetch_page(client, next_link: Optional[str]) -> dict:
-    """Fetch one OData page from CREA DDF. Placeholder — real endpoint TBD.
+async def _get_token(force_refresh: bool = False) -> str:
+    """Fetch and cache an OAuth2 access token from identity.crea.ca."""
+    now = time.time()
+    if not force_refresh and _token_cache["access_token"] and _token_cache["expires_at"] > now + 30:
+        return _token_cache["access_token"]
 
-    Once credentials are provided:
-        headers = {"Authorization": f"Bearer {token}", "odata.maxpagesize": "100"}
-        url = next_link or f"{DDF_ENDPOINT}/Property?$filter=..."
-        r = await client.get(url, headers=headers, timeout=30.0)
-        r.raise_for_status()
-        return r.json()
+    if not credentials_ready():
+        raise RuntimeError("CREA DDF credentials not configured in backend/.env")
 
-    Returns:
-        {"value": [ ...properties... ], "@odata.nextLink": "https://..."}
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            DDF_TOKEN_URL,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": DDF_CLIENT_ID,
+                "client_secret": DDF_CLIENT_SECRET,
+                "scope": DDF_SCOPE,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+    if r.status_code != 200:
+        # Preserve the CREA error message for the admin to see
+        raise RuntimeError(f"DDF token request failed ({r.status_code}): {r.text[:400]}")
+    payload = r.json()
+    tok = payload["access_token"]
+    expires_in = int(payload.get("expires_in", 3600))
+    _token_cache["access_token"] = tok
+    _token_cache["expires_at"] = now + max(60, expires_in - 60)  # renew 1m before expiry
+    logger.info(f"DDF token acquired, expires in ~{expires_in}s")
+    return tok
+
+
+async def test_connection() -> dict:
+    """Diagnostic: acquire a token and hit a tiny Property page. Returns a
+    structured status the admin dashboard can render."""
+    result: dict = {
+        "credentials_configured": credentials_ready(),
+        "token_url": DDF_TOKEN_URL,
+        "endpoint": DDF_ENDPOINT,
+        "province_filter": DDF_PROVINCE_FILTER,
+        "token_ok": False,
+        "api_ok": False,
+        "error": None,
+        "sample_count": 0,
+    }
+    if not credentials_ready():
+        result["error"] = "Credentials missing. Set CREA_DDF_CLIENT_ID and CREA_DDF_CLIENT_SECRET in backend/.env (these are your DDF Destination username + password from the CREA DDF dashboard — NOT your realtor.ca member login)."
+        return result
+    try:
+        tok = await _get_token(force_refresh=True)
+        result["token_ok"] = True
+    except Exception as e:
+        result["error"] = str(e)
+        return result
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.get(
+                f"{DDF_ODATA_BASE}/Property"
+                f"?$top=1&$select=ListingKey,City,StateOrProvince,ListPrice,StandardStatus",
+                headers={"Authorization": f"Bearer {tok}"},
+            )
+        if r.status_code != 200:
+            result["error"] = f"DDF Property probe failed ({r.status_code}): {r.text[:400]}"
+            return result
+        data = r.json()
+        result["api_ok"] = True
+        result["sample_count"] = len(data.get("value", []))
+        result["sample"] = data.get("value", [])[:1]
+    except Exception as e:
+        result["error"] = f"DDF Property probe exception: {e}"
+    return result
+
+
+# ---------------- Mapping ----------------
+def _first(v):
+    """Some fields come back as arrays; take the first for our summary shape."""
+    if isinstance(v, list):
+        return v[0] if v else None
+    return v
+
+def _feature_flags(p: dict) -> list[str]:
+    """Distil a small set of user-facing feature tags from the RESO payload."""
+    feats: list[str] = []
+    if p.get("PoolFeatures"): feats.append("pool")
+    if p.get("FireplaceYN"): feats.append("fireplace")
+    if any(w and "waterfront" in str(w).lower() for w in (p.get("WaterfrontFeatures") or [])): feats.append("waterfront")
+    if any(v and ("ocean" in str(v).lower() or "mountain" in str(v).lower()) for v in (p.get("View") or [])):
+        feats.append("view")
+    if p.get("ParkingTotal") and int(p.get("ParkingTotal") or 0) >= 2: feats.append("parking-2plus")
+    if p.get("Basement"): feats.append("basement")
+    return feats
+
+def _map_property(p: dict) -> Optional[dict]:
+    """Map a CREA DDF Property row -> internal listings shape.
+    Returns None for records we must not publish (privacy flags / non-BC).
     """
-    raise NotImplementedError("DDF endpoint provisioning pending — using mock seed data instead.")
+    # Respect display flags
+    if p.get("InternetEntireListingDisplayYN") is False:
+        return None
+    # BC scope only
+    if DDF_PROVINCE_FILTER and p.get("StateOrProvince") and p.get("StateOrProvince") != DDF_PROVINCE_FILTER:
+        return None
+
+    show_addr = p.get("InternetAddressDisplayYN") is not False  # default true if null
+
+    listing_key = str(p.get("ListingKey") or "").strip()
+    if not listing_key:
+        return None
+
+    media = p.get("Media") or []
+    photos = []
+    for m in media:
+        if not isinstance(m, dict): continue
+        url = m.get("MediaURL")
+        if url and (m.get("MediaCategory") in (None, "Photo")):
+            photos.append(url)
+    if photos and media[0:1] and media[0].get("PreferredPhotoYN"):
+        # already ordered; nothing else to do
+        pass
+
+    street = " ".join(x for x in [
+        p.get("StreetNumber"), p.get("StreetDirPrefix"),
+        p.get("StreetName"), p.get("StreetSuffix"), p.get("StreetDirSuffix"),
+    ] if x)
+    unit = p.get("UnitNumber")
+    if unit:
+        street = f"{street} #{unit}" if street else f"#{unit}"
+
+    return {
+        "listing_key": listing_key,
+        "mls_number": p.get("ListingId") or listing_key,
+        "list_price": p.get("ListPrice"),
+        "status": (p.get("StandardStatus") or "Active"),
+        "property_type": p.get("PropertySubType") or _first(p.get("StructureType")) or "Residential",
+        "beds": p.get("BedroomsTotal"),
+        "baths": p.get("BathroomsTotalInteger"),
+        "living_area": p.get("LivingArea"),
+        "living_area_units": p.get("LivingAreaUnits"),
+        "year_built": p.get("YearBuilt"),
+        "lot_size_area": p.get("LotSizeArea"),
+        "lot_size_units": p.get("LotSizeUnits"),
+        "street_address": street if show_addr else "",
+        "unparsed_address": p.get("UnparsedAddress") if show_addr else "",
+        "city": p.get("City") or "",
+        "region": p.get("CityRegion") or "",
+        "postal_code": p.get("PostalCode") if show_addr else "",
+        "province": p.get("StateOrProvince") or "British Columbia",
+        "country": p.get("Country") or "Canada",
+        "lat": p.get("Latitude"),
+        "lon": p.get("Longitude"),
+        "description": p.get("PublicRemarks") or "",
+        "features": _feature_flags(p),
+        "photos": photos,
+        "photo_count": p.get("PhotosCount") or len(photos),
+        "brokerage_name": None,   # resolved from Office if needed via a follow-up sync
+        "list_office_key": p.get("ListOfficeKey") or "",
+        "list_agent_key": p.get("ListAgentKey") or "",
+        "realtor_ca_url": p.get("ListingURL") or f"https://www.realtor.ca/real-estate/{listing_key}",
+        "modified_at": p.get("ModificationTimestamp"),
+        "originating_system": p.get("OriginatingSystemName") or "CREA DDF",
+        "internet_display_addr": show_addr,
+        # Bookkeeping
+        "source": "CREA_DDF",
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
-async def sync_incremental(db, since: Optional[datetime] = None) -> dict:
-    """Incremental sync — pulls only listings updated since `since`.
-    Returns: {"pulled": N, "upserted": N, "removed": N, "errors": [...]}
-    Called by APScheduler (once CREA is live) or on-demand via admin.
+# ---------------- Sync ----------------
+async def _fetch_page(client: httpx.AsyncClient, url: str, token: str) -> dict:
+    r = await client.get(url, headers={
+        "Authorization": f"Bearer {token}",
+        "odata.maxpagesize": "100",
+    }, timeout=60.0)
+    if r.status_code == 401:
+        # token expired mid-sync — refresh once
+        token = await _get_token(force_refresh=True)
+        r = await client.get(url, headers={
+            "Authorization": f"Bearer {token}",
+            "odata.maxpagesize": "100",
+        }, timeout=60.0)
+    r.raise_for_status()
+    return r.json()
+
+
+async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int = 200) -> dict:
+    """Pull active BC listings from CREA DDF, upsert to Mongo. Returns a summary.
+
+    - Uses ModificationTimestamp filter when `since` provided.
+    - Reconciles: any prior CREA_DDF listing NOT seen this run is marked withdrawn.
+    - `max_pages` guards against runaway (100/page × 200 = 20k listings).
     """
     if not credentials_ready():
-        logger.info("DDF credentials not configured yet — skipping sync.")
+        logger.info("DDF credentials not configured — skipping sync.")
         return {"pulled": 0, "upserted": 0, "removed": 0, "errors": ["ddf_credentials_missing"]}
-    # Real flow (to activate once credentials arrive):
-    # 1. Loop through pages via @odata.nextLink until exhausted
-    # 2. Upsert each Property doc by ListingKey
-    # 3. Track all keys seen; reconciliation removes any DB record NOT seen
-    # 4. Log to db.ddf_sync_log
-    logger.warning("sync_incremental called but not implemented — DDF endpoint pending.")
-    return {"pulled": 0, "upserted": 0, "removed": 0, "errors": []}
+
+    started = datetime.now(timezone.utc)
+    result = {"pulled": 0, "upserted": 0, "removed": 0, "errors": [], "pages": 0}
+
+    # Build initial URL — BC scope + active + display allowed
+    filters = [f"StateOrProvince eq '{DDF_PROVINCE_FILTER}'"] if DDF_PROVINCE_FILTER else []
+    filters.append("StandardStatus eq 'Active'")
+    filters.append("InternetEntireListingDisplayYN eq true")
+    if since:
+        filters.append(f"ModificationTimestamp gt {since.astimezone(timezone.utc).isoformat().replace('+00:00','Z')}")
+    filter_str = " and ".join(filters)
+
+    url = (
+        f"{DDF_ODATA_BASE}/Property"
+        f"?$top=100&$filter={httpx.QueryParams({'f': filter_str})['f']}"
+    ).replace("$filter=", "$filter=").replace("+", "%20")
+    # httpx QueryParams url-encodes as needed; build simpler:
+    from urllib.parse import quote
+    url = f"{DDF_ODATA_BASE}/Property?$top=100&$filter={quote(filter_str)}"
+
+    try:
+        token = await _get_token()
+    except Exception as e:
+        result["errors"].append(f"token: {e}")
+        return result
+
+    seen_keys: set[str] = set()
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for _ in range(max_pages):
+            try:
+                page = await _fetch_page(client, url, token)
+            except Exception as e:
+                result["errors"].append(f"page: {e}")
+                break
+            result["pages"] += 1
+            rows = page.get("value", []) or []
+            result["pulled"] += len(rows)
+
+            ops = []
+            for p in rows:
+                mapped = _map_property(p)
+                if not mapped:
+                    continue
+                seen_keys.add(mapped["listing_key"])
+                # Upsert
+                try:
+                    await db.listings.update_one(
+                        {"listing_key": mapped["listing_key"]},
+                        {"$set": mapped, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
+                        upsert=True,
+                    )
+                    result["upserted"] += 1
+                except Exception as e:
+                    result["errors"].append(f"upsert {mapped['listing_key']}: {e}")
+
+            next_link = page.get("@odata.nextLink")
+            if not next_link:
+                break
+            url = next_link
+            await asyncio.sleep(0.15)  # be polite
+
+    # Reconciliation: soft-remove listings we didn't see this run (only if full sync = no `since`)
+    if not since and seen_keys:
+        try:
+            r = await db.listings.delete_many({"source": "CREA_DDF", "listing_key": {"$nin": list(seen_keys)}})
+            result["removed"] = r.deleted_count
+        except Exception as e:
+            result["errors"].append(f"reconcile: {e}")
+
+    # Persist a run record
+    try:
+        await db.ddf_sync_log.insert_one({
+            "started_at": started.isoformat(),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "since": since.isoformat() if since else None,
+            **result,
+        })
+    except Exception:
+        pass
+
+    logger.info(f"DDF sync complete: {result}")
+    return result
 
 
 async def reconcile_withdrawals(db, seen_keys: set) -> int:
-    """Remove any listing not seen in the latest full sync (withdrawn/sold/expired)."""
+    """Remove any DDF listing not seen in the latest full sync."""
     if not seen_keys:
         return 0
-    res = await db.listings.delete_many({"listing_key": {"$nin": list(seen_keys)}})
+    res = await db.listings.delete_many({"source": "CREA_DDF", "listing_key": {"$nin": list(seen_keys)}})
     return res.deleted_count

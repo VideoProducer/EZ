@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, json, uuid, logging, bcrypt, jwt
+import os, json, uuid, logging, bcrypt, jwt, asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
@@ -109,6 +109,8 @@ class BuyerLead(BaseModel):
     pipa_ack: bool
     source: str = "buyer_form"
     status: str = "new"
+    form_lang: Optional[str] = "en"
+    notes_en: Optional[str] = ""
     created_at: str = Field(default_factory=now_iso)
 
 class SellerLead(BaseModel):
@@ -127,6 +129,8 @@ class SellerLead(BaseModel):
     pipa_ack: bool
     source: str = "seller_form"
     status: str = "new"
+    form_lang: Optional[str] = "en"
+    reason_en: Optional[str] = ""
     created_at: str = Field(default_factory=now_iso)
 
 class RealtorApplication(BaseModel):
@@ -355,6 +359,40 @@ def get_consent_meta(request: Request) -> dict:
     ua = request.headers.get("user-agent", "")[:500]
     return {"consent_ip": ip, "consent_ua": ua, "consent_at": now_iso()}
 
+
+async def _translate_to_english(text: str, source_lang: str) -> str:
+    """Translate a short free-text field to English for Doug's CRM. Best-effort;
+    on failure returns empty string. Called as a fire-and-forget background task
+    so it doesn't add latency to lead submission."""
+    text = (text or "").strip()
+    if not text or source_lang == "en" or len(text) > 4000:
+        return ""
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"tr-{uuid.uuid4()}",
+            system_message=(
+                "You are a professional translator. Translate the following text to natural, "
+                "concise English. Return ONLY the translation — no explanations, no quotes, "
+                "no source language mention. If the text is already English, return it unchanged."
+            ),
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        out = []
+        async for delta in chat.stream_message(UserMessage(text=text)):
+            if isinstance(delta, TextDelta):
+                out.append(delta.content)
+        return "".join(out).strip()
+    except Exception as e:
+        logger.warning(f"Lead note translation failed ({source_lang}): {e}")
+        return ""
+
+
+async def _translate_lead_notes(collection: str, lead_id: str, field: str, text: str, source_lang: str):
+    """Background task: translate a note field and patch the lead record."""
+    en = await _translate_to_english(text, source_lang)
+    if en:
+        await db[collection].update_one({"id": lead_id}, {"$set": {f"{field}_en": en}})
+
 # =============== LEADS ===============
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
@@ -364,7 +402,10 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         raise HTTPException(400, "Because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.buyer_leads.insert_one(doc)
-    logger.info(f"Buyer lead from {lead.email}")
+    # Background translation of the visitor's free-text note (non-EN forms)
+    if (lead.form_lang or "en") != "en" and (lead.notes or "").strip():
+        asyncio.create_task(_translate_lead_notes("buyer_leads", lead.id, "notes", lead.notes or "", lead.form_lang or "en"))
+    logger.info(f"Buyer lead from {lead.email} (lang={lead.form_lang})")
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
 @api.post("/leads/seller")
@@ -375,6 +416,9 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         raise HTTPException(400, "Because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     await db.seller_leads.insert_one(doc)
+    if (lead.form_lang or "en") != "en" and (lead.reason or "").strip():
+        asyncio.create_task(_translate_lead_notes("seller_leads", lead.id, "reason", lead.reason or "", lead.form_lang or "en"))
+    logger.info(f"Seller lead from {lead.email} (lang={lead.form_lang})")
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
 # =============== UNSUBSCRIBE (working, updates lead records) ===============
@@ -1435,7 +1479,11 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.responses import JSONResponse
 from services.analytics_logger import record_event as _log_event
-from services.ddf_sync import credentials_ready as _ddf_ready, sync_incremental as _ddf_sync
+from services.ddf_sync import (
+    credentials_ready as _ddf_ready,
+    sync_incremental as _ddf_sync,
+    test_connection as _ddf_test,
+)
 
 _limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = _limiter
@@ -1577,6 +1625,11 @@ async def listings_facets(request: Request):
 async def admin_ddf_sync_now(_=Depends(verify_admin)):
     """Manual trigger for a DDF® sync (no-op until credentials are configured)."""
     return await _ddf_sync(db)
+
+@api.get("/admin/listings/ddf-status")
+async def admin_ddf_status(_=Depends(verify_admin)):
+    """Probe CREA DDF® auth + Property endpoint. Returns rich diagnostics."""
+    return await _ddf_test()
 
 
 # =============== AI CONTENT AUDIT TRAIL (CREA / BCFSA compliance) ===============

@@ -4,6 +4,17 @@ import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, us
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import "./App.css";
+import { useT, normalizeLang, langQS, isRTL } from "./i18n";
+
+// Hook: read `?lang=` from URL (falls back to Doogie's stored lang) and returns
+// [locale, t(), langLinkSuffix] for use in translated forms/pages.
+const useFormLang = () => {
+  const [params] = useSearchParams();
+  const raw = params.get("lang") || localStorage.getItem("ez_doogie_lang") || "en";
+  const lang = normalizeLang(raw);
+  const t = useT(lang);
+  return { lang, t, qs: langQS(lang), rtl: isRTL(lang) };
+};
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const SITE_URL = "https://eztofind.ca";
@@ -35,7 +46,21 @@ const CommunityMap = ({ name, region }) => {
 // Convert Doogie's markdown-ish chat output into safe HTML with clickable
 // internal links (/referral-request, /buyer, /seller, /glossary/xxx, etc.),
 // external URLs, **bold**, and line breaks.
-const renderChatContent = (raw) => {
+// When `lang` is non-English, internal lead links preserve the visitor's
+// language via ?lang=xx so localized forms are rendered.
+const LEAD_PATHS = ["/buyer", "/seller", "/contact", "/referral-request"];
+const _appendLangToHref = (raw, lang) => {
+  if (!lang || lang === "en") return raw;
+  return raw.replace(/href="(\/[^"?#]*)([^"]*)"/g, (m, path, tail) => {
+    // Only append to lead conversion routes — not glossary/community pages
+    if (!LEAD_PATHS.some(p => path === p || path.startsWith(p + "/"))) return m;
+    // Avoid duplicating lang= if already present
+    if (/[?&]lang=/.test(tail)) return m;
+    const sep = tail.startsWith("?") ? "&" : "?";
+    return `href="${path}${tail}${sep}lang=${encodeURIComponent(lang)}"`;
+  });
+};
+const renderChatContent = (raw, lang) => {
   if (!raw) return "";
   // 1. HTML-escape everything first (safety)
   let s = String(raw)
@@ -57,6 +82,8 @@ const renderChatContent = (raw) => {
   //     Doogie's system prompt uses this phrase; make it clickable regardless of exact model output.
   s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link)/gi,
     '<a href="/referral-request" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
+  // 4c. If a non-English chat language is active, append ?lang=xx to lead conversion routes.
+  s = _appendLangToHref(s, lang);
   // 5. Line breaks
   s = s.replace(/\n/g, "<br/>");
   return s;
@@ -687,7 +714,7 @@ const DoogieChat = () => {
         <div style={{fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem"}}>Before we chat…</div>
         <p style={{margin:"0 0 0.75rem"}}>Doogie is an AI assistant powered by Anthropic Claude. Doogie provides <strong>general information only</strong> — never financial, legal, tax, or property-specific advice.</p>
         <p style={{margin:"0 0 0.75rem"}}><strong>Please don't share confidential information</strong> such as your full name, address, phone number, financial details, or property specifics. Messages you send are processed by our AI provider and may be logged for quality and compliance review.</p>
-        <p style={{margin:"0 0 1rem",fontSize:"0.82rem"}}>See our <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy</Link> for details. For advice specific to your situation, please <Link to="/contact" style={{color:"var(--brand-blue)"}}>contact Doug LeMaire, REALTOR®</Link>.</p>
+        <p style={{margin:"0 0 1rem",fontSize:"0.82rem"}}>See our <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--brand-blue)"}}>Privacy Policy</Link> for details. For advice specific to your situation, please <Link to={`/contact${langQS(lang)}`} style={{color:"var(--brand-blue)"}}>contact Doug LeMaire, REALTOR®</Link>.</p>
         <button onClick={acceptConsent} className="btn btn-primary" style={{width:"100%"}} data-testid="doogie-consent-accept">I understand — start chatting</button>
       </div>
       : <>
@@ -711,7 +738,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content)}}/>{m.role==="assistant" && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to="/privacy" style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -1502,65 +1529,67 @@ const GlossaryTerm = () => {
 
 // --- Lead forms ---
 const BuyerForm = () => {
+  const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"]}); setDone(true); } catch(x){ setErr("Please complete all required fields including consents."); } };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <div className="eyebrow">Buyer Intake</div><h1 className="section-title">Tell us what you're looking for</h1>
-    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services.</div>
+  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang}); setDone(true); } catch(x){ setErr(t("common.required")); } };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
+  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
       <div className="form-grid">
-        <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="buyer-name"/></div>
-        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="buyer-email"/></div>
-        <div className="field"><label>Phone *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} data-testid="buyer-phone"/></div>
-        <div className="field"><label>Property Type *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})} data-testid="buyer-type"><option value="">Select…</option><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
-        <div className="field"><label>Budget Range *</label><select required value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="">Select…</option><option>Under $750K</option><option>$750K – $1.25M</option><option>$1.25M – $2M</option><option>$2M – $3M</option><option>$3M – $5M</option><option>$5M+</option></select></div>
-        <div className="field"><label>Timeline *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">Select…</option><option>0-3 months</option><option>3-6 months</option><option>6-12 months</option><option>12+ months</option></select></div>
-        <div className="field"><label>Financing *</label><select required value={f.financing_status} onChange={e=>setF({...f,financing_status:e.target.value})}><option value="">Select…</option><option>Pre-approved</option><option>Working on it</option><option>Cash buyer</option><option>Need information</option></select></div>
-        <div className="field"><label>Preferred Contact</label><select value={f.preferred_contact} onChange={e=>setF({...f,preferred_contact:e.target.value})}><option value="email">Email</option><option value="phone">Phone</option><option value="text">Text</option></select></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="buyer-name"/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="buyer-email"/></div>
+        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} data-testid="buyer-phone"/></div>
+        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})} data-testid="buyer-type"><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
+        <div className="field"><label>{t("buyer.budget_range")} *</label><select required value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("buyer.budget_u750")}</option><option value="$750K – $1.25M">{t("buyer.budget_750_1250")}</option><option value="$1.25M – $2M">{t("buyer.budget_1250_2m")}</option><option value="$2M – $3M">{t("buyer.budget_2m_3m")}</option><option value="$3M – $5M">{t("buyer.budget_3m_5m")}</option><option value="$5M+">{t("buyer.budget_5mplus")}</option></select></div>
+        <div className="field"><label>{t("buyer.timeline")} *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="0-3 months">{t("buyer.tl_0_3")}</option><option value="3-6 months">{t("buyer.tl_3_6")}</option><option value="6-12 months">{t("buyer.tl_6_12")}</option><option value="12+ months">{t("buyer.tl_12plus")}</option></select></div>
+        <div className="field"><label>{t("buyer.financing_status")} *</label><select required value={f.financing_status} onChange={e=>setF({...f,financing_status:e.target.value})}><option value="">{t("common.select")}</option><option value="Pre-approved">{t("buyer.fin_pre")}</option><option value="Working on it">{t("buyer.fin_working")}</option><option value="Cash buyer">{t("buyer.fin_cash")}</option><option value="Need information">{t("buyer.fin_need_info")}</option></select></div>
+        <div className="field"><label>{t("buyer.preferred_contact")}</label><select value={f.preferred_contact} onChange={e=>setF({...f,preferred_contact:e.target.value})}><option value="email">{t("contact.email_pref")}</option><option value="phone">{t("contact.phone_pref")}</option><option value="text">{t("contact.text_pref")}</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Areas of interest (BC only)</label><input placeholder="e.g. Langley, White Rock, Whistler" onChange={e=>setF({...f,areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Notes</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
-      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>setF({...f,first_time_buyer:e.target.checked})}/> I am a first-time home buyer</label></div>
-      <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="buyer-under-contract"/> I am currently under contract with another REALTOR®</label></div>
-      {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Thank you — but because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>Communities</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>Glossary</Link> pages.</div>}
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="buyer-casl"/> I consent to receive commercial electronic messages from EZtoFind.ca (CASL). I can unsubscribe anytime.</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link>.</label></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.areas_label")}</label><input placeholder={t("buyer.areas_placeholder")} onChange={e=>setF({...f,areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>setF({...f,first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
+      <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
+      {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("buyer.under_contract_block")}</div>}
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
-      <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">Submit</button>
+      <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">{t("common.submit")}</button>
     </form>
   </div></section>);
 };
 
 const SellerForm = () => {
+  const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,f); setDone(true);}catch(x){setErr("Please complete required fields and consents.");} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Thank you!</h1><p className="section-sub">Doug will reach out within 1 business day.</p><Link to="/" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Back home</Link></div></section>;
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <div className="eyebrow">Seller Intake</div><h1 className="section-title">Let's talk about your property</h1>
-    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>BCFSA Consumer Notice — Please read before submitting:</strong> Submitting this form does not create a REALTOR®-client relationship. Under the Real Estate Services Rules, Doug LeMaire, REALTOR® will provide you with a formal <Link to="/dorts" style={{color:"var(--brand-blue)",fontWeight:600}}>Disclosure of Representation in Trading Services (DoRTS)</Link> before providing real estate services.</div>
+  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang}); setDone(true);}catch(x){setErr(t("common.required"));} };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
+  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
+    <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">
       <div className="form-grid">
-        <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-        <div className="field"><label>Phone *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-        <div className="field"><label>City (BC) *</label><input required value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
+        <div className="field"><label>{t("seller.city")} *</label><input required value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Property Address *</label><input required value={f.property_address} onChange={e=>setF({...f,property_address:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.property_address")} *</label><input required value={f.property_address} onChange={e=>setF({...f,property_address:e.target.value})}/></div>
       <div className="form-grid" style={{marginTop:"1rem"}}>
-        <div className="field"><label>Property Type *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option value="">Select…</option><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
-        <div className="field"><label>Timeline to List *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">Select…</option><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just exploring</option></select></div>
-        <div className="field"><label>Estimated Value *</label><select required value={f.estimated_value} onChange={e=>setF({...f,estimated_value:e.target.value})}><option value="">Select…</option><option>Under $750K</option><option>$750K – $1.5M</option><option>$1.5M – $3M</option><option>$3M – $5M</option><option>$5M+</option></select></div>
+        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
+        <div className="field"><label>{t("seller.timeline_list")} *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="ASAP">{t("seller.tl_asap")}</option><option value="1-3 months">{t("seller.tl_1_3")}</option><option value="3-6 months">{t("seller.tl_3_6")}</option><option value="6-12 months">{t("seller.tl_6_12")}</option><option value="Just exploring">{t("seller.tl_exploring")}</option></select></div>
+        <div className="field"><label>{t("seller.estimated_value")} *</label><select required value={f.estimated_value} onChange={e=>setF({...f,estimated_value:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("seller.ev_u750")}</option><option value="$750K – $1.5M">{t("seller.ev_750_1500")}</option><option value="$1.5M – $3M">{t("seller.ev_1500_3m")}</option><option value="$3M – $5M">{t("seller.ev_3m_5m")}</option><option value="$5M+">{t("seller.ev_5mplus")}</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="seller-currently-listed"/> The property is currently listed with another REALTOR®</label></div>
-      {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Thank you — but because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>Communities</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>Glossary</Link> pages.</div>}
-      <div style={{marginTop:"1rem"}} className="field"><label>Reason for selling (optional)</label><textarea rows="3" value={f.reason} onChange={e=>setF({...f,reason:e.target.value})}/></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> I consent to receive commercial electronic messages (CASL).</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
+      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
+      {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("seller.currently_listed_block")}</div>}
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>setF({...f,reason:e.target.value})}/></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> {t("consent.casl")}</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
-      <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">Submit</button>
+      <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">{t("common.submit")}</button>
     </form>
   </div></section>);
 };
@@ -1637,16 +1666,22 @@ const About = () => (<section className="section"><div className="container-x" s
 </div></section>);
 
 // --- Contact ---
-const Contact = () => (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-  <div className="eyebrow">Contact</div><h1 className="section-title">Get in touch</h1>
-  <div className="paper" style={{fontFamily:"Inter,sans-serif",lineHeight:1.9}}>
-    <p><strong>General:</strong> <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a></p>
-    <p><strong>REALTORS®:</strong> <a href="mailto:realtors@eztofind.ca" style={{color:"var(--brand-blue)"}}>realtors@eztofind.ca</a></p>
-    <p><strong>Referral leads:</strong> <a href="mailto:referral@eztofind.ca" style={{color:"var(--brand-blue)"}}>referral@eztofind.ca</a></p>
-    <hr style={{margin:"1.5rem 0",border:"none",borderTop:"1px solid rgba(15,42,91,0.1)"}}/>
-    <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}><Link to="/buyer" className="btn btn-primary">Buyer Form</Link><Link to="/seller" className="btn btn-green">Seller Form</Link></div>
-  </div>
-</div></section>);
+const Contact = () => {
+  const { t, qs, rtl } = useFormLang();
+  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <div className="eyebrow">{t("contact.eyebrow")}</div><h1 className="section-title">{t("contact.title")}</h1>
+    <div className="paper" style={{fontFamily:"Inter,sans-serif",lineHeight:1.9}}>
+      <p><strong>{t("contact.general")}:</strong> <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a></p>
+      <p><strong>{t("contact.realtors")}:</strong> <a href="mailto:realtors@eztofind.ca" style={{color:"var(--brand-blue)"}}>realtors@eztofind.ca</a></p>
+      <p><strong>{t("contact.referral_leads")}:</strong> <a href="mailto:referral@eztofind.ca" style={{color:"var(--brand-blue)"}}>referral@eztofind.ca</a></p>
+      <hr style={{margin:"1.5rem 0",border:"none",borderTop:"1px solid rgba(15,42,91,0.1)"}}/>
+      <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}>
+        <Link to={`/buyer${qs}`} className="btn btn-primary" data-testid="contact-buyer-link">{t("common.buyer_form")}</Link>
+        <Link to={`/seller${qs}`} className="btn btn-green" data-testid="contact-seller-link">{t("common.seller_form")}</Link>
+      </div>
+    </div>
+  </div></section>);
+};
 
 // --- Legal ---
 const Legal = ({title,body}) => (<section className="section"><div className="container-x" style={{maxWidth:"46rem",fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}><h1 className="section-title">{title}</h1>{body}</div></section>);
@@ -1981,27 +2016,28 @@ const Valuation = () => {
 
 // --- Referral Request (out-of-area) ---
 const ReferralRequest = () => {
+  const { lang, t, qs, rtl } = useFormLang();
   const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false});
   const [city,setCity]=useState(""); const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}. ${f.notes}`}); setDone(true);}catch(x){setErr("Please complete required fields.");} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Referral request received!</h1><p className="section-sub">We'll match you with a REALTOR® active in your area within 1 business day.</p></div></section>;
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <div className="eyebrow">BC-Wide Referral</div><h1 className="section-title">Need a REALTOR® outside Doug's focus area?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky. For any other BC community, we'll connect you with a REALTOR® from our referral network.</p>
+  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}. ${f.notes}`, form_lang: lang}); setDone(true);}catch(x){setErr(t("common.required"));} };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
+  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")}</p>
     <form onSubmit={submit} className="paper" data-testid="referral-form">
       <div className="form-grid">
-        <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-        <div className="field"><label>Phone *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-        <div className="field"><label>BC City/Community *</label><input required value={city} onChange={e=>setCity(e.target.value)} placeholder="e.g. Kelowna, Nelson, Prince George"/></div>
-        <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option>Detached</option><option>Condo</option><option>Townhouse</option><option>Acreage / Rural</option><option>Luxury</option></select></div>
-        <div className="field"><label>Budget</label><select value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option>Under $500K</option><option>$500K – $1M</option><option>$1M – $2M</option><option>$2M+</option><option>Not sure</option></select></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
+        <div className="field"><label>{t("ref.city")} *</label><input required value={city} onChange={e=>setCity(e.target.value)} placeholder={t("ref.city_placeholder")}/></div>
+        <div className="field"><label>{t("buyer.property_type")}</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option value="Detached">{t("buyer.pt_detached")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option><option value="Acreage / Rural">{t("buyer.pt_acreage")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option></select></div>
+        <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Anything else we should know?</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> I consent to CASL commercial messages.</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy.</label></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> {t("consent.casl")}</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
-      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}}>Request Referral</button>
+      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="referral-submit">{t("ref.submit")}</button>
     </form>
   </div></section>);
 };

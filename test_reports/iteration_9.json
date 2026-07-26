@@ -1,0 +1,25 @@
+{
+  "summary": "Verified (A) multilingual buyer/seller/referral intake with async Claude translation of free-text notes, and (B) CREA DDF diagnostic endpoint. All 8 backend pytest cases PASS (pt-PT, zh-Hans, and fa translations correctly populate notes_en/reason_en within ~15s; EN and missing form_lang do NOT trigger translation; /api/admin/listings/ddf-status returns correct diagnostic schema with credentials_configured=true, token_ok=false, error containing 'invalid_client'; /api/admin/listings/sync-now returns 200 with token/auth errors rather than 500). Frontend playwright verified: /buyer?lang=pt-PT renders Portuguese ('Diga-nos o que procura', 'Aviso ao Consumidor da BCFSA', 'Nome completo', 'Enviar'; eyebrow 'Registo de Comprador' renders CSS-uppercased); /seller?lang=zh-Hans shows all 4 required option strings 独立屋, 豪宅, 农地／马房用地, 遗产出售 in the property-type dropdown; /referral-request?lang=fa uses dir='rtl' on section; /contact?lang=pt-PT preserves ?lang=pt-PT in both Buyer & Seller form buttons ('Formulário de Comprador'/'Formulário de Vendedor'). Back-home button on buyer/seller success screens uses t('common.back_home') = 'Voltar à página inicial' and href={`/${qs}`} which includes the lang param — verified via code inspection (full UI submission skipped as noted in review request as low-priority).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_multilingual_and_ddf.py",
+    "/app/test_reports/pytest/multilingual_ddf_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 1849 lines and App.js is 2776 lines — both continue to grow past the 700-line guideline. Refactor into routers (leads, admin, listings, doogie) and page/component modules to keep the codebase maintainable. Carried over from previous iterations.",
+    "_translate_lead_notes runs via asyncio.create_task fire-and-forget with no retry or dead-letter — if Claude call fails, the visitor's note is silently untranslated (only a warning log). Consider persisting a translation_status field and adding a small retry queue so Doug isn't unknowingly missing Chinese/Portuguese/Farsi leads.",
+    "Both create_buyer_lead/create_seller_lead accept arbitrary form_lang strings without whitelist validation. A malformed value (e.g. 'xx') is passed to the translator which may hallucinate. Consider validating form_lang against the supported set ['en','zh-Hans','zh-Hant','pa','fa','pt-PT'].",
+    "sync_incremental returns pulled/upserted/removed/errors dict — response schema should be exposed via a Pydantic model so admin dashboard can render it consistently.",
+    "BuyerForm/SellerForm are still bare <label>Text</label><input/> siblings without htmlFor/id — accessibility + Playwright get_by_label() still don't work (noted in iteration_8)."
+  ],
+  "updated_files": ["/app/backend/tests/test_multilingual_and_ddf.py"],
+  "success_rate": {"backend": "100% (8/8 pytest)", "frontend": "100% on scoped checks (4/4 language-page smoke tests)"},
+  "test_credentials": "Admin: doug@eztofind.ca / EZtoFind2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "5 TEST_ prefixed leads created via API (4 buyer: pt-PT, zh-Hans, en, no-lang; 1 seller: fa). Safe to leave; identifiable by test_ml_ email prefix.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression suite for multilingual + DDF diagnostic lives at /app/backend/tests/test_multilingual_and_ddf.py. Requires ~50s runtime (mostly 15s waits for background Claude translation). The DDF diagnostic tests are hard-coded to the current 'invalid_client' error state — once real Destination credentials are configured, update test_ddf_status_structure and test_ddf_sync_now_does_not_500 to expect token_ok=true / api_ok=true / no errors. For frontend, use CSS-uppercase-aware checks (page.evaluate innerText preserves text-transform) or match on the raw i18n string; the 'Registo de Comprador' eyebrow renders as 'REGISTO DE COMPRADOR' in the DOM.",
+  "rca_of_the_issue": "n/a — new feature verification. Multilingual pipeline: form_lang param → BuyerLead/SellerLead Pydantic model → asyncio.create_task(_translate_lead_notes) → Claude Sonnet 4.6 via emergentintegrations → db update with notes_en/reason_en. DDF invalid_client is expected (user supplied realtor.ca portal creds instead of DDF Destination creds); not a bug — endpoint correctly surfaces the diagnostic."
+}
