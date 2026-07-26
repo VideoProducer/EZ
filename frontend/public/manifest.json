@@ -1,0 +1,43 @@
+{
+  "name": "EZtoFind.ca — BC Real Estate",
+  "short_name": "EZtoFind",
+  "description": "AI-powered BC real estate research and lead generation. Doug LeMaire, REALTOR®.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F0E1",
+  "theme_color": "#0F2A5B",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Search Listings",
+      "url": "/listings",
+      "description": "Browse active BC MLS® listings"
+    },
+    {
+      "name": "Ask Doogie",
+      "url": "/?doogie=open",
+      "description": "Open the Doogie AI chat"
+    },
+    {
+      "name": "Home Valuation",
+      "url": "/valuation",
+      "description": "Get an instant home estimate"
+    }
+  ]
+}

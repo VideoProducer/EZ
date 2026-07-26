@@ -569,6 +569,29 @@ async def doogie_chat(request: Request, body: ChatIn):
         "ts": now_iso(),
         "expires_at": expires  # BSON date for TTL index
     })
+
+    # --- Response cache lookup (MongoDB TTL) ---
+    # Cache saves ~$0.01-$0.03 per repeat glossary/how-to question ("what's the
+    # PTT?", "how much down payment for a $600K home?"). Cache is keyed by lang
+    # + normalized message + prior-history-length: only hits when this is the
+    # FIRST message in a session (stateless) and the query contains no PII.
+    cached = await _lookup_doogie_cache(redacted_msg, lang, session_id, pii_flags)
+    if cached:
+        async def gen_cached():
+            # Stream the cached text in ~40-char chunks so the UX still feels natural.
+            text = cached
+            CHUNK = 40
+            for i in range(0, len(text), CHUNK):
+                yield f"data: {json.dumps({'delta': text[i:i+CHUNK]})}\n\n"
+                await asyncio.sleep(0.015)   # ~15ms between chunks
+            await db.chat_messages.insert_one({
+                "session_id": session_id, "role": "assistant",
+                "content": text, "ts": now_iso(), "cached": True,
+                "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
+            })
+            yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'cached': True}) }\n\n"
+        return StreamingResponse(gen_cached(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
     chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=system_prompt).with_model("anthropic", "claude-sonnet-4-6")
 
     # Load prior conversation turns so Doogie has context (up to 10 turns = 20 messages).
@@ -576,6 +599,7 @@ async def doogie_chat(request: Request, body: ChatIn):
     # summarization needed since Doogie's turns are short and stateless-tolerant.
     # This also caps input-token growth so a chatty user can't compound your bill.
     _MAX_CONTEXT_TURNS = 10  # 10 user+10 assistant = 20 messages
+    prior_count = 0
     try:
         prior = await db.chat_messages.find(
             {"session_id": session_id, "role": {"$in": ["user", "assistant"]}},
@@ -586,6 +610,7 @@ async def doogie_chat(request: Request, body: ChatIn):
         if prior_chrono and prior_chrono[-1].get("role") == "user":
             prior_chrono = prior_chrono[:-1]
         chat.history = [{"role": m["role"], "content": m["content"]} for m in prior_chrono]
+        prior_count = len(prior_chrono)
     except Exception as e:
         logger.warning(f"Doogie context load failed for {session_id}: {e}")
 
@@ -607,12 +632,84 @@ async def doogie_chat(request: Request, body: ChatIn):
                 "ts": now_iso(),
                 "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
             })
+            # Save to response cache — only for stateless first-message questions
+            # with no PII. Sits behind a helper so we can tweak the eligibility rule
+            # in one place. Cache key uses the redacted message (safe to key on).
+            await _save_doogie_cache(redacted_msg, lang, prior_count, pii_flags, redacted_reply)
             yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'pii_redacted': bool(pii_flags)})}\n\n"
         except Exception as e:
             logger.error(f"Doogie error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
+
+# ---- Doogie response cache (MongoDB TTL) ----
+# Cache saves LLM $$ on the highest-volume repeat questions. TTL is 7 days so
+# even time-sensitive answers stay fresh; if content changes we can bump the
+# cache version prefix below to hard-invalidate everything.
+_DOOGIE_CACHE_VERSION = "v1"
+_DOOGIE_CACHE_TTL_DAYS = 7
+# Signals that a query is personal / stateful and should NOT be cached even if
+# other rules pass. Prevents "hi doug!" or "for MY 500k budget…" bleeding
+# across sessions.
+_UNCACHEABLE_SIGNALS = re.compile(
+    r"\b(my|our|i am|i'm|i'd|i've|help me|remind me|last time|earlier|previously)\b",
+    re.IGNORECASE,
+)
+
+
+def _doogie_cache_key(msg: str, lang: str) -> str:
+    """Stable SHA256 hash of the normalized inputs — used as the Mongo _id."""
+    normalized = re.sub(r"\s+", " ", (msg or "").strip().lower())
+    raw = f"{_DOOGIE_CACHE_VERSION}|{lang}|{normalized}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def _lookup_doogie_cache(msg: str, lang: str, session_id: str, pii_flags: list) -> Optional[str]:
+    """Return cached reply text if this query is cache-eligible AND we have a hit."""
+    m = (msg or "").strip()
+    if not m or len(m) < 8 or len(m) > 600:
+        return None
+    if pii_flags:
+        return None
+    if _UNCACHEABLE_SIGNALS.search(m):
+        return None
+    # Only serve from cache when this is the FIRST message in the session
+    # (i.e. stateless). Second/third turn may reference prior context.
+    prior = await db.chat_messages.count_documents({"session_id": session_id, "role": "assistant"})
+    if prior > 0:
+        return None
+    doc = await db.doogie_response_cache.find_one({"_id": _doogie_cache_key(m, lang)})
+    if not doc:
+        return None
+    return doc.get("reply") or None
+
+
+async def _save_doogie_cache(msg: str, lang: str, prior_count: int, pii_flags: list, reply: str) -> None:
+    """Upsert the reply into the cache if this query is cache-eligible."""
+    m = (msg or "").strip()
+    r = (reply or "").strip()
+    if not m or not r or len(m) < 8 or len(m) > 600 or len(r) < 20 or len(r) > 6000:
+        return
+    if pii_flags or prior_count > 0:
+        return
+    if _UNCACHEABLE_SIGNALS.search(m):
+        return
+    try:
+        await db.doogie_response_cache.update_one(
+            {"_id": _doogie_cache_key(m, lang)},
+            {"$set": {
+                "reply": r,
+                "lang": lang,
+                "cached_at": now_iso(),
+                # TTL index driver
+                "expires_at": datetime.now(timezone.utc) + timedelta(days=_DOOGIE_CACHE_TTL_DAYS),
+            }},
+            upsert=True,
+        )
+    except Exception as e:
+        logger.warning(f"Doogie cache write failed: {e}")
 
 def get_consent_meta(request: Request) -> dict:
     """Capture IP + User-Agent for CASL consent proof (3-year retention)."""
@@ -2059,6 +2156,21 @@ async def startup():
         logger.info("usage_quotas indexes ensured (3-day TTL + compound lookup)")
     except Exception as e:
         logger.error(f"usage_quotas index setup failed: {e}")
+
+    # Doogie response cache TTL — cached LLM replies expire after 7 days.
+    # Cache saves ~$0.02/repeat glossary question ("what's the PTT?", etc.).
+    try:
+        await db.doogie_response_cache.create_index("expires_at", expireAfterSeconds=0)
+        logger.info("doogie_response_cache TTL index ensured (7-day auto-expire)")
+    except Exception as e:
+        logger.error(f"doogie_response_cache index setup failed: {e}")
+
+    # beta_feedback — index on status + created_at for fast admin inbox filtering.
+    try:
+        await db.beta_feedback.create_index([("status", 1), ("created_at", -1)])
+        logger.info("beta_feedback indexes ensured")
+    except Exception as e:
+        logger.error(f"beta_feedback index setup failed: {e}")
 
     # Daily records-retention purge (BCFSA 7-yr + CASL 3-yr + PIPA data minimization).
     # First run happens 60s after startup so admins can hit /admin/retention/log to see

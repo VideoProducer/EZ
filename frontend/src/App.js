@@ -90,15 +90,26 @@ const renderChatContent = (raw, lang) => {
 };
 
 // Reusable SEO/meta component — injects per-route <title>, meta description,
-// canonical, OpenGraph, Twitter Card, and optional JSON-LD schema.
+// canonical, OpenGraph, Twitter Card, hreflang alternates, and optional JSON-LD schema.
+const SUPPORTED_LANGS = ["en", "zh-Hant", "zh-Hans", "pa", "fa", "pt-PT"];
+
 const SEO = ({ title, description, path, image, schema }) => {
   const url = `${SITE_URL}${path || ""}`;
   const img = image || `${SITE_URL}/images/og-default.png`;
+  // Preserve existing querystring while swapping ?lang= for hreflang alternates.
+  const buildLangUrl = (code) => {
+    const base = `${SITE_URL}${path || ""}`;
+    return code === "en" ? base : `${base}${(path||"").includes("?") ? "&" : "?"}lang=${code}`;
+  };
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description}/>
       <link rel="canonical" href={url}/>
+      {SUPPORTED_LANGS.map(code => (
+        <link key={code} rel="alternate" hrefLang={code} href={buildLangUrl(code)}/>
+      ))}
+      <link rel="alternate" hrefLang="x-default" href={url}/>
       <meta property="og:type" content="website"/>
       <meta property="og:title" content={title}/>
       <meta property="og:description" content={description}/>
@@ -778,6 +789,41 @@ const Footer = () => (
   </div></footer>
 );
 
+// ---------- Doogie Explainability Panel ("Why did Doogie say this?") ----------
+// Renders under every Doogie chat response. Discloses model, language, cache
+// hit, PII-redaction, and the compliance boundary. This is a TRUST moat — no
+// other BC real-estate AI shows this level of transparency.
+const DoogieExplainability = ({meta, lang}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{marginTop:"0.5rem",fontSize:"0.7rem",color:"var(--muted)",lineHeight:1.5}} data-testid="doogie-explain">
+      <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontStyle:"italic",opacity:0.9}}>🤖 AI-generated · general information only</span>
+        <button type="button" onClick={()=>setOpen(o=>!o)}
+          data-testid="doogie-explain-toggle"
+          style={{background:"none",border:"1px solid rgba(15,42,91,0.2)",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.7rem",cursor:"pointer",color:"var(--brand-navy)",fontFamily:"Inter,sans-serif"}}>
+          {open ? "▲ Hide details" : "▾ Why did Doogie say this?"}
+        </button>
+        <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link>
+      </div>
+      {open && (
+        <div data-testid="doogie-explain-body" style={{marginTop:"0.4rem",padding:"0.65rem 0.8rem",background:"#F5F0E1",borderRadius:8,fontStyle:"normal"}}>
+          <div style={{fontWeight:600,color:"var(--brand-navy)",marginBottom:"0.35rem"}}>How this answer was generated</div>
+          <ul style={{margin:0,paddingLeft:"1.1rem",lineHeight:1.6}}>
+            <li><strong>Model:</strong> Anthropic Claude Sonnet 4.6 (via Emergent LLM key)</li>
+            <li><strong>Language:</strong> {lang || "en"}</li>
+            <li><strong>Knowledge sources:</strong> Doogie is trained on general BC real-estate concepts plus this site's curated glossary (~396 BC terms) and community pages (~241 BC communities, ~520 micro-neighborhoods). Live listing data comes from CREA DDF®.</li>
+            {meta?.cached && <li style={{color:"#0F5C2E"}}><strong>Cached response:</strong> served from the 7-day response cache (identical question was answered before — no fresh LLM call).</li>}
+            {meta?.pii_redacted && <li style={{color:"#8B0000"}}><strong>PII redacted:</strong> your message contained personal information (email/phone/address) — it was automatically redacted before being stored, per PIPA.</li>}
+            <li><strong>What Doogie is NOT:</strong> a licensed REALTOR®, lawyer, notary, appraiser, mortgage broker, or financial advisor. Any transactional advice must come from a licensed professional.</li>
+            <li><strong>Under BCFSA rules,</strong> Doogie provides general information only. For a formal opinion, quote, CMA, or transaction, contact <Link to={`/contact${langQS(lang)}`}>Doug LeMaire</Link> or another licensed BC REALTOR®.</li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Doogie AI Chat Widget ---
 // Detect listing-search intent so we can fire the MLS filter extractor alongside Doogie's chat stream.
 // Broad triggers (any of these means "user is looking for listings"):
@@ -924,7 +970,8 @@ const DoogieChat = () => {
           if(!line.startsWith("data:")) continue;
           try {
             const j = JSON.parse(line.slice(5).trim());
-            if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:c[c.length-1].content+j.delta}; return c; }); }
+            if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], role:"assistant",content:(c[c.length-1].content||"")+j.delta}; return c; }); }
+            else if(j.done) { setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], meta: {cached: !!j.cached, pii_redacted: !!j.pii_redacted, language: lang}}; return c; }); }
             else if(j.error) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: "+String(j.error).slice(0,180)+")"}; return c; }); }
           } catch{}
         }
@@ -975,7 +1022,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && <DoogieExplainability meta={m.meta || null} lang={lang}/>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -3152,16 +3199,76 @@ const Unsubscribe = () => {
 // --- Cookie banner (PIPA-tracked consent) ---
 const CookieBanner = () => {
   const [show, setShow] = useState(() => !localStorage.getItem("ez_cookie"));
-  const accept = () => {
-    const record = {accepted:true, at: new Date().toISOString(), ua: navigator.userAgent};
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [prefs, setPrefs] = useState(() => {
+    const stored = localStorage.getItem("ez_cookie_prefs");
+    if (stored) { try { return JSON.parse(stored); } catch(_){} }
+    return { essential: true, analytics: false, session: true };  // Essential is always on
+  });
+
+  const save = (finalPrefs) => {
+    const record = { accepted: true, at: new Date().toISOString(), ua: navigator.userAgent, prefs: finalPrefs };
     localStorage.setItem("ez_cookie", JSON.stringify(record));
-    setShow(false);
+    localStorage.setItem("ez_cookie_prefs", JSON.stringify(finalPrefs));
+    setShow(false); setShowPrefs(false);
   };
-  if(!show) return null;
-  return <div role="dialog" aria-label="Cookie & Privacy Notice" style={{position:"fixed",bottom:20,left:20,right:20,maxWidth:520,background:"var(--brand-navy)",color:"white",padding:"1rem 1.25rem",borderRadius:12,zIndex:59,boxShadow:"0 20px 40px rgba(0,0,0,0.3)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}} data-testid="cookie-banner">
-    <div style={{flex:1,minWidth:220}}>EZtoFind.ca uses only essential cookies (session, consent state). Under BC's <strong>Personal Information Protection Act (PIPA)</strong>, we ask you to acknowledge our <Link to="/privacy" style={{color:"var(--brand-gold)"}}>Privacy Policy</Link>. Clicking "I acknowledge" records your acceptance timestamp locally.</div>
-    <button className="btn btn-green" onClick={accept} style={{padding:"0.5rem 1rem"}} data-testid="cookie-accept">I acknowledge</button>
-  </div>;
+  const acceptAll = () => save({ essential: true, analytics: true, session: true });
+  const rejectOptional = () => save({ essential: true, analytics: false, session: true });
+  const savePrefs = () => save({ ...prefs, essential: true });
+
+  if (!show) return null;
+
+  return <>
+    <div role="dialog" aria-label="Cookie & Privacy Preferences" data-testid="cookie-banner"
+      style={{position:"fixed",bottom:20,left:20,right:20,maxWidth:600,background:"var(--brand-navy)",color:"white",padding:"1rem 1.25rem",borderRadius:12,zIndex:59,boxShadow:"0 20px 40px rgba(0,0,0,0.3)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>
+      <div style={{marginBottom:"0.75rem"}}>
+        EZtoFind.ca uses cookies to run this site and improve your experience. Under BC's <strong>Personal Information Protection Act (PIPA)</strong> you can choose which cookies to allow. Essential cookies are always on. See our <Link to="/privacy" style={{color:"var(--brand-gold)"}}>Privacy Policy</Link>.
+      </div>
+      <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+        <button className="btn btn-green" onClick={acceptAll} style={{padding:"0.5rem 1rem"}} data-testid="cookie-accept-all">Accept all</button>
+        <button className="btn btn-outline" onClick={rejectOptional} style={{padding:"0.5rem 1rem",background:"transparent",color:"#fff",borderColor:"rgba(255,255,255,0.4)"}} data-testid="cookie-reject-optional">Reject optional</button>
+        <button className="btn btn-outline" onClick={()=>setShowPrefs(true)} style={{padding:"0.5rem 1rem",background:"transparent",color:"var(--brand-gold)",borderColor:"var(--brand-gold)"}} data-testid="cookie-customize">Customize</button>
+      </div>
+    </div>
+
+    {showPrefs && (
+      <div
+        onClick={(e)=>{if(e.target===e.currentTarget) setShowPrefs(false);}}
+        style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.6)",backdropFilter:"blur(4px)",zIndex:60,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}
+        data-testid="cookie-prefs-modal">
+        <div style={{background:"#fff",borderRadius:14,maxWidth:520,width:"100%",padding:"1.5rem",boxShadow:"0 20px 60px rgba(0,0,0,0.35)"}}>
+          <h3 className="font-display" style={{margin:0,fontSize:"1.4rem",color:"var(--brand-navy)"}}>Cookie Preferences</h3>
+          <p style={{fontSize:"0.85rem",color:"var(--muted)",margin:"0.5rem 0 1rem"}}>Choose which cookies EZtoFind.ca may use on your device. You can change this later.</p>
+
+          <div style={{border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.75rem",background:"#F8F9FA"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><strong>Essential (required)</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Session, security (Turnstile), consent state.</div></div>
+              <span style={{fontSize:"0.75rem",fontWeight:600,color:"var(--muted)"}}>ALWAYS ON</span>
+            </div>
+          </div>
+
+          <label style={{display:"block",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.75rem",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><strong>Analytics</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Anonymous page-view tracking used to improve the site. No third-party ad networks.</div></div>
+              <input type="checkbox" checked={prefs.analytics} onChange={e=>setPrefs({...prefs,analytics:e.target.checked})} style={{width:20,height:20,cursor:"pointer"}} data-testid="cookie-toggle-analytics"/>
+            </div>
+          </label>
+
+          <label style={{display:"block",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"1rem",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><strong>Personalization</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Remember your Doogie session, saved searches, and beta-tester name/email.</div></div>
+              <input type="checkbox" checked={prefs.session} onChange={e=>setPrefs({...prefs,session:e.target.checked})} style={{width:20,height:20,cursor:"pointer"}} data-testid="cookie-toggle-session"/>
+            </div>
+          </label>
+
+          <div style={{display:"flex",gap:"0.5rem",justifyContent:"flex-end"}}>
+            <button className="btn btn-outline" onClick={()=>setShowPrefs(false)} style={{padding:"0.5rem 1rem"}} data-testid="cookie-prefs-cancel">Cancel</button>
+            <button className="btn btn-primary" onClick={savePrefs} style={{padding:"0.5rem 1rem"}} data-testid="cookie-prefs-save">Save preferences</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>;
 };
 
 // --- Home JSON-LD schema ---
@@ -3904,10 +4011,17 @@ const getTurnstileToken = () => (typeof window !== "undefined" ? (window.__ttoke
 
 // Anonymous page-view beacon — sends one event per route change to /api/track/page.
 // Skips /admin/* pages so Doug's own browsing doesn't pollute the growth dashboard.
+// Also respects the user's PIPA cookie preference: if they've opted out of analytics
+// via the Cookie Preferences modal, this component becomes a no-op.
 function PageViewBeacon() {
   const loc = useLocation();
   useEffect(() => {
     if (loc.pathname.startsWith("/admin")) return;
+    // Honour analytics opt-out from Cookie Preferences (PIPA).
+    try {
+      const prefs = JSON.parse(localStorage.getItem("ez_cookie_prefs") || "{}");
+      if (prefs.analytics === false) return;
+    } catch(_){}
     let sid = localStorage.getItem("ez_sid");
     if (!sid) {
       sid = (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+"-"+Math.random().toString(36).slice(2)));

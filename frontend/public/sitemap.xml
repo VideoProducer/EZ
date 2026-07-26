@@ -4123,6 +4123,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/canal-flats/n/canal-flats</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -4130,12 +4136,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/kamloops/n/pritchard</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/canal-flats/n/canal-flats</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4645,12 +4645,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/central-nanaimo</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops/n/south-thompson-valley</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -4658,6 +4652,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/kelowna/n/kelowna-south</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/nanaimo/n/central-nanaimo</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4687,12 +4687,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kimberley/n/marysville</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanaimo/n/diver-lake</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -4700,6 +4694,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/fernie/n/west-fernie</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kimberley/n/marysville</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4873,12 +4873,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/greenwood/n/greenwood</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nelson/n/harrop-procter</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -4886,6 +4880,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/kamloops/n/knutsford-lac-le-jeune</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/greenwood/n/greenwood</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5425,13 +5425,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/campbell-river/n/campbell-river-west</loc>
+    <loc>https://eztofind.ca/community/salmo/n/village-of-salmo</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/salmo/n/village-of-salmo</loc>
+    <loc>https://eztofind.ca/community/campbell-river/n/campbell-river-west</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5659,13 +5659,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
+    <loc>https://eztofind.ca/community/pouce-coupe/n/dawson-creek-rural</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/pouce-coupe/n/dawson-creek-rural</loc>
+    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5743,19 +5743,19 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/fruitvale/n/fruitvale-rural</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/castlegar/n/north-castlegar</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/okanagan-north</loc>
+    <loc>https://eztofind.ca/community/fruitvale/n/fruitvale-rural</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/victoria/n/burnside</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5773,13 +5773,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/foothills</loc>
+    <loc>https://eztofind.ca/community/vernon/n/okanagan-north</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/n/burnside</loc>
+    <loc>https://eztofind.ca/community/vernon/n/foothills</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6049,12 +6049,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanoose-bay/n/fairwinds</loc>
-    <lastmod>2026-07-26</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/castlegar/n/rivervale-genelle</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
@@ -6062,6 +6056,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/golden/n/west-north-highway-1</loc>
+    <lastmod>2026-07-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/nanoose-bay/n/fairwinds</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6079,13 +6079,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/french-beach</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/smith-creek</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/smith-creek</loc>
+    <loc>https://eztofind.ca/community/sooke/n/french-beach</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6169,13 +6169,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/pineview-valley</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/upper-mission</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/upper-mission</loc>
+    <loc>https://eztofind.ca/community/kamloops/n/pineview-valley</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6301,13 +6301,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/view-royal/n/hospital</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
+    <loc>https://eztofind.ca/community/view-royal/n/hospital</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6697,7 +6697,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/fintry</loc>
+    <loc>https://eztofind.ca/community/comox/n/comox-town-of</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6709,13 +6709,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/duncan/n/cowichan-station-glenora</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/fintry</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/comox/n/comox-town-of</loc>
+    <loc>https://eztofind.ca/community/duncan/n/cowichan-station-glenora</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6979,13 +6979,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
+    <loc>https://eztofind.ca/community/princeton/n/princeton</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/princeton/n/princeton</loc>
+    <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
     <lastmod>2026-07-26</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
