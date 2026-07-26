@@ -1113,6 +1113,7 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
 const Listings = () => {
   const [params] = useSearchParams();
   const rawQ = params.get("q") || "";
+  const [alertOpen, setAlertOpen] = useState(false);
   const [filters, setFilters] = useState({
     q: rawQ,
     city: params.get("city") || params.get("community") || "",
@@ -1213,6 +1214,9 @@ const Listings = () => {
             <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="listings-count">
               {loading ? "Searching…" : `${results.total} listing${results.total===1?"":"s"}${results.total>results.listings.length ? ` — showing top ${results.listings.length}` : ""}`}
             </div>
+            <button onClick={()=>setAlertOpen(true)} data-testid="get-alerts-btn" className="btn" style={{background:"#fff",color:"var(--brand-navy)",border:"1.5px solid var(--brand-navy)",padding:"0.5rem 1.1rem",fontSize:"0.88rem",borderRadius:999,display:"inline-flex",alignItems:"center",gap:"0.4rem",fontWeight:600}}>
+              🔔 Get alerts for this search
+            </button>
           </div>
           {results.listings.length === 0 && !loading && (
             <div className="paper" style={{textAlign:"center",padding:"3rem 1.5rem"}}>
@@ -1229,8 +1233,86 @@ const Listings = () => {
       <div className="notice" style={{marginTop:"2rem"}}>
         {results.compliance?.trademark_notice || "MLS®, Multiple Listing Service®, and the associated logos are owned by The Canadian Real Estate Association (CREA). REALTOR® is a trademark of REALTOR® Canada Inc. Data © CREA DDF®."}
       </div>
+      <SavedSearchModal open={alertOpen} onClose={()=>setAlertOpen(false)} currentFilters={filters}/>
     </div></section>
     </TermsGate>
+  );
+};
+
+// Saved-search alert signup modal (CASL + PIPA double-opt-in).
+// Rendered from the /listings page; captures the visitor's current filter state
+// and requires both consent checkboxes before submission. Backend sends a
+// verification email; nothing else is sent until the visitor clicks the link.
+const SavedSearchModal = ({ open, onClose, currentFilters }) => {
+  const [email, setEmail] = useState("");
+  const [label, setLabel] = useState("");
+  const [casl, setCasl] = useState(false);
+  const [pipa, setPipa] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState("");
+  if (!open) return null;
+  const cleanFilters = Object.fromEntries(
+    Object.entries(currentFilters || {}).filter(([k, v]) => v && k !== "q" && k !== "sort" && k !== "community")
+  );
+  const filterSummary = Object.entries(cleanFilters)
+    .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+    .join(" · ") || "all BC residential listings";
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr("");
+    if (!email || !casl || !pipa) { setErr("Please enter your email and check both consent boxes."); return; }
+    setBusy(true);
+    try {
+      await axios.post(`${API}/saved-searches`, {
+        email, label, filters: cleanFilters,
+        casl_consent: casl, pipa_ack: pipa,
+      });
+      setDone(true);
+    } catch (x) {
+      setErr(x?.response?.data?.detail || "Something went wrong. Please try again.");
+    } finally { setBusy(false); }
+  };
+  return (
+    <div data-testid="saved-search-modal" style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,maxWidth:520,width:"100%",padding:"2rem 1.75rem",fontFamily:"Inter,sans-serif",maxHeight:"92vh",overflowY:"auto",position:"relative"}}>
+        <button onClick={onClose} data-testid="saved-search-close" aria-label="Close" style={{position:"absolute",top:12,right:14,background:"transparent",border:"none",fontSize:"1.4rem",cursor:"pointer",color:"var(--muted)"}}>×</button>
+        {done ? (
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:"2.5rem"}}>📬</div>
+            <h2 style={{fontFamily:"Georgia,serif",color:"var(--brand-navy)",margin:"0.5rem 0 0.75rem"}}>Check your inbox</h2>
+            <p style={{color:"var(--muted)",lineHeight:1.6,fontSize:"0.95rem"}}>We just emailed <strong>{email}</strong> a one-click confirmation link. Under Canada's Anti-Spam Legislation (CASL) we can't send you listings until you confirm.</p>
+            <p style={{color:"var(--muted)",lineHeight:1.6,fontSize:"0.85rem",marginTop:"1rem"}}>If it hasn't arrived in 5 minutes, check your spam folder — or drop us a line at <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a>.</p>
+            <button onClick={onClose} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="saved-search-success-close">Got it</button>
+          </div>
+        ) : (
+          <>
+            <div style={{fontSize:"0.72rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--brand-green)",fontWeight:700}}>🔔 Alerts</div>
+            <h2 style={{fontFamily:"Georgia,serif",color:"var(--brand-navy)",margin:"0.35rem 0 0.6rem",fontSize:"1.5rem",lineHeight:1.2}}>Get notified of new matching listings</h2>
+            <p style={{color:"var(--muted)",fontSize:"0.92rem",lineHeight:1.55}}>We'll email you when new BC MLS® listings match: <strong style={{color:"var(--brand-navy)"}}>{filterSummary}</strong></p>
+            <form onSubmit={submit} style={{marginTop:"1rem"}}>
+              <div className="field"><label>Email address *</label>
+                <input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" data-testid="saved-search-email"/></div>
+              <div className="field" style={{marginTop:"0.75rem"}}><label>Name this search <span style={{color:"var(--muted)",fontWeight:400}}>(optional)</span></label>
+                <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="e.g. Whistler dream condo" data-testid="saved-search-label"/></div>
+              <div style={{background:"#F0F4FB",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.85rem 1rem",marginTop:"1rem",fontSize:"0.82rem",lineHeight:1.5,color:"var(--muted)"}}>
+                <strong style={{color:"var(--brand-navy)"}}>Double opt-in:</strong> after you submit, we email a one-click confirmation link. Nothing else is sent until you confirm — and you can unsubscribe with one click from any email we send.
+              </div>
+              <div className="field" style={{marginTop:"0.85rem"}}><label className="check">
+                <input required type="checkbox" checked={casl} onChange={e=>setCasl(e.target.checked)} data-testid="saved-search-casl"/>
+                &nbsp;I consent to receive listing-alert emails from EZtoFind.ca (CASL). I can unsubscribe anytime.
+              </label></div>
+              <div className="field"><label className="check">
+                <input required type="checkbox" checked={pipa} onChange={e=>setPipa(e.target.checked)} data-testid="saved-search-pipa"/>
+                &nbsp;I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}} target="_blank" rel="noopener">Privacy Policy (PIPA)</Link>.
+              </label></div>
+              {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"0.75rem",fontSize:"0.85rem"}} data-testid="saved-search-error">{err}</div>}
+              <button type="submit" disabled={busy} className="btn btn-primary" style={{marginTop:"1rem",width:"100%",opacity:busy?0.6:1}} data-testid="saved-search-submit">{busy?"Sending…":"Send me the confirmation email"}</button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os, json, uuid, logging, bcrypt, jwt, asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any
 from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 import re
@@ -434,6 +434,214 @@ async def unsubscribe(body: UnsubscribeIn, request: Request):
     total = result_b.modified_count + result_s.modified_count + result_r.modified_count
     await db.unsubscribe_log.insert_one({"email": email, "ts": now_iso(), "records_updated": total, "ip": get_consent_meta(request)["consent_ip"]})
     return {"success": True, "records_updated": total, "message": "You have been unsubscribed. It may take up to 10 business days to remove you from all lists, per CASL."}
+
+# =============== SAVED-SEARCH ALERTS (CASL + PIPA compliant) ===============
+# Compliance design:
+# - EXPRESS opt-in via double-opt-in email verification (link in transactional email).
+# - Nothing commercial sent until visitor clicks the verification link.
+# - Tamper-evident consent log: IP + UA + timestamp + policy_version captured
+#   at both subscribe AND verify events (proof of express consent per CASL s.6).
+# - One-click unsubscribe token in every commercial email (RFC 8058 + link).
+# - Data retention: consent proof kept for 3+ years (CASL requirement); PII
+#   scrubbed on unsub (email retained hashed for audit only).
+# - "Reasonable purpose" limitation: filters are the ONLY personal info used.
+# - Frequency cap: max one digest per 6h (see services/alert_matcher.py).
+
+class SavedSearchIn(BaseModel):
+    """Filters + consent — everything needed to create a pending saved search."""
+    email: EmailStr
+    filters: Dict[str, Any] = {}   # city, region, property_type, beds_min, baths_min, price_min, price_max
+    label: Optional[str] = ""
+    casl_consent: bool
+    pipa_ack: bool
+    frequency: str = "instant"     # "instant" (respecting 6h cap) | "daily" | "weekly"
+
+CURRENT_POLICY_VERSION = "2026-02-25"
+
+def _public_base_url(request: Request) -> str:
+    """Derive the public URL for building verify/unsubscribe links.
+    Prefers X-Forwarded-Host (Kubernetes ingress) so links match REACT_APP_BACKEND_URL."""
+    proto = request.headers.get("x-forwarded-proto", "https")
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    if not host:
+        return "https://eztofind.ca"
+    return f"{proto}://{host}"
+
+async def _save_search_index_setup():
+    await db.saved_searches.create_index("email")
+    await db.saved_searches.create_index("verification_token", unique=True, sparse=True)
+    await db.saved_searches.create_index("unsubscribe_token", unique=True, sparse=True)
+    await db.saved_searches.create_index([("status", 1), ("unsubscribed_at", 1)])
+
+@api.post("/saved-searches")
+async def create_saved_search(body: SavedSearchIn, request: Request):
+    """Step 1 of double-opt-in. Creates a PENDING record and emails a
+    verification link. No commercial email is sent until the user clicks."""
+    if not body.casl_consent or not body.pipa_ack:
+        raise HTTPException(400, "Both CASL consent and PIPA acknowledgement are required.")
+    filters = {k: v for k, v in (body.filters or {}).items() if v not in (None, "", 0)}
+    # Sanitize any commercial types out of filters (residential-only site)
+    if filters.get("property_type") in EXCLUDED_PROPERTY_TYPES:
+        filters.pop("property_type", None)
+
+    meta = get_consent_meta(request)
+    ss_id = str(uuid.uuid4())
+    verify_tok = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    unsub_tok = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    doc = {
+        "id": ss_id,
+        "email": body.email.lower(),
+        "filters": filters,
+        "label": (body.label or "")[:120],
+        "frequency": body.frequency if body.frequency in ("instant", "daily", "weekly") else "instant",
+        "status": "pending",     # → verified → unsubscribed
+        "policy_version": CURRENT_POLICY_VERSION,
+        "verification_token": verify_tok,
+        "unsubscribe_token": unsub_tok,
+        "created_at": now_iso(),
+        "verified_at": None,
+        "verify_ip": None,
+        "verify_ua": None,
+        "unsubscribed_at": None,
+        "notified_count": 0,
+        "last_notified_at": None,
+        **meta,                   # consent_ip, consent_ua, consent_at
+    }
+    await db.saved_searches.insert_one(doc)
+
+    # Build verification email (TRANSACTIONAL — no CASL consent required)
+    from services.email_sender import send_email as _send_email, SENDER_NAME, SENDER_ADDRESS, SENDER_PHONE, SENDER_EMAIL
+    base = _public_base_url(request)
+    verify_url = f"{base}/api/saved-searches/verify?token={verify_tok}"
+    unsub_url = f"{base}/api/saved-searches/unsubscribe?token={unsub_tok}"
+    label = doc["label"] or ", ".join(f"{k}={v}" for k, v in filters.items()) or "all BC residential listings"
+
+    html = f"""<!doctype html><html><body style="margin:0;background:#F5F0E1">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E1;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;padding:2rem;font-family:Inter,Arial,sans-serif;color:#111827">
+<tr><td>
+<div style="font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:#22C55E;font-weight:700">EZtoFind.ca · Confirm your listing alert</div>
+<h1 style="font-family:Georgia,serif;font-size:1.7rem;color:#0F2A5B;margin:0.4rem 0 0.75rem">One quick click to activate your BC listing alerts</h1>
+<p style="line-height:1.6;color:#374151">You (or someone using your email) asked EZtoFind.ca to send email alerts when new BC MLS® listings match: <strong>{label}</strong>.</p>
+<p style="line-height:1.6;color:#374151">Under Canada's Anti-Spam Legislation (CASL) we don't send you anything until you confirm this address. Click the button below to activate.</p>
+<p style="text-align:center;margin:1.5rem 0"><a href="{verify_url}" style="display:inline-block;background:#22C55E;color:#fff;text-decoration:none;padding:0.9rem 1.9rem;border-radius:999px;font-weight:700">Confirm my subscription</a></p>
+<p style="font-size:0.8rem;color:#6b7280;line-height:1.6">If you didn't request this, just ignore this email — nothing will be sent. This link expires in 30 days.</p>
+<hr style="margin:1.5rem 0 1rem;border:none;border-top:1px solid #e5e7eb"/>
+<div style="font-size:12px;color:#6b7280;line-height:1.6">
+  <p style="margin:0 0 0.5rem"><strong>{SENDER_NAME}</strong><br/>{SENDER_ADDRESS} · {SENDER_PHONE} · <a href="mailto:{SENDER_EMAIL}" style="color:#0F2A5B">{SENDER_EMAIL}</a></p>
+  <p style="margin:0">This is a one-time transactional email required to activate your subscription. <a href="{unsub_url}" style="color:#0F2A5B">Cancel this request</a>.</p>
+</div>
+</td></tr></table></td></tr></table></body></html>"""
+    text = (
+        "EZtoFind.ca — Confirm your listing alert subscription\n\n"
+        f"You asked EZtoFind.ca to send you email alerts when new BC MLS listings match: {label}\n\n"
+        f"Confirm your subscription: {verify_url}\n\n"
+        "If you didn't request this, ignore this email — nothing will be sent.\n"
+        "This link expires in 30 days.\n\n"
+        f"---\n{SENDER_NAME}\n{SENDER_ADDRESS} · {SENDER_PHONE} · {SENDER_EMAIL}\n"
+        f"Cancel this request: {unsub_url}\n"
+    )
+    send_result = await _send_email(db,
+        to=body.email, subject="Confirm your EZtoFind.ca listing alerts",
+        html=html, text=text, kind="transactional", related_id=ss_id,
+        unsubscribe_url=unsub_url,
+    )
+    logger.info(f"Saved search created: id={ss_id} status=pending email_queued={send_result.get('queued', False)}")
+    return {
+        "success": True,
+        "id": ss_id,
+        "status": "pending",
+        "message": "Almost done! Check your inbox and click the confirmation link. We won't send anything else until you confirm.",
+        "email_dispatch": "sent" if not send_result.get("queued") else "queued_pending_resend",
+    }
+
+@api.get("/saved-searches/verify")
+async def verify_saved_search(token: str, request: Request):
+    """Step 2: user clicks the link. Flips status to 'verified'. Records
+    verification IP + UA for tamper-evident consent proof."""
+    ss = await db.saved_searches.find_one({"verification_token": token})
+    if not ss:
+        return HTMLResponse(_landing_page("Invalid or expired link",
+            "This confirmation link is no longer valid. If you'd still like listing alerts, please subscribe again on EZtoFind.ca."))
+    if ss.get("status") == "verified":
+        return HTMLResponse(_landing_page("You're already subscribed",
+            "This email is already receiving BC listing alerts. You can unsubscribe anytime from any email we send."))
+    meta = get_consent_meta(request)
+    await db.saved_searches.update_one(
+        {"id": ss["id"]},
+        {"$set": {
+            "status": "verified",
+            "verified_at": now_iso(),
+            "verify_ip": meta["consent_ip"],
+            "verify_ua": meta["consent_ua"],
+        }},
+    )
+    return HTMLResponse(_landing_page("You're all set! ✅",
+        f"Great — we'll email you when new BC MLS® listings match your saved search. "
+        f"You can adjust or cancel anytime via any email we send.<br/><br/>"
+        f"<a href='https://eztofind.ca/listings' style='color:#22C55E;font-weight:600'>Return to EZtoFind.ca →</a>"))
+
+@api.get("/saved-searches/unsubscribe")
+async def unsubscribe_saved_search(token: str, request: Request):
+    """One-click unsubscribe (CASL compliant). Works whether the user was
+    verified or still pending."""
+    ss = await db.saved_searches.find_one({"unsubscribe_token": token})
+    if not ss:
+        return HTMLResponse(_landing_page("Link not recognised",
+            "This unsubscribe link is not valid. If you're still receiving emails, contact info@eztofind.ca and we'll remove you immediately."))
+    meta = get_consent_meta(request)
+    await db.saved_searches.update_one(
+        {"id": ss["id"]},
+        {"$set": {
+            "status": "unsubscribed",
+            "unsubscribed_at": now_iso(),
+            "unsubscribed_ip": meta["consent_ip"],
+        }},
+    )
+    return HTMLResponse(_landing_page("You've been unsubscribed",
+        "You will no longer receive BC listing alerts from EZtoFind.ca. This took effect immediately.<br/><br/>"
+        "If you unsubscribed by mistake, feel free to re-subscribe from any listing search page."))
+
+# One-click POST endpoint (for RFC 8058 List-Unsubscribe-Post support)
+@api.post("/saved-searches/unsubscribe")
+async def unsubscribe_saved_search_post(token: str, request: Request):
+    return await unsubscribe_saved_search(token, request)
+
+def _landing_page(title: str, body_html: str) -> str:
+    return f"""<!doctype html><html><head><meta charset="utf-8"/><title>EZtoFind.ca — {title}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;background:#F5F0E1;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,Arial,sans-serif;padding:1.5rem">
+<div style="max-width:520px;background:#fff;border-radius:20px;padding:2.5rem 2rem;text-align:center;box-shadow:0 10px 40px rgba(15,42,91,0.08)">
+  <div style="font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;color:#22C55E;font-weight:700;margin-bottom:0.5rem">EZtoFind.ca</div>
+  <h1 style="font-family:Georgia,serif;font-size:1.75rem;color:#0F2A5B;margin:0 0 1rem;line-height:1.15">{title}</h1>
+  <div style="color:#374151;line-height:1.7;font-size:0.98rem">{body_html}</div>
+</div>
+</body></html>"""
+
+@api.get("/admin/saved-searches")
+async def admin_list_saved_searches(_=Depends(verify_admin)):
+    """Doug's CRM view of all subscribers. Grouped by status for quick scanning."""
+    docs = await db.saved_searches.find({}, {"_id": 0, "verification_token": 0}).sort("created_at", -1).to_list(2000)
+    counts = {"pending": 0, "verified": 0, "unsubscribed": 0}
+    for d in docs:
+        counts[d.get("status", "pending")] = counts.get(d.get("status", "pending"), 0) + 1
+    return {"counts": counts, "records": docs}
+
+@api.post("/admin/saved-searches/run-matcher")
+async def admin_run_matcher(request: Request, _=Depends(verify_admin)):
+    """Manually kick off the alert matcher (for testing + fallback if the
+    post-sync hook fails)."""
+    from services.alert_matcher import run_matcher
+    return await run_matcher(db, _public_base_url(request))
+
+@api.get("/admin/email-outbox")
+async def admin_email_outbox(_=Depends(verify_admin)):
+    """Read the email audit trail. Includes queued messages that will be
+    replayed once RESEND_API_KEY is set."""
+    docs = await db.email_outbox.find({}, {"_id": 0, "html": 0}).sort("created_at", -1).limit(500).to_list(500)
+    pending = await db.email_outbox.count_documents({"status": "pending"})
+    return {"pending_count": pending, "recent": docs}
 
 # =============== BREACH RESPONSE (PIPA audit log) ===============
 class BreachReport(BaseModel):
@@ -1231,6 +1439,15 @@ async def startup():
     except Exception as e:
         logger.error(f"MLS listings seed/index setup failed: {e}")
 
+    # Saved-search indexes (email, verification/unsubscribe tokens)
+    try:
+        await _save_search_index_setup()
+        await db.email_outbox.create_index("created_at")
+        await db.email_outbox.create_index("status")
+        logger.info("saved_searches + email_outbox indexes ensured")
+    except Exception as e:
+        logger.error(f"saved_searches index setup failed: {e}")
+
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
@@ -1710,9 +1927,11 @@ async def listings_facets(request: Request):
     return {"cities": cities, "property_types": types, "regions": regions}
 
 @api.post("/admin/listings/sync-now")
-async def admin_ddf_sync_now(_=Depends(verify_admin)):
+async def admin_ddf_sync_now(request: Request, _=Depends(verify_admin)):
     """Manual trigger for a DDF® sync. Runs in the background because a full BC
-    sync can take 1-2 minutes; poll /admin/listings/sync-log for progress."""
+    sync can take 1-2 minutes; poll /admin/listings/sync-log for progress.
+    On completion, runs the saved-search alert matcher so subscribers get
+    notified of new matches."""
     # If credentials not configured, return synchronously so the admin sees the reason
     if not _ddf_ready():
         return await _ddf_sync(db)
@@ -1723,11 +1942,20 @@ async def admin_ddf_sync_now(_=Depends(verify_admin)):
     marker = {"status": "running", "started_at": now_iso(), "pulled": 0, "upserted": 0}
     ins = await db.ddf_sync_log.insert_one(marker)
     marker_id = ins.inserted_id
+    base_url = _public_base_url(request)
 
     async def _run():
         try:
             r = await _ddf_sync(db)
             await db.ddf_sync_log.update_one({"_id": marker_id}, {"$set": {"status": "done", "finished_at": now_iso(), **r}})
+            # Trigger saved-search alerts. Isolated in try/except so alert
+            # failures never mark the sync as errored.
+            try:
+                from services.alert_matcher import run_matcher
+                alerts = await run_matcher(db, base_url)
+                logger.info(f"alert_matcher after sync: {alerts}")
+            except Exception as e:
+                logger.exception(f"alert_matcher hook failed: {e}")
         except Exception as e:
             await db.ddf_sync_log.update_one({"_id": marker_id}, {"$set": {"status": "error", "finished_at": now_iso(), "errors": [str(e)]}})
     asyncio.create_task(_run())

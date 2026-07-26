@@ -1,0 +1,37 @@
+{
+  "summary": "Tested new CASL/PIPA-compliant saved-search email alerts feature. Backend: 14/14 pytest cases passed including validation, double-opt-in flow, tamper-evident consent capture (IP/UA/timestamp at both subscribe & verify), Mongo email_outbox queuing (RESEND_API_KEY intentionally absent), digest matcher with Whistler listings, CASL footer/unsubscribe compliance, RFC 8058 POST unsubscribe, admin views, excluded property-type sanitization, and 10-burst POST resilience. Frontend: /listings CREA gate → alerts button → modal open → double-opt-in copy → happy submit → 'Check your inbox' success state → X-close all verified. Everything works end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SavedSearchModal (/listings)", "issues": [
+        "Minor UX: the custom error banner 'Please enter your email and check both consent boxes.' never renders because the email <input> and both consent <input type=checkbox> have the HTML `required` attribute. When the user clicks submit with blanks, the browser-native validation tooltip fires instead (e.g. 'Please fill out this field.', 'Please check this box if you want to proceed.'). Functionally the form is still blocked from submitting, but this deviates from the review-request expectation that the custom banner appears. Fix: remove `required` from the fields OR remove the custom check + banner (pick one)."
+      ]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_saved_searches.py",
+    "/app/test_reports/pytest/saved_searches.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Decide whether custom validation banner or HTML5 native validation is desired for SavedSearchModal (currently both are wired; native wins so banner never shows)."
+  ],
+  "critical_code_review_comments": [
+    "services/email_sender.py — SENDER_PHONE placeholder '+1-604-XXX-XXXX' and SENDER_ADDRESS 'British Columbia, Canada' need replacement with real civic address + phone BEFORE launch (comments in code already flag this, but CASL s.6(2) requires a valid mailing address & at least one live contact method). Test currently only verifies 'Fraser Property' + 'info@eztofind.ca' + 'Doug LeMaire' are present.",
+    "alert_matcher.py — cutoff for 'new listings' uses last_notified_at || verified_at || created_at, but listings.synced_at may be missing on legacy DDF records. Query `synced_at: {$gt: cutoff}` will silently skip listings without synced_at. Consider `{$or: [{synced_at: {$gt: cutoff}}, {created_at: {$gt: cutoff}}]}` or backfill synced_at.",
+    "server.py — CURRENT_POLICY_VERSION is hard-coded ('2026-02-25'). Consider externalising to env or config so policy bumps don't require redeploy.",
+    "server.py — /api/saved-searches has no rate-limit decorator (@_limiter.limit) unlike other public POSTs. Not a bug (test_rapid_posts_no_500 passed) but worth adding to prevent enumeration/abuse of email verification link generation.",
+    "server.py L622 admin_list_saved_searches — returns unsubscribe_token in payload (verification_token is stripped). unsubscribe_token being leaked to admin UI means anyone with admin access can trigger unsubscribes on behalf of users. Minor; consider stripping it too."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_saved_searches.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin doug@eztofind.ca / EZtoFind2026! from /app/memory/test_credentials.md",
+  "seed_data_creation": "Test data prefixed with test_savedsearch_ and playwright_ui_test — all cleaned up post-run via fixture teardown + mongo cleanup.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_saved_searches.py is comprehensive regression coverage. RESEND_API_KEY intentionally unset — emails go to email_outbox with provider='outbox'. Whistler saved search yields 8-listing digest reliably (~319 active BC listings). If run-matcher digests_sent is 0, check that listings have synced_at set and that filter's city matches Mongo docs case-insensitively.",
+  "rca of the issue": "N/A — no bugs blocking. One minor UX inconsistency documented above (HTML5 native validation overrides custom banner)."
+}
