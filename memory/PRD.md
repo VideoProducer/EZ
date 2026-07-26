@@ -82,6 +82,10 @@ Backend: **19/19 tests passed (100%)** via testing subagent (iteration_1.json)
 - ✅ **/communities index copy** — removed "Doug's primary practice..." line, added Referral REALTOR® link
 - ✅ **Community map moved above H1 name** — Google Maps embed at top of each community page
 
+### Feb 26, 2026 — Out-of-Area Referral Pill on Listing Detail
+- ✅ **Service-area gating on `/listing/:key`** — added `SERVICE_AREA_CITIES` set (Greater Vancouver + Fraser Valley + Sea-to-Sky, normalized to fold "Langley City"/"Langley Township" → "langley", etc.) and `isInServiceArea(listing)` helper. When a listing's city is outside Doug's service area, the "Book a Viewing" inquiry form is replaced with a dark-navy pill CTA reading "Request a Referral REALTOR® in [City]" that deep-links to `/referral-request?city=X&mls=Y&region=Z`. In-service-area listings keep the existing form. Falls back cleanly since DDF-synced `region` is often empty.
+- ✅ **`ReferralRequest` form pre-fill** — reads `?city=` and `?mls=` from URL and pre-populates the city field + notes ("Interested in MLS® ###### in <City>."), so the out-of-area lead lands with full context. Referral notes captured as `OUT-OF-AREA REFERRAL REQUEST — <City> · MLS® ####.` for Doug's CRM triage.
+
 ### Feb 25, 2026 — Multilingual Lead Forms + CREA DDF Live + Strict Community Filtering + Mobile Hero Fix
 - ✅ **Multilingual `?lang=` conversion forms** — `/buyer`, `/seller`, `/referral-request`, `/contact` now render in EN, 繁 (zh-Hant), 简 (zh-Hans), ਪੰਜਾਬੀ (pa), فارسی (fa) with RTL, and Português (pt-PT). i18n dict at `/app/frontend/src/i18n.js`; `useFormLang()` hook reads URL param.
 - ✅ **Doogie chat auto-appends `?lang=xx`** to internal /buyer, /seller, /contact, /referral-request links when a non-EN chat language is active.

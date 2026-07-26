@@ -1364,6 +1364,37 @@ const SavedSearchModal = ({ open, onClose, currentFilters }) => {
 };
 
 // Full listing detail page — /listing/:key
+// Doug's direct service area. Listings whose city is NOT in this set
+// swap the "Book a Viewing" form for a "Request a Referral REALTOR®" pill
+// (BCFSA compliance + monetization: Doug earns a 25% referral fee on the
+// receiving REALTOR®'s closed commission).
+//
+// DDF-synced listings often have an empty `region` field, so we match by
+// normalized city name. Variants like "Langley City" / "Langley Township"
+// are all folded to "langley" and matched against this list.
+const SERVICE_AREA_CITIES = new Set([
+  // Greater Vancouver
+  "anmore","belcarra","bowen island","burnaby","coquitlam","delta","ladner","tsawwassen",
+  "langley","lions bay","maple ridge","new westminster","north vancouver","pitt meadows",
+  "port coquitlam","port moody","richmond","surrey","university endowment lands",
+  "vancouver","west vancouver","white rock",
+  // Fraser Valley
+  "abbotsford","boston bar","bridal falls","chilliwack","harrison hot springs","hope",
+  "kent","mission","spuzzum","yale","agassiz",
+  // Sea-to-Sky
+  "britannia beach","furry creek","pemberton","squamish","whistler",
+]);
+const _normCity = (s) => (s || "")
+  .toLowerCase()
+  .trim()
+  .replace(/\s+(city|township|district|municipality)$/,"")
+  .replace(/^(city of|township of|district of)\s+/,"")
+  .replace(/\s+/g," ");
+const isInServiceArea = (listing) => {
+  if (!listing) return false;
+  return SERVICE_AREA_CITIES.has(_normCity(listing.city));
+};
+
 const ListingDetail = () => {
   const { key } = useParams();
   const [listing, setListing] = useState(null);
@@ -1437,6 +1468,7 @@ const ListingDetail = () => {
         </div>
         {/* Inquiry sidebar */}
         <div style={{position:"sticky",top:"1rem"}}>
+          {isInServiceArea(listing) ? (
           <div className="paper" data-testid="listing-inquiry-form">
             <div className="eyebrow">Book a Viewing</div>
             <h3 style={{fontSize:"1.2rem",marginBottom:"0.75rem"}}>Ask Doug about this listing</h3>
@@ -1457,6 +1489,39 @@ const ListingDetail = () => {
               </form>
             )}
           </div>
+          ) : (
+          <div className="paper" data-testid="listing-referral-cta" style={{textAlign:"center"}}>
+            <div className="eyebrow">Outside Doug's service area</div>
+            <h3 style={{fontSize:"1.15rem",margin:"0.5rem 0 0.9rem",lineHeight:1.35}}>
+              This listing is in {listing.city}, BC — beyond Doug's direct service area.
+            </h3>
+            <Link
+              to={`/referral-request?city=${encodeURIComponent(listing.city || "")}&mls=${encodeURIComponent(listing.mls_number || "")}&region=${encodeURIComponent(listing.region || "")}`}
+              data-testid="listing-referral-pill"
+              className="referral-pill"
+              style={{
+                display:"inline-block",
+                background:"var(--brand-navy)",
+                color:"#fff",
+                fontFamily:"Inter,sans-serif",
+                fontWeight:600,
+                fontSize:"0.95rem",
+                padding:"0.85rem 1.5rem",
+                borderRadius:999,
+                textDecoration:"none",
+                boxShadow:"0 6px 14px rgba(15,42,91,0.28)",
+                transition:"transform 0.15s, box-shadow 0.15s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 10px 20px rgba(15,42,91,0.35)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 6px 14px rgba(15,42,91,0.28)";}}
+            >
+              Request a Referral REALTOR<sup style={{fontSize:"0.55em"}}>®</sup> in {listing.city}
+            </Link>
+            <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.9rem",lineHeight:1.55,fontFamily:"Inter,sans-serif"}}>
+              We'll match you with a BC-licensed REALTOR® active in {listing.city}. No cost to you — the receiving REALTOR® pays Doug a referral fee at closing.
+            </div>
+          </div>
+          )}
         </div>
       </div>
     </div></section>
@@ -2163,7 +2228,19 @@ const ReferralRequest = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false});
   const [city,setCity]=useState(""); const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}. ${f.notes}`, form_lang: lang}); setDone(true);}catch(x){setErr(t("common.required"));} };
+  // Pre-fill from listing referral pill (?city=...&mls=...)
+  const [prefillMls, setPrefillMls] = useState("");
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const c = sp.get("city"); const m = sp.get("mls");
+    if (c && !city) setCity(c);
+    if (m) {
+      setPrefillMls(m);
+      setF(prev => prev.notes ? prev : { ...prev, notes: `Interested in MLS® ${m}${c ? " in " + c : ""}.` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang}); setDone(true);}catch(x){setErr(t("common.required"));} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
