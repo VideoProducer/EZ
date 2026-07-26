@@ -2156,6 +2156,87 @@ async def export_casl_consent_log(_=Depends(verify_admin)):
     )
 
 
+# =============== NEIGHBORHOOD NICKNAME RESOLVER ===============
+# BC locals search by nickname ("Kits", "PoCo", "The Drive"). CREA's CityRegion
+# field is mostly empty in the DDF feed, so the neighborhood name is enforced
+# by requiring it to appear in the listing's description/features (via the
+# _features_query helper).
+#
+# When exactly ONE candidate matches → we silently apply the clarification and
+# show a "🔍 We searched Vancouver — Kitsilano" note in the summary.
+# When 2+ candidates match (e.g. "the West End" = Vancouver West End OR West
+# Vancouver) → we return needs_clarification=True with clickable options.
+#
+# Focused on Metro Vancouver (Doug's practice area). Nickname keys are matched
+# with word boundaries so "Kits Beach" also fires the "Kits" rule.
+NEIGHBORHOOD_NICKNAMES: dict[str, list[dict]] = {
+    "kits":            [{"city": "Vancouver", "hood": "Kitsilano", "label": "Vancouver — Kitsilano"}],
+    "kitsilano":       [{"city": "Vancouver", "hood": "Kitsilano", "label": "Vancouver — Kitsilano"}],
+    "yaletown":        [{"city": "Vancouver", "hood": "Yaletown", "label": "Vancouver — Yaletown"}],
+    "gastown":         [{"city": "Vancouver", "hood": "Gastown", "label": "Vancouver — Gastown"}],
+    "coal harbour":    [{"city": "Vancouver", "hood": "Coal Harbour", "label": "Vancouver — Coal Harbour"}],
+    "coal harbor":     [{"city": "Vancouver", "hood": "Coal Harbour", "label": "Vancouver — Coal Harbour"}],
+    "mount pleasant":  [{"city": "Vancouver", "hood": "Mount Pleasant", "label": "Vancouver — Mount Pleasant"}],
+    "point grey":      [{"city": "Vancouver", "hood": "Point Grey", "label": "Vancouver — Point Grey"}],
+    "west point grey": [{"city": "Vancouver", "hood": "West Point Grey", "label": "Vancouver — West Point Grey"}],
+    "kerrisdale":      [{"city": "Vancouver", "hood": "Kerrisdale", "label": "Vancouver — Kerrisdale"}],
+    "shaughnessy":     [{"city": "Vancouver", "hood": "Shaughnessy", "label": "Vancouver — Shaughnessy"}],
+    "dunbar":          [{"city": "Vancouver", "hood": "Dunbar", "label": "Vancouver — Dunbar"}],
+    "marpole":         [{"city": "Vancouver", "hood": "Marpole", "label": "Vancouver — Marpole"}],
+    "fairview":        [{"city": "Vancouver", "hood": "Fairview", "label": "Vancouver — Fairview"}],
+    "false creek":     [{"city": "Vancouver", "hood": "False Creek", "label": "Vancouver — False Creek"}],
+    "commercial drive":[{"city": "Vancouver", "hood": "Commercial Drive", "label": "Vancouver — Commercial Drive"}],
+    "the drive":       [{"city": "Vancouver", "hood": "Commercial Drive", "label": "Vancouver — Commercial Drive"}],
+    "grandview":       [{"city": "Vancouver", "hood": "Grandview-Woodland", "label": "Vancouver — Grandview-Woodland"}],
+    "killarney":       [{"city": "Vancouver", "hood": "Killarney", "label": "Vancouver — Killarney"}],
+    "champlain":       [{"city": "Vancouver", "hood": "Champlain Heights", "label": "Vancouver — Champlain Heights"}],
+    "victoria drive":  [{"city": "Vancouver", "hood": "Victoria-Fraserview", "label": "Vancouver — Victoria-Fraserview"}],
+    "downtown eastside":[{"city": "Vancouver", "hood": "Downtown Eastside", "label": "Vancouver — Downtown Eastside"}],
+    "the dtes":        [{"city": "Vancouver", "hood": "Downtown Eastside", "label": "Vancouver — Downtown Eastside"}],
+    "olympic village": [{"city": "Vancouver", "hood": "Olympic Village", "label": "Vancouver — Olympic Village"}],
+    # Genuinely AMBIGUOUS — Vancouver's West End neighborhood vs. the city of West Vancouver.
+    "the west end":    [
+        {"city": "Vancouver",       "hood": "West End", "label": "Vancouver — West End (downtown neighborhood)"},
+        {"city": "West Vancouver",  "hood": None,       "label": "West Vancouver (the whole municipality)"},
+    ],
+    "west end":        [
+        {"city": "Vancouver",       "hood": "West End", "label": "Vancouver — West End (downtown neighborhood)"},
+        {"city": "West Vancouver",  "hood": None,       "label": "West Vancouver (the whole municipality)"},
+    ],
+    # Nicknames for whole municipalities
+    "poco":            [{"city": "Port Coquitlam", "hood": None, "label": "Port Coquitlam"}],
+    "new west":        [{"city": "New Westminster", "hood": None, "label": "New Westminster"}],
+    "north van":       [{"city": "North Vancouver", "hood": None, "label": "North Vancouver"}],
+    "west van":        [{"city": "West Vancouver",  "hood": None, "label": "West Vancouver"}],
+    "the tri-cities":  [
+        {"city": "Coquitlam",      "hood": None, "label": "Coquitlam"},
+        {"city": "Port Coquitlam", "hood": None, "label": "Port Coquitlam"},
+        {"city": "Port Moody",     "hood": None, "label": "Port Moody"},
+    ],
+    # Sea-to-Sky
+    "the corridor":    [{"city": "Squamish", "hood": None, "label": "Squamish (Sea-to-Sky Corridor — click to also search Whistler/Pemberton)"}],
+    # Sunshine Coast
+    "the coast":       [
+        {"city": "Sechelt", "hood": None, "label": "Sechelt"},
+        {"city": "Gibsons", "hood": None, "label": "Gibsons"},
+        {"city": "Pender Harbour", "hood": None, "label": "Pender Harbour"},
+    ],
+}
+
+
+def _detect_neighborhood_nickname(raw_query: str) -> list[dict]:
+    """Scan the raw user query for known BC neighborhood nicknames.
+    Returns the list of candidate localities (may be empty, may be >1)."""
+    if not raw_query:
+        return []
+    q = raw_query.lower()
+    # Sort by longest key first so "the west end" wins over "west end" wins over "end"
+    for key in sorted(NEIGHBORHOOD_NICKNAMES.keys(), key=lambda k: (-len(k), k)):
+        if re.search(rf"\b{re.escape(key)}\b", q):
+            return NEIGHBORHOOD_NICKNAMES[key]
+    return []
+
+
 # =============== DOOGIE MLS® SEARCH (natural language → filters → listings) ===============
 
 # CREA DDF® uses different labels across the 82 Canadian boards for the same
@@ -2266,6 +2347,51 @@ async def doogie_mls_search(request: Request, payload: dict):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": ""}
 
     filters = await _extract_listing_filters(q)
+
+    # Neighborhood-nickname detection. Locals search by shorthand ("Kits",
+    # "PoCo", "The Drive") — we resolve those to real BC localities before
+    # searching. If the nickname is ambiguous ("the West End" = Vancouver
+    # West End neighborhood OR West Vancouver city), we return a clarification
+    # response so the frontend can render clickable options.
+    nickname_hits = _detect_neighborhood_nickname(q)
+    if nickname_hits:
+        # Genuinely ambiguous nicknames ALWAYS trigger the clarification prompt,
+        # even if Claude guessed a city — the AI guess may not match user intent.
+        if len(nickname_hits) > 1:
+            return {
+                "intent_matched": True,
+                "needs_clarification": True,
+                "clarification_prompt": (
+                    f"Just to be sure — when you say \"{q}\", did you mean:"
+                ),
+                "options": [
+                    {"label": h["label"], "city": h["city"], "hood": h.get("hood")}
+                    for h in nickname_hits
+                ],
+                "original_query": q,
+                "filters": {k: v for k, v in filters.items() if not k.startswith("_")},
+                "count": 0,
+                "listings": [],
+                "summary": "",
+            }
+        # Unambiguous — silent auto-apply
+        hit = nickname_hits[0]
+        filters["city"] = hit["city"]
+        if hit.get("hood"):
+            existing = filters.get("features") or []
+            if hit["hood"] not in existing and hit["hood"].lower() not in [e.lower() for e in existing]:
+                existing.append(hit["hood"])
+            # Remove the nickname itself from features if Claude also added it
+            hood_lc = hit["hood"].lower()
+            existing = [e for e in existing if e.lower() == hood_lc or hood_lc not in e.lower() and e.lower() not in hood_lc]
+            # De-dupe (case-insensitive, preserve order)
+            seen = set(); deduped = []
+            for f in existing:
+                if f.lower() not in seen:
+                    seen.add(f.lower()); deduped.append(f)
+            filters["features"] = deduped
+        filters["_neighborhood_note"] = hit["label"]
+
     # Belt-and-suspenders: if Claude didn't extract a city, try our own
     # locality resolver against the raw query. This guarantees "Whistler"
     # always becomes a strict city filter, never a text-index leak.
@@ -2327,17 +2453,19 @@ async def doogie_mls_search(request: Request, payload: dict):
     feat_note = ""
     if filters.get("features"):
         feat_note = f" with {' and '.join(filters['features'])}"
+    hood_note = filters.pop("_neighborhood_note", None)
+    hood_prefix = f"🔍 Searched **{hood_note}** — " if hood_note else ""
     criteria = (" ".join(parts) + price_note + feat_note) if parts else "listings matching your search"
     if total == 0:
-        summary = (
+        summary = hood_prefix + (
             f"I couldn't find any {criteria.strip()} in the current MLS® data. "
             f"That combination is very specific — try widening the price range, "
             f"dropping one of the features, or searching a nearby community."
         )
     elif total <= 6:
-        summary = f"Here {'is' if total==1 else 'are'} {total} {criteria.strip()}:"
+        summary = hood_prefix + f"Here {'is' if total==1 else 'are'} {total} {criteria.strip()}:"
     else:
-        summary = f"I found {total} matching {criteria.strip()} — showing the top 6. Refine your search on the full listings page for more."
+        summary = hood_prefix + f"I found {total} matching {criteria.strip()} — showing the top 6. Refine your search on the full listings page for more."
 
     return {
         "intent_matched": True,

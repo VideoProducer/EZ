@@ -1126,6 +1126,7 @@ const Listings = () => {
     sort: params.get("sort") || "newest",
   });
   const [nlBanner, setNlBanner] = useState(null); // { original, extracted }
+  const [clarify, setClarify] = useState(null);    // { prompt, options, original }
   const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
   const [facets, setFacets] = useState({});
   const [allComms, setAllComms] = useState([]); // [{name, region}] — full BC list for typeahead
@@ -1162,6 +1163,11 @@ const Listings = () => {
       axios.post(`${API}/doogie/mls-search`, { message: rawQ })
         .then(r => {
           const d = r.data;
+          if (d && d.needs_clarification) {
+            // Ambiguous locality — show the user their options
+            setClarify({ prompt: d.clarification_prompt, options: d.options, original: rawQ });
+            return;
+          }
           if (d && d.intent_matched && d.filters) {
             const parsed = {
               q: "",
@@ -1206,6 +1212,45 @@ const Listings = () => {
           <div style={{background:"#DBEAFE",border:"1px solid #2563EB",color:"#1E3A8A",padding:"0.75rem 1.25rem",borderRadius:10,fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.75rem",maxWidth:720,margin:"0.75rem auto 0",textAlign:"left"}} data-testid="nl-banner">
             <div style={{fontWeight:700,marginBottom:"0.25rem"}}>🐾 Doogie parsed your search:</div>
             <div style={{fontSize:"0.82rem"}}>"{nlBanner.original}" → {Object.entries(nlBanner.extracted).filter(([_k,v])=>v).map(([k,v])=>`${k.replace(/_/g," ")}: ${v}`).join(" · ")}</div>
+          </div>
+        )}
+        {clarify && (
+          <div data-testid="clarify-card" style={{background:"#fff",border:"2px solid var(--brand-gold, #E0B84A)",color:"var(--brand-navy)",padding:"1.25rem 1.5rem",borderRadius:14,fontFamily:"Inter,sans-serif",marginTop:"1.25rem",maxWidth:640,margin:"1.25rem auto 0",textAlign:"left",boxShadow:"0 10px 30px rgba(15,42,91,0.08)"}}>
+            <div style={{fontWeight:700,marginBottom:"0.4rem",fontSize:"1rem"}}>🐾 Quick clarification</div>
+            <div style={{fontSize:"0.92rem",lineHeight:1.5,marginBottom:"0.85rem"}}>{clarify.prompt}</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
+              {clarify.options.map((opt, i) => (
+                <button key={i} data-testid={`clarify-option-${i}`} onClick={() => {
+                  // Re-run search with an explicit, unambiguous query
+                  const explicit = opt.hood
+                    ? `${clarify.original.replace(/\b(the west end|west end|kits|kitsilano|yaletown|gastown|coal harbou?r|mount pleasant|point grey|kerrisdale|shaughnessy|dunbar|marpole|fairview|false creek|commercial drive|the drive|grandview|killarney|champlain|olympic village|downtown eastside|the dtes|poco|new west|north van|west van|the tri-cities|the coast|the corridor)\b/gi, "").trim()} in ${opt.city} in the ${opt.hood} neighborhood`.replace(/\s+/g, " ")
+                    : clarify.original.replace(/\b(the tri-cities|poco|new west|north van|west van|the west end|west end|the coast|the corridor)\b/gi, opt.city);
+                  setClarify(null);
+                  // Fire another Doogie call with the explicit phrasing
+                  axios.post(`${API}/doogie/mls-search`, { message: explicit }).then(r => {
+                    const d = r.data;
+                    if (d && d.intent_matched && d.filters && !d.needs_clarification) {
+                      const parsed = {
+                        q: "", city: d.filters.city || "", community: "",
+                        property_type: d.filters.property_type || "",
+                        beds_min: d.filters.beds_min || "", baths_min: d.filters.baths_min || "",
+                        price_min: d.filters.price_min || "", price_max: d.filters.price_max || "",
+                        features: Array.isArray(d.filters.features) ? d.filters.features.join(",") : "",
+                        sort: d.filters.sort || "newest",
+                      };
+                      setFilters(parsed);
+                      setNlBanner({ original: explicit, extracted: d.filters });
+                      runSearch(parsed);
+                    }
+                  }).catch(() => {});
+                }} className="btn" style={{background:"var(--brand-navy)",color:"#fff",padding:"0.55rem 1.1rem",borderRadius:999,fontSize:"0.85rem",fontWeight:600,border:"none",cursor:"pointer"}}>
+                  {opt.label}
+                </button>
+              ))}
+              <button data-testid="clarify-cancel" onClick={() => setClarify(null)} className="btn" style={{background:"transparent",color:"var(--muted)",padding:"0.55rem 0.85rem",borderRadius:999,fontSize:"0.85rem",border:"1px solid rgba(0,0,0,0.15)",cursor:"pointer"}}>
+                None of these — let me refine
+              </button>
+            </div>
           </div>
         )}
       </div>
