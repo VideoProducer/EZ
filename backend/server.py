@@ -1304,6 +1304,53 @@ async def community_neighbourhoods(slug: str):
     return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
 
 
+# =============== MUNICIPAL ZONING ===============
+# Curated per-community links to authoritative municipal zoning bylaws + planning
+# depts. Communities NOT in the curated file get a Google-search fallback URL.
+# The provincial context (BC Bill 44 / SSMUH) applies to EVERY BC community and
+# is served identically for all — that piece is the moat vs. Zoocasa/REW/Rennie
+# which don't yet cover the 2024 up-zoning wave.
+_ZONING_SOURCES_PATH = ROOT_DIR / "data" / "community_zoning_sources.json"
+def _zoning_sources() -> dict:
+    try: return json.loads(_ZONING_SOURCES_PATH.read_text())
+    except Exception: return {}
+
+@api.get("/community/{slug}/zoning")
+async def community_zoning(slug: str):
+    name, region = _resolve_community(slug)
+    if not name:
+        raise HTTPException(404, "Community not found")
+    sources = _zoning_sources()
+    src = sources.get(slug)
+    if not src:
+        # Graceful fallback for the ~190 communities not yet in the curated file.
+        google_q = f"{name} BC residential zoning bylaw"
+        src = {
+            "bylaw_url": f"https://www.google.com/search?q={google_q.replace(' ', '+')}",
+            "map_url": None,
+            "planning_url": None,
+            "planning_phone": None,
+            "planning_email": None,
+            "is_fallback": True,
+        }
+    else:
+        src = {**src, "is_fallback": False}
+    return {
+        "community": name,
+        "region": region,
+        "slug": slug,
+        "source": src,
+        "provincial_context": {
+            "act": "BC Bill 44 — Housing Statutes (Residential Development) Amendment Act, 2023",
+            "common_name": "Small-Scale Multi-Unit Housing (SSMUH)",
+            "effective": "July 1, 2024 for most municipalities",
+            "summary": "Every BC municipality (pop. ≥ 5,000, on Class-A water service) was required by June 30, 2024 to amend its zoning bylaw to permit 3–4 residential units on most lots previously zoned for a single detached dwelling, and up to 6 units on lots close to frequent-transit stops. This applies province-wide and effectively supersedes older R-1 / RS-1 style single-family-only zones for most parcels — regardless of what the local bylaw text still says on the surface. Always verify current permitted density with the municipality's planning department.",
+            "authority_url": "https://www2.gov.bc.ca/gov/content/housing-tenancy/local-governments-and-housing/housing-initiatives/smsc-housing",
+        },
+        "last_reviewed": "2026-02-26",
+    }
+
+
 async def generate_neighbourhood_synopsis(neigh: str, community: str, region: str, listing_stats: dict) -> str:
     """Generate a 180-260 word micro-neighbourhood synopsis via Claude Sonnet 4.6.
     Deliberately excludes climate/walkability/transit/vibe (those live on the

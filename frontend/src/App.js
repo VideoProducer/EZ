@@ -277,6 +277,106 @@ const NeighbourhoodPage = () => {
   </div></section>);
 };
 
+const CommunityZoning = () => {
+  const { slug } = useParams();
+  const [d, setD] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  useEffect(() => {
+    setD(null); setNotFound(false);
+    axios.get(`${API}/community/${slug}/zoning`).then(r => setD(r.data)).catch(() => setNotFound(true));
+  }, [slug]);
+  if (notFound) return <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}><Link to="/communities" style={{color:"var(--brand-blue)"}}>← All communities</Link><h1 className="section-title">Community not found</h1></div></section>;
+  if (!d) return <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}><h1 className="section-title">Loading…</h1></div></section>;
+  const s = d.source;
+  return (
+    <section className="section" style={{fontFamily:"Inter,sans-serif"}}>
+      <div className="container-x" style={{maxWidth:"52rem"}}>
+        <SEO
+          title={`${d.community} Residential Zoning — Bylaw + Planning Contacts | EZtoFind.ca`}
+          description={`Residential zoning bylaw links, planning department contacts, and BC Bill 44 (SSMUH) up-zoning context for ${d.community}, British Columbia. Written by Doug LeMaire, REALTOR®.`}
+          path={`/community/${slug}/zoning`}
+        />
+        <Helmet><script type="application/ld+json">{JSON.stringify({
+          "@context":"https://schema.org","@type":"BreadcrumbList",
+          "itemListElement":[
+            {"@type":"ListItem","position":1,"name":"Home","item":"https://eztofind.ca/"},
+            {"@type":"ListItem","position":2,"name":"Communities","item":"https://eztofind.ca/communities"},
+            {"@type":"ListItem","position":3,"name":d.community,"item":`https://eztofind.ca/community/${slug}`},
+            {"@type":"ListItem","position":4,"name":"Residential Zoning","item":`https://eztofind.ca/community/${slug}/zoning`},
+          ]
+        })}</script></Helmet>
+
+        <div style={{fontSize:"0.9rem",marginBottom:"1rem"}}>
+          <Link to="/communities" style={{color:"var(--brand-blue)",textDecoration:"none"}}>Communities</Link>
+          <span style={{color:"var(--muted)"}}> › </span>
+          <Link to={`/community/${slug}`} style={{color:"var(--brand-blue)",textDecoration:"none"}}>{d.community}</Link>
+          <span style={{color:"var(--muted)"}}> › Residential Zoning</span>
+        </div>
+        <div className="eyebrow">{d.community}, {d.region}</div>
+        <h1 className="section-title" data-testid="zoning-title">Residential Zoning in {d.community}</h1>
+        <p style={{color:"var(--muted)",fontSize:"1rem",lineHeight:1.7}}>Last reviewed by Doug LeMaire, REALTOR® on {new Date(d.last_reviewed).toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}. General information only — zoning bylaws change frequently. Always verify current permitted uses with the municipality's planning department before making offers, applying for permits, or building.</p>
+
+        {/* Provincial SSMUH context — the piece almost no competitor site has */}
+        <div className="paper" data-testid="zoning-provincial" style={{background:"#EAF3FF",marginTop:"1.5rem"}}>
+          <div className="eyebrow">Province-wide overlay (applies to {d.community})</div>
+          <h2 style={{fontSize:"1.35rem",marginTop:"0.4rem"}}>🏛️ BC Bill 44 — Small-Scale Multi-Unit Housing (SSMUH)</h2>
+          <p style={{fontSize:"0.95rem",lineHeight:1.75,margin:"0.5rem 0"}}>{d.provincial_context.summary}</p>
+          <p style={{fontSize:"0.85rem",color:"var(--muted)",margin:"0.5rem 0"}}>
+            <strong>Act:</strong> {d.provincial_context.act}<br/>
+            <strong>Effective:</strong> {d.provincial_context.effective}
+          </p>
+          <a href={d.provincial_context.authority_url} target="_blank" rel="noopener noreferrer" data-testid="zoning-ssmuh-link" style={{color:"var(--brand-blue)",fontSize:"0.9rem",textDecoration:"none",fontWeight:600}}>Read the Province of BC's SSMUH overview →</a>
+        </div>
+
+        {/* Municipality-specific bylaw + planning contacts */}
+        <h2 style={{marginTop:"2rem",fontSize:"1.5rem"}}>📜 {d.community}'s zoning bylaw + planning contacts</h2>
+        {s.is_fallback && (
+          <p style={{fontSize:"0.9rem",color:"var(--muted)",background:"#FFF8E8",padding:"0.75rem 1rem",borderRadius:8,borderLeft:"3px solid var(--brand-gold)",margin:"0.5rem 0 1rem"}}>
+            ℹ️ Direct link for {d.community}'s zoning bylaw isn't yet in our curated index. The link below runs a Google search for the current municipal or regional-district bylaw — if you find the correct authoritative URL, please email <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a> and Doug will add it here.
+          </p>
+        )}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(230px, 1fr))",gap:"0.8rem",marginTop:"1rem"}} data-testid="zoning-sources">
+          {s.bylaw_url && (
+            <a href={s.bylaw_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-bylaw-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
+              <div style={{fontSize:"1.5rem"}}>📖</div>
+              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Zoning Bylaw</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Full text of the residential zoning schedule for {d.community}.</div>
+            </a>
+          )}
+          {s.map_url && (
+            <a href={s.map_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-map-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
+              <div style={{fontSize:"1.5rem"}}>🗺️</div>
+              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Interactive Zoning Map</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Look up any specific parcel's current zoning designation.</div>
+            </a>
+          )}
+          {s.planning_url && (
+            <a href={s.planning_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-planning-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
+              <div style={{fontSize:"1.5rem"}}>🏛️</div>
+              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Planning Department</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Talk to a planner about a specific property.<br/>{s.planning_phone && <><br/><strong>☎ </strong><a href={`tel:${s.planning_phone.replace(/[^0-9+]/g,"")}`} style={{color:"var(--brand-blue)"}}>{s.planning_phone}</a></>}{s.planning_email && <><br/><strong>✉ </strong><a href={`mailto:${s.planning_email}`} style={{color:"var(--brand-blue)"}}>{s.planning_email}</a></>}</div>
+            </a>
+          )}
+        </div>
+
+        {/* Ask Doogie for zone-specific follow-ups */}
+        <div className="paper" style={{marginTop:"2rem",background:"var(--brand-navy)",color:"#fff"}}>
+          <h2 style={{color:"#fff",fontSize:"1.3rem",marginTop:0}}>💬 Have a zoning question about a specific property?</h2>
+          <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9}}>Doogie can walk you through common BC zone codes (R-1, RM-1, RS-1, CD-1, etc.), the SSMUH transition, secondary-suite allowances, and how to read a zoning bylaw — in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.</p>
+          <div style={{display:"flex",gap:"0.8rem",flexWrap:"wrap",marginTop:"0.5rem"}}>
+            <Link to={`/community/${slug}`} className="btn btn-outline" style={{color:"#fff",borderColor:"#fff"}}>← Back to {d.community}</Link>
+            <Link to="/listings" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none"}}>View {d.community} Listings</Link>
+          </div>
+        </div>
+
+        <p style={{marginTop:"2rem",fontSize:"0.78rem",color:"var(--muted)",fontStyle:"italic"}}>
+          Zoning designations, permitted uses, and density allowances are set by municipal bylaws which are amended frequently. The information linked above is authoritative; anything inferred from a third-party source (including this page or Doogie AI) must be verified against the actual bylaw and confirmed with the municipality's planning department before you make a real estate, construction, or renovation decision. Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 — (604) 466-7021.
+        </p>
+      </div>
+    </section>
+  );
+};
+
 const VibeScore = ({ slug, community }) => {
   const [vs, setVs] = useState(null);
   const [expanded, setExpanded] = useState(false);
@@ -2463,6 +2563,7 @@ const CommunityPage = () => {
           <Link to="/seller" className="btn btn-green">I'm Selling in {found}</Link>
         </> : <Link to={`/referral-request?city=${encodeURIComponent(found)}`} className="btn btn-primary">Request a Referral REALTOR® in {found}</Link>}
         <Link to={`/listings?city=${encodeURIComponent(found)}`} className="btn btn-outline" data-testid={`community-view-listings-${slug}`}>View Listings in {found}</Link>
+        <Link to={`/community/${slug}/zoning`} className="btn btn-outline" data-testid={`community-view-zoning-${slug}`}>🏛️ Zoning in {found}</Link>
       </div>
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
@@ -3525,6 +3626,7 @@ function App() {
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
+      <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>

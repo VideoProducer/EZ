@@ -82,6 +82,7 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
                 slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
                 community_slug_by_name[name.lower()] = (slug, region)
                 parts.append(_url_tag(f"{BASE_URL}/community/{slug}", today, "weekly", "0.7"))
+                parts.append(_url_tag(f"{BASE_URL}/community/{slug}/zoning", today, "monthly", "0.6"))
                 community_count += 1
 
     # Micro-neighbourhood pages: enumerate live from CREA DDF sub-area (`region`)
