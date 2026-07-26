@@ -164,6 +164,119 @@ const WMO = (code) => {
 
 
 // Neighbourhood Vibe Score™ — 6-factor community livability index.
+const NeighbourhoodDirectory = ({ slug, community }) => {
+  const [items, setItems] = useState(null);
+  useEffect(() => {
+    if (!slug) return;
+    let alive = true;
+    axios.get(`${API}/community/${slug}/neighbourhoods`).then(r => { if (alive) setItems(r.data.neighbourhoods || []); }).catch(() => { if (alive) setItems([]); });
+    return () => { alive = false; };
+  }, [slug]);
+  if (items === null || items.length === 0) return null;
+  const fmt = (n) => n ? `$${(n/1000000 >= 1) ? (n/1000000).toFixed(2) + "M" : Math.round(n/1000) + "K"}` : "—";
+  return (
+    <div data-testid="community-neighbourhood-directory" style={{marginTop:"2.5rem",fontFamily:"Inter,sans-serif"}}>
+      <h2 style={{fontSize:"1.75rem",marginBottom:"0.35rem"}}>🏘️ Neighbourhoods in {community}</h2>
+      <p style={{color:"var(--muted)",fontSize:"0.95rem",lineHeight:1.6,marginBottom:"1.25rem"}}>
+        {items.length} sub-neighbourhood{items.length===1?"":"s"} with active MLS® inventory. Tap a tile for its character, housing mix, and current listings.
+      </p>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:"0.8rem"}}>
+        {items.map(n => (
+          <Link
+            key={n.slug}
+            to={`/community/${slug}/n/${n.slug}`}
+            data-testid={`nhb-tile-${n.slug}`}
+            style={{
+              display:"block",
+              padding:"1rem 1.1rem",
+              background:"#FDFCF8",
+              border:"1px solid rgba(15,42,91,0.12)",
+              borderRadius:12,
+              textDecoration:"none",
+              color:"var(--ink)",
+              transition:"transform 0.15s, box-shadow 0.15s, border-color 0.15s",
+              boxShadow:"0 2px 6px rgba(15,42,91,0.05)",
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 18px rgba(15,42,91,0.14)"; e.currentTarget.style.borderColor="rgba(15,42,91,0.28)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 2px 6px rgba(15,42,91,0.05)"; e.currentTarget.style.borderColor="rgba(15,42,91,0.12)";}}
+          >
+            <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.05rem",fontWeight:700,color:"var(--brand-navy)",lineHeight:1.25}}>{n.name}</div>
+            <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem"}}>{n.count} active listing{n.count===1?"":"s"}</div>
+            <div style={{fontSize:"0.85rem",color:"var(--ink)",marginTop:"0.35rem",fontWeight:500}}>
+              {fmt(n.min_price)} – {fmt(n.max_price)}
+              {n.median_price && <span style={{color:"var(--muted)",fontWeight:400}}> · med {fmt(n.median_price)}</span>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const NeighbourhoodPage = () => {
+  const { slug, nSlug } = useParams();
+  const [d, setD] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  useEffect(() => {
+    setD(null); setNotFound(false);
+    axios.get(`${API}/community/${slug}/neighbourhood/${nSlug}`, {timeout: 90000})
+      .then(r => setD(r.data))
+      .catch(() => setNotFound(true));
+  }, [slug, nSlug]);
+  if (notFound) return <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}><Link to="/communities" style={{color:"var(--brand-blue)",fontFamily:"Inter,sans-serif"}}>← All communities</Link><h1 className="section-title">Neighbourhood not found</h1><p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>We couldn't find that micro-neighbourhood. It may not currently have active MLS® listings.</p></div></section>;
+  if (!d) return <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}><h1 className="section-title">Loading…</h1></div></section>;
+  const fmt = (n) => n ? `$${(n/1000000 >= 1) ? (n/1000000).toFixed(2) + "M" : Math.round(n/1000) + "K"}` : "—";
+  const jsonLd = {"@context":"https://schema.org","@type":"Place","name":`${d.neighbourhood}, ${d.community}, BC`,"containedInPlace":{"@type":"Place","name":`${d.community}, British Columbia`},"description":(d.synopsis||"").substring(0,300)};
+  return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
+    <SEO
+      title={`${d.neighbourhood}, ${d.community} BC — Micro-Neighbourhood Profile | EZtoFind.ca`}
+      description={d.synopsis ? d.synopsis.substring(0,200) : `Active MLS® listings and housing character for ${d.neighbourhood}, a sub-neighbourhood of ${d.community}, British Columbia.`}
+      path={`/community/${slug}/n/${nSlug}`}
+      schema={jsonLd}
+    />
+    <Helmet><script type="application/ld+json">{JSON.stringify({
+      "@context":"https://schema.org","@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://eztofind.ca/"},
+        {"@type":"ListItem","position":2,"name":"Communities","item":"https://eztofind.ca/communities"},
+        {"@type":"ListItem","position":3,"name":d.community,"item":`https://eztofind.ca/community/${slug}`},
+        {"@type":"ListItem","position":4,"name":d.neighbourhood,"item":`https://eztofind.ca/community/${slug}/n/${nSlug}`},
+      ]
+    })}</script></Helmet>
+    <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>
+      <Link to="/communities" style={{color:"var(--brand-blue)",textDecoration:"none"}}>Communities</Link>
+      <span style={{color:"var(--muted)"}}> › </span>
+      <Link to={`/community/${slug}`} style={{color:"var(--brand-blue)",textDecoration:"none"}}>{d.community}</Link>
+      <span style={{color:"var(--muted)"}}> › {d.neighbourhood}</span>
+    </div>
+    <div className="eyebrow" style={{marginTop:"1.25rem"}}>{d.community}, {d.region}</div>
+    <h1 className="section-title" data-testid="neighbourhood-name">{d.neighbourhood}</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.02rem",lineHeight:1.7}}>
+      A micro-neighbourhood within {d.community}. This page focuses on <strong>location and housing character</strong> — for walkability, transit, climate, and safety metrics see the <Link to={`/community/${slug}`} style={{color:"var(--brand-blue)"}}>{d.community} community page</Link>.
+    </p>
+
+    {/* Market snapshot bar — deliberately different from Vibe Score */}
+    <div data-testid="nhb-market-snapshot" style={{marginTop:"1.5rem",display:"flex",gap:"1rem",flexWrap:"wrap",background:"#FDFCF8",border:"1px solid rgba(15,42,91,0.12)",borderRadius:12,padding:"1rem 1.25rem",fontFamily:"Inter,sans-serif"}}>
+      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Active listings</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.6rem",fontWeight:700,color:"var(--brand-navy)"}}>{d.listing_count}</div></div>
+      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Price range</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.15rem",fontWeight:700,color:"var(--brand-navy)"}}>{fmt(d.min_price)} – {fmt(d.max_price)}</div></div>
+      {d.median_price && <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Median</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.6rem",fontWeight:700,color:"var(--brand-navy)"}}>{fmt(d.median_price)}</div></div>}
+    </div>
+
+    <div style={{marginTop:"1.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
+      <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">🏡 View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
+      <Link to={`/community/${slug}`} className="btn btn-outline">← Back to {d.community}</Link>
+    </div>
+
+    <h2 style={{marginTop:"2.5rem",fontSize:"1.5rem"}}>About {d.neighbourhood}</h2>
+    {d.synopsis ? (
+      <div data-testid="nhb-synopsis" style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}}>{d.synopsis}</div>
+    ) : (
+      <div className="notice" style={{marginTop:"0.5rem"}}>{d.note || "Synopsis being generated — please refresh in a moment."}</div>
+    )}
+    {d.synopsis && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-authored, reviewed by Doug LeMaire, REALTOR®. General information only — not a substitute for professional advice.</div>}
+  </div></section>);
+};
+
 const VibeScore = ({ slug, community }) => {
   const [vs, setVs] = useState(null);
   const [expanded, setExpanded] = useState(false);
@@ -1118,6 +1231,7 @@ const Listings = () => {
     q: rawQ,
     city: params.get("city") || params.get("community") || "",
     community: params.get("community") || "",
+    region: params.get("region") || "",
     property_type: params.get("property_type") || "",
     beds_min: params.get("beds_min") || "",
     baths_min: params.get("baths_min") || "",
@@ -2178,6 +2292,8 @@ const CommunityPage = () => {
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
+      {slug && found && <NeighbourhoodDirectory slug={slug} community={found}/>}
+
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>☀️ Weather &amp; Climate in {found}</h2>
       {slug && found && <CurrentWeather slug={slug} community={found}/>}
       {climate?.available && climate.monthly && <ClimateNormalsTable data={climate} community={found}/>}
@@ -2949,6 +3065,7 @@ function App() {
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
+      <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>

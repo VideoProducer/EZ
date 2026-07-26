@@ -1102,6 +1102,153 @@ async def community_weather(slug: str):
     return {"community": name, "region": region, "weather": "", "source":"pending_review", "note":"Weather summary awaiting review before publication.", "sources": weather_sources}
 
 
+# =============== NEIGHBOURHOOD DIRECTORY ===============
+# Sub-neighbourhoods (e.g. "Kitsilano" in Vancouver, "Lower Mission" in Kelowna)
+# derived from live MLS `CityRegion` data. Cached briefly in-memory.
+# Deliberately EXCLUDES anything covered by the parent community's Vibe Score
+# (walkability / transit / air quality / wildfire / flood / climate) — this
+# directory adds ONLY housing-stock + character detail at the micro level.
+_NHB_SLUG_RX = re.compile(r"[^a-z0-9]+")
+def _nhb_slug(s: str) -> str:
+    return _NHB_SLUG_RX.sub("-", (s or "").lower()).strip("-")
+
+def _resolve_community(slug: str):
+    """Return (name, region) tuple for a community slug or (None, None)."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    for r, lst in all_comm.items():
+        for c in lst:
+            if _nhb_slug(c) == slug:
+                return c, r
+    return None, None
+
+@api.get("/community/{slug}/neighbourhoods")
+async def community_neighbourhoods(slug: str):
+    """Return the list of sub-neighbourhoods (CityRegion values) with active
+    MLS listing counts + price snapshots for the given community. Cities where
+    the local board doesn't populate CityRegion will return an empty list."""
+    name, region = _resolve_community(slug)
+    if not name:
+        raise HTTPException(404, "Community not found")
+    pipeline = [
+        {"$match": {
+            "status": "Active",
+            "city": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+            "region": {"$nin": ["", None, region]},  # exclude blanks + the parent region label
+            "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        }},
+        {"$group": {
+            "_id": "$region",
+            "count": {"$sum": 1},
+            "min_price": {"$min": "$list_price"},
+            "max_price": {"$max": "$list_price"},
+            "prices": {"$push": "$list_price"},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 40},
+    ]
+    items = []
+    async for row in db.listings.aggregate(pipeline):
+        prices = sorted([p for p in row.get("prices") or [] if p])
+        median = prices[len(prices)//2] if prices else None
+        items.append({
+            "slug": _nhb_slug(row["_id"]),
+            "name": row["_id"],
+            "count": row["count"],
+            "min_price": row.get("min_price"),
+            "max_price": row.get("max_price"),
+            "median_price": median,
+        })
+    return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
+
+
+async def generate_neighbourhood_synopsis(neigh: str, community: str, region: str, listing_stats: dict) -> str:
+    """Generate a 180-260 word micro-neighbourhood synopsis via Claude Sonnet 4.6.
+    Deliberately excludes climate/walkability/transit/vibe (those live on the
+    parent community page) so the two never duplicate."""
+    beds_mix = listing_stats.get("beds_mix") or ""
+    price_hint = listing_stats.get("price_hint") or ""
+    types = listing_stats.get("types") or ""
+    prompt = f"""Write a factual synopsis of {neigh}, a sub-neighbourhood within {community}, in the {region} region of British Columbia, Canada.
+
+Length: 180-260 words in 2 short paragraphs.
+
+Cover ONLY these two topics — one per paragraph:
+1. Location within {community} — where {neigh} sits geographically inside {community}, its rough boundaries or landmarks that define it, and how it relates to nearby sub-areas.
+2. Housing character — the predominant housing stock and streetscape (e.g., older character homes, mid-rise condos, townhome complexes, larger lots, waterfront, hillside), typical age of homes if known in general terms, and the overall feel (established / newer / mixed / redeveloping). Reference the active listing mix if useful: {types} · beds mix: {beds_mix} · price context: {price_hint}.
+
+Strict rules:
+- Do NOT discuss walkability, transit, schools, hospitals, air quality, wildfire risk, flood risk, or climate — these are already covered on the {community} community page. Your job is to add ONLY location + housing character detail.
+- No price predictions, no property recommendations, no advice.
+- Plain prose. No headers, no bullets, no markdown.
+- Warm, professional tone."""
+    try:
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"nhb-{uuid.uuid4()}", system_message="You are a BC real estate content writer producing factual micro-neighbourhood synopses.").with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        return full.strip()
+    except Exception as e:
+        logger.error(f"Neighbourhood synopsis gen failed for {neigh}, {community}: {e}")
+        return ""
+
+@api.get("/community/{slug}/neighbourhood/{n_slug}")
+async def neighbourhood_detail(slug: str, n_slug: str):
+    """Return metadata + Claude-authored synopsis for a specific micro-
+    neighbourhood. Cached permanently after first generation."""
+    name, region = _resolve_community(slug)
+    if not name:
+        raise HTTPException(404, "Community not found")
+    # Find the exact CityRegion string whose slug matches n_slug (case-preserving)
+    distinct = await db.listings.distinct("region", {
+        "status": "Active",
+        "city": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+        "region": {"$nin": ["", None, region]},
+    })
+    n_name = next((r for r in distinct if _nhb_slug(r) == n_slug), None)
+    if not n_name:
+        raise HTTPException(404, "Neighbourhood not found in this community")
+    # Aggregate listing stats to feed the LLM AND surface on the page.
+    agg = await db.listings.aggregate([
+        {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(name)}$","$options":"i"},"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}, "prices":{"$push":"$list_price"}}},
+    ]).to_list(1)
+    stats = agg[0] if agg else {}
+    prices_sorted = sorted([p for p in stats.get("prices") or [] if p])
+    median = prices_sorted[len(prices_sorted)//2] if prices_sorted else None
+    beds_avg = stats.get("avg_beds") or 0
+    listing_stats = {
+        "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
+        "beds_mix": f"avg {beds_avg:.1f} beds" if beds_avg else "mixed",
+        "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
+    }
+    cached = await db.neighbourhood_synopses.find_one({"slug": slug, "n_slug": n_slug}, {"_id":0})
+    if cached and cached.get("synopsis"):
+        payload = cached
+    else:
+        syn = await generate_neighbourhood_synopsis(n_name, name, region, listing_stats)
+        if syn:
+            await db.neighbourhood_synopses.replace_one(
+                {"slug": slug, "n_slug": n_slug},
+                {"slug": slug, "n_slug": n_slug, "community": name, "region": region, "neighbourhood": n_name, "synopsis": syn, "approved": False, "ts": now_iso()},
+                upsert=True,
+            )
+        payload = {"synopsis": syn, "approved": False}
+    return {
+        "community": name,
+        "region": region,
+        "neighbourhood": n_name,
+        "slug": slug,
+        "n_slug": n_slug,
+        "listing_count": stats.get("count", 0),
+        "min_price": stats.get("min_price"),
+        "max_price": stats.get("max_price"),
+        "median_price": median,
+        "synopsis": payload.get("synopsis") if payload.get("approved") else "",
+        "note": None if payload.get("approved") else "This micro-neighbourhood synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.",
+    }
+
+
 # =============== ECCC LIVE CLIMATE NORMALS ===============
 # Real 1981-2010 Canadian Climate Normals fetched from Environment and Climate
 # Change Canada's MSC GeoMet API. Cached permanently in MongoDB per station
@@ -1409,7 +1556,7 @@ async def startup():
     try:
         from sitemap_generator import generate_sitemap
         stats = await generate_sitemap(db)
-        logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities)")
+        logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities + {stats.get('neighbourhoods',0)} micro-neighbourhoods)")
     except Exception as e:
         logger.error(f"sitemap generation failed: {e}")
 

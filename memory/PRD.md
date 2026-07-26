@@ -82,9 +82,18 @@ Backend: **19/19 tests passed (100%)** via testing subagent (iteration_1.json)
 - ✅ **/communities index copy** — removed "Doug's primary practice..." line, added Referral REALTOR® link
 - ✅ **Community map moved above H1 name** — Google Maps embed at top of each community page
 
-### Feb 26, 2026 — Out-of-Area Referral Pill on Listing Detail
-- ✅ **Service-area gating on `/listing/:key`** — added `SERVICE_AREA_CITIES` set (Greater Vancouver + Fraser Valley + Sea-to-Sky, normalized to fold "Langley City"/"Langley Township" → "langley", etc.) and `isInServiceArea(listing)` helper. When a listing's city is outside Doug's service area, the "Book a Viewing" inquiry form is replaced with a dark-navy pill CTA reading "Request a Referral REALTOR® in [City]" that deep-links to `/referral-request?city=X&mls=Y&region=Z`. In-service-area listings keep the existing form. Falls back cleanly since DDF-synced `region` is often empty.
-- ✅ **`ReferralRequest` form pre-fill** — reads `?city=` and `?mls=` from URL and pre-populates the city field + notes ("Interested in MLS® ###### in <City>."), so the out-of-area lead lands with full context. Referral notes captured as `OUT-OF-AREA REFERRAL REQUEST — <City> · MLS® ####.` for Doug's CRM triage.
+### Feb 26, 2026 — Neighbourhood Directory Pages (SEO/AEO surface + zero overlap w/ Vibe Score)
+- ✅ **Backend endpoints** — `GET /api/community/{slug}/neighbourhoods` (aggregates distinct `CityRegion` from live MLS listings + count + min/median/max price) and `GET /api/community/{slug}/neighbourhood/{n_slug}` (Claude Sonnet 4.6 authored micro-neighbourhood synopsis, cached in `db.neighbourhood_synopses`, pending-review workflow). Prompt explicitly EXCLUDES walkability/transit/climate/wildfire/flood/air quality — those live on the parent community page's Vibe Score so the two never duplicate.
+- ✅ **Frontend directory** — new `NeighbourhoodDirectory` grid injected on every community page between the About synopsis and the Weather section. Tiles show name + active listing count + price range + median. Renders zero tiles gracefully for cities whose MLS board doesn't populate CityRegion (Vancouver, Squamish — REBGV/S2S) so nothing broken shows.
+- ✅ **Micro-neighbourhood detail page** — new route `/community/:slug/n/:nSlug` with breadcrumbs, market snapshot bar (active count · price range · median), AI synopsis, "View X Listings in [Neighbourhood]" CTA, JSON-LD Place + BreadcrumbList schema for AEO.
+- ✅ **Listings filter bugfix** — `region` URL param wasn't being pulled into the Listings component's filter state; fixed. Verified `/listings?city=Kelowna&region=Lower Mission` now returns 244 correctly filtered listings.
+- ✅ **Sitemap expansion** — sitemap.xml now includes 520+ micro-neighbourhood URLs (auto-derived from live MLS data). Total sitemap surface jumped from **653 → 1,173 URLs** (16 static + 396 glossary + 241 communities + **520 micro-neighbourhoods**).
+- Impact: massive SEO/AEO surface expansion — Kelowna alone contributes 28 pages (Lower Mission with 244 listings, Kelowna North 274, etc.), Kamloops 31, Vernon 25, Saanich 34, Sooke 19, Langford 17, and so on.
+
+### Feb 26, 2026 — Community "View Listings" filter fix + Out-of-Area Referral Pill
+- ✅ **Community "View Listings" fix** — button now reads "View Listings in [City]" and links to `/listings?city=X` so clicking Squamish → View Listings returns only Squamish, not all BC.
+- ✅ **In-service-area "Ask Doug" pill** — replaced Book-a-Viewing form on in-area listings with a navy pill that deep-links to `/buyer?city=X&mls=Y&address=Z`; BuyerForm pre-fills areas + notes from URL params. Doogie is not involved in this flow (user preference).
+- ✅ **Out-of-service-area "Request a Referral REALTOR® in [City]" pill** — replaces form on out-of-area listings; deep-links to `/referral-request?city=X&mls=Y` with pre-fill.
 
 ### Feb 25, 2026 — Multilingual Lead Forms + CREA DDF Live + Strict Community Filtering + Mobile Hero Fix
 - ✅ **Multilingual `?lang=` conversion forms** — `/buyer`, `/seller`, `/referral-request`, `/contact` now render in EN, 繁 (zh-Hant), 简 (zh-Hans), ਪੰਜਾਬੀ (pa), فارسی (fa) with RTL, and Português (pt-PT). i18n dict at `/app/frontend/src/i18n.js`; `useFormLang()` hook reads URL param.

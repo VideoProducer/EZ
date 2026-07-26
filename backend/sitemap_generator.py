@@ -73,13 +73,41 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
     import json
     community_seed = Path("/app/backend/data/communities_seed.json")
     community_count = 0
+    community_slug_by_name = {}
     if community_seed.exists():
         comms = json.loads(community_seed.read_text())
         for region, names in comms.items():
             for name in names:
                 slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                community_slug_by_name[name.lower()] = (slug, region)
                 parts.append(_url_tag(f"{BASE_URL}/community/{slug}", today, "weekly", "0.7"))
                 community_count += 1
+
+    # Micro-neighbourhood pages: enumerate live from CREA DDF sub-area (`region`)
+    # values on active listings. Only cities where the local board populates
+    # CityRegion (Interior/Okanagan/Vancouver Island boards) will contribute.
+    neighbourhood_count = 0
+    try:
+        pipeline = [
+            {"$match": {"status":"Active","region":{"$nin":["", None]}}},
+            {"$group": {"_id": {"city":"$city","region":"$region"}}},
+        ]
+        async for row in db.listings.aggregate(pipeline):
+            city = (row["_id"].get("city") or "").strip()
+            n_name = (row["_id"].get("region") or "").strip()
+            hit = community_slug_by_name.get(city.lower())
+            if not hit or not n_name:
+                continue
+            c_slug, region = hit
+            if n_name.strip().lower() == region.strip().lower():
+                continue  # parent region label — skip
+            n_slug = re.sub(r"[^a-z0-9]+", "-", n_name.lower()).strip("-")
+            if not n_slug:
+                continue
+            parts.append(_url_tag(f"{BASE_URL}/community/{c_slug}/n/{n_slug}", today, "weekly", "0.6"))
+            neighbourhood_count += 1
+    except Exception:
+        pass
 
     parts.append("</urlset>\n")
     xml = "".join(parts)
@@ -92,7 +120,8 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
         "static": static_count,
         "glossary": len(gterms),
         "communities": community_count,
-        "total": static_count + len(gterms) + community_count,
+        "neighbourhoods": neighbourhood_count,
+        "total": static_count + len(gterms) + community_count + neighbourhood_count,
         "path": str(out),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
