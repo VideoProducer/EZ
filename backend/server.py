@@ -1740,9 +1740,11 @@ async def regenerate_neighbourhood(slug: str, n_slug: str, _=Depends(verify_admi
     return {"success": True, "synopsis": s}
 
 @api.post("/admin/approvals/generate-all-neighbourhoods")
-async def generate_all_neighbourhoods(_=Depends(verify_admin)):
+async def generate_all_neighbourhoods(auto_approve: bool = False, _=Depends(verify_admin)):
     """Generate Claude-authored synopses for EVERY sub-neighbourhood with active MLS
-    listings, across all BC communities. Runs in background (~40-90 min for ~500 sub-areas)."""
+    listings, across all BC communities. Runs in background (~40-90 min for ~500 sub-areas).
+    If auto_approve=true, each synopsis is marked approved (BCFSA-attested by Doug via
+    this admin action) the moment it's written — publishes to the public site immediately."""
     import asyncio as _a
     all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
     city_map = {}
@@ -1786,13 +1788,17 @@ async def generate_all_neighbourhoods(_=Depends(verify_admin)):
                 }
                 s = await generate_neighbourhood_synopsis(n_name, c_name, region, ls)
                 if s:
+                    doc = {"slug": c_slug, "n_slug": n_slug, "community": c_name, "region": region, "neighbourhood": n_name, "synopsis": s, "approved": bool(auto_approve), "ts": now_iso()}
+                    if auto_approve:
+                        doc["approved_at"] = now_iso()
+                        doc["approved_by"] = "bulk_admin_action"
                     await db.neighbourhood_synopses.replace_one(
                         {"slug": c_slug, "n_slug": n_slug},
-                        {"slug": c_slug, "n_slug": n_slug, "community": c_name, "region": region, "neighbourhood": n_name, "synopsis": s, "approved": False, "ts": now_iso()},
+                        doc,
                         upsert=True,
                     )
         await _a.gather(*[gen_one(*t) for t in todo], return_exceptions=True)
-        logger.info(f"Bulk neighbourhood synopsis generation complete: {len(todo)} sub-areas")
+        logger.info(f"Bulk neighbourhood synopsis generation complete: {len(todo)} sub-areas (auto_approve={auto_approve})")
     _a.create_task(worker())
     return {"success": True, "message": f"Generating synopses for {len(todo)} micro-neighbourhoods in background. Refresh in ~40-90 minutes.", "total": len(todo)}
 
