@@ -3430,7 +3430,18 @@ const BackHomeBar = () => {
   );
 };
 
-const AppLayout = ({children}) => (<><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/><TurnstileScriptLoader/></>);
+const AppLayout = ({children}) => (<><ScrollToTop/><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/><TurnstileScriptLoader/></>);
+
+// Every SPA navigation lands at the top of the page. Preserves scroll ONLY
+// when the URL includes a hash anchor (so /page#faq still jumps to the anchor).
+function ScrollToTop() {
+  const loc = useLocation();
+  useEffect(() => {
+    if (loc.hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [loc.pathname, loc.search]);
+  return null;
+}
 
 // --- Cloudflare Turnstile (invisible bot-check on lead forms) ---
 // Loads the Cloudflare script once. Gracefully no-ops when the site key is
