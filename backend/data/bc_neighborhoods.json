@@ -1,0 +1,210 @@
+{
+  "Vancouver": [
+    "Downtown", "West End", "Yaletown", "Coal Harbour", "Gastown", "Chinatown",
+    "Kitsilano", "Fairview", "South Cambie", "Mount Pleasant", "Strathcona",
+    "Grandview-Woodland", "Commercial Drive", "Hastings-Sunrise", "Renfrew-Collingwood",
+    "Killarney", "Fraserview", "Champlain Heights", "Victoria-Fraserview",
+    "Marpole", "Oakridge", "Kerrisdale", "Shaughnessy", "Arbutus Ridge",
+    "Dunbar-Southlands", "West Point Grey", "Point Grey",
+    "South Granville", "Kensington-Cedar Cottage", "Riley Park", "Sunset",
+    "Downtown Eastside", "Olympic Village", "False Creek", "Mount Pleasant"
+  ],
+  "Burnaby": [
+    "Metrotown", "Brentwood", "Lougheed", "Edmonds", "Highgate",
+    "Burnaby Heights", "Capitol Hill", "Willingdon Heights",
+    "Deer Lake", "Central Park", "Buckingham", "Cariboo",
+    "Simon Fraser University", "Sperling-Duthie", "Government Road",
+    "Big Bend", "Burnaby Lake", "Forest Glen"
+  ],
+  "Richmond": [
+    "Steveston", "Terra Nova", "Seafair", "Broadmoor", "Riverdale",
+    "West Cambie", "East Cambie", "Bridgeport", "Sea Island",
+    "Ironwood", "Hamilton", "McLennan North", "McLennan South",
+    "Boyd Park", "Woodwards", "South Arm", "Brighouse", "Lansdowne",
+    "Saunders", "Quilchena", "Blundell"
+  ],
+  "Surrey": [
+    "Cloverdale", "Fleetwood", "Guildford", "Newton", "South Surrey",
+    "White Rock", "Grandview Heights", "Morgan Creek", "Sunnyside",
+    "Elgin Chantrell", "Crescent Beach", "Ocean Park", "Rosemary Heights",
+    "Panorama Ridge", "Bear Creek", "West Newton", "East Newton",
+    "Whalley", "City Centre", "North Surrey", "Fraser Heights",
+    "Bolivar Heights", "Sullivan Station", "Clayton"
+  ],
+  "Coquitlam": [
+    "Central Coquitlam", "Como Lake", "Cape Horn", "Chineside",
+    "Coquitlam East", "Coquitlam West", "Eagle Ridge", "Harbour Place",
+    "Harbour Chines", "Hockaday", "Lower Coquitlam", "Maillardville",
+    "Meadow Brook", "New Horizons", "North Coquitlam", "Park Ridge Estates",
+    "Ranch Park", "River Springs", "Scott Creek", "Summit View",
+    "Upper Eagle Ridge", "Westwood Plateau", "Westwood Summit"
+  ],
+  "Port Coquitlam": [
+    "Birchland Manor", "Central Pt Coquitlam", "Citadel PQ", "Glenwood PQ",
+    "Lincoln Park PQ", "Lower Mary Hill", "Mary Hill", "Oxford Heights",
+    "Riverwood", "Woodland Acres PQ"
+  ],
+  "Port Moody": [
+    "Anmore", "Barber Street", "Belcarra", "College Park PM",
+    "Glenayre", "Heritage Mountain", "Heritage Woods PM", "Ioco",
+    "Mountain Meadows", "North Shore Pt Moody", "Port Moody Centre"
+  ],
+  "Langley": [
+    "Aldergrove Langley", "Brookswood Langley", "Campbell Valley",
+    "Fort Langley", "Langley City", "Murrayville", "Otter District",
+    "Salmon River", "Walnut Grove", "Willoughby Heights", "Willowbrook"
+  ],
+  "North Vancouver": [
+    "Blueridge NV", "Boulevard", "Braemar", "Calverhall", "Canyon Heights NV",
+    "Capilano NV", "Central Lonsdale", "Delbrook", "Deep Cove",
+    "Dollarton", "Edgemont", "Forest Hills NV", "Grouse Woods",
+    "Hamilton", "Indian River", "Lower Lonsdale", "Lynn Valley",
+    "Lynnmour", "Norgate", "Northlands", "Pemberton Heights",
+    "Pemberton NV", "Princess Park", "Queensbury", "Roche Point",
+    "Seymour NV", "Tempe", "Upper Delbrook", "Upper Lonsdale",
+    "Westlynn", "Westlynn Terrace"
+  ],
+  "West Vancouver": [
+    "Ambleside", "British Properties", "Cedardale", "Chartwell",
+    "Cypress", "Cypress Park Estates", "Deer Ridge WV", "Dundarave",
+    "Eagle Harbour", "Furry Creek", "Gleneagles", "Glenmore",
+    "Horseshoe Bay WV", "Howe Sound", "Lions Bay", "Panorama Village",
+    "Park Royal", "Queens", "Rockridge", "Sandy Cove", "Sentinel Hill",
+    "Upper Caulfeild", "West Bay", "Westhill", "Westmount WV",
+    "Whitby Estates", "Whytecliff"
+  ],
+  "New Westminster": [
+    "Downtown NW", "Fraserview NW", "Glenbrooke North", "GlenBrooke South",
+    "McBride", "Moody Park", "North Arm North", "Queens Park",
+    "Queensborough", "Sapperton", "Uptown NW", "West End NW"
+  ],
+  "Delta": [
+    "Boundary Beach", "Tsawwassen Central", "Tsawwassen East", "Tsawwassen North",
+    "Beach Grove", "Cliff Drive", "English Bluff", "Pebble Hill",
+    "Ladner Elementary", "Ladner Rural", "Neilsen Grove", "Port Guichon",
+    "Hawthorne", "Holly", "North Delta", "Nordel", "Sunshine Hills Woods",
+    "Annieville", "Kennedy", "Cougar Canyon"
+  ],
+  "White Rock": [
+    "White Rock West", "Hillside", "Central White Rock", "White Rock East"
+  ],
+  "Maple Ridge": [
+    "Albion", "Cottonwood MR", "East Central", "Northeast Maple Ridge",
+    "Northwest Maple Ridge", "Silver Valley", "Southwest Maple Ridge",
+    "Thornhill MR", "Websters Corners", "West Central", "Whonnock",
+    "Yennadon"
+  ],
+  "Pitt Meadows": [
+    "Central Meadows", "Mid Meadows", "North Meadows PI",
+    "South Meadows", "West Meadows"
+  ],
+  "Abbotsford": [
+    "Abbotsford East", "Abbotsford West", "Aberdeen", "Bradner",
+    "Central Abbotsford", "Clayburn", "Downtown Abbotsford", "Matsqui",
+    "Poplar", "Sumas Mountain", "Sumas Prairie"
+  ],
+  "Chilliwack": [
+    "Chilliwack Downtown", "Chilliwack East Hope", "Chilliwack Mountain",
+    "Chilliwack Proper East", "Chilliwack Proper South", "Chilliwack Proper West",
+    "Chilliwack River Valley", "Chilliwack West", "Fairfield Island",
+    "Greendale", "Little Mountain", "Promontory", "Rosedale",
+    "Ryder Lake", "Sardis East Vedder", "Sardis West Vedder",
+    "Yale Rd Cache Creek", "Yarrow"
+  ],
+  "Mission": [
+    "Mission BC", "Deroche", "Dewdney", "Hatzic", "Lake Errock",
+    "Mission Downtown", "Ruskin", "Silverdale", "Silverhill", "Stave Falls"
+  ],
+  "Squamish": [
+    "Britannia Beach", "Brackendale", "Dentville", "Downtown SQ",
+    "Garibaldi Estates", "Garibaldi Highlands", "Northyards",
+    "Plateau", "Ring Creek", "Squamish Rural", "Tantalus",
+    "University Highlands", "Valleycliffe"
+  ],
+  "Whistler": [
+    "Alpine Meadows", "Alta Vista", "Bayshores", "Benchlands",
+    "Blackcomb", "Blueberry Hill", "Brio", "Cheakamus Crossing",
+    "Creekside", "Emerald Estates", "Function Junction", "Green Lake",
+    "Nordic", "Nesters", "Rainbow", "Spring Creek", "Tapley's Farm",
+    "Village North", "Whistler Cay Estates", "Whistler Cay Heights",
+    "Whistler Creek", "Whistler Village", "White Gold"
+  ],
+  "Pemberton": ["Pemberton", "Pemberton Meadows", "Mount Currie", "D'Arcy"],
+  "Victoria": [
+    "Downtown Victoria", "Fairfield East", "Fairfield West", "Fernwood",
+    "Gonzales", "Harris Green", "Hillside", "James Bay", "Jubilee",
+    "North Park", "Oaklands", "Rockland", "Vic West"
+  ],
+  "Saanich": [
+    "Broadmead", "Cadboro Bay", "Cordova Bay", "Falaise", "Gordon Head",
+    "Prospect Lake", "Quadra", "Royal Oak", "Saanich East", "Saanich West",
+    "Strawberry Vale", "Ten Mile Point", "Tillicum"
+  ],
+  "Oak Bay": ["Estevan", "Gonzales", "Henderson", "North Oak Bay", "South Oak Bay", "Uplands"],
+  "Esquimalt": ["Esquimalt", "Rockheights", "Saxe Point"],
+  "Sidney": ["North Sidney", "Sidney"],
+  "Nanaimo": [
+    "Central Nanaimo", "Chase River", "Departure Bay", "Diver Lake",
+    "Extension", "Hammond Bay", "Lower Lantzville", "Lower Nanaimo",
+    "North Jingle Pot", "North Nanaimo", "Old City", "Pleasant Valley",
+    "South Jingle Pot", "South Nanaimo", "University District", "Uplands",
+    "Upper Lantzville", "Waterfront"
+  ],
+  "Kelowna": [
+    "Belgo", "Black Mountain", "Central City", "Clifton", "Crawford Estates",
+    "Dilworth Mountain", "Ellison", "Glenmore", "Kelowna North", "Kelowna South",
+    "Kettle Valley", "Lakeview Heights", "Lower Mission", "McKinley Landing",
+    "North Glenmore", "North Rutland", "Peachland", "Rutland North", "Rutland South",
+    "South East Kelowna", "South Rutland", "Springfield/Spall", "University District",
+    "Upper Mission", "West Kelowna"
+  ],
+  "Vernon": [
+    "Adventure Bay", "Bella Vista", "BX Silver Star", "Coldstream",
+    "Commonage", "Downtown Vernon", "East Hill", "Foothills", "Harwood",
+    "Lavington", "Lumby Valley", "Middleton Mountain Coldstream",
+    "Middleton Mountain Vernon", "Mission Hill", "North BX", "Okanagan Landing",
+    "Rose Hill", "Silver Star", "South BX", "South Vernon", "West Vernon"
+  ],
+  "Penticton": [
+    "Columbia/Duncan", "Main North", "Main South", "Naramata", "Okanagan Falls",
+    "Penticton Rural", "Redlands", "Skaha Estates", "Uplands", "West Bench",
+    "Wiltse/Valleyview"
+  ],
+  "Kamloops": [
+    "Aberdeen", "Barnhartvale", "Batchelor Heights", "Brocklehurst", "Campbell Creek",
+    "Dallas", "Dufferin", "Heffley", "Juniper Heights", "Knutsford",
+    "Lower Sahali", "North Kamloops", "Paul Lake", "Pineview Valley", "Pritchard",
+    "Rayleigh", "Sahali", "South Kamloops", "Sun Peaks", "Sun Rivers", "Valleyview",
+    "Westsyde"
+  ],
+  "Prince George": [
+    "Blackburn", "Buckhorn", "Central", "Chief Lake Road", "Crescents",
+    "Cranbrook Hill", "Downtown PG", "East End", "Emerald", "Fort George",
+    "Foothills", "Hart Highway", "Heritage", "Highland", "Highway 16 East",
+    "Highway 16 West", "Ingala", "Lakewood", "Mount Alder", "N78-College Heights",
+    "Nechako", "N79", "N81 Aberdeen", "North Blackburn", "Peden Hill", "Perry",
+    "Pineview", "Salmon Valley", "Shelley", "Spruceland", "St. Lawrence Heights",
+    "Uplands", "VLA", "West Austin", "Western Acres"
+  ],
+  "Sechelt": [
+    "Davis Bay RC Sandy", "Halfmoon Bay", "Roberts Creek",
+    "Sechelt District", "West Sechelt"
+  ],
+  "Gibsons": ["Elphinstone", "Gibsons & Area", "Roberts Creek"],
+  "Powell River": [
+    "Cranberry", "Powell River", "Southview", "Townsite", "Wildwood"
+  ],
+  "Fort St. John": ["Fort St. John - City NE", "Fort St. John - City NW", "Fort St. John - City SE", "Fort St. John - City SW", "Fort St. John - Rural"],
+  "Dawson Creek": ["Dawson Creek", "Dawson Creek Rural"],
+  "Terrace": ["Terrace"],
+  "Prince Rupert": ["Prince Rupert"],
+  "Nelson": ["Nelson"],
+  "Cranbrook": ["Cranbrook Central", "Cranbrook North", "Cranbrook South East", "Cranbrook South West"],
+  "Fernie": ["Fernie"],
+  "Revelstoke": ["Revelstoke"],
+  "Salmon Arm": ["NE Salmon Arm", "NW Salmon Arm", "SE Salmon Arm", "SW Salmon Arm"],
+  "Kimberley": ["Kimberley"],
+  "Rossland": ["Rossland"],
+  "Trail": ["Trail"],
+  "Castlegar": ["Castlegar"]
+}

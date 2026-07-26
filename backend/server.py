@@ -1717,6 +1717,23 @@ EXCLUDED_PROPERTY_TYPES = {
     "Business", "Hospitality", "Industrial", "Office", "Retail", "Other",
 }
 
+# Curated user-facing property-type filter options. This is what appears in
+# every Community/City filter dropdown across the site. Order matches Doug's
+# preferred UX order — alphabetical with common-first callouts.
+PROPERTY_TYPE_UI_OPTIONS = [
+    "Acreage",
+    "Condo",
+    "Detached",
+    "Duplex",
+    "Equestrian",
+    "Manufactured / Mobile",
+    "Multi-family",
+    "Recreation",
+    "Recreational",
+    "Single Family",
+    "Townhouse",
+]
+
 def _sanitize_listing(doc: dict) -> dict:
     doc.pop("_id", None)
     # CREA compliance: brokerage name is required. Listing agent is per-listing (from feed).
@@ -1814,8 +1831,18 @@ async def search_listings(
                         "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA).",
                         "data_source": "CREA DDF® — residential only",
                     }}
-        # Use CREA synonym expansion so "Detached" also catches "Single Family" etc.
-        query["property_type"] = _property_type_query(property_type)
+        # For fuzzy types (Equestrian, Manufactured / Mobile, Recreation) merge
+        # a description-text fallback so we catch listings even when CREA
+        # doesn't have a matching structured label.
+        if property_type in ("Equestrian", "Manufactured / Mobile", "Recreation", "Recreational"):
+            merged = query.get("$and", [])
+            merged.append(_property_type_or_feature_query(property_type))
+            query["$and"] = merged
+            # Drop the base $nin restriction on property_type so it doesn't
+            # exclude records that only match via the description fallback.
+            query.pop("property_type", None)
+        else:
+            query["property_type"] = _property_type_query(property_type)
     if beds_min is not None:  query["beds"] = {"$gte": beds_min}
     if baths_min is not None: query["baths"] = {"$gte": baths_min}
     price_q = {}
@@ -1924,12 +1951,15 @@ async def record_mls_consent(request: Request, payload: dict):
 @api.get("/listings/meta/facets")
 @_limiter.limit("60/minute")
 async def listings_facets(request: Request):
-    """Return distinct filter values so the search UI can populate dropdowns."""
+    """Return distinct filter values so the search UI can populate dropdowns.
+
+    Property types are a CURATED fixed list (PROPERTY_TYPE_UI_OPTIONS) so
+    Doug's filter is consistent across every community/city page and never
+    shows raw CREA labels like "Residential Detached" or "House".
+    """
     cities = sorted(await db.listings.distinct("city", {"status":"Active"}))
-    types = sorted(await db.listings.distinct("property_type", {"status":"Active"}))
-    types = [t for t in types if t not in EXCLUDED_PROPERTY_TYPES]
     regions = sorted(await db.listings.distinct("region", {"status":"Active"}))
-    return {"cities": cities, "property_types": types, "regions": regions}
+    return {"cities": cities, "property_types": PROPERTY_TYPE_UI_OPTIONS, "regions": regions}
 
 @api.post("/admin/listings/sync-now")
 async def admin_ddf_sync_now(request: Request, _=Depends(verify_admin)):
@@ -2247,13 +2277,23 @@ def _detect_neighborhood_nickname(raw_query: str) -> list[dict]:
 PROPERTY_TYPE_SYNONYMS = {
     # CREA REBGV/FVREB store StructureType=["House"] for detached and
     # PropertySubType="Single Family" for the residential category; we accept
-    # either label so all boards resolve correctly.
-    "Detached":     ["Detached", "House", "Single Family", "Residential Detached"],
-    "Condo":        ["Condo", "Condominium", "Apartment", "Residential Condo", "Strata"],
-    "Townhouse":    ["Townhouse", "Row / Townhouse", "Attached", "Row"],
-    "Acreage":      ["Acreage", "Farm", "Ranch", "Agriculture", "Recreational"],
-    "Multi-family": ["Multi-family", "Duplex", "Triplex", "Fourplex"],
-    "Vacant Land":  ["Vacant Land", "Lot"],
+    # either label so all boards resolve correctly. Each user-facing filter
+    # option maps to every CREA label the DDF feed uses for that concept.
+    "Detached":              ["Detached", "House", "Single Family", "Residential Detached"],
+    "Single Family":         ["Single Family", "Detached", "House", "Residential Detached"],
+    "Condo":                 ["Condo", "Condominium", "Apartment", "Residential Condo", "Strata"],
+    "Townhouse":             ["Townhouse", "Row / Townhouse", "Attached", "Row"],
+    "Acreage":               ["Acreage", "Farm", "Ranch", "Agriculture"],
+    "Multi-family":          ["Multi-family", "Multi Family", "Multi-Family"],
+    "Duplex":                ["Duplex", "Triplex", "Fourplex"],
+    "Recreation":            ["Recreation", "Recreational", "Recreational Property"],
+    "Recreational":          ["Recreational", "Recreation", "Recreational Property"],
+    "Manufactured / Mobile": ["Manufactured Home", "Mobile Home", "Manufactured Home on Land", "Mobile"],
+    # Equestrian isn't a CREA property_type — it's a feature. We still allow it
+    # as a filter option; _property_type_query() handles the fallback by matching
+    # "equestrian"/"ranch"/"acreage" style words on structured type + description.
+    "Equestrian":            ["Equestrian", "Farm", "Ranch", "Acreage", "Agriculture"],
+    "Vacant Land":           ["Vacant Land", "Lot"],
 }
 
 FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
@@ -2309,10 +2349,35 @@ async def _extract_listing_filters(user_query: str) -> dict:
 
 
 def _property_type_query(pt: str):
-    """Return a Mongo query fragment for property_type that includes CREA synonyms."""
+    """Return a Mongo query fragment for property_type that includes CREA synonyms.
+
+    For rare/feature-like types (Equestrian), if the requested type has NO
+    exact CREA match in the data, the caller will still get useful results
+    because we additionally match on structured features + description
+    (see _property_type_or_feature_query below)."""
     synonyms = PROPERTY_TYPE_SYNONYMS.get(pt, [pt])
     # Case-insensitive exact-match on any synonym
     return {"$in": synonyms + [s.lower() for s in synonyms] + [s.title() for s in synonyms]}
+
+
+def _property_type_or_feature_query(pt: str) -> dict:
+    """For property types like 'Equestrian' or 'Manufactured / Mobile' where
+    CREA labels vary widely, match on EITHER the property_type synonyms OR
+    the description text. Returns a full $or clause to merge into the query."""
+    synonyms = PROPERTY_TYPE_SYNONYMS.get(pt, [pt])
+    type_set = list({s for s in synonyms} | {s.lower() for s in synonyms} | {s.title() for s in synonyms})
+    # Text-fallback keywords per fuzzy type
+    text_hints = {
+        "Equestrian":            ["equestrian", "stables", "horse", "arena"],
+        "Manufactured / Mobile": ["manufactured", "mobile home", "double-wide", "singlewide"],
+        "Recreation":            ["recreational property", "cabin", "cottage"],
+        "Recreational":          ["recreational property", "cabin", "cottage"],
+    }
+    hints = text_hints.get(pt, [])
+    clauses: list = [{"property_type": {"$in": type_set}}]
+    for h in hints:
+        clauses.append({"description": {"$regex": re.escape(h), "$options": "i"}})
+    return {"$or": clauses}
 
 
 def _features_query(feature_list: list) -> list:
