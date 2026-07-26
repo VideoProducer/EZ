@@ -2801,6 +2801,22 @@ const AdminApprovals = () => {
   };
   useEffect(() => { loadSummary(); loadItems(tab); /* eslint-disable-next-line */ }, [tab]);
 
+  const approveNeighbourhood = async (slug, n_slug, key) => {
+    await axios.post(`${API}/admin/approvals/neighbourhoods/approve`, {slug, n_slug, synopsis: edited[key]}, {headers});
+    await loadSummary(); await loadItems("neighbourhoods");
+  };
+  const regenNeighbourhood = async (slug, n_slug) => { await axios.post(`${API}/admin/approvals/neighbourhoods/${slug}/${n_slug}/regenerate`, {}, {headers}); await loadItems("neighbourhoods"); };
+  const bulkApproveNeighbourhoods = async () => {
+    if(!window.confirm(`Bulk-approve ALL ${items.length} pending micro-neighbourhood synopses? Spot-check a few first.`)) return;
+    await axios.post(`${API}/admin/approvals/neighbourhoods/approve-all`, {}, {headers});
+    await loadSummary(); await loadItems("neighbourhoods");
+  };
+  const generateAllNeighbourhoods = async () => {
+    if(!window.confirm("Generate synopses for EVERY sub-neighbourhood with active MLS listings (~500 pages, ~40-90 min in background). Then refresh the Neighbourhoods tab to approve.")) return;
+    const r = await axios.post(`${API}/admin/approvals/generate-all-neighbourhoods`, {}, {headers});
+    alert(r.data.message);
+    setTimeout(() => { loadSummary(); if(tab==="neighbourhoods") loadItems("neighbourhoods"); }, 3000);
+  };
   const approveSynopsis = async (slug) => {
     await axios.post(`${API}/admin/approvals/synopses/approve`, {slug, synopsis: edited[slug]}, {headers});
     await loadSummary(); await loadItems("synopses");
@@ -2854,9 +2870,14 @@ const AdminApprovals = () => {
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>AI Content Approvals</h1>
     <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>BCFSA compliance: as the licensed REALTOR®, you are responsible for all AI-generated content. Review, edit if needed, then approve before publication. Unapproved content stays hidden from the public site.</p>
 
-    <div className="paper" style={{marginTop:"1rem",background:"#F5F0E1",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
-      <div style={{flex:1,minWidth:240}}><strong>Populate all 243 BC communities at once</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate synopsis + weather drafts for every community, then approve in bulk below.</span></div>
-      <button onClick={generateAll} className="btn btn-primary" style={{padding:"0.6rem 1.2rem"}} data-testid="generate-all-btn">🚀 Generate All Missing</button>
+    <div className="paper" style={{marginTop:"1rem",background:"#F5F0E1"}}>
+      <div><strong>Populate all 243 BC communities at once</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate synopsis + weather drafts for every community, then approve in bulk below.</span></div>
+      <button onClick={generateAll} className="btn btn-primary" style={{padding:"0.6rem 1.2rem",marginTop:"0.85rem"}} data-testid="generate-all-btn">🚀 Generate All Missing (Synopsis + Weather)</button>
+    </div>
+
+    <div className="paper" style={{marginTop:"1rem",background:"#EAF3FF"}}>
+      <div><strong>Populate synopses for all ~500 micro-neighbourhoods</strong><br/><span style={{color:"var(--muted)",fontSize:"0.88rem"}}>Auto-generate housing-character synopsis for every sub-neighbourhood (Kelowna's Lower Mission, Kamloops's Aberdeen, etc.). Deliberately no overlap with community Vibe Score. Background job, ~40-90 min.</span></div>
+      <button onClick={generateAllNeighbourhoods} className="btn btn-primary" style={{padding:"0.6rem 1.2rem",marginTop:"0.85rem"}} data-testid="generate-all-nhb-btn">🏘️ Generate All Neighbourhood Synopses</button>
     </div>
 
     <div className="paper" style={{marginTop:"1rem",background:"#EEF7EF",display:"flex",gap:"1rem",alignItems:"center",flexWrap:"wrap"}}>
@@ -2868,9 +2889,10 @@ const AdminApprovals = () => {
 
     <div style={{display:"flex",gap:"0.5rem",marginTop:"1.5rem",marginBottom:"1rem",flexWrap:"wrap"}}>
       {[
-        {key:"synopses", label:`🗺️ Community Synopses (${summary.pending_synopses})`},
-        {key:"weather", label:`☀️ Weather (${summary.pending_weather})`},
-        {key:"glossary", label:`📖 Glossary FAQs (${summary.pending_glossary_faqs})`}
+        {key:"synopses", label:`🗺️ Community Synopses (${summary.pending_synopses||0})`},
+        {key:"weather", label:`☀️ Weather (${summary.pending_weather||0})`},
+        {key:"neighbourhoods", label:`🏘️ Neighbourhoods (${summary.pending_neighbourhoods||0})`},
+        {key:"glossary", label:`📖 Glossary FAQs (${summary.pending_glossary_faqs||0})`}
       ].map(t => (
         <button key={t.key} onClick={()=>setTab(t.key)} className={tab===t.key?"btn btn-primary":"btn btn-outline"} style={{padding:"0.5rem 1rem",fontSize:"0.9rem"}} data-testid={`approvals-tab-${t.key}`}>{t.label}</button>
       ))}
@@ -2919,6 +2941,30 @@ const AdminApprovals = () => {
           <textarea defaultValue={it.weather} onChange={e=>setEdited({...edited,[it.slug]:e.target.value})} rows={7} style={{width:"100%",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6,padding:"0.75rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,resize:"vertical"}}/>
         </div>
       ))}
+      </>
+    )}
+
+    {!busy && tab === "neighbourhoods" && (
+      items.length === 0 ? <p style={{color:"var(--muted)"}}>✓ No pending micro-neighbourhood synopses. Click "🏘️ Generate All Neighbourhood Synopses" above to kick off generation.</p> :
+      <>
+      {items.length > 3 && <div className="paper" style={{marginBottom:"1rem",background:"#FFF8E8"}}>
+        <p style={{margin:"0 0 0.75rem",fontSize:"0.9rem"}}><strong>Bulk approve:</strong> Approve all {items.length} pending micro-neighbourhood synopses at once.</p>
+        <button onClick={bulkApproveNeighbourhoods} className="btn btn-green" style={{padding:"0.5rem 1rem"}} data-testid="approve-all-nhb">✓ Approve all {items.length}</button>
+      </div>}
+      {items.map(it => {
+        const key = `${it.slug}::${it.n_slug}`;
+        return (
+        <div key={key} className="paper" style={{marginBottom:"1rem"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
+            <strong style={{fontSize:"1.05rem",color:"var(--brand-navy)"}}>{it.neighbourhood} <span style={{color:"var(--muted)",fontWeight:400,fontSize:"0.88rem"}}>· {it.community}, {it.region}</span></strong>
+            <div style={{display:"flex",gap:"0.5rem"}}>
+              <button onClick={()=>regenNeighbourhood(it.slug, it.n_slug)} className="btn btn-outline" style={{padding:"0.4rem 0.8rem",fontSize:"0.82rem"}}>↻ Regenerate</button>
+              <button onClick={()=>approveNeighbourhood(it.slug, it.n_slug, key)} className="btn btn-green" style={{padding:"0.4rem 0.8rem",fontSize:"0.82rem"}} data-testid={`approve-nhb-${it.n_slug}`}>✓ Approve &amp; Publish</button>
+            </div>
+          </div>
+          <textarea defaultValue={it.synopsis} onChange={e=>setEdited({...edited,[key]:e.target.value})} rows={8} style={{width:"100%",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6,padding:"0.75rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,resize:"vertical"}}/>
+        </div>
+      );})}
       </>
     )}
 

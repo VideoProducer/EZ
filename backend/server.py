@@ -1610,7 +1610,8 @@ async def approvals_summary(_=Depends(verify_admin)):
     pending_faqs = await db.glossary.count_documents({"faqs.0": {"$exists": True}, "faqs_approved": {"$ne": True}})
     pending_syn = await db.community_synopses.count_documents({"approved": {"$ne": True}})
     pending_wx = await db.community_weather.count_documents({"approved": {"$ne": True}})
-    return {"pending_glossary_faqs": pending_faqs, "pending_synopses": pending_syn, "pending_weather": pending_wx}
+    pending_nhb = await db.neighbourhood_synopses.count_documents({"approved": {"$ne": True}})
+    return {"pending_glossary_faqs": pending_faqs, "pending_synopses": pending_syn, "pending_weather": pending_wx, "pending_neighbourhoods": pending_nhb}
 
 @api.get("/admin/approvals/glossary")
 async def pending_glossary(_=Depends(verify_admin)):
