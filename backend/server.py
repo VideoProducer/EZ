@@ -1846,8 +1846,9 @@ async def generate_all_missing(auto_approve: bool = False, _=Depends(verify_admi
     return {"success": True, "message": f"Generating synopsis + weather for {len(todo)} communities in background. Refresh the approval queues in ~15-30 minutes.", "total": len(todo)}
 
 @api.post("/admin/approvals/generate-all-glossary")
-async def generate_all_glossary(_=Depends(verify_admin)):
-    """Generate FAQs for EVERY glossary term missing them. Runs in background. ~30-60 min for 400+ terms."""
+async def generate_all_glossary(auto_approve: bool = False, _=Depends(verify_admin)):
+    """Generate FAQs for EVERY glossary term missing them. Runs in background. ~30-60 min for 400+ terms.
+    If auto_approve=true, FAQs publish immediately as they're written (BCFSA-attested by Doug via this admin action)."""
     import asyncio as _a
     todo = await db.glossary.find({"$or":[{"faqs":{"$exists":False}},{"faqs":[]}]}, {"_id":0,"slug":1,"term":1,"definition":1}).to_list(2000)
 
@@ -1858,9 +1859,13 @@ async def generate_all_glossary(_=Depends(verify_admin)):
                 if await db.glossary.find_one({"slug": t["slug"], "faqs.0": {"$exists": True}}): return
                 faqs = await generate_faqs_for_term(t["term"], t["definition"])
                 if faqs:
-                    await db.glossary.update_one({"slug": t["slug"]}, {"$set": {"faqs": faqs, "faqs_approved": False, "faqs_generated_at": now_iso()}})
+                    update = {"faqs": faqs, "faqs_approved": bool(auto_approve), "faqs_generated_at": now_iso()}
+                    if auto_approve:
+                        update["faqs_approved_at"] = now_iso()
+                        update["faqs_approved_by"] = "bulk_admin_action"
+                    await db.glossary.update_one({"slug": t["slug"]}, {"$set": update})
         await _a.gather(*[gen(t) for t in todo], return_exceptions=True)
-        logger.info(f"Bulk FAQ generation complete for {len(todo)} glossary terms")
+        logger.info(f"Bulk FAQ generation complete for {len(todo)} glossary terms (auto_approve={auto_approve})")
 
     _a.create_task(worker())
     return {"success": True, "message": f"Generating FAQs for {len(todo)} glossary terms in background. Refresh the Glossary tab in ~30-60 minutes.", "total": len(todo)}
