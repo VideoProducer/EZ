@@ -609,6 +609,19 @@ const DoogieChat = () => {
     const pre = localStorage.getItem("ez_doogie_prefill");
     if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
   }, [open, consented]);
+  // External open trigger (e.g. from listing detail "Ask Doug" pill). Any code
+  // can call `window.dispatchEvent(new CustomEvent("ez:openDoogie", {detail:{prefill:"…"}}))`
+  // and the chat panel will open, pre-populate the input, and (if not yet consented)
+  // still surface the consent gate first.
+  useEffect(() => {
+    const onOpen = (e) => {
+      const pre = e?.detail?.prefill;
+      if (pre) localStorage.setItem("ez_doogie_prefill", pre);
+      setOpen(true);
+    };
+    window.addEventListener("ez:openDoogie", onOpen);
+    return () => window.removeEventListener("ez:openDoogie", onOpen);
+  }, []);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
 
@@ -1400,25 +1413,9 @@ const ListingDetail = () => {
   const [listing, setListing] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
-  const [form, setForm] = useState({ name:"", email:"", phone:"", message:"" });
-  const [submitted, setSubmitted] = useState(false);
   useEffect(() => {
     axios.get(`${API}/listings/${key}`).then(r => setListing(r.data)).catch(() => setNotFound(true));
   }, [key]);
-  const submitInquiry = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${API}/leads/buyer`, {
-        full_name: form.name, email: form.email, phone: form.phone,
-        location: listing.city, price_range: `MLS® ${listing.mls_number}`, timeframe: "unknown",
-        notes: `LISTING INQUIRY — MLS® ${listing.mls_number} · ${listing.street_address}, ${listing.city}\n\n${form.message}`,
-        source: "listing_inquiry",
-        consent: true,
-      });
-      await axios.post(`${API}/listings/analytics/track`, { listing_key: key, event_type: "contact_request", path: `/listing/${key}` });
-      setSubmitted(true);
-    } catch(e) {}
-  };
   if (notFound) return <section className="section"><div className="container-x"><h1 className="section-title">Listing not found</h1><p><Link to="/listings" style={{color:"var(--brand-blue)"}}>← Back to all listings</Link></p></div></section>;
   if (!listing) return <section className="section"><div className="container-x"><div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading listing…</div></div></section>;
   const price = (listing.list_price || 0).toLocaleString("en-CA");
@@ -1469,25 +1466,40 @@ const ListingDetail = () => {
         {/* Inquiry sidebar */}
         <div style={{position:"sticky",top:"1rem"}}>
           {isInServiceArea(listing) ? (
-          <div className="paper" data-testid="listing-inquiry-form">
-            <div className="eyebrow">Book a Viewing</div>
-            <h3 style={{fontSize:"1.2rem",marginBottom:"0.75rem"}}>Ask Doug about this listing</h3>
-            {submitted ? (
-              <div style={{background:"#DEF7EC",color:"#03543F",padding:"1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}} data-testid="inquiry-success">
-                ✅ Sent. Doug will reach out within one business day.
-              </div>
-            ) : (
-              <form onSubmit={submitInquiry}>
-                <div className="field"><label>Name *</label><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} data-testid="inquiry-name"/></div>
-                <div className="field"><label>Email *</label><input required type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} data-testid="inquiry-email"/></div>
-                <div className="field"><label>Phone</label><input value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} data-testid="inquiry-phone"/></div>
-                <div className="field"><label>Message</label><textarea rows={3} value={form.message} onChange={e=>setForm({...form,message:e.target.value})} data-testid="inquiry-message" placeholder="When would you like to view? Any questions?"/></div>
-                <button type="submit" className="btn btn-primary" style={{width:"100%"}} data-testid="inquiry-submit">Send Inquiry</button>
-                <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.5rem",lineHeight:1.5}}>
-                  By submitting, you consent to Doug LeMaire, REALTOR® contacting you about this listing. Handled under our <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy</Link>.
-                </div>
-              </form>
-            )}
+          <div className="paper" data-testid="listing-ask-doug-cta" style={{textAlign:"center"}}>
+            <div className="eyebrow">In Doug's service area</div>
+            <h3 style={{fontSize:"1.05rem",margin:"0.5rem 0 1rem",lineHeight:1.4,fontWeight:600}}>
+              If you're not working with a REALTOR<sup style={{fontSize:"0.55em"}}>®</sup> already, ask Doug about this listing.
+            </h3>
+            <button
+              type="button"
+              data-testid="listing-ask-doug-pill"
+              onClick={() => {
+                const msg = `Tell me about MLS® ${listing.mls_number} — ${listing.street_address}, ${listing.city}, BC.`;
+                window.dispatchEvent(new CustomEvent("ez:openDoogie", { detail: { prefill: msg } }));
+              }}
+              style={{
+                display:"inline-block",
+                background:"var(--brand-navy)",
+                color:"#fff",
+                fontFamily:"Inter,sans-serif",
+                fontWeight:600,
+                fontSize:"0.95rem",
+                padding:"0.85rem 1.5rem",
+                borderRadius:999,
+                border:"none",
+                cursor:"pointer",
+                boxShadow:"0 6px 14px rgba(15,42,91,0.28)",
+                transition:"transform 0.15s, box-shadow 0.15s",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 10px 20px rgba(15,42,91,0.35)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 6px 14px rgba(15,42,91,0.28)";}}
+            >
+              Ask Doug about this listing
+            </button>
+            <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.9rem",lineHeight:1.55,fontFamily:"Inter,sans-serif"}}>
+              Doogie will open a chat with Doug — no forms, no phone tag.
+            </div>
           </div>
           ) : (
           <div className="paper" data-testid="listing-referral-cta" style={{textAlign:"center"}}>
