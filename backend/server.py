@@ -1305,40 +1305,94 @@ async def community_neighbourhoods(slug: str):
 
 
 # =============== MUNICIPAL ZONING ===============
-# Curated per-community links to authoritative municipal zoning bylaws + planning
-# depts. Communities NOT in the curated file get a Google-search fallback URL.
-# The provincial context (BC Bill 44 / SSMUH) applies to EVERY BC community and
-# is served identically for all — that piece is the moat vs. Zoocasa/REW/Rennie
-# which don't yet cover the 2024 up-zoning wave.
+# Claude-authored plain-English list of the common residential zone codes for
+# each BC community (R-1, RM-1, RS-1, CD-1, etc.) with a short explainer per
+# code. Cached in Mongo; approval-gated (BCFSA licensee attests before publish).
+# The provincial SSMUH (Bill 44) context is served identically for every
+# community — that's the moat piece vs Zoocasa/REW/Rennie.
 _ZONING_SOURCES_PATH = ROOT_DIR / "data" / "community_zoning_sources.json"
 def _zoning_sources() -> dict:
     try: return json.loads(_ZONING_SOURCES_PATH.read_text())
     except Exception: return {}
+
+async def generate_community_zones(community: str, region: str) -> Optional[List[dict]]:
+    """Ask Claude to enumerate the common residential zone codes for this
+    community with plain-English descriptions. Returns None on failure."""
+    prompt = f"""List the most common RESIDENTIAL zoning code designations currently used by the municipality of {community}, in the {region} region of British Columbia, Canada.
+
+Return STRICTLY a JSON array. Each element must have exactly these keys:
+- "code": short zone code as the municipality writes it (e.g. "R-1", "RS-1", "RM-1", "RT-1", "RH-1", "CD-1")
+- "name": full name of the zone (e.g. "Single Family Residential", "Low Density Multiple Housing", "Residential Comprehensive Development")
+- "summary": 2-3 sentence plain-English explanation of what this zone typically permits (dwelling type, density, common permitted uses). Write for a home buyer, not a lawyer.
+- "note": one short line about caveats, secondary-suite allowance, or SSMUH interaction (or empty string if none).
+
+Rules:
+1. Only include RESIDENTIAL zones — skip commercial, industrial, agricultural, institutional, parks.
+2. Include 5-15 codes — the actual most-common residential zones in {community}'s bylaw. If unsure of the exact code, DO NOT invent one — omit it.
+3. For the "summary" field, describe the zone as it functionally works today under BC Bill 44 (SSMUH, effective July 1, 2024) — most previously-single-family zones now permit 3-4 units.
+4. If {community} is a small community or Electoral Area without its own bylaw and relies on Regional District zoning, note that in the first zone's "note" field.
+5. Output ONLY the JSON array. No markdown fences, no prose."""
+    try:
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"zone-{uuid.uuid4()}",
+                         system_message="You are a BC real estate content researcher producing plain-English residential zoning summaries. You never invent zone codes you're not sure about.").with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        raw = full.strip()
+        if raw.startswith("```"): raw = raw.split("```")[1].lstrip("json").strip()
+        zones = json.loads(raw)
+        if isinstance(zones, list) and 0 < len(zones) <= 20:
+            # Sanitize
+            clean = []
+            for z in zones:
+                if not isinstance(z, dict): continue
+                code = str(z.get("code","")).strip()[:24]
+                name = str(z.get("name","")).strip()[:120]
+                summary = str(z.get("summary","")).strip()[:600]
+                note = str(z.get("note","")).strip()[:300]
+                if code and name and summary:
+                    clean.append({"code": code, "name": name, "summary": summary, "note": note})
+            return clean or None
+        return None
+    except Exception as e:
+        logger.error(f"Zone generation failed for {community}, {region}: {e}")
+        return None
 
 @api.get("/community/{slug}/zoning")
 async def community_zoning(slug: str):
     name, region = _resolve_community(slug)
     if not name:
         raise HTTPException(404, "Community not found")
-    sources = _zoning_sources()
-    src = sources.get(slug)
+    # Try cache first
+    cached = await db.community_zoning.find_one({"slug": slug}, {"_id": 0})
+    zones = []
+    approved = False
+    if cached:
+        zones = cached.get("zones") or []
+        approved = bool(cached.get("approved"))
+    else:
+        # On-demand generation (draft, unapproved) — same pattern as synopses
+        gen = await generate_community_zones(name, region)
+        if gen:
+            await db.community_zoning.replace_one(
+                {"slug": slug},
+                {"slug": slug, "community": name, "region": region, "zones": gen, "approved": False, "ts": now_iso()},
+                upsert=True,
+            )
+            zones = gen
+    src = _zoning_sources().get(slug)
     if not src:
-        # Graceful fallback for the ~190 communities not yet in the curated file.
-        google_q = f"{name} BC residential zoning bylaw"
-        src = {
-            "bylaw_url": f"https://www.google.com/search?q={google_q.replace(' ', '+')}",
-            "map_url": None,
-            "planning_url": None,
-            "planning_phone": None,
-            "planning_email": None,
-            "is_fallback": True,
-        }
+        src = {"bylaw_url": f"https://www.google.com/search?q={('%20'.join((name + ' BC residential zoning bylaw').split()))}", "is_fallback": True}
     else:
         src = {**src, "is_fallback": False}
     return {
         "community": name,
         "region": region,
         "slug": slug,
+        "zones": zones if approved else [],  # public site only sees approved zones
+        "approved": approved,
+        "note": None if approved else ("Zone list is being drafted for review by Doug LeMaire, REALTOR® before publication." if zones else "Zone list will be published once approved."),
         "source": src,
         "provincial_context": {
             "act": "BC Bill 44 — Housing Statutes (Residential Development) Amendment Act, 2023",
@@ -1349,6 +1403,57 @@ async def community_zoning(slug: str):
         },
         "last_reviewed": "2026-02-26",
     }
+
+# --- Admin: zoning approval workflow ---
+@api.get("/admin/approvals/zoning")
+async def pending_zoning(_=Depends(verify_admin)):
+    return await db.community_zoning.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(2000)
+
+class ApproveZoning(BaseModel):
+    slug: str
+    zones: Optional[List[dict]] = None
+
+@api.post("/admin/approvals/zoning/approve")
+async def approve_zoning(body: ApproveZoning, _=Depends(verify_admin)):
+    update = {"approved": True, "approved_at": now_iso(), "approved_by": "doug@eztofind.ca"}
+    if body.zones is not None: update["zones"] = body.zones
+    r = await db.community_zoning.update_one({"slug": body.slug}, {"$set": update})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/zoning/approve-all")
+async def approve_all_zoning(_=Depends(verify_admin)):
+    r = await db.community_zoning.update_many({"approved": {"$ne": True}, "zones.0": {"$exists": True}}, {"$set": {"approved": True, "approved_at": now_iso(), "approved_by": "bulk_admin_action"}})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/generate-all-zoning")
+async def generate_all_zoning(auto_approve: bool = False, _=Depends(verify_admin)):
+    """Generate residential zone-code lists for EVERY BC community. Background job.
+    Skips communities already generated. ~30-60 min for 241 communities at 4 concurrent."""
+    import asyncio as _a
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    todo = []
+    for region, lst in all_comm.items():
+        for name in lst:
+            slug = re.sub(r"[^a-z0-9]+","-", name.lower()).strip("-")
+            todo.append((slug, name, region))
+
+    async def worker():
+        SEM = _a.Semaphore(4)
+        async def gen(slug, name, region):
+            async with SEM:
+                existing = await db.community_zoning.find_one({"slug": slug, "zones.0": {"$exists": True}})
+                if existing: return
+                z = await generate_community_zones(name, region)
+                if z:
+                    doc = {"slug": slug, "community": name, "region": region, "zones": z, "approved": bool(auto_approve), "ts": now_iso()}
+                    if auto_approve:
+                        doc["approved_at"] = now_iso(); doc["approved_by"] = "bulk_admin_action"
+                    await db.community_zoning.replace_one({"slug": slug}, doc, upsert=True)
+        await _a.gather(*[gen(*t) for t in todo], return_exceptions=True)
+        logger.info(f"Bulk community zoning generation complete for {len(todo)} communities (auto_approve={auto_approve})")
+
+    _a.create_task(worker())
+    return {"success": True, "message": f"Generating residential zone lists for {len(todo)} communities in background. Refresh /admin/approvals in ~30-60 minutes.", "total": len(todo)}
 
 
 async def generate_neighbourhood_synopsis(neigh: str, community: str, region: str, listing_stats: dict) -> str:

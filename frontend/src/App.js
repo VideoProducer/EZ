@@ -328,41 +328,40 @@ const CommunityZoning = () => {
           <a href={d.provincial_context.authority_url} target="_blank" rel="noopener noreferrer" data-testid="zoning-ssmuh-link" style={{color:"var(--brand-blue)",fontSize:"0.9rem",textDecoration:"none",fontWeight:600}}>Read the Province of BC's SSMUH overview →</a>
         </div>
 
-        {/* Municipality-specific bylaw + planning contacts */}
-        <h2 style={{marginTop:"2rem",fontSize:"1.5rem"}}>📜 {d.community}'s zoning bylaw + planning contacts</h2>
-        {s.is_fallback && (
-          <p style={{fontSize:"0.9rem",color:"var(--muted)",background:"#FFF8E8",padding:"0.75rem 1rem",borderRadius:8,borderLeft:"3px solid var(--brand-gold)",margin:"0.5rem 0 1rem"}}>
-            ℹ️ Direct link for {d.community}'s zoning bylaw isn't yet in our curated index. The link below runs a Google search for the current municipal or regional-district bylaw — if you find the correct authoritative URL, please email <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a> and Doug will add it here.
+        {/* Zone code table — the actual content the user asked for */}
+        <h2 style={{marginTop:"2rem",fontSize:"1.5rem"}}>📋 Common residential zone codes in {d.community}</h2>
+        {d.zones && d.zones.length > 0 ? (
+          <>
+            <p style={{fontSize:"0.9rem",color:"var(--muted)",marginBottom:"1rem"}}>Below are the residential zone codes most commonly used in {d.community}'s bylaw, with a plain-English summary of what each typically permits. Under BC Bill 44 (SSMUH, above), most historically single-family zones now permit 3–4 units.</p>
+            <div data-testid="zoning-code-table" style={{display:"grid",gap:"0.85rem"}}>
+              {d.zones.map((z, i) => (
+                <div key={i} className="paper" style={{padding:"1.1rem 1.25rem"}}>
+                  <div style={{display:"flex",gap:"0.75rem",alignItems:"baseline",flexWrap:"wrap"}}>
+                    <span style={{fontFamily:"Sora,sans-serif",fontWeight:800,color:"var(--brand-navy)",fontSize:"1.15rem",background:"#EAF3FF",padding:"0.15rem 0.6rem",borderRadius:6,letterSpacing:"0.02em"}}>{z.code}</span>
+                    <strong style={{fontSize:"1rem",color:"var(--ink)"}}>{z.name}</strong>
+                  </div>
+                  <p style={{margin:"0.6rem 0 0",fontSize:"0.94rem",lineHeight:1.65}}>{z.summary}</p>
+                  {z.note && <p style={{margin:"0.5rem 0 0",fontSize:"0.82rem",color:"var(--muted)",fontStyle:"italic"}}>{z.note}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="notice" style={{marginTop:"0.5rem"}}>{d.note || "Zone list is being drafted and will appear here once reviewed by Doug LeMaire, REALTOR®."}</div>
+        )}
+
+        {/* Small "official source" link at the bottom */}
+        {d.source && d.source.bylaw_url && (
+          <p style={{marginTop:"1.5rem",fontSize:"0.9rem"}}>
+            <strong>Official source:</strong> <a href={d.source.bylaw_url} target="_blank" rel="noopener noreferrer" data-testid="zoning-bylaw-link" style={{color:"var(--brand-blue)"}}>{d.source.is_fallback ? `Find ${d.community}'s current zoning bylaw →` : `${d.community}'s residential zoning bylaw →`}</a>
+            {d.source.planning_phone && <span style={{marginLeft:"1rem",color:"var(--muted)"}}>Planning dept: <a href={`tel:${d.source.planning_phone.replace(/[^0-9+]/g,"")}`} style={{color:"var(--brand-blue)"}}>{d.source.planning_phone}</a></span>}
           </p>
         )}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(230px, 1fr))",gap:"0.8rem",marginTop:"1rem"}} data-testid="zoning-sources">
-          {s.bylaw_url && (
-            <a href={s.bylaw_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-bylaw-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
-              <div style={{fontSize:"1.5rem"}}>📖</div>
-              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Zoning Bylaw</div>
-              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Full text of the residential zoning schedule for {d.community}.</div>
-            </a>
-          )}
-          {s.map_url && (
-            <a href={s.map_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-map-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
-              <div style={{fontSize:"1.5rem"}}>🗺️</div>
-              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Interactive Zoning Map</div>
-              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Look up any specific parcel's current zoning designation.</div>
-            </a>
-          )}
-          {s.planning_url && (
-            <a href={s.planning_url} target="_blank" rel="noopener noreferrer" className="paper" data-testid="zoning-planning-link" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
-              <div style={{fontSize:"1.5rem"}}>🏛️</div>
-              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Planning Department</div>
-              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Talk to a planner about a specific property.<br/>{s.planning_phone && <><br/><strong>☎ </strong><a href={`tel:${s.planning_phone.replace(/[^0-9+]/g,"")}`} style={{color:"var(--brand-blue)"}}>{s.planning_phone}</a></>}{s.planning_email && <><br/><strong>✉ </strong><a href={`mailto:${s.planning_email}`} style={{color:"var(--brand-blue)"}}>{s.planning_email}</a></>}</div>
-            </a>
-          )}
-        </div>
 
         {/* Ask Doogie for zone-specific follow-ups */}
         <div className="paper" style={{marginTop:"2rem",background:"var(--brand-navy)",color:"#fff"}}>
           <h2 style={{color:"#fff",fontSize:"1.3rem",marginTop:0}}>💬 Have a zoning question about a specific property?</h2>
-          <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9}}>Doogie can walk you through common BC zone codes (R-1, RM-1, RS-1, CD-1, etc.), the SSMUH transition, secondary-suite allowances, and how to read a zoning bylaw — in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.</p>
+          <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9}}>Doogie can walk you through these zone codes, the SSMUH transition, secondary-suite allowances, and how to read a zoning bylaw — in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.</p>
           <div style={{display:"flex",gap:"0.8rem",flexWrap:"wrap",marginTop:"0.5rem"}}>
             <Link to={`/community/${slug}`} className="btn btn-outline" style={{color:"#fff",borderColor:"#fff"}}>← Back to {d.community}</Link>
             <Link to="/listings" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none"}}>View {d.community} Listings</Link>
@@ -370,7 +369,7 @@ const CommunityZoning = () => {
         </div>
 
         <p style={{marginTop:"2rem",fontSize:"0.78rem",color:"var(--muted)",fontStyle:"italic"}}>
-          Zoning designations, permitted uses, and density allowances are set by municipal bylaws which are amended frequently. The information linked above is authoritative; anything inferred from a third-party source (including this page or Doogie AI) must be verified against the actual bylaw and confirmed with the municipality's planning department before you make a real estate, construction, or renovation decision. Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 — (604) 466-7021.
+          Zoning designations, permitted uses, and density allowances are set by municipal bylaws which are amended frequently. The zone code summaries above are AI-authored, reviewed by Doug LeMaire, REALTOR® — but municipal bylaws take precedence. Always verify against the actual bylaw and confirm with the municipality's planning department before you make a real estate, construction, or renovation decision. Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 — (604) 466-7021.
         </p>
       </div>
     </section>
