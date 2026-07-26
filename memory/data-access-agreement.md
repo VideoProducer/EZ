@@ -13,9 +13,9 @@
 
 - The **sole operator** of the Member Feed Website eztofind.ca
 - The **sole technology provider** for eztofind.ca (self-operated custom build — no commercial IDX vendor)
-- The **DDF® participant of record** for the following active channels:
+- The **DDF® participant of record** for the following channels:
   - **Member Feed Channel** (Member Website Feed — My Listings) — active since 2023-08-14
-  - **National Shared Pool Channel** — active (Doug's own DDF participant status)
+  - **National Shared Pool Channel** — **provisioned but INACTIVE**; will be activated at production launch. Credentials will only be issued by CREA once Doug sets the feed Status to "Active" in the DDF Dashboard.
 
 No third-party Technology Provider (as defined in the DDF® Click-Wrap Agreement) operates any DDF® channel on behalf of Doug LeMaire, REALTOR®. Doug is both the DDF® Participant and the site operator.
 
