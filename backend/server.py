@@ -953,36 +953,82 @@ async def get_term(slug: str):
     return t
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
-    """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs for a glossary term.
-    Prompt is engineered for regulatory accuracy against BCFSA, Strata Property Act (BC), ALR/ALC, RESA, PIPA, CASL."""
+    """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs. Hallucination-hardened
+    prompt v2: cites BC statute sections or explicitly refuses; forces "verify with a BC
+    lawyer/notary/tax professional" language when unsure; every dollar amount gets an
+    "as of [date] — verify current" tag; whitelist of known-good BC statute citations."""
+    from datetime import date as _date
+    today = _date.today().isoformat()
     prompt = f"""Generate exactly 10 frequently asked questions (with answers) about the British Columbia real estate term "{term}".
 
 Definition context: {definition}
 
-ACCURACY & COMPLIANCE RULES — READ CAREFULLY:
-1. Every answer must be factually accurate for British Columbia, Canada as of 2026. If you are not certain of a specific numeric threshold, dollar figure, percentage, deadline, section number, or rule, DO NOT invent one — instead phrase the answer generically (e.g. "consult the current BC Government or BCFSA guidance for exact thresholds").
-2. When the term touches licensee conduct, agency, disclosure, trust accounts, remuneration, or dispute resolution: cite the correct authority — the **British Columbia Financial Services Authority (BCFSA)** and the **Real Estate Services Act (RESA)** and its Rules. Never confuse BCFSA with the former Real Estate Council of BC (RECBC), which merged into BCFSA on August 1, 2021.
-3. When the term touches strata lots, common property, limited common property, strata corporations, bylaws, Form B / Form F / Form I, depreciation reports, or contingency reserve funds: cite the **Strata Property Act (SBC 1998, c. 43)** and its Regulation. Do NOT cite "Condominium Act" (that is Ontario/other-province terminology and does not apply in BC).
-4. When the term touches farmland, agricultural land, subdivision restrictions, or non-farm use: cite the **Agricultural Land Commission Act (SBC 2002, c. 36)** and the **Agricultural Land Reserve (ALR)** administered by the **Agricultural Land Commission (ALC)**. Reference specific ALR restrictions accurately (e.g., minimum lot sizes, non-farm-use applications, non-adhering residential use rules) only when you are certain — otherwise refer readers to the ALC directly.
-5. When the term touches Property Transfer Tax, First-Time Home Buyers' Program, Newly Built Home Exemption, Speculation and Vacancy Tax, or Additional PTT (Foreign Buyer Tax): cite the **BC Property Transfer Tax Act** and the current BC Ministry of Finance thresholds. If you cite a numeric threshold, use only the values you are highly confident are current for 2026 (e.g. First-Time Home Buyer full exemption up to $835,000; Newly Built Home exemption up to $1,100,000; PTT tiers of 1% / 2% / 3% / additional 2% on residential value over $3,000,000).
-6. When the term touches personal information, consent, or privacy: cite the **Personal Information Protection Act (PIPA)** of BC. For unsolicited commercial electronic messages, cite **Canada's Anti-Spam Legislation (CASL)**.
-7. When the term touches wills, estates, probate, or executor duties: cite the **Wills, Estates and Succession Act (WESA)** of BC.
-8. When the term touches foreclosure or judicial sale: cite the **BC Supreme Court Civil Rules** and the **Law and Equity Act** (foreclosure in BC is judicial, not power-of-sale).
-9. Do NOT provide legal, tax, mortgage-specific, or investment ADVICE. Provide accurate, neutral, educational information only. Do NOT recommend or discourage specific actions.
-10. Answers must be 2–4 sentences. Plain-language but precise. Prefer citing the correct BC statute name over vague references like "the law".
+═══════════════════════════════════════════════════════════════
+HALLUCINATION-HARDENED RULES (v2, {today})
+═══════════════════════════════════════════════════════════════
 
-FORMAT RULES:
-- Questions must be BC-specific (British Columbia, Canada) and directly relevant to "{term}"
-- Do NOT append any disclaimer or "consult a REALTOR" line — the page carries one site-wide disclaimer already
-- Return ONLY valid JSON: an array of exactly 10 objects, each with "q" and "a" keys
+RULE 1 — CITE OR REFUSE
+Every substantive claim must EITHER:
+  (a) Cite a statute or authority from the WHITELIST below (with section number where relevant), OR
+  (b) Explicitly say: "Verify current details with a BC lawyer, notary, or licensed tax professional before acting."
+If you are not certain a specific claim maps to a whitelist source or a well-established fact, refuse to make the claim and use option (b).
+
+RULE 2 — NEVER INVENT
+Do NOT invent:
+  - Section numbers ("s. 25(4)" style) unless you are highly confident
+  - Dollar amounts, percentages, effective dates
+  - Program names or eligibility rules
+  - Federal or municipal law that overlaps BC provincial law
+If unsure, phrase as "the current BC Ministry of Finance thresholds" or "the current BCFSA Rules" and refer the reader to verify.
+
+RULE 3 — DOLLAR / % / DATE TAGGING
+Every specific dollar figure, percentage rate, or effective date MUST be followed by "(as of {today} — verify current)". Example:
+  "The First-Time Home Buyer full exemption applies up to $835,000 (as of {today} — verify current)."
+  "The Additional PTT rate is 20% (as of {today} — verify current)."
+This is mandatory. Every single number.
+
+RULE 4 — WHITELIST OF ACCEPTABLE BC CITATIONS
+Only cite from this list (or say "verify with a professional"):
+  • British Columbia Financial Services Authority (BCFSA) — regulator; do NOT confuse with the former RECBC (merged into BCFSA August 1, 2021)
+  • Real Estate Services Act (RESA), SBC 2004, c. 42, and the RESA Rules
+  • Strata Property Act (SPA), SBC 1998, c. 43, and Strata Property Regulation — for strata/condo matters (NEVER "Condominium Act" — that's Ontario)
+  • Property Transfer Tax Act (PTTA), RSBC 1996, c. 378 — for PTT, First-Time Home Buyer Exemption, Newly Built Home Exemption, Additional PTT (foreign buyer)
+  • Speculation and Vacancy Tax Act, SBC 2018, c. 46
+  • Residential Tenancy Act, SBC 2002, c. 78 (RTA)
+  • Home Purchase Assistance Act (First-Time Home Buyer)
+  • Wills, Estates and Succession Act (WESA), SBC 2009, c. 13
+  • Land Title Act, RSBC 1996, c. 250
+  • Personal Information Protection Act (PIPA), SBC 2003, c. 63
+  • Canada's Anti-Spam Legislation (CASL), SC 2010, c. 23 — federal
+  • Prohibition on the Purchase of Residential Property by Non-Canadians Act, SC 2022, c. 10 — federal (Foreign Buyer Ban; currently extended through January 1, 2027)
+  • Agricultural Land Commission Act, SBC 2002, c. 36 (ALR/ALC)
+  • Local Government Act (RSBC 2015, c. 1) — for municipal zoning
+  • Housing Statutes (Residential Development) Amendment Act, 2023 — BC Bill 44 (SSMUH, effective July 1, 2024 for most municipalities)
+  • Home Flipping Tax Act, SBC 2024 (effective January 1, 2025 — verify current)
+  • BC Home Owner Grant Act — for property tax grant
+  • BC Ministry of Finance publications and www.gov.bc.ca
+  • Canada Mortgage and Housing Corporation (CMHC) — federal
+  • Financial Consumer Agency of Canada (FCAC) — federal
+  • Bank of Canada — for policy rates
+
+RULE 5 — NO ADVICE
+Do NOT advise "you should X". Provide neutral, educational, factual information only. Never recommend a specific mortgage, lender, brokerage, lawyer, or REALTOR®.
+
+RULE 6 — WHEN IN DOUBT
+When a question could go multiple ways depending on province, jurisdiction, timing, or personal circumstances, the correct answer template is:
+  "This depends on [factor]. Under BC's [correct statute from whitelist], the general framework is [general framework]. Verify the specifics for your situation with a BC lawyer, notary, or licensed tax professional before acting."
+
+RULE 7 — FORMAT
+- Questions must be BC-specific and directly relevant to "{term}"
+- Each answer: 2–4 sentences, plain-language but precise
+- Return ONLY valid JSON: an array of exactly 10 objects with "q" and "a" keys
 - No preamble, no markdown, no code fences, just the JSON array."""
     try:
-        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be accurate under BC statutes (BCFSA/RESA, Strata Property Act, Agricultural Land Commission Act, Property Transfer Tax Act, PIPA, CASL, WESA). You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"faq-{uuid.uuid4()}", system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be verifiable against a BC statute or federal Act from the whitelist. When uncertain, you REFUSE to make the claim and refer the reader to verify with a BC lawyer, notary, or licensed tax professional. You never invent section numbers, dollar amounts, percentages, or dates. Every specific number gets an 'as of YYYY-MM-DD — verify current' tag. You output only valid JSON arrays.").with_model("anthropic", "claude-sonnet-4-6")
         full = ""
         async for ev in chat.stream_message(UserMessage(text=prompt)):
             if isinstance(ev, TextDelta): full += ev.content
             elif isinstance(ev, StreamDone): break
-        # extract JSON
         s = full.strip()
         if s.startswith("```"): s = s.split("```")[1].replace("json","",1).strip()
         start = s.find("["); end = s.rfind("]")
@@ -2258,29 +2304,34 @@ async def generate_all_missing(auto_approve: bool = False, _=Depends(verify_admi
     return {"success": True, "message": f"Generating synopsis + weather for {len(todo)} communities in background. Refresh the approval queues in ~15-30 minutes.", "total": len(todo)}
 
 @api.post("/admin/approvals/generate-all-glossary")
-async def generate_all_glossary(auto_approve: bool = False, _=Depends(verify_admin)):
-    """Generate FAQs for EVERY glossary term missing them. Runs in background. ~30-60 min for 400+ terms.
-    If auto_approve=true, FAQs publish immediately as they're written (BCFSA-attested by Doug via this admin action)."""
+async def generate_all_glossary(auto_approve: bool = False, regenerate: bool = False, _=Depends(verify_admin)):
+    """Generate FAQs for glossary terms. Runs in background. ~30-60 min for 400+ terms.
+    If auto_approve=true, FAQs publish immediately as they're written.
+    If regenerate=true, OVERWRITES existing FAQs (used for hallucination-hardened v2 sweep)."""
     import asyncio as _a
-    todo = await db.glossary.find({"$or":[{"faqs":{"$exists":False}},{"faqs":[]}]}, {"_id":0,"slug":1,"term":1,"definition":1}).to_list(2000)
+    if regenerate:
+        todo = await db.glossary.find({}, {"_id":0,"slug":1,"term":1,"definition":1}).to_list(2000)
+    else:
+        todo = await db.glossary.find({"$or":[{"faqs":{"$exists":False}},{"faqs":[]}]}, {"_id":0,"slug":1,"term":1,"definition":1}).to_list(2000)
 
     async def worker():
         SEM = _a.Semaphore(4)
         async def gen(t):
             async with SEM:
-                if await db.glossary.find_one({"slug": t["slug"], "faqs.0": {"$exists": True}}): return
+                if not regenerate and await db.glossary.find_one({"slug": t["slug"], "faqs.0": {"$exists": True}}): return
                 faqs = await generate_faqs_for_term(t["term"], t["definition"])
                 if faqs:
-                    update = {"faqs": faqs, "faqs_approved": bool(auto_approve), "faqs_generated_at": now_iso()}
+                    update = {"faqs": faqs, "faqs_approved": bool(auto_approve), "faqs_generated_at": now_iso(), "faqs_prompt_version": "v2-hallucination-hardened"}
                     if auto_approve:
                         update["faqs_approved_at"] = now_iso()
                         update["faqs_approved_by"] = "bulk_admin_action"
                     await db.glossary.update_one({"slug": t["slug"]}, {"$set": update})
         await _a.gather(*[gen(t) for t in todo], return_exceptions=True)
-        logger.info(f"Bulk FAQ generation complete for {len(todo)} glossary terms (auto_approve={auto_approve})")
+        logger.info(f"Bulk FAQ generation complete for {len(todo)} glossary terms (regenerate={regenerate}, auto_approve={auto_approve})")
 
     _a.create_task(worker())
-    return {"success": True, "message": f"Generating FAQs for {len(todo)} glossary terms in background. Refresh the Glossary tab in ~30-60 minutes.", "total": len(todo)}
+    action = "Regenerating" if regenerate else "Generating"
+    return {"success": True, "message": f"{action} FAQs for {len(todo)} glossary terms in background (v2 prompt).", "total": len(todo)}
 
 @api.post("/admin/approvals/glossary/unapprove-all")
 async def unapprove_all_glossary(_=Depends(verify_admin)):
