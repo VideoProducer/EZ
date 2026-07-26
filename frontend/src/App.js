@@ -1518,7 +1518,7 @@ const ListingDetail = () => {
               Request a Referral REALTOR<sup style={{fontSize:"0.55em"}}>®</sup> in {listing.city}
             </Link>
             <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.9rem",lineHeight:1.55,fontFamily:"Inter,sans-serif"}}>
-              We'll match you with a BC-licensed REALTOR® active in {listing.city}. No cost to you — the receiving REALTOR® pays Doug a referral fee at closing.
+              We'll match you with a BC-licensed REALTOR® active in {listing.city}.
             </div>
           </div>
           )}
