@@ -164,10 +164,17 @@ def _map_property(p: dict) -> Optional[dict]:
     for m in media:
         if not isinstance(m, dict): continue
         url = m.get("MediaURL")
-        if url and (m.get("MediaCategory") in (None, "Photo")):
+        cat = (m.get("MediaCategory") or "").lower()
+        # CREA DDF categorizes as "Property Photo" (also allow legacy/generic "Photo")
+        if url and ("photo" in cat or not cat):
             photos.append(url)
-    if photos and media[0:1] and media[0].get("PreferredPhotoYN"):
-        # already ordered; nothing else to do
+    # Sort by Order if present so PreferredPhotoYN comes first
+    try:
+        photos_with_order = [(int(m.get("Order") or 999), m.get("MediaURL")) for m in media
+                             if isinstance(m, dict) and m.get("MediaURL") and "photo" in (m.get("MediaCategory") or "").lower()]
+        photos_with_order.sort(key=lambda x: x[0])
+        photos = [u for _, u in photos_with_order]
+    except Exception:
         pass
 
     street = " ".join(x for x in [
@@ -177,6 +184,12 @@ def _map_property(p: dict) -> Optional[dict]:
     unit = p.get("UnitNumber")
     if unit:
         street = f"{street} #{unit}" if street else f"#{unit}"
+
+    # ListingURL from CREA may be missing scheme (e.g. "www.realtor.ca/..."); prepend https
+    raw_url = (p.get("ListingURL") or "").strip()
+    if raw_url and not raw_url.startswith(("http://", "https://")):
+        raw_url = "https://" + raw_url
+    listing_url = raw_url or f"https://www.realtor.ca/real-estate/{listing_key}"
 
     return {
         "listing_key": listing_key,
@@ -207,7 +220,7 @@ def _map_property(p: dict) -> Optional[dict]:
         "brokerage_name": None,   # resolved from Office if needed via a follow-up sync
         "list_office_key": p.get("ListOfficeKey") or "",
         "list_agent_key": p.get("ListAgentKey") or "",
-        "realtor_ca_url": p.get("ListingURL") or f"https://www.realtor.ca/real-estate/{listing_key}",
+        "realtor_ca_url": listing_url,
         "modified_at": p.get("ModificationTimestamp"),
         "originating_system": p.get("OriginatingSystemName") or "CREA DDF",
         "internet_display_addr": show_addr,
@@ -234,7 +247,7 @@ async def _fetch_page(client: httpx.AsyncClient, url: str, token: str) -> dict:
     return r.json()
 
 
-async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int = 200) -> dict:
+async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int = 700) -> dict:
     """Pull active BC listings from CREA DDF, upsert to Mongo. Returns a summary.
 
     - Uses ModificationTimestamp filter when `since` provided.
@@ -248,21 +261,19 @@ async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int 
     started = datetime.now(timezone.utc)
     result = {"pulled": 0, "upserted": 0, "removed": 0, "errors": [], "pages": 0}
 
-    # Build initial URL — BC scope + active + display allowed
+    # Build initial URL — BC scope. DDF's "Active" endpoint only returns active
+    # listings by design; StandardStatus is not a filterable field. We also skip
+    # filtering on InternetEntireListingDisplayYN here — we honour it in
+    # _map_property() so listings flagged as no-display are silently dropped.
     filters = [f"StateOrProvince eq '{DDF_PROVINCE_FILTER}'"] if DDF_PROVINCE_FILTER else []
-    filters.append("StandardStatus eq 'Active'")
-    filters.append("InternetEntireListingDisplayYN eq true")
     if since:
         filters.append(f"ModificationTimestamp gt {since.astimezone(timezone.utc).isoformat().replace('+00:00','Z')}")
     filter_str = " and ".join(filters)
-
-    url = (
-        f"{DDF_ODATA_BASE}/Property"
-        f"?$top=100&$filter={httpx.QueryParams({'f': filter_str})['f']}"
-    ).replace("$filter=", "$filter=").replace("+", "%20")
-    # httpx QueryParams url-encodes as needed; build simpler:
     from urllib.parse import quote
-    url = f"{DDF_ODATA_BASE}/Property?$top=100&$filter={quote(filter_str)}"
+    if filter_str:
+        url = f"{DDF_ODATA_BASE}/Property?$top=100&$filter={quote(filter_str)}"
+    else:
+        url = f"{DDF_ODATA_BASE}/Property?$top=100"
 
     try:
         token = await _get_token()
@@ -283,28 +294,32 @@ async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int 
             rows = page.get("value", []) or []
             result["pulled"] += len(rows)
 
+            # Batch upserts — pymongo's bulk_write is 10-50x faster than one-by-one
+            from pymongo import UpdateOne
             ops = []
+            now_iso_str = datetime.now(timezone.utc).isoformat()
             for p in rows:
                 mapped = _map_property(p)
                 if not mapped:
                     continue
                 seen_keys.add(mapped["listing_key"])
-                # Upsert
+                ops.append(UpdateOne(
+                    {"listing_key": mapped["listing_key"]},
+                    {"$set": mapped, "$setOnInsert": {"created_at": now_iso_str}},
+                    upsert=True,
+                ))
+            if ops:
                 try:
-                    await db.listings.update_one(
-                        {"listing_key": mapped["listing_key"]},
-                        {"$set": mapped, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
-                        upsert=True,
-                    )
-                    result["upserted"] += 1
+                    r = await db.listings.bulk_write(ops, ordered=False)
+                    result["upserted"] += (r.upserted_count + r.modified_count)
                 except Exception as e:
-                    result["errors"].append(f"upsert {mapped['listing_key']}: {e}")
+                    result["errors"].append(f"bulk_write: {e}")
 
             next_link = page.get("@odata.nextLink")
             if not next_link:
                 break
             url = next_link
-            await asyncio.sleep(0.15)  # be polite
+            await asyncio.sleep(0.1)  # be polite
 
     # Reconciliation: soft-remove listings we didn't see this run (only if full sync = no `since`)
     if not since and seen_keys:

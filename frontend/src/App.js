@@ -864,8 +864,8 @@ const Home = () => {
           {["Detached","Luxury","Equestrian","Estate Sales","Condos","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
         </div>
       </div>
-      <div style={{textAlign:"center",overflow:"visible"}}>
-        <img src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",maxWidth:"none",transform:"scale(1.9)",transformOrigin:"center center",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+      <div className="doogie-hero-wrap" style={{textAlign:"center",overflow:"visible"}}>
+        <img className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 

@@ -1623,8 +1623,37 @@ async def listings_facets(request: Request):
 
 @api.post("/admin/listings/sync-now")
 async def admin_ddf_sync_now(_=Depends(verify_admin)):
-    """Manual trigger for a DDF® sync (no-op until credentials are configured)."""
-    return await _ddf_sync(db)
+    """Manual trigger for a DDF® sync. Runs in the background because a full BC
+    sync can take 1-2 minutes; poll /admin/listings/sync-log for progress."""
+    # If credentials not configured, return synchronously so the admin sees the reason
+    if not _ddf_ready():
+        return await _ddf_sync(db)
+    # Prevent overlapping syncs
+    running = await db.ddf_sync_log.find_one({"status": "running"})
+    if running:
+        return {"status": "already_running", "started_at": running.get("started_at")}
+    marker = {"status": "running", "started_at": now_iso(), "pulled": 0, "upserted": 0}
+    ins = await db.ddf_sync_log.insert_one(marker)
+    marker_id = ins.inserted_id
+
+    async def _run():
+        try:
+            r = await _ddf_sync(db)
+            await db.ddf_sync_log.update_one({"_id": marker_id}, {"$set": {"status": "done", "finished_at": now_iso(), **r}})
+        except Exception as e:
+            await db.ddf_sync_log.update_one({"_id": marker_id}, {"$set": {"status": "error", "finished_at": now_iso(), "errors": [str(e)]}})
+    asyncio.create_task(_run())
+    return {"status": "started", "started_at": marker["started_at"]}
+
+@api.get("/admin/listings/sync-log")
+async def admin_ddf_sync_log(_=Depends(verify_admin)):
+    """Latest 10 DDF sync attempts (newest first)."""
+    docs = []
+    async for d in db.ddf_sync_log.find({}).sort("started_at", -1).limit(10):
+        d.pop("_id", None)
+        docs.append(d)
+    total_bc = await db.listings.count_documents({"source": "CREA_DDF"})
+    return {"total_bc_listings": total_bc, "runs": docs}
 
 @api.get("/admin/listings/ddf-status")
 async def admin_ddf_status(_=Depends(verify_admin)):
