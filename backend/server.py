@@ -1500,6 +1500,60 @@ def _sanitize_listing(doc: dict) -> dict:
     doc.setdefault("realtor_ca_url", f"https://www.realtor.ca/real-estate/{doc.get('listing_key','')}")
     return doc
 
+
+# --------- Locality resolver ---------
+# Cache of distinct BC city + region values (built from Mongo listings).
+# Reused by /api/listings and /api/doogie/mls-search so that a hero query
+# like "Whistler" becomes a STRICT city filter instead of a text-index leak.
+_locality_cache: dict = {"cities": None, "regions": None, "loaded_at": 0.0}
+
+async def _get_localities() -> dict:
+    """Return {'cities': [...], 'regions': [...]} — deduplicated, sorted longest-first
+    so 'North Vancouver' beats 'Vancouver' on longest-substring match. Cached for 10 min."""
+    import time
+    now = time.time()
+    if _locality_cache["cities"] and now - _locality_cache["loaded_at"] < 600:
+        return _locality_cache
+    try:
+        cities = [c for c in await db.listings.distinct("city", {"status": "Active"}) if c]
+        regions = [r for r in await db.listings.distinct("region", {"status": "Active"}) if r]
+    except Exception as e:
+        logger.warning(f"locality distinct() failed: {e}")
+        return {"cities": [], "regions": []}
+    # Sort longest first so multi-word cities win the substring match
+    cities.sort(key=lambda s: (-len(s), s.lower()))
+    regions.sort(key=lambda s: (-len(s), s.lower()))
+    _locality_cache["cities"] = cities
+    _locality_cache["regions"] = regions
+    _locality_cache["loaded_at"] = now
+    return _locality_cache
+
+async def _resolve_bc_locality(q: str) -> Optional[dict]:
+    """Given a natural-language query, return {"city": "..."} or {"region": "..."}
+    if the query matches a known BC city or CREA CityRegion (case-insensitive).
+    Match is: exact match wins → whole-word substring match on cities → then regions.
+    Returns None if no locality is detected (caller can fall back to $text search)."""
+    if not q or not q.strip():
+        return None
+    ql = q.strip().lower()
+    localities = await _get_localities()
+    # 1) Exact match (e.g. user typed just "Whistler")
+    for c in localities["cities"]:
+        if c.lower() == ql:
+            return {"city": c}
+    for r in localities["regions"]:
+        if r.lower() == ql:
+            return {"region": r}
+    # 2) Whole-word substring match (e.g. "4-bed homes in Whistler")
+    import re as _re
+    for c in localities["cities"]:
+        if _re.search(rf"\b{_re.escape(c.lower())}\b", ql):
+            return {"city": c}
+    for r in localities["regions"]:
+        if _re.search(rf"\b{_re.escape(r.lower())}\b", ql):
+            return {"region": r}
+    return None
+
 @api.get("/listings")
 @_limiter.limit("60/minute")
 async def search_listings(
@@ -1522,7 +1576,9 @@ async def search_listings(
     Returns { total, count, offset, limit, listings: [...], compliance }.
     """
     query: dict = {"status": "Active"}
-    if community: query["community"] = {"$regex": f"^{re.escape(community)}$", "$options": "i"}
+    # Accept legacy `community` param as an alias for city (frontend has used both).
+    if community and not city:
+        city = community
     if city:      query["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
     if property_type: query["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
@@ -1535,7 +1591,22 @@ async def search_listings(
     if features:
         feats = [f.strip() for f in features.split(",") if f.strip()]
         if feats: query["features"] = {"$all": feats}
-    if q:
+    # `q` (natural-language query from the hero search bar) is treated as a
+    # LOCALITY hint first — if it names a known BC city or CityRegion, we
+    # promote it to a strict exact-match filter so a search for "Whistler"
+    # never leaks Vancouver/Bowen listings whose description happens to
+    # mention Whistler. Only if we cannot resolve a locality do we fall
+    # back to Mongo's full-text index.
+    if q and not (city or region):
+        loc = await _resolve_bc_locality(q)
+        if loc:
+            for k, v in loc.items():
+                query[k] = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
+        else:
+            query["$text"] = {"$search": q}
+    elif q:
+        # City/region already set explicitly — still let q filter within that
+        # scope (e.g. city=Vancouver & q="ocean view")
         query["$text"] = {"$search": q}
 
     sort_key = [("created_at", -1)]
@@ -1783,11 +1854,21 @@ async def doogie_mls_search(request: Request, payload: dict):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": ""}
 
     filters = await _extract_listing_filters(q)
+    # Belt-and-suspenders: if Claude didn't extract a city, try our own
+    # locality resolver against the raw query. This guarantees "Whistler"
+    # always becomes a strict city filter, never a text-index leak.
+    if not filters.get("city"):
+        loc = await _resolve_bc_locality(q)
+        if loc:
+            if loc.get("city"):   filters["city"] = loc["city"]
+            if loc.get("region"): filters["region"] = loc["region"]
+
     if not any(v for v in filters.values() if v not in (None, "", [])):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
 
     query: dict = {"status": "Active"}
     if filters.get("city"):          query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
+    if filters.get("region"):        query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
     if filters.get("property_type"): query["property_type"] = {"$regex": f"^{re.escape(filters['property_type'])}$", "$options": "i"}
     if filters.get("beds_min"):      query["beds"] = {"$gte": int(filters["beds_min"])}
     if filters.get("baths_min"):     query["baths"] = {"$gte": int(filters["baths_min"])}
@@ -1795,6 +1876,8 @@ async def doogie_mls_search(request: Request, payload: dict):
     if filters.get("price_min"): pr["$gte"] = int(filters["price_min"])
     if filters.get("price_max"): pr["$lte"] = int(filters["price_max"])
     if pr: query["list_price"] = pr
+    # Keyword search is only applied WITHIN the locality scope; it never
+    # widens the result set beyond the resolved city/region.
     if filters.get("keyword"):
         query["$text"] = {"$search": filters["keyword"]}
 

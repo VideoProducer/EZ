@@ -82,12 +82,13 @@ Backend: **19/19 tests passed (100%)** via testing subagent (iteration_1.json)
 - ✅ **/communities index copy** — removed "Doug's primary practice..." line, added Referral REALTOR® link
 - ✅ **Community map moved above H1 name** — Google Maps embed at top of each community page
 
-### Feb 25, 2026 — Multilingual Lead Forms + CREA DDF Diagnostic
+### Feb 25, 2026 — Multilingual Lead Forms + CREA DDF Live + Strict Community Filtering + Mobile Hero Fix
 - ✅ **Multilingual `?lang=` conversion forms** — `/buyer`, `/seller`, `/referral-request`, `/contact` now render in EN, 繁 (zh-Hant), 简 (zh-Hans), ਪੰਜਾਬੀ (pa), فارسی (fa) with RTL, and Português (pt-PT). i18n dict at `/app/frontend/src/i18n.js`; `useFormLang()` hook reads URL param.
-- ✅ **Doogie chat auto-appends `?lang=xx`** to internal /buyer, /seller, /contact, /referral-request links when a non-EN chat language is active (via `renderChatContent(raw, lang)` in App.js).
-- ✅ **Background note translation** — free-text `notes` (buyer) and `reason` (seller) fields typed in a non-EN language are auto-translated to English via Claude Sonnet 4.6 and stored as `notes_en` / `reason_en` for Doug's CRM. Fire-and-forget `asyncio.create_task` — zero added latency on the POST.
-- ✅ **CREA DDF diagnostic endpoint** — `GET /api/admin/listings/ddf-status` probes identity.crea.ca + ddfapi.realtor.ca and returns `{credentials_configured, token_ok, api_ok, error, sample_count}`. Confirmed: current credentials return `invalid_client` → user has CREA member portal login, not DDF Destination username/password.
-- ✅ **Production DDF sync worker** — `services/ddf_sync.py` fully implemented: OAuth2 token cache, OData pagination via `@odata.nextLink`, incremental sync via `ModificationTimestamp`, RESO Property → internal shape mapping, reconciliation removes withdrawn listings, honours `InternetEntireListingDisplayYN` + `InternetAddressDisplayYN` privacy flags. Ready to activate the moment Destination credentials are pasted into `.env`.
+- ✅ **Doogie chat auto-appends `?lang=xx`** to internal /buyer, /seller, /contact, /referral-request links when a non-EN chat language is active.
+- ✅ **Background note translation** — free-text `notes` (buyer) and `reason` (seller) fields typed in a non-EN language are auto-translated to English via Claude Sonnet 4.6 and stored as `notes_en` / `reason_en`. Zero added latency.
+- ✅ **CREA DDF LIVE** — 53,649 BC MLS® listings synced from CREA DDF (identity.crea.ca OAuth + ddfapi.realtor.ca OData v1). Photos, list_price, MLS number, lat/lon, realtor.ca URL all populated. Diagnostic + sync-log admin endpoints wired.
+- ✅ **Strict community filtering** — new `_resolve_bc_locality()` on the backend maps hero-search queries like "Whistler" to a strict `city` exact-match filter BEFORE falling back to MongoDB's full-text index. Prevents Vancouver/Bowen listings that just mention "Whistler" in their description from leaking into the results. Applied to both `/api/listings?q=` and `/api/doogie/mls-search`. Community page link changed from `?community=` to `?city=`.
+- ✅ **Mobile hero fix** — Doogie hero image's `transform: scale(1.9)` extracted into `.doogie-hero-img` class with mobile media queries so he no longer overlaps the search chips on phones.
 
 ### Environment variables required (when CREA credentials arrive)
 ```

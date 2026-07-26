@@ -1937,7 +1937,7 @@ const CommunityPage = () => {
     {found ? <>
       {found && <CommunityMap name={found} region={region}/>}
       <div style={{display:"flex",justifyContent:"center",marginBottom:"1.75rem"}}>
-        <Link to={`/listings?community=${encodeURIComponent(found)}`} className="btn btn-primary" data-testid={`view-listings-in-${slug}`} style={{padding:"0.85rem 1.75rem",fontSize:"1rem"}}>
+        <Link to={`/listings?city=${encodeURIComponent(found)}`} className="btn btn-primary" data-testid={`view-listings-in-${slug}`} style={{padding:"0.85rem 1.75rem",fontSize:"1rem"}}>
           🏡 View Active Listings in {found}
         </Link>
       </div>
