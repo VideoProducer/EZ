@@ -260,6 +260,33 @@ class AdminLogin(BaseModel):
     password: str
 
 # =============== AUTH ===============
+def hash_password(plain: str) -> str:
+    """bcrypt hash → utf-8 string (safe to store in Mongo)."""
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
+
+
+async def _get_admin_hash() -> Optional[str]:
+    """Load the persisted bcrypt hash for the admin. None means we haven't
+    migrated from the .env plaintext yet — callers should fall back."""
+    doc = await db.admin_settings.find_one({"_id": "admin_credentials"}, {"password_hash": 1})
+    return (doc or {}).get("password_hash")
+
+
+async def _set_admin_hash(new_hash: str) -> None:
+    await db.admin_settings.update_one(
+        {"_id": "admin_credentials"},
+        {"$set": {"password_hash": new_hash, "updated_at": now_iso()}},
+        upsert=True,
+    )
+
+
 def create_token(email: str) -> str:
     return jwt.encode({"email": email, "exp": datetime.now(timezone.utc) + timedelta(days=7)}, JWT_SECRET, algorithm="HS256")
 
@@ -275,9 +302,46 @@ def verify_admin(authorization: Optional[str] = Header(None)):
 
 @api.post("/admin/login")
 async def admin_login(body: AdminLogin):
-    if body.email.lower() != ADMIN_EMAIL.lower() or body.password != ADMIN_PASSWORD:
+    if body.email.lower() != ADMIN_EMAIL.lower():
         raise HTTPException(401, "Invalid credentials")
+    stored_hash = await _get_admin_hash()
+    if stored_hash:
+        if not verify_password(body.password, stored_hash):
+            raise HTTPException(401, "Invalid credentials")
+    else:
+        # First-run migration: no DB hash yet. Verify against .env plaintext,
+        # then bootstrap a bcrypt hash so future changes persist in DB.
+        if body.password != ADMIN_PASSWORD:
+            raise HTTPException(401, "Invalid credentials")
+        await _set_admin_hash(hash_password(body.password))
     return {"token": create_token(ADMIN_EMAIL), "email": ADMIN_EMAIL}
+
+
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@api.post("/admin/change-password")
+async def admin_change_password(body: ChangePassword, _=Depends(verify_admin)):
+    """Self-service admin password change. Verifies current password, then
+    replaces the stored bcrypt hash. Requires a valid admin JWT (i.e. must be
+    logged in already)."""
+    if len(body.new_password) < 10:
+        raise HTTPException(400, "New password must be at least 10 characters.")
+    if body.new_password == body.current_password:
+        raise HTTPException(400, "New password must be different from the current one.")
+    # Verify current — check DB hash first, fall back to .env plaintext for
+    # the pre-migration path (same rule as admin_login).
+    stored_hash = await _get_admin_hash()
+    if stored_hash:
+        if not verify_password(body.current_password, stored_hash):
+            raise HTTPException(401, "Current password is incorrect.")
+    else:
+        if body.current_password != ADMIN_PASSWORD:
+            raise HTTPException(401, "Current password is incorrect.")
+    await _set_admin_hash(hash_password(body.new_password))
+    return {"success": True, "message": "Password updated. Use the new password on your next login."}
 
 # =============== DOOGIE AI CHAT ===============
 DOOGIE_SYSTEM = """You are Doogie, the friendly AI mascot for EZtoFind.ca — a British Columbia real estate search platform run by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.).
@@ -2076,6 +2140,102 @@ async def pending_glossary(_=Depends(verify_admin)):
     items = await db.glossary.find({"faqs.0": {"$exists": True}, "faqs_approved": {"$ne": True}}, {"_id":0}).to_list(1000)
     return items
 
+
+# ---- FAQ Audit: covers ALL glossary terms with FAQs (approved AND pending),
+# ranked by hallucination-risk. Doug uses this to spot-check the ~40 highest-
+# risk terms after any bulk regeneration.
+
+# Keywords that historically produce the most factually-sensitive answers.
+# Each hit adds 1 to the risk score. Threshold >= 2 = "high risk".
+FAQ_RISK_KEYWORDS = [
+    # Tax / statutory numbers that change year-over-year
+    "property transfer tax", "ptt", "gst", "hst", "capital gains", "speculation tax",
+    "vacancy tax", "foreign buyer", "empty homes", "underused housing",
+    # Legal / disclosure obligations
+    "fintrac", "disclosure", "dual agency", "designated agency", "unrepresented",
+    "fiduciary", "material latent", "psds", "form b", "strata form", "depreciation report",
+    # Regulatory bodies + dated programs
+    "bcfsa", "recbc", "cmhc", "cra", "wcb", "worksafe",
+    # Numeric/date-sensitive
+    "insured mortgage", "down payment", "stress test", "amortization",
+    "cooling off", "rescission",
+    # Specific programs
+    "first-time home buyer", "newly built home", "home buyers' plan", "hbp",
+    "first home savings account", "fhsa",
+]
+
+
+def _compute_faq_risk(term_doc: dict) -> tuple[int, list]:
+    """Return (score, matched_keywords). Score = # of high-risk keywords found
+    in the term itself, its definition, or any FAQ question/answer."""
+    haystack = " ".join([
+        term_doc.get("term") or "",
+        term_doc.get("definition") or "",
+        " ".join(
+            (f.get("q") or "") + " " + (f.get("a") or "")
+            for f in (term_doc.get("faqs") or [])
+        ),
+    ]).lower()
+    hits = [kw for kw in FAQ_RISK_KEYWORDS if kw in haystack]
+    return len(hits), hits
+
+
+@api.get("/admin/faq-audit")
+async def faq_audit(filter: str = "all", _=Depends(verify_admin)):
+    """List every glossary term with FAQs, tagged with a risk score so Doug
+    can spot-check the highest-risk terms.
+
+    Query params:
+      filter=all         → every term with FAQs
+      filter=high        → risk score >= 2 (~40 terms)
+      filter=approved    → faqs_approved==True
+      filter=unapproved  → faqs_approved!=True
+    """
+    q = {"faqs.0": {"$exists": True}}
+    if filter == "approved":
+        q["faqs_approved"] = True
+    elif filter == "unapproved":
+        q["faqs_approved"] = {"$ne": True}
+
+    docs = await db.glossary.find(q, {"_id": 0}).to_list(2000)
+
+    enriched = []
+    for d in docs:
+        score, hits = _compute_faq_risk(d)
+        if filter == "high" and score < 2:
+            continue
+        enriched.append({
+            "slug": d.get("slug"),
+            "term": d.get("term"),
+            "category": d.get("category"),
+            "definition": d.get("definition"),
+            "faqs": d.get("faqs") or [],
+            "faqs_approved": bool(d.get("faqs_approved")),
+            "faqs_approved_at": d.get("faqs_approved_at"),
+            "risk_score": score,
+            "risk_hits": hits,
+        })
+
+    # Highest-risk first, then unapproved before approved, then by term.
+    enriched.sort(key=lambda r: (-r["risk_score"], r["faqs_approved"], r["term"] or ""))
+    return {"count": len(enriched), "items": enriched}
+
+
+class UnapproveGlossary(BaseModel):
+    slug: str
+
+
+@api.post("/admin/approvals/glossary/unapprove")
+async def unapprove_glossary(body: UnapproveGlossary, _=Depends(verify_admin)):
+    """Reject/re-queue a single term's FAQs — clears the approved flag so the
+    public site hides them again until Doug re-approves."""
+    r = await db.glossary.update_one(
+        {"slug": body.slug},
+        {"$set": {"faqs_approved": False}, "$unset": {"faqs_approved_at": ""}},
+    )
+    return {"success": True, "modified": r.modified_count}
+
+
 @api.get("/admin/approvals/synopses")
 async def pending_synopses(_=Depends(verify_admin)):
     return await db.community_synopses.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(1000)
@@ -3234,10 +3394,91 @@ async def _extract_listing_filters(user_query: str) -> dict:
         for dim in ("beds", "baths"):
             if parsed.get(f"{dim}_exact") is not None and parsed.get(f"{dim}_min") is not None:
                 parsed[f"{dim}_min"] = None
+        # DETERMINISTIC POST-PROCESSING (belt-and-suspenders): Claude sometimes
+        # returns beds_min for a plain "3 bedroom" query. Scan the raw text and
+        # correct: if the user's phrasing is a plain count (no "+"/"at least"/
+        # "or more"/"minimum"), force beds_exact and drop beds_min. Same for baths.
+        _apply_beds_baths_regex_override(user_query, parsed)
         return parsed
     except Exception as e:
         logger.warning(f"filter extraction failed: {e}")
         return {}
+
+
+# Regex-based deterministic override — the LLM cannot be fully trusted to
+# distinguish "3 bedroom home" (exact) from "3+ bedroom" (min). This scans
+# the raw text and takes precedence over whatever Claude returned.
+_MIN_PHRASE_RE = {
+    "beds": re.compile(
+        r"(?:"
+        r"(?:at\s+least|minimum|min\.?|min|≥|>=)\s*(\d{1,2})\s*(?:\+)?\s*(?:-|\s)?\s*(?:bed|bedroom|br|bd)"
+        r"|(\d{1,2})\s*\+\s*(?:bed|bedroom|br|bd)"
+        r"|(\d{1,2})\s*(?:bed|bedroom|br|bd)s?\s+or\s+more"
+        r")",
+        re.IGNORECASE,
+    ),
+    "baths": re.compile(
+        r"(?:"
+        r"(?:at\s+least|minimum|min\.?|min|≥|>=)\s*(\d{1,2}(?:\.5)?)\s*(?:\+)?\s*(?:-|\s)?\s*(?:bath|bathroom|ba)"
+        r"|(\d{1,2}(?:\.5)?)\s*\+\s*(?:bath|bathroom|ba)"
+        r"|(\d{1,2}(?:\.5)?)\s*(?:bath|bathroom|ba)s?\s+or\s+more"
+        r")",
+        re.IGNORECASE,
+    ),
+}
+_EXACT_PHRASE_RE = {
+    "beds": re.compile(
+        r"(?<![+\d.])\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s*[- ]?\s*(?:bed|bedroom|br|bd)s?\b",
+        re.IGNORECASE,
+    ),
+    "baths": re.compile(
+        r"(?<![+\d.])\b(\d{1,2}(?:\.5)?|one|two|three|four|five|six|seven|eight|nine|ten)\s*[- ]?\s*(?:bath|bathroom|ba)s?\b",
+        re.IGNORECASE,
+    ),
+}
+_WORD_TO_NUM = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+
+
+def _apply_beds_baths_regex_override(raw_query: str, parsed: dict) -> None:
+    """Mutate `parsed` in place. If the raw query mentions a plain bedroom
+    count (no min-modifier), force `beds_exact` and clear `beds_min`. Same
+    for bathrooms. Runs AFTER Claude, so the LLM's guess is a fallback for
+    ambiguous phrasing this regex can't classify."""
+    if not raw_query:
+        return
+    q = raw_query
+    for dim in ("beds", "baths"):
+        min_match = _MIN_PHRASE_RE[dim].search(q)
+        if min_match:
+            # User explicitly said "at least N", "N+", or "N or more" — honour beds_min.
+            # Take the first non-None captured group as the number.
+            num_str = next((g for g in min_match.groups() if g), None)
+            if num_str:
+                try:
+                    val = float(num_str) if "." in num_str else int(num_str)
+                    parsed[f"{dim}_min"] = val
+                    parsed[f"{dim}_exact"] = None
+                except ValueError:
+                    pass
+            continue
+
+        exact_match = _EXACT_PHRASE_RE[dim].search(q)
+        if exact_match:
+            token = exact_match.group(1).lower()
+            try:
+                if token in _WORD_TO_NUM:
+                    val = _WORD_TO_NUM[token]
+                elif "." in token:
+                    val = float(token)
+                else:
+                    val = int(token)
+                parsed[f"{dim}_exact"] = val
+                parsed[f"{dim}_min"] = None
+            except ValueError:
+                pass
 
 
 def _property_type_query(pt: str):
