@@ -1492,6 +1492,14 @@ app.state.limiter = _limiter
 async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(status_code=429, content={"detail": "Too many requests. Please slow down."})
 
+
+# EZtoFind.ca is a RESIDENTIAL real estate site — commercial/industrial
+# property types are excluded everywhere (facet dropdown, listings search,
+# and Doogie NL search). If you need to re-enable a category, remove it here.
+EXCLUDED_PROPERTY_TYPES = {
+    "Business", "Hospitality", "Industrial", "Office", "Retail", "Other",
+}
+
 def _sanitize_listing(doc: dict) -> dict:
     doc.pop("_id", None)
     # CREA compliance: brokerage name is required. Listing agent is per-listing (from feed).
@@ -1575,13 +1583,21 @@ async def search_listings(
     """Search active MLS® listings. Rate-limited (60/min per IP).
     Returns { total, count, offset, limit, listings: [...], compliance }.
     """
-    query: dict = {"status": "Active"}
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
     if city:      query["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
-    if property_type: query["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+    if property_type:
+        # Silently drop requests for excluded (commercial) types — residential only.
+        if property_type in EXCLUDED_PROPERTY_TYPES:
+            return {"total": 0, "count": 0, "offset": offset, "limit": limit, "listings": [],
+                    "using_mock_data": not _ddf_ready(), "compliance": {
+                        "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA).",
+                        "data_source": "CREA DDF® — residential only",
+                    }}
+        query["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
     if beds_min is not None:  query["beds"] = {"$gte": beds_min}
     if baths_min is not None: query["baths"] = {"$gte": baths_min}
     price_q = {}
@@ -1689,6 +1705,7 @@ async def listings_facets(request: Request):
     """Return distinct filter values so the search UI can populate dropdowns."""
     cities = sorted(await db.listings.distinct("city", {"status":"Active"}))
     types = sorted(await db.listings.distinct("property_type", {"status":"Active"}))
+    types = [t for t in types if t not in EXCLUDED_PROPERTY_TYPES]
     regions = sorted(await db.listings.distinct("region", {"status":"Active"}))
     return {"cities": cities, "property_types": types, "regions": regions}
 
@@ -1866,10 +1883,14 @@ async def doogie_mls_search(request: Request, payload: dict):
     if not any(v for v in filters.values() if v not in (None, "", [])):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
 
-    query: dict = {"status": "Active"}
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
     if filters.get("city"):          query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
     if filters.get("region"):        query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
-    if filters.get("property_type"): query["property_type"] = {"$regex": f"^{re.escape(filters['property_type'])}$", "$options": "i"}
+    if filters.get("property_type"):
+        if filters["property_type"] in EXCLUDED_PROPERTY_TYPES:
+            return {"intent_matched": True, "filters": filters, "count": 0, "listings": [],
+                    "summary": "EZtoFind.ca focuses on residential listings only — commercial property types are not shown here."}
+        query["property_type"] = {"$regex": f"^{re.escape(filters['property_type'])}$", "$options": "i"}
     if filters.get("beds_min"):      query["beds"] = {"$gte": int(filters["beds_min"])}
     if filters.get("baths_min"):     query["baths"] = {"$gte": int(filters["baths_min"])}
     pr = {}
