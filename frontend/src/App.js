@@ -1039,23 +1039,6 @@ const ListingCard = ({ listing }) => {
 };
 
 // Search filter sidebar (used inside <Listings/>).
-// Feature-chip filters shown below the Property Type dropdown on /listings.
-// Each chip's `value` is passed to the backend as an entry in the comma-separated
-// `features` query param — the same param Doogie's NL search populates. The
-// backend's `_features_query()` helper turns every entry into a required
-// $and clause across the description/features fields, so chips COMPOSE
-// (buyer can layer multiple must-haves without typing).
-const FEATURE_CHIPS = [
-  { value: "stables",    icon: "🏇", label: "Stables" },
-  { value: "pool",       icon: "🏊", label: "Pool" },
-  { value: "fireplace",  icon: "🔥", label: "Fireplace" },
-  { value: "waterfront", icon: "🌊", label: "Waterfront" },
-  { value: "view",       icon: "⛰️", label: "View" },
-  { value: "suite",      icon: "🏠", label: "Suite / In-law" },
-  { value: "acreage",    icon: "🌾", label: "Acreage" },
-  { value: "garage",     icon: "🚗", label: "Garage" },
-];
-
 const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => {
   const set = (k, v) => setFilters(f => ({ ...f, [k]: v }));
   const [cityFocus, setCityFocus] = useState(false);
@@ -1097,42 +1080,6 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
           <option value="">Any</option>
           {(facets.property_types||[]).map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-      </div>
-      <div className="field">
-        <label>Must have</label>
-        <div style={{display:"flex",flexWrap:"wrap",gap:"0.4rem",marginTop:"0.35rem"}} data-testid="filter-chips">
-          {FEATURE_CHIPS.map(chip => {
-            const active = (filters.features || "").split(",").map(x=>x.trim().toLowerCase()).includes(chip.value.toLowerCase());
-            return (
-              <button
-                key={chip.value}
-                type="button"
-                data-testid={`chip-${chip.value.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}
-                onClick={() => {
-                  const current = (filters.features || "").split(",").map(x=>x.trim()).filter(Boolean);
-                  const idx = current.findIndex(c => c.toLowerCase() === chip.value.toLowerCase());
-                  const next = idx >= 0 ? current.filter((_,i)=>i!==idx) : [...current, chip.value];
-                  set("features", next.join(","));
-                }}
-                style={{
-                  padding: "0.35rem 0.7rem",
-                  borderRadius: 999,
-                  border: active ? "1.5px solid var(--brand-green)" : "1px solid rgba(15,42,91,0.2)",
-                  background: active ? "var(--brand-green)" : "#fff",
-                  color: active ? "#fff" : "var(--brand-navy)",
-                  fontSize: "0.78rem",
-                  fontWeight: 600,
-                  fontFamily: "Inter,sans-serif",
-                  cursor: "pointer",
-                  display: "inline-flex", alignItems: "center", gap: "0.3rem",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <span aria-hidden="true">{chip.icon}</span>{chip.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
       <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
         <div className="field"><label>Min beds</label>
