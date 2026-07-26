@@ -196,7 +196,10 @@ def _map_property(p: dict) -> Optional[dict]:
         "mls_number": p.get("ListingId") or listing_key,
         "list_price": p.get("ListPrice"),
         "status": (p.get("StandardStatus") or "Active"),
-        "property_type": p.get("PropertySubType") or _first(p.get("StructureType")) or "Residential",
+        # Use StructureType FIRST (distinguishes Apartment vs House) — CREA's
+        # REBGV/FVREB boards file everything under PropertySubType="Single Family"
+        # but StructureType correctly says ["Apartment"] for condos.
+        "property_type": _first(p.get("StructureType")) or p.get("PropertySubType") or "Residential",
         "beds": p.get("BedroomsTotal"),
         "baths": p.get("BathroomsTotalInteger"),
         "living_area": p.get("LivingArea"),

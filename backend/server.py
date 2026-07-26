@@ -1814,7 +1814,8 @@ async def search_listings(
                         "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA).",
                         "data_source": "CREA DDF® — residential only",
                     }}
-        query["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+        # Use CREA synonym expansion so "Detached" also catches "Single Family" etc.
+        query["property_type"] = _property_type_query(property_type)
     if beds_min is not None:  query["beds"] = {"$gte": beds_min}
     if baths_min is not None: query["baths"] = {"$gte": baths_min}
     price_q = {}
@@ -1823,7 +1824,11 @@ async def search_listings(
     if price_q: query["list_price"] = price_q
     if features:
         feats = [f.strip() for f in features.split(",") if f.strip()]
-        if feats: query["features"] = {"$all": feats}
+        if feats:
+            # Each feature must match either the structured tag OR appear in
+            # the description (case-insensitive). Same semantics as Doogie NL.
+            existing_and = query.get("$and", [])
+            query["$and"] = existing_and + _features_query(feats)
     # `q` (natural-language query from the hero search bar) is treated as a
     # LOCALITY hint first — if it names a known BC city or CityRegion, we
     # promote it to a strict exact-match filter so a search for "Whistler"
@@ -2152,17 +2157,35 @@ async def export_casl_consent_log(_=Depends(verify_admin)):
 
 
 # =============== DOOGIE MLS® SEARCH (natural language → filters → listings) ===============
+
+# CREA DDF® uses different labels across the 82 Canadian boards for the same
+# concept. "Single Family" and "Detached" both mean a detached home. This map
+# expands the user's requested type into every equivalent CREA label so we
+# don't zero-out searches like "3-bed detached in Langley" when Langley's
+# board actually files them as "Single Family".
+PROPERTY_TYPE_SYNONYMS = {
+    # CREA REBGV/FVREB store StructureType=["House"] for detached and
+    # PropertySubType="Single Family" for the residential category; we accept
+    # either label so all boards resolve correctly.
+    "Detached":     ["Detached", "House", "Single Family", "Residential Detached"],
+    "Condo":        ["Condo", "Condominium", "Apartment", "Residential Condo", "Strata"],
+    "Townhouse":    ["Townhouse", "Row / Townhouse", "Attached", "Row"],
+    "Acreage":      ["Acreage", "Farm", "Ranch", "Agriculture", "Recreational"],
+    "Multi-family": ["Multi-family", "Duplex", "Triplex", "Fourplex"],
+    "Vacant Land":  ["Vacant Land", "Lot"],
+}
+
 FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
 Read the user's request and output a SINGLE JSON object with these fields (all optional):
 {
-  "city": string | null,          // BC city/community name; capitalize properly
-  "property_type": string | null, // one of: Detached, Condo, Townhouse, Acreage
-  "beds_min": integer | null,     // minimum bedrooms
-  "baths_min": integer | null,    // minimum bathrooms
-  "price_min": integer | null,    // minimum in CAD dollars (no commas)
-  "price_max": integer | null,    // maximum in CAD dollars (no commas)
-  "keyword": string | null,       // free-text feature keyword (e.g. "ocean view", "suite", "top floor")
-  "sort": string | null           // "price_asc" | "price_desc" | "newest"
+  "city": string | null,               // BC city/community name; capitalize properly
+  "property_type": string | null,      // one of: Detached, Condo, Townhouse, Acreage, Multi-family
+  "beds_min": integer | null,          // minimum bedrooms
+  "baths_min": integer | null,         // minimum bathrooms
+  "price_min": integer | null,         // minimum in CAD dollars (no commas)
+  "price_max": integer | null,         // maximum in CAD dollars (no commas)
+  "features": [string, ...] | null,    // LIST of REQUIRED feature phrases — every one must appear in the listing description. E.g. ["indoor pool", "hot tub", "ocean view"]
+  "sort": string | null                // "price_asc" | "price_desc" | "newest"
 }
 RULES:
 - Return ONLY the JSON object, no explanation, no markdown fences.
@@ -2170,30 +2193,64 @@ RULES:
 - If user says "2-bed" or "2 bedroom" set beds_min=2.
 - Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage.
 - Location: BC cities only. If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver").
-- Descriptive terms like "top floor", "ocean view", "waterfront", "suite" go into keyword.
-- If nothing extracted, return {"city":null,"property_type":null,"beds_min":null,"baths_min":null,"price_min":null,"price_max":null,"keyword":null,"sort":null}."""
+- FEATURES: extract ALL descriptive requirements as separate array entries. If the user says "indoor pool AND hot tub" → ["indoor pool", "hot tub"]. If they say "ocean view with a suite" → ["ocean view", "suite"]. If they say "waterfront home with private dock" → ["waterfront", "private dock"]. Every feature is a REQUIREMENT — the listing must match ALL of them.
+- If user says "top floor" or "penthouse" → features: ["top floor"] or ["penthouse"].
+- If nothing extracted, return {"city":null,"property_type":null,"beds_min":null,"baths_min":null,"price_min":null,"price_max":null,"features":null,"sort":null}."""
 
 async def _extract_listing_filters(user_query: str) -> dict:
-    """Use Claude to extract structured search filters from a natural-language query."""
+    """Use Claude to extract structured search filters from a natural-language query.
+    Returns a dict that may include a `features` list — one required phrase per entry."""
     if not ANTHROPIC_API_KEY:
         return {}
     try:
         r = await _anthropic_client.messages.create(
             model="claude-sonnet-4-5-20250929",
-            max_tokens=400,
+            max_tokens=500,
             system=FILTER_EXTRACTION_SYSTEM,
             messages=[{"role": "user", "content": user_query}],
         )
         text = r.content[0].text if r.content else "{}"
-        # Strip any accidental fences
         text = text.strip()
         if text.startswith("```"):
             text = text.split("```")[1] if "```" in text[3:] else text[3:]
             if text.startswith("json"): text = text[4:]
-        return json.loads(text.strip())
+        parsed = json.loads(text.strip())
+        # Backward compat: if `keyword` still returned (old prompt cache), split into features.
+        if "keyword" in parsed and parsed.get("keyword") and not parsed.get("features"):
+            parsed["features"] = [parsed["keyword"]]
+        # Normalize features to a clean list of trimmed strings
+        if parsed.get("features"):
+            parsed["features"] = [f.strip() for f in parsed["features"] if f and f.strip()][:6]
+        return parsed
     except Exception as e:
         logger.warning(f"filter extraction failed: {e}")
         return {}
+
+
+def _property_type_query(pt: str):
+    """Return a Mongo query fragment for property_type that includes CREA synonyms."""
+    synonyms = PROPERTY_TYPE_SYNONYMS.get(pt, [pt])
+    # Case-insensitive exact-match on any synonym
+    return {"$in": synonyms + [s.lower() for s in synonyms] + [s.title() for s in synonyms]}
+
+
+def _features_query(feature_list: list) -> list:
+    """Return a list of $and clauses — each feature must match either
+    the structured `features` tag array OR the `description` text (case-insensitive
+    substring). Every feature must be present (AND semantics)."""
+    clauses = []
+    for feat in feature_list:
+        f = feat.strip()
+        if not f:
+            continue
+        # Try broader match — either in features tags OR anywhere in the description
+        clauses.append({
+            "$or": [
+                {"features": {"$regex": f"^{re.escape(f.lower())}$", "$options": "i"}},
+                {"description": {"$regex": re.escape(f), "$options": "i"}},
+            ]
+        })
+    return clauses
 
 @api.post("/doogie/mls-search")
 @_limiter.limit("30/minute")
@@ -2228,17 +2285,20 @@ async def doogie_mls_search(request: Request, payload: dict):
         if filters["property_type"] in EXCLUDED_PROPERTY_TYPES:
             return {"intent_matched": True, "filters": filters, "count": 0, "listings": [],
                     "summary": "EZtoFind.ca focuses on residential listings only — commercial property types are not shown here."}
-        query["property_type"] = {"$regex": f"^{re.escape(filters['property_type'])}$", "$options": "i"}
+        query["property_type"] = _property_type_query(filters["property_type"])
     if filters.get("beds_min"):      query["beds"] = {"$gte": int(filters["beds_min"])}
     if filters.get("baths_min"):     query["baths"] = {"$gte": int(filters["baths_min"])}
     pr = {}
     if filters.get("price_min"): pr["$gte"] = int(filters["price_min"])
     if filters.get("price_max"): pr["$lte"] = int(filters["price_max"])
     if pr: query["list_price"] = pr
-    # Keyword search is only applied WITHIN the locality scope; it never
-    # widens the result set beyond the resolved city/region.
-    if filters.get("keyword"):
-        query["$text"] = {"$search": filters["keyword"]}
+    # Features are STRICT AND-required — every phrase must appear in either the
+    # structured features tag array OR the free-text description. This is what
+    # turns "indoor pool AND hot tub" into a real requirement, not a fuzzy match.
+    if filters.get("features"):
+        clauses = _features_query(filters["features"])
+        if clauses:
+            query["$and"] = clauses
 
     sort_key = [("created_at", -1)]
     if filters.get("sort") == "price_asc":  sort_key = [("list_price", 1)]
@@ -2254,7 +2314,9 @@ async def doogie_mls_search(request: Request, payload: dict):
             await _log_event(db, l.get("listing_key",""), "impression", {"path": "/doogie/mls-search"})
         except Exception: pass
 
-    # Craft summary
+    # Craft summary — mention BOTH the criteria we honoured and the specific
+    # features we required, so a 0-result response reads as "we understood
+    # you, that combination doesn't exist" rather than "search failed".
     parts = []
     if filters.get("beds_min"): parts.append(f"{filters['beds_min']}+ bed")
     if filters.get("property_type"): parts.append(str(filters["property_type"]).lower() + ("s" if not str(filters["property_type"]).lower().endswith("s") else ""))
@@ -2262,9 +2324,16 @@ async def doogie_mls_search(request: Request, payload: dict):
     price_note = ""
     if filters.get("price_max"): price_note = f" under ${int(filters['price_max']):,}"
     elif filters.get("price_min"): price_note = f" over ${int(filters['price_min']):,}"
-    criteria = " ".join(parts) + price_note if parts else "listings matching your search"
+    feat_note = ""
+    if filters.get("features"):
+        feat_note = f" with {' and '.join(filters['features'])}"
+    criteria = (" ".join(parts) + price_note + feat_note) if parts else "listings matching your search"
     if total == 0:
-        summary = f"I couldn't find any {criteria.strip()} right now. Try broadening the price or beds, or ask me to search a nearby community."
+        summary = (
+            f"I couldn't find any {criteria.strip()} in the current MLS® data. "
+            f"That combination is very specific — try widening the price range, "
+            f"dropping one of the features, or searching a nearby community."
+        )
     elif total <= 6:
         summary = f"Here {'is' if total==1 else 'are'} {total} {criteria.strip()}:"
     else:

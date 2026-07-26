@@ -1135,7 +1135,7 @@ const Listings = () => {
     const f = overrideFilters || filters;
     setLoading(true);
     const qp = {};
-    ["q","city","community","region","property_type","beds_min","baths_min","price_min","price_max","sort"].forEach(k => {
+    ["q","city","community","region","property_type","beds_min","baths_min","price_min","price_max","features","sort"].forEach(k => {
       if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
     qp.limit = 30;
@@ -1164,7 +1164,7 @@ const Listings = () => {
           const d = r.data;
           if (d && d.intent_matched && d.filters) {
             const parsed = {
-              q: d.filters.keyword || "",
+              q: "",
               city: d.filters.city || "",
               community: "",
               property_type: d.filters.property_type || "",
@@ -1172,6 +1172,8 @@ const Listings = () => {
               baths_min: d.filters.baths_min || "",
               price_min: d.filters.price_min || "",
               price_max: d.filters.price_max || "",
+              // Features from NL → comma-separated string for /api/listings
+              features: Array.isArray(d.filters.features) ? d.filters.features.join(",") : (d.filters.keyword || ""),
               sort: d.filters.sort || "newest",
             };
             setFilters(parsed);
