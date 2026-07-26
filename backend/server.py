@@ -2041,6 +2041,116 @@ async def export_audit_trail(_=Depends(verify_admin)):
     )
 
 
+@api.get("/admin/casl-consent-log.csv")
+async def export_casl_consent_log(_=Depends(verify_admin)):
+    """CSV export of every CASL express-consent event across every list.
+
+    One row per subscriber/lead with:
+        list, email, subscribed_at, subscribe_ip, subscribe_ua,
+        verified_at, verify_ip, verify_ua,
+        unsubscribed_at, unsubscribed_ip,
+        status, policy_version, label/filters
+
+    Intended for handoff to legal counsel or a CASL auditor as proof of
+    express consent (CASL s.6 requires you to be able to prove consent was
+    obtained — this file is that proof).
+    """
+    from fastapi.responses import PlainTextResponse
+    import csv, io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow([
+        "List", "Email", "Subscribed At (ISO)", "Subscribe IP", "Subscribe User-Agent",
+        "Verified At (ISO)", "Verify IP", "Verify User-Agent",
+        "Unsubscribed At (ISO)", "Unsubscribe IP",
+        "Current Status", "Policy Version", "Notes / Filters",
+    ])
+
+    # 1. Saved-search alert subscribers — cleanest express-consent path (double opt-in)
+    async for s in db.saved_searches.find({}, {"_id": 0}).sort("created_at", 1):
+        filters_str = " · ".join(f"{k}={v}" for k, v in (s.get("filters") or {}).items()) or ""
+        label = s.get("label") or ""
+        notes = f"[Saved Search] {label} {filters_str}".strip()
+        w.writerow([
+            "Saved-Search Alerts",
+            s.get("email", ""),
+            s.get("consent_at") or s.get("created_at") or "",
+            s.get("consent_ip") or "",
+            (s.get("consent_ua") or "")[:200],
+            s.get("verified_at") or "",
+            s.get("verify_ip") or "",
+            (s.get("verify_ua") or "")[:200],
+            s.get("unsubscribed_at") or "",
+            s.get("unsubscribed_ip") or "",
+            s.get("status", ""),
+            s.get("policy_version") or CURRENT_POLICY_VERSION,
+            notes,
+        ])
+
+    # 2. Buyer leads — single opt-in via consent checkbox on /buyer form
+    async for b in db.buyer_leads.find({}, {"_id": 0}).sort("created_at", 1):
+        status = "unsubscribed" if b.get("unsubscribed") else ("consented" if b.get("casl_consent") else "no-consent")
+        notes = f"[Buyer Lead] {b.get('property_type','')} in {', '.join(b.get('areas') or [])[:120]}"
+        w.writerow([
+            "Buyer Leads",
+            b.get("email", ""),
+            b.get("consent_at") or b.get("created_at") or "",
+            b.get("consent_ip") or "",
+            (b.get("consent_ua") or "")[:200],
+            "",  # single-opt-in — no separate verify event
+            "",
+            "",
+            b.get("unsubscribed_at") or "",
+            b.get("unsubscribed_ip") or "",
+            status,
+            "1.0",
+            notes,
+        ])
+
+    # 3. Seller leads
+    async for s in db.seller_leads.find({}, {"_id": 0}).sort("created_at", 1):
+        status = "unsubscribed" if s.get("unsubscribed") else ("consented" if s.get("casl_consent") else "no-consent")
+        notes = f"[Seller Lead] {s.get('property_type','')} in {s.get('city','')}"
+        w.writerow([
+            "Seller Leads",
+            s.get("email", ""),
+            s.get("consent_at") or s.get("created_at") or "",
+            s.get("consent_ip") or "",
+            (s.get("consent_ua") or "")[:200],
+            "", "", "",
+            s.get("unsubscribed_at") or "",
+            s.get("unsubscribed_ip") or "",
+            status,
+            "1.0",
+            notes,
+        ])
+
+    # 4. REALTOR® applications — business-to-business but still recorded
+    async for r in db.realtor_applications.find({}, {"_id": 0}).sort("created_at", 1):
+        status = "unsubscribed" if r.get("unsubscribed") else ("consented" if r.get("casl_consent") else "no-consent")
+        notes = f"[REALTOR® Application] {r.get('city','')} · {r.get('name','')}"
+        w.writerow([
+            "REALTOR® Applications",
+            r.get("email", ""),
+            r.get("consent_at") or r.get("created_at") or "",
+            r.get("consent_ip") or "",
+            (r.get("consent_ua") or "")[:200],
+            "", "", "",
+            r.get("unsubscribed_at") or "",
+            "",
+            status,
+            "1.0",
+            notes,
+        ])
+
+    csv_content = buf.getvalue()
+    return PlainTextResponse(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="eztofind-casl-consent-log-{now_iso()[:10]}.csv"'},
+    )
+
+
 # =============== DOOGIE MLS® SEARCH (natural language → filters → listings) ===============
 FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
 Read the user's request and output a SINGLE JSON object with these fields (all optional):

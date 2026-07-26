@@ -1878,19 +1878,34 @@ const AdminDash = () => {
   return <AdminShell active="dash">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
       <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,marginBottom:0}}>Welcome back, Doug 🐾</h1>
-      <a href={`${API}/admin/audit-trail.csv`} target="_blank" rel="noopener noreferrer"
-         onClick={async (e) => {
-           e.preventDefault();
-           try {
-             const r = await axios.get(`${API}/admin/audit-trail.csv`, {headers, responseType:"blob"});
-             const url = window.URL.createObjectURL(new Blob([r.data]));
-             const a = document.createElement("a"); a.href = url;
-             a.download = `eztofind-ai-audit-${new Date().toISOString().slice(0,10)}.csv`;
-             document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
-           } catch { alert("Download failed."); }
-         }}
-         className="btn btn-ghost" data-testid="download-audit-csv"
-         style={{fontSize:"0.9rem",padding:"0.6rem 1rem"}}>📥 Download AI Content Audit Trail (CSV)</a>
+      <div style={{display:"flex",gap:"0.6rem",flexWrap:"wrap"}}>
+        <a href={`${API}/admin/audit-trail.csv`} target="_blank" rel="noopener noreferrer"
+           onClick={async (e) => {
+             e.preventDefault();
+             try {
+               const r = await axios.get(`${API}/admin/audit-trail.csv`, {headers, responseType:"blob"});
+               const url = window.URL.createObjectURL(new Blob([r.data]));
+               const a = document.createElement("a"); a.href = url;
+               a.download = `eztofind-ai-audit-${new Date().toISOString().slice(0,10)}.csv`;
+               document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+             } catch { alert("Download failed."); }
+           }}
+           className="btn btn-ghost" data-testid="download-audit-csv"
+           style={{fontSize:"0.9rem",padding:"0.6rem 1rem"}}>📥 AI Audit Trail (CSV)</a>
+        <a href={`${API}/admin/casl-consent-log.csv`} target="_blank" rel="noopener noreferrer"
+           onClick={async (e) => {
+             e.preventDefault();
+             try {
+               const r = await axios.get(`${API}/admin/casl-consent-log.csv`, {headers, responseType:"blob"});
+               const url = window.URL.createObjectURL(new Blob([r.data]));
+               const a = document.createElement("a"); a.href = url;
+               a.download = `eztofind-casl-consent-log-${new Date().toISOString().slice(0,10)}.csv`;
+               document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+             } catch { alert("Download failed."); }
+           }}
+           className="btn btn-ghost" data-testid="download-casl-csv"
+           style={{fontSize:"0.9rem",padding:"0.6rem 1rem"}}>🛡️ CASL Consent Log (CSV)</a>
+      </div>
     </div>
     <div className="grid-3" style={{marginTop:"1.5rem"}}>
       {[["Buyer Leads",stats.buyers],["Seller Leads",stats.sellers],["REALTORS® Applied",stats.realtors]].map(([l,n])=><div key={l} className="paper" style={{textAlign:"center"}}><div style={{fontSize:"3rem",fontWeight:700,color:"var(--brand-blue)"}}>{n}</div><div style={{color:"var(--muted)"}}>{l}</div></div>)}
