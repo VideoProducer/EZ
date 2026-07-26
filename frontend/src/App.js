@@ -1309,10 +1309,7 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
           </select>
         </div>
       </div>
-      <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
-        <div className="field"><label>Min price ($)</label><input type="number" placeholder="0" value={filters.price_min||""} onChange={e=>set("price_min", e.target.value)} data-testid="filter-price-min"/></div>
-        <div className="field"><label>Max price ($)</label><input type="number" placeholder="Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
-      </div>
+      <div className="field"><label>Maximum price ($)</label><input type="number" placeholder="Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
       <div className="field"><label>Keyword</label><input placeholder="e.g. suite, waterfront" value={filters.q||""} onChange={e=>set("q", e.target.value)} data-testid="filter-keyword"/></div>
       <div className="field"><label>Sort by</label>
         <select value={filters.sort||"newest"} onChange={e=>set("sort", e.target.value)} data-testid="filter-sort">

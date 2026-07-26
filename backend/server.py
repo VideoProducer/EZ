@@ -2594,6 +2594,10 @@ from services.ddf_sync import (
 # and Doogie NL search). If you need to re-enable a category, remove it here.
 EXCLUDED_PROPERTY_TYPES = {
     "Business", "Hospitality", "Industrial", "Office", "Retail", "Other",
+    # Deliberately excluded per Doug: Multi-family and Recreational are not
+    # part of the residential focus of this site.
+    "Multi-family", "Multi Family", "Multi-Family",
+    "Recreation", "Recreational", "Recreational Property",
 }
 
 # Curated user-facing property-type filter options. This is what appears in
@@ -2605,10 +2609,8 @@ PROPERTY_TYPE_UI_OPTIONS = [
     "Detached",
     "Duplex",
     "Equestrian",
+    "Land",
     "Manufactured / Mobile",
-    "Multi-family",
-    "Recreation",
-    "Recreational",
     "Single Family",
     "Townhouse",
 ]
@@ -3330,14 +3332,15 @@ PROPERTY_TYPE_SYNONYMS = {
     # as a filter option; _property_type_query() handles the fallback by matching
     # "equestrian"/"ranch"/"acreage" style words on structured type + description.
     "Equestrian":            ["Equestrian", "Farm", "Ranch", "Acreage", "Agriculture"],
-    "Vacant Land":           ["Vacant Land", "Lot"],
+    "Vacant Land":           ["Vacant Land", "Lot", "Land"],
+    "Land":                  ["Vacant Land", "Lot", "Land"],
 }
 
 FILTER_EXTRACTION_SYSTEM = """You are a real estate search filter extractor.
 Read the user's request and output a SINGLE JSON object with these fields (all optional):
 {
   "city": string | null,               // BC city/community name; capitalize properly
-  "property_type": string | null,      // one of: Detached, Condo, Townhouse, Acreage, Multi-family
+  "property_type": string | null,      // one of: Detached, Condo, Townhouse, Acreage, Duplex, Equestrian, Land, Manufactured / Mobile, Single Family
   "beds_exact": integer | null,        // EXACT bedroom count — use this when the user names a plain count ("4 bedroom", "3-bed", "two bedroom home")
   "beds_min": integer | null,          // MINIMUM bedrooms — use ONLY when the user explicitly says "at least", "or more", "+" or "minimum"
   "baths_exact": integer | null,       // EXACT bathroom count
@@ -3359,7 +3362,7 @@ RULES:
     • "minimum 3 beds"            → beds_min=3
     • "3 to 5 bedrooms"           → beds_min=3 (range: lower bound only; the upper bound is ignored)
   Same rules apply to bathrooms (baths_exact vs baths_min). NEVER set both _exact and _min for the same field.
-- Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage.
+- Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage; "lot"/"vacant land"/"raw land" → Land.
 - Location: BC cities only. If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver").
 - FEATURES: extract ALL descriptive requirements as separate array entries. If the user says "indoor pool AND hot tub" → ["indoor pool", "hot tub"]. If they say "ocean view with a suite" → ["ocean view", "suite"]. If they say "waterfront home with private dock" → ["waterfront", "private dock"]. Every feature is a REQUIREMENT — the listing must match ALL of them.
 - If user says "top floor" or "penthouse" → features: ["top floor"] or ["penthouse"].
