@@ -85,6 +85,81 @@ else:
 app = FastAPI(title="EZtoFind.ca API")
 api = APIRouter(prefix="/api")
 
+# =============== RATE LIMITING (defined early so @_limiter.limit works on ANY route below) ===============
+# CREA Rules require anti-scraping controls on MLS® endpoints. We also protect Doogie
+# (Anthropic-billed) and lead-form endpoints against bot abuse.
+from slowapi import Limiter as _SlowLimiter
+from slowapi.errors import RateLimitExceeded as _SlowRateLimitExceeded
+from starlette.responses import JSONResponse as _SlowJSONResponse
+
+def _rate_limit_key(request: Request) -> str:
+    """Real client IP behind Kubernetes ingress. Falls back to request.client.host."""
+    xff = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if xff: return xff
+    xrealip = request.headers.get("x-real-ip", "").strip()
+    if xrealip: return xrealip
+    return request.client.host if request.client else "unknown"
+
+_limiter = _SlowLimiter(key_func=_rate_limit_key)
+app.state.limiter = _limiter
+
+# Session + IP quota buckets. In-memory is per-pod; Mongo is shared across pods.
+# We use Mongo for real cost protection — the in-memory `_SESSION_BUCKETS` is
+# an opportunistic fast-path only. HARD ceiling is enforced in Mongo below.
+_SESSION_BUCKETS: Dict[str, List[float]] = {}
+def check_session_rate(session_id: str, max_per_hour: int = 100):
+    if not session_id: return
+    import time as _t
+    now = _t.time()
+    hits = _SESSION_BUCKETS.setdefault(session_id, [])
+    hits[:] = [t for t in hits if now - t < 3600]
+    if len(hits) >= max_per_hour:
+        raise HTTPException(status_code=429, detail="Slow down — Doogie's popular right now. Try again in a minute.")
+    hits.append(now)
+    if len(_SESSION_BUCKETS) > 5000:
+        for k in list(_SESSION_BUCKETS.keys()):
+            if not _SESSION_BUCKETS[k]:
+                del _SESSION_BUCKETS[k]
+
+# HARD daily quota enforced via Mongo — survives pod restarts + shared across
+# all backend pods. Blocks scraper abuse that would otherwise blow up your
+# Anthropic bill. Ceiling is generous for real humans (100/day per session),
+# instant-kill for scripts (which typically fire 1000s per hour).
+async def enforce_doogie_daily_quota(session_id: str, ip: str, daily_cap_per_session: int = 100, daily_cap_per_ip: int = 300):
+    if not session_id: session_id = f"anon-{ip}"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    key = {"day": today, "kind": "doogie"}
+    # per-session
+    ss_key = {**key, "session_id": session_id}
+    ss = await db.usage_quotas.find_one_and_update(
+        ss_key,
+        {"$inc": {"n": 1}, "$setOnInsert": {**ss_key, "created_at": now_iso()}},
+        upsert=True, return_document=True,
+    )
+    if ss and ss.get("n", 0) > daily_cap_per_session:
+        logger.warning(f"Doogie daily-quota hit: session={session_id[:12]} count={ss.get('n')}")
+        raise HTTPException(status_code=429, detail="Doogie's daily limit reached for this session. Try again tomorrow or reload the page to start a new session.")
+    # per-ip (looser cap since IPs are shared behind NAT/office/school WiFi)
+    ip_key = {**key, "ip": ip}
+    ipd = await db.usage_quotas.find_one_and_update(
+        ip_key,
+        {"$inc": {"n": 1}, "$setOnInsert": {**ip_key, "created_at": now_iso()}},
+        upsert=True, return_document=True,
+    )
+    if ipd and ipd.get("n", 0) > daily_cap_per_ip:
+        logger.warning(f"Doogie daily-quota hit: ip={ip} count={ipd.get('n')}")
+        raise HTTPException(status_code=429, detail="Slow down — Doogie's popular right now. Try again in a minute.")
+
+@app.exception_handler(_SlowRateLimitExceeded)
+async def _rate_limit_handler(request: Request, exc: _SlowRateLimitExceeded):
+    # Friendly 429 — Doogie-specific messaging when the abused endpoint is /doogie/*
+    path = str(request.url.path)
+    if "/doogie/" in path:
+        msg = "Slow down — Doogie's popular right now. Try again in a minute."
+    else:
+        msg = "Too many requests. Please slow down."
+    return _SlowJSONResponse(status_code=429, content={"detail": msg})
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -111,6 +186,7 @@ class BuyerLead(BaseModel):
     status: str = "new"
     form_lang: Optional[str] = "en"
     notes_en: Optional[str] = ""
+    turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token (validated + stripped server-side)
     created_at: str = Field(default_factory=now_iso)
 
 class SellerLead(BaseModel):
@@ -131,6 +207,7 @@ class SellerLead(BaseModel):
     status: str = "new"
     form_lang: Optional[str] = "en"
     reason_en: Optional[str] = ""
+    turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token
     created_at: str = Field(default_factory=now_iso)
 
 class RealtorApplication(BaseModel):
@@ -295,8 +372,15 @@ def redact_pii(text: str) -> tuple[str, list[str]]:
     return text, flags
 
 @api.post("/doogie/chat")
-async def doogie_chat(body: ChatIn):
+@_limiter.limit("30/minute")  # 30/min per IP — anti-abuse (Anthropic bill protection)
+async def doogie_chat(request: Request, body: ChatIn):
     session_id = body.session_id or str(uuid.uuid4())
+    # Per-session bucket: 100 req/hour — protects against a single tab going wild
+    check_session_rate(session_id, max_per_hour=100)
+    # Mongo-backed daily quota — survives pod restarts + shared across all backend pods.
+    # THIS is the hard ceiling that actually protects your Anthropic bill.
+    ip = _rate_limit_key(request)
+    await enforce_doogie_daily_quota(session_id, ip, daily_cap_per_session=100, daily_cap_per_ip=300)
     # Redact PII BEFORE storing (BCFSA/PIPA compliance)
     redacted_msg, pii_flags = redact_pii(body.message)
     if pii_flags:
@@ -327,6 +411,24 @@ async def doogie_chat(body: ChatIn):
         "expires_at": expires  # BSON date for TTL index
     })
     chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=system_prompt).with_model("anthropic", "claude-sonnet-4-6")
+
+    # Load prior conversation turns so Doogie has context (up to 10 turns = 20 messages).
+    # Beyond 10 turns, older messages are dropped (oldest-first) — cheap, no
+    # summarization needed since Doogie's turns are short and stateless-tolerant.
+    # This also caps input-token growth so a chatty user can't compound your bill.
+    _MAX_CONTEXT_TURNS = 10  # 10 user+10 assistant = 20 messages
+    try:
+        prior = await db.chat_messages.find(
+            {"session_id": session_id, "role": {"$in": ["user", "assistant"]}},
+            {"_id": 0, "role": 1, "content": 1}
+        ).sort("ts", -1).limit(_MAX_CONTEXT_TURNS * 2).to_list(_MAX_CONTEXT_TURNS * 2)
+        # Reverse to chronological order and drop the current user turn we JUST inserted (last one)
+        prior_chrono = list(reversed(prior))
+        if prior_chrono and prior_chrono[-1].get("role") == "user":
+            prior_chrono = prior_chrono[:-1]
+        chat.history = [{"role": m["role"], "content": m["content"]} for m in prior_chrono]
+    except Exception as e:
+        logger.warning(f"Doogie context load failed for {session_id}: {e}")
 
     async def gen():
         full = ""
@@ -393,14 +495,53 @@ async def _translate_lead_notes(collection: str, lead_id: str, field: str, text:
     if en:
         await db[collection].update_one({"id": lead_id}, {"$set": {f"{field}_en": en}})
 
+# =============== CLOUDFLARE TURNSTILE (invisible CAPTCHA on lead forms) ===============
+# Gracefully no-ops when TURNSTILE_SECRET_KEY is unset (dev / pre-launch),
+# so nothing breaks until Doug adds the keys to backend/.env + frontend/.env.
+import httpx as _httpx
+TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "").strip()
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+async def verify_turnstile(token: str, request: Request) -> bool:
+    """Server-side Turnstile verification. Returns True when disabled (no secret set)
+    so pre-launch testing isn't blocked. Returns True on valid token. Raises 400 on
+    invalid token."""
+    if not TURNSTILE_SECRET_KEY:
+        return True  # graceful no-op until Doug wires the secret
+    if not token:
+        raise HTTPException(400, "Bot check failed — please refresh and try again.")
+    try:
+        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+              or (request.client.host if request.client else ""))
+        async with _httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.post(TURNSTILE_VERIFY_URL, data={
+                "secret": TURNSTILE_SECRET_KEY,
+                "response": token,
+                "remoteip": ip,
+            })
+        j = r.json()
+        if not j.get("success"):
+            logger.warning(f"Turnstile rejected token from {ip}: {j.get('error-codes')}")
+            raise HTTPException(400, "Bot check failed — please refresh and try again.")
+        return True
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Turnstile verify network error: {e}")
+        # Fail OPEN on network errors (Cloudflare outage shouldn't block leads);
+        # log for monitoring. This is the industry-standard behaviour.
+        return True
+
 # =============== LEADS ===============
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
+    await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
     if lead.working_with_realtor:
         raise HTTPException(400, "Because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
+    doc.pop("turnstile_token", None)  # don't persist the CAPTCHA token
     await db.buyer_leads.insert_one(doc)
     # Background translation of the visitor's free-text note (non-EN forms)
     if (lead.form_lang or "en") != "en" and (lead.notes or "").strip():
@@ -410,11 +551,13 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
 
 @api.post("/leads/seller")
 async def create_seller_lead(lead: SellerLead, request: Request):
+    await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
     if not lead.casl_consent or not lead.pipa_ack:
         raise HTTPException(400, "Consent required")
     if lead.currently_listed:
         raise HTTPException(400, "Because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
+    doc.pop("turnstile_token", None)
     await db.seller_leads.insert_one(doc)
     if (lead.form_lang or "en") != "en" and (lead.reason or "").strip():
         asyncio.create_task(_translate_lead_notes("seller_leads", lead.id, "reason", lead.reason or "", lead.form_lang or "en"))
@@ -1551,6 +1694,15 @@ async def startup():
     except Exception as e:
         logger.error(f"TTL index setup failed: {e}")
 
+    # usage_quotas TTL — daily Doogie quota docs auto-delete after 3 days
+    try:
+        await db.usage_quotas.create_index("created_at", expireAfterSeconds=3*24*3600)
+        await db.usage_quotas.create_index([("day", 1), ("kind", 1), ("session_id", 1)])
+        await db.usage_quotas.create_index([("day", 1), ("kind", 1), ("ip", 1)])
+        logger.info("usage_quotas indexes ensured (3-day TTL + compound lookup)")
+    except Exception as e:
+        logger.error(f"usage_quotas index setup failed: {e}")
+
     # Daily records-retention purge (BCFSA 7-yr + CASL 3-yr + PIPA data minimization).
     # First run happens 60s after startup so admins can hit /admin/retention/log to see
     # today's activity; then repeats every 24 h. Purge log stays for 7 years as proof.
@@ -2065,24 +2217,13 @@ async def purge_all_chats(_=Depends(verify_admin)):
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # =============== CREA DDF® — MLS® LISTINGS (compliance-first) ===============
-# All endpoints below are rate-limited (anti-scraping requirement per CREA Rules).
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from starlette.responses import JSONResponse
+# All endpoints below are rate-limited via _limiter defined at top of file.
 from services.analytics_logger import record_event as _log_event
 from services.ddf_sync import (
     credentials_ready as _ddf_ready,
     sync_incremental as _ddf_sync,
     test_connection as _ddf_test,
 )
-
-_limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = _limiter
-
-@app.exception_handler(RateLimitExceeded)
-async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(status_code=429, content={"detail": "Too many requests. Please slow down."})
 
 
 # EZtoFind.ca is a RESIDENTIAL real estate site — commercial/industrial
@@ -2940,6 +3081,10 @@ async def doogie_mls_search(request: Request, payload: dict):
     Body: {"message": "4-bedroom homes in Whistler"}
     Returns: {"intent_matched": bool, "filters": {...}, "count": N, "listings": [...], "summary": str}
     """
+    # Mongo-backed daily quota (shared across pods) — hard ceiling for Anthropic bill protection
+    session_id = (payload.get("session_id") or "").strip() or f"anon-{_rate_limit_key(request)}"
+    await enforce_doogie_daily_quota(session_id, _rate_limit_key(request), daily_cap_per_session=200, daily_cap_per_ip=600)
+
     q = (payload.get("message") or "").strip()
     if not q or len(q) > 500:
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": ""}
