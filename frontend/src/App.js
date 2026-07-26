@@ -609,19 +609,6 @@ const DoogieChat = () => {
     const pre = localStorage.getItem("ez_doogie_prefill");
     if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
   }, [open, consented]);
-  // External open trigger (e.g. from listing detail "Ask Doug" pill). Any code
-  // can call `window.dispatchEvent(new CustomEvent("ez:openDoogie", {detail:{prefill:"…"}}))`
-  // and the chat panel will open, pre-populate the input, and (if not yet consented)
-  // still surface the consent gate first.
-  useEffect(() => {
-    const onOpen = (e) => {
-      const pre = e?.detail?.prefill;
-      if (pre) localStorage.setItem("ez_doogie_prefill", pre);
-      setOpen(true);
-    };
-    window.addEventListener("ez:openDoogie", onOpen);
-    return () => window.removeEventListener("ez:openDoogie", onOpen);
-  }, []);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
 
@@ -1469,15 +1456,11 @@ const ListingDetail = () => {
           <div className="paper" data-testid="listing-ask-doug-cta" style={{textAlign:"center"}}>
             <div className="eyebrow">In Doug's service area</div>
             <h3 style={{fontSize:"1.05rem",margin:"0.5rem 0 1rem",lineHeight:1.4,fontWeight:600}}>
-              If you're not working with a REALTOR<sup style={{fontSize:"0.55em"}}>®</sup> already, ask Doug about this listing.
+              If you're not working with a REALTOR<sup style={{fontSize:"0.55em"}}>®</sup> already —
             </h3>
-            <button
-              type="button"
+            <Link
+              to={`/buyer?city=${encodeURIComponent(listing.city || "")}&mls=${encodeURIComponent(listing.mls_number || "")}&address=${encodeURIComponent(listing.street_address || "")}`}
               data-testid="listing-ask-doug-pill"
-              onClick={() => {
-                const msg = `Tell me about MLS® ${listing.mls_number} — ${listing.street_address}, ${listing.city}, BC.`;
-                window.dispatchEvent(new CustomEvent("ez:openDoogie", { detail: { prefill: msg } }));
-              }}
               style={{
                 display:"inline-block",
                 background:"var(--brand-navy)",
@@ -1487,8 +1470,7 @@ const ListingDetail = () => {
                 fontSize:"0.95rem",
                 padding:"0.85rem 1.5rem",
                 borderRadius:999,
-                border:"none",
-                cursor:"pointer",
+                textDecoration:"none",
                 boxShadow:"0 6px 14px rgba(15,42,91,0.28)",
                 transition:"transform 0.15s, box-shadow 0.15s",
               }}
@@ -1496,10 +1478,7 @@ const ListingDetail = () => {
               onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 6px 14px rgba(15,42,91,0.28)";}}
             >
               Ask Doug about this listing
-            </button>
-            <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.9rem",lineHeight:1.55,fontFamily:"Inter,sans-serif"}}>
-              Doogie will open a chat with Doug — no forms, no phone tag.
-            </div>
+            </Link>
           </div>
           ) : (
           <div className="paper" data-testid="listing-referral-cta" style={{textAlign:"center"}}>
@@ -1738,6 +1717,18 @@ const BuyerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
+  // Pre-fill from listing "Ask Doug about this listing" pill (?city=&mls=&address=)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const city = sp.get("city"); const mls = sp.get("mls"); const addr = sp.get("address");
+    if (!city && !mls && !addr) return;
+    setF(prev => ({
+      ...prev,
+      areas: city && prev.areas.length === 0 ? [city] : prev.areas,
+      notes: prev.notes ? prev.notes : `LISTING INQUIRY — MLS® ${mls || "?"}${addr ? " · " + addr : ""}${city ? ", " + city : ""}.`,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang}); setDone(true); } catch(x){ setErr(t("common.required")); } };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
@@ -1754,7 +1745,7 @@ const BuyerForm = () => {
         <div className="field"><label>{t("buyer.financing_status")} *</label><select required value={f.financing_status} onChange={e=>setF({...f,financing_status:e.target.value})}><option value="">{t("common.select")}</option><option value="Pre-approved">{t("buyer.fin_pre")}</option><option value="Working on it">{t("buyer.fin_working")}</option><option value="Cash buyer">{t("buyer.fin_cash")}</option><option value="Need information">{t("buyer.fin_need_info")}</option></select></div>
         <div className="field"><label>{t("buyer.preferred_contact")}</label><select value={f.preferred_contact} onChange={e=>setF({...f,preferred_contact:e.target.value})}><option value="email">{t("contact.email_pref")}</option><option value="phone">{t("contact.phone_pref")}</option><option value="text">{t("contact.text_pref")}</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.areas_label")}</label><input placeholder={t("buyer.areas_placeholder")} onChange={e=>setF({...f,areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.areas_label")}</label><input placeholder={t("buyer.areas_placeholder")} value={f.areas.join(", ")} onChange={e=>setF({...f,areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
       <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>setF({...f,first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
       <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
