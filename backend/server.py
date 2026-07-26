@@ -1480,7 +1480,7 @@ async def community_neighbourhoods(slug: str):
     pipeline = [
         {"$match": {
             "status": "Active",
-            "city": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+            "city": _city_query(name),
             "region": {"$nin": ["", None, region]},  # exclude blanks + the parent region label
             "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
         }},
@@ -1702,7 +1702,7 @@ async def neighbourhood_detail(slug: str, n_slug: str):
     # Find the exact CityRegion string whose slug matches n_slug (case-preserving)
     distinct = await db.listings.distinct("region", {
         "status": "Active",
-        "city": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+        "city": _city_query(name),
         "region": {"$nin": ["", None, region]},
     })
     n_name = next((r for r in distinct if _nhb_slug(r) == n_slug), None)
@@ -1710,7 +1710,7 @@ async def neighbourhood_detail(slug: str, n_slug: str):
         raise HTTPException(404, "Neighbourhood not found in this community")
     # Aggregate listing stats to feed the LLM AND surface on the page.
     agg = await db.listings.aggregate([
-        {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(name)}$","$options":"i"},"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$match": {"status":"Active","city":_city_query(name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
         {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}, "prices":{"$push":"$list_price"}}},
     ]).to_list(1)
     stats = agg[0] if agg else {}
@@ -2439,7 +2439,7 @@ async def regenerate_neighbourhood(slug: str, n_slug: str, _=Depends(verify_admi
     if not d: raise HTTPException(404, "Not found")
     # Re-collect listing stats for the prompt context
     agg = await db.listings.aggregate([
-        {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(d['community'])}$","$options":"i"},"region":d["neighbourhood"],"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$match": {"status":"Active","city":_city_query(d['community']),"region":d["neighbourhood"],"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
         {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
     ]).to_list(1)
     stats = agg[0] if agg else {}
@@ -2490,7 +2490,7 @@ async def generate_all_neighbourhoods(auto_approve: bool = False, _=Depends(veri
                 existing = await db.neighbourhood_synopses.find_one({"slug": c_slug, "n_slug": n_slug, "synopsis": {"$ne": ""}})
                 if existing: return
                 agg = await db.listings.aggregate([
-                    {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(c_name)}$","$options":"i"},"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+                    {"$match": {"status":"Active","city":_city_query(c_name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
                     {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
                 ]).to_list(1)
                 stats = agg[0] if agg else {}
@@ -2725,6 +2725,30 @@ def _sanitize_listing(doc: dict) -> dict:
 # like "Whistler" becomes a STRICT city filter instead of a text-index leak.
 _locality_cache: dict = {"cities": None, "regions": None, "loaded_at": 0.0}
 
+# Common municipal suffixes users type that CREA's DDF feed doesn't distinguish.
+# CREA rolls "Langley City" and "Langley Township" up to just "Langley", so a
+# strict `^Langley Township$` regex returns 0 hits. _city_query() strips these
+# suffixes and matches both forms.
+_CITY_SUFFIX_RE = re.compile(
+    r"\s+(township|twp\.?|city|district(?:\s+municipality)?|municipality|village|town)$",
+    re.IGNORECASE,
+)
+
+
+def _city_query(city: str) -> dict:
+    """Mongo query fragment for city that handles municipal-suffix aliasing.
+    Matches the user's exact input AND the suffix-stripped form (case-insensitive)."""
+    if not city:
+        return {}
+    city = city.strip()
+    stripped = _CITY_SUFFIX_RE.sub("", city).strip()
+    variants = [city]
+    if stripped and stripped.lower() != city.lower():
+        variants.append(stripped)
+    escaped = "|".join(re.escape(v) for v in variants)
+    return {"$regex": f"^({escaped})$", "$options": "i"}
+
+
 async def _get_localities() -> dict:
     """Return {'cities': [...], 'regions': [...]} — deduplicated, sorted longest-first
     so 'North Vancouver' beats 'Vancouver' on longest-substring match. Cached for 10 min."""
@@ -2797,7 +2821,7 @@ async def search_listings(
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
-    if city:      query["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
+    if city:      query["city"] = _city_query(city)
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
     if property_type:
         # Silently drop requests for excluded (commercial) types — residential only.
@@ -3644,7 +3668,7 @@ def _build_mls_query(filters: dict) -> dict:
     """
     query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
     if filters.get("city"):
-        query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
+        query["city"] = _city_query(filters["city"])
     if filters.get("region"):
         query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
     if filters.get("property_type"):
@@ -3746,7 +3770,7 @@ async def doogie_mls_search(request: Request, payload: dict):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
 
     query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
-    if filters.get("city"):          query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
+    if filters.get("city"):          query["city"] = _city_query(filters["city"])
     if filters.get("region"):        query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
     if filters.get("property_type"):
         if filters["property_type"] in EXCLUDED_PROPERTY_TYPES:

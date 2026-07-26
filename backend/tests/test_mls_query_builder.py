@@ -79,11 +79,10 @@ class TestCityAndRegion:
     def test_city_case_insensitive_exact_regex(self):
         q = _build_mls_query({"city": "Prince George"})
         assert q["city"]["$options"] == "i"
-        # anchors and escaped city name
-        assert q["city"]["$regex"].startswith("^") and q["city"]["$regex"].endswith("$")
-        # re.escape() escapes the space in "Prince George" → "Prince\\ George"
+        # anchors and escaped city name (now wrapped in a group by _city_query)
+        assert q["city"]["$regex"].startswith("^(") and q["city"]["$regex"].endswith(")$")
         import re as _re
-        assert q["city"]["$regex"] == f"^{_re.escape('Prince George')}$"
+        assert q["city"]["$regex"] == f"^({_re.escape('Prince George')})$"
 
 
 class TestPrinceGeorge4BedUnder1_5M:
@@ -104,8 +103,8 @@ class TestPrinceGeorge4BedUnder1_5M:
         # 2. Price cap honoured.
         assert q["list_price"] == {"$lte": 1500000}
 
-        # 3. City locked to Prince George (case-insensitive exact).
-        assert q["city"]["$regex"] == "^Prince\\ George$"
+        # 3. City locked to Prince George (case-insensitive exact, wrapped in group).
+        assert q["city"]["$regex"] == "^(Prince\\ George)$"
 
         # 4. Residential-only guard still in place.
         assert q["status"] == "Active"
