@@ -1611,6 +1611,115 @@ const isInServiceArea = (listing) => {
   return SERVICE_AREA_CITIES.has(_normCity(listing.city));
 };
 
+const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
+  const [lightbox, setLightbox] = useState(false);
+  const thumbStripRef = React.useRef(null);
+  const n = photos.length;
+
+  const prev = React.useCallback(() => setPhotoIdx(i => (i - 1 + n) % n), [n, setPhotoIdx]);
+  const next = React.useCallback(() => setPhotoIdx(i => (i + 1) % n), [n, setPhotoIdx]);
+
+  // Keyboard nav — active whenever lightbox is open OR the page has focus and no input is focused
+  useEffect(() => {
+    if (n <= 1) return;
+    const onKey = (e) => {
+      const tag = (document.activeElement && document.activeElement.tagName) || "";
+      if (["INPUT","TEXTAREA","SELECT"].includes(tag) && !lightbox) return;
+      if (e.key === "ArrowLeft")  { e.preventDefault(); prev(); }
+      if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+      if (e.key === "Escape" && lightbox) setLightbox(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [n, lightbox, prev, next]);
+
+  // Keep active thumbnail visible as user navigates
+  useEffect(() => {
+    if (!thumbStripRef.current) return;
+    const el = thumbStripRef.current.querySelector(`[data-thumb-idx="${photoIdx}"]`);
+    if (el && el.scrollIntoView) el.scrollIntoView({behavior:"smooth", block:"nearest", inline:"center"});
+  }, [photoIdx]);
+
+  if (n === 0) {
+    return (
+      <div style={{marginTop:"1rem",background:"#F5F0E1",borderRadius:14,overflow:"hidden",aspectRatio:"16/9",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",fontFamily:"Inter,sans-serif"}} data-testid="listing-no-photos">
+        No photos available for this listing.
+      </div>
+    );
+  }
+
+  const arrowBtn = {
+    position:"absolute", top:"50%", transform:"translateY(-50%)", width:44, height:44,
+    borderRadius:"50%", border:"none", cursor:"pointer",
+    background:"rgba(15,42,91,0.7)", color:"#fff", fontSize:"1.4rem", fontWeight:700,
+    display:"flex", alignItems:"center", justifyContent:"center",
+    backdropFilter:"blur(6px)", boxShadow:"0 4px 12px rgba(0,0,0,0.25)"
+  };
+
+  return (
+    <>
+      <div style={{marginTop:"1rem",background:"#F5F0E1",borderRadius:14,overflow:"hidden",aspectRatio:"16/9",position:"relative",cursor: n>0?"zoom-in":"default"}} data-testid="listing-hero-photo">
+        <img src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1} of ${n}`} onClick={()=>setLightbox(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+        {n > 1 && (
+          <>
+            <button onClick={prev} aria-label="Previous photo" data-testid="photo-prev" style={{...arrowBtn, left:"1rem"}}>‹</button>
+            <button onClick={next} aria-label="Next photo" data-testid="photo-next" style={{...arrowBtn, right:"1rem"}}>›</button>
+            <div style={{position:"absolute",bottom:"0.85rem",right:"0.85rem",background:"rgba(0,0,0,0.6)",color:"#fff",padding:"0.3rem 0.75rem",borderRadius:999,fontFamily:"Inter,sans-serif",fontSize:"0.8rem",fontWeight:600,backdropFilter:"blur(4px)"}} data-testid="photo-counter">
+              {photoIdx + 1} / {n}
+            </div>
+          </>
+        )}
+        <button onClick={()=>setLightbox(true)} aria-label="View all photos" data-testid="photo-viewall" style={{position:"absolute",bottom:"0.85rem",left:"0.85rem",background:"rgba(255,255,255,0.95)",color:"var(--brand-navy)",padding:"0.35rem 0.85rem",borderRadius:999,fontFamily:"Inter,sans-serif",fontSize:"0.8rem",fontWeight:600,border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:"0.35rem"}}>
+          <span aria-hidden="true">🖼</span> View all {n} photo{n>1?"s":""}
+        </button>
+      </div>
+
+      {n > 1 && (
+        <div ref={thumbStripRef} data-testid="photo-thumbstrip" style={{marginTop:"0.75rem",display:"flex",gap:"0.5rem",overflowX:"auto",padding:"0.25rem",scrollbarWidth:"thin"}}>
+          {photos.map((p,i)=>(
+            <button key={i} onClick={()=>setPhotoIdx(i)} data-thumb-idx={i} data-testid={`photo-thumb-${i}`}
+              aria-label={`Show photo ${i+1}`} aria-pressed={i===photoIdx}
+              style={{flex:"0 0 auto", width:110, height:70, padding:0, borderRadius:8, overflow:"hidden", cursor:"pointer",
+                border:i===photoIdx?"3px solid var(--brand-gold)":"2px solid rgba(15,42,91,0.15)",
+                background:"none", transition:"border-color 120ms"}}>
+              <img src={p} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {lightbox && (
+        <div
+          onClick={(e)=>{if(e.target===e.currentTarget) setLightbox(false);}}
+          data-testid="photo-lightbox"
+          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.94)",zIndex:10000,display:"flex",flexDirection:"column",padding:"1rem"}}
+        >
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",color:"#fff",fontFamily:"Inter,sans-serif",padding:"0.25rem 0.5rem",flexShrink:0}}>
+            <div style={{fontSize:"0.9rem",fontWeight:600}}>{photoIdx + 1} of {n} — {address}</div>
+            <button onClick={()=>setLightbox(false)} aria-label="Close" data-testid="lightbox-close" style={{background:"none",border:"none",color:"#fff",fontSize:"2rem",cursor:"pointer",padding:"0 0.5rem",lineHeight:1}}>×</button>
+          </div>
+          <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",minHeight:0}}>
+            {n > 1 && <button onClick={prev} data-testid="lightbox-prev" aria-label="Previous" style={{...arrowBtn,left:"1rem",width:56,height:56,fontSize:"1.8rem",background:"rgba(255,255,255,0.15)"}}>‹</button>}
+            <img src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1}`} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}/>
+            {n > 1 && <button onClick={next} data-testid="lightbox-next" aria-label="Next" style={{...arrowBtn,right:"1rem",width:56,height:56,fontSize:"1.8rem",background:"rgba(255,255,255,0.15)"}}>›</button>}
+          </div>
+          {n > 1 && (
+            <div style={{display:"flex",gap:"0.35rem",overflowX:"auto",padding:"0.5rem 0",justifyContent:"center",flexWrap:"nowrap",flexShrink:0}}>
+              {photos.map((p,i)=>(
+                <button key={i} onClick={()=>setPhotoIdx(i)} aria-label={`Show photo ${i+1}`}
+                  style={{flex:"0 0 auto",width:70,height:46,padding:0,borderRadius:6,overflow:"hidden",cursor:"pointer",
+                    border:i===photoIdx?"3px solid var(--brand-gold)":"2px solid rgba(255,255,255,0.25)",background:"none"}}>
+                  <img src={p} alt="" loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
 const ListingDetail = () => {
   const { key } = useParams();
   const [listing, setListing] = useState(null);
@@ -1627,17 +1736,8 @@ const ListingDetail = () => {
     <TermsGate>
     <section className="section"><div className="container-x">
       <Link to="/listings" data-testid="back-to-listings" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",fontSize:"0.9rem"}}>← All listings</Link>
-      {/* Photo gallery */}
-      <div style={{marginTop:"1rem",background:"#F5F0E1",borderRadius:14,overflow:"hidden",aspectRatio:"16/9",position:"relative"}} data-testid="listing-hero-photo">
-        <img src={listing.photos?.[photoIdx] || listing.photos?.[0]} alt={listing.street_address} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-        {listing.photos?.length > 1 && (
-          <div style={{position:"absolute",bottom:"1rem",left:"50%",transform:"translateX(-50%)",display:"flex",gap:"0.35rem"}}>
-            {listing.photos.slice(0,10).map((_,i) => (
-              <button key={i} onClick={()=>setPhotoIdx(i)} data-testid={`photo-dot-${i}`} style={{width:12,height:12,borderRadius:"50%",background:i===photoIdx?"#fff":"rgba(255,255,255,0.5)",border:"none",cursor:"pointer"}}/>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Photo gallery — big hero with arrows, counter, thumbnail strip, and click-to-fullscreen lightbox */}
+      <ListingGallery photos={listing.photos||[]} address={listing.street_address||""} photoIdx={photoIdx} setPhotoIdx={setPhotoIdx}/>
       <div className="listing-detail-layout" style={{marginTop:"2rem",alignItems:"start"}}>
         {/* Main column */}
         <div>
