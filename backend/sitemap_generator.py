@@ -22,6 +22,7 @@ STATIC_URLS = [
     ("/communities",       "0.9", "weekly"),
     ("/glossary",          "0.9", "weekly"),
     ("/valuation",         "0.7", "monthly"),
+    ("/relocating",        "0.9", "weekly"),
     ("/about",             "0.7", "monthly"),
     ("/realtors",          "0.7", "monthly"),
     ("/referral-request",  "0.7", "monthly"),

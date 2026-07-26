@@ -630,6 +630,7 @@ const Nav = () => {
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
+        <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <span className="nav-divider" aria-hidden="true"/>
         <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">REALTORS®</NavLink>
       </div>
@@ -2047,6 +2048,157 @@ const RetentionPolicy = () => {
   );
 };
 
+// SEO/AEO landing page for BC relocation. Deliberately links out to the site's
+// existing corpus (communities, glossary, neighbourhoods) instead of duplicating —
+// so every visitor from a "moving to BC" search lands here + fans out into 1,000+
+// deep pages that compound the site's topical authority.
+const Relocating = () => {
+  const nav = useNavigate();
+  return (
+    <section className="section" style={{fontFamily:"Inter,sans-serif"}}>
+      <div className="container-x" style={{maxWidth:"58rem"}}>
+        <SEO
+          title="Relocating to British Columbia — A Consumer Guide by Doug LeMaire, REALTOR® | EZtoFind.ca"
+          description="Thinking of moving to British Columbia? Compare BC regions, cost of living, PTT, the Foreign Buyer Ban, weather, lifestyle, and start your home search with an AI-assisted MLS® tool. Written by a licensed BC REALTOR®."
+          path="/relocating"
+          schema={{
+            "@context":"https://schema.org","@type":"Article",
+            "headline":"Relocating to British Columbia — A Consumer Guide",
+            "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about"},
+            "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+            "dateModified": new Date().toISOString().slice(0,10),
+            "about":[
+              {"@type":"Place","name":"British Columbia, Canada"},
+              {"@type":"Thing","name":"Real estate relocation"},
+            ],
+          }}
+        />
+        <Helmet><script type="application/ld+json">{JSON.stringify({
+          "@context":"https://schema.org","@type":"FAQPage",
+          "mainEntity":[
+            {"@type":"Question","name":"Can non-Canadians buy real estate in BC?","acceptedAnswer":{"@type":"Answer","text":"Most non-citizens and non-permanent residents are currently restricted under the federal Prohibition on the Purchase of Residential Property by Non-Canadians Act (extended through January 1, 2027), with narrow exemptions for refugees and certain temporary residents. Separately, BC imposes an Additional Property Transfer Tax of 20% on residential purchases by foreign nationals in specified regions. Verify both current statuses before making a purchase decision — links to the full glossary entries are below."}},
+            {"@type":"Question","name":"What is the average home price in British Columbia?","acceptedAnswer":{"@type":"Answer","text":"BC's average sale price ranges widely by region — roughly $970,000 province-wide in early 2026, ~$1.25M in Greater Vancouver, ~$700–800K in the BC Interior and rural regions. Use the search below to see live MLS® listings by community."}},
+            {"@type":"Question","name":"Which BC region should I move to?","acceptedAnswer":{"@type":"Answer","text":"It depends on your priorities: Greater Vancouver for urban jobs + cultural diversity, Vancouver Island / Victoria for milder winters + laid-back lifestyle, the Okanagan for wine country + drier summers, the Kootenays for outdoor recreation + lower prices, Northern BC for resource-sector work + wilderness. Each of BC's 241 communities has a dedicated page with weather, vibe score, and active listings."}},
+            {"@type":"Question","name":"What extra taxes should out-of-BC buyers know about?","acceptedAnswer":{"@type":"Answer","text":"Property Transfer Tax (1%/2%/3%/5% tiered on purchase price), Speculation and Vacancy Tax (0.5–3% annually for non-BC residents who leave homes vacant), plus the 20% Additional Property Transfer Tax for foreign nationals in specified regions. See the glossary for full breakdowns and exemptions."}},
+          ]
+        })}</script></Helmet>
+
+        <div className="eyebrow">Consumer Guide</div>
+        <h1 className="section-title" data-testid="relocating-title">Relocating to British Columbia</h1>
+        <p style={{fontSize:"1.08rem",lineHeight:1.75,color:"var(--muted)"}}>
+          Written by <strong>Doug LeMaire, REALTOR®</strong> — Fraser Property Management Realty Services Ltd., Maple Ridge, BC. Last reviewed {new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}. General information only — consult a licensed REALTOR®, lawyer, notary, or accountant before acting.
+        </p>
+
+        <div className="paper" style={{background:"#EAF3FF",marginTop:"2rem"}}>
+          <p style={{margin:0,fontSize:"1rem",lineHeight:1.75}}>
+            <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, or considering BC as your first home in the country — this page is a starting point, not the whole picture. Everything below links to a deeper page on this site: community profiles, glossary entries, live MLS® listings, and Doug's AI assistant Doogie for follow-up questions in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.
+          </p>
+        </div>
+
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>1. Choose a region</h2>
+        <p>British Columbia is huge — larger than California + Washington combined. Where you land affects taxes, weather, commute times, and cost of living more than in most provinces.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))",gap:"0.85rem",marginTop:"1rem"}} data-testid="relocating-regions">
+          {[
+            {name:"Greater Vancouver", desc:"Urban core, most job diversity, highest housing costs. 22 municipalities.", href:"/communities"},
+            {name:"Fraser Valley", desc:"Suburban east of Vancouver. Better value, growing families, agricultural heritage.", href:"/communities"},
+            {name:"Sea-to-Sky", desc:"Squamish + Whistler + Pemberton. Ski country, tech workers, outdoor lifestyle.", href:"/community/squamish"},
+            {name:"Vancouver Island", desc:"Victoria + Nanaimo + Comox Valley. Mild winters, ferry access, slower pace.", href:"/community/victoria"},
+            {name:"Okanagan", desc:"Kelowna + Vernon + Penticton. Wine country, dry summers, retirement-friendly.", href:"/community/kelowna"},
+            {name:"Kootenays", desc:"Nelson + Cranbrook + Fernie. Alpine, artistic, most affordable BC housing.", href:"/community/nelson"},
+            {name:"Northern BC", desc:"Prince George + Fort St. John. Resource jobs, wilderness, cold winters.", href:"/community/prince-george"},
+            {name:"Cariboo & Thompson", desc:"Kamloops + Williams Lake. Interior plateau, ranching, four-season climate.", href:"/community/kamloops"},
+          ].map(r => (
+            <Link key={r.name} to={r.href} className="paper" style={{textDecoration:"none",color:"var(--ink)",transition:"transform 0.15s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";}}>
+              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",fontSize:"1.05rem"}}>{r.name}</div>
+              <div style={{fontSize:"0.88rem",color:"var(--muted)",marginTop:"0.35rem",lineHeight:1.5}}>{r.desc}</div>
+              <div style={{fontSize:"0.8rem",color:"var(--brand-blue)",marginTop:"0.5rem"}}>Explore →</div>
+            </Link>
+          ))}
+        </div>
+        <p style={{marginTop:"1.5rem"}}>Not sure which fits? <Link to="/communities" style={{color:"var(--brand-blue)"}}>Browse all 241 BC communities</Link>, each with an AI-authored synopsis, live weather, Neighbourhood Vibe Score™, and active MLS® listings.</p>
+
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>2. Understand the tax picture</h2>
+        <p>BC has some of Canada's most nuanced housing taxes. Foreign buyers face additional layers. Skim these before you make an offer:</p>
+        <ul style={{lineHeight:1.9}}>
+          <li><Link to="/glossary/property-transfer-tax-ptt" style={{color:"var(--brand-blue)"}}>Property Transfer Tax (PTT)</Link> — payable by every BC buyer at closing. Tiered rates + first-time buyer / newly-built exemptions.</li>
+          <li><Link to="/glossary/additional-property-transfer-tax-foreign-buyer-ptt" style={{color:"var(--brand-blue)"}}>Additional Property Transfer Tax (Foreign Buyer PTT)</Link> — 20% BC surtax on foreign national purchases in specified regions.</li>
+          <li><Link to="/glossary/foreign-buyer-ban-federal-act" style={{color:"var(--brand-blue)"}}>Foreign Buyer Ban (Federal Act)</Link> — the federal prohibition on most non-Canadian residential purchases, extended through January 1, 2027.</li>
+          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>Speculation and Vacancy Tax (SVT)</Link> — annual 0.5–3% for owners who leave BC homes vacant, with a declaration filed every March.</li>
+          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>BC Home Flipping Tax</Link> — anti-flipping tax on homes sold within 2 years of purchase, with divorce/hardship/newly-built exemptions.</li>
+          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>Empty Homes Tax (Vancouver only)</Link> — separate 3% City of Vancouver tax on vacant properties within municipal boundaries.</li>
+        </ul>
+
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>3. Cost-of-living benchmarks</h2>
+        <p>Median BC sale prices vary wildly. Here's a rough 2026 snapshot to calibrate expectations:</p>
+        <ul style={{lineHeight:1.9}}>
+          <li>Greater Vancouver detached: <strong>~$2.0M+ median</strong> (West Vancouver + Vancouver West Side higher)</li>
+          <li>Greater Vancouver condo: <strong>~$780K median</strong></li>
+          <li>Fraser Valley detached: <strong>~$1.4M median</strong></li>
+          <li>Kelowna / Okanagan detached: <strong>~$950K median</strong></li>
+          <li>Victoria / Greater Victoria: <strong>~$1.15M median</strong></li>
+          <li>Kamloops / Interior: <strong>~$620K median</strong></li>
+          <li>Nelson / Kootenays: <strong>~$680K median</strong></li>
+          <li>Prince George / Northern BC: <strong>~$450K median</strong></li>
+        </ul>
+        <p style={{marginTop:"1rem",fontSize:"0.88rem",color:"var(--muted)",fontStyle:"italic"}}>Median values reflect early-2026 MLS® snapshot data from your live listing feed and shift week-to-week. Use the search tool for current figures.</p>
+
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>4. Immigration + banking + insurance essentials</h2>
+        <p>BC-side realities you'll want to line up before or shortly after arrival:</p>
+        <ul style={{lineHeight:1.9}}>
+          <li><strong>PR / work-permit status</strong> — dictates whether you're eligible to purchase under the federal ban and at what tax rate.</li>
+          <li><strong>Canadian banking relationship</strong> — most lenders require 3–12 months of Canadian banking history before offering a competitive mortgage.</li>
+          <li><strong>Down-payment source rules</strong> — Canadian FINTRAC + BCFSA anti-money-laundering rules require documented source of funds. Start gathering paperwork early.</li>
+          <li><strong>Home insurance</strong> — wildfire + flood zones affect premiums heavily in BC. Get a quote before you finalize a purchase.</li>
+          <li><strong>ICBC auto insurance</strong> — BC's provincial auto insurance monopoly. Register within days of arrival if you're bringing a vehicle.</li>
+          <li><strong>MSP (BC health)</strong> — enrol immediately; there's a 3-month wait for coverage as a new resident.</li>
+          <li><strong>Notary + lawyer</strong> — required for the actual property closing. Retain one before signing an offer.</li>
+        </ul>
+
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>5. Start your search</h2>
+        <p style={{marginTop:"0.5rem"}}>Once you have a rough region in mind, use one of these three tools. All are free — no signup required to browse.</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"0.85rem",marginTop:"1rem"}} data-testid="relocating-tools">
+          <Link to="/listings" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
+            <div style={{fontSize:"1.5rem"}}>🔍</div>
+            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Live MLS® Search</div>
+            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>~46,000 residential BC listings, filterable by city, price, beds, and property type.</div>
+          </Link>
+          <Link to="/valuation" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
+            <div style={{fontSize:"1.5rem"}}>🏠</div>
+            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Home Estimate</div>
+            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Selling your current home to fund the move? Get a REALTOR®-reviewed BC-side valuation.</div>
+          </Link>
+          <button
+            type="button"
+            data-testid="relocating-ask-doogie"
+            onClick={() => { localStorage.setItem("ez_doogie_prefill","I'm relocating to BC — help me figure out where to start."); nav("/"); setTimeout(() => window.scrollTo({top:0}), 200); }}
+            className="paper"
+            style={{textAlign:"left",cursor:"pointer",border:"1px solid rgba(15,42,91,0.08)",background:"#FDFCF8"}}
+          >
+            <div style={{fontSize:"1.5rem"}}>💬</div>
+            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Ask Doogie</div>
+            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>AI assistant trained on BC real estate, taxes, and communities. Speaks 6 languages.</div>
+          </button>
+        </div>
+
+        <div className="paper" style={{marginTop:"2.5rem",background:"var(--brand-navy)",color:"#fff",textAlign:"center"}}>
+          <h2 style={{fontSize:"1.4rem",marginTop:0,color:"#fff"}}>Ready to talk to a REALTOR®?</h2>
+          <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9,marginBottom:"1.25rem"}}>
+            If you're relocating to Doug's direct service area — <strong>Greater Vancouver, Fraser Valley, or Sea-to-Sky</strong> — start with the Buyer form. If you're relocating anywhere else in BC, Doug will personally match you with a vetted local REALTOR® at no cost to you.
+          </p>
+          <div style={{display:"flex",gap:"0.8rem",justifyContent:"center",flexWrap:"wrap"}}>
+            <Link to="/buyer" data-testid="relocating-buyer-cta" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none"}}>I'm Moving to Doug's Area</Link>
+            <Link to="/referral-request" data-testid="relocating-referral-cta" className="btn btn-outline" style={{color:"#fff",borderColor:"#fff"}}>I'm Moving Elsewhere in BC</Link>
+          </div>
+        </div>
+
+        <p style={{marginTop:"2rem",fontSize:"0.8rem",color:"var(--muted)",fontStyle:"italic",textAlign:"center"}}>
+          This page is general information only. Nothing here is financial, legal, immigration, tax, or real-estate advice. Consult a licensed REALTOR®, lawyer, notary, accountant, or mortgage broker before making decisions. Content reviewed by Doug LeMaire, REALTOR® — BCFSA-licensed under Fraser Property Management Realty Services Ltd.
+        </p>
+      </div>
+    </section>
+  );
+};
+
 const DoRTS = () => <Legal title="Disclosure of Representation in Trading Services (DoRTS)" body={<>
   <div style={{background:"#F5F0E1",border:"2px solid var(--brand-gold)",borderRadius:12,padding:"1.25rem 1.5rem",margin:"0 0 1.75rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap"}}>
     <div style={{flex:"1 1 auto",minWidth:220}}>
@@ -3383,6 +3535,7 @@ function App() {
       <Route path="/compliance" element={<AppLayout><Compliance/></AppLayout>}/>
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
       <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
+      <Route path="/relocating" element={<AppLayout><Relocating/></AppLayout>}/>
       <Route path="/legal/retention" element={<AppLayout><RetentionPolicy/></AppLayout>}/>
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
