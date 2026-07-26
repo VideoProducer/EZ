@@ -3178,8 +3178,10 @@ Read the user's request and output a SINGLE JSON object with these fields (all o
 {
   "city": string | null,               // BC city/community name; capitalize properly
   "property_type": string | null,      // one of: Detached, Condo, Townhouse, Acreage, Multi-family
-  "beds_min": integer | null,          // minimum bedrooms
-  "baths_min": integer | null,         // minimum bathrooms
+  "beds_exact": integer | null,        // EXACT bedroom count — use this when the user names a plain count ("4 bedroom", "3-bed", "two bedroom home")
+  "beds_min": integer | null,          // MINIMUM bedrooms — use ONLY when the user explicitly says "at least", "or more", "+" or "minimum"
+  "baths_exact": integer | null,       // EXACT bathroom count
+  "baths_min": integer | null,         // MINIMUM bathrooms — same "at least"/"+"/"or more" rule as beds
   "price_min": integer | null,         // minimum in CAD dollars (no commas)
   "price_max": integer | null,         // maximum in CAD dollars (no commas)
   "features": [string, ...] | null,    // LIST of REQUIRED feature phrases — every one must appear in the listing description. E.g. ["indoor pool", "hot tub", "ocean view"]
@@ -3188,12 +3190,20 @@ Read the user's request and output a SINGLE JSON object with these fields (all o
 RULES:
 - Return ONLY the JSON object, no explanation, no markdown fences.
 - If user says "under $800K" set price_max=800000. "over $2M" set price_min=2000000.
-- If user says "2-bed" or "2 bedroom" set beds_min=2.
+- BEDROOMS (critical, follow exactly):
+    • "4 bedroom home"           → beds_exact=4 (NOT beds_min)
+    • "3-bed condo"               → beds_exact=3
+    • "two bedroom"               → beds_exact=2
+    • "4+ bedrooms" / "4 or more" → beds_min=4
+    • "at least 4 bedrooms"       → beds_min=4
+    • "minimum 3 beds"            → beds_min=3
+    • "3 to 5 bedrooms"           → beds_min=3 (range: lower bound only; the upper bound is ignored)
+  Same rules apply to bathrooms (baths_exact vs baths_min). NEVER set both _exact and _min for the same field.
 - Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage.
 - Location: BC cities only. If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver").
 - FEATURES: extract ALL descriptive requirements as separate array entries. If the user says "indoor pool AND hot tub" → ["indoor pool", "hot tub"]. If they say "ocean view with a suite" → ["ocean view", "suite"]. If they say "waterfront home with private dock" → ["waterfront", "private dock"]. Every feature is a REQUIREMENT — the listing must match ALL of them.
 - If user says "top floor" or "penthouse" → features: ["top floor"] or ["penthouse"].
-- If nothing extracted, return {"city":null,"property_type":null,"beds_min":null,"baths_min":null,"price_min":null,"price_max":null,"features":null,"sort":null}."""
+- If nothing extracted, return {"city":null,"property_type":null,"beds_exact":null,"beds_min":null,"baths_exact":null,"baths_min":null,"price_min":null,"price_max":null,"features":null,"sort":null}."""
 
 async def _extract_listing_filters(user_query: str) -> dict:
     """Use Claude to extract structured search filters from a natural-language query.
@@ -3219,6 +3229,11 @@ async def _extract_listing_filters(user_query: str) -> dict:
         # Normalize features to a clean list of trimmed strings
         if parsed.get("features"):
             parsed["features"] = [f.strip() for f in parsed["features"] if f and f.strip()][:6]
+        # Enforce "never both _exact and _min" — if the model set both for the same
+        # dimension, prefer _exact (matches the user's plain-count intent).
+        for dim in ("beds", "baths"):
+            if parsed.get(f"{dim}_exact") is not None and parsed.get(f"{dim}_min") is not None:
+                parsed[f"{dim}_min"] = None
         return parsed
     except Exception as e:
         logger.warning(f"filter extraction failed: {e}")
@@ -3274,6 +3289,47 @@ def _features_query(feature_list: list) -> list:
             ]
         })
     return clauses
+
+
+def _build_mls_query(filters: dict) -> dict:
+    """Compose the MongoDB query for `db.listings` from extracted NL filters.
+
+    Rules:
+      - `beds_exact` (or `baths_exact`) => Mongo `$eq` equivalent (exact int match).
+        Wins over `_min` if both were somehow set.
+      - `beds_min` (or `baths_min`) => `{"$gte": N}`.
+      - City, region, property_type, price bounds, features honoured as before.
+
+    Broken out from `doogie_mls_search` so it can be unit-tested without any
+    LLM calls or a running FastAPI/Mongo instance.
+    """
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
+    if filters.get("city"):
+        query["city"] = {"$regex": f"^{re.escape(filters['city'])}$", "$options": "i"}
+    if filters.get("region"):
+        query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
+    if filters.get("property_type"):
+        query["property_type"] = _property_type_query(filters["property_type"])
+    # Bedrooms — exact wins over min
+    if filters.get("beds_exact") is not None:
+        query["beds"] = int(filters["beds_exact"])
+    elif filters.get("beds_min") is not None:
+        query["beds"] = {"$gte": int(filters["beds_min"])}
+    # Bathrooms — exact wins over min
+    if filters.get("baths_exact") is not None:
+        query["baths"] = int(filters["baths_exact"])
+    elif filters.get("baths_min") is not None:
+        query["baths"] = {"$gte": int(filters["baths_min"])}
+    pr = {}
+    if filters.get("price_min"): pr["$gte"] = int(filters["price_min"])
+    if filters.get("price_max"): pr["$lte"] = int(filters["price_max"])
+    if pr:
+        query["list_price"] = pr
+    if filters.get("features"):
+        clauses = _features_query(filters["features"])
+        if clauses:
+            query["$and"] = clauses
+    return query
 
 @api.post("/doogie/mls-search")
 @_limiter.limit("30/minute")
@@ -3357,20 +3413,12 @@ async def doogie_mls_search(request: Request, payload: dict):
         if filters["property_type"] in EXCLUDED_PROPERTY_TYPES:
             return {"intent_matched": True, "filters": filters, "count": 0, "listings": [],
                     "summary": "EZtoFind.ca focuses on residential listings only — commercial property types are not shown here."}
-        query["property_type"] = _property_type_query(filters["property_type"])
-    if filters.get("beds_min"):      query["beds"] = {"$gte": int(filters["beds_min"])}
-    if filters.get("baths_min"):     query["baths"] = {"$gte": int(filters["baths_min"])}
-    pr = {}
-    if filters.get("price_min"): pr["$gte"] = int(filters["price_min"])
-    if filters.get("price_max"): pr["$lte"] = int(filters["price_max"])
-    if pr: query["list_price"] = pr
-    # Features are STRICT AND-required — every phrase must appear in either the
-    # structured features tag array OR the free-text description. This is what
-    # turns "indoor pool AND hot tub" into a real requirement, not a fuzzy match.
-    if filters.get("features"):
-        clauses = _features_query(filters["features"])
-        if clauses:
-            query["$and"] = clauses
+    # Delegate the actual query composition (beds/baths exact-vs-min, price, features)
+    # to the tested helper so behaviour stays in one place.
+    query.update(_build_mls_query({k: v for k, v in filters.items() if k != "_neighborhood_note"}))
+    # Preserve the residential-only guard which the helper also applies (it will
+    # be identical after the merge, but explicit `status` filter is defensive).
+    query["status"] = "Active"
 
     sort_key = [("created_at", -1)]
     if filters.get("sort") == "price_asc":  sort_key = [("list_price", 1)]
@@ -3390,7 +3438,10 @@ async def doogie_mls_search(request: Request, payload: dict):
     # features we required, so a 0-result response reads as "we understood
     # you, that combination doesn't exist" rather than "search failed".
     parts = []
-    if filters.get("beds_min"): parts.append(f"{filters['beds_min']}+ bed")
+    if filters.get("beds_exact") is not None:
+        parts.append(f"{filters['beds_exact']}-bed")
+    elif filters.get("beds_min") is not None:
+        parts.append(f"{filters['beds_min']}+ bed")
     if filters.get("property_type"): parts.append(str(filters["property_type"]).lower() + ("s" if not str(filters["property_type"]).lower().endswith("s") else ""))
     if filters.get("city"): parts.append(f"in {filters['city']}")
     price_note = ""
