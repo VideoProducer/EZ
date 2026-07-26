@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, json, uuid, logging, bcrypt, jwt, asyncio
+import os, json, uuid, logging, bcrypt, jwt, asyncio, hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal, Dict, Any
@@ -2304,6 +2304,164 @@ async def track_event(request: Request, payload: dict):
         "ua": request.headers.get("user-agent","")[:200],
     })
     return {"ok": True}
+
+# =============== SITE-WIDE PAGE-VIEW BEACON (feeds Growth Dashboard) ===============
+# Anonymous session-scoped page-view tracking. No PII stored — just a hashed
+# session ID + path + timestamp + optional referrer. Used to measure unique
+# visitors, sessions, and top-pages until GA4 is fully wired.
+_BOT_RX = re.compile(r"bot|crawler|spider|slurp|indexnow|gptbot|claudebot|perplexit|google-inspection|bingbot|yandex|duckduck|ccbot|amazonbot|bytespider", re.I)
+
+@api.post("/track/page")
+@_limiter.limit("240/minute")
+async def track_pageview(request: Request, payload: dict):
+    ua = request.headers.get("user-agent","")[:200]
+    # Skip known crawlers so the dashboard reflects human traffic only.
+    if _BOT_RX.search(ua): return {"ok": True, "skipped": "bot"}
+    sid = (payload.get("session_id") or "").strip()[:64]
+    path = (payload.get("path") or "").strip()[:400]
+    if not sid or not path: return {"ok": False}
+    doc = {
+        "sid": sid,
+        "path": path,
+        "ref": (payload.get("referrer") or "")[:400],
+        "lang": (payload.get("lang") or "")[:8],
+        "ua": ua,
+        "ip_hash": hashlib.sha256((request.client.host if request.client else "").encode()).hexdigest()[:16],
+        "ts": now_iso(),
+    }
+    await db.pageviews.insert_one(doc)
+    return {"ok": True}
+
+# =============== ADMIN GROWTH DASHBOARD ===============
+@api.get("/admin/growth/dashboard")
+async def growth_dashboard(_=Depends(verify_admin)):
+    """Aggregate all launch-growth metrics from Mongo. Refreshed every request.
+    Feeds the /admin/growth UI so Doug can course-correct weekly."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    d30 = (now - timedelta(days=30)).isoformat()
+    d7 = (now - timedelta(days=7)).isoformat()
+    d1 = (now - timedelta(days=1)).isoformat()
+
+    # --- Traffic (from our own pageview beacon; bots already filtered) ---
+    pv_30d = await db.pageviews.count_documents({"ts": {"$gte": d30}})
+    pv_7d  = await db.pageviews.count_documents({"ts": {"$gte": d7}})
+    pv_24h = await db.pageviews.count_documents({"ts": {"$gte": d1}})
+    uniq_30d = len(await db.pageviews.distinct("sid", {"ts": {"$gte": d30}}))
+    uniq_7d  = len(await db.pageviews.distinct("sid", {"ts": {"$gte": d7}}))
+    uniq_24h = len(await db.pageviews.distinct("sid", {"ts": {"$gte": d1}}))
+
+    # Top pages 7d
+    top_pages = []
+    async for r in db.pageviews.aggregate([
+        {"$match": {"ts": {"$gte": d7}}},
+        {"$group": {"_id": "$path", "views": {"$sum": 1}, "sids": {"$addToSet": "$sid"}}},
+        {"$project": {"path": "$_id", "_id": 0, "views": 1, "uniques": {"$size": "$sids"}}},
+        {"$sort": {"views": -1}},
+        {"$limit": 20},
+    ]): top_pages.append(r)
+
+    # Referrer breakdown 7d
+    referrers = []
+    async for r in db.pageviews.aggregate([
+        {"$match": {"ts": {"$gte": d7}, "ref": {"$ne": ""}}},
+        {"$addFields": {"host": {"$arrayElemAt": [{"$split": [{"$arrayElemAt": [{"$split": ["$ref", "://"]}, 1]}, "/"]}, 0]}}},
+        {"$group": {"_id": "$host", "n": {"$sum": 1}}},
+        {"$sort": {"n": -1}},
+        {"$limit": 15},
+    ]): referrers.append({"host": r["_id"] or "(direct)", "n": r["n"]})
+
+    # Daily trend (last 30 days) — for the sparkline
+    trend = {}
+    async for r in db.pageviews.aggregate([
+        {"$match": {"ts": {"$gte": d30}}},
+        {"$group": {"_id": {"$substr": ["$ts", 0, 10]}, "views": {"$sum": 1}, "sids": {"$addToSet": "$sid"}}},
+        {"$project": {"day": "$_id", "_id": 0, "views": 1, "uniques": {"$size": "$sids"}}},
+        {"$sort": {"day": 1}},
+    ]): trend[r["day"]] = {"views": r["views"], "uniques": r["uniques"]}
+
+    # --- Doogie sessions ---
+    doogie_30d = len(await db.chat_messages.distinct("session_id", {"created_at": {"$gte": d30}}))
+    doogie_7d  = len(await db.chat_messages.distinct("session_id", {"created_at": {"$gte": d7}}))
+    doogie_24h = len(await db.chat_messages.distinct("session_id", {"created_at": {"$gte": d1}}))
+
+    # --- Lead funnel ---
+    async def lead_count(col, since):
+        try: return await db[col].count_documents({"created_at": {"$gte": since}})
+        except Exception: return 0
+    buyer_30 = await lead_count("buyer_leads", d30)
+    seller_30 = await lead_count("seller_leads", d30)
+    valuation_30 = await lead_count("valuation_leads", d30)
+    referral_30 = await lead_count("referral_requests", d30)
+    saved_30 = await db.saved_searches.count_documents({"created_at": {"$gte": d30}})
+
+    # --- Content stats (approved & live) ---
+    syn_live = await db.community_synopses.count_documents({"approved": True, "synopsis": {"$ne": ""}})
+    wx_live  = await db.community_weather.count_documents({"approved": True, "weather": {"$ne": ""}})
+    nhb_live = await db.neighbourhood_synopses.count_documents({"approved": True, "synopsis": {"$ne": ""}})
+    faq_live = await db.glossary.count_documents({"faqs_approved": True, "faqs.0": {"$exists": True}})
+
+    # --- LLM citations tracked ---
+    llm_total = await db.llm_citations.count_documents({})
+    llm_by_source = {}
+    async for r in db.llm_citations.aggregate([{"$group": {"_id": "$source", "n": {"$sum": 1}}}]):
+        llm_by_source[r["_id"] or "unknown"] = r["n"]
+    latest_citations = await db.llm_citations.find({}, {"_id": 0}).sort("captured_at", -1).to_list(20)
+
+    return {
+        "generated_at": now.isoformat(),
+        "traffic": {
+            "pageviews_24h": pv_24h, "pageviews_7d": pv_7d, "pageviews_30d": pv_30d,
+            "uniques_24h": uniq_24h, "uniques_7d": uniq_7d, "uniques_30d": uniq_30d,
+            "top_pages_7d": top_pages,
+            "referrers_7d": referrers,
+            "daily_trend_30d": trend,
+        },
+        "doogie": {"sessions_24h": doogie_24h, "sessions_7d": doogie_7d, "sessions_30d": doogie_30d},
+        "leads_30d": {
+            "buyer": buyer_30, "seller": seller_30, "valuation": valuation_30,
+            "referral": referral_30, "saved_search": saved_30,
+            "total": buyer_30 + seller_30 + valuation_30 + referral_30,
+        },
+        "content_live": {
+            "community_synopses": syn_live, "community_weather": wx_live,
+            "neighbourhoods": nhb_live, "glossary_faqs": faq_live,
+            "total_pages": syn_live + wx_live + nhb_live + faq_live,
+        },
+        "llm_citations": {
+            "total": llm_total,
+            "by_source": llm_by_source,
+            "latest": latest_citations,
+        },
+    }
+
+
+# --- LLM Citation Tracker (Doug's manual scoreboard) ---
+class LlmCitation(BaseModel):
+    source: str  # "chatgpt" | "claude" | "perplexity" | "bing_copilot" | "google_ai" | "grok" | "manus" | "other"
+    query: str
+    result_url: Optional[str] = ""
+    result_excerpt: Optional[str] = ""
+    screenshot_url: Optional[str] = ""
+    notes: Optional[str] = ""
+
+@api.post("/admin/growth/citations")
+async def add_llm_citation(body: LlmCitation, _=Depends(verify_admin)):
+    doc = body.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["captured_at"] = now_iso()
+    await db.llm_citations.insert_one(doc)
+    return {"success": True, "id": doc["id"]}
+
+@api.get("/admin/growth/citations")
+async def list_llm_citations(_=Depends(verify_admin)):
+    return await db.llm_citations.find({}, {"_id": 0}).sort("captured_at", -1).to_list(500)
+
+@api.delete("/admin/growth/citations/{cid}")
+async def delete_llm_citation(cid: str, _=Depends(verify_admin)):
+    r = await db.llm_citations.delete_one({"id": cid})
+    return {"success": True, "deleted": r.deleted_count}
+
 
 @api.post("/listings/consent")
 @_limiter.limit("30/minute")

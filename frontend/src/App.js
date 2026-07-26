@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import "./App.css";
@@ -2111,6 +2111,7 @@ const AdminShell = ({children,active}) => {
     <aside className="admin-sidebar">
       <h3>Doug's Desk</h3>
       <a onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
+      <a onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
       <a onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
@@ -2809,6 +2810,152 @@ const ComplianceStrip = () => (
 
 
 // --- Admin AI Content Approvals ---
+const AdminGrowth = () => {
+  const nav = useNavigate();
+  const token = localStorage.getItem("eztoken");
+  const headers = { Authorization: `Bearer ${token}` };
+  const [d, setD] = useState(null);
+  const [citations, setCitations] = useState([]);
+  const [form, setForm] = useState({ source: "perplexity", query: "", result_url: "", result_excerpt: "", notes: "" });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if(!token) nav("/admin/login"); }, [token, nav]);
+  const load = async () => {
+    const [dash, cits] = await Promise.all([
+      axios.get(`${API}/admin/growth/dashboard`, {headers}).catch(()=>({data:null})),
+      axios.get(`${API}/admin/growth/citations`, {headers}).catch(()=>({data:[]})),
+    ]);
+    setD(dash.data); setCitations(cits.data);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  const addCitation = async (e) => {
+    e.preventDefault();
+    if (!form.query) return;
+    setSaving(true);
+    await axios.post(`${API}/admin/growth/citations`, form, {headers});
+    setSaving(false);
+    setForm({ source: form.source, query: "", result_url: "", result_excerpt: "", notes: "" });
+    load();
+  };
+  const deleteCitation = async (id) => {
+    if (!window.confirm("Remove this citation?")) return;
+    await axios.delete(`${API}/admin/growth/citations/${id}`, {headers});
+    load();
+  };
+
+  if (!d) return <AdminShell active="growth"><p>Loading growth data…</p></AdminShell>;
+
+  const trafficKpis = [
+    { label: "Uniques (24h)", value: d.traffic.uniques_24h, sub: `${d.traffic.pageviews_24h} views` },
+    { label: "Uniques (7d)", value: d.traffic.uniques_7d, sub: `${d.traffic.pageviews_7d} views` },
+    { label: "Uniques (30d)", value: d.traffic.uniques_30d, sub: `${d.traffic.pageviews_30d} views` },
+    { label: "Doogie sessions (30d)", value: d.doogie.sessions_30d, sub: `${d.doogie.sessions_24h} today` },
+    { label: "Leads (30d)", value: d.leads_30d.total, sub: `${d.leads_30d.buyer}B · ${d.leads_30d.seller}S · ${d.leads_30d.valuation}V · ${d.leads_30d.referral}R` },
+    { label: "Content live", value: d.content_live.total_pages, sub: `${d.content_live.community_synopses} comm · ${d.content_live.neighbourhoods} nhb · ${d.content_live.glossary_faqs} FAQ` },
+    { label: "LLM citations", value: d.llm_citations.total, sub: Object.entries(d.llm_citations.by_source).map(([k,v]) => `${k}:${v}`).join(" · ") || "none logged yet" },
+  ];
+
+  const sortedTrend = Object.entries(d.traffic.daily_trend_30d).sort(([a],[b]) => a.localeCompare(b));
+  const maxUniq = Math.max(1, ...sortedTrend.map(([,v]) => v.uniques));
+
+  const sourceOptions = ["perplexity","chatgpt","claude","bing_copilot","google_ai","grok","manus","other"];
+  const sourceLabel = { perplexity:"Perplexity", chatgpt:"ChatGPT (search)", claude:"Claude (search)", bing_copilot:"Bing Copilot", google_ai:"Google AI Overviews", grok:"Grok (X)", manus:"Manus", other:"Other" };
+
+  return <AdminShell active="growth">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>📈 Growth Dashboard</h1>
+    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>Live traffic, engagement, and LLM-citation scoreboard for the 30-day launch push. Bot traffic filtered. Refreshes on load.</p>
+    <div style={{marginBottom:"1rem",fontSize:"0.82rem",color:"var(--muted)"}}>Generated {new Date(d.generated_at).toLocaleString()} · <button onClick={load} className="btn btn-outline" style={{padding:"0.3rem 0.7rem",fontSize:"0.8rem",marginLeft:"0.5rem"}} data-testid="growth-refresh">↻ Refresh</button></div>
+
+    {/* KPI grid */}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:"0.85rem",marginBottom:"2rem"}} data-testid="growth-kpis">
+      {trafficKpis.map((k,i) => (
+        <div key={i} className="paper" style={{padding:"1rem 1.2rem"}}>
+          <div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>{k.label}</div>
+          <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.9rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.3rem",lineHeight:1}}>{k.value.toLocaleString()}</div>
+          <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.4rem"}}>{k.sub}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Daily trend sparkline */}
+    <div className="paper" style={{marginBottom:"1.5rem"}}>
+      <h2 style={{fontSize:"1.15rem",marginTop:0}}>Daily uniques — last 30 days</h2>
+      {sortedTrend.length === 0 ? <p style={{color:"var(--muted)"}}>No traffic yet. Open the public site to log the first pageview.</p> :
+      <div style={{display:"flex",alignItems:"flex-end",gap:"3px",height:120,marginTop:"1rem"}}>
+        {sortedTrend.map(([day, v]) => (
+          <div key={day} title={`${day} · ${v.uniques} uniques · ${v.views} views`} style={{flex:1,minWidth:6,background:"var(--brand-navy)",height:`${Math.max(4, (v.uniques/maxUniq)*100)}%`,borderRadius:"2px 2px 0 0",cursor:"help"}}/>
+        ))}
+      </div>}
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.5rem"}}>
+        <span>{sortedTrend[0]?.[0] || ""}</span><span>{sortedTrend.at(-1)?.[0] || ""}</span>
+      </div>
+    </div>
+
+    {/* Two columns: top pages + referrers */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:"1.5rem"}}>
+      <div className="paper">
+        <h2 style={{fontSize:"1.05rem",marginTop:0}}>🔥 Top pages (7d)</h2>
+        {d.traffic.top_pages_7d.length === 0 ? <p style={{color:"var(--muted)",fontSize:"0.9rem"}}>No pageviews yet in the last 7 days.</p> :
+        <table style={{width:"100%",fontSize:"0.87rem",borderCollapse:"collapse"}}>
+          <thead><tr style={{textAlign:"left",borderBottom:"1px solid rgba(0,0,0,0.08)"}}><th style={{padding:"0.4rem 0"}}>Path</th><th style={{textAlign:"right"}}>Views</th><th style={{textAlign:"right"}}>Uniq</th></tr></thead>
+          <tbody>{d.traffic.top_pages_7d.slice(0,15).map((p,i) => (
+            <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
+              <td style={{padding:"0.3rem 0",fontFamily:"monospace",fontSize:"0.78rem"}}><a href={p.path} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>{p.path.length>52?p.path.slice(0,52)+"…":p.path}</a></td>
+              <td style={{textAlign:"right"}}>{p.views}</td>
+              <td style={{textAlign:"right",color:"var(--muted)"}}>{p.uniques}</td>
+            </tr>
+          ))}</tbody>
+        </table>}
+      </div>
+
+      <div className="paper">
+        <h2 style={{fontSize:"1.05rem",marginTop:0}}>🌐 Top referrers (7d)</h2>
+        {d.traffic.referrers_7d.length === 0 ? <p style={{color:"var(--muted)",fontSize:"0.9rem"}}>No referrer data yet — visitors so far arrived direct.</p> :
+        <table style={{width:"100%",fontSize:"0.87rem",borderCollapse:"collapse"}}>
+          <thead><tr style={{textAlign:"left",borderBottom:"1px solid rgba(0,0,0,0.08)"}}><th style={{padding:"0.4rem 0"}}>Source</th><th style={{textAlign:"right"}}>Visits</th></tr></thead>
+          <tbody>{d.traffic.referrers_7d.map((r,i) => (
+            <tr key={i} style={{borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
+              <td style={{padding:"0.3rem 0",fontFamily:"monospace",fontSize:"0.82rem"}}>{r.host}</td>
+              <td style={{textAlign:"right"}}>{r.n}</td>
+            </tr>
+          ))}</tbody>
+        </table>}
+      </div>
+    </div>
+
+    {/* LLM Citation Tracker */}
+    <div className="paper" style={{background:"#F5F0E1"}}>
+      <h2 style={{fontSize:"1.15rem",marginTop:0}}>🤖 LLM Citation Tracker</h2>
+      <p style={{color:"var(--muted)",fontSize:"0.88rem",marginTop:0}}>Every time you spot EZtoFind.ca cited by an AI (ChatGPT, Claude, Perplexity, Bing Copilot, Google AI Overviews, Grok, Manus), log it here. This is your <em>real</em> AEO scoreboard.</p>
+      <form onSubmit={addCitation} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:"0.6rem",marginTop:"1rem",background:"white",padding:"1rem",borderRadius:8}}>
+        <select value={form.source} onChange={e=>setForm({...form,source:e.target.value})} data-testid="citation-source">
+          {sourceOptions.map(o => <option key={o} value={o}>{sourceLabel[o]}</option>)}
+        </select>
+        <input placeholder="Query asked (e.g. 'best BC real estate glossary')" value={form.query} onChange={e=>setForm({...form,query:e.target.value})} required data-testid="citation-query"/>
+        <input placeholder="Result URL (optional)" value={form.result_url} onChange={e=>setForm({...form,result_url:e.target.value})} data-testid="citation-url"/>
+        <input placeholder="Notes (e.g. position, screenshot link)" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} data-testid="citation-notes"/>
+        <button type="submit" className="btn btn-primary" disabled={saving} data-testid="citation-submit" style={{gridColumn:"1 / -1"}}>{saving?"Saving…":"➕ Log citation"}</button>
+      </form>
+      {citations.length === 0 ? <p style={{color:"var(--muted)",fontStyle:"italic",marginTop:"1rem"}}>None logged yet. Run the Day-15 LLM prompt test from the playbook and paste your first citations here.</p> :
+      <div style={{marginTop:"1rem",maxHeight:400,overflowY:"auto"}}>
+        {citations.map(c => (
+          <div key={c.id} style={{padding:"0.75rem",borderBottom:"1px solid rgba(0,0,0,0.06)",fontSize:"0.87rem"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:"0.5rem"}}>
+              <div style={{flex:1}}>
+                <strong style={{color:"var(--brand-navy)"}}>{sourceLabel[c.source] || c.source}</strong>
+                <span style={{color:"var(--muted)",marginLeft:"0.5rem",fontSize:"0.78rem"}}>{new Date(c.captured_at).toLocaleDateString()}</span>
+                <div style={{marginTop:"0.25rem"}}>Q: <em>"{c.query}"</em></div>
+                {c.result_url && <div style={{marginTop:"0.2rem",fontSize:"0.8rem"}}><a href={c.result_url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>{c.result_url}</a></div>}
+                {c.notes && <div style={{marginTop:"0.2rem",color:"var(--muted)",fontSize:"0.82rem"}}>{c.notes}</div>}
+              </div>
+              <button onClick={()=>deleteCitation(c.id)} className="btn btn-outline" style={{padding:"0.25rem 0.6rem",fontSize:"0.75rem",height:"fit-content"}}>Remove</button>
+            </div>
+          </div>
+        ))}
+      </div>}
+    </div>
+  </AdminShell>;
+};
+
 const AdminApprovals = () => {
   const {headers} = useAdmin();
   const [tab, setTab] = useState("synopses");
@@ -3127,7 +3274,28 @@ const BackHomeBar = () => {
   );
 };
 
-const AppLayout = ({children}) => (<><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/></>);
+const AppLayout = ({children}) => (<><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/></>);
+
+// Anonymous page-view beacon — sends one event per route change to /api/track/page.
+// Skips /admin/* pages so Doug's own browsing doesn't pollute the growth dashboard.
+function PageViewBeacon() {
+  const loc = useLocation();
+  useEffect(() => {
+    if (loc.pathname.startsWith("/admin")) return;
+    let sid = localStorage.getItem("ez_sid");
+    if (!sid) {
+      sid = (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+"-"+Math.random().toString(36).slice(2)));
+      localStorage.setItem("ez_sid", sid);
+    }
+    axios.post(`${API}/track/page`, {
+      session_id: sid,
+      path: loc.pathname + loc.search,
+      referrer: document.referrer || "",
+      lang: navigator.language || "",
+    }).catch(() => {});
+  }, [loc.pathname, loc.search]);
+  return null;
+}
 const AdminLayout = ({children}) => children;
 
 function App() {
