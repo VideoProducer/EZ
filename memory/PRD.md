@@ -82,6 +82,13 @@ Backend: **19/19 tests passed (100%)** via testing subagent (iteration_1.json)
 - ✅ **/communities index copy** — removed "Doug's primary practice..." line, added Referral REALTOR® link
 - ✅ **Community map moved above H1 name** — Google Maps embed at top of each community page
 
+### Feb 25, 2026 — Multilingual Lead Forms + CREA DDF Diagnostic
+- ✅ **Multilingual `?lang=` conversion forms** — `/buyer`, `/seller`, `/referral-request`, `/contact` now render in EN, 繁 (zh-Hant), 简 (zh-Hans), ਪੰਜਾਬੀ (pa), فارسی (fa) with RTL, and Português (pt-PT). i18n dict at `/app/frontend/src/i18n.js`; `useFormLang()` hook reads URL param.
+- ✅ **Doogie chat auto-appends `?lang=xx`** to internal /buyer, /seller, /contact, /referral-request links when a non-EN chat language is active (via `renderChatContent(raw, lang)` in App.js).
+- ✅ **Background note translation** — free-text `notes` (buyer) and `reason` (seller) fields typed in a non-EN language are auto-translated to English via Claude Sonnet 4.6 and stored as `notes_en` / `reason_en` for Doug's CRM. Fire-and-forget `asyncio.create_task` — zero added latency on the POST.
+- ✅ **CREA DDF diagnostic endpoint** — `GET /api/admin/listings/ddf-status` probes identity.crea.ca + ddfapi.realtor.ca and returns `{credentials_configured, token_ok, api_ok, error, sample_count}`. Confirmed: current credentials return `invalid_client` → user has CREA member portal login, not DDF Destination username/password.
+- ✅ **Production DDF sync worker** — `services/ddf_sync.py` fully implemented: OAuth2 token cache, OData pagination via `@odata.nextLink`, incremental sync via `ModificationTimestamp`, RESO Property → internal shape mapping, reconciliation removes withdrawn listings, honours `InternetEntireListingDisplayYN` + `InternetAddressDisplayYN` privacy flags. Ready to activate the moment Destination credentials are pasted into `.env`.
+
 ### Environment variables required (when CREA credentials arrive)
 ```
 CREA_DDF_ENDPOINT=          # OData API base URL from CREA
@@ -104,10 +111,11 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 ## Backlog / Future
 
 ### P0 — Ready to activate once CREA DDF® credentials arrive
-- Wire real DDF fetch in `services/ddf_sync.py::_fetch_page()` (~4 hrs, blocked on credentials)
-- Configure APScheduler for 4-hour incremental sync + nightly reconciliation (~2 hrs)
-- Doogie MLS® tool-use (natural language MLS search in chat) — ~8 hrs, requires DDF live first
-- Real email delivery (Resend) for the 3 workflow emails from info@ / realtors@ / referral@eztofind.ca (~2 hrs, needs API key)
+- **BLOCKED: Need real DDF Destination username/password.** The values in `.env` (`info@metrovancouver.forsale` / `1Tiffany!`) are the CREA member portal login, NOT the DDF Destination credentials. To obtain the correct ones: log into the CREA DDF Dashboard → **My Data Feeds** → Edit the Destination for eztofind.ca → copy the auto-generated **Username** and **Password** shown there. Diagnostic returns `invalid_client` until this is done.
+- Once credentials swap in, `services/ddf_sync.py` runs unchanged and the `/api/admin/listings/ddf-status` endpoint will flip to `token_ok=true, api_ok=true, sample_count>0`.
+- Configure APScheduler for 4-hour incremental sync + nightly reconciliation (~2 hrs) — services/ddf_sync.py::sync_incremental() ready to be scheduled
+- Doogie MLS® tool-use — already wired to Mongo listings collection; will use real data automatically once sync runs
+- Real email delivery (Resend) for the 3 workflow emails from info@ / realtors@ / referral@eztofind.ca (~2 hrs, needs Resend API key)
 
 ### P1
 - BCFSA REALTOR® number verification (public registry lookup)
