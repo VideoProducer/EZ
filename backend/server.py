@@ -1550,6 +1550,19 @@ async def startup():
         logger.info("chat_messages TTL index ensured (30-day auto-purge)")
     except Exception as e:
         logger.error(f"TTL index setup failed: {e}")
+
+    # Daily records-retention purge (BCFSA 7-yr + CASL 3-yr + PIPA data minimization).
+    # First run happens 60s after startup so admins can hit /admin/retention/log to see
+    # today's activity; then repeats every 24 h. Purge log stays for 7 years as proof.
+    async def _retention_loop():
+        import asyncio as _a
+        while True:
+            try:
+                await _run_retention_purge()
+            except Exception as e:
+                logger.error(f"Retention loop iteration failed: {e}")
+            await _a.sleep(24 * 3600)  # daily
+    asyncio.create_task(asyncio.sleep(60)).add_done_callback(lambda _: asyncio.create_task(_retention_loop()))
     # Amenity warm-up disabled per user request
 
     # Generate sitemap.xml on startup so search engines get a fresh copy
@@ -1599,6 +1612,101 @@ async def startup():
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
     return await generate_sitemap(db)
+
+
+# =============== RECORDS RETENTION (BCFSA / PIPA / CASL) ===============
+# Public: serves the human-readable retention policy for auditors, OIPC, BCFSA.
+# Backend: runs a daily purge job that permanently destroys expired records and
+# writes a tamper-evident destruction attestation to `retention_purge_log`.
+_RETENTION_POLICY_PATH = ROOT_DIR / "data" / "retention-policy.md"
+
+@api.get("/legal/retention-policy")
+async def retention_policy_public():
+    """Serve the current records retention policy as markdown. Referenced by BCFSA/OIPC/CASL audits."""
+    if not _RETENTION_POLICY_PATH.exists():
+        raise HTTPException(404, "Retention policy not found")
+    return {
+        "version": "1.0",
+        "effective_date": "2026-02-26",
+        "records_officer": "Doug LeMaire, REALTOR®",
+        "brokerage": "Fraser Property Management Realty Services Ltd.",
+        "brokerage_address": "1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5",
+        "brokerage_phone": "+1-604-466-7021",
+        "policy_markdown": _RETENTION_POLICY_PATH.read_text(),
+    }
+
+# Retention windows (in days). Each key maps to a MongoDB collection and the
+# fields used to compute the record's age. Records older than the window are
+# permanently deleted by the daily purger. Kept in sync with retention-policy.md.
+_RETENTION_RULES = [
+    {"collection": "buyer_leads",       "age_field": "created_at",       "days": 7*365 + 1, "class": "trading_services_lead"},
+    {"collection": "seller_leads",      "age_field": "created_at",       "days": 7*365 + 1, "class": "trading_services_lead"},
+    {"collection": "valuation_leads",   "age_field": "created_at",       "days": 7*365 + 1, "class": "trading_services_lead"},
+    {"collection": "referral_requests", "age_field": "created_at",       "days": 7*365 + 1, "class": "trading_services_lead"},
+    {"collection": "mls_consent_log",   "age_field": "ts",               "days": 7*365 + 1, "class": "casl_consent_log"},
+    {"collection": "email_outbox",      "age_field": "sent_at",          "days": 3*365 + 1, "class": "email_audit"},
+    # saved_searches: only purge those unsubscribed >3 years ago (see below)
+]
+
+async def _run_retention_purge():
+    """Purge records past their retention window. Writes an attestation to
+    `retention_purge_log` for each collection processed (proof-of-destruction
+    without retaining the destroyed personal data)."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    for rule in _RETENTION_RULES:
+        try:
+            cutoff = now - timedelta(days=rule["days"])
+            # Records store timestamps as ISO strings; compare lexicographically.
+            cutoff_iso = cutoff.isoformat()
+            col = db[rule["collection"]]
+            n = await col.count_documents({rule["age_field"]: {"$lt": cutoff_iso}})
+            if n > 0:
+                r = await col.delete_many({rule["age_field"]: {"$lt": cutoff_iso}})
+                await db.retention_purge_log.insert_one({
+                    "purged_at": now.isoformat(),
+                    "collection": rule["collection"],
+                    "record_class": rule["class"],
+                    "cutoff_iso": cutoff_iso,
+                    "retention_days": rule["days"],
+                    "count_destroyed": r.deleted_count,
+                    "attestation": f"BCFSA/PIPA/CASL retention purge — {r.deleted_count} {rule['class']} records destroyed permanently.",
+                })
+                logger.info(f"Retention purge: {r.deleted_count} {rule['collection']} records destroyed (>{rule['days']} days).")
+        except Exception as e:
+            logger.error(f"Retention purge failed for {rule['collection']}: {e}")
+    # saved_searches — unsubscribed >3 years ago
+    try:
+        cutoff = (now - timedelta(days=3*365 + 1)).isoformat()
+        n_unsub = await db.saved_searches.count_documents({"unsubscribed_at": {"$lt": cutoff, "$ne": None}})
+        if n_unsub > 0:
+            r = await db.saved_searches.delete_many({"unsubscribed_at": {"$lt": cutoff, "$ne": None}})
+            await db.retention_purge_log.insert_one({
+                "purged_at": now.isoformat(),
+                "collection": "saved_searches",
+                "record_class": "unsubscribed_saved_search",
+                "cutoff_iso": cutoff,
+                "retention_days": 3*365 + 1,
+                "count_destroyed": r.deleted_count,
+                "attestation": f"CASL suppression-list expiry — {r.deleted_count} unsubscribed saved-searches destroyed permanently.",
+            })
+            logger.info(f"Retention purge: {r.deleted_count} unsubscribed saved-searches destroyed.")
+    except Exception as e:
+        logger.error(f"Retention purge failed for saved_searches: {e}")
+
+@api.post("/admin/retention/run-now")
+async def admin_run_retention_now(_=Depends(verify_admin)):
+    """Manual trigger — normally runs daily via the background scheduler."""
+    await _run_retention_purge()
+    log = await db.retention_purge_log.find({}, {"_id": 0}).sort("purged_at", -1).to_list(20)
+    return {"success": True, "recent_purge_log": log}
+
+@api.get("/admin/retention/log")
+async def admin_retention_log(_=Depends(verify_admin)):
+    """Destruction attestation audit trail — proves purges happened without keeping destroyed PII."""
+    log = await db.retention_purge_log.find({}, {"_id": 0}).sort("purged_at", -1).to_list(1000)
+    return {"count": len(log), "log": log}
+
 
 @api.get("/")
 async def root():

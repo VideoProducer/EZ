@@ -648,7 +648,7 @@ const Footer = () => (
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85,marginTop:"0.75rem"}}>Doogie is an AI-assisted chatbot designed to help provide information, answer general real estate questions, explain terminology, and navigate the EZtoFind.ca platform. Doogie provides general information only and is not a substitute for professional real estate advice. Interacting with Doogie does not create a REALTOR®-client relationship.</p>
-        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong></p>
+        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5<br/><a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}}>(604) 466-7021</a></p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
@@ -661,9 +661,12 @@ const Footer = () => (
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
+        <li><Link to="/legal/retention">Records Retention (7 yr)</Link></li>
       </ul></div>
       <div><h4>Contact</h4><ul>
         <li>info@eztofind.ca</li>
+        <li><a href="tel:+16044667021" style={{color:"inherit"}}>(604) 466-7021</a></li>
+        <li style={{fontSize:"0.82rem",opacity:0.85,marginTop:"0.35rem"}}>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5</li>
       </ul></div>
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.7}}>
@@ -2018,6 +2021,30 @@ const Complaints = () => <Legal title="Complaints & Concerns" body={<>
   <p style={{marginTop:"1.5rem",fontSize:"0.9rem",color:"var(--muted)"}}>You have the right to escalate directly to any of the above authorities without contacting us first. We will not retaliate against any person who files a complaint.</p>
 </>}/>;
 
+const RetentionPolicy = () => {
+  const [d, setD] = useState(null);
+  useEffect(() => { axios.get(`${API}/legal/retention-policy`).then(r => setD(r.data)).catch(()=>{}); }, []);
+  return (
+    <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
+      <SEO title="Records Retention Policy — EZtoFind.ca" description="How EZtoFind.ca stores, retains, and destroys personal information under BCFSA, PIPA, and CASL." path="/legal/retention"/>
+      <div className="eyebrow">Consumer Protection</div>
+      <h1 className="section-title">Records Retention Policy</h1>
+      {!d ? <p>Loading…</p> : (
+        <>
+          <div className="paper" style={{background:"#FDFCF8",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",lineHeight:1.7}}>
+            <strong>Version:</strong> {d.version} · <strong>Effective:</strong> {d.effective_date}<br/>
+            <strong>Records Officer:</strong> {d.records_officer}<br/>
+            <strong>Brokerage:</strong> {d.brokerage}<br/>
+            {d.brokerage_address}<br/>
+            <a href={`tel:${d.brokerage_phone.replace(/[^0-9+]/g,"")}`} style={{color:"var(--brand-blue)"}}>{d.brokerage_phone}</a>
+          </div>
+          <div style={{marginTop:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.98rem",lineHeight:1.8,whiteSpace:"pre-wrap",color:"var(--ink)"}} data-testid="retention-policy-body">{d.policy_markdown}</div>
+        </>
+      )}
+    </div></section>
+  );
+};
+
 const DoRTS = () => <Legal title="Disclosure of Representation in Trading Services (DoRTS)" body={<>
   <div style={{background:"#F5F0E1",border:"2px solid var(--brand-gold)",borderRadius:12,padding:"1.25rem 1.5rem",margin:"0 0 1.75rem",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap"}}>
     <div style={{flex:"1 1 auto",minWidth:220}}>
@@ -3133,6 +3160,7 @@ function App() {
       <Route path="/compliance" element={<AppLayout><Compliance/></AppLayout>}/>
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
       <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
+      <Route path="/legal/retention" element={<AppLayout><RetentionPolicy/></AppLayout>}/>
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
       <Route path="/unsubscribe" element={<AppLayout><Unsubscribe/></AppLayout>}/>

@@ -33,8 +33,8 @@ logger = logging.getLogger("email_sender")
 # CASL identification block (immutable — do NOT strip when composing emails)
 SENDER_NAME    = "Doug LeMaire, REALTOR® · EZtoFind.ca"
 SENDER_ORG     = "Fraser Property Management Realty Services Ltd."
-SENDER_ADDRESS = "British Columbia, Canada"  # replace with full civic address before launch
-SENDER_PHONE   = "+1-604-XXX-XXXX"           # replace before launch
+SENDER_ADDRESS = "1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5"
+SENDER_PHONE   = "+1-604-466-7021"
 SENDER_EMAIL   = "info@eztofind.ca"
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
