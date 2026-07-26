@@ -780,7 +780,25 @@ const Footer = () => (
 
 // --- Doogie AI Chat Widget ---
 // Detect listing-search intent so we can fire the MLS filter extractor alongside Doogie's chat stream.
-const LISTING_INTENT_REGEX = /\b(listing|listings|for\s+sale|homes?\s+in|houses?\s+in|condos?|townhomes?|townhouses?|acreage|find\s+.*(bed|bath|home|condo)|show\s+me|looking\s+for|search|properties?\s+in)\b/i;
+// Broad triggers (any of these means "user is looking for listings"):
+//   - explicit listing words: listing, for sale, houses in, condos, acreage…
+//   - a bedroom/bathroom count: "3 bedroom", "4-bed", "two bath", "2 br"
+//   - a $-price cap: "under 800k", "under $1.5M", "under 2 million"
+// Missing any of these was why "3 bedrooms in white rock" bypassed the extractor entirely.
+const LISTING_INTENT_REGEX = new RegExp(
+  [
+    // Explicit real-estate keywords
+    "\\b(listing|listings|for\\s+sale|homes?\\s+in|houses?\\s+in|condos?|townhomes?|townhouses?|acreage|find\\s+.*(bed|bath|home|condo)|show\\s+me|looking\\s+for|search|properties?\\s+in)\\b",
+    // Numeric bed count (digits or words) — captures "3 bedroom", "4-bed", "two bedroom"
+    "\\b(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\\s*[- ]?\\s*(bed|bedroom|br|bd)s?\\b",
+    // Numeric bath count
+    "\\b(\\d{1,2}(?:\\.5)?|one|two|three|four|five|six|seven|eight|nine|ten)\\s*[- ]?\\s*(bath|bathroom|ba)s?\\b",
+    // Price-cap phrases
+    "\\b(under|below|less\\s+than|max|up\\s+to)\\s*\\$?\\s*\\d",
+    "\\$\\s*\\d.*(m|mil|million|k|thousand)\\b",
+  ].join("|"),
+  "i"
+);
 const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
 
 // Compact listing card used inside Doogie chat (smaller than the search-page card).
@@ -945,10 +963,11 @@ const DoogieChat = () => {
             {m.count > m.listings.length && (
               <Link to={`/listings?${new URLSearchParams(Object.entries({
                 city: m.filters?.city, property_type: m.filters?.property_type,
-                beds_min: m.filters?.beds_min, baths_min: m.filters?.baths_min,
+                beds_min: m.filters?.beds_min, beds_exact: m.filters?.beds_exact,
+                baths_min: m.filters?.baths_min, baths_exact: m.filters?.baths_exact,
                 price_min: m.filters?.price_min, price_max: m.filters?.price_max,
                 q: m.filters?.keyword,
-              }).filter(([,v])=>v)).toString()}`}
+              }).filter(([,v])=>v!=null && v!=="")).toString()}`}
                 style={{display:"block",marginTop:"0.6rem",textAlign:"center",fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--brand-blue)",fontWeight:600,textDecoration:"none"}} data-testid={`doogie-see-all-${i}`}>
                 See all {m.count} matches →
               </Link>
@@ -1336,7 +1355,9 @@ const Listings = () => {
     region: params.get("region") || "",
     property_type: params.get("property_type") || "",
     beds_min: params.get("beds_min") || "",
+    beds_exact: params.get("beds_exact") || "",
     baths_min: params.get("baths_min") || "",
+    baths_exact: params.get("baths_exact") || "",
     price_min: params.get("price_min") || "",
     price_max: params.get("price_max") || "",
     sort: params.get("sort") || "newest",
@@ -1352,7 +1373,7 @@ const Listings = () => {
     const f = overrideFilters || filters;
     setLoading(true);
     const qp = {};
-    ["q","city","community","region","property_type","beds_min","baths_min","price_min","price_max","features","sort"].forEach(k => {
+    ["q","city","community","region","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
       if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
     qp.limit = 30;
@@ -1391,7 +1412,9 @@ const Listings = () => {
               community: "",
               property_type: d.filters.property_type || "",
               beds_min: d.filters.beds_min || "",
+              beds_exact: d.filters.beds_exact ?? "",
               baths_min: d.filters.baths_min || "",
+              baths_exact: d.filters.baths_exact ?? "",
               price_min: d.filters.price_min || "",
               price_max: d.filters.price_max || "",
               // Features from NL → comma-separated string for /api/listings
@@ -1449,7 +1472,8 @@ const Listings = () => {
                       const parsed = {
                         q: "", city: d.filters.city || "", community: "",
                         property_type: d.filters.property_type || "",
-                        beds_min: d.filters.beds_min || "", baths_min: d.filters.baths_min || "",
+                        beds_min: d.filters.beds_min || "", beds_exact: d.filters.beds_exact ?? "",
+                        baths_min: d.filters.baths_min || "", baths_exact: d.filters.baths_exact ?? "",
                         price_min: d.filters.price_min || "", price_max: d.filters.price_max || "",
                         features: Array.isArray(d.filters.features) ? d.filters.features.join(",") : "",
                         sort: d.filters.sort || "newest",

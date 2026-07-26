@@ -2806,7 +2806,9 @@ async def search_listings(
     region: Optional[str] = None,
     property_type: Optional[str] = None,
     beds_min: Optional[int] = None,
+    beds_exact: Optional[int] = None,
     baths_min: Optional[int] = None,
+    baths_exact: Optional[int] = None,
     price_min: Optional[int] = None,
     price_max: Optional[int] = None,
     features: Optional[str] = None,  # comma-separated
@@ -2843,8 +2845,11 @@ async def search_listings(
             query.pop("property_type", None)
         else:
             query["property_type"] = _property_type_query(property_type)
-    if beds_min is not None:  query["beds"] = {"$gte": beds_min}
-    if baths_min is not None: query["baths"] = {"$gte": baths_min}
+    # Bedrooms — exact wins over min (matches Doogie NL semantics)
+    if beds_exact is not None:  query["beds"] = int(beds_exact)
+    elif beds_min is not None:  query["beds"] = {"$gte": beds_min}
+    if baths_exact is not None: query["baths"] = int(baths_exact)
+    elif baths_min is not None: query["baths"] = {"$gte": baths_min}
     price_q = {}
     if price_min is not None: price_q["$gte"] = price_min
     if price_max is not None: price_q["$lte"] = price_max
