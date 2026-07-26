@@ -717,7 +717,9 @@ const Nav = () => {
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
         <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
-        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)"}}>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span></div>
+        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span>
+          <Link to="/beta" onClick={close} title="This site is in beta — click to learn what to test" data-testid="nav-beta-badge" style={{textDecoration:"none",fontFamily:"Inter,sans-serif",fontSize:"0.62rem",fontWeight:700,letterSpacing:"0.08em",background:"linear-gradient(135deg,#F5A623 0%,#F5C023 100%)",color:"#1a1a1a",padding:"0.15rem 0.5rem",borderRadius:6,border:"1px solid rgba(0,0,0,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.1)"}}>BETA</Link>
+        </div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>DOUG LEMAIRE, REALTOR®</div></div>
       </Link>
       <button className="nav-hamburger" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} onClick={()=>setOpen(o=>!o)} data-testid="nav-hamburger">
@@ -771,7 +773,7 @@ const Footer = () => (
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.7}}>
       <div>© 2026 EZtoFind.ca — All rights reserved. REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><Link to="/beta" data-testid="footer-beta-link">Beta Testing</Link></div>
     </div>
   </div></footer>
 );
@@ -2368,6 +2370,7 @@ const AdminShell = ({children,active}) => {
       <a onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
       <a onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
+      <a onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
       <a onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623"}}>← Sign out</a>
     </aside>
@@ -3526,7 +3529,192 @@ const BackHomeBar = () => {
   );
 };
 
-const AppLayout = ({children}) => (<><ScrollToTop/><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/><TurnstileScriptLoader/></>);
+// ---------- Beta Testing: floating feedback widget + welcome page ----------
+const BetaFeedbackWidget = () => {
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({name:"", email:"", comment:"", rating:0, category:"general"});
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState("");
+  const loc = useLocation();
+
+  // Remember tester name/email across visits (nice UX for repeat testers)
+  useEffect(() => {
+    const cached = localStorage.getItem("beta_tester");
+    if (cached) { try { const c = JSON.parse(cached); setF(x => ({...x, name:c.name||"", email:c.email||""})); } catch(_){} }
+  }, []);
+
+  const submit = async (e) => {
+    e.preventDefault(); setErr(""); setBusy(true);
+    try {
+      await axios.post(`${API}/beta/feedback`, {
+        name: f.name.trim(),
+        email: f.email.trim(),
+        comment: f.comment.trim(),
+        rating: f.rating || null,
+        category: f.category,
+        page_url: (typeof window !== "undefined" ? window.location.pathname + window.location.search : ""),
+      });
+      localStorage.setItem("beta_tester", JSON.stringify({name:f.name, email:f.email}));
+      setDone(true);
+      setF(x => ({...x, comment:"", rating:0, category:"general"}));
+    } catch (x) {
+      setErr(x?.response?.data?.detail || "Sorry — something went wrong. Please try again.");
+    } finally { setBusy(false); }
+  };
+
+  const reset = () => { setDone(false); setErr(""); };
+
+  return (
+    <>
+      <button
+        onClick={()=>{setOpen(true); reset();}}
+        data-testid="beta-feedback-fab"
+        title="Send beta feedback to Doug"
+        style={{
+          position:"fixed", left:"1.25rem", bottom:"1.25rem", zIndex:9998,
+          background:"linear-gradient(135deg,#0F2A5B 0%,#1a3d7a 100%)",
+          color:"#fff", border:"2px solid #F5A623",
+          padding:"0.75rem 1.1rem", borderRadius:999,
+          fontFamily:"Inter,sans-serif", fontSize:"0.85rem", fontWeight:600,
+          boxShadow:"0 6px 20px rgba(0,0,0,0.25)", cursor:"pointer",
+          display:"flex", alignItems:"center", gap:"0.5rem"
+        }}
+      >
+        <span aria-hidden="true">💬</span> Send Feedback
+      </button>
+
+      {open && (
+        <div
+          onClick={(e)=>{if(e.target===e.currentTarget) setOpen(false);}}
+          style={{position:"fixed", inset:0, background:"rgba(15,42,91,0.55)", backdropFilter:"blur(4px)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem"}}
+          data-testid="beta-feedback-modal"
+        >
+          <div style={{background:"#fff", borderRadius:14, maxWidth:520, width:"100%", padding:"1.5rem", boxShadow:"0 20px 60px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"0.5rem"}}>
+              <div>
+                <h3 className="font-display" style={{margin:0, fontSize:"1.4rem", color:"var(--brand-navy)"}}>Send Beta Feedback</h3>
+                <p style={{margin:"0.35rem 0 0", fontSize:"0.85rem", color:"var(--muted)"}}>Every note goes straight to Doug — thank you for testing 🙏</p>
+              </div>
+              <button onClick={()=>setOpen(false)} aria-label="Close" data-testid="beta-close" style={{background:"none",border:"none",fontSize:"1.4rem",cursor:"pointer",color:"var(--muted)",lineHeight:1}}>×</button>
+            </div>
+
+            {done ? (
+              <div style={{background:"#EEF7EF", border:"1px solid #86BC42", borderRadius:10, padding:"1.25rem", marginTop:"1rem", textAlign:"center"}}>
+                <div style={{fontSize:"2rem"}}>✓</div>
+                <div style={{fontWeight:600, color:"var(--brand-navy)", marginTop:"0.5rem"}}>Feedback sent</div>
+                <div style={{fontSize:"0.85rem", color:"var(--muted)", marginTop:"0.35rem"}}>Doug will see this in his admin inbox.</div>
+                <div style={{display:"flex", gap:"0.5rem", justifyContent:"center", marginTop:"1rem"}}>
+                  <button onClick={reset} className="btn btn-outline" style={{padding:"0.5rem 1rem"}} data-testid="beta-send-another">Send another</button>
+                  <button onClick={()=>setOpen(false)} className="btn btn-primary" style={{padding:"0.5rem 1rem"}} data-testid="beta-close-thanks">Close</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={submit} style={{marginTop:"1rem"}}>
+                <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr", gap:"0.75rem"}}>
+                  <div className="field"><label>Your name *</label>
+                    <input required value={f.name} onChange={e=>setF({...f,name:e.target.value})} data-testid="beta-name" placeholder="First and last"/>
+                  </div>
+                  <div className="field"><label>Email *</label>
+                    <input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="beta-email" placeholder="you@example.com"/>
+                  </div>
+                </div>
+                <div className="field"><label>What kind of feedback?</label>
+                  <div style={{display:"flex", gap:"0.4rem", flexWrap:"wrap"}}>
+                    {[
+                      {v:"bug",      l:"🐛 Bug"},
+                      {v:"idea",     l:"💡 Idea"},
+                      {v:"question", l:"❓ Question"},
+                      {v:"general",  l:"💬 General"},
+                    ].map(c => (
+                      <button
+                        key={c.v} type="button"
+                        onClick={()=>setF({...f,category:c.v})}
+                        data-testid={`beta-cat-${c.v}`}
+                        style={{
+                          padding:"0.4rem 0.85rem",
+                          border: f.category===c.v ? "2px solid var(--brand-navy)" : "1px solid rgba(15,42,91,0.2)",
+                          background: f.category===c.v ? "var(--brand-navy)" : "#fff",
+                          color: f.category===c.v ? "#fff" : "var(--ink)",
+                          borderRadius:999, cursor:"pointer",
+                          fontSize:"0.85rem", fontFamily:"Inter,sans-serif",
+                        }}
+                      >{c.l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="field"><label>Overall experience (optional)</label>
+                  <div style={{display:"flex", gap:"0.35rem"}} role="radiogroup" aria-label="Rating">
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} type="button" onClick={()=>setF({...f,rating:n===f.rating?0:n})} data-testid={`beta-star-${n}`}
+                        aria-label={`${n} star${n>1?"s":""}`} aria-pressed={f.rating>=n}
+                        style={{background:"none", border:"none", cursor:"pointer", fontSize:"1.5rem", color: f.rating>=n ? "#F5A623" : "#D4D4D4", lineHeight:1, padding:"0.1rem"}}>
+                        ★
+                      </button>
+                    ))}
+                    {f.rating>0 && <span style={{alignSelf:"center", fontSize:"0.82rem", color:"var(--muted)"}}>{f.rating}/5</span>}
+                  </div>
+                </div>
+                <div className="field"><label>Your feedback *</label>
+                  <textarea required rows={5} value={f.comment} onChange={e=>setF({...f,comment:e.target.value})} data-testid="beta-comment"
+                    placeholder="What did you try? What worked? What didn't? Anything confusing or missing?"
+                    style={{width:"100%", padding:"0.65rem", border:"1px solid rgba(15,42,91,0.15)", borderRadius:8, fontFamily:"Inter,sans-serif", fontSize:"0.92rem", lineHeight:1.5, resize:"vertical"}}/>
+                </div>
+                <div style={{fontSize:"0.75rem", color:"var(--muted)", marginBottom:"0.75rem"}}>
+                  Also captured: current page URL &amp; your browser info (so Doug can reproduce).
+                </div>
+                {err && <div style={{background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:8, padding:"0.6rem 0.85rem", fontSize:"0.85rem", color:"#991B1B", marginBottom:"0.75rem"}} data-testid="beta-error">{typeof err==="string"?err:"Something went wrong."}</div>}
+                <button type="submit" className="btn btn-primary" disabled={busy} style={{width:"100%", padding:"0.75rem"}} data-testid="beta-submit">
+                  {busy ? "Sending…" : "Send feedback"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+const BetaWelcome = () => {
+  return (
+    <div className="container-x" style={{padding:"3rem 1rem 5rem", maxWidth:820}}>
+      <div style={{display:"inline-block", background:"linear-gradient(135deg,#F5A623 0%,#F5C023 100%)", color:"#1a1a1a", padding:"0.3rem 0.85rem", borderRadius:6, fontFamily:"Inter,sans-serif", fontSize:"0.75rem", fontWeight:700, letterSpacing:"0.08em", marginBottom:"1rem"}}>BETA — TESTERS WELCOME</div>
+      <h1 className="font-display" style={{fontSize:"2.4rem", marginTop:0, color:"var(--brand-navy)"}} data-testid="beta-welcome-title">Thanks for helping test EZtoFind.ca</h1>
+      <p style={{fontSize:"1.05rem", lineHeight:1.65, color:"var(--ink)"}}>You're one of the first people to look at Doug LeMaire's new British Columbia real-estate research platform. This page has a short list of things worth trying — and the <strong>Send Feedback</strong> button (bottom-left) is always one click away.</p>
+
+      <div className="paper" style={{marginTop:"1.5rem", background:"#F5F0E1"}}>
+        <h3 style={{marginTop:0, color:"var(--brand-navy)"}}>Suggested test checklist</h3>
+        <ol style={{lineHeight:1.7, paddingLeft:"1.2rem"}}>
+          <li><strong>Doogie AI chat</strong> — click the dog icon (bottom-right) and ask a real question. Try “what's the property transfer tax in BC?” or “show me 3-bedroom homes in Kamloops under $700K”.</li>
+          <li><strong>MLS® search</strong> — go to <Link to="/listings">Search Listings</Link>, pick a community, and try the filters. Do the results feel right? Any listing that looks off?</li>
+          <li><strong>Natural-language search</strong> — from Doogie, try phrases like “4 bedroom home in Prince George under $1.5M” or “vacant land in Osoyoos”. Do the beds/prices match exactly?</li>
+          <li><strong>Communities</strong> — visit <Link to="/communities">Communities</Link> and open one you know well. Does the synopsis, weather, and vibe score read fairly?</li>
+          <li><strong>Glossary</strong> — open <Link to="/glossary">the Glossary</Link>, pick a BC-specific term (Property Transfer Tax, PIPA, Dual Agency…). Are the FAQs accurate?</li>
+          <li><strong>Home valuation</strong> — try <Link to="/valuation">the Home Estimate</Link> tool with an address you know. Is the range reasonable?</li>
+          <li><strong>Referral flow</strong> — if you live in BC but outside Doug's core service area (Ridge Meadows / Langley / Squamish / Whistler), try a search there and watch what Doogie offers.</li>
+          <li><strong>Mobile</strong> — please open the site on your phone at least once. Layout, spacing, and the Doogie button on small screens all matter.</li>
+        </ol>
+      </div>
+
+      <div className="paper" style={{marginTop:"1.5rem", background:"#EAF3FF"}}>
+        <h3 style={{marginTop:0, color:"var(--brand-navy)"}}>Especially helpful feedback</h3>
+        <ul style={{lineHeight:1.7, paddingLeft:"1.2rem"}}>
+          <li>Anything that reads as inaccurate (numbers, dates, policies, tax rules).</li>
+          <li>Anywhere the site feels slow, broken, or confusing.</li>
+          <li>Missing information you'd expect to see for a BC home shopper.</li>
+          <li>Layout weirdness on your specific device (screenshot in the comment helps).</li>
+        </ul>
+      </div>
+
+      <div style={{marginTop:"2rem", padding:"1.25rem", background:"#EEF7EF", border:"1px solid rgba(134,188,66,0.4)", borderRadius:10, textAlign:"center"}}>
+        <p style={{margin:0, fontSize:"1rem"}}>Ready when you are — the <strong>💬 Send Feedback</strong> button is always at the bottom-left of every page.</p>
+      </div>
+    </div>
+  );
+};
+
+const AppLayout = ({children}) => (<><ScrollToTop/><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/><TurnstileScriptLoader/><BetaFeedbackWidget/></>);
 
 // Every SPA navigation lands at the top of the page. Preserves scroll ONLY
 // when the URL includes a hash anchor (so /page#faq still jumps to the anchor).
@@ -3612,6 +3800,92 @@ function PageViewBeacon() {
 }
 const AdminLayout = ({children}) => children;
 
+// ---------- Admin: Beta Feedback inbox ----------
+const AdminFeedback = () => {
+  const {headers} = useAdmin();
+  const [items, setItems] = useState([]);
+  const [counts, setCounts] = useState({new:0, read:0, resolved:0});
+  const [status, setStatus] = useState("");   // "" = all
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    if (!headers) return;
+    setBusy(true);
+    const r = await axios.get(`${API}/admin/feedback${status?`?status=${status}`:""}`, {headers}).catch(()=>({data:{items:[],counts:{}}}));
+    setItems(r.data.items || []);
+    setCounts(r.data.counts || {});
+    setBusy(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status]);
+
+  const setStatusFor = async (id, newStatus) => {
+    await axios.patch(`${API}/admin/feedback/${id}`, {status: newStatus}, {headers});
+    load();
+  };
+  const del = async (id) => {
+    if (!window.confirm("Delete this feedback? This cannot be undone.")) return;
+    await axios.delete(`${API}/admin/feedback/${id}`, {headers});
+    load();
+  };
+
+  const catBadge = (cat) => {
+    const m = {bug:{bg:"#FEE2E2",fg:"#991B1B",label:"🐛 Bug"}, idea:{bg:"#EAF3FF",fg:"#1E40AF",label:"💡 Idea"}, question:{bg:"#FEF3C7",fg:"#92400E",label:"❓ Question"}, general:{bg:"#F3F4F6",fg:"#374151",label:"💬 General"}};
+    const s = m[cat] || m.general;
+    return <span style={{background:s.bg,color:s.fg,padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:600}}>{s.label}</span>;
+  };
+  const statusBadge = (st) => {
+    const m = {new:{bg:"#F5A623",fg:"#fff",label:"NEW"}, read:{bg:"#E5E7EB",fg:"#374151",label:"READ"}, resolved:{bg:"#86BC42",fg:"#fff",label:"RESOLVED"}};
+    const s = m[st] || m.new;
+    return <span style={{background:s.bg,color:s.fg,padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.05em"}}>{s.label}</span>;
+  };
+
+  return <AdminShell active="feedback">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Beta Feedback</h1>
+    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>Every submission from the public site's floating <strong>💬 Send Feedback</strong> button lands here.</p>
+
+    <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+      {[
+        {v:"",         l:`All (${(counts.new||0)+(counts.read||0)+(counts.resolved||0)})`},
+        {v:"new",      l:`🟠 New (${counts.new||0})`},
+        {v:"read",     l:`⚪ Read (${counts.read||0})`},
+        {v:"resolved", l:`✓ Resolved (${counts.resolved||0})`},
+      ].map(t => (
+        <button key={t.v} onClick={()=>setStatus(t.v)} className={status===t.v?"btn btn-primary":"btn btn-outline"} style={{padding:"0.5rem 1rem",fontSize:"0.9rem"}} data-testid={`fb-tab-${t.v||"all"}`}>{t.l}</button>
+      ))}
+    </div>
+
+    {busy && <p>Loading…</p>}
+    {!busy && items.length === 0 && <p style={{color:"var(--muted)"}}>✓ No feedback in this bucket yet.</p>}
+
+    {!busy && items.map(it => (
+      <div key={it.id} className="paper" style={{marginBottom:"1rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"1rem",flexWrap:"wrap",marginBottom:"0.75rem"}}>
+          <div style={{flex:1, minWidth:220}}>
+            <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap",marginBottom:"0.35rem"}}>
+              {statusBadge(it.status)}
+              {catBadge(it.category)}
+              {it.rating>0 && <span style={{fontSize:"0.85rem",color:"#F5A623"}}>{"★".repeat(it.rating)}<span style={{color:"#D4D4D4"}}>{"★".repeat(5-it.rating)}</span></span>}
+            </div>
+            <div style={{fontWeight:600, color:"var(--brand-navy)"}}>{it.name}</div>
+            <div style={{fontSize:"0.82rem", color:"var(--muted)"}}>
+              <a href={`mailto:${it.email}`} style={{color:"var(--brand-blue)"}}>{it.email}</a> · {new Date(it.created_at).toLocaleString()}
+              {it.page_url && <> · <code style={{background:"#F5F0E1",padding:"0.05rem 0.3rem",borderRadius:4}}>{it.page_url}</code></>}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:"0.4rem",flexWrap:"wrap"}}>
+            {it.status !== "read" && <button onClick={()=>setStatusFor(it.id,"read")} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} data-testid={`fb-read-${it.id}`}>Mark read</button>}
+            {it.status !== "resolved" && <button onClick={()=>setStatusFor(it.id,"resolved")} className="btn btn-green" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} data-testid={`fb-resolve-${it.id}`}>✓ Resolve</button>}
+            {it.status === "resolved" && <button onClick={()=>setStatusFor(it.id,"new")} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}}>Reopen</button>}
+            <button onClick={()=>del(it.id)} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem",color:"#DC2626",borderColor:"#DC2626"}} data-testid={`fb-del-${it.id}`}>Delete</button>
+          </div>
+        </div>
+        <div style={{whiteSpace:"pre-wrap",fontSize:"0.95rem",lineHeight:1.55,padding:"0.75rem",background:"#FAFAF5",borderRadius:8,borderLeft:"3px solid var(--brand-navy)"}}>{it.comment}</div>
+        {it.user_agent && <div style={{fontSize:"0.72rem", color:"var(--muted)", marginTop:"0.5rem", fontFamily:"monospace"}}>{it.user_agent}</div>}
+      </div>
+    ))}
+  </AdminShell>;
+};
+
 function App() {
   return (<BrowserRouter>
     <Routes>
@@ -3644,6 +3918,7 @@ function App() {
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
       <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
       <Route path="/relocating" element={<AppLayout><Relocating/></AppLayout>}/>
+      <Route path="/beta" element={<AppLayout><BetaWelcome/></AppLayout>}/>
       <Route path="/legal/retention" element={<AppLayout><RetentionPolicy/></AppLayout>}/>
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
@@ -3658,6 +3933,7 @@ function App() {
       <Route path="/admin/clients" element={<AdminClients/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
+      <Route path="/admin/feedback" element={<AdminFeedback/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
     </Routes>
   </BrowserRouter>);

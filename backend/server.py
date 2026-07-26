@@ -259,6 +259,18 @@ class AdminLogin(BaseModel):
     email: str
     password: str
 
+class BetaFeedback(BaseModel):
+    name: str
+    email: str
+    comment: str
+    rating: Optional[int] = None       # 1..5
+    category: Optional[str] = "general"  # "bug" | "idea" | "question" | "general"
+    page_url: Optional[str] = ""
+
+class AdminFeedbackUpdate(BaseModel):
+    status: Optional[str] = None       # "new" | "read" | "resolved"
+    admin_note: Optional[str] = None
+
 # =============== AUTH ===============
 def hash_password(plain: str) -> str:
     """bcrypt hash → utf-8 string (safe to store in Mongo)."""
@@ -342,6 +354,89 @@ async def admin_change_password(body: ChangePassword, _=Depends(verify_admin)):
             raise HTTPException(401, "Current password is incorrect.")
     await _set_admin_hash(hash_password(body.new_password))
     return {"success": True, "message": "Password updated. Use the new password on your next login."}
+
+
+# =============== BETA FEEDBACK (public + admin inbox) ===============
+_ALLOWED_FEEDBACK_CATEGORIES = {"bug", "idea", "question", "general"}
+_ALLOWED_FEEDBACK_STATUSES = {"new", "read", "resolved"}
+
+
+@api.post("/beta/feedback")
+@_limiter.limit("10/hour")
+async def submit_beta_feedback(request: Request, body: BetaFeedback):
+    """Public endpoint for beta testers to submit feedback. Rate-limited to
+    10 submissions per IP per hour to keep out casual spam."""
+    name = (body.name or "").strip()[:120]
+    email = (body.email or "").strip()[:200]
+    comment = (body.comment or "").strip()[:4000]
+    if not name or not email or not comment:
+        raise HTTPException(400, "Name, email, and comment are required.")
+    if "@" not in email or "." not in email:
+        raise HTTPException(400, "Please enter a valid email address.")
+    if len(comment) < 5:
+        raise HTTPException(400, "Comment is too short — please add a bit more detail.")
+
+    rating = body.rating if body.rating in (1, 2, 3, 4, 5) else None
+    category = (body.category or "general").strip().lower()
+    if category not in _ALLOWED_FEEDBACK_CATEGORIES:
+        category = "general"
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "email": email,
+        "comment": comment,
+        "rating": rating,
+        "category": category,
+        "page_url": (body.page_url or "")[:500],
+        "user_agent": (request.headers.get("user-agent") or "")[:300],
+        "ip": _rate_limit_key(request),
+        "status": "new",
+        "admin_note": "",
+        "created_at": now_iso(),
+    }
+    await db.beta_feedback.insert_one(doc)
+    return {"success": True, "id": doc["id"], "message": "Thanks — Doug will see this next time he checks the feedback inbox."}
+
+
+@api.get("/admin/feedback")
+async def admin_list_feedback(status: Optional[str] = None, _=Depends(verify_admin)):
+    """List feedback for Doug's inbox. Optional ?status=new|read|resolved filter."""
+    q: dict = {}
+    if status and status in _ALLOWED_FEEDBACK_STATUSES:
+        q["status"] = status
+    docs = await db.beta_feedback.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    counts = {}
+    for s in _ALLOWED_FEEDBACK_STATUSES:
+        counts[s] = await db.beta_feedback.count_documents({"status": s})
+    return {"count": len(docs), "items": docs, "counts": counts}
+
+
+@api.patch("/admin/feedback/{feedback_id}")
+async def admin_update_feedback(feedback_id: str, body: AdminFeedbackUpdate, _=Depends(verify_admin)):
+    update: dict = {}
+    if body.status is not None:
+        if body.status not in _ALLOWED_FEEDBACK_STATUSES:
+            raise HTTPException(400, "Invalid status")
+        update["status"] = body.status
+    if body.admin_note is not None:
+        update["admin_note"] = body.admin_note[:2000]
+    if not update:
+        raise HTTPException(400, "Nothing to update")
+    update["updated_at"] = now_iso()
+    r = await db.beta_feedback.update_one({"id": feedback_id}, {"$set": update})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Feedback not found")
+    return {"success": True, "modified": r.modified_count}
+
+
+@api.delete("/admin/feedback/{feedback_id}")
+async def admin_delete_feedback(feedback_id: str, _=Depends(verify_admin)):
+    r = await db.beta_feedback.delete_one({"id": feedback_id})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Feedback not found")
+    return {"success": True}
+
 
 # =============== DOOGIE AI CHAT ===============
 DOOGIE_SYSTEM = """You are Doogie, the friendly AI mascot for EZtoFind.ca — a British Columbia real estate search platform run by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.).
