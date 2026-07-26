@@ -2360,18 +2360,9 @@ const PTTCalculator = () => {
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
     <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-      <div className="eyebrow" style={{marginBottom:"0.5rem"}}>BC Calculators</div>
       <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
-        Estimate Your <span className="accent">Home-Buying Costs</span>
+        What can you <span className="accent">afford?</span>
       </h2>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.6,maxWidth:"38rem",margin:"0 auto 1.25rem"}}>See your <span className="green" style={{fontWeight:600}}>maximum home price</span>, monthly payment, and all closing costs — instantly, under current BC stress-test rules.</p>
-      <div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
-        {[{i:"⚡",t:"Instant"},{i:"🆓",t:"Free"},{i:"🔓",t:"No sign-up"}].map(b => (
-          <span key={b.t} style={{display:"inline-flex",alignItems:"center",gap:"0.4rem",padding:"0.4rem 0.9rem",background:"rgba(15,42,91,0.06)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,fontSize:"0.82rem",fontWeight:600,color:"var(--brand-navy)"}}>
-            <span style={{fontSize:"0.95rem"}} aria-hidden="true">{b.i}</span>{b.t}
-          </span>
-        ))}
-      </div>
     </div>
     <AffordabilityCalculator/>
   </div></section>
