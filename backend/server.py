@@ -1803,8 +1803,10 @@ async def generate_all_neighbourhoods(auto_approve: bool = False, _=Depends(veri
     return {"success": True, "message": f"Generating synopses for {len(todo)} micro-neighbourhoods in background. Refresh in ~40-90 minutes.", "total": len(todo)}
 
 @api.post("/admin/approvals/generate-all")
-async def generate_all_missing(_=Depends(verify_admin)):
-    """Generate synopsis + weather for EVERY BC community that doesn't have them yet. Runs in background."""
+async def generate_all_missing(auto_approve: bool = False, _=Depends(verify_admin)):
+    """Generate synopsis + weather for EVERY BC community that doesn't have them yet. Runs in background.
+    If auto_approve=true, each doc is marked approved (BCFSA-attested by Doug via this admin action)
+    the moment it's written — publishes to the public site immediately."""
     import asyncio as _a
     all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
     todo = []
@@ -1813,24 +1815,32 @@ async def generate_all_missing(_=Depends(verify_admin)):
             slug = re.sub(r"[^a-z0-9]+","-", community.lower()).strip("-")
             todo.append((slug, community, region))
 
+    def _approve_fields():
+        if not auto_approve: return {}
+        return {"approved": True, "approved_at": now_iso(), "approved_by": "bulk_admin_action"}
+
     async def worker():
         SEM = _a.Semaphore(4)  # up to 4 concurrent Claude calls
         async def gen_syn(slug, name, region):
             async with SEM:
                 if await db.community_synopses.find_one({"slug": slug, "synopsis": {"$ne": ""}}): return
                 s = await generate_community_synopsis(name, region)
-                if s: await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": s, "approved": False, "ts": now_iso()}, upsert=True)
+                if s:
+                    doc = {"slug": slug, "name": name, "region": region, "synopsis": s, "approved": bool(auto_approve), "ts": now_iso(), **_approve_fields()}
+                    await db.community_synopses.replace_one({"slug": slug}, doc, upsert=True)
         async def gen_wx(slug, name, region):
             async with SEM:
                 if await db.community_weather.find_one({"slug": slug, "weather": {"$ne": ""}}): return
                 w = await generate_community_weather(name, region)
-                if w: await db.community_weather.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "weather": w, "approved": False, "ts": now_iso()}, upsert=True)
+                if w:
+                    doc = {"slug": slug, "name": name, "region": region, "weather": w, "approved": bool(auto_approve), "ts": now_iso(), **_approve_fields()}
+                    await db.community_weather.replace_one({"slug": slug}, doc, upsert=True)
         tasks = []
         for slug, name, region in todo:
             tasks.append(gen_syn(slug, name, region))
             tasks.append(gen_wx(slug, name, region))
         await _a.gather(*tasks, return_exceptions=True)
-        logger.info(f"Bulk generation complete for {len(todo)} communities")
+        logger.info(f"Bulk community generation complete for {len(todo)} communities (auto_approve={auto_approve})")
 
     _a.create_task(worker())
     return {"success": True, "message": f"Generating synopsis + weather for {len(todo)} communities in background. Refresh the approval queues in ~15-30 minutes.", "total": len(todo)}
