@@ -2549,33 +2549,40 @@ app.include_router(api)
 # response so the UI can show a friendly message instead of crashing.
 import base64
 from fastapi import File, UploadFile, Form
+import io as _io
 
 @app.post("/api/doogie/transcribe")
 async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("en")):
-    """Transcribe voice input via OpenAI Whisper. Requires OPENAI_API_KEY in env.
+    """Transcribe voice input via OpenAI Whisper — powered by the Emergent
+    Universal LLM Key so Doug doesn't need to plug in a separate OpenAI key.
     Frontend sends a webm/opus blob (browser MediaRecorder default).
-    Language hint maps our codes → Whisper language codes."""
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-    if not openai_key:
-        return {"text": "", "error": "Voice input is coming soon — configure OPENAI_API_KEY to enable Whisper."}
-    lang_map = {"en":"en", "zh-Hant":"zh", "zh-Hans":"zh", "pa":"pa", "fa":"fa", "pt-PT":"pt"}
+    Language hint maps our chat codes → Whisper's ISO-639-1 codes.
+    """
+    lang_map = {"en": "en", "zh-Hant": "zh", "zh-Hans": "zh", "pa": "pa", "fa": "fa", "pt-PT": "pt"}
     try:
         data = await audio.read()
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                "https://api.openai.com/v1/audio/transcriptions",
-                headers={"Authorization": f"Bearer {openai_key}"},
-                files={"file": (audio.filename or "voice.webm", data, audio.content_type or "audio/webm")},
-                data={"model": "whisper-1", "language": lang_map.get(language, "en")},
-            )
-            if r.status_code != 200:
-                logger.warning(f"Whisper error {r.status_code}: {r.text[:200]}")
-                return {"text": "", "error": "Transcription service returned an error."}
-            js = r.json()
-            return {"text": js.get("text",""), "language": language}
+        # CASL/PIPA: cap the payload at Whisper's 25 MB limit before we even
+        # hit the API — protects Doug's Universal Key balance from abuse.
+        if len(data) > 25 * 1024 * 1024:
+            return {"text": "", "error": "Audio is too long (max 25 MB). Please keep voice input under a minute."}
+        from emergentintegrations.llm.openai import OpenAISpeechToText
+        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
+        # emergentintegrations accepts a file-like — wrap the bytes in BytesIO
+        # and give it a name so the SDK can infer the mime type.
+        buf = _io.BytesIO(data)
+        buf.name = audio.filename or "voice.webm"
+        response = await stt.transcribe(
+            file=buf,
+            model="whisper-1",
+            response_format="json",
+            language=lang_map.get(language, "en"),
+            temperature=0.0,
+        )
+        text = (getattr(response, "text", "") or "").strip()
+        return {"text": text, "language": language, "provider": "emergent-universal"}
     except Exception as e:
         logger.warning(f"Whisper transcribe failed: {e}")
-        return {"text": "", "error": "Transcription failed. Please try typing."}
+        return {"text": "", "error": "Transcription failed. Please try typing your message."}
 
 @app.on_event("shutdown")
 async def shutdown(): mongo_client.close()

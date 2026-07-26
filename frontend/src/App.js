@@ -613,7 +613,7 @@ const DoogieChat = () => {
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
 
   // Voice input via MediaRecorder → OpenAI Whisper (backend endpoint /doogie/transcribe).
-  // Endpoint is a scaffold — activates once OPENAI_API_KEY is configured (see /app/backend/services/).
+  // Powered by the Emergent Universal LLM Key — no user-provided OpenAI key required.
   const toggleMic = async () => {
     if (listening) {
       try { mediaRef.current?.stop(); } catch {}
