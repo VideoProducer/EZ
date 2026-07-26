@@ -1697,6 +1697,104 @@ async def approve_all_weather(_=Depends(verify_admin)):
     r = await db.community_weather.update_many({"approved": {"$ne": True}, "weather": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
     return {"success": True, "modified": r.modified_count}
 
+# --- Micro-neighbourhood synopses (sub-areas of communities) ---
+@api.get("/admin/approvals/neighbourhoods")
+async def pending_neighbourhoods(_=Depends(verify_admin)):
+    return await db.neighbourhood_synopses.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(2000)
+
+class ApproveNeighbourhood(BaseModel):
+    slug: str
+    n_slug: str
+    synopsis: Optional[str] = None
+
+@api.post("/admin/approvals/neighbourhoods/approve")
+async def approve_neighbourhood(body: ApproveNeighbourhood, _=Depends(verify_admin)):
+    update = {"approved": True, "approved_at": now_iso()}
+    if body.synopsis is not None: update["synopsis"] = body.synopsis
+    r = await db.neighbourhood_synopses.update_one({"slug": body.slug, "n_slug": body.n_slug}, {"$set": update})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/neighbourhoods/approve-all")
+async def approve_all_neighbourhoods(_=Depends(verify_admin)):
+    r = await db.neighbourhood_synopses.update_many({"approved": {"$ne": True}, "synopsis": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/neighbourhoods/{slug}/{n_slug}/regenerate")
+async def regenerate_neighbourhood(slug: str, n_slug: str, _=Depends(verify_admin)):
+    d = await db.neighbourhood_synopses.find_one({"slug": slug, "n_slug": n_slug}, {"_id":0})
+    if not d: raise HTTPException(404, "Not found")
+    # Re-collect listing stats for the prompt context
+    agg = await db.listings.aggregate([
+        {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(d['community'])}$","$options":"i"},"region":d["neighbourhood"],"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
+    ]).to_list(1)
+    stats = agg[0] if agg else {}
+    ls = {
+        "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
+        "beds_mix": f"avg {stats.get('avg_beds') or 0:.1f} beds" if stats.get("avg_beds") else "mixed",
+        "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
+    }
+    s = await generate_neighbourhood_synopsis(d["neighbourhood"], d["community"], d["region"], ls)
+    await db.neighbourhood_synopses.update_one({"slug": slug, "n_slug": n_slug}, {"$set": {"synopsis": s, "approved": False, "ts": now_iso()}})
+    return {"success": True, "synopsis": s}
+
+@api.post("/admin/approvals/generate-all-neighbourhoods")
+async def generate_all_neighbourhoods(_=Depends(verify_admin)):
+    """Generate Claude-authored synopses for EVERY sub-neighbourhood with active MLS
+    listings, across all BC communities. Runs in background (~40-90 min for ~500 sub-areas)."""
+    import asyncio as _a
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    city_map = {}
+    for region, lst in all_comm.items():
+        for name in lst:
+            city_map[name.lower()] = (name, region)
+
+    # Aggregate distinct (city, region) pairs from live MLS
+    pipeline = [
+        {"$match": {"status":"Active","region":{"$nin":["", None]}}},
+        {"$group": {"_id": {"city":"$city","region":"$region"}}},
+    ]
+    todo = []
+    async for row in db.listings.aggregate(pipeline):
+        city = (row["_id"].get("city") or "").strip()
+        n_name = (row["_id"].get("region") or "").strip()
+        hit = city_map.get(city.lower())
+        if not hit or not n_name: continue
+        c_name, region = hit
+        if n_name.strip().lower() == region.strip().lower(): continue
+        c_slug = re.sub(r"[^a-z0-9]+","-", c_name.lower()).strip("-")
+        n_slug = re.sub(r"[^a-z0-9]+","-", n_name.lower()).strip("-")
+        if not n_slug: continue
+        todo.append((c_slug, c_name, region, n_slug, n_name))
+
+    async def worker():
+        SEM = _a.Semaphore(4)
+        async def gen_one(c_slug, c_name, region, n_slug, n_name):
+            async with SEM:
+                existing = await db.neighbourhood_synopses.find_one({"slug": c_slug, "n_slug": n_slug, "synopsis": {"$ne": ""}})
+                if existing: return
+                agg = await db.listings.aggregate([
+                    {"$match": {"status":"Active","city":{"$regex":f"^{re.escape(c_name)}$","$options":"i"},"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+                    {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
+                ]).to_list(1)
+                stats = agg[0] if agg else {}
+                ls = {
+                    "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
+                    "beds_mix": f"avg {stats.get('avg_beds') or 0:.1f} beds" if stats.get("avg_beds") else "mixed",
+                    "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
+                }
+                s = await generate_neighbourhood_synopsis(n_name, c_name, region, ls)
+                if s:
+                    await db.neighbourhood_synopses.replace_one(
+                        {"slug": c_slug, "n_slug": n_slug},
+                        {"slug": c_slug, "n_slug": n_slug, "community": c_name, "region": region, "neighbourhood": n_name, "synopsis": s, "approved": False, "ts": now_iso()},
+                        upsert=True,
+                    )
+        await _a.gather(*[gen_one(*t) for t in todo], return_exceptions=True)
+        logger.info(f"Bulk neighbourhood synopsis generation complete: {len(todo)} sub-areas")
+    _a.create_task(worker())
+    return {"success": True, "message": f"Generating synopses for {len(todo)} micro-neighbourhoods in background. Refresh in ~40-90 minutes.", "total": len(todo)}
+
 @api.post("/admin/approvals/generate-all")
 async def generate_all_missing(_=Depends(verify_admin)):
     """Generate synopsis + weather for EVERY BC community that doesn't have them yet. Runs in background."""
