@@ -2322,7 +2322,7 @@ const RealtorApplyOutOfProvince = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For REALTORS® Outside BC</div><h1 className="section-title">Request to join our out-of-province referral network</h1>
-    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia?</p>
+    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a REALTOR® outside British Columbia?</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-oop-apply-form">
           <div className="form-grid">
