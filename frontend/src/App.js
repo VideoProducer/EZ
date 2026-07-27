@@ -3237,28 +3237,6 @@ const AffordabilityCalculator = () => {
   if (propType && propType !== "Any") linkParams.set("property_type", propType);
   const listingsHref = `/listings?${linkParams.toString()}`;
 
-  const doogieHandoff = () => {
-    const parts = [`I make $${annualIncome.toLocaleString()} a year`, `have $${downPmt.toLocaleString()} saved`];
-    if (monthlyDebts > 0) parts.push(`monthly debts of $${monthlyDebts.toLocaleString()}`);
-    if (community) parts.push(`looking in ${community}`);
-    const msg = parts.join(", ") + `. What can I buy${propType !== "Any" ? ` — ${propType.toLowerCase()}s only` : ""}?`;
-    localStorage.setItem("ez_doogie_prefill", msg);
-    // Fire a click on the FAB
-    setTimeout(() => {
-      const fab = document.querySelector('[data-testid="doogie-fab"]');
-      if (fab) fab.click();
-      setTimeout(() => {
-        const inp = document.querySelector('[data-testid="doogie-input"]');
-        if (inp) {
-          const nv = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-          nv.call(inp, msg);
-          inp.dispatchEvent(new Event("input", { bubbles: true }));
-          inp.focus();
-        }
-      }, 500);
-    }, 100);
-  };
-
   const FieldBox = ({label, prefix, children, hint}) => (
     <div style={{flex:"1 1 240px",minWidth:220}}>
       <label style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.9rem",display:"block",marginBottom:"0.4rem"}}>{label}</label>
@@ -3357,9 +3335,6 @@ const AffordabilityCalculator = () => {
         <Link to={listingsHref} className="btn btn-primary" data-testid="afford-see-listings" style={{flex:"1 1 240px",textAlign:"center",textDecoration:"none"}}>
           🏡 Show me listings under {fmtDollar(Math.floor(priceCap/1000)*1000)}
         </Link>
-        <button type="button" onClick={doogieHandoff} className="btn btn-ghost" data-testid="afford-ask-doogie" style={{flex:"1 1 200px"}}>
-          🐾 Ask Doogie about my numbers
-        </button>
       </div>
 
       <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0,textAlign:"center"}}>
