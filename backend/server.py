@@ -246,6 +246,7 @@ class Client(BaseModel):
     mortgage_renewal_date: Optional[str] = None  # YYYY-MM-DD; 90 & 60-day pings
     mortgage_lender: Optional[str] = ""
     send_christmas: bool = True
+    send_new_year: bool = True
     # CASL express-consent tracking (mandatory before any commercial email)
     email_consent: bool = False
     consent_date: Optional[str] = None  # YYYY-MM-DD Doug obtained express consent
@@ -1386,11 +1387,25 @@ async def get_reminders(_=Depends(verify_admin)):
                     "auto_send": True,
                 })
 
+        # New Year — appears Dec 22 onward, sent Jan 1; opt-in per client
+        if c.get("send_new_year", True):
+            delta = _days_until(1, 1)
+            if 0 <= delta <= horizon_days:
+                target = today + timedelta(days=delta)
+                reminders.append({
+                    **base,
+                    "type": "New Year Greeting",
+                    "type_key": "new_year",
+                    "date": target.isoformat(),
+                    "days_until": delta,
+                    "auto_send": True,
+                })
+
     reminders.sort(key=lambda r: r["days_until"])
     return reminders
 
 # ---------- Reminder templates ----------
-_REMINDER_TYPES = ["birthday", "anniversary", "possession", "bc_assessment", "mortgage_renewal", "christmas"]
+_REMINDER_TYPES = ["birthday", "anniversary", "possession", "bc_assessment", "mortgage_renewal", "christmas", "new_year"]
 
 DEFAULT_REMINDER_TEMPLATES = {
     "birthday": {
@@ -1474,6 +1489,19 @@ DEFAULT_REMINDER_TEMPLATES = {
             "to you and yours! Thank you for being part of the EZtoFind.ca community this year.</p>"
             "<p>Wishing you a restful season, safe travels, and a bright 2027.</p>"
             "<p>See you in the new year,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
+        ),
+    },
+    "new_year": {
+        "subject": "Happy New Year, {{first_name}} — cheers to what's next 🎉",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Wishing you and yours a <strong>very happy New Year</strong>! Whatever 2027 brings — a "
+            "move, a renovation, a new career chapter, or simply enjoying the home you're already in — "
+            "I hope it's a year of good news, good health, and good coffee. ☕</p>"
+            "<p>If real estate ends up on your radar this year — even just a curiosity check about your "
+            "home's current market value — you know where to find me. No obligation, no pressure, just "
+            "a friendly chat whenever you're ready.</p>"
+            "<p>Here's to a great year ahead,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
         ),
     },
 }
@@ -1702,6 +1730,8 @@ async def auto_send_today(request: Request, _=Depends(verify_admin)):
                 continue
         if c.get("send_christmas", True) and today.month == 12 and today.day == 20:
             pairs.append(("christmas", {}))
+        if c.get("send_new_year", True) and today.month == 1 and today.day == 1:
+            pairs.append(("new_year", {}))
 
         for type_key, extra in pairs:
             if (c["id"], type_key) in already_sent:

@@ -2723,7 +2723,7 @@ const AdminList = ({title,url,cols,active}) => {
 const AdminClients = () => {
   const {headers} = useAdmin();
   const [rows,setRows]=useState([]); const [show,setShow]=useState(false);
-  const empty = {full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:"",property_address:"",bc_assessment_opt_in:true,mortgage_renewal_date:"",mortgage_lender:"",send_christmas:true,email_consent:false,consent_date:"",consent_source:""};
+  const empty = {full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:"",property_address:"",bc_assessment_opt_in:true,mortgage_renewal_date:"",mortgage_lender:"",send_christmas:true,send_new_year:true,email_consent:false,consent_date:"",consent_source:""};
   const [f,setF]=useState(empty);
   const load=()=>axios.get(`${API}/admin/clients`,{headers}).then(r=>setRows(r.data)).catch(()=>{});
   useEffect(()=>{ load(); },[]);
@@ -2759,6 +2759,7 @@ const AdminClients = () => {
       <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}>
         <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.bc_assessment_opt_in} onChange={e=>setF({...f,bc_assessment_opt_in:e.target.checked})} data-testid="client-bca-opt"/> 📋 Send BC Assessment heads-up (early January)</label>
         <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.send_christmas} onChange={e=>setF({...f,send_christmas:e.target.checked})} data-testid="client-xmas-opt"/> 🎄 Include in Christmas bulk send</label>
+        <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.send_new_year} onChange={e=>setF({...f,send_new_year:e.target.checked})} data-testid="client-newyear-opt"/> 🎉 Include in New Year bulk send</label>
       </div>
 
       <h3 style={{margin:"1.5rem 0 0.75rem",color:"var(--brand-navy)"}}>CASL Express Consent <span style={{color:"var(--muted)",fontWeight:400,fontSize:"0.85rem"}}>— required by Canadian law before sending any commercial email</span></h3>
@@ -2896,7 +2897,7 @@ const AdminReminderTemplates = () => {
     load();
   };
   const update = (type, patch) => setTpls(ts => ts.map(t => t.type === type ? {...t, ...patch} : t));
-  const LABEL = {birthday:"🎂 Birthday",anniversary:"💍 Anniversary",possession:"🏠 Possession-versary",bc_assessment:"📋 BC Assessment",mortgage_renewal:"💰 Mortgage Renewal",christmas:"🎄 Christmas"};
+  const LABEL = {birthday:"🎂 Birthday",anniversary:"💍 Anniversary",possession:"🏠 Possession-versary",bc_assessment:"📋 BC Assessment",mortgage_renewal:"💰 Mortgage Renewal",christmas:"🎄 Christmas",new_year:"🎉 New Year"};
   return <AdminShell active="rem-templates">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Reminder Templates</h1>
     <p style={{color:"var(--muted)"}}>Edit the 6 lifecycle reminder emails. Every email auto-appends a CASL-compliant footer with your brokerage identifier + a working unsubscribe link — no need to add it yourself. Available merge tags:</p>
@@ -3017,7 +3018,7 @@ const AdminEmailLog = () => {
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Reminder Email Log</h1>
     <p style={{color:"var(--muted)"}}>7-year audit trail of every reminder email queued or sent (CASL / BCFSA compliance).</p>
     <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem"}}>
-      {["","birthday","anniversary","possession","bc_assessment","mortgage_renewal","christmas"].map(t => (
+      {["","birthday","anniversary","possession","bc_assessment","mortgage_renewal","christmas","new_year"].map(t => (
         <button key={t||"all"} onClick={()=>setFilter(t)} className={filter===t?"btn btn-primary":"btn btn-ghost"} style={{padding:"0.35rem 0.9rem",fontSize:"0.82rem"}}>{t||"All"}</button>
       ))}
     </div>
