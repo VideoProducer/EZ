@@ -882,8 +882,12 @@ const DoogieChat = () => {
   const [sessionId] = useState(() => "sess-" + Math.random().toString(36).slice(2));
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
+  // Voice output (TTS) — persisted preference. Default OFF so first-time users
+  // don't get startled by autoplay audio. Users toggle via the 🔊/🔇 button.
+  const [voiceOut, setVoiceOut] = useState(() => localStorage.getItem("ez_doogie_voice_out") === "1");
   const scrollRef = useRef();
   const mediaRef = useRef(null);
+  const audioRef = useRef(null);   // currently-playing HTMLAudioElement, so we can stop mid-play
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
   // Pre-fill from affordability calculator handoff
@@ -893,6 +897,49 @@ const DoogieChat = () => {
   }, [open, consented]);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
+
+  // Stop any currently-playing Doogie voice — used when panel closes, a new
+  // message starts, or the user toggles voice-out off mid-play.
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.src = ""; } catch(_) {}
+      audioRef.current = null;
+    }
+  };
+
+  // Fetch a TTS blob from the backend and auto-play it. Text is trimmed to the
+  // TTS 4096-char cap on the server side; here we defensively slice to 3800.
+  const speak = async (text) => {
+    if (!voiceOut || !text) return;
+    try {
+      stopSpeaking();   // stop anything mid-play before starting the new one
+      const r = await fetch(`${API}/doogie/tts`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: text.slice(0, 3800), voice: "nova", session_id: sessionId}),
+      });
+      if (!r.ok) return;
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      audioRef.current = a;
+      a.onended = () => { try { URL.revokeObjectURL(url); } catch(_){} if (audioRef.current === a) audioRef.current = null; };
+      await a.play();
+    } catch (e) {
+      // Autoplay policies may throw NotAllowedError on some browsers until user
+      // interacts with the page. That's fine — the user just toggled the
+      // speaker so we're already past that gate in almost every case.
+    }
+  };
+
+  // When user disables voice-out mid-play, stop the audio immediately.
+  useEffect(() => {
+    localStorage.setItem("ez_doogie_voice_out", voiceOut ? "1" : "0");
+    if (!voiceOut) stopSpeaking();
+  }, [voiceOut]);
+
+  // Stop audio when chat panel closes (privacy + battery).
+  useEffect(() => { if (!open) stopSpeaking(); }, [open]);
 
   // Voice input via MediaRecorder → OpenAI Whisper (backend endpoint /doogie/transcribe).
   // Powered by the Emergent Universal LLM Key — no user-provided OpenAI key required.
@@ -971,7 +1018,12 @@ const DoogieChat = () => {
           try {
             const j = JSON.parse(line.slice(5).trim());
             if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], role:"assistant",content:(c[c.length-1].content||"")+j.delta}; return c; }); }
-            else if(j.done) { setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], meta: {cached: !!j.cached, pii_redacted: !!j.pii_redacted, language: lang}}; return c; }); }
+            else if(j.done) {
+              setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], meta: {cached: !!j.cached, pii_redacted: !!j.pii_redacted, language: lang}}; return c; });
+              // Fire-and-forget TTS if the user has voice-out enabled. Runs
+              // async so the "done" UI update doesn't wait on OpenAI.
+              setMsgs(m => { const full = m[m.length-1]?.content || ""; if (voiceOut && full) speak(full); return m; });
+            }
             else if(j.error) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: "+String(j.error).slice(0,180)+")"}; return c; }); }
           } catch{}
         }
@@ -987,9 +1039,16 @@ const DoogieChat = () => {
     </button>
     {open && <div className="doogie-panel" data-testid="doogie-panel">
       <header><img src={DOOGIE_THINKING} alt="Doogie"/><div><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85}}>AI Helper · General Info Only</div></div>
+        <button type="button" onClick={()=>setVoiceOut(v=>!v)} data-testid="doogie-voiceout-toggle"
+          aria-label={voiceOut ? "Turn Doogie's voice off" : "Turn Doogie's voice on"}
+          title={voiceOut ? "Voice ON — Doogie will speak replies. Tap to mute." : "Voice OFF — tap to hear Doogie speak"}
+          aria-pressed={voiceOut}
+          style={{marginLeft:"auto",width:36,height:36,borderRadius:8,border:"1px solid rgba(255,255,255,0.35)",background:voiceOut?"rgba(245,166,35,0.35)":"rgba(255,255,255,0.15)",color:"white",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}>
+          {voiceOut ? "🔊" : "🔇"}
+        </button>
         <select value={lang} onChange={e=>setLang(e.target.value)} data-testid="doogie-lang-select"
           title="Chat language"
-          style={{marginLeft:"auto",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.5rem",fontSize:"0.85rem",cursor:"pointer",fontFamily:"Inter,sans-serif"}}>
+          style={{marginLeft:"0.35rem",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.5rem",fontSize:"0.85rem",cursor:"pointer",fontFamily:"Inter,sans-serif"}}>
           {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label} · {l.name}</option>)}
         </select>
         <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
@@ -2536,17 +2595,17 @@ const AdminShell = ({children,active}) => {
   return (<div className="admin-shell">
     <aside className="admin-sidebar">
       <h3>Doug's Desk</h3>
-      <a onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
-      <a onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
-      <a onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
-      <a onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
-      <a onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
-      <a onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
-      <a onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
-      <a onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
-      <a onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
-      <a onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
-      <a onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623"}}>← Sign out</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
   </div>);
@@ -3948,7 +4007,32 @@ const BetaWelcome = () => {
   );
 };
 
-const AppLayout = ({children}) => (<><ScrollToTop/><ComplianceStrip/><Nav/><BackHomeBar/>{children}<Footer/><DoogieChat/><CookieBanner/><PageViewBeacon/><TurnstileScriptLoader/><BetaFeedbackWidget/></>);
+const AppLayout = ({children}) => {
+  // WCAG SC 3.1.1 — keep <html lang> in sync with the user's chosen Doogie
+  // language so screen readers pronounce content correctly.
+  useEffect(() => {
+    const l = localStorage.getItem("ez_doogie_lang") || "en";
+    // Strip subtag for zh-Hant/zh-Hans → "zh" for html lang; keep pa/fa/pt.
+    const htmlLang = l.startsWith("zh") ? "zh" : (l === "pt-PT" ? "pt" : l);
+    if (document.documentElement.lang !== htmlLang) document.documentElement.lang = htmlLang;
+  });
+  return (<>
+    <ScrollToTop/>
+    {/* Skip-to-content link — WCAG SC 2.4.1 (Bypass Blocks). First Tab keystroke
+        focuses this so keyboard users can jump past nav on every page. */}
+    <a href="#main-content" className="skip-to-content" data-testid="skip-to-content">Skip to main content</a>
+    <ComplianceStrip/>
+    <Nav/>
+    <BackHomeBar/>
+    <main id="main-content" tabIndex={-1}>{children}</main>
+    <Footer/>
+    <DoogieChat/>
+    <CookieBanner/>
+    <PageViewBeacon/>
+    <TurnstileScriptLoader/>
+    <BetaFeedbackWidget/>
+  </>);
+};
 
 // Every SPA navigation lands at the top of the page. Preserves scroll ONLY
 // when the URL includes a hash anchor (so /page#faq still jumps to the anchor).
