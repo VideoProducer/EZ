@@ -1463,6 +1463,8 @@ const Listings = () => {
   const [facets, setFacets] = useState({});
   const [allComms, setAllComms] = useState([]); // [{name, region}] — full BC list for typeahead
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 30;
 
   const runSearch = (overrideFilters) => {
     const f = overrideFilters || filters;
@@ -1471,11 +1473,35 @@ const Listings = () => {
     ["q","city","community","region","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
       if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
-    qp.limit = 30;
+    qp.limit = PAGE_SIZE;
+    qp.offset = 0;
     axios.get(`${API}/listings`, { params: qp })
       .then(r => setResults(r.data))
       .catch(() => setResults({total:0, listings:[]}))
       .finally(() => setLoading(false));
+  };
+
+  // Pagination: fetch the NEXT page and append its listings to the current
+  // results. Reuses whatever filter values were on the last search — we
+  // read them from the current `filters` state so any newly-applied filter
+  // will have already caused a fresh runSearch() reset.
+  const loadMore = () => {
+    if (loadingMore || !results.listings) return;
+    setLoadingMore(true);
+    const qp = {};
+    ["q","city","community","region","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
+      if (filters[k] !== "" && filters[k] !== undefined && filters[k] !== null) qp[k] = filters[k];
+    });
+    qp.limit = PAGE_SIZE;
+    qp.offset = results.listings.length;
+    axios.get(`${API}/listings`, { params: qp })
+      .then(r => setResults(prev => ({
+        ...r.data,
+        // Merge: keep prior listings, append new page, update total/count
+        listings: [...(prev.listings || []), ...(r.data.listings || [])],
+      })))
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
   };
 
   useEffect(() => {
@@ -1594,7 +1620,7 @@ const Listings = () => {
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
             <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="listings-count">
-              {loading ? "Searching…" : `${results.total} listing${results.total===1?"":"s"}${results.total>results.listings.length ? ` — showing top ${results.listings.length}` : ""}`}
+              {loading ? "Searching…" : `${results.total} listing${results.total===1?"":"s"}${results.total>results.listings.length ? ` — showing ${results.listings.length}` : ""}`}
             </div>
             <button onClick={()=>setAlertOpen(true)} data-testid="get-alerts-btn" className="btn" style={{background:"#fff",color:"var(--brand-navy)",border:"1.5px solid var(--brand-navy)",padding:"0.5rem 1.1rem",fontSize:"0.88rem",borderRadius:999,display:"inline-flex",alignItems:"center",gap:"0.4rem",fontWeight:600}}>
               🔔 Get alerts for this search
@@ -1610,6 +1636,30 @@ const Listings = () => {
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"1.25rem"}} data-testid="listings-grid">
             {results.listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
           </div>
+          {/* Load more — appears whenever there are un-fetched listings remaining */}
+          {results.listings.length > 0 && results.total > results.listings.length && (
+            <div style={{textAlign:"center",marginTop:"2rem"}} data-testid="load-more-container">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="btn btn-primary"
+                data-testid="load-more-btn"
+                style={{padding:"0.85rem 2rem",fontSize:"0.95rem",fontFamily:"Inter,sans-serif",fontWeight:600,minWidth:280}}
+              >
+                {loadingMore
+                  ? "Loading…"
+                  : `Show ${Math.min(PAGE_SIZE, results.total - results.listings.length)} more (${results.total - results.listings.length} remaining)`}
+              </button>
+              <div style={{marginTop:"0.5rem",fontSize:"0.8rem",color:"var(--muted)"}}>
+                Showing {results.listings.length} of {results.total}
+              </div>
+            </div>
+          )}
+          {results.listings.length > 0 && results.total > 0 && results.total === results.listings.length && results.total > PAGE_SIZE && (
+            <div style={{textAlign:"center",marginTop:"1.5rem",color:"var(--muted)",fontSize:"0.85rem",fontFamily:"Inter,sans-serif"}} data-testid="end-of-results">
+              ✓ You've reached the end — {results.total} of {results.total} listings shown.
+            </div>
+          )}
         </div>
       </div>
       <div className="notice" style={{marginTop:"2rem"}}>
