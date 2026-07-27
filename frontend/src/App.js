@@ -2316,7 +2316,7 @@ const RealtorApplyOutOfProvince = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For REALTORS® Outside BC</div><h1 className="section-title">Join Doug's out-of-province referral network</h1>
-    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia? Join Doug's national referral network. You'll receive qualified <strong>BC-exit clients</strong> moving to your province and can send Doug your BC-bound clients. 25% referral fee both directions, secured via signed CREA Inter-Board Referral Agreement.</p>
+    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia? Join Doug's national referral network.</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-oop-apply-form">
           <div className="form-grid">
@@ -2423,58 +2423,6 @@ const AboutDoug = () => {
           <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>Client Testimonials</h2>
           <p style={{color:"var(--muted)",fontStyle:"italic"}}>Coming soon — Doug is currently collecting testimonials from recent clients. If you've worked with Doug and would like to share your experience, please <a href="mailto:doug@eztofind.ca?subject=Testimonial for eztofind.ca">email a short note</a>.</p>
         </div>
-        <div className="paper" style={{marginBottom:"2rem"}}>
-          <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>How to Reach Doug</h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))",gap:"1.5rem",marginTop:"1.25rem"}}>
-            <div>
-              <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.4rem"}}>📞 CALL</div>
-              <a href="tel:+16044667021" style={{fontSize:"1.15rem",fontWeight:600,color:"var(--brand-navy)",textDecoration:"none"}}>(604) 466-7021</a>
-            </div>
-            <div>
-              <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.4rem"}}>✉️ EMAIL</div>
-              <a href="mailto:doug@eztofind.ca" style={{fontSize:"1.05rem",fontWeight:600,color:"var(--brand-navy)",textDecoration:"none"}}>doug@eztofind.ca</a>
-            </div>
-            <div>
-              <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.4rem"}}>🏢 OFFICE</div>
-              <address style={{fontStyle:"normal",fontSize:"0.92rem",color:"var(--ink)",lineHeight:1.5}}>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5</address>
-            </div>
-          </div>
-
-          <div style={{marginTop:"1.75rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
-            <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.6rem"}}>🕒 HOURS</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:"0.5rem",fontSize:"0.92rem",color:"var(--ink)"}}>
-              <div><strong>Mon–Fri:</strong> 9 AM – 7 PM</div>
-              <div><strong>Saturday:</strong> 10 AM – 5 PM</div>
-              <div><strong>Sunday:</strong> By appointment</div>
-            </div>
-          </div>
-
-          <div style={{marginTop:"1.75rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
-            <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.6rem"}}>📍 SERVICE AREAS</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
-              {["Maple Ridge","Pitt Meadows","Coquitlam","Port Coquitlam","Port Moody","New Westminster","Burnaby","Vancouver","North Vancouver","West Vancouver","Richmond","Surrey","Langley","Abbotsford","Chilliwack","Mission","Squamish","Whistler","Pemberton","Delta"].map(area => (
-                <span key={area} style={{background:"#F7FAFF",border:"1px solid rgba(15,42,91,0.15)",color:"var(--brand-navy)",padding:"0.35rem 0.8rem",borderRadius:999,fontSize:"0.85rem",fontWeight:500}}>{area}</span>
-              ))}
-            </div>
-          </div>
-
-          <div style={{marginTop:"1.75rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
-            <div style={{fontSize:"0.75rem",fontWeight:700,color:"var(--muted)",letterSpacing:"0.05em",marginBottom:"0.6rem"}}>✨ WHAT TO EXPECT</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:"0.4rem"}}>
-              {[
-                {icon:"📅",label:"Online appointments"},
-                {icon:"💬",label:"Free consultation"},
-                {icon:"📊",label:"Free home valuation"},
-                {icon:"🤖",label:"AI-assisted answers 24/7"},
-                {icon:"🌐",label:"Referrals across Canada"},
-                {icon:"🏳️‍🌈",label:"LGBTQ+ friendly"}
-              ].map(b => (
-                <span key={b.label} style={{background:"#E8F5E9",border:"1px solid rgba(15,157,88,0.25)",color:"#0F6C40",padding:"0.35rem 0.8rem",borderRadius:999,fontSize:"0.85rem",fontWeight:500,display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>{b.icon} {b.label}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div className="paper" style={{background:"linear-gradient(135deg, #0F2A5B 0%, #1a3f7d 100%)",color:"white",textAlign:"center"}}>
           <h2 style={{marginTop:0,color:"var(--brand-gold)"}}>Ready to work with Doug?</h2>
           <p style={{opacity:0.9,lineHeight:1.6,marginBottom:"1.5rem"}}>Whether you're buying, selling, or just have a question about the BC real estate market — Doug is available Monday to Saturday.</p>
