@@ -782,9 +782,15 @@ const Footer = () => (
         <li style={{fontSize:"0.82rem",opacity:0.85,marginTop:"0.35rem"}}>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5</li>
       </ul></div>
     </div>
-    <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.7}}>
-      <div>© 2026 EZtoFind.ca — All rights reserved. REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><Link to="/beta" data-testid="footer-beta-link">Beta Testing</Link></div>
+    <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
+      <div style={{maxWidth:"58ch"}}>
+        <div style={{marginBottom:"0.5rem"}}>
+          <span style={{background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.15rem 0.6rem",borderRadius:999,fontWeight:700,fontSize:"0.7rem",letterSpacing:"0.05em"}}>PUBLIC BETA</span>
+          <span style={{marginLeft:"0.75rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</span>
+        </div>
+        <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
+      </div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><Link to="/beta" data-testid="footer-beta-link">Beta Testing</Link></div>
     </div>
   </div></footer>
 );
