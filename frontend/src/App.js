@@ -2292,7 +2292,7 @@ const RealtorApply = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
-    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed BC REALTOR®</p>
+    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed BC REALTOR®?</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
           <div className="form-grid">
