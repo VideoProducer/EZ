@@ -29,11 +29,17 @@ STATIC_URLS = [
     ("/buyer",             "0.7", "monthly"),
     ("/seller",            "0.7", "monthly"),
     ("/contact",           "0.6", "yearly"),
+    # Legal / compliance pages — indexable for trust signals and E-E-A-T.
     ("/privacy",           "0.4", "yearly"),
     ("/terms",             "0.4", "yearly"),
+    ("/compliance",        "0.5", "yearly"),
+    ("/data-attribution",  "0.4", "yearly"),
+    ("/breach-policy",     "0.4", "yearly"),
     ("/dorts",             "0.5", "yearly"),
     ("/code-of-ethics",    "0.4", "yearly"),
     ("/complaints",        "0.4", "yearly"),
+    # NOTE: /beta (invitation-only), /unsubscribe (per-user tokens), and /admin/*
+    # are DELIBERATELY EXCLUDED from the public sitemap.
 ]
 
 def _url_tag(loc: str, lastmod: str, changefreq: str, priority: str) -> str:
