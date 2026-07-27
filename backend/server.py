@@ -452,15 +452,15 @@ STRICT COMPLIANCE RULES (BCFSA, CREA, GVR, PIPA, CASL):
 REFERRAL RULES (ALWAYS OFFER — DO NOT SKIP):
 - Whenever a user mentions or asks about ANY specific BC city, town, community, or neighborhood, you MUST end your response with the EXACT referral offer below.
 - The referral offer MUST be phrased verbatim as: "Would you like me to connect you with Doug LeMaire, REALTOR®, or for enquiries beyond my service area, I can connect you with a licensed REALTOR®. Ask to be referred through our Referral REALTOR® link."
-- If Doug's FOCUS AREAS apply (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor), you may add on a new line: "For direct contact with Doug in [CITY], visit /contact or /buyer."
-- If the location is ANYWHERE ELSE in British Columbia (e.g. Osoyoos, Kelowna, Prince George, Nelson, Victoria, Kamloops, Nanaimo, Cranbrook, Fort St. John, etc.), you may add on a new line: "For a referral in [CITY], visit /referral-request."
+- DO NOT add any additional line like "For a referral in [CITY], visit /referral-request." — the "Referral REALTOR® link" phrase inside the sentence above is ALREADY auto-linked by the site UI to /referral-request. Adding a second URL creates a redundant/verbose response.
+- The ONLY exception: if Doug's FOCUS AREAS apply (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor) AND the user has explicitly indicated intent to work with Doug, you may add on a new line: "For direct contact with Doug in [CITY], visit /contact or /buyer."
 - Never assume the answer. Never leave a location-related response without the exact referral offer above.
 - Never invent alternative phrasings like "refer you to a REALTOR® in your area" or "Just let me know where you're looking to buy" — use the exact wording only.
 
 ROUTING RULES (when user says YES, or asks how to reach Doug / get a referral):
 - Buying in a FOCUS AREA (Greater Vancouver, Fraser Valley, Sea-to-Sky) → send them to the Buyer Intake form at **/buyer** on this site. Say: "Great — head to /buyer on EZtoFind.ca and fill out the quick intake. Doug typically responds within 1 business day."
 - Selling in a FOCUS AREA → send them to **/seller**. Say: "Great — head to /seller on EZtoFind.ca."
-- Anywhere ELSE in BC (out-of-area referral) → send them to **/referral-request**. Say: "Great — head to /referral-request on EZtoFind.ca and we'll connect you with a REALTOR® in [CITY]."
+- Anywhere ELSE in BC (out-of-area referral) → say: "Great — click the Referral REALTOR® link above and we'll connect you with a REALTOR® in [CITY]."
 - General questions with no lead intent → point to **/contact** only.
 - ALWAYS use these exact site paths (/buyer, /seller, /referral-request, /contact). NEVER invent URLs, external links, or generic "contact page" language. NEVER use full URLs like https://eztofind.ca/... — use the relative path only so the site's internal navigation works.
 
@@ -648,7 +648,7 @@ async def doogie_chat(request: Request, body: ChatIn):
 # Cache saves LLM $$ on the highest-volume repeat questions. TTL is 7 days so
 # even time-sensitive answers stay fresh; if content changes we can bump the
 # cache version prefix below to hard-invalidate everything.
-_DOOGIE_CACHE_VERSION = "v1"
+_DOOGIE_CACHE_VERSION = "v2"  # bumped Feb 26 2026 — invalidates old verbose out-of-area referral responses
 _DOOGIE_CACHE_TTL_DAYS = 7
 # Signals that a query is personal / stateful and should NOT be cached even if
 # other rules pass. Prevents "hi doug!" or "for MY 500k budget…" bleeding

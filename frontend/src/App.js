@@ -888,6 +888,7 @@ const DoogieChat = () => {
   const scrollRef = useRef();
   const mediaRef = useRef(null);
   const audioRef = useRef(null);   // currently-playing HTMLAudioElement, so we can stop mid-play
+  const spokenRef = useRef(new Set());  // set of message-indices we've already spoken — bulletproof against double-fire
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
   // Pre-fill from affordability calculator handoff
@@ -909,26 +910,32 @@ const DoogieChat = () => {
 
   // Fetch a TTS blob from the backend and auto-play it. Text is trimmed to the
   // TTS 4096-char cap on the server side; here we defensively slice to 3800.
+  // Concurrency: if a new speak() starts before an older one has finished
+  // fetching its audio, the older one is invalidated via a monotonic counter.
+  const speakSeqRef = useRef(0);
   const speak = async (text) => {
     if (!voiceOut || !text) return;
+    stopSpeaking();                              // pause anything currently playing
+    const mySeq = ++speakSeqRef.current;         // claim the newest slot
     try {
-      stopSpeaking();   // stop anything mid-play before starting the new one
       const r = await fetch(`${API}/doogie/tts`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({text: text.slice(0, 3800), voice: "nova", session_id: sessionId}),
       });
       if (!r.ok) return;
+      if (mySeq !== speakSeqRef.current) return; // a newer request has since started — drop this one
       const blob = await r.blob();
+      if (mySeq !== speakSeqRef.current) return; // check again after blob() awaits
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
       audioRef.current = a;
       a.onended = () => { try { URL.revokeObjectURL(url); } catch(_){} if (audioRef.current === a) audioRef.current = null; };
       await a.play();
     } catch (e) {
-      // Autoplay policies may throw NotAllowedError on some browsers until user
-      // interacts with the page. That's fine — the user just toggled the
-      // speaker so we're already past that gate in almost every case.
+      // Autoplay policies may throw NotAllowedError on some browsers until the user
+      // interacts with the page. That's fine — the user just toggled the speaker
+      // so we're already past that gate in almost every case.
     }
   };
 
@@ -1019,10 +1026,23 @@ const DoogieChat = () => {
             const j = JSON.parse(line.slice(5).trim());
             if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], role:"assistant",content:(c[c.length-1].content||"")+j.delta}; return c; }); }
             else if(j.done) {
-              setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], meta: {cached: !!j.cached, pii_redacted: !!j.pii_redacted, language: lang}}; return c; });
-              // Fire-and-forget TTS if the user has voice-out enabled. Runs
-              // async so the "done" UI update doesn't wait on OpenAI.
-              setMsgs(m => { const full = m[m.length-1]?.content || ""; if (voiceOut && full) speak(full); return m; });
+              // Capture the fully-streamed text OUTSIDE the state setter so
+              // we can speak it exactly once. Ref-guard prevents ANY re-fire
+              // (React StrictMode, batching, duplicate 'done' events, etc.).
+              setMsgs(m => {
+                const c=[...m];
+                const lastIdx = c.length - 1;
+                c[lastIdx] = {...c[lastIdx], meta: {cached: !!j.cached, pii_redacted: !!j.pii_redacted, language: lang}};
+                const fullText = c[lastIdx].content || "";
+                // Fire TTS once per message index. Marker is the current turn's
+                // start timestamp so a NEW answer with the same index (rare) still fires.
+                const key = `${lastIdx}::${fullText.length}`;
+                if (voiceOut && fullText && !spokenRef.current.has(key)) {
+                  spokenRef.current.add(key);
+                  speak(fullText);
+                }
+                return c;
+              });
             }
             else if(j.error) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {role:"assistant",content:"Woof — Doogie's brain is temporarily unavailable. Please try again in a moment, or ask Doug directly via the Contact page. (Reason: "+String(j.error).slice(0,180)+")"}; return c; }); }
           } catch{}
