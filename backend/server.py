@@ -3280,6 +3280,113 @@ async def purge_all_chats(_=Depends(verify_admin)):
     r = await db.chat_messages.delete_many({})
     return {"success": True, "deleted": r.deleted_count}
 
+# =============== FRESH LAUNCH RESET (pre-launch data purge) ===============
+# Doug uses this exactly once, before flipping DNS to the live domain, to wipe
+# every synthetic test record so the CRM opens on Day 1 with a truly clean slate.
+# After go-live, individual records must be deleted only via the daily retention
+# purger or DSAR requests — this tool becomes non-idempotent on real client data.
+_RESET_CATEGORIES = {
+    "leads": {
+        "label": "Buyer / Seller / Valuation / Referral leads",
+        "collections": ["buyer_leads", "seller_leads", "valuation_leads", "referral_requests"],
+    },
+    "realtors": {
+        "label": "REALTOR® applications",
+        "collections": ["realtor_applications"],
+    },
+    "crm_clients": {
+        "label": "CRM clients + reminder snoozes + email send log",
+        "collections": ["clients", "reminder_snoozes", "email_send_log"],
+    },
+    "chats": {
+        "label": "Doogie chat sessions + caches + quota counters",
+        "collections": ["chat_messages", "chat_sessions", "doogie_response_cache", "doogie_tts_cache", "usage_quotas"],
+    },
+    "feedback": {
+        "label": "Beta feedback",
+        "collections": ["beta_feedback"],
+    },
+    "email_outbox": {
+        "label": "Email outbox (pending queue)",
+        "collections": ["email_outbox"],
+    },
+    "saved_searches": {
+        "label": "Saved-search subscriptions",
+        "collections": ["saved_searches"],
+    },
+    "listing_analytics": {
+        "label": "MLS listing analytics (impression / view counts)",
+        "collections": ["listing_analytics"],
+    },
+}
+_RESET_CONFIRMATION_PHRASE = "RESET FOR LAUNCH"
+
+@api.get("/admin/reset/preview")
+async def reset_preview(_=Depends(verify_admin)):
+    """Returns per-category row counts + a manifest of what will and will NOT be touched."""
+    preview = []
+    for key, meta in _RESET_CATEGORIES.items():
+        total = 0
+        per_col = []
+        for col_name in meta["collections"]:
+            c = await db[col_name].count_documents({})
+            per_col.append({"collection": col_name, "count": c})
+            total += c
+        preview.append({"key": key, "label": meta["label"], "total": total, "collections": per_col})
+    preserved = [
+        {"collection": "glossary",           "reason": "BC real estate terms — content"},
+        {"collection": "communities",        "reason": "Community profiles — content"},
+        {"collection": "community_zoning",   "reason": "Zoning bylaws — content"},
+        {"collection": "reminder_templates", "reason": "Your 6 lifecycle email templates"},
+        {"collection": "listings",           "reason": "MLS® data — synced from CREA"},
+        {"collection": "retention_purge_log","reason": "Audit trail — required 7 years"},
+        {"collection": "mls_consent_log",    "reason": "CASL consent audit — 7 years"},
+        {"collection": "breach_log",         "reason": "PIPA breach records — 7 years"},
+    ]
+    return {"categories": preview, "preserved": preserved, "confirmation_phrase": _RESET_CONFIRMATION_PHRASE}
+
+class ResetPurgeRequest(BaseModel):
+    categories: List[str]
+    confirm_text: str
+
+@api.post("/admin/reset/purge")
+async def reset_purge(body: ResetPurgeRequest, _=Depends(verify_admin)):
+    """Destructive: wipes selected pre-launch categories. Writes a permanent
+    attestation to retention_purge_log so BCFSA/OIPC audits can verify the
+    action was authorized and traceable."""
+    if body.confirm_text.strip() != _RESET_CONFIRMATION_PHRASE:
+        raise HTTPException(400, f'Confirmation phrase must be exactly "{_RESET_CONFIRMATION_PHRASE}".')
+    if not body.categories:
+        raise HTTPException(400, "Select at least one category to purge.")
+    unknown = [c for c in body.categories if c not in _RESET_CATEGORIES]
+    if unknown:
+        raise HTTPException(400, f"Unknown categories: {unknown}")
+
+    results = {}
+    total_destroyed = 0
+    for key in body.categories:
+        meta = _RESET_CATEGORIES[key]
+        per_col = {}
+        for col_name in meta["collections"]:
+            r = await db[col_name].delete_many({})
+            per_col[col_name] = r.deleted_count
+            total_destroyed += r.deleted_count
+        results[key] = per_col
+
+    attestation = {
+        "id": str(uuid.uuid4()),
+        "purged_at": now_iso(),
+        "action": "fresh_launch_reset",
+        "categories": body.categories,
+        "records_destroyed": total_destroyed,
+        "per_collection": results,
+        "authorized_by": ADMIN_EMAIL,
+        "attestation": f"Pre-launch reset — {total_destroyed} synthetic records permanently destroyed across {len(body.categories)} categories.",
+    }
+    await db.retention_purge_log.insert_one(attestation)
+    logger.warning(f"FRESH LAUNCH RESET: {total_destroyed} records destroyed across {body.categories}")
+    return {"success": True, "destroyed": total_destroyed, "results": results, "attestation_id": attestation["id"]}
+
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # =============== CREA DDF® — MLS® LISTINGS (compliance-first) ===============

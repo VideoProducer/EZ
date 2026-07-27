@@ -2645,6 +2645,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
@@ -2913,6 +2914,92 @@ const AdminReminderTemplates = () => {
     </div>)}
   </AdminShell>;
 };
+
+const AdminReset = () => {
+  const {headers} = useAdmin();
+  const [preview, setPreview] = useState(null);
+  const [selected, setSelected] = useState({});
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const load = () => axios.get(`${API}/admin/reset/preview`, {headers}).then(r => setPreview(r.data)).catch(() => {});
+  useEffect(() => { if(headers) load(); }, []);
+
+  const toggle = (k) => setSelected(s => ({...s, [k]: !s[k]}));
+  const selectAll = () => setSelected(preview.categories.reduce((acc, c) => ({...acc, [c.key]: true}), {}));
+  const clearAll = () => setSelected({});
+  const cats = Object.keys(selected).filter(k => selected[k]);
+  const canFire = cats.length > 0 && confirmText.trim() === (preview?.confirmation_phrase || "");
+
+  const fire = async () => {
+    if(!canFire) return;
+    if(!window.confirm(`This will PERMANENTLY destroy ${cats.length} data categor${cats.length===1?"y":"ies"}. This action is irreversible and logged. Continue?`)) return;
+    setBusy(true);
+    try {
+      const r = await axios.post(`${API}/admin/reset/purge`, {categories: cats, confirm_text: confirmText}, {headers});
+      setResult(r.data);
+      setSelected({}); setConfirmText(""); load();
+    } catch(e){
+      alert("Reset failed: " + (e.response?.data?.detail || e.message));
+    }
+    setBusy(false);
+  };
+
+  return <AdminShell active="reset">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,color:"#DC2626"}}>🧹 Fresh Launch Reset</h1>
+    <div style={{background:"#FFF3E0",border:"2px solid #F5A623",borderRadius:8,padding:"1.25rem",marginBottom:"2rem"}}>
+      <strong style={{color:"#B45309"}}>⚠️ TEST DATA ONLY — do not run after launch on real client records.</strong>
+      <div style={{marginTop:"0.5rem",fontSize:"0.9rem",lineHeight:1.55,color:"var(--ink)"}}>
+        Real buyer/seller/valuation leads and REALTOR® applications are subject to <strong>7-year BCFSA / PIPA / CASL retention</strong>. Once you flip DNS to your live domain, individual records should be deleted only through the automatic daily retention purger or a documented DSAR request — never through this button. Every reset writes a permanent attestation to <code>retention_purge_log</code> for audit purposes.
+      </div>
+    </div>
+
+    {result && <div className="paper" style={{background:"#E8F5E9",marginBottom:"2rem",borderLeft:"4px solid #0F9D58"}}>
+      <strong>✅ Purge complete.</strong> {result.destroyed} records destroyed across {Object.keys(result.results).length} categories. Attestation ID: <code>{result.attestation_id}</code>
+    </div>}
+
+    {preview && <>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
+        <h3 style={{margin:0}}>Categories to purge</h3>
+        <div style={{display:"flex",gap:"0.5rem"}}>
+          <button onClick={selectAll} className="btn btn-ghost" style={{padding:"0.3rem 0.75rem",fontSize:"0.82rem"}} data-testid="reset-select-all">Select all</button>
+          <button onClick={clearAll} className="btn btn-ghost" style={{padding:"0.3rem 0.75rem",fontSize:"0.82rem"}}>Clear</button>
+        </div>
+      </div>
+      <table className="admin-table" data-testid="admin-reset-preview">
+        <thead><tr><th></th><th>Category</th><th>Collections</th><th style={{textAlign:"right"}}>Records</th></tr></thead>
+        <tbody>{preview.categories.map(c => <tr key={c.key} style={{background: selected[c.key] ? "#FFF3E0" : "transparent"}}>
+          <td style={{width:40}}><input type="checkbox" checked={!!selected[c.key]} onChange={()=>toggle(c.key)} data-testid={`reset-cat-${c.key}`}/></td>
+          <td><strong>{c.label}</strong></td>
+          <td style={{fontFamily:"monospace",fontSize:"0.78rem",color:"var(--muted)"}}>{c.collections.map(x=>x.collection).join(", ")}</td>
+          <td style={{textAlign:"right",fontWeight:600}}>{c.total.toLocaleString()}</td>
+        </tr>)}</tbody>
+      </table>
+
+      <h3 style={{marginTop:"2.5rem"}}>Preserved by design (never touched)</h3>
+      <table className="admin-table">
+        <thead><tr><th>Collection</th><th>Why it's preserved</th></tr></thead>
+        <tbody>{preview.preserved.map(p => <tr key={p.collection}>
+          <td style={{fontFamily:"monospace",fontSize:"0.85rem"}}>{p.collection}</td>
+          <td style={{color:"var(--muted)"}}>{p.reason}</td>
+        </tr>)}</tbody>
+      </table>
+
+      <div className="paper" style={{marginTop:"2.5rem",background:"#FFF8E1",borderLeft:"4px solid #DC2626"}}>
+        <h3 style={{margin:"0 0 1rem",color:"#B45309"}}>Confirmation required</h3>
+        <p style={{marginTop:0,marginBottom:"1rem"}}>Type <code style={{background:"#fff",padding:"0.15rem 0.5rem",borderRadius:4,fontWeight:700}}>{preview.confirmation_phrase}</code> below to enable the purge button.</p>
+        <input value={confirmText} onChange={e=>setConfirmText(e.target.value)} placeholder="Type the phrase exactly…" data-testid="reset-confirm-input" style={{width:"100%",maxWidth:400,padding:"0.7rem 1rem",fontFamily:"monospace",fontSize:"0.95rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:8,marginBottom:"1rem"}}/>
+        <div>
+          <button disabled={!canFire || busy} onClick={fire} className="btn btn-primary" data-testid="reset-fire-btn" style={{background: canFire?"#DC2626":"#999",borderColor: canFire?"#DC2626":"#999",cursor: canFire?"pointer":"not-allowed",padding:"0.75rem 1.5rem"}}>
+            {busy ? "Purging…" : `🗑️ Purge ${cats.length} categor${cats.length===1?"y":"ies"} permanently`}
+          </button>
+        </div>
+      </div>
+    </>}
+  </AdminShell>;
+};
+
 
 const AdminEmailLog = () => {
   const {headers} = useAdmin();
@@ -4630,6 +4717,7 @@ function App() {
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
+      <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
       <Route path="/admin/feedback" element={<AdminFeedback/>}/>
