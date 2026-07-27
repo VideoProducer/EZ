@@ -741,6 +741,7 @@ const Nav = () => {
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
+        <NavLink to="/about-doug" onClick={close} data-testid="nav-about-doug">Meet Doug</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <span className="nav-divider" aria-hidden="true"/>
@@ -2355,6 +2356,80 @@ const RealtorCredentials = () => {
 };
 
 // --- About ---
+// --- Doug LeMaire Author Page — E-E-A-T signal for Google ---
+const AboutDoug = () => {
+  const personSchema = {
+    "@context":"https://schema.org","@type":"Person","name":"Doug LeMaire","jobTitle":"REALTOR®",
+    "worksFor":{"@type":"RealEstateAgent","name":"Fraser Property Management Realty Services Ltd.","address":{"@type":"PostalAddress","streetAddress":"1 – 22374 Lougheed Hwy","addressLocality":"Maple Ridge","addressRegion":"BC","postalCode":"V2X 2T5","addressCountry":"CA"},"telephone":"+1-604-466-7021"},
+    "identifier":[{"@type":"PropertyValue","propertyID":"BCFSA License","value":"167790"}],
+    "hasCredential":[{"@type":"EducationalOccupationalCredential","name":"Licensed REALTOR®","credentialCategory":"license","recognizedBy":{"@type":"Organization","name":"BC Financial Services Authority (BCFSA)"}},{"@type":"EducationalOccupationalCredential","name":"REALTOR® designation","credentialCategory":"membership","recognizedBy":{"@type":"Organization","name":"Canadian Real Estate Association (CREA)"}}],
+    "areaServed":[{"@type":"Place","name":"Greater Vancouver, BC"},{"@type":"Place","name":"Fraser Valley, BC"},{"@type":"Place","name":"Sea-to-Sky Corridor, BC"}],
+    "knowsAbout":["British Columbia Real Estate","Property Transfer Tax (PTT)","First-Time Home Buyer Incentives","BC Home Flipping Tax","Strata Property Act (SPA)","Real Estate Services Act (RESA)","Mortgage Stress Test (OSFI B-20)","BC Assessment","MLS® Data Distribution Facility (DDF®)"],
+    "sameAs":["https://eztofind.ca","https://www.linkedin.com/in/dougelemaire/"],
+    "image":"https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
+    "url":"https://eztofind.ca/about-doug","email":"doug@eztofind.ca"
+  };
+  return (
+    <section className="section">
+      <Helmet>
+        <title>About Doug LeMaire, REALTOR® — BC Licensed | EZtoFind.ca</title>
+        <meta name="description" content="Doug LeMaire is a licensed REALTOR® (BCFSA #167790) in British Columbia serving Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor through Fraser Property Management Realty Services Ltd."/>
+        <link rel="canonical" href="https://eztofind.ca/about-doug"/>
+        <script type="application/ld+json">{JSON.stringify(personSchema)}</script>
+      </Helmet>
+      <div className="container-x" style={{maxWidth:"56rem"}}>
+        <div style={{display:"flex",gap:"2rem",alignItems:"flex-start",flexWrap:"wrap",marginBottom:"3rem"}}>
+          <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:180,height:180,borderRadius:"50%",objectFit:"cover",border:"4px solid var(--brand-gold)",boxShadow:"0 4px 20px rgba(0,0,0,0.15)",flexShrink:0}}/>
+          <div style={{flex:"1 1 320px"}}>
+            <div className="eyebrow">Licensed REALTOR® · BCFSA #167790</div>
+            <h1 className="section-title" style={{marginTop:"0.5rem"}}>Doug LeMaire</h1>
+            <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",color:"var(--muted)",lineHeight:1.6,marginBottom:"1rem"}}>REALTOR® · Fraser Property Management Realty Services Ltd. · Serving Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor.</p>
+            <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+              <a href="tel:+16044667021" className="btn btn-primary" data-testid="doug-call">📞 (604) 466-7021</a>
+              <a href="mailto:doug@eztofind.ca" className="btn btn-ghost" data-testid="doug-email">✉️ doug@eztofind.ca</a>
+              <a href="https://www.linkedin.com/in/dougelemaire/" target="_blank" rel="noreferrer" className="btn btn-ghost">🔗 LinkedIn</a>
+            </div>
+          </div>
+        </div>
+        <div className="paper" style={{marginBottom:"2rem"}}>
+          <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>About Doug</h2>
+          <p style={{lineHeight:1.7}}>Doug LeMaire is a licensed REALTOR® in British Columbia with a passion for using technology to make real estate simpler, more transparent, and genuinely helpful. He founded EZtoFind.ca as a compliance-first platform to give BC home buyers and sellers the tools they'd want their own family to use — AI-assisted answers, real MLS® data, and a REALTOR® who actually picks up the phone.</p>
+          <p style={{lineHeight:1.7}}>Based in Maple Ridge and operating through <strong>Fraser Property Management Realty Services Ltd.</strong>, Doug personally handles transactions across the <strong>Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor</strong>. For clients outside his licensed scope, Doug operates a vetted cross-Canada REALTOR® referral network — connecting buyers and sellers with trusted local professionals wherever they need one.</p>
+        </div>
+        <div className="paper" style={{marginBottom:"2rem"}}>
+          <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>Areas of Expertise</h2>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))",gap:"1rem",marginTop:"1rem"}}>
+            {[{icon:"🏡",title:"BC Residential Real Estate",sub:"Buying, selling, and market analysis across Metro Vancouver and Fraser Valley"},{icon:"📋",title:"Property Transfer Tax & Exemptions",sub:"First-Time Buyer, Newly Built Home, and general PTT navigation"},{icon:"💰",title:"BC Home Flipping Tax",sub:"The 2024 rules, exemption criteria, and how they affect timing"},{icon:"🏘️",title:"Community & Neighbourhood Insights",sub:"244 BC communities and 420 micro-neighbourhoods analysed"},{icon:"🔗",title:"REALTOR® Referral Network",sub:"Cross-Canada network for out-of-province transactions (25% referral)"},{icon:"🤖",title:"Proptech & AI",sub:"Founded the AI-powered EZtoFind.ca platform to modernize BC real estate"}].map((x,i)=>(<div key={i} style={{padding:"1rem",background:"#F7FAFF",borderRadius:8}}><div style={{fontSize:"1.5rem",marginBottom:"0.5rem"}}>{x.icon}</div><div style={{fontWeight:600,color:"var(--brand-navy)"}}>{x.title}</div><div style={{color:"var(--muted)",fontSize:"0.88rem",marginTop:"0.3rem",lineHeight:1.5}}>{x.sub}</div></div>))}
+          </div>
+        </div>
+        <div className="paper" style={{marginBottom:"2rem"}}>
+          <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>Credentials & Memberships</h2>
+          <ul style={{lineHeight:2,color:"var(--ink)"}}>
+            <li>✅ <strong>Licensed REALTOR®</strong> — BC Financial Services Authority (BCFSA) License #167790</li>
+            <li>✅ <strong>REALTOR®</strong> — Canadian Real Estate Association (CREA) member in good standing</li>
+            <li>✅ <strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd., 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5</li>
+            <li>✅ <strong>Errors & Omissions Insurance:</strong> Full BCFSA-required professional liability coverage</li>
+            <li>✅ <strong>CREA Data Distribution Facility (DDF®)</strong> — Authorized technology-provider agreement for direct MLS® data feed</li>
+          </ul>
+        </div>
+        <div className="paper" style={{marginBottom:"2rem"}}>
+          <h2 style={{marginTop:0,color:"var(--brand-navy)"}}>Client Testimonials</h2>
+          <p style={{color:"var(--muted)",fontStyle:"italic"}}>Coming soon — Doug is currently collecting testimonials from recent clients. If you've worked with Doug and would like to share your experience, please <a href="mailto:doug@eztofind.ca?subject=Testimonial for eztofind.ca">email a short note</a>.</p>
+        </div>
+        <div className="paper" style={{background:"linear-gradient(135deg, #0F2A5B 0%, #1a3f7d 100%)",color:"white",textAlign:"center"}}>
+          <h2 style={{marginTop:0,color:"var(--brand-gold)"}}>Ready to work with Doug?</h2>
+          <p style={{opacity:0.9,lineHeight:1.6,marginBottom:"1.5rem"}}>Whether you're buying, selling, or just have a question about the BC real estate market — Doug is available Monday to Saturday.</p>
+          <div style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
+            <Link to="/buyer" className="btn btn-primary" data-testid="doug-cta-buyer">🏡 Buyer Consultation</Link>
+            <Link to="/valuation" className="btn btn-ghost" style={{color:"white",borderColor:"rgba(255,255,255,0.3)"}} data-testid="doug-cta-valuation">💰 Free Home Valuation</Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+
 const About = () => (<section className="section"><div className="container-x" style={{maxWidth:"56rem"}}>
   <SEO
     title="About Doug LeMaire, REALTOR® — 13 Years in BC Real Estate | EZtoFind.ca"
@@ -4928,6 +5003,7 @@ function App() {
       <Route path="/realtors-outofprovince" element={<AppLayout><RealtorApplyOutOfProvince/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
+      <Route path="/about-doug" element={<AppLayout><AboutDoug/></AppLayout>}/>
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
