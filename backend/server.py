@@ -1853,6 +1853,61 @@ RULE 7 — FORMAT
         logger.error(f"FAQ gen failed: {e}")
     return []
 
+async def generate_definition_v2(term: str, category: str, current_definition: str) -> Optional[str]:
+    """Regenerate a glossary term definition using the same hallucination-hardened
+    v2 rules as generate_faqs_for_term. Returns None on failure so caller can keep
+    the current definition. The prompt uses the existing seed definition as an
+    accuracy anchor but re-verifies every specific claim + adds date tags."""
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    prompt = f"""Rewrite the following British Columbia real estate glossary definition using the hallucination-hardened rules below. The goal is a definition that is legally defensible, factually accurate, and consistent with the FAQs (which already use these rules).
+
+TERM: "{term}"
+CATEGORY: {category}
+
+CURRENT DEFINITION (use as accuracy anchor — do NOT copy verbatim; verify every claim against the whitelist):
+\"\"\"
+{current_definition}
+\"\"\"
+
+═══════════════════════════════════════════════════════════════
+HALLUCINATION-HARDENED RULES (v2-definitions, {today})
+═══════════════════════════════════════════════════════════════
+
+RULE 1 — CITE OR REFUSE: Every substantive claim cites a whitelist source or explicitly says "verify current details with a BC lawyer, notary, or licensed tax professional."
+
+RULE 2 — NEVER INVENT statute section numbers, dollar amounts, percentages, effective dates, or program names.
+
+RULE 3 — TAG NUMBERS: Every specific dollar figure, percentage, or effective date must be followed by "(as of {today} — verify current)". Every single number.
+
+RULE 4 — WHITELIST OF ACCEPTABLE BC CITATIONS (same as FAQ generator):
+  • BCFSA · Real Estate Services Act (RESA), SBC 2004, c. 42 · Strata Property Act (SPA), SBC 1998, c. 43 · Property Transfer Tax Act (PTTA), RSBC 1996, c. 378 · Speculation and Vacancy Tax Act, SBC 2018, c. 46 · Residential Tenancy Act, SBC 2002, c. 78 · Wills, Estates and Succession Act (WESA), SBC 2009, c. 13 · Land Title Act, RSBC 1996, c. 250 · PIPA, SBC 2003, c. 63 · CASL, SC 2010, c. 23 · Prohibition on Purchase of Residential Property by Non-Canadians Act, SC 2022, c. 10 (extended through Jan 1, 2027 — verify current) · Agricultural Land Commission Act, SBC 2002, c. 36 · Local Government Act, RSBC 2015, c. 1 · Housing Statutes (Residential Development) Amendment Act, 2023 (BC Bill 44) · Home Flipping Tax Act, SBC 2024 · BC Home Owner Grant Act · BC Ministry of Finance / gov.bc.ca · CMHC · FCAC · Bank of Canada
+
+RULE 5 — NO ADVICE: Neutral, educational, factual only. Never recommend a specific mortgage, lender, brokerage, lawyer, or REALTOR®.
+
+RULE 6 — FORMAT:
+- One paragraph, 4–8 sentences, 400–700 characters. Plain-language but precise.
+- Preserve the same technical scope as the current definition.
+- End with the "verify current" tag on any specific numbers.
+- Return the definition text ONLY. No preamble, no markdown, no code fences.
+"""
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY, session_id=f"defv2-{uuid.uuid4()}",
+            system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be verifiable against a BC statute or federal Act from the whitelist. When uncertain, you refuse to make the claim and refer the reader to verify with a BC lawyer, notary, or licensed tax professional. You never invent section numbers, dollar amounts, percentages, or dates. Every specific number gets an 'as of YYYY-MM-DD — verify current' tag. You output the definition text ONLY.",
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        text = full.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1].replace("json", "", 1).strip()
+        return text or None
+    except Exception as e:
+        logger.error(f"Definition v2 gen failed for {term}: {e}")
+        return None
+
 # =============== COMMUNITIES ===============
 @api.get("/communities")
 async def list_communities():
@@ -3080,6 +3135,135 @@ async def regenerate_glossary_faqs(slug: str, _=Depends(verify_admin)):
     faqs = await generate_faqs_for_term(t["term"], t["definition"])
     await db.glossary.update_one({"slug": slug}, {"$set": {"faqs": faqs, "faqs_approved": False}})
     return {"success": True, "faqs": faqs}
+
+# ================================================================
+# DEFINITION HARDENING (v2) — regenerates the 396 glossary term
+# definitions using the same hallucination-hardened prompt as the
+# FAQs. New definitions land in `definition_pending` so the live
+# site keeps showing the current definition until Doug approves
+# each one (or bulk-approves via /admin/definitions/approve-all).
+# ================================================================
+_DEFN_REGEN_STATE = {"running": False, "started_at": None, "processed": 0, "total": 0, "errors": []}
+
+async def _run_definition_regen():
+    """Background task: iterates every glossary term and asks Claude to rewrite
+    the definition under the v2 rules. Writes to `definition_pending` and marks
+    `definition_prompt_version=v2-hallucination-hardened`. Idempotent — skips
+    terms already regenerated."""
+    _DEFN_REGEN_STATE["running"] = True
+    _DEFN_REGEN_STATE["started_at"] = now_iso()
+    _DEFN_REGEN_STATE["processed"] = 0
+    _DEFN_REGEN_STATE["errors"] = []
+    try:
+        cursor = db.glossary.find(
+            {"definition_prompt_version": {"$ne": "v2-hallucination-hardened"}},
+            {"_id": 0, "slug": 1, "term": 1, "category": 1, "definition": 1}
+        )
+        pending = await cursor.to_list(2000)
+        _DEFN_REGEN_STATE["total"] = len(pending)
+        logger.info(f"Definition v2 regen: {len(pending)} terms to process")
+
+        for t in pending:
+            if not _DEFN_REGEN_STATE["running"]:
+                logger.warning("Definition v2 regen: aborted mid-run")
+                break
+            try:
+                new_defn = await generate_definition_v2(t["term"], t.get("category", ""), t.get("definition", ""))
+                if new_defn and len(new_defn) > 40:
+                    await db.glossary.update_one(
+                        {"slug": t["slug"]},
+                        {"$set": {
+                            "definition_pending": new_defn,
+                            "definition_original": t.get("definition"),
+                            "definition_regenerated_at": now_iso(),
+                            "definition_prompt_version": "v2-hallucination-hardened",
+                            "definition_approved": False,
+                        }},
+                    )
+                    _DEFN_REGEN_STATE["processed"] += 1
+                    if _DEFN_REGEN_STATE["processed"] % 20 == 0:
+                        logger.info(f"Definition v2 regen: {_DEFN_REGEN_STATE['processed']}/{_DEFN_REGEN_STATE['total']}")
+                else:
+                    _DEFN_REGEN_STATE["errors"].append({"term": t["term"], "reason": "empty response"})
+            except Exception as e:
+                _DEFN_REGEN_STATE["errors"].append({"term": t["term"], "reason": str(e)[:200]})
+                logger.exception(f"Definition v2 gen error on {t['term']}")
+            await asyncio.sleep(0.15)  # small pacing gap
+    finally:
+        _DEFN_REGEN_STATE["running"] = False
+        logger.info(f"Definition v2 regen COMPLETE: {_DEFN_REGEN_STATE['processed']} processed, {len(_DEFN_REGEN_STATE['errors'])} errors")
+
+@api.post("/admin/definitions/regenerate-v2")
+async def start_definition_regen(_=Depends(verify_admin)):
+    """Kicks off the v2 definition regeneration in the background. Idempotent:
+    returns 'already_running' if a run is in progress."""
+    if _DEFN_REGEN_STATE["running"]:
+        return {"status": "already_running", "state": _DEFN_REGEN_STATE}
+    asyncio.create_task(_run_definition_regen())
+    return {"status": "started", "state": _DEFN_REGEN_STATE}
+
+@api.get("/admin/definitions/regen-status")
+async def definition_regen_status(_=Depends(verify_admin)):
+    """Live progress of the definition regen so Doug can watch it complete."""
+    pending_count = await db.glossary.count_documents({"definition_pending": {"$exists": True, "$ne": ""}, "definition_approved": {"$ne": True}})
+    approved_count = await db.glossary.count_documents({"definition_approved": True})
+    return {"state": _DEFN_REGEN_STATE, "pending_for_review": pending_count, "approved": approved_count}
+
+@api.get("/admin/definition-audit")
+async def definition_audit(status: str = "pending", _=Depends(verify_admin)):
+    """Show terms whose definitions are pending Doug's approval, with side-by-side
+    old vs new. status=pending (default) | approved | all."""
+    q = {"definition_pending": {"$exists": True, "$ne": ""}}
+    if status == "pending":
+        q["definition_approved"] = {"$ne": True}
+    elif status == "approved":
+        q["definition_approved"] = True
+    docs = await db.glossary.find(q, {"_id": 0, "faqs": 0}).sort("term", 1).to_list(2000)
+    return {"count": len(docs), "items": docs}
+
+class DefinitionApprovalIn(BaseModel):
+    slug: str
+    edited_text: Optional[str] = None  # Doug can edit before approving
+
+@api.post("/admin/definitions/approve")
+async def approve_definition(body: DefinitionApprovalIn, _=Depends(verify_admin)):
+    """Promote definition_pending → definition. If Doug edited it, save the edit."""
+    t = await db.glossary.find_one({"slug": body.slug})
+    if not t:
+        raise HTTPException(404, "Term not found")
+    new_defn = body.edited_text if body.edited_text else t.get("definition_pending")
+    if not new_defn:
+        raise HTTPException(400, "No pending definition to approve")
+    await db.glossary.update_one(
+        {"slug": body.slug},
+        {"$set": {
+            "definition": new_defn,
+            "definition_approved": True,
+            "definition_approved_at": now_iso(),
+        }, "$unset": {"definition_pending": ""}},
+    )
+    return {"success": True}
+
+@api.post("/admin/definitions/reject")
+async def reject_definition(body: UnapproveGlossary, _=Depends(verify_admin)):
+    """Discard the pending v2 definition and keep the current live one."""
+    await db.glossary.update_one(
+        {"slug": body.slug},
+        {"$unset": {"definition_pending": "", "definition_regenerated_at": ""}, "$set": {"definition_approved": False}},
+    )
+    return {"success": True}
+
+@api.post("/admin/definitions/approve-all")
+async def approve_all_definitions(_=Depends(verify_admin)):
+    """Bulk-approve every pending definition (Doug uses this after a full spot-review pass)."""
+    pending = await db.glossary.find({"definition_pending": {"$exists": True, "$ne": ""}, "definition_approved": {"$ne": True}}, {"_id": 1, "definition_pending": 1}).to_list(2000)
+    for t in pending:
+        await db.glossary.update_one(
+            {"_id": t["_id"]},
+            {"$set": {"definition": t["definition_pending"], "definition_approved": True, "definition_approved_at": now_iso()},
+             "$unset": {"definition_pending": ""}},
+        )
+    return {"success": True, "approved": len(pending)}
 
 class ApproveSynopsis(BaseModel):
     slug: str

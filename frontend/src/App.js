@@ -2650,6 +2650,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
@@ -4676,6 +4677,119 @@ const AdminFaqAudit = () => {
   </AdminShell>;
 };
 
+// ---- Definition Audit — v2 hardening review ----
+const AdminDefinitionAudit = () => {
+  const { headers } = useAdmin();
+  const [status, setStatus] = useState("pending");
+  const [items, setItems] = useState([]);
+  const [regen, setRegen] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [edits, setEdits] = useState({});
+
+  const load = async () => {
+    setBusy(true);
+    const r = await axios.get(`${API}/admin/definition-audit?status=${status}`, {headers}).catch(()=>({data:{items:[]}}));
+    setItems(r.data.items || []);
+    setBusy(false);
+  };
+  const loadStatus = async () => {
+    const s = await axios.get(`${API}/admin/definitions/regen-status`, {headers}).catch(()=>({data:{}}));
+    setRegen(s.data);
+  };
+  useEffect(() => { if(headers) { load(); loadStatus(); } }, [status]);
+  useEffect(() => {
+    // Poll regen status every 15s while a run is active
+    const t = setInterval(async () => {
+      const s = await axios.get(`${API}/admin/definitions/regen-status`, {headers}).catch(()=>null);
+      if(s) {
+        setRegen(s.data);
+        if(s.data?.state?.running) load();  // refresh list as new items appear
+      }
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  const kickoff = async () => {
+    await axios.post(`${API}/admin/definitions/regenerate-v2`, {}, {headers});
+    loadStatus();
+  };
+  const approveOne = async (slug) => {
+    const edited = edits[slug];
+    await axios.post(`${API}/admin/definitions/approve`, {slug, edited_text: edited || null}, {headers});
+    load();
+  };
+  const rejectOne = async (slug) => {
+    if(!window.confirm("Discard the pending v2 definition and keep the current live one?")) return;
+    await axios.post(`${API}/admin/definitions/reject`, {slug}, {headers});
+    load();
+  };
+  const approveAll = async () => {
+    if(!window.confirm(`Approve every one of ${items.length} pending definitions and promote them to the live site? Any Doug-edited text is saved. This cannot be undone.`)) return;
+    await axios.post(`${API}/admin/definitions/approve-all`, {}, {headers});
+    load(); loadStatus();
+  };
+
+  const st = regen?.state;
+  const progress = st?.total ? Math.round((st.processed / st.total) * 100) : 0;
+
+  return <AdminShell active="def-audit">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>📖 Definition Audit — v2 Hardening</h1>
+    <p style={{color:"var(--muted)"}}>Every glossary term definition is regenerated with the same hallucination-hardened prompt as your FAQs. New versions cite BC statutes from the whitelist, tag every dollar/percent/date with "as of YYYY-MM-DD — verify current", and hedge appropriately. Nothing goes live until you approve — the current definition stays on the site until you promote the pending one.</p>
+
+    {regen && <div className="paper" style={{background: st?.running ? "#FFF3E0" : "#F7FAFF", marginBottom:"1.25rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+        <div><strong>Regen status:</strong> {st?.running ? `⏳ Running — ${st.processed}/${st.total} (${progress}%)` : "✅ Idle"}</div>
+        <div style={{display:"flex",gap:"0.5rem"}}>
+          <button className="btn btn-ghost" onClick={loadStatus}>Refresh</button>
+          {!st?.running && <button className="btn btn-primary" onClick={kickoff} data-testid="regen-kickoff">Start / resume regen</button>}
+        </div>
+      </div>
+      {st?.errors?.length > 0 && <div style={{marginTop:"0.5rem",color:"#DC2626",fontSize:"0.85rem"}}>{st.errors.length} error(s) — see server logs</div>}
+      {st?.running && <div style={{background:"#eee",height:6,borderRadius:3,marginTop:"0.75rem"}}><div style={{width:`${progress}%`,height:6,background:"var(--brand-blue)",borderRadius:3,transition:"width 0.5s"}}/></div>}
+    </div>}
+
+    <div style={{display:"flex",gap:"0.5rem",marginBottom:"1.5rem",flexWrap:"wrap"}}>
+      {[
+        {v:"pending", l:"Pending review"},
+        {v:"approved", l:"Approved"},
+        {v:"all", l:"All"},
+      ].map(t => (
+        <button key={t.v} onClick={()=>setStatus(t.v)} className={status===t.v?"btn btn-primary":"btn btn-outline"} style={{padding:"0.5rem 1rem",fontSize:"0.9rem"}} data-testid={`def-tab-${t.v}`}>{t.l}</button>
+      ))}
+      <span style={{marginLeft:"auto",alignSelf:"center",color:"var(--muted)",fontSize:"0.85rem"}}>{busy ? "Loading…" : `${items.length} shown`}</span>
+      {status === "pending" && items.length > 0 && <button className="btn btn-green" onClick={approveAll} data-testid="def-approve-all" style={{padding:"0.5rem 1rem"}}>✅ Approve all {items.length}</button>}
+    </div>
+
+    {!busy && items.length === 0 && <div className="paper" style={{textAlign:"center",padding:"2rem"}}>
+      <p style={{color:"var(--muted)"}}>{status === "pending" ? "No pending definitions. Kick off a regen above to generate v2 versions." : "None yet in this bucket."}</p>
+    </div>}
+
+    {items.map(it => (
+      <div key={it.slug} className="paper" style={{marginBottom:"1rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.75rem"}}>
+          <div><strong style={{fontSize:"1.1rem",color:"var(--brand-navy)"}}>{it.term}</strong><span style={{marginLeft:"0.5rem",fontSize:"0.75rem",color:"var(--muted)"}}>{it.category}</span></div>
+          <div style={{display:"flex",gap:"0.4rem"}}>
+            <button className="btn btn-ghost" onClick={()=>rejectOne(it.slug)} style={{padding:"0.35rem 0.75rem",fontSize:"0.8rem",color:"#DC2626"}} data-testid={`def-reject-${it.slug}`}>Reject</button>
+            <button className="btn btn-green" onClick={()=>approveOne(it.slug)} style={{padding:"0.35rem 0.75rem",fontSize:"0.8rem"}} data-testid={`def-approve-${it.slug}`}>Approve</button>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))",gap:"1rem"}}>
+          <div>
+            <div style={{fontSize:"0.75rem",fontWeight:600,color:"var(--muted)",marginBottom:"0.3rem"}}>CURRENT (live)</div>
+            <div style={{background:"#F8F9FA",padding:"0.75rem",borderRadius:6,fontSize:"0.87rem",lineHeight:1.55}}>{it.definition}</div>
+          </div>
+          <div>
+            <div style={{fontSize:"0.75rem",fontWeight:600,color:"#0F9D58",marginBottom:"0.3rem"}}>PENDING v2 (edit if needed)</div>
+            <textarea value={edits[it.slug] ?? it.definition_pending} onChange={e=>setEdits({...edits, [it.slug]: e.target.value})} rows={Math.max(4, Math.ceil((it.definition_pending||"").length/80))} style={{width:"100%",padding:"0.75rem",borderRadius:6,border:"1px solid rgba(15,42,91,0.2)",fontSize:"0.87rem",lineHeight:1.55,fontFamily:"inherit"}} data-testid={`def-edit-${it.slug}`}/>
+          </div>
+        </div>
+      </div>
+    ))}
+  </AdminShell>;
+};
+
+
+
 function App() {
   return (<BrowserRouter>
     <Routes>
@@ -4729,6 +4843,7 @@ function App() {
       <Route path="/admin/chats" element={<AdminChats/>}/>
       <Route path="/admin/feedback" element={<AdminFeedback/>}/>
       <Route path="/admin/faq-audit" element={<AdminFaqAudit/>}/>
+      <Route path="/admin/definition-audit" element={<AdminDefinitionAudit/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
     </Routes>
   </BrowserRouter>);
