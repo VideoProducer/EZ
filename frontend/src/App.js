@@ -2652,6 +2652,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
@@ -2923,7 +2924,85 @@ const AdminReminderTemplates = () => {
   </AdminShell>;
 };
 
-const AdminReset = () => {
+const AdminChangePassword = () => {
+  const { headers } = useAdmin();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [err, setErr] = useState(null);
+
+  const strength = (p) => {
+    if (!p) return {level:"", score:0};
+    let s = 0;
+    if (p.length >= 10) s++;
+    if (p.length >= 14) s++;
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++;
+    if (/[0-9]/.test(p)) s++;
+    if (/[^A-Za-z0-9]/.test(p)) s++;
+    const label = ["Very weak","Weak","Fair","Good","Strong","Very strong"][s] || "";
+    return {level: label, score: s};
+  };
+  const strengthNext = strength(next);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr(null); setMsg(null);
+    if (next.length < 10) { setErr("New password must be at least 10 characters."); return; }
+    if (next !== confirm) { setErr("New password and confirmation do not match."); return; }
+    if (next === current) { setErr("New password must be different from the current one."); return; }
+    setBusy(true);
+    try {
+      const r = await axios.post(`${API}/admin/change-password`, {current_password: current, new_password: next}, {headers});
+      setMsg(r.data.message || "Password updated. Log in with the new password next time.");
+      setCurrent(""); setNext(""); setConfirm("");
+    } catch (x) {
+      setErr(x.response?.data?.detail || x.message || "Password change failed.");
+    }
+    setBusy(false);
+  };
+
+  return <AdminShell active="settings-password">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>🔑 Change Admin Password</h1>
+    <p style={{color:"var(--muted)",maxWidth:"56ch"}}>Rotate your admin password. You'll stay logged in on this browser (JWT token stays valid until it expires), but any new login will require the new password. Store the new one in your password manager immediately.</p>
+
+    {msg && <div className="paper" style={{background:"#E8F5E9",borderLeft:"4px solid #0F9D58",marginBottom:"1.5rem"}}>{msg}</div>}
+    {err && <div className="paper" style={{background:"#FEE2E2",borderLeft:"4px solid #DC2626",marginBottom:"1.5rem"}}>{err}</div>}
+
+    <form onSubmit={submit} className="paper" style={{maxWidth:"520px"}}>
+      <div className="field" style={{marginBottom:"1rem"}}>
+        <label>Current password</label>
+        <input type="password" required autoComplete="current-password" value={current} onChange={e=>setCurrent(e.target.value)} data-testid="pwd-current"/>
+      </div>
+      <div className="field" style={{marginBottom:"1rem"}}>
+        <label>New password (minimum 10 characters)</label>
+        <input type="password" required minLength={10} autoComplete="new-password" value={next} onChange={e=>setNext(e.target.value)} data-testid="pwd-new"/>
+        {next && <div style={{marginTop:"0.4rem",fontSize:"0.82rem",color: strengthNext.score >= 4 ? "#0F9D58" : strengthNext.score >= 3 ? "#F5A623" : "#DC2626"}}>Strength: {strengthNext.level}</div>}
+      </div>
+      <div className="field" style={{marginBottom:"1.25rem"}}>
+        <label>Confirm new password</label>
+        <input type="password" required autoComplete="new-password" value={confirm} onChange={e=>setConfirm(e.target.value)} data-testid="pwd-confirm"/>
+        {confirm && next !== confirm && <div style={{marginTop:"0.4rem",fontSize:"0.82rem",color:"#DC2626"}}>Passwords do not match yet.</div>}
+      </div>
+      <button type="submit" className="btn btn-primary" disabled={busy || !current || next.length < 10 || next !== confirm} data-testid="pwd-submit" style={{padding:"0.7rem 1.4rem"}}>
+        {busy ? "Updating…" : "Update password"}
+      </button>
+    </form>
+
+    <div className="paper" style={{marginTop:"1.5rem",background:"#FFF8E1",borderLeft:"4px solid #F5A623",maxWidth:"520px",fontSize:"0.9rem",color:"var(--ink)"}}>
+      <strong>Safety tips:</strong>
+      <ul style={{margin:"0.5rem 0 0 1rem",lineHeight:1.6}}>
+        <li>Use 12+ characters with mixed case, numbers, and a symbol.</li>
+        <li>Do not reuse a password from any other site.</li>
+        <li>Store the new password in your password manager (1Password, Bitwarden, iCloud Keychain).</li>
+        <li>If you lose it, contact your developer for a manual reset — there is no self-serve password recovery.</li>
+      </ul>
+    </div>
+  </AdminShell>;
+};
+
+
   const {headers} = useAdmin();
   const [preview, setPreview] = useState(null);
   const [selected, setSelected] = useState({});
@@ -4840,6 +4919,7 @@ function App() {
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
+      <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
       <Route path="/admin/feedback" element={<AdminFeedback/>}/>
