@@ -3003,6 +3003,7 @@ const AdminChangePassword = () => {
 };
 
 
+const AdminReset = () => {
   const {headers} = useAdmin();
   const [preview, setPreview] = useState(null);
   const [selected, setSelected] = useState({});
