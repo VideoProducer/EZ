@@ -2590,6 +2590,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
@@ -4197,6 +4198,165 @@ const AdminFeedback = () => {
   </AdminShell>;
 };
 
+// ---------- Admin: Glossary FAQ Audit (risk-scored spot-check tool) ----------
+const AdminFaqAudit = () => {
+  const {headers} = useAdmin();
+  const [items, setItems] = useState([]);
+  const [filter, setFilter] = useState("high");   // start on high-risk by default
+  const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(null); // slug currently expanded
+  const [drafts, setDrafts] = useState({});       // slug → edited faqs array (for inline edits)
+  const [action, setAction] = useState({});       // slug → "regenerating" | "approving" | ...
+
+  const load = async () => {
+    if (!headers) return;
+    setBusy(true);
+    const r = await axios.get(`${API}/admin/faq-audit?filter=${filter}`, {headers}).catch(()=>({data:{items:[]}}));
+    setItems(r.data.items || []);
+    setBusy(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
+
+  const approve = async (slug) => {
+    setAction(a => ({...a, [slug]: "approving"}));
+    const faqs = drafts[slug];  // if user edited, send edited version
+    await axios.post(`${API}/admin/approvals/glossary/approve`, {slug, ...(faqs ? {faqs} : {})}, {headers}).catch(()=>{});
+    setDrafts(d => { const c={...d}; delete c[slug]; return c; });
+    setAction(a => { const c={...a}; delete c[slug]; return c; });
+    load();
+  };
+  const unapprove = async (slug) => {
+    setAction(a => ({...a, [slug]: "rejecting"}));
+    await axios.post(`${API}/admin/approvals/glossary/unapprove`, {slug}, {headers}).catch(()=>{});
+    setAction(a => { const c={...a}; delete c[slug]; return c; });
+    load();
+  };
+  const regenerate = async (slug) => {
+    if (!window.confirm(`Regenerate FAQs for "${slug}"? Existing FAQs will be overwritten and status reset to unapproved. Costs ~$0.05 in LLM credits.`)) return;
+    setAction(a => ({...a, [slug]: "regenerating"}));
+    await axios.post(`${API}/admin/approvals/glossary/${slug}/regenerate`, {}, {headers}).catch(()=>{});
+    setAction(a => { const c={...a}; delete c[slug]; return c; });
+    load();
+  };
+  const editFaq = (slug, idx, field, val) => {
+    setDrafts(d => {
+      const current = d[slug] || items.find(x=>x.slug===slug)?.faqs || [];
+      const next = current.map((f,i) => i===idx ? {...f, [field]: val} : f);
+      return {...d, [slug]: next};
+    });
+  };
+  const removeFaq = (slug, idx) => {
+    setDrafts(d => {
+      const current = d[slug] || items.find(x=>x.slug===slug)?.faqs || [];
+      return {...d, [slug]: current.filter((_,i)=>i!==idx)};
+    });
+  };
+
+  const riskBadge = (score) => {
+    if (score >= 3) return <span style={{background:"#FEE2E2",color:"#991B1B",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:700}}>⚠ HIGH ({score})</span>;
+    if (score === 2) return <span style={{background:"#FEF3C7",color:"#92400E",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:700}}>⚠ ELEVATED ({score})</span>;
+    if (score === 1) return <span style={{background:"#EAF3FF",color:"#1E40AF",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:600}}>MODERATE ({score})</span>;
+    return <span style={{background:"#F3F4F6",color:"#6B7280",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:600}}>LOW</span>;
+  };
+  const approvalBadge = (approved) => approved
+    ? <span style={{background:"#86BC42",color:"#fff",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.05em"}}>✓ APPROVED</span>
+    : <span style={{background:"#F5A623",color:"#fff",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.05em"}}>PENDING</span>;
+
+  return <AdminShell active="faq-audit">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Glossary FAQ Audit</h1>
+    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem",maxWidth:820}}>Risk-scored review of all {items.length > 0 ? "" : "396 "}glossary terms with FAQs. High-risk terms (PTT, GST, FINTRAC, dual agency, disclosure forms, tax rules, etc.) are ranked first so you can spot-check the most legally-sensitive answers. Approve, edit inline, or regenerate any term.</p>
+
+    <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",marginBottom:"1rem",flexWrap:"wrap"}}>
+      {[
+        {v:"high",       l:"⚠ High Risk (~40)"},
+        {v:"unapproved", l:"⏳ Pending Approval"},
+        {v:"approved",   l:"✓ Approved"},
+        {v:"all",        l:"All (396)"},
+      ].map(t => (
+        <button key={t.v} onClick={()=>setFilter(t.v)} className={filter===t.v?"btn btn-primary":"btn btn-outline"} style={{padding:"0.5rem 1rem",fontSize:"0.9rem"}} data-testid={`fa-tab-${t.v}`}>{t.l}</button>
+      ))}
+      <span style={{marginLeft:"auto",alignSelf:"center",color:"var(--muted)",fontSize:"0.85rem"}}>{busy ? "Loading…" : `${items.length} shown`}</span>
+    </div>
+
+    {!busy && items.length === 0 && <div className="paper" style={{textAlign:"center",padding:"2rem"}}>
+      <p style={{color:"var(--muted)"}}>No terms in this bucket.</p>
+    </div>}
+
+    {items.map(it => {
+      const isOpen = expanded === it.slug;
+      const faqs = drafts[it.slug] || it.faqs || [];
+      const busySlug = action[it.slug];
+      return (
+        <div key={it.slug} className="paper" style={{marginBottom:"0.85rem", opacity: busySlug ? 0.6 : 1}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"1rem",flexWrap:"wrap"}}>
+            <div style={{flex:1, minWidth:220}}>
+              <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap",marginBottom:"0.35rem"}}>
+                {riskBadge(it.risk_score)}
+                {approvalBadge(it.faqs_approved)}
+                {it.category && <span style={{background:"#F3F4F6",color:"#374151",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem"}}>{it.category}</span>}
+                <span style={{fontSize:"0.75rem",color:"var(--muted)"}}>{faqs.length} FAQ{faqs.length!==1?"s":""}</span>
+              </div>
+              <div style={{fontWeight:600,color:"var(--brand-navy)",fontSize:"1.05rem"}}>
+                <Link to={`/glossary/${it.slug}`} target="_blank" rel="noopener" style={{color:"var(--brand-navy)"}} data-testid={`fa-term-${it.slug}`}>{it.term}</Link>
+              </div>
+              {it.risk_hits && it.risk_hits.length > 0 && (
+                <div style={{fontSize:"0.75rem",color:"#8B0000",marginTop:"0.25rem"}}>
+                  Risk keywords: <em>{it.risk_hits.slice(0,6).join(", ")}</em>
+                </div>
+              )}
+              <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem",lineHeight:1.5}}>
+                {(it.definition||"").slice(0,240)}{(it.definition||"").length > 240 ? "…" : ""}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:"0.4rem",flexWrap:"wrap"}}>
+              <button onClick={()=>setExpanded(isOpen ? null : it.slug)} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} data-testid={`fa-toggle-${it.slug}`}>
+                {isOpen ? "▲ Collapse" : `▾ Review FAQs (${faqs.length})`}
+              </button>
+              {!it.faqs_approved && <button onClick={()=>approve(it.slug)} className="btn btn-green" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} disabled={!!busySlug} data-testid={`fa-approve-${it.slug}`}>{busySlug==="approving" ? "…" : "✓ Approve"}</button>}
+              {it.faqs_approved && <button onClick={()=>unapprove(it.slug)} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem",color:"#DC2626",borderColor:"#DC2626"}} disabled={!!busySlug} data-testid={`fa-unapprove-${it.slug}`}>Unapprove</button>}
+              <button onClick={()=>regenerate(it.slug)} className="btn btn-outline" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} disabled={!!busySlug} data-testid={`fa-regen-${it.slug}`}>{busySlug==="regenerating" ? "🔄 Regenerating…" : "🔄 Regenerate"}</button>
+            </div>
+          </div>
+
+          {isOpen && (
+            <div style={{marginTop:"1rem",paddingTop:"0.85rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
+              {faqs.length === 0 && <p style={{color:"var(--muted)",fontStyle:"italic"}}>No FAQs generated yet.</p>}
+              {faqs.map((f, i) => (
+                <div key={i} style={{marginBottom:"0.85rem",padding:"0.75rem",background:"#FAFAF5",borderRadius:8,borderLeft:"3px solid var(--brand-navy)"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"0.5rem",marginBottom:"0.35rem"}}>
+                    <label style={{fontWeight:600,fontSize:"0.8rem",color:"var(--brand-navy)",flex:1}}>Q{i+1}</label>
+                    <button onClick={()=>removeFaq(it.slug, i)} title="Remove this FAQ" style={{background:"none",border:"none",color:"#DC2626",cursor:"pointer",fontSize:"1rem",lineHeight:1,padding:"0 0.3rem"}}>🗑</button>
+                  </div>
+                  <textarea
+                    value={f.q || ""}
+                    onChange={e=>editFaq(it.slug, i, "q", e.target.value)}
+                    rows={2}
+                    style={{width:"100%",padding:"0.4rem",fontSize:"0.88rem",fontFamily:"inherit",border:"1px solid rgba(15,42,91,0.15)",borderRadius:6,marginBottom:"0.5rem",resize:"vertical"}}
+                    data-testid={`fa-q-${it.slug}-${i}`}
+                  />
+                  <label style={{fontWeight:600,fontSize:"0.8rem",color:"var(--brand-navy)",display:"block",marginBottom:"0.25rem"}}>Answer</label>
+                  <textarea
+                    value={f.a || ""}
+                    onChange={e=>editFaq(it.slug, i, "a", e.target.value)}
+                    rows={4}
+                    style={{width:"100%",padding:"0.4rem",fontSize:"0.88rem",fontFamily:"inherit",border:"1px solid rgba(15,42,91,0.15)",borderRadius:6,resize:"vertical",lineHeight:1.5}}
+                    data-testid={`fa-a-${it.slug}-${i}`}
+                  />
+                </div>
+              ))}
+              {drafts[it.slug] && (
+                <div style={{padding:"0.75rem",background:"#FEF3C7",borderRadius:8,fontSize:"0.85rem",color:"#92400E",marginBottom:"0.5rem"}}>
+                  ⚠ You have unsaved edits. Click <strong>✓ Approve</strong> to save AND approve, or reload to discard.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    })}
+  </AdminShell>;
+};
+
 function App() {
   return (<BrowserRouter>
     <Routes>
@@ -4245,6 +4405,7 @@ function App() {
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
       <Route path="/admin/feedback" element={<AdminFeedback/>}/>
+      <Route path="/admin/faq-audit" element={<AdminFaqAudit/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
     </Routes>
   </BrowserRouter>);
