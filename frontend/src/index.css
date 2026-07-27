@@ -65,7 +65,7 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
 .hero h1 { font-size: clamp(2.5rem, 5.5vw, 4.75rem); line-height: 1.02; margin: 0 0 1.25rem; }
 .hero h1 .accent { color: var(--brand-blue); font-style: italic; }
 .hero h1 .brand-blue { color: var(--brand-blue); }
-.hero h1 .green { color: var(--brand-green-dark); }
+.hero h1 .green { color: #FDB813; }
 .hero p.lead { font-family: 'Inter',sans-serif; font-size: 1.15rem; color: var(--muted); max-width: 42rem; line-height: 1.6; margin: 0 0 2rem; }
 
 /* Search bar */
