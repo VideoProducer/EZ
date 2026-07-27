@@ -2306,8 +2306,8 @@ const Contact = () => {
     <div className="eyebrow">{t("contact.eyebrow")}</div><h1 className="section-title">{t("contact.title")}</h1>
     <div className="paper" style={{fontFamily:"Inter,sans-serif",lineHeight:1.9}}>
       <p><strong>{t("contact.general")}:</strong> <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a></p>
-      <p><strong>{t("contact.realtors")}:</strong> <a href="mailto:realtors@eztofind.ca" style={{color:"var(--brand-blue)"}}>realtors@eztofind.ca</a></p>
-      <p><strong>{t("contact.referral_leads")}:</strong> <a href="mailto:referral@eztofind.ca" style={{color:"var(--brand-blue)"}}>referral@eztofind.ca</a></p>
+      <p><strong>{t("contact.realtors")}:</strong> <a href="mailto:realtor@eztofind.ca" style={{color:"var(--brand-blue)"}}>realtor@eztofind.ca</a></p>
+      <p><strong>{t("contact.referral_leads")}:</strong> <a href="mailto:referrals@eztofind.ca" style={{color:"var(--brand-blue)"}}>referrals@eztofind.ca</a></p>
       <hr style={{margin:"1.5rem 0",border:"none",borderTop:"1px solid rgba(15,42,91,0.1)"}}/>
       <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}>
         <Link to={`/buyer${qs}`} className="btn btn-primary" data-testid="contact-buyer-link">{t("common.buyer_form")}</Link>

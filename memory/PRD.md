@@ -143,7 +143,7 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 - Once credentials swap in, `services/ddf_sync.py` runs unchanged and the `/api/admin/listings/ddf-status` endpoint will flip to `token_ok=true, api_ok=true, sample_count>0`.
 - Configure APScheduler for 4-hour incremental sync + nightly reconciliation (~2 hrs) — services/ddf_sync.py::sync_incremental() ready to be scheduled
 - Doogie MLS® tool-use — already wired to Mongo listings collection; will use real data automatically once sync runs
-- Real email delivery (Resend) for the 3 workflow emails from info@ / realtors@ / referral@eztofind.ca (~2 hrs, needs Resend API key)
+- Real email delivery (Resend) for the 3 workflow emails from info@ / realtors@ / referrals@eztofind.ca (~2 hrs, needs Resend API key)
 
 ### P1
 - BCFSA REALTOR® number verification (public registry lookup)
@@ -163,5 +163,5 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 
 ## Emails Configured (routing only — actual sending needs Resend setup)
 - info@eztofind.ca — general
-- realtors@eztofind.ca — REALTOR® application workflow
-- referral@eztofind.ca — outbound referral request notifications
+- realtor@eztofind.ca — REALTOR® application workflow
+- referrals@eztofind.ca — outbound referral request notifications

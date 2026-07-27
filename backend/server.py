@@ -1082,10 +1082,10 @@ async def realtor_apply(body: RealtorInitial):
         return {"success": True, "id": existing["id"], "message": "Application updated. Doug will review and be in touch."}
     app_obj = RealtorApplication(full_name=body.full_name, email=body.email, brokerage=body.brokerage, realtor_number=body.realtor_number, stage="applied")
     await db.realtor_applications.insert_one(app_obj.model_dump())
-    # Log for admin queue; email dispatch to realtors@eztofind.ca happens when SMTP is wired
-    logger.info(f"REALTOR APPLICATION → realtors@eztofind.ca: {body.full_name} ({body.email}) — {body.brokerage} — #{body.realtor_number}")
+    # Log for admin queue; email dispatch to realtor@eztofind.ca happens when SMTP is wired
+    logger.info(f"REALTOR APPLICATION → realtor@eztofind.ca: {body.full_name} ({body.email}) — {body.brokerage} — #{body.realtor_number}")
     await db.email_outbox.insert_one({
-        "to": "realtors@eztofind.ca",
+        "to": "realtor@eztofind.ca",
         "subject": f"New REALTOR® application — {body.full_name}",
         "body": f"Name: {body.full_name}\nEmail: {body.email}\nBrokerage: {body.brokerage}\nMembership #: {body.realtor_number}",
         "ts": now_iso(),
