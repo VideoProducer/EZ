@@ -39,6 +39,7 @@ SENDER_EMAIL   = "info@eztofind.ca"
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 RESEND_FROM    = os.environ.get("RESEND_FROM", "EZtoFind.ca <alerts@eztofind.ca>")
+RESEND_REPLY_TO = os.environ.get("RESEND_REPLY_TO", "").strip()
 RESEND_URL     = "https://api.resend.com/emails"
 
 
@@ -119,6 +120,8 @@ async def send_email(
         "html": html,
         "text": text,
     }
+    if RESEND_REPLY_TO:
+        payload["reply_to"] = RESEND_REPLY_TO
     if unsubscribe_url:
         payload["headers"] = {
             # RFC 8058 one-click list-unsubscribe (Gmail + Outlook honour this)

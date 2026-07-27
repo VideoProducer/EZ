@@ -1088,6 +1088,73 @@ async def admin_email_outbox(_=Depends(verify_admin)):
     pending = await db.email_outbox.count_documents({"status": "pending"})
     return {"pending_count": pending, "recent": docs}
 
+class EmailTestRequest(BaseModel):
+    to: EmailStr
+    subject: Optional[str] = "🐾 EZtoFind.ca — Resend integration test"
+
+@api.post("/admin/email/send-test")
+async def admin_email_send_test(body: EmailTestRequest, _=Depends(verify_admin)):
+    """Fires a live test email through Resend. Use this to verify the API key,
+    From address, DNS verification, and inbox deliverability end-to-end."""
+    from services.email_sender import send_email as _send
+    html = (
+        "<div style='font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:1rem'>"
+        "<h2 style='color:#0F2A5B'>🐾 Resend is wired up correctly</h2>"
+        "<p>This is a test email sent through the production email pipeline for <strong>EZtoFind.ca</strong>. "
+        "If you're reading this in your inbox (not spam), then:</p>"
+        "<ul>"
+        "<li>✅ The Resend API key is valid</li>"
+        "<li>✅ The FastAPI backend can reach Resend's servers</li>"
+        "<li>✅ Your <em>From</em> address is authorized to send</li>"
+        "</ul>"
+        "<p style='color:#6b7280;font-size:0.85em'>Next step: verify the <code>eztofind.ca</code> domain in Resend so we can swap the sandbox sender for your real <code>info@eztofind.ca</code> address.</p>"
+        "</div>"
+    )
+    text = "🐾 Resend is wired up correctly. This is a test email from EZtoFind.ca."
+    result = await _send(
+        db, to=body.to, subject=body.subject, html=html, text=text,
+        kind="transactional", related_id="admin-test",
+        unsubscribe_url="https://eztofind.ca/unsubscribe",
+    )
+    return result
+
+@api.post("/admin/email-outbox/flush")
+async def admin_email_outbox_flush(_=Depends(verify_admin)):
+    """Retry every pending / failed message in email_outbox. Use this after
+    verifying the eztofind.ca domain in Resend so backlogged messages actually
+    get delivered instead of staying stuck in the queue."""
+    from services.email_sender import send_email as _send
+    q = {"status": {"$in": ["pending", "error", "failed"]}}
+    docs = await db.email_outbox.find(q).sort("created_at", 1).limit(500).to_list(500)
+    stats = {"attempted": 0, "sent": 0, "still_failed": 0}
+    for d in docs:
+        stats["attempted"] += 1
+        try:
+            r = await _send(
+                db, to=d.get("to"), subject=d.get("subject",""),
+                html=d.get("html") or "", text=d.get("text") or (d.get("html") or ""),
+                kind=d.get("kind") or "transactional",
+                related_id=d.get("related_id"),
+                unsubscribe_url=d.get("unsubscribe_url"),
+            )
+            if not r.get("queued") and not r.get("error"):
+                # Mark the old outbox row as sent so we don't retry forever.
+                await db.email_outbox.update_one(
+                    {"_id": d["_id"]},
+                    {"$set": {"status": "sent", "sent_at": now_iso(), "provider_message_id": r.get("provider_message_id"), "replayed_at": now_iso()}},
+                )
+                stats["sent"] += 1
+            else:
+                await db.email_outbox.update_one(
+                    {"_id": d["_id"]},
+                    {"$set": {"status": "failed", "last_attempt_at": now_iso(), "last_error": r.get("error")}},
+                )
+                stats["still_failed"] += 1
+        except Exception as e:
+            stats["still_failed"] += 1
+            logger.exception(f"flush send failed: {e}")
+    return stats
+
 # =============== BREACH RESPONSE (PIPA audit log) ===============
 class BreachReport(BaseModel):
     description: str
@@ -1482,18 +1549,28 @@ async def _queue_reminder_email(client: dict, type_key: str, request: Request, e
         unsubscribe_token=client.get("unsubscribe_token"), status="queued"
     ).model_dump()
     await db.email_send_log.insert_one(log)
-    await db.email_outbox.insert_one({
-        "to": client["email"],
-        "subject": subject,
-        "html": body,
-        "type": f"reminder:{type_key}",
-        "client_id": client["id"],
-        "created_at": now_iso(),
-        "sent_at": None,
-        "status": "pending",
-    })
-    logger.info(f"REMINDER queued → {client['email']} ({type_key}) log_id={log['id']}")
-    return {"status": "queued", "log_id": log["id"], "to": client["email"]}
+
+    # Try real delivery via Resend (falls back to email_outbox queue if no API key).
+    from services.email_sender import send_email as _send
+    text_body = re.sub(r"<[^>]+>", "", body)  # simple HTML-strip for text/plain fallback
+    result = await _send(
+        db,
+        to=client["email"],
+        subject=subject,
+        html=body,
+        text=text_body,
+        kind="commercial",
+        related_id=client["id"],
+        unsubscribe_url=unsub_url,
+    )
+    # Update the audit log with delivery outcome
+    delivered_status = "sent" if not result.get("queued") and not result.get("error") else ("queued" if result.get("queued") else "failed")
+    await db.email_send_log.update_one(
+        {"id": log["id"]},
+        {"$set": {"status": delivered_status, "provider_message_id": result.get("provider_message_id"), "provider_error": result.get("error")}},
+    )
+    logger.info(f"REMINDER {delivered_status} → {client['email']} ({type_key}) log_id={log['id']} provider_id={result.get('provider_message_id')}")
+    return {"status": delivered_status, "log_id": log["id"], "to": client["email"], "provider_message_id": result.get("provider_message_id"), "error": result.get("error")}
 
 
 @api.get("/admin/reminder-templates")
