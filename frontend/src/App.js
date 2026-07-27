@@ -2291,7 +2291,7 @@ const RealtorApply = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
-    {res ? <div className="paper"><h3 style={{marginTop:0}}>Application received ✓</h3><p style={{fontFamily:"Inter,sans-serif"}}>{res.message}</p></div>
+    {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3><p style={{fontFamily:"Inter,sans-serif"}}>{res.message}</p></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
           <div className="form-grid">
             <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-name"/></div>

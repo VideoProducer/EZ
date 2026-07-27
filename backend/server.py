@@ -1192,7 +1192,7 @@ async def realtor_apply(body: RealtorInitial):
     if existing:
         # Update existing with any new fields
         await db.realtor_applications.update_one({"email": body.email}, {"$set": {**body.model_dump(exclude_none=True), "updated_at": now_iso()}})
-        return {"success": True, "id": existing["id"], "message": "Application updated. Doug will review and be in touch."}
+        return {"success": True, "id": existing["id"], "message": "Your Information has been received. Doug will be in touch."}
     app_obj = RealtorApplication(full_name=body.full_name, email=body.email, brokerage=body.brokerage, realtor_number=body.realtor_number, stage="applied")
     await db.realtor_applications.insert_one(app_obj.model_dump())
     # Log for admin queue; email dispatch to realtor@eztofind.ca happens when SMTP is wired
@@ -1204,7 +1204,7 @@ async def realtor_apply(body: RealtorInitial):
         "ts": now_iso(),
         "sent": False
     })
-    return {"success": True, "id": app_obj.id, "message": "Thank you! Your application has been received. Doug will review and be in touch."}
+    return {"success": True, "id": app_obj.id, "message": "Your Information has been received. Doug will be in touch."}
 
 class RealtorCredentials(BaseModel):
     brokerage: str
