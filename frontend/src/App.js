@@ -2323,7 +2323,7 @@ const RealtorApplyOutOfProvince = () => {
             <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-oop-name"/></div>
             <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-oop-email"/></div>
             <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-oop-brokerage"/></div>
-            <div className="field"><label>Local REALTOR® / License # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-oop-number"/></div>
+            <div className="field"><label>License # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-oop-number"/></div>
             <div className="field"><label>Province / Territory *</label>
               <select required value={f.province} onChange={e=>setF({...f,province:e.target.value})} data-testid="realtor-oop-province">
                 <option value="">Select…</option>
