@@ -2288,8 +2288,8 @@ const SellerForm = () => {
 
 // --- REALTOR® network (3 stages) ---
 const RealtorApply = () => {
-  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:""}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
+  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
+  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
@@ -2310,8 +2310,8 @@ const RealtorApply = () => {
 
 // --- Out-of-Province REALTOR® network (same shape, different destination + copy) ---
 const RealtorApplyOutOfProvince = () => {
-  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",province:""}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
+  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",province:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
+  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
   const PROVINCES = ["Alberta","Saskatchewan","Manitoba","Ontario","Quebec","New Brunswick","Nova Scotia","Prince Edward Island","Newfoundland and Labrador","Yukon","Northwest Territories","Nunavut","Other (International)"];
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
@@ -2329,6 +2329,13 @@ const RealtorApplyOutOfProvince = () => {
                 <option value="">Select…</option>
                 {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
+            </div>
+          </div>
+          <div style={{marginTop:"1.25rem",padding:"1rem",background:"#F7FAFF",borderRadius:8,border:"1px solid rgba(15,42,91,0.12)"}}>
+            <label style={{display:"block",fontWeight:600,marginBottom:"0.5rem",color:"var(--brand-navy)"}}>Are you a CREA Member? *</label>
+            <div style={{display:"flex",gap:"1rem"}}>
+              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===true?"var(--brand-green-dark)":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===true?"#E8F5E9":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_oop" checked={f.crea_member===true} onChange={()=>setF({...f,crea_member:true})} data-testid="realtor-oop-crea-yes"/> ✅ Yes</label>
+              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===false?"#DC2626":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===false?"#FEE2E2":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_oop" checked={f.crea_member===false} onChange={()=>setF({...f,crea_member:false})} data-testid="realtor-oop-crea-no"/> ❌ No</label>
             </div>
           </div>
           {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
