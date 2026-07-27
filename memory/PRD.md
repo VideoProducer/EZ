@@ -165,3 +165,16 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 - info@eztofind.ca — general
 - realtor@eztofind.ca — REALTOR® application workflow
 - referrals@eztofind.ca — outbound referral request notifications
+
+## Feb 27, 2026 — Client Lifecycle Reminders module
+- ✅ Extended `Client` model with property_address, bc_assessment_opt_in, mortgage_renewal_date + lender, send_christmas, CASL express-consent fields (email_consent, consent_date, consent_source, unsubscribed, unsubscribe_token)
+- ✅ `/admin/reminders` (dedicated page): shows Birthday, Anniversary, Possession-versary, BC Assessment, Mortgage Renewal (90d + 60d pings), Christmas — with per-row consent status + Send/Snooze actions
+- ✅ `/admin/reminder-templates`: 6 editable HTML templates (auto-seeded) with `{{first_name}}` / `{{years}}` / `{{renewal_date}}` / `{{lender}}` merge-tag rendering + Reset-to-default
+- ✅ `/admin/email-log`: 7-year CASL/BCFSA audit trail with type filter
+- ✅ "⚡ Auto-send today's" button — fires Birthday, Anniversary, Possession, Christmas for consented clients (Dec 20 only for Christmas)
+- ✅ "🎄 Christmas bulk send" — preview modal + one-click send to all consented + send_christmas=true clients
+- ✅ CASL footer auto-appended to every send (sender ID + brokerage address + working /api/unsubscribe/reminder/{token} link)
+- ✅ One-click unsubscribe flow (sets unsubscribed=true, email_consent=false)
+- ✅ Snooze-for-this-year mechanism prevents duplicate sends
+- ✅ Emails queue to email_outbox (still mocked) + full body written to email_send_log — activates for real delivery the moment Resend API key is added
+- ✅ Homepage: removed "Enter your income and savings…" tagline under the "What Can I Afford?" title (calculator box retained)

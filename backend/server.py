@@ -240,7 +240,45 @@ class Client(BaseModel):
     notes: Optional[str] = ""
     tags: List[str] = []
     pipeline_stage: str = "new"
+    # New lifecycle-reminder fields
+    property_address: Optional[str] = ""  # used in Possession-versary email
+    bc_assessment_opt_in: bool = True  # annual Jan-3 heads-up
+    mortgage_renewal_date: Optional[str] = None  # YYYY-MM-DD; 90 & 60-day pings
+    mortgage_lender: Optional[str] = ""
+    send_christmas: bool = True
+    # CASL express-consent tracking (mandatory before any commercial email)
+    email_consent: bool = False
+    consent_date: Optional[str] = None  # YYYY-MM-DD Doug obtained express consent
+    consent_source: Optional[str] = ""  # e.g. "Signed buyer agreement 2024-05-12"
+    unsubscribed: bool = False
+    unsubscribed_at: Optional[str] = None
+    unsubscribe_token: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: str = Field(default_factory=now_iso)
+
+# CASL-compliant email templates for lifecycle reminders. Doug edits the 6 defaults
+# in /admin/reminder-templates. Merge tags rendered by _render_reminder_template().
+class ReminderTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str  # birthday | anniversary | possession | bc_assessment | mortgage_renewal | christmas
+    subject: str
+    body_html: str
+    active: bool = True
+    updated_at: str = Field(default_factory=now_iso)
+
+# 7-year audit trail of every reminder email sent (CASL + BCFSA retention).
+class EmailSendLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    client_email: str
+    client_name: str
+    type: str  # matches ReminderTemplate.type
+    subject: str
+    body_html: str
+    sent_at: str = Field(default_factory=now_iso)
+    channel: str = "email"
+    status: str = "queued"  # queued | sent | failed
+    error: Optional[str] = None
+    unsubscribe_token: Optional[str] = None
 
 class GlossaryTerm(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -1158,28 +1196,463 @@ async def delete_client(cid: str, _=Depends(verify_admin)):
 
 @api.get("/admin/reminders")
 async def get_reminders(_=Depends(verify_admin)):
-    """Returns upcoming birthdays, anniversaries, and possession-date anniversaries within next 30 days"""
-    clients = await db.clients.find({}, {"_id":0}).to_list(2000)
+    """Returns upcoming client lifecycle reminders within the next 30 days.
+    Types: Birthday, Anniversary, Possession Anniversary, BC Assessment,
+    Mortgage Renewal (90d + 60d), Christmas. Each row includes consent status
+    so Doug knows whether he can send commercially (CASL)."""
+    clients = await db.clients.find({}, {"_id": 0}).to_list(2000)
     today = datetime.now(timezone.utc).date()
+    horizon_days = 30
     reminders = []
+
+    def _consent_state(c: dict) -> dict:
+        return {
+            "email_consent": bool(c.get("email_consent")),
+            "unsubscribed": bool(c.get("unsubscribed")),
+            "can_send": bool(c.get("email_consent")) and not c.get("unsubscribed") and bool(c.get("email")),
+        }
+
+    def _days_until(month: int, day: int) -> int:
+        try:
+            target = datetime(today.year, month, day).date()
+        except ValueError:
+            return -1
+        if target < today:
+            try:
+                target = datetime(today.year + 1, month, day).date()
+            except ValueError:
+                return -1
+        return (target - today).days
+
     for c in clients:
-        for field, label in [("birthdate","Birthday"),("anniversary","Anniversary"),("possession_date","Possession Anniversary")]:
+        base = {
+            "client_id": c["id"],
+            "client_name": c["full_name"],
+            "client_email": c.get("email") or "",
+            "consent": _consent_state(c),
+        }
+        # Birthday / Anniversary / Possession-versary (recurring annual)
+        for field, label, key in [
+            ("birthdate", "Birthday", "birthday"),
+            ("anniversary", "Anniversary", "anniversary"),
+            ("possession_date", "Possession Anniversary", "possession"),
+        ]:
+            v = c.get(field)
+            if not v:
+                continue
+            try:
+                d = datetime.strptime(v, "%Y-%m-%d").date()
+                this_year = d.replace(year=today.year)
+                delta = (this_year - today).days
+                if delta < 0:
+                    this_year = d.replace(year=today.year + 1)
+                    delta = (this_year - today).days
+                if 0 <= delta <= horizon_days:
+                    years = today.year - d.year if key == "possession" else None
+                    if key == "possession" and (years is None or years < 1):
+                        continue  # no possession-versary in the first year
+                    reminders.append({
+                        **base,
+                        "type": label,
+                        "type_key": key,
+                        "date": this_year.isoformat(),
+                        "days_until": delta,
+                        "years": years,
+                        "auto_send": key in ("birthday", "anniversary"),
+                    })
+            except Exception:
+                continue
+
+        # BC Assessment reminder — annual heads-up on Jan 3 (notices mailed early Jan)
+        if c.get("bc_assessment_opt_in", True):
+            delta = _days_until(1, 3)
+            if 0 <= delta <= horizon_days:
+                target = today + timedelta(days=delta)
+                reminders.append({
+                    **base,
+                    "type": "BC Assessment",
+                    "type_key": "bc_assessment",
+                    "date": target.isoformat(),
+                    "days_until": delta,
+                    "auto_send": False,  # manual review — higher stakes
+                })
+
+        # Mortgage Renewal — ping at 90d and 60d out
+        mrd = c.get("mortgage_renewal_date")
+        if mrd:
+            try:
+                mr = datetime.strptime(mrd, "%Y-%m-%d").date()
+                delta = (mr - today).days
+                for ping in (90, 60):
+                    if delta == ping:
+                        reminders.append({
+                            **base,
+                            "type": f"Mortgage Renewal ({ping}d out)",
+                            "type_key": "mortgage_renewal",
+                            "date": mr.isoformat(),
+                            "days_until": delta,
+                            "ping_bucket": ping,
+                            "auto_send": False,  # manual review — high-stakes
+                        })
+            except Exception:
+                pass
+
+        # Christmas — appears Dec 1 onward, sent Dec 20; only for opted-in past/sphere clients
+        if c.get("send_christmas", True):
+            delta = _days_until(12, 20)
+            if 0 <= delta <= horizon_days:
+                target = today + timedelta(days=delta)
+                reminders.append({
+                    **base,
+                    "type": "Christmas Greeting",
+                    "type_key": "christmas",
+                    "date": target.isoformat(),
+                    "days_until": delta,
+                    "auto_send": True,
+                })
+
+    reminders.sort(key=lambda r: r["days_until"])
+    return reminders
+
+# ---------- Reminder templates ----------
+_REMINDER_TYPES = ["birthday", "anniversary", "possession", "bc_assessment", "mortgage_renewal", "christmas"]
+
+DEFAULT_REMINDER_TEMPLATES = {
+    "birthday": {
+        "subject": "Happy Birthday, {{first_name}}! 🎂",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Just a quick note from Doug at EZtoFind.ca — <strong>Happy Birthday!</strong> "
+            "I hope your day is full of good coffee, good company, and (if I'm lucky) a peek at the "
+            "latest listings on your Saved Search. 🎉</p>"
+            "<p>If there's anything I can help with — a market chat, referral to a great REALTOR® "
+            "outside my service area, or just a curiosity question about your home's value — "
+            "just hit reply.</p>"
+            "<p>Warmly,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
+        ),
+    },
+    "anniversary": {
+        "subject": "Cheers to another year, {{first_name}} 🥂",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Just a warm hello from Doug — happy anniversary to you and {{spouse_name}}! "
+            "Wishing you both another wonderful year in your home.</p>"
+            "<p>If you're thinking about the future — whether it's an eventual move, a renovation "
+            "question, or a market check-in — I'm one reply away.</p>"
+            "<p>Warmly,<br/>Doug LeMaire, REALTOR®</p>"
+        ),
+    },
+    "possession": {
+        "subject": "{{years}} year{{years_s}} in your home, {{first_name}}! 🏠",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Hard to believe it's already been <strong>{{years}} year{{years_s}}</strong> since you got "
+            "the keys{{property_line}}. Congratulations on the milestone!</p>"
+            "<p>If you'd ever like a no-obligation valuation for your records — or you're curious what "
+            "similar homes in your neighbourhood are doing — just reply and I'll pull the numbers.</p>"
+            "<p>All the best,<br/>Doug LeMaire, REALTOR®</p>"
+        ),
+    },
+    "bc_assessment": {
+        "subject": "Your BC Assessment notice is coming, {{first_name}} 📋",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Heads up — BC Assessment mails its <strong>2026 assessment notices in early January</strong>, "
+            "reflecting your home's value as of July 1, 2025.</p>"
+            "<p>A few things worth knowing:</p>"
+            "<ul>"
+            "<li>The assessed value is <em>not</em> the same as fair market value today. It's a snapshot "
+            "from six months ago, used for property-tax calculation only.</li>"
+            "<li>You have until <strong>January 31</strong> to file a Notice of Complaint (formerly \"appeal\") "
+            "if the assessment looks off.</li>"
+            "<li>If you'd like a current market valuation to compare against the BCA number, I'm happy to "
+            "prepare one — no obligation.</li>"
+            "</ul>"
+            "<p>Reply anytime,<br/>Doug LeMaire, REALTOR®</p>"
+        ),
+    },
+    "mortgage_renewal": {
+        "subject": "Your mortgage renews {{renewal_date}} — {{days}} days out",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>A friendly reminder that your mortgage with <strong>{{lender}}</strong> is up for renewal "
+            "on <strong>{{renewal_date}}</strong> — about <strong>{{days}} days</strong> away.</p>"
+            "<p>A few thoughts before you sign the renewal your lender sends:</p>"
+            "<ul>"
+            "<li>The rate on the auto-renewal letter is almost always higher than what you can negotiate "
+            "or move for. Shop it.</li>"
+            "<li>An independent mortgage broker can quote 30+ lenders in one shot — free of charge.</li>"
+            "<li>If you're considering a move, a purchase, or an equity take-out, now is the natural "
+            "window to plan it.</li>"
+            "</ul>"
+            "<p>If you'd like an introduction to a broker I trust, just reply.</p>"
+            "<p>Warmly,<br/>Doug LeMaire, REALTOR®</p>"
+            "<p style='color:#666;font-size:0.85em'>This is a general reminder, not mortgage advice. "
+            "Please consult a licensed mortgage professional.</p>"
+        ),
+    },
+    "christmas": {
+        "subject": "Merry Christmas from Doug & the EZtoFind.ca family 🎄",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Just a warm holiday hello from Doug — <strong>Merry Christmas and Happy Holidays</strong> "
+            "to you and yours! Thank you for being part of the EZtoFind.ca community this year.</p>"
+            "<p>Wishing you a restful season, safe travels, and a bright 2027.</p>"
+            "<p>See you in the new year,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
+        ),
+    },
+}
+
+async def _seed_reminder_templates():
+    """Idempotent — inserts any missing defaults."""
+    for t, payload in DEFAULT_REMINDER_TEMPLATES.items():
+        existing = await db.reminder_templates.find_one({"type": t})
+        if not existing:
+            doc = ReminderTemplate(type=t, subject=payload["subject"], body_html=payload["body_html"]).model_dump()
+            await db.reminder_templates.insert_one(doc)
+
+_CASL_FOOTER_HTML = (
+    '<hr style="margin:2em 0;border:none;border-top:1px solid #ddd"/>'
+    '<p style="color:#888;font-size:0.8em;line-height:1.5">'
+    'You are receiving this because you expressly consented to lifecycle updates from Doug LeMaire, REALTOR® '
+    'at EZtoFind.ca. '
+    'Sender: Doug LeMaire, Fraser Property Management Realty Services Ltd., '
+    '1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 · +1-604-466-7021 · doug@eztofind.ca<br/>'
+    '<a href="{{unsubscribe_url}}" style="color:#888">Unsubscribe from future reminders</a>'
+    '</p>'
+)
+
+def _render_reminder_template(body: str, client: dict, extra: dict = None) -> str:
+    """Simple mustache-style {{tag}} rendering with safe fallbacks."""
+    extra = extra or {}
+    first = (client.get("full_name") or "").split(" ")[0] or "there"
+    years = extra.get("years")
+    ctx = {
+        "first_name": first,
+        "full_name": client.get("full_name") or "there",
+        "spouse_name": client.get("spouse_name") or "your partner",
+        "property_address": client.get("property_address") or "",
+        "property_line": f" at {client['property_address']}" if client.get("property_address") else "",
+        "years": str(years) if years is not None else "",
+        "years_s": "s" if (years or 0) != 1 else "",
+        "renewal_date": client.get("mortgage_renewal_date") or "",
+        "lender": client.get("mortgage_lender") or "your lender",
+        "days": str(extra.get("days") or ""),
+        "unsubscribe_url": extra.get("unsubscribe_url") or "https://eztofind.ca/unsubscribe",
+    }
+    out = body
+    for k, v in ctx.items():
+        out = out.replace("{{" + k + "}}", str(v))
+    return out
+
+async def _queue_reminder_email(client: dict, type_key: str, request: Request, extra: dict = None) -> dict:
+    """CASL-compliant reminder send. Returns {status, log_id, reason?}.
+    - Refuses if no email, no express consent, or client unsubscribed.
+    - Always attaches sender ID + unsubscribe link (CASL s.6(2)).
+    - Writes to email_outbox (mock) + email_send_log (7-yr audit)."""
+    extra = extra or {}
+    if not client.get("email"):
+        return {"status": "skipped", "reason": "no_email"}
+    if not client.get("email_consent"):
+        return {"status": "skipped", "reason": "no_consent"}
+    if client.get("unsubscribed"):
+        return {"status": "skipped", "reason": "unsubscribed"}
+    tpl = await db.reminder_templates.find_one({"type": type_key, "active": True})
+    if not tpl:
+        return {"status": "skipped", "reason": "no_template"}
+
+    base = _public_base_url(request)
+    unsub_url = f"{base}/api/unsubscribe/reminder/{client.get('unsubscribe_token','')}"
+    extra_ctx = {**extra, "unsubscribe_url": unsub_url}
+
+    subject = _render_reminder_template(tpl["subject"], client, extra_ctx)
+    body = _render_reminder_template(tpl["body_html"] + _CASL_FOOTER_HTML, client, extra_ctx)
+
+    log = EmailSendLog(
+        client_id=client["id"], client_email=client["email"], client_name=client["full_name"],
+        type=type_key, subject=subject, body_html=body,
+        unsubscribe_token=client.get("unsubscribe_token"), status="queued"
+    ).model_dump()
+    await db.email_send_log.insert_one(log)
+    await db.email_outbox.insert_one({
+        "to": client["email"],
+        "subject": subject,
+        "html": body,
+        "type": f"reminder:{type_key}",
+        "client_id": client["id"],
+        "created_at": now_iso(),
+        "sent_at": None,
+        "status": "pending",
+    })
+    logger.info(f"REMINDER queued → {client['email']} ({type_key}) log_id={log['id']}")
+    return {"status": "queued", "log_id": log["id"], "to": client["email"]}
+
+
+@api.get("/admin/reminder-templates")
+async def get_reminder_templates(_=Depends(verify_admin)):
+    await _seed_reminder_templates()
+    docs = await db.reminder_templates.find({}, {"_id": 0}).to_list(20)
+    # Sort into a stable order for the UI
+    order = {t: i for i, t in enumerate(_REMINDER_TYPES)}
+    docs.sort(key=lambda d: order.get(d.get("type"), 99))
+    return docs
+
+class ReminderTemplateUpdate(BaseModel):
+    subject: str
+    body_html: str
+    active: Optional[bool] = True
+
+@api.put("/admin/reminder-templates/{type_key}")
+async def update_reminder_template(type_key: str, body: ReminderTemplateUpdate, _=Depends(verify_admin)):
+    if type_key not in _REMINDER_TYPES:
+        raise HTTPException(400, "Unknown template type")
+    payload = {**body.model_dump(), "type": type_key, "updated_at": now_iso()}
+    await db.reminder_templates.update_one({"type": type_key}, {"$set": payload}, upsert=True)
+    return {"success": True}
+
+@api.post("/admin/reminder-templates/{type_key}/reset")
+async def reset_reminder_template(type_key: str, _=Depends(verify_admin)):
+    if type_key not in DEFAULT_REMINDER_TEMPLATES:
+        raise HTTPException(400, "Unknown template type")
+    d = DEFAULT_REMINDER_TEMPLATES[type_key]
+    await db.reminder_templates.update_one(
+        {"type": type_key},
+        {"$set": {"subject": d["subject"], "body_html": d["body_html"], "active": True, "updated_at": now_iso()}},
+        upsert=True,
+    )
+    return {"success": True}
+
+class SendReminderIn(BaseModel):
+    client_id: str
+    type_key: str
+    years: Optional[int] = None
+    days: Optional[int] = None
+
+@api.post("/admin/reminders/send")
+async def send_reminder_now(body: SendReminderIn, request: Request, _=Depends(verify_admin)):
+    if body.type_key not in _REMINDER_TYPES:
+        raise HTTPException(400, "Unknown reminder type")
+    client = await db.clients.find_one({"id": body.client_id})
+    if not client:
+        raise HTTPException(404, "Client not found")
+    extra = {"years": body.years, "days": body.days}
+    result = await _queue_reminder_email(client, body.type_key, request, extra=extra)
+    return result
+
+@api.post("/admin/reminders/{cid}/{type_key}/snooze")
+async def snooze_reminder(cid: str, type_key: str, _=Depends(verify_admin)):
+    """Mark a reminder as dismissed for this year so it stops showing on the dashboard."""
+    if type_key not in _REMINDER_TYPES:
+        raise HTTPException(400, "Unknown reminder type")
+    year = datetime.now(timezone.utc).year
+    await db.reminder_snoozes.update_one(
+        {"client_id": cid, "type_key": type_key, "year": year},
+        {"$set": {"client_id": cid, "type_key": type_key, "year": year, "snoozed_at": now_iso()}},
+        upsert=True,
+    )
+    return {"success": True}
+
+@api.get("/admin/reminders/christmas/preview")
+async def christmas_preview(request: Request, _=Depends(verify_admin)):
+    """List every client eligible for the Dec-20 Christmas bulk send + render one preview."""
+    clients = await db.clients.find({"send_christmas": True, "email_consent": True, "unsubscribed": {"$ne": True}, "email": {"$nin": ["", None]}}).to_list(2000)
+    tpl = await db.reminder_templates.find_one({"type": "christmas", "active": True})
+    preview_html, preview_subject = "", ""
+    if tpl and clients:
+        base = _public_base_url(request)
+        sample = clients[0]
+        unsub_url = f"{base}/api/unsubscribe/reminder/{sample.get('unsubscribe_token','')}"
+        preview_subject = _render_reminder_template(tpl["subject"], sample, {"unsubscribe_url": unsub_url})
+        preview_html = _render_reminder_template(tpl["body_html"] + _CASL_FOOTER_HTML, sample, {"unsubscribe_url": unsub_url})
+    return {
+        "count": len(clients),
+        "recipients": [{"id": c["id"], "name": c["full_name"], "email": c["email"]} for c in clients[:200]],
+        "preview_subject": preview_subject,
+        "preview_html": preview_html,
+    }
+
+@api.post("/admin/reminders/christmas/send")
+async def christmas_send(request: Request, _=Depends(verify_admin)):
+    """Fire the Christmas bulk send to every consented, non-unsubscribed client with send_christmas=true."""
+    clients = await db.clients.find({"send_christmas": True, "email_consent": True, "unsubscribed": {"$ne": True}, "email": {"$nin": ["", None]}}).to_list(2000)
+    results = {"queued": 0, "skipped": 0}
+    for c in clients:
+        r = await _queue_reminder_email(c, "christmas", request)
+        if r.get("status") == "queued":
+            results["queued"] += 1
+        else:
+            results["skipped"] += 1
+    return results
+
+@api.post("/admin/reminders/auto-send-today")
+async def auto_send_today(request: Request, _=Depends(verify_admin)):
+    """Sends all AUTO-eligible reminders due today (Birthday, Anniversary, Christmas on Dec 20).
+    Manual-review types (BC Assessment, Mortgage Renewal) are intentionally excluded.
+    Doug can click this daily; a cron trigger can hit it too."""
+    all_reminders = await get_reminders(_=None) if False else None  # (avoid re-auth; inline instead)
+    # Re-run the reminders logic inline (avoiding re-auth complexity)
+    clients = await db.clients.find({}).to_list(2000)
+    today = datetime.now(timezone.utc).date()
+    year = today.year
+    already_sent = set()  # avoid double-sends
+    async for row in db.email_send_log.find({"sent_at": {"$gte": today.isoformat()}}, {"_id": 0, "client_id": 1, "type": 1}):
+        already_sent.add((row["client_id"], row["type"]))
+
+    results = {"queued": 0, "skipped": 0, "details": []}
+    for c in clients:
+        pairs = []
+        for field, key in [("birthdate", "birthday"), ("anniversary", "anniversary"), ("possession_date", "possession")]:
             v = c.get(field)
             if not v: continue
             try:
                 d = datetime.strptime(v, "%Y-%m-%d").date()
-                # this year's occurrence
-                this_year = d.replace(year=today.year)
-                delta = (this_year - today).days
-                if delta < 0:
-                    this_year = d.replace(year=today.year+1)
-                    delta = (this_year - today).days
-                if 0 <= delta <= 30:
-                    years = today.year - d.year if label == "Possession Anniversary" else None
-                    reminders.append({"client_id": c["id"], "client_name": c["full_name"], "type": label, "date": this_year.isoformat(), "days_until": delta, "years": years})
-            except Exception: continue
-    reminders.sort(key=lambda r: r["days_until"])
-    return reminders
+                if d.month == today.month and d.day == today.day:
+                    if key == "possession":
+                        yrs = today.year - d.year
+                        if yrs >= 1:
+                            pairs.append((key, {"years": yrs}))
+                    else:
+                        pairs.append((key, {}))
+            except Exception:
+                continue
+        if c.get("send_christmas", True) and today.month == 12 and today.day == 20:
+            pairs.append(("christmas", {}))
+
+        for type_key, extra in pairs:
+            if (c["id"], type_key) in already_sent:
+                results["skipped"] += 1
+                continue
+            snoozed = await db.reminder_snoozes.find_one({"client_id": c["id"], "type_key": type_key, "year": year})
+            if snoozed:
+                results["skipped"] += 1
+                continue
+            r = await _queue_reminder_email(c, type_key, request, extra=extra)
+            if r.get("status") == "queued":
+                results["queued"] += 1
+                results["details"].append({"client": c["full_name"], "type": type_key})
+            else:
+                results["skipped"] += 1
+    return results
+
+@api.get("/admin/email-log")
+async def admin_email_log(type: Optional[str] = None, limit: int = 500, _=Depends(verify_admin)):
+    q = {}
+    if type: q["type"] = type
+    docs = await db.email_send_log.find(q, {"_id": 0, "body_html": 0}).sort("sent_at", -1).limit(limit).to_list(limit)
+    return docs
+
+@api.get("/unsubscribe/reminder/{token}")
+async def unsubscribe_reminder(token: str):
+    """One-click CASL unsubscribe. Sets unsubscribed=True on the client record."""
+    if not token:
+        raise HTTPException(400, "Missing token")
+    res = await db.clients.update_one(
+        {"unsubscribe_token": token},
+        {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso(), "email_consent": False}},
+    )
+    if res.matched_count == 0:
+        return HTMLResponse(_landing_page("Unsubscribe", "<p>This unsubscribe link is no longer valid or has already been processed. If you need help, email doug@eztofind.ca.</p>"))
+    return HTMLResponse(_landing_page("Unsubscribed", "<p>You've been unsubscribed from all future EZtoFind.ca lifecycle reminders. We'll miss you! If this was a mistake, email doug@eztofind.ca and we'll restore your preferences.</p>"))
 
 # =============== GLOSSARY ===============
 @api.get("/glossary")
@@ -2236,6 +2709,21 @@ async def startup():
         logger.info("saved_searches + email_outbox indexes ensured")
     except Exception as e:
         logger.error(f"saved_searches index setup failed: {e}")
+
+    # Client-lifecycle reminder module — seed 6 default templates + indexes.
+    try:
+        await _seed_reminder_templates()
+        await db.reminder_templates.create_index("type", unique=True)
+        await db.clients.create_index("unsubscribe_token", sparse=True)
+        await db.email_send_log.create_index([("sent_at", -1)])
+        await db.email_send_log.create_index("client_id")
+        await db.reminder_snoozes.create_index([("client_id", 1), ("type_key", 1), ("year", 1)], unique=True)
+        # Backfill unsubscribe_token on legacy client records
+        async for c in db.clients.find({"unsubscribe_token": {"$in": [None, ""]}}, {"_id": 1}):
+            await db.clients.update_one({"_id": c["_id"]}, {"$set": {"unsubscribe_token": str(uuid.uuid4())}})
+        logger.info("Reminder templates + client-lifecycle indexes ensured")
+    except Exception as e:
+        logger.error(f"Reminder module setup failed: {e}")
 
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):

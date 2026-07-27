@@ -2637,6 +2637,9 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminders")} className={active==="reminders"?"active":""} data-testid="admin-nav-reminders">🎂 Reminders</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminder-templates")} className={active==="rem-templates"?"active":""} data-testid="admin-nav-rem-templates">📧 Reminder Templates</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-log")} className={active==="email-log"?"active":""} data-testid="admin-nav-email-log">📮 Email Log</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
@@ -2690,10 +2693,10 @@ const AdminDash = () => {
     <div className="grid-3" style={{marginTop:"1.5rem"}}>
       {[["Buyer Leads",stats.buyers],["Seller Leads",stats.sellers],["REALTORS® Applied",stats.realtors]].map(([l,n])=><div key={l} className="paper" style={{textAlign:"center"}}><div style={{fontSize:"3rem",fontWeight:700,color:"var(--brand-blue)"}}>{n}</div><div style={{color:"var(--muted)"}}>{l}</div></div>)}
     </div>
-    <h2 style={{marginTop:"3rem"}}>Upcoming Reminders (next 30 days)</h2>
+    <h2 style={{marginTop:"3rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}><span>Upcoming Reminders (next 30 days)</span><Link to="/admin/reminders" className="btn btn-ghost" style={{fontSize:"0.85rem",padding:"0.4rem 0.9rem"}} data-testid="dash-view-all-reminders">View & send →</Link></h2>
     <table className="admin-table" data-testid="admin-reminders">
-      <thead><tr><th>Client</th><th>Type</th><th>Date</th><th>Days</th></tr></thead>
-      <tbody>{rem.length===0 ? <tr><td colSpan="4" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No upcoming reminders. Add clients with birthdays / anniversaries / possession dates in the CRM.</td></tr> : rem.map((r,i)=><tr key={i}><td>{r.client_name}</td><td>{r.type} {r.years?`(${r.years} yr)`:""}</td><td>{r.date}</td><td>{r.days_until===0?"Today!":`${r.days_until} days`}</td></tr>)}</tbody>
+      <thead><tr><th>Client</th><th>Type</th><th>Date</th><th>Days</th><th>Consent</th></tr></thead>
+      <tbody>{rem.length===0 ? <tr><td colSpan="5" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No upcoming reminders. Add clients with birthdays / anniversaries / possession dates / mortgage renewal dates in the CRM.</td></tr> : rem.slice(0,10).map((r,i)=><tr key={i}><td>{r.client_name}</td><td>{r.type} {r.years?`(${r.years} yr)`:""}</td><td>{r.date}</td><td>{r.days_until===0?"Today!":`${r.days_until} days`}</td><td>{r.consent?.unsubscribed ? <span style={{color:"#DC2626"}}>Unsub.</span> : (r.consent?.email_consent ? <span style={{color:"#0F9D58"}}>✓</span> : <span style={{color:"#DC2626"}}>✗</span>)}</td></tr>)}</tbody>
     </table>
   </AdminShell>;
 };
@@ -2712,30 +2715,228 @@ const AdminList = ({title,url,cols,active}) => {
 const AdminClients = () => {
   const {headers} = useAdmin();
   const [rows,setRows]=useState([]); const [show,setShow]=useState(false);
-  const [f,setF]=useState({full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:""});
+  const empty = {full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:"",property_address:"",bc_assessment_opt_in:true,mortgage_renewal_date:"",mortgage_lender:"",send_christmas:true,email_consent:false,consent_date:"",consent_source:""};
+  const [f,setF]=useState(empty);
   const load=()=>axios.get(`${API}/admin/clients`,{headers}).then(r=>setRows(r.data)).catch(()=>{});
   useEffect(()=>{ load(); },[]);
-  const add=async e=>{e.preventDefault(); await axios.post(`${API}/admin/clients`,f,{headers}); setShow(false); setF({full_name:"",email:"",phone:"",client_type:"buyer",birthdate:"",anniversary:"",possession_date:"",spouse_name:"",notes:""}); load();};
+  const add=async e=>{e.preventDefault();
+    if(f.email_consent && !f.consent_date){ alert("Consent Date is required whenever Email Consent is checked (CASL requirement)."); return; }
+    if(f.email_consent && !f.email){ alert("Email address is required if consent is granted."); return; }
+    await axios.post(`${API}/admin/clients`,f,{headers}); setShow(false); setF(empty); load();
+  };
   const del=async id=>{if(!window.confirm("Delete?"))return; await axios.delete(`${API}/admin/clients/${id}`,{headers}); load();};
   return <AdminShell active="clients">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><h1 className="font-display" style={{fontSize:"2rem",margin:0}}>CRM Clients</h1><button className="btn btn-primary" onClick={()=>setShow(s=>!s)} data-testid="admin-add-client">+ Add Client</button></div>
     {show && <form onSubmit={add} className="paper" style={{marginTop:"1.5rem"}}>
+      <h3 style={{margin:"0 0 0.75rem",color:"var(--brand-navy)"}}>Basics</h3>
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="client-name"/></div>
-        <div className="field"><label>Email</label><input value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
+        <div className="field"><label>Email</label><input type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="client-email"/></div>
         <div className="field"><label>Phone</label><input value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
         <div className="field"><label>Type</label><select value={f.client_type} onChange={e=>setF({...f,client_type:e.target.value})}><option value="buyer">Buyer</option><option value="seller">Seller</option><option value="past">Past Client</option><option value="sphere">Sphere</option></select></div>
-        <div className="field"><label>Birthdate</label><input type="date" value={f.birthdate} onChange={e=>setF({...f,birthdate:e.target.value})} data-testid="client-birthdate"/></div>
-        <div className="field"><label>Anniversary</label><input type="date" value={f.anniversary} onChange={e=>setF({...f,anniversary:e.target.value})} data-testid="client-anniv"/></div>
-        <div className="field"><label>Possession Date</label><input type="date" value={f.possession_date} onChange={e=>setF({...f,possession_date:e.target.value})} data-testid="client-possession"/></div>
         <div className="field"><label>Spouse</label><input value={f.spouse_name} onChange={e=>setF({...f,spouse_name:e.target.value})}/></div>
+        <div className="field"><label>Property Address <span style={{color:"var(--muted)",fontWeight:400}}>(shown in Possession-versary emails)</span></label><input value={f.property_address} onChange={e=>setF({...f,property_address:e.target.value})} placeholder="123 Main St, Maple Ridge"/></div>
       </div>
+
+      <h3 style={{margin:"1.5rem 0 0.75rem",color:"var(--brand-navy)"}}>Key Dates</h3>
+      <div className="form-grid">
+        <div className="field"><label>🎂 Birthdate</label><input type="date" value={f.birthdate} onChange={e=>setF({...f,birthdate:e.target.value})} data-testid="client-birthdate"/></div>
+        <div className="field"><label>💍 Anniversary</label><input type="date" value={f.anniversary} onChange={e=>setF({...f,anniversary:e.target.value})} data-testid="client-anniv"/></div>
+        <div className="field"><label>🏠 Possession Date</label><input type="date" value={f.possession_date} onChange={e=>setF({...f,possession_date:e.target.value})} data-testid="client-possession"/></div>
+        <div className="field"><label>💰 Mortgage Renewal Date <span style={{color:"var(--muted)",fontWeight:400}}>(90d & 60d ahead)</span></label><input type="date" value={f.mortgage_renewal_date} onChange={e=>setF({...f,mortgage_renewal_date:e.target.value})} data-testid="client-mortgage-date"/></div>
+        <div className="field"><label>Mortgage Lender</label><input value={f.mortgage_lender} onChange={e=>setF({...f,mortgage_lender:e.target.value})} placeholder="RBC, BMO, MCAP, …"/></div>
+      </div>
+
+      <h3 style={{margin:"1.5rem 0 0.75rem",color:"var(--brand-navy)"}}>Reminder Preferences</h3>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap"}}>
+        <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.bc_assessment_opt_in} onChange={e=>setF({...f,bc_assessment_opt_in:e.target.checked})} data-testid="client-bca-opt"/> 📋 Send BC Assessment heads-up (early January)</label>
+        <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.send_christmas} onChange={e=>setF({...f,send_christmas:e.target.checked})} data-testid="client-xmas-opt"/> 🎄 Include in Christmas bulk send</label>
+      </div>
+
+      <h3 style={{margin:"1.5rem 0 0.75rem",color:"var(--brand-navy)"}}>CASL Express Consent <span style={{color:"var(--muted)",fontWeight:400,fontSize:"0.85rem"}}>— required by Canadian law before sending any commercial email</span></h3>
+      <div style={{background:"#FFF8E1",border:"1px solid rgba(245,166,35,0.35)",borderRadius:"0.6rem",padding:"1rem",marginBottom:"0.75rem",fontSize:"0.85rem",color:"var(--muted)",lineHeight:1.5}}>Only tick "Email Consent" if this client has <strong>expressly agreed</strong> to receive lifecycle emails from you (e.g., signed a buyer agreement mentioning it, or explicitly opted in via the site). Every email will include an unsubscribe link and your brokerage identifier.</div>
+      <div className="form-grid">
+        <div className="field"><label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}><input type="checkbox" checked={f.email_consent} onChange={e=>setF({...f,email_consent:e.target.checked})} data-testid="client-consent"/> 🛡️ Email Consent granted</label></div>
+        <div className="field"><label>Consent Date {f.email_consent && <span style={{color:"#DC2626"}}>*</span>}</label><input type="date" value={f.consent_date} onChange={e=>setF({...f,consent_date:e.target.value})} data-testid="client-consent-date"/></div>
+        <div className="field"><label>Consent Source</label><input value={f.consent_source} onChange={e=>setF({...f,consent_source:e.target.value})} placeholder="Signed buyer agreement, verbal opt-in, website form, …"/></div>
+      </div>
+
       <div style={{marginTop:"1rem"}} className="field"><label>Notes</label><textarea rows="2" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
       <button type="submit" className="btn btn-green" style={{marginTop:"1rem"}} data-testid="client-save">Save Client</button>
     </form>}
     <table className="admin-table" style={{marginTop:"1.5rem"}}>
-      <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Phone</th><th>Birthday</th><th>Anniv.</th><th>Possession</th><th></th></tr></thead>
-      <tbody>{rows.length===0 ? <tr><td colSpan="8" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No clients yet.</td></tr> : rows.map(r=><tr key={r.id}><td>{r.full_name}</td><td>{r.client_type}</td><td>{r.email}</td><td>{r.phone}</td><td>{r.birthdate||"—"}</td><td>{r.anniversary||"—"}</td><td>{r.possession_date||"—"}</td><td><button onClick={()=>del(r.id)} style={{background:"transparent",border:"none",color:"#DC2626",cursor:"pointer"}}>Delete</button></td></tr>)}</tbody>
+      <thead><tr><th>Name</th><th>Type</th><th>Email</th><th>Consent</th><th>Birthday</th><th>Anniv.</th><th>Possession</th><th>Renewal</th><th></th></tr></thead>
+      <tbody>{rows.length===0 ? <tr><td colSpan="9" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No clients yet.</td></tr> : rows.map(r=><tr key={r.id}>
+        <td>{r.full_name}</td>
+        <td>{r.client_type}</td>
+        <td>{r.email||"—"}</td>
+        <td>{r.unsubscribed ? <span style={{color:"#DC2626"}}>Unsubscribed</span> : (r.email_consent ? <span style={{color:"#0F9D58"}}>✓ Yes</span> : <span style={{color:"var(--muted)"}}>No</span>)}</td>
+        <td>{r.birthdate||"—"}</td>
+        <td>{r.anniversary||"—"}</td>
+        <td>{r.possession_date||"—"}</td>
+        <td>{r.mortgage_renewal_date||"—"}</td>
+        <td><button onClick={()=>del(r.id)} style={{background:"transparent",border:"none",color:"#DC2626",cursor:"pointer"}}>Delete</button></td>
+      </tr>)}</tbody>
+    </table>
+  </AdminShell>;
+};
+
+// --- Client Reminders (dedicated page) ---
+const AdminReminders = () => {
+  const {headers} = useAdmin();
+  const [rem, setRem] = useState([]);
+  const [busy, setBusy] = useState({});
+  const [xmas, setXmas] = useState(null);
+  const [showXmasPreview, setShowXmasPreview] = useState(false);
+  const [autoResult, setAutoResult] = useState(null);
+  const load = () => axios.get(`${API}/admin/reminders`, {headers}).then(r => setRem(r.data)).catch(() => {});
+  useEffect(() => { if(headers) load(); }, []);
+  const send = async (r) => {
+    setBusy(b => ({...b, [r.client_id + r.type_key]: true}));
+    try {
+      const body = {client_id: r.client_id, type_key: r.type_key, years: r.years || null, days: r.days_until || null};
+      const res = await axios.post(`${API}/admin/reminders/send`, body, {headers});
+      if(res.data.status === "queued") alert(`✅ Queued to ${res.data.to}. Email will be delivered when Resend is wired.`);
+      else alert(`⚠️ Not sent — ${res.data.reason || "unknown"}. Check consent & email on this client.`);
+    } catch(e){ alert("Failed: " + (e.response?.data?.detail || e.message)); }
+    setBusy(b => ({...b, [r.client_id + r.type_key]: false}));
+  };
+  const snooze = async (r) => {
+    if(!window.confirm(`Snooze this ${r.type} reminder for this year?`)) return;
+    await axios.post(`${API}/admin/reminders/${r.client_id}/${r.type_key}/snooze`, {}, {headers});
+    load();
+  };
+  const openXmas = async () => {
+    const r = await axios.get(`${API}/admin/reminders/christmas/preview`, {headers});
+    setXmas(r.data); setShowXmasPreview(true);
+  };
+  const sendXmas = async () => {
+    if(!window.confirm(`Send the Christmas email to ${xmas?.count || 0} consented clients right now? This action is logged.`)) return;
+    const r = await axios.post(`${API}/admin/reminders/christmas/send`, {}, {headers});
+    alert(`Queued ${r.data.queued} · Skipped ${r.data.skipped}`); setShowXmasPreview(false); load();
+  };
+  const runAuto = async () => {
+    if(!window.confirm("Auto-send today's Birthdays, Anniversaries, Possession-versaries + Christmas (if Dec 20)? Only consented clients will receive email.")) return;
+    const r = await axios.post(`${API}/admin/reminders/auto-send-today`, {}, {headers});
+    setAutoResult(r.data);
+  };
+  return <AdminShell active="reminders">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>Client Reminders</h1>
+      <div style={{display:"flex",gap:"0.6rem",flexWrap:"wrap"}}>
+        <button className="btn btn-primary" onClick={runAuto} data-testid="auto-send-today">⚡ Auto-send today's</button>
+        <button className="btn btn-ghost" onClick={openXmas} data-testid="preview-xmas">🎄 Christmas bulk send…</button>
+      </div>
+    </div>
+    <p style={{color:"var(--muted)",marginTop:"0.5rem"}}>Upcoming lifecycle reminders in the next 30 days. <strong>Auto-send</strong> types (Birthday, Anniversary, Possession, Christmas) fire on the day when you click <em>Auto-send today's</em>. <strong>Manual-review</strong> types (BC Assessment, Mortgage Renewal) require you to click <em>Send</em> per client.</p>
+    {autoResult && <div className="paper" style={{background:"#E8F5E9",marginTop:"1rem"}}>
+      <strong>✅ Auto-send result:</strong> Queued {autoResult.queued} · Skipped {autoResult.skipped}
+      {autoResult.details?.length > 0 && <ul style={{margin:"0.5rem 0 0"}}>{autoResult.details.map((d,i) => <li key={i}>{d.client} → {d.type}</li>)}</ul>}
+    </div>}
+
+    <table className="admin-table" style={{marginTop:"1.5rem"}} data-testid="admin-reminders-full">
+      <thead><tr><th>Client</th><th>Type</th><th>Date</th><th>Days</th><th>Consent</th><th>Mode</th><th style={{textAlign:"right"}}>Action</th></tr></thead>
+      <tbody>{rem.length===0 ? <tr><td colSpan="7" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No upcoming reminders in the next 30 days. Add clients + key dates in <a href="/admin/clients" style={{color:"var(--brand-blue)"}}>CRM Clients</a>.</td></tr> : rem.map((r,i) => {
+        const key = r.client_id + r.type_key;
+        const canSend = r.consent?.can_send;
+        return <tr key={i}>
+          <td>{r.client_name}<div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{r.client_email || "no email"}</div></td>
+          <td>{r.type}{r.years ? ` (${r.years} yr)` : ""}</td>
+          <td>{r.date}</td>
+          <td>{r.days_until === 0 ? <strong style={{color:"#DC2626"}}>Today!</strong> : `${r.days_until}d`}</td>
+          <td>{r.consent?.unsubscribed ? <span style={{color:"#DC2626"}}>Unsub.</span> : (r.consent?.email_consent ? <span style={{color:"#0F9D58"}}>✓</span> : <span style={{color:"#DC2626"}}>✗ No consent</span>)}</td>
+          <td>{r.auto_send ? <span style={{background:"#E3F2FD",padding:"0.15rem 0.5rem",borderRadius:12,fontSize:"0.75rem",color:"var(--brand-blue)"}}>Auto</span> : <span style={{background:"#FFF3E0",padding:"0.15rem 0.5rem",borderRadius:12,fontSize:"0.75rem",color:"#E65100"}}>Manual</span>}</td>
+          <td style={{textAlign:"right",whiteSpace:"nowrap"}}>
+            <button disabled={!canSend || busy[key]} onClick={()=>send(r)} className="btn btn-green" style={{padding:"0.35rem 0.75rem",fontSize:"0.8rem",opacity: canSend?1:0.4,cursor: canSend?"pointer":"not-allowed"}} data-testid={`send-reminder-${r.type_key}-${i}`}>{busy[key] ? "..." : "Send"}</button>
+            <button onClick={()=>snooze(r)} style={{marginLeft:"0.4rem",background:"transparent",border:"1px solid var(--muted)",color:"var(--muted)",padding:"0.3rem 0.6rem",borderRadius:6,cursor:"pointer",fontSize:"0.75rem"}}>Snooze</button>
+          </td>
+        </tr>;
+      })}</tbody>
+    </table>
+
+    {showXmasPreview && xmas && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"2rem"}} onClick={()=>setShowXmasPreview(false)}>
+      <div className="paper" onClick={e=>e.stopPropagation()} style={{maxWidth:720,maxHeight:"85vh",overflow:"auto",background:"#fff"}}>
+        <h2 style={{marginTop:0}}>🎄 Christmas Bulk Send</h2>
+        <p><strong>{xmas.count}</strong> consented clients will receive this email:</p>
+        <div style={{background:"#F7FAFF",padding:"1rem",borderRadius:8,marginTop:"1rem"}}>
+          <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>Subject:</div>
+          <div style={{fontWeight:600,marginBottom:"1rem"}}>{xmas.preview_subject || "(no consented clients yet)"}</div>
+          <div dangerouslySetInnerHTML={{__html: xmas.preview_html || "<p>No consented clients — add clients with email consent to preview.</p>"}} style={{fontSize:"0.9rem",lineHeight:1.5}}/>
+        </div>
+        <div style={{display:"flex",gap:"0.75rem",justifyContent:"flex-end",marginTop:"1.5rem"}}>
+          <button className="btn btn-ghost" onClick={()=>setShowXmasPreview(false)}>Cancel</button>
+          <button className="btn btn-green" onClick={sendXmas} disabled={xmas.count===0} data-testid="send-xmas-bulk">Send to {xmas.count} clients</button>
+        </div>
+      </div>
+    </div>}
+  </AdminShell>;
+};
+
+const AdminReminderTemplates = () => {
+  const {headers} = useAdmin();
+  const [tpls, setTpls] = useState([]);
+  const [saved, setSaved] = useState({});
+  const load = () => axios.get(`${API}/admin/reminder-templates`, {headers}).then(r => setTpls(r.data)).catch(() => {});
+  useEffect(() => { if(headers) load(); }, []);
+  const save = async (t) => {
+    await axios.put(`${API}/admin/reminder-templates/${t.type}`, {subject: t.subject, body_html: t.body_html, active: t.active !== false}, {headers});
+    setSaved(s => ({...s, [t.type]: true})); setTimeout(() => setSaved(s => ({...s, [t.type]: false})), 2500);
+  };
+  const reset = async (t) => {
+    if(!window.confirm(`Reset the ${t.type} template to its default? Your edits will be lost.`)) return;
+    await axios.post(`${API}/admin/reminder-templates/${t.type}/reset`, {}, {headers});
+    load();
+  };
+  const update = (type, patch) => setTpls(ts => ts.map(t => t.type === type ? {...t, ...patch} : t));
+  const LABEL = {birthday:"🎂 Birthday",anniversary:"💍 Anniversary",possession:"🏠 Possession-versary",bc_assessment:"📋 BC Assessment",mortgage_renewal:"💰 Mortgage Renewal",christmas:"🎄 Christmas"};
+  return <AdminShell active="rem-templates">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Reminder Templates</h1>
+    <p style={{color:"var(--muted)"}}>Edit the 6 lifecycle reminder emails. Every email auto-appends a CASL-compliant footer with your brokerage identifier + a working unsubscribe link — no need to add it yourself. Available merge tags:</p>
+    <div style={{background:"#F7FAFF",padding:"1rem",borderRadius:8,fontFamily:"monospace",fontSize:"0.8rem",marginBottom:"1.5rem",lineHeight:1.7}}>
+      <code>{"{{first_name}}"}</code> · <code>{"{{full_name}}"}</code> · <code>{"{{spouse_name}}"}</code> · <code>{"{{property_address}}"}</code> · <code>{"{{property_line}}"}</code> · <code>{"{{years}}"}</code> · <code>{"{{renewal_date}}"}</code> · <code>{"{{lender}}"}</code> · <code>{"{{days}}"}</code>
+    </div>
+    {tpls.map(t => <div key={t.type} className="paper" style={{marginBottom:"1.5rem"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem",marginBottom:"1rem"}}>
+        <h3 style={{margin:0,color:"var(--brand-navy)"}}>{LABEL[t.type] || t.type}</h3>
+        <div style={{display:"flex",gap:"0.5rem"}}>
+          {saved[t.type] && <span style={{color:"#0F9D58",fontSize:"0.9rem",alignSelf:"center"}}>✓ Saved</span>}
+          <button className="btn btn-ghost" onClick={()=>reset(t)} style={{padding:"0.4rem 0.9rem",fontSize:"0.85rem"}}>Reset default</button>
+          <button className="btn btn-green" onClick={()=>save(t)} style={{padding:"0.4rem 1rem",fontSize:"0.9rem"}} data-testid={`save-tpl-${t.type}`}>Save</button>
+        </div>
+      </div>
+      <div className="field" style={{marginBottom:"0.75rem"}}><label>Subject</label>
+        <input value={t.subject} onChange={e=>update(t.type,{subject:e.target.value})} data-testid={`tpl-subject-${t.type}`}/>
+      </div>
+      <div className="field"><label>Body (HTML)</label>
+        <textarea rows="10" value={t.body_html} onChange={e=>update(t.type,{body_html:e.target.value})} style={{fontFamily:"monospace",fontSize:"0.82rem"}} data-testid={`tpl-body-${t.type}`}/>
+      </div>
+    </div>)}
+  </AdminShell>;
+};
+
+const AdminEmailLog = () => {
+  const {headers} = useAdmin();
+  const [rows, setRows] = useState([]); const [filter, setFilter] = useState("");
+  const load = () => axios.get(`${API}/admin/email-log${filter?`?type=${filter}`:""}`, {headers}).then(r => setRows(r.data)).catch(() => {});
+  useEffect(() => { if(headers) load(); }, [filter]);
+  return <AdminShell active="email-log">
+    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Reminder Email Log</h1>
+    <p style={{color:"var(--muted)"}}>7-year audit trail of every reminder email queued or sent (CASL / BCFSA compliance).</p>
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem"}}>
+      {["","birthday","anniversary","possession","bc_assessment","mortgage_renewal","christmas"].map(t => (
+        <button key={t||"all"} onClick={()=>setFilter(t)} className={filter===t?"btn btn-primary":"btn btn-ghost"} style={{padding:"0.35rem 0.9rem",fontSize:"0.82rem"}}>{t||"All"}</button>
+      ))}
+    </div>
+    <table className="admin-table" data-testid="admin-email-log">
+      <thead><tr><th>Sent</th><th>Client</th><th>Email</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
+      <tbody>{rows.length===0 ? <tr><td colSpan="6" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No reminders sent yet.</td></tr> : rows.map((r,i)=><tr key={i}>
+        <td style={{whiteSpace:"nowrap"}}>{r.sent_at?.slice(0,16).replace("T"," ")}</td>
+        <td>{r.client_name}</td>
+        <td>{r.client_email}</td>
+        <td>{r.type}</td>
+        <td>{r.subject}</td>
+        <td>{r.status}</td>
+      </tr>)}</tbody>
     </table>
   </AdminShell>;
 };
@@ -3075,7 +3276,6 @@ const AffordabilityCalculator = () => {
         <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
         <div style={{flex:"1 1 240px"}}>
           <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>What Can I Afford?</h2>
-          <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Enter your income and savings — I'll show you your maximum home price under current BC stress-test rules.</div>
         </div>
       </div>
 
@@ -4452,6 +4652,9 @@ function App() {
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>
+      <Route path="/admin/reminders" element={<AdminReminders/>}/>
+      <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
+      <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
       <Route path="/admin/chats" element={<AdminChats/>}/>
       <Route path="/admin/feedback" element={<AdminFeedback/>}/>
