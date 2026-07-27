@@ -724,15 +724,6 @@ const FeaturedListing = () => {
 const Nav = () => {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
-  const [params, setParams] = useSearchParams();
-  const currentLang = params.get("lang") || localStorage.getItem("ez_doogie_lang") || "en";
-  const changeLang = (code) => {
-    localStorage.setItem("ez_doogie_lang", code);
-    // Rewrite the URL's ?lang= so useFormLang() picks it up everywhere.
-    const next = new URLSearchParams(params);
-    if(code === "en") next.delete("lang"); else next.set("lang", code);
-    setParams(next, { replace: true });
-  };
   return (
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
@@ -754,16 +745,6 @@ const Nav = () => {
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <span className="nav-divider" aria-hidden="true"/>
         <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">REALTORS®</NavLink>
-        <select
-          value={currentLang}
-          onChange={e => changeLang(e.target.value)}
-          data-testid="site-lang-select"
-          aria-label="Choose site language — forms and Doogie will follow"
-          title="Choose site language — forms and Doogie chat will follow"
-          style={{marginLeft:"0.85rem",border:"1px solid rgba(15,42,91,0.2)",borderRadius:999,padding:"0.35rem 0.65rem",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",background:"#fff",color:"var(--brand-navy)",cursor:"pointer",fontWeight:600}}
-        >
-          {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code}>🌐 {l.name}</option>)}
-        </select>
       </div>
     </div></nav>
   );
@@ -866,9 +847,7 @@ const DOOGIE_LANGUAGES = [
 const DoogieChat = () => {
   const [open, setOpen] = useState(false);
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
-  // Inherit the site-wide language chosen in the Nav bar (URL ?lang= → localStorage → "en").
-  // No local language dropdown here — one language selector serves the whole site.
-  const { lang } = useFormLang();
+  const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
   const [msgs, setMsgs] = useState([{role:"assistant",content:"Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\"."}]);
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => "sess-" + Math.random().toString(36).slice(2));
@@ -882,6 +861,7 @@ const DoogieChat = () => {
   const audioRef = useRef(null);   // currently-playing HTMLAudioElement, so we can stop mid-play
   const spokenRef = useRef(new Set());  // set of message-indices we've already spoken — bulletproof against double-fire
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
+  useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
   // Pre-fill from affordability calculator handoff
   useEffect(() => {
     const pre = localStorage.getItem("ez_doogie_prefill");
@@ -1057,6 +1037,12 @@ const DoogieChat = () => {
           style={{marginLeft:"auto",flexShrink:0,width:36,height:36,borderRadius:8,border:"1px solid rgba(255,255,255,0.35)",background:voiceOut?"rgba(245,166,35,0.35)":"rgba(255,255,255,0.15)",color:"white",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}>
           {voiceOut ? "🔊" : "🔇"}
         </button>
+        <select value={lang} onChange={e=>setLang(e.target.value)} data-testid="doogie-lang-select"
+          title="Chat language"
+          aria-label="Chat language"
+          style={{marginLeft:"0.35rem",flexShrink:0,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.4rem",fontSize:"0.8rem",cursor:"pointer",fontFamily:"Inter,sans-serif",maxWidth:"85px"}}>
+          {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label}</option>)}
+        </select>
         <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
           style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1.35rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.5rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
           onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
