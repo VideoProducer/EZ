@@ -992,7 +992,10 @@ const DoogieChat = () => {
           style={{marginLeft:"auto",background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.5rem",fontSize:"0.85rem",cursor:"pointer",fontFamily:"Inter,sans-serif"}}>
           {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label} · {l.name}</option>)}
         </select>
-        <button onClick={()=>setOpen(false)} style={{background:"transparent",border:"none",color:"white",fontSize:"1.5rem",cursor:"pointer",padding:"0 0.35rem",marginLeft:"0.35rem"}}>×</button></header>
+        <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
+          style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1.35rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.5rem",borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
+          onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
+          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>×</button></header>
       {!consented ? <div style={{padding:"1.25rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6,background:"#FFF8E8",flex:1,overflowY:"auto"}} data-testid="doogie-consent">
         <div style={{fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem"}}>Before we chat…</div>
         <p style={{margin:"0 0 0.75rem"}}>Doogie is an AI assistant powered by Anthropic Claude. Doogie provides <strong>general information only</strong> — never financial, legal, tax, or property-specific advice.</p>
