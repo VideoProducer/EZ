@@ -1270,6 +1270,8 @@ class RealtorInitial(BaseModel):
     email: EmailStr
     brokerage: Optional[str] = None
     realtor_number: Optional[str] = None
+    province: Optional[str] = None
+    network_type: Optional[str] = "bc"  # "bc" (in-province partner) or "oop" (out-of-province partner)
 
 @api.post("/realtors/apply")
 async def realtor_apply(body: RealtorInitial):
@@ -1290,6 +1292,43 @@ async def realtor_apply(body: RealtorInitial):
             f"<strong>Brokerage:</strong> {body.brokerage}<br/>"
             f"<strong>REALTOR® #:</strong> {body.realtor_number}</p>"
             f"<p>25% referral fee agreement pending Doug's approval.</p>"
+            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
+        ),
+        related_id=app_obj.id,
+    ))
+    return {"success": True, "id": app_obj.id, "message": "Your Information has been received. Doug will be in touch."}
+
+# Out-of-province REALTOR® application — same data model, different destination
+# and marks the record as network_type="oop" so it can be filtered separately
+# in the admin CRM (BC partners vs. cross-Canada referral partners).
+DOUG_MAILBOX = "doug@eztofind.ca"
+
+@api.post("/realtors/apply-oop")
+async def realtor_apply_out_of_province(body: RealtorInitial):
+    existing = await db.realtor_applications.find_one({"email": body.email})
+    if existing:
+        await db.realtor_applications.update_one(
+            {"email": body.email},
+            {"$set": {**body.model_dump(exclude_none=True), "network_type": "oop", "updated_at": now_iso()}},
+        )
+        return {"success": True, "id": existing["id"], "message": "Your Information has been received. Doug will be in touch."}
+    app_obj = RealtorApplication(full_name=body.full_name, email=body.email, brokerage=body.brokerage, realtor_number=body.realtor_number, stage="applied")
+    doc = app_obj.model_dump()
+    doc["network_type"] = "oop"
+    doc["province"] = body.province or ""
+    await db.realtor_applications.insert_one(doc)
+    logger.info(f"OOP REALTOR APPLICATION → {DOUG_MAILBOX}: {body.full_name} ({body.email}) — {body.brokerage} — {body.province}")
+    asyncio.create_task(_notify_admin_of_lead(
+        kind="Out-of-Province REALTOR® Application", to=DOUG_MAILBOX,
+        subject=f"🐾 New Out-of-Province REALTOR® Application — {body.full_name} ({body.province or 'unknown province'})",
+        body_html=(
+            f"<p><strong>Name:</strong> {body.full_name}<br/>"
+            f"<strong>Email:</strong> {body.email}<br/>"
+            f"<strong>Brokerage:</strong> {body.brokerage}<br/>"
+            f"<strong>License #:</strong> {body.realtor_number}<br/>"
+            f"<strong>Province:</strong> {body.province or '—'}</p>"
+            f"<p>National referral network — 25% referral fee, bidirectional (BC-exit clients to this partner, BC-inbound clients from this partner).</p>"
+            f"<p>Pending your review + signed CREA Inter-Board Referral Agreement.</p>"
             f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
         ),
         related_id=app_obj.id,

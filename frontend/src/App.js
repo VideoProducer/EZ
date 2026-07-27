@@ -744,7 +744,8 @@ const Nav = () => {
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <span className="nav-divider" aria-hidden="true"/>
-        <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">REALTORS®</NavLink>
+        <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">BC REALTORS®</NavLink>
+        <NavLink to="/realtors-outofprovince" onClick={close} data-testid="nav-realtors-oop">Out of Province REALTORS®</NavLink>
       </div>
     </div></nav>
   );
@@ -2290,17 +2291,47 @@ const RealtorApply = () => {
   const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
-    <div className="eyebrow">For REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
+    <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
+    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed BC REALTOR® interested in receiving referrals within British Columbia? Apply here to be considered as a partner in Doug's BC referral network. 25% referral fee on closed transactions.</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
       : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
           <div className="form-grid">
             <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-name"/></div>
             <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-email"/></div>
             <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-brokerage"/></div>
-            <div className="field"><label>Membership Number *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-number"/></div>
+            <div className="field"><label>BCFSA REALTOR® # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-number"/></div>
           </div>
           {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
           <button type="submit" className="btn btn-primary" style={{marginTop:"1.25rem"}} data-testid="realtor-submit">Submit</button>
+        </form>}
+  </div></section>);
+};
+
+// --- Out-of-Province REALTOR® network (same shape, different destination + copy) ---
+const RealtorApplyOutOfProvince = () => {
+  const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",province:""}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
+  const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
+  const PROVINCES = ["Alberta","Saskatchewan","Manitoba","Ontario","Quebec","New Brunswick","Nova Scotia","Prince Edward Island","Newfoundland and Labrador","Yukon","Northwest Territories","Nunavut","Other (International)"];
+  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
+    <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
+    <div className="eyebrow">For REALTORS® Outside BC</div><h1 className="section-title">Join Doug's out-of-province referral network</h1>
+    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia? Join Doug's national referral network. You'll receive qualified <strong>BC-exit clients</strong> moving to your province and can send Doug your BC-bound clients. 25% referral fee both directions, secured via signed CREA Inter-Board Referral Agreement.</p>
+    {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
+      : <form onSubmit={submit} className="paper" data-testid="realtor-oop-apply-form">
+          <div className="form-grid">
+            <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-oop-name"/></div>
+            <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-oop-email"/></div>
+            <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-oop-brokerage"/></div>
+            <div className="field"><label>Local REALTOR® / License # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-oop-number"/></div>
+            <div className="field"><label>Province / Territory *</label>
+              <select required value={f.province} onChange={e=>setF({...f,province:e.target.value})} data-testid="realtor-oop-province">
+                <option value="">Select…</option>
+                {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
+          <button type="submit" className="btn btn-primary" style={{marginTop:"1.25rem"}} data-testid="realtor-oop-submit">Submit</button>
         </form>}
   </div></section>);
 };
@@ -4894,6 +4925,7 @@ function App() {
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<AppLayout><RealtorApply/></AppLayout>}/>
+      <Route path="/realtors-outofprovince" element={<AppLayout><RealtorApplyOutOfProvince/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
