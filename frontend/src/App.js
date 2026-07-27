@@ -728,7 +728,7 @@ const Nav = () => {
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
         <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
-        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span>
+        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}><span>EZtoFind<span style={{color:"var(--brand-green-dark)"}}>.ca</span></span>
           <Link to="/beta" onClick={close} title="This site is in beta — click to learn what to test" data-testid="nav-beta-badge" style={{textDecoration:"none",fontFamily:"Inter,sans-serif",fontSize:"0.62rem",fontWeight:700,letterSpacing:"0.08em",background:"linear-gradient(135deg,#F5A623 0%,#F5C023 100%)",color:"#1a1a1a",padding:"0.15rem 0.5rem",borderRadius:6,border:"1px solid rgba(0,0,0,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.1)"}}>BETA</Link>
         </div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>DOUG LEMAIRE, REALTOR®</div></div>
