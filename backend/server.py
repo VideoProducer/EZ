@@ -835,6 +835,48 @@ async def verify_turnstile(token: str, request: Request) -> bool:
         # log for monitoring. This is the industry-standard behaviour.
         return True
 
+# =============== LEAD NOTIFICATION HELPER ===============
+# Every lead form should ping Doug's inbox the moment it lands. Each address
+# listed on the site has a canonical mailbox that receives the notification:
+#   • Buyer / Seller / Valuation / Contact → info@eztofind.ca (general inbox)
+#   • REALTOR® applications                → realtor@eztofind.ca
+#   • Out-of-area referral requests        → referrals@eztofind.ca
+# All are CC'd to info@eztofind.ca as the admin catch-all so nothing is missed
+# if a mailbox is misconfigured. Every send is logged in email_outbox with a
+# provider_message_id (7-year BCFSA/PIPA audit trail).
+INFO_MAILBOX     = "info@eztofind.ca"
+REALTOR_MAILBOX  = "realtor@eztofind.ca"
+REFERRAL_MAILBOX = "referrals@eztofind.ca"
+
+async def _notify_admin_of_lead(
+    *, kind: str, to: str, subject: str, body_html: str, related_id: Optional[str] = None
+):
+    """Send an internal admin notification (transactional — no CASL footer needed
+    because the recipient is the site owner, not the consumer). Adds info@eztofind.ca
+    as CC unless it's already the primary recipient. Failure is non-fatal so the
+    parent request never crashes because of email trouble."""
+    try:
+        from services.email_sender import send_email as _send
+        cc = None if to == INFO_MAILBOX else [INFO_MAILBOX]
+        html = (
+            "<div style='font-family:Inter,Arial,sans-serif;max-width:640px;line-height:1.55'>"
+            f"<h2 style='color:#0F2A5B;margin:0 0 1rem'>🐾 New {kind}</h2>"
+            f"{body_html}"
+            "<hr style='margin:1.5rem 0;border:none;border-top:1px solid #e5e7eb'/>"
+            "<p style='color:#6b7280;font-size:0.82em'>You're receiving this because it was routed from an EZtoFind.ca lead form. This is an internal admin notification — the visitor does not see this email.</p>"
+            "</div>"
+        )
+        text = re.sub(r"<[^>]+>", "", body_html).strip()
+        result = await _send(
+            db, to=to, subject=subject, html=html, text=text,
+            kind="transactional", related_id=related_id, cc=cc,
+        )
+        logger.info(f"LEAD NOTIFICATION [{kind}] → {to} (cc={cc}) provider_id={result.get('provider_message_id')}")
+        return result
+    except Exception as e:
+        logger.exception(f"Lead notification failed for {kind}: {e}")
+        return {"queued": True, "error": str(e)}
+
 # =============== LEADS ===============
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
@@ -850,6 +892,31 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     if (lead.form_lang or "en") != "en" and (lead.notes or "").strip():
         asyncio.create_task(_translate_lead_notes("buyer_leads", lead.id, "notes", lead.notes or "", lead.form_lang or "en"))
     logger.info(f"Buyer lead from {lead.email} (lang={lead.form_lang})")
+
+    # Route to the correct mailbox. Referral requests come through /leads/buyer
+    # with a "OUT-OF-AREA REFERRAL REQUEST" marker prefixed to notes, so we detect
+    # that and route those to referrals@ instead of info@.
+    is_referral = "OUT-OF-AREA REFERRAL REQUEST" in (lead.notes or "").upper()
+    to_addr = REFERRAL_MAILBOX if is_referral else INFO_MAILBOX
+    kind = "Referral Request" if is_referral else "Buyer Lead"
+    body = (
+        f"<p><strong>Name:</strong> {lead.full_name}<br/>"
+        f"<strong>Email:</strong> {lead.email}<br/>"
+        f"<strong>Phone:</strong> {lead.phone or '—'}<br/>"
+        f"<strong>Areas of interest:</strong> {', '.join(lead.areas or []) or '—'}<br/>"
+        f"<strong>Property type:</strong> {lead.property_type or '—'}<br/>"
+        f"<strong>Budget:</strong> {lead.budget or '—'}<br/>"
+        f"<strong>Bedrooms:</strong> {lead.bedrooms or '—'}<br/>"
+        f"<strong>Timeframe:</strong> {lead.timeframe or '—'}<br/>"
+        f"<strong>Language:</strong> {lead.form_lang or 'en'}</p>"
+        f"<p><strong>Notes:</strong><br/>{(lead.notes or '—').replace(chr(10), '<br/>')}</p>"
+        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=buyer'>Buyer Leads → {lead.email}</a></p>"
+    )
+    asyncio.create_task(_notify_admin_of_lead(
+        kind=kind, to=to_addr,
+        subject=f"🐾 New {kind} — {lead.full_name}" + (f" ({', '.join(lead.areas or [])})" if lead.areas else ""),
+        body_html=body, related_id=lead.id,
+    ))
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
 @api.post("/leads/seller")
@@ -865,6 +932,23 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     if (lead.form_lang or "en") != "en" and (lead.reason or "").strip():
         asyncio.create_task(_translate_lead_notes("seller_leads", lead.id, "reason", lead.reason or "", lead.form_lang or "en"))
     logger.info(f"Seller lead from {lead.email} (lang={lead.form_lang})")
+    body = (
+        f"<p><strong>Name:</strong> {lead.full_name}<br/>"
+        f"<strong>Email:</strong> {lead.email}<br/>"
+        f"<strong>Phone:</strong> {lead.phone or '—'}<br/>"
+        f"<strong>Property address:</strong> {getattr(lead, 'address', '') or '—'}<br/>"
+        f"<strong>Property type:</strong> {getattr(lead, 'property_type', '') or '—'}<br/>"
+        f"<strong>Expected value:</strong> {getattr(lead, 'expected_value', '') or '—'}<br/>"
+        f"<strong>Timeframe:</strong> {getattr(lead, 'timeframe', '') or '—'}<br/>"
+        f"<strong>Language:</strong> {lead.form_lang or 'en'}</p>"
+        f"<p><strong>Reason for selling:</strong><br/>{(lead.reason or '—').replace(chr(10), '<br/>')}</p>"
+        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=seller'>Seller Leads → {lead.email}</a></p>"
+    )
+    asyncio.create_task(_notify_admin_of_lead(
+        kind="Seller Lead", to=INFO_MAILBOX,
+        subject=f"🐾 New Seller Lead — {lead.full_name}",
+        body_html=body, related_id=lead.id,
+    ))
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
 # =============== UNSUBSCRIBE (working, updates lead records) ===============
@@ -1196,15 +1280,20 @@ async def realtor_apply(body: RealtorInitial):
         return {"success": True, "id": existing["id"], "message": "Your Information has been received. Doug will be in touch."}
     app_obj = RealtorApplication(full_name=body.full_name, email=body.email, brokerage=body.brokerage, realtor_number=body.realtor_number, stage="applied")
     await db.realtor_applications.insert_one(app_obj.model_dump())
-    # Log for admin queue; email dispatch to realtor@eztofind.ca happens when SMTP is wired
     logger.info(f"REALTOR APPLICATION → realtor@eztofind.ca: {body.full_name} ({body.email}) — {body.brokerage} — #{body.realtor_number}")
-    await db.email_outbox.insert_one({
-        "to": "realtor@eztofind.ca",
-        "subject": f"New REALTOR® application — {body.full_name}",
-        "body": f"Name: {body.full_name}\nEmail: {body.email}\nBrokerage: {body.brokerage}\nMembership #: {body.realtor_number}",
-        "ts": now_iso(),
-        "sent": False
-    })
+    asyncio.create_task(_notify_admin_of_lead(
+        kind="REALTOR® Application", to=REALTOR_MAILBOX,
+        subject=f"🐾 New REALTOR® Application — {body.full_name}",
+        body_html=(
+            f"<p><strong>Name:</strong> {body.full_name}<br/>"
+            f"<strong>Email:</strong> {body.email}<br/>"
+            f"<strong>Brokerage:</strong> {body.brokerage}<br/>"
+            f"<strong>REALTOR® #:</strong> {body.realtor_number}</p>"
+            f"<p>25% referral fee agreement pending Doug's approval.</p>"
+            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
+        ),
+        related_id=app_obj.id,
+    ))
     return {"success": True, "id": app_obj.id, "message": "Your Information has been received. Doug will be in touch."}
 
 class RealtorCredentials(BaseModel):

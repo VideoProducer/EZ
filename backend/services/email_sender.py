@@ -82,6 +82,8 @@ async def send_email(
     kind: str,                       # "transactional" | "commercial"
     related_id: Optional[str] = None,  # e.g. saved_search.id
     unsubscribe_url: Optional[str] = None,
+    cc: Optional[list] = None,       # additional recipients (e.g. info@ admin catch-all)
+    bcc: Optional[list] = None,
 ) -> dict:
     """Send an email. Behaviour depends on env:
     - RESEND_API_KEY set: post to Resend, log outcome to email_outbox.
@@ -120,6 +122,8 @@ async def send_email(
         "html": html,
         "text": text,
     }
+    if cc:  payload["cc"]  = list(cc)
+    if bcc: payload["bcc"] = list(bcc)
     if RESEND_REPLY_TO:
         payload["reply_to"] = RESEND_REPLY_TO
     if unsubscribe_url:
