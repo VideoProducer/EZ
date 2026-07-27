@@ -2667,6 +2667,43 @@ async def startup():
     asyncio.create_task(asyncio.sleep(60)).add_done_callback(lambda _: asyncio.create_task(_retention_loop()))
     # Amenity warm-up disabled per user request
 
+    # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
+    # background. Writes each run to `ddf_sync_log` so it shows up in the same
+    # /admin/listings/sync-log the manual sync uses. First run fires 10 min
+    # after boot to avoid colliding with any admin-triggered sync.
+    async def _ddf_auto_sync_loop():
+        import asyncio as _a
+        while True:
+            try:
+                if _ddf_ready():
+                    # Skip if a sync is already in flight (manual trigger overlap)
+                    running = await db.ddf_sync_log.find_one({"status": "running"})
+                    if running:
+                        logger.info("DDF auto-sync: skipping (another sync already running)")
+                    else:
+                        marker = {"status": "running", "started_at": now_iso(), "pulled": 0, "upserted": 0, "trigger": "auto"}
+                        ins = await db.ddf_sync_log.insert_one(marker)
+                        try:
+                            r = await _ddf_sync(db)
+                            await db.ddf_sync_log.update_one({"_id": ins.inserted_id}, {"$set": {"status": "done", "finished_at": now_iso(), **r}})
+                            logger.info(f"DDF auto-sync: pulled={r.get('pulled',0)} upserted={r.get('upserted',0)} removed={r.get('removed',0)}")
+                            # Fire saved-search alerts for any newly-matched properties
+                            try:
+                                from services.alert_matcher import run_matcher
+                                alerts = await run_matcher(db, "https://eztofind.ca")
+                                logger.info(f"alert_matcher after auto-sync: {alerts}")
+                            except Exception as e:
+                                logger.exception(f"alert_matcher hook failed: {e}")
+                        except Exception as e:
+                            await db.ddf_sync_log.update_one({"_id": ins.inserted_id}, {"$set": {"status": "error", "finished_at": now_iso(), "errors": [str(e)]}})
+                            logger.error(f"DDF auto-sync failed: {e}")
+                else:
+                    logger.info("DDF auto-sync: credentials not configured, skipping")
+            except Exception as e:
+                logger.error(f"DDF auto-sync loop iteration failed: {e}")
+            await _a.sleep(4 * 3600)  # every 4 hours
+    asyncio.create_task(asyncio.sleep(600)).add_done_callback(lambda _: asyncio.create_task(_ddf_auto_sync_loop()))
+
     # Generate sitemap.xml on startup so search engines get a fresh copy
     try:
         from sitemap_generator import generate_sitemap
@@ -2675,18 +2712,11 @@ async def startup():
     except Exception as e:
         logger.error(f"sitemap generation failed: {e}")
 
-    # ---- MLS / CREA DDF® listings — mock seed + indexes ----
+    # ---- MLS / CREA DDF® listings — indexes only ----
+    # Mock-seed logic removed 2026-07-27: DDF® feed is live with 53k+ BC listings,
+    # and the auto-sync loop below refreshes them every 4 hours. If the collection
+    # is ever empty, wait for the sync — never repopulate from mocks.
     try:
-        lcount = await db.listings.count_documents({})
-        if lcount == 0:
-            mock_path = ROOT_DIR / "data" / "listings_mock.json"
-            if mock_path.exists():
-                mocks = json.loads(mock_path.read_text())
-                for m in mocks:
-                    m["created_at"] = m.get("updated_at") or now_iso()
-                    m["is_mock"] = True
-                await db.listings.insert_many(mocks)
-                logger.info(f"Seeded {len(mocks)} MOCK MLS listings (pending real DDF® credentials)")
         # Ensure indexes (idempotent)
         await db.listings.create_index("listing_key", unique=True)
         await db.listings.create_index([("city", 1), ("list_price", 1)])
@@ -2699,7 +2729,7 @@ async def startup():
         await db.listing_analytics.create_index("flushed_to_crea")
         logger.info("MLS listings indexes ensured (unique listing_key, geo, price, text)")
     except Exception as e:
-        logger.error(f"MLS listings seed/index setup failed: {e}")
+        logger.error(f"MLS listings index setup failed: {e}")
 
     # Saved-search indexes (email, verification/unsubscribe tokens)
     try:
