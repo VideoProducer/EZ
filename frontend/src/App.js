@@ -789,41 +789,6 @@ const Footer = () => (
   </div></footer>
 );
 
-// ---------- Doogie Explainability Panel ("Why did Doogie say this?") ----------
-// Renders under every Doogie chat response. Discloses model, language, cache
-// hit, PII-redaction, and the compliance boundary. This is a TRUST moat — no
-// other BC real-estate AI shows this level of transparency.
-const DoogieExplainability = ({meta, lang}) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{marginTop:"0.5rem",fontSize:"0.7rem",color:"var(--muted)",lineHeight:1.5}} data-testid="doogie-explain">
-      <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap"}}>
-        <span style={{fontStyle:"italic",opacity:0.9}}>🤖 AI-generated · general information only</span>
-        <button type="button" onClick={()=>setOpen(o=>!o)}
-          data-testid="doogie-explain-toggle"
-          style={{background:"none",border:"1px solid rgba(15,42,91,0.2)",padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.7rem",cursor:"pointer",color:"var(--brand-navy)",fontFamily:"Inter,sans-serif"}}>
-          {open ? "▲ Hide details" : "▾ Why did Doogie say this?"}
-        </button>
-        <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link>
-      </div>
-      {open && (
-        <div data-testid="doogie-explain-body" style={{marginTop:"0.4rem",padding:"0.65rem 0.8rem",background:"#F5F0E1",borderRadius:8,fontStyle:"normal"}}>
-          <div style={{fontWeight:600,color:"var(--brand-navy)",marginBottom:"0.35rem"}}>How this answer was generated</div>
-          <ul style={{margin:0,paddingLeft:"1.1rem",lineHeight:1.6}}>
-            <li><strong>Model:</strong> Anthropic Claude Sonnet 4.6 (via Emergent LLM key)</li>
-            <li><strong>Language:</strong> {lang || "en"}</li>
-            <li><strong>Knowledge sources:</strong> Doogie is trained on general BC real-estate concepts plus this site's curated glossary (~396 BC terms) and community pages (~241 BC communities, ~520 micro-neighborhoods). Live listing data comes from CREA DDF®.</li>
-            {meta?.cached && <li style={{color:"#0F5C2E"}}><strong>Cached response:</strong> served from the 7-day response cache (identical question was answered before — no fresh LLM call).</li>}
-            {meta?.pii_redacted && <li style={{color:"#8B0000"}}><strong>PII redacted:</strong> your message contained personal information (email/phone/address) — it was automatically redacted before being stored, per PIPA.</li>}
-            <li><strong>What Doogie is NOT:</strong> a licensed REALTOR®, lawyer, notary, appraiser, mortgage broker, or financial advisor. Any transactional advice must come from a licensed professional.</li>
-            <li><strong>Under BCFSA rules,</strong> Doogie provides general information only. For a formal opinion, quote, CMA, or transaction, contact <Link to={`/contact${langQS(lang)}`}>Doug LeMaire</Link> or another licensed BC REALTOR®.</li>
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // --- Doogie AI Chat Widget ---
 // Detect listing-search intent so we can fire the MLS filter extractor alongside Doogie's chat stream.
 // Broad triggers (any of these means "user is looking for listings"):
@@ -1105,7 +1070,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && i > 0 && <DoogieExplainability meta={m.meta || null} lang={lang}/>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
