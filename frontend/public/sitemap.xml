@@ -4645,13 +4645,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/ashcroft/n/ashcroft</loc>
+    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
+    <loc>https://eztofind.ca/community/ashcroft/n/ashcroft</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4681,7 +4681,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/oliver/n/oliver-rural</loc>
+    <loc>https://eztofind.ca/community/rossland/n/rossland-rural</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4699,7 +4699,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/rossland/n/rossland-rural</loc>
+    <loc>https://eztofind.ca/community/oliver/n/oliver-rural</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5383,13 +5383,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/mission-hill</loc>
+    <loc>https://eztofind.ca/community/port-alberni/n/port-alberni</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alberni/n/port-alberni</loc>
+    <loc>https://eztofind.ca/community/vernon/n/mission-hill</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6013,7 +6013,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/big-white</loc>
+    <loc>https://eztofind.ca/community/vernon/n/east-hill</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6025,7 +6025,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alberni/n/alberni-inlet</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/big-white</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6061,6 +6061,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/port-alberni/n/alberni-inlet</loc>
+    <lastmod>2026-07-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/grand-forks/n/grand-forks</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
@@ -6074,12 +6080,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/armstrong/n/armstrong-spall</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/vernon/n/east-hill</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6289,7 +6289,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/logan-lake/n/logan-lake</loc>
+    <loc>https://eztofind.ca/community/north-saanich/n/dean-park</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6301,13 +6301,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/north-saanich/n/dean-park</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/lakeview-heights</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/lakeview-heights</loc>
+    <loc>https://eztofind.ca/community/logan-lake/n/logan-lake</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6751,13 +6751,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/westwold/n/monte-lake-westwold</loc>
+    <loc>https://eztofind.ca/community/chemainus/n/chemainus</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/chemainus/n/chemainus</loc>
+    <loc>https://eztofind.ca/community/westwold/n/monte-lake-westwold</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6805,13 +6805,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/penticton/n/wiltse-valleyview</loc>
+    <loc>https://eztofind.ca/community/kamloops/n/tobiano</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/tobiano</loc>
+    <loc>https://eztofind.ca/community/penticton/n/wiltse-valleyview</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -7003,7 +7003,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/warfield/n/village-of-warfield</loc>
+    <loc>https://eztofind.ca/community/sooke/n/becher-bay</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -7015,7 +7015,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/becher-bay</loc>
+    <loc>https://eztofind.ca/community/warfield/n/village-of-warfield</loc>
     <lastmod>2026-07-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

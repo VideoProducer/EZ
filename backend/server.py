@@ -3615,8 +3615,21 @@ RULES:
 async def _extract_listing_filters(user_query: str) -> dict:
     """Use Claude to extract structured search filters from a natural-language query.
     Returns a dict that may include a `features` list — one required phrase per entry."""
+    # Whether we have Claude or not, ALWAYS run the deterministic regex layer as a
+    # baseline. This ensures obvious filters ("under $800K", "in Vancouver", "3 bed")
+    # still work even when the direct Anthropic key is archived or the LLM fails.
+    def _fallback_regex_only() -> dict:
+        d: dict = {}
+        _apply_beds_baths_regex_override(user_query, d)
+        _apply_price_regex_override(user_query, d)
+        m = re.search(r"\b(?:in|at|near|around)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})", user_query)
+        if m: d["city"] = m.group(1).strip()
+        return d
+
     if not ANTHROPIC_API_KEY:
-        return {}
+        # No direct Anthropic key configured — return regex-only extraction so
+        # the endpoint's own locality resolver + our regex overrides still work.
+        return _fallback_regex_only()
     try:
         r = await _anthropic_client.messages.create(
             model="claude-sonnet-4-5-20250929",
@@ -3646,10 +3659,22 @@ async def _extract_listing_filters(user_query: str) -> dict:
         # correct: if the user's phrasing is a plain count (no "+"/"at least"/
         # "or more"/"minimum"), force beds_exact and drop beds_min. Same for baths.
         _apply_beds_baths_regex_override(user_query, parsed)
+        _apply_price_regex_override(user_query, parsed)
         return parsed
     except Exception as e:
+        # Even when Claude fails (rate limit, network hiccup, malformed JSON),
+        # apply the deterministic regex layer so we still capture obvious filters.
+        # This is what turns "homes in williams lake between 1M and 1.5M" into a
+        # working search even if the LLM was unavailable.
         logger.warning(f"filter extraction failed: {e}")
-        return {}
+        fallback: dict = {}
+        _apply_beds_baths_regex_override(user_query, fallback)
+        _apply_price_regex_override(user_query, fallback)
+        # Attempt a naïve city grab: capitalized 1-3 word phrases after "in"/"at"/"near"
+        m = re.search(r"\b(?:in|at|near|around)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})", user_query)
+        if m:
+            fallback["city"] = m.group(1).strip()
+        return fallback
 
 
 # Regex-based deterministic override — the LLM cannot be fully trusted to
@@ -3726,6 +3751,90 @@ def _apply_beds_baths_regex_override(raw_query: str, parsed: dict) -> None:
                 parsed[f"{dim}_min"] = None
             except ValueError:
                 pass
+
+
+# Deterministic price parser — same defense-in-depth pattern as beds/baths.
+# The LLM extractor often mis-parses "between $1M and $1.5M" as no price at all.
+# This regex scans the raw text and overrides Claude's guess with concrete numbers.
+_PRICE_TOKEN_RE = re.compile(
+    r"\$?\s*(\d{1,4}(?:[,\.]?\d{3})*(?:\.\d+)?)\s*(k|thousand|m|mm|mil|million|mn)?",
+    re.IGNORECASE,
+)
+
+
+def _parse_price_token(num_str: str, suffix: Optional[str]) -> Optional[int]:
+    """Turn '1.5' + 'million' → 1500000. '800' + 'k' → 800000. '750000' + None → 750000."""
+    try:
+        n = float(num_str.replace(",", ""))
+    except (ValueError, AttributeError):
+        return None
+    s = (suffix or "").lower()
+    if s in ("k", "thousand"):
+        n *= 1_000
+    elif s in ("m", "mm", "mil", "million", "mn"):
+        n *= 1_000_000
+    # Bare numbers < 20 are almost certainly millions ("1.5 million" without the suffix pass)
+    # — but we don't override unless a suffix was explicitly present, to avoid
+    # misinterpreting "3 bedroom" as "$3".
+    return int(round(n))
+
+
+def _apply_price_regex_override(raw_query: str, parsed: dict) -> None:
+    """Mutate `parsed` in place with `price_min`/`price_max` when the raw text
+    contains recognisable price phrasing that the LLM missed. Order of checks
+    matters — range patterns must be tried BEFORE unbounded ones."""
+    if not raw_query:
+        return
+    q = raw_query.lower()
+
+    # 1. RANGE: "between $1M and $1.5M" | "$500K to $800K" | "from 500k to 800k" | "$500K-$800K"
+    range_pat = re.compile(
+        r"(?:between\s+|from\s+)?\$?\s*(\d[\d,\.]*)\s*(k|thousand|m|mm|mil|million|mn)?\s*(?:to|-|–|—|and)\s*\$?\s*(\d[\d,\.]*)\s*(k|thousand|m|mm|mil|million|mn)?",
+        re.IGNORECASE,
+    )
+    m = range_pat.search(q)
+    if m:
+        lo_str, lo_suf, hi_str, hi_suf = m.groups()
+        # If either side has a k/m suffix, infer the other's suffix if missing
+        # (e.g. "between $1 million and $1.5" → both millions)
+        if lo_suf and not hi_suf:
+            hi_suf = lo_suf
+        elif hi_suf and not lo_suf:
+            lo_suf = hi_suf
+        lo = _parse_price_token(lo_str, lo_suf)
+        hi = _parse_price_token(hi_str, hi_suf)
+        # Sanity: only accept ranges where both are >= $50K (below that it's probably
+        # a bedroom count, phone digit, or year — never a BC real estate price)
+        MIN_REALISTIC_PRICE = 50_000
+        if lo and hi and lo >= MIN_REALISTIC_PRICE and hi >= MIN_REALISTIC_PRICE and lo <= hi:
+            parsed["price_min"] = lo
+            parsed["price_max"] = hi
+            return
+
+    # 2. MAX ONLY: "under $800K" | "below 800k" | "less than 800k" | "up to 1M" | "max 800k"
+    max_pat = re.compile(
+        r"(?:under|below|less\s+than|up\s+to|max(?:imum)?|no\s+more\s+than|<=?)\s*\$?\s*(\d[\d,\.]*)\s*(k|thousand|m|mm|mil|million|mn)?",
+        re.IGNORECASE,
+    )
+    m = max_pat.search(q)
+    if m:
+        val = _parse_price_token(m.group(1), m.group(2))
+        if val and val >= 50_000:
+            parsed["price_max"] = val
+            parsed["price_min"] = None
+            return
+
+    # 3. MIN ONLY: "over $2M" | "above 2 million" | "starting at 800k" | "min $500K"
+    min_pat = re.compile(
+        r"(?:over|above|starting\s+(?:at|from)|min(?:imum)?|more\s+than|>=?)\s*\$?\s*(\d[\d,\.]*)\s*(k|thousand|m|mm|mil|million|mn)?",
+        re.IGNORECASE,
+    )
+    m = min_pat.search(q)
+    if m:
+        val = _parse_price_token(m.group(1), m.group(2))
+        if val and val >= 50_000:
+            parsed["price_min"] = val
+            parsed["price_max"] = None
 
 
 def _property_type_query(pt: str):
