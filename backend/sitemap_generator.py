@@ -25,6 +25,7 @@ STATIC_URLS = [
     ("/relocating",        "0.9", "weekly"),
     ("/about",             "0.7", "monthly"),
     ("/realtors",          "0.7", "monthly"),
+    ("/realtors-outofprovince", "0.7", "monthly"),
     ("/referral-request",  "0.7", "monthly"),
     ("/buyer",             "0.7", "monthly"),
     ("/seller",            "0.7", "monthly"),
@@ -36,6 +37,7 @@ STATIC_URLS = [
     ("/data-attribution",  "0.4", "yearly"),
     ("/breach-policy",     "0.4", "yearly"),
     ("/dorts",             "0.5", "yearly"),
+    ("/legal/retention",   "0.4", "yearly"),
     ("/code-of-ethics",    "0.4", "yearly"),
     ("/complaints",        "0.4", "yearly"),
     # NOTE: /beta (invitation-only), /unsubscribe (per-user tokens), and /admin/*
