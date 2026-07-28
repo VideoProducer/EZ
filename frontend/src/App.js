@@ -745,7 +745,6 @@ const Nav = () => {
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
         <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
         <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}><span>EZtoFind<span style={{color:"#FDB813"}}>.ca</span></span>
-          <Link to="/beta" onClick={close} title="This site is in beta — click to learn what to test" data-testid="nav-beta-badge" style={{textDecoration:"none",fontFamily:"Inter,sans-serif",fontSize:"0.62rem",fontWeight:700,letterSpacing:"0.08em",background:"linear-gradient(135deg,#F5A623 0%,#F5C023 100%)",color:"#1a1a1a",padding:"0.15rem 0.5rem",borderRadius:6,border:"1px solid rgba(0,0,0,0.15)",boxShadow:"0 1px 2px rgba(0,0,0,0.1)"}}>BETA</Link>
         </div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>DOUG LEMAIRE, REALTOR®</div></div>
       </Link>
@@ -801,13 +800,10 @@ const Footer = () => (
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
       <div style={{maxWidth:"58ch"}}>
-        <div style={{marginBottom:"0.5rem"}}>
-          <span style={{background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.15rem 0.6rem",borderRadius:999,fontWeight:700,fontSize:"0.7rem",letterSpacing:"0.05em"}}>PUBLIC BETA</span>
-          <span style={{marginLeft:"0.75rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</span>
-        </div>
+        <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
         <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><Link to="/beta" data-testid="footer-beta-link">Beta Testing</Link></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link></div>
     </div>
   </div></footer>
 );
@@ -3779,7 +3775,7 @@ const CookieBanner = () => {
 
           <label style={{display:"block",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"1rem",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><strong>Personalization</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Remember your Doogie session, saved searches, and beta-tester name/email.</div></div>
+              <div><strong>Personalization</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Remember your Doogie session, saved searches, and your name/email so you don't have to re-type it.</div></div>
               <input type="checkbox" checked={prefs.session} onChange={e=>setPrefs({...prefs,session:e.target.checked})} style={{width:20,height:20,cursor:"pointer"}} data-testid="cookie-toggle-session"/>
             </div>
           </label>
@@ -4324,7 +4320,7 @@ const BetaFeedbackWidget = () => {
       <button
         onClick={()=>{setOpen(true); reset();}}
         data-testid="beta-feedback-fab"
-        title="Send beta feedback to Doug"
+        title="Send feedback to Doug"
         style={{
           position:"fixed", left:"1.25rem", bottom:"1.25rem", zIndex:9998,
           background:"linear-gradient(135deg,#0F2A5B 0%,#1a3d7a 100%)",
@@ -4983,7 +4979,8 @@ function App() {
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
       <Route path="/dorts" element={<AppLayout><DoRTS/></AppLayout>}/>
       <Route path="/relocating" element={<AppLayout><Relocating/></AppLayout>}/>
-      <Route path="/beta" element={<AppLayout><BetaWelcome/></AppLayout>}/>
+      {/* /beta legacy page removed for launch — redirect to home */}
+      <Route path="/beta" element={<Navigate to="/" replace/>}/>
       <Route path="/legal/retention" element={<AppLayout><RetentionPolicy/></AppLayout>}/>
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
