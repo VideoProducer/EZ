@@ -297,6 +297,7 @@ class ChatIn(BaseModel):
 class AdminLogin(BaseModel):
     email: str
     password: str
+    turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token
 
 class BetaFeedback(BaseModel):
     name: str
@@ -352,19 +353,53 @@ def verify_admin(authorization: Optional[str] = Header(None)):
         raise HTTPException(401, "Invalid token")
 
 @api.post("/admin/login")
-async def admin_login(body: AdminLogin):
+async def admin_login(body: AdminLogin, request: Request):
+    # --- Brute-force protection: lock out an IP after 5 failed attempts / 15 min. ---
+    # We store attempts in Mongo (collection `admin_login_attempts`) so it survives
+    # server restarts and works across pods. Successful login clears the counter.
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    now = datetime.now(timezone.utc)
+    LOCKOUT_MAX = 5           # failed attempts allowed
+    LOCKOUT_WINDOW = 15 * 60  # seconds — sliding window
+    rec = await db.admin_login_attempts.find_one({"ip": ip})
+    if rec:
+        # Only enforce lockout if the last failure is still within the window.
+        last = rec.get("last_failed_at")
+        if isinstance(last, str):
+            try: last = datetime.fromisoformat(last)
+            except Exception: last = None
+        if last and (now - last).total_seconds() < LOCKOUT_WINDOW and rec.get("count", 0) >= LOCKOUT_MAX:
+            wait_min = int((LOCKOUT_WINDOW - (now - last).total_seconds()) / 60) + 1
+            raise HTTPException(429, f"Too many failed login attempts. Try again in {wait_min} minute(s).")
+
+    # --- Cloudflare Turnstile bot-check (no-ops when TURNSTILE_SECRET_KEY unset). ---
+    await verify_turnstile(body.turnstile_token or "", request)
+
+    async def _record_failure():
+        await db.admin_login_attempts.update_one(
+            {"ip": ip},
+            {"$inc": {"count": 1}, "$set": {"last_failed_at": now.isoformat()}},
+            upsert=True,
+        )
+
     if body.email.lower() != ADMIN_EMAIL.lower():
+        await _record_failure()
         raise HTTPException(401, "Invalid credentials")
     stored_hash = await _get_admin_hash()
     if stored_hash:
         if not verify_password(body.password, stored_hash):
+            await _record_failure()
             raise HTTPException(401, "Invalid credentials")
     else:
         # First-run migration: no DB hash yet. Verify against .env plaintext,
         # then bootstrap a bcrypt hash so future changes persist in DB.
         if body.password != ADMIN_PASSWORD:
+            await _record_failure()
             raise HTTPException(401, "Invalid credentials")
         await _set_admin_hash(hash_password(body.password))
+    # Success — clear the lockout counter for this IP.
+    await db.admin_login_attempts.delete_one({"ip": ip})
     return {"token": create_token(ADMIN_EMAIL), "email": ADMIN_EMAIL}
 
 

@@ -2707,13 +2707,31 @@ const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><str
 // --- Admin ---
 const AdminLogin = () => {
   const [f,setF] = useState({email:"",password:""}); const [err,setErr]=useState(""); const nav=useNavigate();
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ const r=await axios.post(`${API}/admin/login`,f); localStorage.setItem("eztoken",r.data.token); nav("/admin");}catch(x){setErr("Invalid credentials");} };
+  const submit=async e=>{
+    e.preventDefault(); setErr("");
+    try{
+      const r=await axios.post(`${API}/admin/login`,{...f, turnstile_token: getTurnstileToken()});
+      localStorage.setItem("eztoken",r.data.token);
+      nav("/admin");
+    }catch(x){
+      // Show the server-side lockout / bot-check message verbatim when present,
+      // fall back to a generic message for 401s so we don't leak account state.
+      const detail = x?.response?.data?.detail;
+      const status = x?.response?.status;
+      if (status === 429 || (typeof detail === "string" && /try again|bot check/i.test(detail))) {
+        setErr(detail);
+      } else {
+        setErr("Invalid credentials");
+      }
+    }
+  };
   return (<section className="section"><div className="container-x" style={{maxWidth:"32rem"}}>
     <h1 className="section-title">Admin Login</h1>
     <form onSubmit={submit} className="paper">
       <div className="field"><label>Email</label><input required value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="admin-email"/></div>
       <div className="field" style={{marginTop:"1rem"}}><label>Password</label><input required type="password" value={f.password} onChange={e=>setF({...f,password:e.target.value})} data-testid="admin-password"/></div>
-      {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
+      <TurnstileWidget/>
+      {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}} data-testid="admin-login-error">{err}</div>}
       <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="admin-login-btn">Sign in</button>
     </form>
   </div></section>);
