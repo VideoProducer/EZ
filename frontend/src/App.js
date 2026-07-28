@@ -6,11 +6,15 @@ import axios from "axios";
 import "./App.css";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 
-// Hook: read `?lang=` from URL (falls back to Doogie's stored lang) and returns
-// [locale, t(), langLinkSuffix] for use in translated forms/pages.
+// Hook: read `?lang=` from URL and returns [locale, t(), langLinkSuffix] for
+// translated forms/pages. URL is the sole source of truth — visitors who arrive
+// via the English homepage CTA get English, regardless of any Doogie chat
+// language they may have used earlier. Doogie's chat renderer auto-appends
+// ?lang=xx to internal links when it's operating in a non-English language,
+// so the multilingual referral flow still works end-to-end.
 const useFormLang = () => {
   const [params] = useSearchParams();
-  const raw = params.get("lang") || localStorage.getItem("ez_doogie_lang") || "en";
+  const raw = params.get("lang") || "en";
   const lang = normalizeLang(raw);
   const t = useT(lang);
   return { lang, t, qs: langQS(lang), rtl: isRTL(lang) };
