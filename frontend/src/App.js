@@ -4668,6 +4668,7 @@ const AppLayout = ({children}) => {
     <CookieBanner/>
     <PageViewBeacon/>
     <PostHogGate/>
+    <GA4Gate/>
     <TurnstileScriptLoader/>
     <BetaFeedbackWidget/>
   </>);
@@ -4814,6 +4815,84 @@ function PostHogGate() {
     return () => window.removeEventListener("ez-cookie-prefs-changed", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  return null;
+}
+
+// --- Google Analytics 4 gate (PIPA compliance) ---
+// Same pattern as PostHogGate: GA4 (gtag.js) is not loaded until the user opts
+// into analytics cookies via the PIPA consent banner. If they later change
+// their mind via the "Cookie Preferences" footer link, we react to the
+// `ez-cookie-prefs-changed` event.
+const GA4_ID = process.env.REACT_APP_GA4_MEASUREMENT_ID;
+function GA4Gate() {
+  const loc = useLocation();
+  const initedRef = useRef(false);
+  const optedInRef = useRef(false);
+
+  const loadAndInit = () => {
+    if (!GA4_ID) return; // safety: skip if env is missing
+    // Always clear the opt-out flag first — even on re-init after opt-out.
+    window[`ga-disable-${GA4_ID}`] = false;
+    optedInRef.current = true;
+    if (initedRef.current) return;
+    initedRef.current = true;
+
+    // gtag.js snippet, matching Google's official install code.
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
+    document.head.appendChild(s);
+
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ window.dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag("js", new Date());
+    // `anonymize_ip` + `client_storage:'none'` are not needed for GA4 (already
+    // handled), but we set consent defaults so the client obeys withdrawal.
+    gtag("consent", "default", {
+      ad_storage: "denied", ad_user_data: "denied", ad_personalization: "denied",
+      analytics_storage: "granted",
+    });
+    gtag("config", GA4_ID, { anonymize_ip: true });
+  };
+
+  const optOut = () => {
+    // Google's official opt-out flag — GA4 checks this window var on every
+    // event and skips ALL tracking if it's true. Safe to set even before load.
+    if (GA4_ID) window[`ga-disable-${GA4_ID}`] = true;
+    optedInRef.current = false;
+  };
+
+  const applyPrefs = () => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem("ez_cookie_prefs") || "{}");
+      if (prefs.analytics === true) loadAndInit();
+      else optOut();
+    } catch(_){}
+  };
+
+  useEffect(() => {
+    applyPrefs();
+    const handler = () => applyPrefs();
+    window.addEventListener("ez-cookie-prefs-changed", handler);
+    return () => window.removeEventListener("ez-cookie-prefs-changed", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // SPA page-view tracking: GA4 auto-tracks the initial page load, but React
+  // Router navigations don't cause a full page reload — we send `page_view`
+  // manually on every route change (only if consent granted).
+  useEffect(() => {
+    if (!optedInRef.current || !window.gtag) return;
+    try {
+      window.gtag("event", "page_view", {
+        page_path: loc.pathname + loc.search,
+        page_location: window.location.href,
+        page_title: document.title,
+      });
+    } catch(_){}
+  }, [loc.pathname, loc.search]);
+
   return null;
 }
 const AdminLayout = ({children}) => children;
