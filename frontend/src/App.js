@@ -4502,6 +4502,9 @@ const BetaFeedbackWidget = () => {
   const [err, setErr] = useState("");
   // Hide the feedback FAB while the PIPA cookie banner is visible (they share the
   // bottom-left corner and overlap the "Reject optional" / "Customize" buttons).
+  // Covers both first-visit ("no ez_cookie set" case) and the reopened-via-footer
+  // case (we listen for the `open-cookie-prefs` broadcast) and reappears cleanly
+  // after the user saves prefs (`ez-cookie-prefs-changed`).
   const [cookieBannerVisible, setCookieBannerVisible] = useState(
     () => typeof window !== "undefined" && !localStorage.getItem("ez_cookie")
   );
@@ -4513,17 +4516,24 @@ const BetaFeedbackWidget = () => {
     if (cached) { try { const c = JSON.parse(cached); setF(x => ({...x, name:c.name||"", email:c.email||""})); } catch(_){} }
   }, []);
 
-  // Poll for cookie decision so we can un-hide the FAB after the banner is dismissed.
+  // Sync visibility with the cookie banner's lifecycle.
   useEffect(() => {
-    if (!cookieBannerVisible) return;
+    const openHandler  = () => setCookieBannerVisible(true);
+    const closeHandler = () => setCookieBannerVisible(false);
+    window.addEventListener("open-cookie-prefs", openHandler);
+    window.addEventListener("ez-cookie-prefs-changed", closeHandler);
+    // Also poll on first mount in case the banner is shown but no event fired yet.
     const iv = setInterval(() => {
-      if (localStorage.getItem("ez_cookie")) {
-        setCookieBannerVisible(false);
-        clearInterval(iv);
-      }
-    }, 400);
-    return () => clearInterval(iv);
-  }, [cookieBannerVisible]);
+      const hasChoice = !!localStorage.getItem("ez_cookie");
+      const modalOpen = !!document.querySelector('[data-testid="cookie-banner"]') || !!document.querySelector('[data-testid="cookie-prefs-modal"]');
+      setCookieBannerVisible(modalOpen || !hasChoice);
+    }, 500);
+    return () => {
+      window.removeEventListener("open-cookie-prefs", openHandler);
+      window.removeEventListener("ez-cookie-prefs-changed", closeHandler);
+      clearInterval(iv);
+    };
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
