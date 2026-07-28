@@ -3494,11 +3494,8 @@ const AffordabilityCalculator = () => {
 
   return (
     <div className="paper" data-testid="afford-calculator" style={{background:"#F7FAFF"}}>
-      <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:"1.25rem"}}>
         <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
-        <div style={{flex:"1 1 240px"}}>
-          <h2 style={{fontFamily:"'Manrope', 'Inter', sans-serif",fontWeight:700,fontSize:"1.55rem",margin:0,color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>What Can I Afford?</h2>
-        </div>
       </div>
 
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
