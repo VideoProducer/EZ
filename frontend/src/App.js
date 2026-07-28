@@ -2510,9 +2510,6 @@ const Relocating = () => {
 
         <div className="eyebrow">Consumer Guide</div>
         <h1 className="section-title" data-testid="relocating-title">Relocating to British Columbia</h1>
-        <p style={{fontSize:"1.08rem",lineHeight:1.75,color:"var(--muted)"}}>
-          Written by <strong>Doug LeMaire, REALTOR®</strong> — Fraser Property Management Realty Services Ltd., Maple Ridge, BC. Last reviewed {new Date().toLocaleDateString("en-CA",{year:"numeric",month:"long",day:"numeric"})}. General information only — consult a licensed REALTOR®, lawyer, notary, or accountant before acting.
-        </p>
 
         <div className="paper" style={{background:"#EAF3FF",marginTop:"2rem"}}>
           <p style={{margin:0,fontSize:"1rem",lineHeight:1.75}}>
