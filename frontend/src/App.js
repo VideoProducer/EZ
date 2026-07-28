@@ -3669,7 +3669,7 @@ const PTTCalculator = () => {
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
     <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-      <h2 style={{fontFamily:"'Fraunces', 'Playfair Display', Georgia, serif",fontWeight:700,fontSize:"clamp(3.6rem,7vw,5.2rem)",lineHeight:1.05,margin:"0 0 1.5rem",color:"var(--brand-navy)",letterSpacing:"-0.02em"}}>
+      <h2 style={{fontFamily:"'Source Sans 3', 'Inter', sans-serif",fontWeight:700,fontSize:"clamp(2rem, 3.5vw, 3rem)",lineHeight:1.1,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
         What can you <span className="accent">afford?</span>
       </h2>
     </div>
