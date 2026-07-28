@@ -451,7 +451,7 @@ async def submit_beta_feedback(request: Request, body: BetaFeedback):
     )
     await _notify_admin_of_lead(
         kind=f"Site Feedback ({_cat_label})",
-        to=INFO_MAILBOX,
+        to="doug@eztofind.ca",
         subject=f"[Feedback] {doc['category']} — {doc['name']}",
         body_html=admin_html,
         related_id=doc["id"],
