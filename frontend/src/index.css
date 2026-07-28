@@ -343,3 +343,120 @@ textarea:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   MOBILE POLISH — Launch-day mobile UX overrides.
+   Fixes real-world issues found on iPhone 14-class viewports (≤430px).
+   ============================================================ */
+@media (max-width: 640px) {
+  /* Compliance disclaimer at top of page — less shouty on small screens */
+  .compliance-banner,
+  [class*="disclaimer-top"] {
+    font-size: 0.72rem !important;
+    line-height: 1.35 !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  /* Cookie banner — trim padding, smaller text, keep it out of chat/feedback zone */
+  [data-testid="cookie-banner"] {
+    padding: 0.75rem 0.9rem !important;
+    font-size: 0.78rem !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    border-radius: 10px !important;
+  }
+  [data-testid="cookie-banner"] button {
+    padding: 0.4rem 0.7rem !important;
+    font-size: 0.78rem !important;
+  }
+  /* Send Feedback FAB — hide on mobile, users have Doogie chat + Contact page.
+     Feedback still reachable via /contact for anyone who wants to write in. */
+  [data-testid="beta-feedback-fab"] {
+    display: none !important;
+  }
+  /* Doogie chat FAB — lift above cookie banner so they don't overlap.
+     After banner dismissal it's back at normal position on next page load. */
+  .doogie-fab {
+    bottom: 14px !important;
+    right: 14px !important;
+  }
+  /* Section titles — tighten on small screens for less scroll fatigue */
+  .section-title {
+    font-size: clamp(1.5rem, 6vw, 2rem) !important;
+    line-height: 1.15 !important;
+  }
+  .section {
+    padding: 2rem 0 !important;
+  }
+  /* Paper cards — reduce inner padding on mobile so more content fits */
+  .paper {
+    padding: 1.15rem !important;
+  }
+  /* Buttons — larger tap targets (Apple HIG minimum 44×44) */
+  .btn {
+    min-height: 44px;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+  /* Form inputs — prevent iOS auto-zoom on focus (font-size ≥ 16px) */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  /* Listing card grid — single column, tighter gap on mobile */
+  .listings-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  /* Community/glossary grids — single column for readability */
+  .community-grid,
+  .glossary-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Modal / dialog padding — narrower on tiny screens */
+  [data-testid="mls-terms-gate"] > div,
+  [data-testid="beta-feedback-modal"] > div {
+    padding: 1.5rem !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+  }
+  /* Nav header — tighter for mobile */
+  header nav,
+  .nav {
+    padding: 0.5rem 0.75rem !important;
+  }
+  /* Doogie chat modal — full-width on mobile with safe insets */
+  .doogie-panel {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: none !important;
+    bottom: 8px !important;
+  }
+  /* Filter sidebar on /listings — collapse into a drawer button visual */
+  .listings-filters {
+    position: static !important;
+    margin-bottom: 1.25rem;
+  }
+  /* Footer padding trimmed on mobile */
+  footer {
+    padding: 1.5rem 1rem !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* Extra-small phones (≤380px, iPhone SE 1st gen etc.) */
+@media (max-width: 380px) {
+  .section-title {
+    font-size: 1.4rem !important;
+  }
+  [data-testid="cookie-banner"] {
+    font-size: 0.72rem !important;
+    padding: 0.6rem 0.75rem !important;
+  }
+  .btn {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.85rem;
+  }
+}
