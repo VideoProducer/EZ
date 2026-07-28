@@ -81,10 +81,10 @@ https://eztofind.ca/ab/glossary/property-transfer-fee-ab
 
 ### Phase 0 — Pre-Build Confirmation (Doug's actions before agent starts)
 
-- [ ] Doug's RECA license issued (confirm license number for site display)
-- [ ] AB brokerage confirmed (name, address, phone)
+- [ ] Doug's RECA license issued via **BCFSA reciprocity transfer** (paperwork only — no exams; ~2-6 weeks). Confirm license number for site display.
+- [ ] AB brokerage confirmed (name, address, phone) — required for the RECA transfer application
 - [ ] AB Errors & Omissions insurance certificate confirmed
-- [ ] CREA DDF® agreement extended to include AB listings (contact CREA member support)
+- [ ] ~~CREA DDF® agreement extended to include AB listings~~ **NOT REQUIRED.** CREA DDF® is a national feed. Alberta listings are already accessible via the existing DDF agreement + credentials. Activation is a single env-var change: `CREA_DDF_PROVINCE=""` (empty = pulls all provinces) or filter server-side per-province using the `province` field already tagged on each listing document.
 - [ ] AB `PROVINCE_PROVIDER_ID` collected from Namecheap PE (if separate `alberta@` mailbox desired) — **or** confirm all AB mail routes to existing `info@eztofind.ca`
 - [ ] Doug's signed **RECA + BCFSA dual-jurisdiction disclosure statement** ready (client-facing "Doug is licensed in both BC and AB" doc)
 
@@ -102,7 +102,7 @@ https://eztofind.ca/ab/glossary/property-transfer-fee-ab
   - When URL is `/ab/*`, activate the Alberta persona (RECA, Alberta laws, no PTT, municipal assessments, Calgary-region expertise)
   - Otherwise: current BC persona
 - [ ] Robots.txt: **do NOT publish `/ab/*` URLs** until launch is authorized. Add `Disallow: /ab/` initially.
-- [ ] Update DDF sync job (`_ddf_auto_sync_loop`) to fetch AB listings once CREA extension is confirmed, tagged with `province: 'AB'`
+- [ ] Update DDF sync job (`_ddf_auto_sync_loop`) to fetch AB listings — **already possible via single env-var change** (`CREA_DDF_PROVINCE=""` or per-province API filtering). Alberta listings flow through the existing national CREA DDF® feed; no CREA member-services request needed.
 - [ ] Compliance route additions (AB-specific):
   - `/ab/compliance` — RECA disclosure, Alberta consumer protection references
   - `/ab/dorts` → replaced with **AB Consumer Relationships Guide** (RECA-mandated equivalent to BC DORTS)
