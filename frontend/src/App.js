@@ -4942,6 +4942,9 @@ function App() {
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>
+      {/* Legacy split slugs — merged into unified 'langley' page */}
+      <Route path="/community/langley-city" element={<Navigate to="/community/langley" replace/>}/>
+      <Route path="/community/langley-township" element={<Navigate to="/community/langley" replace/>}/>
       <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
       <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>

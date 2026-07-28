@@ -2545,13 +2545,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langley-city</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/langley-township</loc>
+    <loc>https://eztofind.ca/community/langley</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -3991,13 +3985,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/creston/n/west-creston</loc>
+    <loc>https://eztofind.ca/community/sooke/n/sooke-vill-core</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/sooke-vill-core</loc>
+    <loc>https://eztofind.ca/community/creston/n/west-creston</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4807,13 +4801,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/robson/n/robson-raspberry-brilliant</loc>
+    <loc>https://eztofind.ca/community/oliver/n/oliver</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/oliver/n/oliver</loc>
+    <loc>https://eztofind.ca/community/robson/n/robson-raspberry-brilliant</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5701,13 +5695,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/swan-lake-west</loc>
+    <loc>https://eztofind.ca/community/tappen/n/tappen-sunnybrae</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/tappen/n/tappen-sunnybrae</loc>
+    <loc>https://eztofind.ca/community/vernon/n/swan-lake-west</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6895,13 +6889,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lake-cowichan/n/lake-cowichan</loc>
+    <loc>https://eztofind.ca/community/langford/n/walfred</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langford/n/walfred</loc>
+    <loc>https://eztofind.ca/community/lake-cowichan/n/lake-cowichan</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -7033,6 +7027,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/penticton/n/industrial-area</loc>
+    <lastmod>2026-07-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/parson/n/south-hwy-95</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
@@ -7040,12 +7040,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/colwood/n/triangle</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/penticton/n/industrial-area</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
