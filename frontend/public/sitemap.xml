@@ -4357,6 +4357,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/lake-country/n/lake-country-north-west</loc>
+    <lastmod>2026-07-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/cache-creek/n/cache-creek</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
@@ -4370,12 +4376,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/fruitvale/n/fruitvale-rural</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/lake-country/n/lake-country-north-west</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4735,13 +4735,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nelson/n/kokanee-creek-to-balfour</loc>
+    <loc>https://eztofind.ca/community/cranbrook/n/cranbrook-south</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cranbrook/n/cranbrook-south</loc>
+    <loc>https://eztofind.ca/community/nelson/n/kokanee-creek-to-balfour</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5125,7 +5125,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langford/n/fairway</loc>
+    <loc>https://eztofind.ca/community/lantzville/n/lower-lantzville</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5137,13 +5137,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lantzville/n/lower-lantzville</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/comox/n/comox-peninsula</loc>
+    <loc>https://eztofind.ca/community/dawson-creek/n/pouce-coupe</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5155,7 +5149,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/dawson-creek/n/pouce-coupe</loc>
+    <loc>https://eztofind.ca/community/langford/n/fairway</loc>
+    <lastmod>2026-07-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/comox/n/comox-peninsula</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5503,12 +5503,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/silverton/n/village-of-silverton</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/qualicum-beach/n/qualicum-north</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
@@ -5516,6 +5510,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/oliver/n/oliver-mount-baldy</loc>
+    <lastmod>2026-07-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/silverton/n/village-of-silverton</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6091,6 +6091,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/kelowna/n/ellison</loc>
+    <lastmod>2026-07-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/langford/n/walfred</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
@@ -6098,12 +6104,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/salmon-arm/n/nw-salmon-arm</loc>
-    <lastmod>2026-07-28</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kelowna/n/ellison</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6133,13 +6133,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/radium-hot-springs/n/dry-gulch-to-radium</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
+    <loc>https://eztofind.ca/community/radium-hot-springs/n/dry-gulch-to-radium</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6187,7 +6187,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
+    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6217,7 +6217,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
+    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6409,13 +6409,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/duncan/n/west-duncan</loc>
+    <loc>https://eztofind.ca/community/langford/n/bear-mountain</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langford/n/bear-mountain</loc>
+    <loc>https://eztofind.ca/community/duncan/n/west-duncan</loc>
     <lastmod>2026-07-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

@@ -628,6 +628,11 @@ async def doogie_chat(request: Request, body: ChatIn):
     }
     lang = (body.language or "en").strip()
     lang_addon = LANG_INSTRUCT.get(lang, "")
+    # For non-English replies, add a hard rule: append a translation-quality note
+    # at the end of every substantive reply. Protects Doug against reliance-on-mistranslation
+    # claims — visitor is repeatedly reminded to verify money decisions with a professional.
+    if lang != "en" and lang_addon:
+        lang_addon += " IMPORTANT: At the end of every substantive reply (any reply longer than a one-line greeting or acknowledgement), append this exact line on its own paragraph in the target language: 'AI translation — verify important details with a licensed professional before acting.' Translate that sentence into the target language. Do NOT append it to trivial greetings, one-line clarifying questions, or listing-search results."
     system_prompt = DOOGIE_SYSTEM + ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon if lang_addon else "")
 
     await db.chat_messages.insert_one({
