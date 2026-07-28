@@ -2605,7 +2605,7 @@ const Relocating = () => {
         <div className="paper" style={{marginTop:"2.5rem",background:"var(--brand-navy)",color:"#fff",textAlign:"center"}}>
           <h2 style={{fontSize:"1.4rem",marginTop:0,color:"#fff"}}>Ready to talk to a REALTOR®?</h2>
           <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9,marginBottom:"1.25rem"}}>
-            If you're relocating to Doug's direct service area — <strong>Greater Vancouver, Fraser Valley, or Sea-to-Sky</strong> — start with the Buyer form. If you're relocating anywhere else in BC, Doug will personally match you with a vetted local REALTOR® at no cost to you.
+            If you're relocating to Doug's direct service area — <strong>Greater Vancouver, Fraser Valley, or Sea-to-Sky</strong> — start with the Buyer form. If you're relocating anywhere else in BC, Doug will personally match you with a local REALTOR®.
           </p>
           <div style={{display:"flex",gap:"0.8rem",justifyContent:"center",flexWrap:"wrap"}}>
             <Link to="/buyer" data-testid="relocating-buyer-cta" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none"}}>I'm Moving to Doug's Area</Link>
