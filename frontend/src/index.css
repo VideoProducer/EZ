@@ -460,3 +460,106 @@ textarea:focus-visible,
     font-size: 0.85rem;
   }
 }
+
+/* ============================================================
+   MOBILE POLISH — Recent additions (Feb 28, 2026 launch day)
+   ============================================================ */
+@media (max-width: 640px) {
+  /* Doogie translation disclaimer banner — smaller text, tighter padding on mobile */
+  [data-testid="doogie-translation-disclaimer"] {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.72rem !important;
+    line-height: 1.4 !important;
+  }
+  /* Doogie referral pill (auto-injected at end of non-English replies) —
+     ensure the navy pill button fits on narrow screens and wraps gracefully */
+  .doogie-referral-pill {
+    display: block !important;
+    padding: 0.7rem 1rem !important;
+    font-size: 0.85rem !important;
+    text-align: center !important;
+    margin: 0.65rem 0 !important;
+    line-height: 1.35 !important;
+    white-space: normal !important;
+  }
+  /* Affordability calculator hero heading — respects Source Sans 3 sizing but
+     never gets so tight that lines break awkwardly on small phones */
+  [data-testid="afford-calculator"] > h2,
+  [data-testid="afford-calculator"] h2:first-of-type {
+    font-size: 1.75rem !important;
+    line-height: 1.15 !important;
+    margin-bottom: 0.75rem !important;
+  }
+  /* Send Feedback modal — IP-license notice should stay readable on tiny screens */
+  [data-testid="beta-feedback-modal"] textarea {
+    min-height: 100px !important;
+    font-size: 16px !important;
+  }
+  /* Feedback rating stars — larger tap targets on mobile */
+  [data-testid="beta-feedback-modal"] button[aria-label*="star"],
+  [data-testid="beta-feedback-modal"] [role="radiogroup"] > * {
+    padding: 0.5rem !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  /* Category selector pills (Bug / Question / General) — wrap on narrow screens */
+  [data-testid="beta-feedback-modal"] [role="radiogroup"],
+  [data-testid="beta-feedback-category"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  /* CREA Terms modal (redesigned for launch) — extra breathing room + scroll on tiny screens */
+  [data-testid="mls-terms-gate"] > div h2,
+  [data-testid="mls-terms-gate"] > div h3 {
+    font-size: 1.15rem !important;
+  }
+  [data-testid="mls-terms-gate"] > div ul {
+    padding-left: 1rem !important;
+  }
+  /* Community merged-page maps — keep iframe usable */
+  [data-testid="community-map-wrap"] iframe {
+    min-height: 260px !important;
+    height: 260px !important;
+  }
+  /* MLS number line on listing cards — ensure it doesn't push card too tall */
+  [data-testid^="listing-card-"] {
+    margin-bottom: 0.75rem !important;
+  }
+  /* Doogie chat modal — full-height take-over on mobile with safe insets;
+     translation disclaimer + referral pill both need to be scrollable */
+  .doogie-panel {
+    left: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+    top: 6px !important;
+    max-height: none !important;
+    width: auto !important;
+    max-width: none !important;
+    border-radius: 12px !important;
+  }
+  .doogie-panel .msg,
+  .doogie-panel [role="log"] > * {
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+  }
+  /* Farsi / RTL — ensure right-alignment applies inside chat too */
+  [dir="rtl"] .doogie-referral-pill {
+    text-align: center !important;
+  }
+}
+
+/* Extra-small phones (≤380px) — the new elements need one more downshift */
+@media (max-width: 380px) {
+  [data-testid="doogie-translation-disclaimer"] {
+    font-size: 0.68rem !important;
+    padding: 0.5rem 0.6rem !important;
+  }
+  .doogie-referral-pill {
+    font-size: 0.8rem !important;
+    padding: 0.6rem 0.85rem !important;
+  }
+  [data-testid="afford-calculator"] > h2:first-of-type {
+    font-size: 1.55rem !important;
+  }
+}
