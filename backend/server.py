@@ -2359,6 +2359,7 @@ async def community_neighbourhoods(slug: str):
             "city": _city_query(name),
             "region": {"$nin": ["", None, region]},  # exclude blanks + the parent region label
             "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+            "list_price": {"$gt": 0},
         }},
         {"$group": {
             "_id": "$region",
@@ -3512,7 +3513,7 @@ async def regenerate_neighbourhood(slug: str, n_slug: str, _=Depends(verify_admi
     if not d: raise HTTPException(404, "Not found")
     # Re-collect listing stats for the prompt context
     agg = await db.listings.aggregate([
-        {"$match": {"status":"Active","city":_city_query(d['community']),"region":d["neighbourhood"],"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$match": {"status":"Active","city":_city_query(d['community']),"region":d["neighbourhood"],"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)},"list_price":{"$gt":0}}},
         {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
     ]).to_list(1)
     stats = agg[0] if agg else {}
@@ -3563,7 +3564,7 @@ async def generate_all_neighbourhoods(auto_approve: bool = False, _=Depends(veri
                 existing = await db.neighbourhood_synopses.find_one({"slug": c_slug, "n_slug": n_slug, "synopsis": {"$ne": ""}})
                 if existing: return
                 agg = await db.listings.aggregate([
-                    {"$match": {"status":"Active","city":_city_query(c_name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+                    {"$match": {"status":"Active","city":_city_query(c_name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)},"list_price":{"$gt":0}}},
                     {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}}},
                 ]).to_list(1)
                 stats = agg[0] if agg else {}
@@ -3999,7 +4000,7 @@ async def search_listings(
     """Search active MLS® listings. Rate-limited (60/min per IP).
     Returns { total, count, offset, limit, listings: [...], compliance }.
     """
-    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
@@ -4960,7 +4961,7 @@ def _build_mls_query(filters: dict) -> dict:
     Broken out from `doogie_mls_search` so it can be unit-tested without any
     LLM calls or a running FastAPI/Mongo instance.
     """
-    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
     if filters.get("city"):
         query["city"] = _city_query(filters["city"])
     if filters.get("region"):
@@ -5063,7 +5064,7 @@ async def doogie_mls_search(request: Request, payload: dict):
     if not any(v for v in filters.values() if v not in (None, "", [])):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
 
-    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}
+    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
     if filters.get("city"):          query["city"] = _city_query(filters["city"])
     if filters.get("region"):        query["region"] = {"$regex": f"^{re.escape(filters['region'])}$", "$options": "i"}
     if filters.get("property_type"):
