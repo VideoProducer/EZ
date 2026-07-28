@@ -871,12 +871,12 @@ const DOOGIE_LANGUAGES = [
 // a non-English language is active. Legal shield: makes visitors explicitly
 // aware that AI translations may contain errors, especially in legal/tax terms.
 const DOOGIE_TRANSLATION_DISCLAIMER = {
-  fr:       "⚠️ Traduction par IA — les réponses de Doogie dans cette langue peuvent contenir de petites erreurs. Les mentions de conformité (licence BCFSA #, texte MLS®) restent toujours en anglais. Pour toute décision financière, consultez d'abord un professionnel.",
-  "zh-Hant":"⚠️ AI 翻譯 — Doogie 的中文回覆可能有細微誤差。合規資訊（BCFSA 牌照編號、MLS® 條款）將保留英文原文。任何涉及金錢的決定，請先諮詢專業人士。",
-  "zh-Hans":"⚠️ AI 翻译 — Doogie 的中文回复可能有细微误差。合规信息（BCFSA 牌照编号、MLS® 条款）保留英文原文。任何涉及金钱的决定，请先咨询专业人士。",
-  pa:       "⚠️ AI ਅਨੁਵਾਦ — ਇਸ ਭਾਸ਼ਾ ਵਿੱਚ ਡੂਗੀ ਦੇ ਜਵਾਬਾਂ ਵਿੱਚ ਛੋਟੀਆਂ ਗਲਤੀਆਂ ਹੋ ਸਕਦੀਆਂ ਹਨ। ਪਾਲਣਾ ਸੰਬੰਧੀ ਜਾਣਕਾਰੀ (BCFSA ਲਾਇਸੈਂਸ #, MLS® ਟੈਕਸਟ) ਅੰਗਰੇਜ਼ੀ ਵਿੱਚ ਰਹਿੰਦੀ ਹੈ। ਪੈਸੇ ਨਾਲ ਸੰਬੰਧਿਤ ਕਿਸੇ ਵੀ ਫੈਸਲੇ ਲਈ, ਪਹਿਲਾਂ ਕਿਸੇ ਪੇਸ਼ੇਵਰ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।",
-  fa:       "⚠️ ترجمه توسط هوش مصنوعی — پاسخ‌های داگی به این زبان ممکن است دارای اشتباهات جزئی باشند. اطلاعات مربوط به مقررات (شماره مجوز BCFSA، متن MLS®) همیشه به زبان انگلیسی باقی می‌ماند. برای هر تصمیمی که مربوط به پول است، ابتدا با یک متخصص مشورت کنید.",
-  "pt-PT":  "⚠️ Tradução por IA — as respostas do Doogie nesta língua podem conter pequenos erros. As menções de conformidade (licença BCFSA #, texto MLS®) permanecem sempre em inglês. Para qualquer decisão que envolva dinheiro, consulte primeiro um profissional.",
+  fr:       "⚠️ Traduction par IA — les réponses de Doogie dans cette langue peuvent contenir de petites erreurs. Pour toute décision financière, consultez d'abord un professionnel.",
+  "zh-Hant":"⚠️ AI 翻譯 — Doogie 的中文回覆可能有細微誤差。任何涉及金錢的決定，請先諮詢專業人士。",
+  "zh-Hans":"⚠️ AI 翻译 — Doogie 的中文回复可能有细微误差。任何涉及金钱的决定，请先咨询专业人士。",
+  pa:       "⚠️ AI ਅਨੁਵਾਦ — ਇਸ ਭਾਸ਼ਾ ਵਿੱਚ ਡੂਗੀ ਦੇ ਜਵਾਬਾਂ ਵਿੱਚ ਛੋਟੀਆਂ ਗਲਤੀਆਂ ਹੋ ਸਕਦੀਆਂ ਹਨ। ਪੈਸੇ ਨਾਲ ਸੰਬੰਧਿਤ ਕਿਸੇ ਵੀ ਫੈਸਲੇ ਲਈ, ਪਹਿਲਾਂ ਕਿਸੇ ਪੇਸ਼ੇਵਰ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।",
+  fa:       "⚠️ ترجمه توسط هوش مصنوعی — پاسخ‌های داگی به این زبان ممکن است دارای اشتباهات جزئی باشند. برای هر تصمیمی که مربوط به پول است، ابتدا با یک متخصص مشورت کنید.",
+  "pt-PT":  "⚠️ Tradução por IA — as respostas do Doogie nesta língua podem conter pequenos erros. Para qualquer decisão que envolva dinheiro, consulte primeiro um profissional.",
 };
 
 const DoogieChat = () => {
