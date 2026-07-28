@@ -435,6 +435,27 @@ async def submit_beta_feedback(request: Request, body: BetaFeedback):
         "created_at": now_iso(),
     }
     await db.beta_feedback.insert_one(doc)
+
+    # Notify Doug via email (non-fatal — feedback is still saved in Mongo if email fails)
+    rating_line = f"<strong>Rating:</strong> {'⭐' * doc['rating']} ({doc['rating']}/5)<br/>" if doc.get('rating') else ""
+    _cat_label = {"bug":"🐛 Bug","idea":"💡 Idea","question":"❓ Question","general":"💬 General"}.get(doc['category'], doc['category'])
+    admin_html = (
+        f"<p><strong>From:</strong> {doc['name']} &lt;{doc['email']}&gt;</p>"
+        f"<p><strong>Category:</strong> {_cat_label}</p>"
+        f"{rating_line}"
+        f"<p><strong>Page:</strong> <a href='{doc['page_url']}'>{doc['page_url'] or '(not captured)'}</a></p>"
+        f"<div style='background:#F7FAFF;border-left:4px solid #FDB813;padding:1rem;margin:1rem 0;white-space:pre-wrap;font-family:Georgia,serif'>{doc['comment']}</div>"
+        f"<p style='color:#6b7280;font-size:0.85em'><strong>Browser:</strong> {doc['user_agent']}<br/>"
+        f"<strong>Reply to:</strong> Just hit reply — your response goes straight to {doc['email']}<br/>"
+        f"<strong>Admin dashboard:</strong> <a href='https://eztofind.ca/admin/feedback'>eztofind.ca/admin/feedback</a></p>"
+    )
+    await _notify_admin_of_lead(
+        kind=f"Site Feedback ({_cat_label})",
+        to=INFO_MAILBOX,
+        subject=f"[Feedback] {doc['category']} — {doc['name']}",
+        body_html=admin_html,
+        related_id=doc["id"],
+    )
     return {"success": True, "id": doc["id"], "message": "Thanks — Doug will see this next time he checks the feedback inbox."}
 
 

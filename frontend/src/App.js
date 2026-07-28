@@ -4340,8 +4340,8 @@ const BetaFeedbackWidget = () => {
           <div style={{background:"#fff", borderRadius:14, maxWidth:520, width:"100%", padding:"1.5rem", boxShadow:"0 20px 60px rgba(0,0,0,0.35)", maxHeight:"90vh", overflowY:"auto"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"0.5rem"}}>
               <div>
-                <h3 className="font-display" style={{margin:0, fontSize:"1.4rem", color:"var(--brand-navy)"}}>Send Beta Feedback</h3>
-                <p style={{margin:"0.35rem 0 0", fontSize:"0.85rem", color:"var(--muted)"}}>Every note goes straight to Doug — thank you for testing 🙏</p>
+                <h3 className="font-display" style={{margin:0, fontSize:"1.4rem", color:"var(--brand-navy)"}}>Send Feedback</h3>
+                <p style={{margin:"0.35rem 0 0", fontSize:"0.85rem", color:"var(--muted)"}}>Every note goes straight to Doug — thank you 🙏</p>
               </div>
               <button onClick={()=>setOpen(false)} aria-label="Close" data-testid="beta-close" style={{background:"none",border:"none",fontSize:"1.4rem",cursor:"pointer",color:"var(--muted)",lineHeight:1}}>×</button>
             </div>
