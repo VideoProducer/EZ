@@ -1505,6 +1505,7 @@ const Listings = () => {
     city: params.get("city") || params.get("community") || "",
     community: params.get("community") || "",
     region: params.get("region") || "",
+    region_group: params.get("region_group") || "",
     property_type: params.get("property_type") || "",
     beds_min: params.get("beds_min") || "",
     beds_exact: params.get("beds_exact") || "",
@@ -1527,7 +1528,7 @@ const Listings = () => {
     const f = overrideFilters || filters;
     setLoading(true);
     const qp = {};
-    ["q","city","community","region","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
+    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
       if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
     qp.limit = PAGE_SIZE;
@@ -1546,7 +1547,7 @@ const Listings = () => {
     if (loadingMore || !results.listings) return;
     setLoadingMore(true);
     const qp = {};
-    ["q","city","community","region","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
+    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","sort"].forEach(k => {
       if (filters[k] !== "" && filters[k] !== undefined && filters[k] !== null) qp[k] = filters[k];
     });
     qp.limit = PAGE_SIZE;
@@ -2104,7 +2105,7 @@ const RegionPage = () => {
     <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
       {d.referral
         ? <Link to="/referral-request" className="btn btn-primary" data-testid="referral-cta">Request a Referral</Link>
-        : <><Link to="/listings" className="btn btn-primary" data-testid={`region-view-listings-${slug}`}>View Listings</Link><Link to="/buyer" className="btn btn-outline" data-testid={`region-buying-${slug}`}>I'm Buying Here</Link><Link to="/seller" className="btn btn-green" data-testid={`region-selling-${slug}`}>I'm Selling Here</Link></>}
+        : <><Link to={`/listings?region_group=${encodeURIComponent(d.key)}`} className="btn btn-primary" data-testid={`region-view-listings-${slug}`}>View Listings</Link><Link to="/buyer" className="btn btn-outline" data-testid={`region-buying-${slug}`}>I'm Buying Here</Link><Link to="/seller" className="btn btn-green" data-testid={`region-selling-${slug}`}>I'm Selling Here</Link></>}
     </div>
   </div></section>);
 };

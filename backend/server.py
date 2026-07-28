@@ -4292,6 +4292,7 @@ async def search_listings(
     community: Optional[str] = None,
     city: Optional[str] = None,
     region: Optional[str] = None,
+    region_group: Optional[str] = None,  # Top-level BC area: "Greater Vancouver", "Fraser Valley", "Sea-to-Sky" — resolved to the cities defined in communities_seed.json
     property_type: Optional[str] = None,
     beds_min: Optional[int] = None,
     beds_exact: Optional[int] = None,
@@ -4313,6 +4314,18 @@ async def search_listings(
         city = community
     if city:      query["city"] = _city_query(city)
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
+    # region_group: resolves a top-level BC area (e.g. "Sea-to-Sky") to the full
+    # list of member cities and applies a case-insensitive $in filter. Ignored
+    # if the caller also passed a specific `city` (city wins — narrower).
+    if region_group and not city:
+        try:
+            _seed = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+            group_cities = _seed.get(region_group, [])
+            if group_cities:
+                # Case-insensitive exact match on any of the region's cities.
+                query["city"] = {"$in": [re.compile(f"^{re.escape(c)}$", re.I) for c in group_cities]}
+        except Exception as e:
+            logger.warning(f"region_group resolution failed for {region_group!r}: {e}")
     if property_type:
         # Silently drop requests for excluded (commercial) types — residential only.
         if property_type in EXCLUDED_PROPERTY_TYPES:
