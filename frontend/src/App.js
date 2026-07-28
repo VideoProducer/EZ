@@ -25,15 +25,25 @@ const SITE_URL = "https://eztofind.ca";
 
 // Google Maps iframe embed — no API key required for basic q=... embed.
 // Google handles geocoding, so no client-side geocoder or rate limits needed.
+// For merged municipalities (Langley = City + Township; North Vancouver = City + District)
+// we override the query to target the larger municipality (which physically surrounds
+// the smaller one) and drop the zoom so both are visible in the same frame.
+const MERGED_MAP_QUERIES = {
+  "Langley":         { q: "Township of Langley, BC, Canada",         z: 11 },
+  "North Vancouver": { q: "District of North Vancouver, BC, Canada", z: 11 },
+};
 const CommunityMap = ({ name, region }) => {
-  const q = encodeURIComponent(`${name}, BC, Canada`);
+  const override = MERGED_MAP_QUERIES[name];
+  const rawQuery = override ? override.q : `${name}, BC, Canada`;
+  const q = encodeURIComponent(rawQuery);
+  const zoomParam = override ? `&z=${override.z}` : "";
   return (
     <div style={{marginTop:"1.25rem",marginBottom:"1.5rem"}} data-testid="community-map-wrap">
       <div style={{height:"340px",width:"100%",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)",background:"#F5F0E1"}}>
         <iframe
           title={`Map of ${name}, BC`}
           data-testid="community-map"
-          src={`https://www.google.com/maps?q=${q}&output=embed`}
+          src={`https://www.google.com/maps?q=${q}${zoomParam}&output=embed`}
           width="100%"
           height="340"
           style={{border:0,display:"block"}}
