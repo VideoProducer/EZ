@@ -780,7 +780,6 @@ const Footer = () => (
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
-        <li><Link to="/privacy">Records Retention</Link></li>
       </ul></div>
       <div><h4>Contact</h4><ul>
         <li>info@eztofind.ca</li>
