@@ -811,7 +811,7 @@ const Footer = () => (
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
         <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
   </div></footer>
 );
@@ -3765,10 +3765,29 @@ const CookieBanner = () => {
     return { essential: true, analytics: false, session: true };  // Essential is always on
   });
 
+  // Allow any component (e.g. the Footer link) to re-open the preferences modal
+  // by dispatching a global "open-cookie-prefs" event. This is our "give it back"
+  // path when a user accidentally clicked "Reject optional" and now wants analytics.
+  useEffect(() => {
+    const handler = () => {
+      // Refresh the current prefs from storage so the modal reflects saved state.
+      try {
+        const stored = localStorage.getItem("ez_cookie_prefs");
+        if (stored) setPrefs(JSON.parse(stored));
+      } catch(_){}
+      setShow(true);
+      setShowPrefs(true);
+    };
+    window.addEventListener("open-cookie-prefs", handler);
+    return () => window.removeEventListener("open-cookie-prefs", handler);
+  }, []);
+
   const save = (finalPrefs) => {
     const record = { accepted: true, at: new Date().toISOString(), ua: navigator.userAgent, prefs: finalPrefs };
     localStorage.setItem("ez_cookie", JSON.stringify(record));
     localStorage.setItem("ez_cookie_prefs", JSON.stringify(finalPrefs));
+    // Broadcast so listeners (PostHog gate, PageViewBeacon) can react without a reload.
+    try { window.dispatchEvent(new CustomEvent("ez-cookie-prefs-changed", { detail: finalPrefs })); } catch(_){}
     setShow(false); setShowPrefs(false);
   };
   const acceptAll = () => save({ essential: true, analytics: true, session: true });
@@ -4547,6 +4566,7 @@ const AppLayout = ({children}) => {
     <DoogieChat/>
     <CookieBanner/>
     <PageViewBeacon/>
+    <PostHogGate/>
     <TurnstileScriptLoader/>
     <BetaFeedbackWidget/>
   </>);
@@ -4639,6 +4659,60 @@ function PageViewBeacon() {
       lang: navigator.language || "",
     }).catch(() => {});
   }, [loc.pathname, loc.search]);
+  return null;
+}
+
+// --- PostHog analytics gate (PIPA compliance) ---
+// PostHog SDK is NOT loaded until the user opts into analytics cookies via the
+// PIPA consent banner. If they later change their mind (via the "Cookie
+// Preferences" link in the footer), we react to the `ez-cookie-prefs-changed`
+// event and either lazy-load PostHog or opt them out of capturing.
+const POSTHOG_KEY = "phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs";
+const POSTHOG_HOST = "https://us.i.posthog.com";
+function PostHogGate() {
+  const initedRef = useRef(false);
+
+  const loadAndInit = () => {
+    if (initedRef.current) {
+      if (window.posthog && window.posthog.opt_in_capturing) {
+        try { window.posthog.opt_in_capturing(); } catch(_){}
+      }
+      return;
+    }
+    initedRef.current = true;
+    // Inject the official PostHog snippet. Kept identical to the one Emergent
+    // shipped in index.html, minus the auto-init call.
+    (function(t,e){var o,n,p,r;if(!e.__SV){window.posthog=e;e._i=[];e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}p=t.createElement("script");p.type="text/javascript";p.crossOrigin="anonymous";p.async=!0;p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js";r=t.getElementsByTagName("script")[0];r.parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])};e.__SV=1}})(document,window.posthog||[]);
+    try {
+      window.posthog.init(POSTHOG_KEY, {
+        api_host: POSTHOG_HOST,
+        person_profiles: "identified_only",
+        session_recording: { recordCrossOriginIframes: true, capturePerformance: false },
+      });
+    } catch(_){}
+  };
+
+  const optOut = () => {
+    if (window.posthog && window.posthog.opt_out_capturing) {
+      try { window.posthog.opt_out_capturing(); } catch(_){}
+    }
+  };
+
+  const applyPrefs = () => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem("ez_cookie_prefs") || "{}");
+      if (prefs.analytics === true) loadAndInit();
+      else optOut();
+    } catch(_){}
+  };
+
+  useEffect(() => {
+    applyPrefs();
+    const handler = () => applyPrefs();
+    window.addEventListener("ez-cookie-prefs-changed", handler);
+    return () => window.removeEventListener("ez-cookie-prefs-changed", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return null;
 }
 const AdminLayout = ({children}) => children;
