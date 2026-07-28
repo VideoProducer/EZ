@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import "./App.css";
@@ -844,6 +844,7 @@ const DoogieListingCard = ({ listing }) => {
 
 const DOOGIE_LANGUAGES = [
   { code: "en",      label: "EN",  name: "English"                    },
+  { code: "fr",      label: "FR",  name: "Français"                   },
   { code: "zh-Hant", label: "繁", name: "繁體中文 (Traditional / Cantonese)" },
   { code: "zh-Hans", label: "简", name: "简体中文 (Simplified / Mandarin)"   },
   { code: "pa",      label: "ਪੰ",  name: "ਪੰਜਾਬੀ (Punjabi)"           },
@@ -1297,6 +1298,7 @@ const MLS_POLICY_VERSION = "1.0";
 const MLS_ACCEPT_KEY = "eztofind_mls_terms_v" + MLS_POLICY_VERSION;
 const TermsGate = ({ children }) => {
   const [accepted, setAccepted] = useState(() => localStorage.getItem(MLS_ACCEPT_KEY) === "yes");
+  const nav = useNavigate();
   const accept = async () => {
     localStorage.setItem(MLS_ACCEPT_KEY, "yes");
     setAccepted(true);
@@ -1308,24 +1310,33 @@ const TermsGate = ({ children }) => {
       });
     } catch(e) { /* non-blocking */ }
   };
+  const decline = () => {
+    // Send them somewhere useful instead of the homepage they came from
+    nav("/communities");
+  };
   if (accepted) return children;
   return (
-    <div data-testid="mls-terms-gate" style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem",fontFamily:"Inter,sans-serif"}}>
-      <div style={{background:"#FDFCF8",maxWidth:640,width:"100%",borderRadius:16,padding:"2rem",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"1rem"}}>MLS® Listing Data — Terms of Use</div>
-        <div style={{fontSize:"0.92rem",lineHeight:1.6,color:"var(--ink)",marginBottom:"1.25rem"}}>
-          <p style={{marginBottom:"0.75rem"}}>The MLS® listing content you're about to view is provided under license by <strong>The Canadian Real Estate Association (CREA)</strong> via the DDF® (Data Distribution Facility) program. By clicking "I Accept" below you agree to the following:</p>
-          <ul style={{paddingLeft:"1.25rem",marginBottom:"0.75rem"}}>
-            <li style={{marginBottom:"0.35rem"}}>Listings are for <strong>personal, non-commercial use only</strong>. You will not scrape, resell, redistribute, or use for AI model training.</li>
-            <li style={{marginBottom:"0.35rem"}}>Prices, availability, and details are subject to change without notice. Verify current information with Doug LeMaire, REALTOR®, before making an offer.</li>
-            <li style={{marginBottom:"0.35rem"}}>MLS®, Multiple Listing Service®, and the associated logos are owned by CREA and identify the quality of services provided by real estate professionals who are members of CREA.</li>
-            <li style={{marginBottom:"0.35rem"}}>Your acceptance is recorded (timestamp + IP + user-agent) for regulatory compliance.</li>
-          </ul>
-          <p style={{fontSize:"0.82rem",color:"var(--muted)"}}>Full terms: <a href="https://www.crea.ca/legal/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>CREA Terms of Use ↗</a> · <Link to="/privacy" style={{color:"var(--brand-blue)"}}>EZtoFind.ca Privacy ↗</Link></p>
+    <div data-testid="mls-terms-gate" style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem",fontFamily:"Inter,sans-serif"}}>
+      <div style={{background:"#FDFCF8",maxWidth:520,width:"100%",borderRadius:16,padding:"2rem",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",maxHeight:"92vh",overflowY:"auto"}}>
+        <div style={{textAlign:"center",marginBottom:"1rem"}}>
+          <div style={{fontSize:"2.2rem",lineHeight:1}}>🏡</div>
+          <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.4rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.75rem"}}>One-time welcome to our MLS® listings</div>
         </div>
-        <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
-          <button className="btn btn-primary" onClick={accept} data-testid="mls-terms-accept" style={{flex:"1 1 200px"}}>I Accept the Terms of Use</button>
-          <Link to="/" className="btn btn-ghost" data-testid="mls-terms-decline" style={{flex:"1 1 100px",textAlign:"center",textDecoration:"none"}}>Cancel</Link>
+        <div style={{fontSize:"0.95rem",lineHeight:1.6,color:"var(--ink)",marginBottom:"1.25rem"}}>
+          <p style={{marginBottom:"0.75rem"}}>Before we show you live MLS® data, we're required by the Canadian Real Estate Association (CREA) to ask you to agree to a few common-sense terms:</p>
+          <ul style={{paddingLeft:"1.25rem",marginBottom:"0.75rem"}}>
+            <li style={{marginBottom:"0.35rem"}}>The listings are for your <strong>personal browsing</strong>, not for resale or scraping.</li>
+            <li style={{marginBottom:"0.35rem"}}>Prices and availability can change — always verify with <strong>Doug LeMaire, REALTOR®</strong> before making an offer.</li>
+            <li style={{marginBottom:"0.35rem"}}>MLS® and REALTOR® are CREA trademarks.</li>
+          </ul>
+          <p style={{fontSize:"0.82rem",color:"var(--muted)"}}><a href="https://www.crea.ca/legal/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Full CREA terms ↗</a> · <Link to="/privacy" style={{color:"var(--brand-blue)"}}>EZtoFind.ca privacy ↗</Link></p>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:"0.6rem"}}>
+          <button className="btn btn-primary" onClick={accept} data-testid="mls-terms-accept" style={{background:"#16A34A",color:"#fff",fontSize:"1rem",padding:"0.85rem 1rem",fontWeight:700,border:"none"}}>✓ I Agree — Show Me the Listings</button>
+          <button onClick={decline} data-testid="mls-terms-decline" style={{background:"transparent",color:"var(--muted)",border:"none",fontSize:"0.88rem",padding:"0.4rem",cursor:"pointer",textDecoration:"underline"}}>Not now — browse BC communities instead</button>
+        </div>
+        <div style={{marginTop:"1rem",padding:"0.6rem",background:"#F5F0E1",borderRadius:8,fontSize:"0.72rem",color:"var(--muted)",textAlign:"center"}}>
+          Why am I seeing this? — CREA's rules require every website showing MLS® data to record your acceptance once per browser. You won't see this again.
         </div>
       </div>
     </div>
@@ -4928,6 +4939,9 @@ function App() {
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
+      {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
+      <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
+      <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
       <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
       <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>

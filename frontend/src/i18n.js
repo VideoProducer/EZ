@@ -1,11 +1,13 @@
 // EZtoFind.ca — Form translations
 // Non-English speakers who chat with Doogie can click through to /buyer, /seller,
 // /referral-request, /contact with ?lang=xx and receive a localized form.
-// Languages: en, zh-Hant, zh-Hans, pa, fa, pt-PT
+// Languages: en, fr, zh-Hant, zh-Hans, pa, fa, pt-PT
+// (French forms currently fall back to English text; the Doogie chat still
+// replies in French. Full French form translation is a post-launch task.)
 // Free-text notes (typed by the visitor in their language) are stored as-is; the
 // backend attaches an English-machine-translation via Claude for Doug's CRM.
 
-export const SUPPORTED_LANGS = ["en", "zh-Hant", "zh-Hans", "pa", "fa", "pt-PT"];
+export const SUPPORTED_LANGS = ["en", "fr", "zh-Hant", "zh-Hans", "pa", "fa", "pt-PT"];
 
 const en = {
   // Common
@@ -466,6 +468,7 @@ export function normalizeLang(v) {
   if (s.startsWith("pa")) return "pa";
   if (s.startsWith("fa")) return "fa";
   if (s.startsWith("pt")) return "pt-PT";
+  if (s.startsWith("fr")) return "fr";
   return "en";
 }
 
