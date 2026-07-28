@@ -130,13 +130,15 @@ const SEO = ({ title, description, path, image, schema }) => {
 };
 
 // --- Doogie Assets ---
-const DOOGIE_LAPTOP = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/vo8679bv_Doogie%20Laptop.png";
-const DOOGIE_POINT_R = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/9lnyn1tx_Doogie%20Pointing%20Right.png";
-const DOOGIE_POINT_L = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/686tnkdh_Doogie%20Pointing%20Left.jpeg";
-const DOOGIE_CELEBRATE = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/4g6serdu_Doogie%20Celebrating.png";
-const DOOGIE_THINKING = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png";
-const DOOGIE_MAGNIFY = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/6phrhs00_Doogie%20Magnifying%20Glass%20Transparent.png";
-const DOOGIE_POINT_L_T = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png";
+// Doogie mascot assets — served locally from /public/images/doogie/ for fast
+// mobile delivery and Cloudflare edge caching. Optimized: ~2 MB total (was ~7 MB).
+const DOOGIE_LAPTOP = "/images/doogie/laptop.png";
+const DOOGIE_POINT_R = "/images/doogie/pointing-right.png";
+const DOOGIE_POINT_L = "/images/doogie/pointing-left.jpg";
+const DOOGIE_CELEBRATE = "/images/doogie/celebrating.png";
+const DOOGIE_THINKING = "/images/doogie/thinking.png";
+const DOOGIE_MAGNIFY = "/images/doogie/magnifying.png";
+const DOOGIE_POINT_L_T = "/images/doogie/pointing-left-transparent.png";
 const DOUG_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg";
 
 // Shared "Authoritative Sources" block — used on glossary + community pages
