@@ -3489,7 +3489,7 @@ const AffordabilityCalculator = () => {
       <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.25rem",flexWrap:"wrap"}}>
         <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
         <div style={{flex:"1 1 240px"}}>
-          <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>What Can I Afford?</h2>
+          <h2 style={{fontFamily:"'Manrope', 'Inter', sans-serif",fontWeight:700,fontSize:"1.55rem",margin:0,color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>What Can I Afford?</h2>
         </div>
       </div>
 
@@ -3664,7 +3664,7 @@ const PTTCalculator = () => {
 const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
     <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
-      <h2 className="font-display" style={{fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>
+      <h2 style={{fontFamily:"'Manrope', 'Inter', sans-serif",fontWeight:700,fontSize:"clamp(1.8rem,3.5vw,2.6rem)",lineHeight:1.15,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.02em"}}>
         What can you <span className="accent">afford?</span>
       </h2>
     </div>
