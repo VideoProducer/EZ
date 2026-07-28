@@ -847,6 +847,7 @@ const DoogieListingCard = ({ listing }) => {
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.98rem",fontWeight:700,color:"var(--brand-navy)"}}>${price}</div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--ink)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{listing.street_address}, {listing.city}</div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.15rem"}}>{listing.beds}bd · {listing.baths}ba · {listing.property_type}</div>
+        {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.1rem"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
   );
@@ -1399,6 +1400,7 @@ const ListingCard = ({ listing }) => {
           <span>🛁 {listing.baths}{listing.half_baths ? `+${listing.half_baths}` : ""}</span>
           {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
         </div>
+        {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",paddingTop:"0.55rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
   );
