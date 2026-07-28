@@ -3149,7 +3149,30 @@ async def startup():
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
-    return await generate_sitemap(db)
+    from indexnow import notify_indexnow
+    result = await generate_sitemap(db)
+    # After a manual regen, push the top-level SEO landing pages to IndexNow
+    # so Bing/Yandex/Naver/Seznam refresh their caches immediately (Google is
+    # not on IndexNow yet — we rely on Search Console for that).
+    try:
+        priority_urls = [
+            "https://eztofind.ca/",
+            "https://eztofind.ca/communities",
+            "https://eztofind.ca/glossary",
+            "https://eztofind.ca/regions/greater-vancouver",
+            "https://eztofind.ca/regions/fraser-valley",
+            "https://eztofind.ca/regions/sea-to-sky",
+            "https://eztofind.ca/about",
+            "https://eztofind.ca/valuation",
+            "https://eztofind.ca/relocating",
+            "https://eztofind.ca/realtors",
+        ]
+        indexnow_result = await notify_indexnow(priority_urls)
+        result["indexnow"] = indexnow_result
+    except Exception as e:
+        logger.warning(f"admin sitemap regen: IndexNow push failed (silent-fail): {e}")
+        result["indexnow"] = {"ok": False, "error": str(e)}
+    return result
 
 
 # =============== RECORDS RETENTION (BCFSA / PIPA / CASL) ===============
@@ -3386,6 +3409,206 @@ async def regenerate_glossary_faqs(slug: str, _=Depends(verify_admin)):
     faqs = await generate_faqs_for_term(t["term"], t["definition"])
     await db.glossary.update_one({"slug": slug}, {"$set": {"faqs": faqs, "faqs_approved": False}})
     return {"success": True, "faqs": faqs}
+
+# ================================================================
+# DSAR — Data Subject Access Request (PIPA / PIPEDA compliance)
+# ================================================================
+# Under BC's Personal Information Protection Act (PIPA) s.23 and Canada's
+# PIPEDA s.4.9, every individual has the right to request a copy of the
+# personal information a business holds about them. We implement this as
+# a self-service double-opt-in flow:
+#
+#   1. POST /api/privacy/export-request { email }
+#         -> logs the request, emails a signed verification link
+#   2. GET  /api/privacy/export?token=... (click from email)
+#         -> returns a JSON bundle of all data associated with that email
+#         -> single-use token, 24h expiry, tamper-evident audit log
+#
+# Fulfilment latency: instant (well under the 30-day PIPA/PIPEDA maximum).
+# The token is single-use to prevent link-scraping bots from pulling PII.
+# All access is logged to `dsar_export_log` for OIPC audit purposes.
+
+class DSARExportRequest(BaseModel):
+    email: str
+
+# Collections that may store personal data keyed by email.
+# The `field` attribute names the email field within each document.
+_DSAR_COLLECTIONS = [
+    ("buyer_leads",         "email"),
+    ("seller_leads",        "email"),
+    ("clients",             "email"),
+    ("saved_searches",      "email"),
+    ("realtor_applications","email"),
+    ("beta_feedback",       "email"),
+    ("chat_messages",       "email"),
+    ("mls_consent_log",     "email"),
+    ("email_send_log",      "to_email"),
+    ("email_outbox",        "to_email"),
+    ("unsubscribe_log",     "email"),
+    ("newsletter_subscribers", "email"),
+]
+
+@api.post("/privacy/export-request")
+async def dsar_export_request(body: DSARExportRequest, request: Request):
+    """Submit a DSAR export request. Sends a verification email with a
+    single-use link that (once clicked) returns a JSON bundle of all PII
+    tied to this email address.
+
+    Rate-limit: 1 request per email per 24h to prevent abuse.
+    """
+    email = (body.email or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Valid email address required.")
+
+    # Rate limit: 1 request per email per 24h
+    now = datetime.now(timezone.utc)
+    recent = await db.dsar_export_log.find_one({
+        "email": email,
+        "requested_at": {"$gte": (now - timedelta(hours=24)).isoformat()},
+        "status": {"$in": ["pending", "fulfilled"]},
+    })
+    if recent:
+        raise HTTPException(429, "A data export request for this email was already submitted in the last 24 hours. Please check your inbox for the verification link.")
+
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    ua = request.headers.get("user-agent", "")[:400]
+    token = uuid.uuid4().hex + uuid.uuid4().hex  # 64-char high-entropy token
+    request_id = str(uuid.uuid4())
+
+    await db.dsar_export_log.insert_one({
+        "id": request_id,
+        "email": email,
+        "token": token,
+        "status": "pending",
+        "requested_at": now.isoformat(),
+        "expires_at": (now + timedelta(hours=24)).isoformat(),
+        "requester_ip": ip,
+        "requester_ua": ua,
+    })
+
+    # Send verification email (transactional — no CASL consent required for
+    # a user-initiated compliance response).
+    from services.email_sender import send_email as _send_email, SENDER_NAME, SENDER_ADDRESS, SENDER_PHONE, SENDER_EMAIL
+    base = _public_base_url(request)
+    export_url = f"{base}/api/privacy/export?token={token}"
+    html = f"""<!doctype html><html><body style="margin:0;background:#F5F0E1">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E1;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;padding:2rem;font-family:Inter,Arial,sans-serif;color:#111827">
+<tr><td>
+<div style="font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:#0F2A5B;font-weight:700">EZtoFind.ca · Privacy request (PIPA / PIPEDA)</div>
+<h1 style="font-family:Georgia,serif;font-size:1.6rem;color:#0F2A5B;margin:0.4rem 0 0.75rem">Your data export is ready</h1>
+<p style="line-height:1.6;color:#374151">You (or someone using your email) requested a copy of the personal information EZtoFind.ca holds about you, as permitted under BC's Personal Information Protection Act (PIPA) and Canada's PIPEDA.</p>
+<p style="line-height:1.6;color:#374151">Click the button below to download your data as a JSON file. The link is <strong>single-use</strong> and expires in <strong>24 hours</strong>.</p>
+<p style="text-align:center;margin:1.5rem 0"><a href="{export_url}" style="display:inline-block;background:#0F2A5B;color:#fff;text-decoration:none;padding:0.9rem 1.9rem;border-radius:999px;font-weight:700">Download my data (JSON)</a></p>
+<p style="font-size:0.8rem;color:#6b7280;line-height:1.6">If you didn't request this, just ignore this email — the link will expire unused and no data is released. Only the person who clicks the link (in the same 24-hour window) sees the data.</p>
+<hr style="margin:1.5rem 0 1rem;border:none;border-top:1px solid #e5e7eb"/>
+<div style="font-size:12px;color:#6b7280;line-height:1.6">
+  <p style="margin:0 0 0.5rem"><strong>{SENDER_NAME}</strong><br/>{SENDER_ADDRESS} · {SENDER_PHONE} · <a href="mailto:{SENDER_EMAIL}" style="color:#0F2A5B">{SENDER_EMAIL}</a></p>
+  <p style="margin:0">Prefer to have Doug email you the data instead of downloading it yourself? Reply to this email. Under PIPA we will respond within 30 days at the latest.</p>
+</div>
+</td></tr></table></td></tr></table></body></html>"""
+    text = (
+        "EZtoFind.ca — Your PIPA / PIPEDA data export is ready\n\n"
+        "You requested a copy of the personal information we hold about you.\n\n"
+        f"Download your data (JSON): {export_url}\n\n"
+        "The link is single-use and expires in 24 hours.\n\n"
+        "If you didn't request this, ignore this email — no data is released\n"
+        "until someone clicks the link.\n\n"
+        f"---\n{SENDER_NAME}\n{SENDER_ADDRESS} · {SENDER_PHONE} · {SENDER_EMAIL}\n"
+    )
+    send_result = await _send_email(db,
+        to=email, subject="Your EZtoFind.ca data export (PIPA)",
+        html=html, text=text, kind="transactional", related_id=request_id,
+    )
+    logger.info(f"DSAR export request created: email={email} id={request_id} email_queued={send_result.get('queued', False)}")
+    return {
+        "success": True,
+        "message": "Check your inbox — we've sent a secure download link. It expires in 24 hours and can only be used once.",
+    }
+
+
+@api.get("/privacy/export")
+async def dsar_export_download(token: str, request: Request):
+    """Serve the DSAR JSON bundle. Token is single-use and expires in 24h."""
+    from fastapi.responses import JSONResponse
+    now = datetime.now(timezone.utc)
+    rec = await db.dsar_export_log.find_one({"token": token})
+    if not rec:
+        raise HTTPException(404, "Invalid or already-used export link. Please submit a new privacy request.")
+    if rec.get("status") == "fulfilled":
+        raise HTTPException(410, "This download link has already been used. For security, each link works exactly once. Please submit a new privacy request if you need another copy.")
+    expires_at = rec.get("expires_at")
+    if isinstance(expires_at, str):
+        try:
+            if datetime.fromisoformat(expires_at) < now:
+                raise HTTPException(410, "This download link has expired. Please submit a new privacy request.")
+        except ValueError:
+            pass
+
+    email = rec["email"]
+    # Bundle personal data from every known collection
+    bundle = {
+        "export_metadata": {
+            "email": email,
+            "export_id": rec["id"],
+            "generated_at": now.isoformat(),
+            "requested_at": rec.get("requested_at"),
+            "legal_basis": "BC PIPA s.23 / PIPEDA s.4.9 — right of access",
+            "controller": {
+                "name": "Doug LeMaire, REALTOR® — EZtoFind.ca",
+                "brokerage": "Fraser Property Management Realty Services Ltd.",
+                "contact_email": "info@eztofind.ca",
+                "notes": "For corrections, deletion requests, or complaints, reply to this email. Under PIPA you may also complain to the BC Office of the Information & Privacy Commissioner (https://www.oipc.bc.ca).",
+            },
+        },
+        "records": {},
+    }
+    total_docs = 0
+    for coll_name, email_field in _DSAR_COLLECTIONS:
+        try:
+            cursor = db[coll_name].find({email_field: {"$regex": f"^{re.escape(email)}$", "$options": "i"}}, {"_id": 0})
+            docs = await cursor.to_list(length=1000)
+            if docs:
+                # Redact tokens (verification/unsubscribe) that could be reused
+                for d in docs:
+                    for redact_field in ("verification_token", "unsubscribe_token", "token", "password_hash"):
+                        if redact_field in d:
+                            d[redact_field] = "[REDACTED — internal security token]"
+                bundle["records"][coll_name] = docs
+                total_docs += len(docs)
+        except Exception as e:
+            logger.warning(f"DSAR export: failed to read {coll_name}: {e}")
+
+    bundle["export_metadata"]["total_records"] = total_docs
+    bundle["export_metadata"]["collections_searched"] = [c[0] for c in _DSAR_COLLECTIONS]
+
+    # Mark request as fulfilled (single-use enforcement)
+    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+          or (request.client.host if request.client else "unknown"))
+    await db.dsar_export_log.update_one(
+        {"token": token},
+        {"$set": {
+            "status": "fulfilled",
+            "fulfilled_at": now.isoformat(),
+            "fulfilled_from_ip": ip,
+            "total_records_returned": total_docs,
+        }},
+    )
+    logger.info(f"DSAR export fulfilled: email={email} records={total_docs}")
+
+    # Trigger download in browser rather than inline JSON display
+    from fastapi.responses import Response
+    import json as _json
+    payload = _json.dumps(bundle, indent=2, default=str, ensure_ascii=False)
+    filename = f"eztofind-data-export-{email.split('@')[0]}-{now.strftime('%Y%m%d')}.json"
+    return Response(
+        content=payload,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 
 # ================================================================
 # DEFINITION HARDENING (v2) — regenerates the 396 glossary term
