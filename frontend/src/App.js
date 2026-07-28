@@ -4370,7 +4370,6 @@ const BetaFeedbackWidget = () => {
                   <div style={{display:"flex", gap:"0.4rem", flexWrap:"wrap"}}>
                     {[
                       {v:"bug",      l:"🐛 Bug"},
-                      {v:"idea",     l:"💡 Idea"},
                       {v:"question", l:"❓ Question"},
                       {v:"general",  l:"💬 General"},
                     ].map(c => (
@@ -4608,7 +4607,7 @@ const AdminFeedback = () => {
   };
 
   const catBadge = (cat) => {
-    const m = {bug:{bg:"#FEE2E2",fg:"#991B1B",label:"🐛 Bug"}, idea:{bg:"#EAF3FF",fg:"#1E40AF",label:"💡 Idea"}, question:{bg:"#FEF3C7",fg:"#92400E",label:"❓ Question"}, general:{bg:"#F3F4F6",fg:"#374151",label:"💬 General"}};
+    const m = {bug:{bg:"#FEE2E2",fg:"#991B1B",label:"🐛 Bug"}, question:{bg:"#FEF3C7",fg:"#92400E",label:"❓ Question"}, general:{bg:"#F3F4F6",fg:"#374151",label:"💬 General"}};
     const s = m[cat] || m.general;
     return <span style={{background:s.bg,color:s.fg,padding:"0.15rem 0.55rem",borderRadius:999,fontSize:"0.72rem",fontWeight:600}}>{s.label}</span>;
   };

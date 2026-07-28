@@ -303,7 +303,7 @@ class BetaFeedback(BaseModel):
     email: str
     comment: str
     rating: Optional[int] = None       # 1..5
-    category: Optional[str] = "general"  # "bug" | "idea" | "question" | "general"
+    category: Optional[str] = "general"  # "bug" | "question" | "general"
     page_url: Optional[str] = ""
 
 class AdminFeedbackUpdate(BaseModel):
@@ -396,7 +396,7 @@ async def admin_change_password(body: ChangePassword, _=Depends(verify_admin)):
 
 
 # =============== BETA FEEDBACK (public + admin inbox) ===============
-_ALLOWED_FEEDBACK_CATEGORIES = {"bug", "idea", "question", "general"}
+_ALLOWED_FEEDBACK_CATEGORIES = {"bug", "question", "general"}
 _ALLOWED_FEEDBACK_STATUSES = {"new", "read", "resolved"}
 
 
@@ -438,7 +438,7 @@ async def submit_beta_feedback(request: Request, body: BetaFeedback):
 
     # Notify Doug via email (non-fatal — feedback is still saved in Mongo if email fails)
     rating_line = f"<strong>Rating:</strong> {'⭐' * doc['rating']} ({doc['rating']}/5)<br/>" if doc.get('rating') else ""
-    _cat_label = {"bug":"🐛 Bug","idea":"💡 Idea","question":"❓ Question","general":"💬 General"}.get(doc['category'], doc['category'])
+    _cat_label = {"bug":"🐛 Bug","question":"❓ Question","general":"💬 General"}.get(doc['category'], doc['category'])
     admin_html = (
         f"<p><strong>From:</strong> {doc['name']} &lt;{doc['email']}&gt;</p>"
         f"<p><strong>Category:</strong> {_cat_label}</p>"
