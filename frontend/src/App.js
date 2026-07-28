@@ -2758,6 +2758,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminders")} className={active==="reminders"?"active":""} data-testid="admin-nav-reminders">🎂 Reminders</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminder-templates")} className={active==="rem-templates"?"active":""} data-testid="admin-nav-rem-templates">📧 Reminder Templates</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-log")} className={active==="email-log"?"active":""} data-testid="admin-nav-email-log">📮 Email Log</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/saved-searches")} className={active==="saved-searches"?"active":""} data-testid="admin-nav-saved-searches">🔔 Saved Searches</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
@@ -3197,6 +3198,106 @@ const AdminReset = () => {
         </div>
       </div>
     </>}
+  </AdminShell>;
+};
+
+
+const AdminSavedSearches = () => {
+  const {headers} = useAdmin();
+  const [data, setData] = useState({counts:{pending:0,verified:0,unsubscribed:0}, records:[]});
+  const [busy, setBusy] = useState(false);
+  const [runResult, setRunResult] = useState(null);
+  const [filter, setFilter] = useState(""); // "" | "pending" | "verified" | "unsubscribed"
+
+  const load = () => axios.get(`${API}/admin/saved-searches`, {headers})
+    .then(r => setData(r.data)).catch(()=>{});
+  useEffect(()=>{ if(headers) load(); }, []);
+
+  const runMatcher = async () => {
+    if (!window.confirm("Run the alert matcher now? This will scan every verified saved search and send digest emails for any new listings that match. (Respects the 6-hour frequency cap.)")) return;
+    setBusy(true); setRunResult(null);
+    try {
+      const r = await axios.post(`${API}/admin/saved-searches/run-matcher`, {}, {headers});
+      setRunResult(r.data);
+      load(); // refresh counts
+    } catch (x) {
+      setRunResult({error: x?.response?.data?.detail || "Matcher failed."});
+    } finally { setBusy(false); }
+  };
+
+  const filtered = filter ? data.records.filter(r => r.status === filter) : data.records;
+  const fmtFilters = (f) => f && Object.keys(f).length
+    ? Object.entries(f).map(([k,v])=>`${k.replace(/_/g," ")}: ${v}`).join(" · ")
+    : "all BC residential";
+  const fmtDate = (s) => s ? String(s).slice(0,16).replace("T"," ") : "—";
+
+  return <AdminShell active="saved-searches">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>Saved Search Subscribers</h1>
+      <button className="btn btn-primary" onClick={runMatcher} disabled={busy} data-testid="saved-search-run-matcher">
+        {busy ? "Running…" : "🚀 Run Matcher Now"}
+      </button>
+    </div>
+    <p style={{color:"var(--muted)",marginTop:"0.5rem"}}>Users who opted into new-listing email alerts. Digests dispatch automatically after every 4-hour DDF sync — the button above manually re-runs it (respecting the 6-hour cap per subscriber).</p>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginTop:"1.25rem",marginBottom:"1.25rem"}}>
+      <button onClick={()=>setFilter("")} data-testid="ss-count-all" style={{background:filter===""?"var(--brand-navy)":"#F0F4FB",color:filter===""?"#fff":"var(--brand-navy)",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.8}}>Total</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.records.length}</div>
+      </button>
+      <button onClick={()=>setFilter("verified")} data-testid="ss-count-verified" style={{background:filter==="verified"?"#22C55E":"#F0FDF4",color:filter==="verified"?"#fff":"#166534",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Verified (receiving)</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.counts.verified||0}</div>
+      </button>
+      <button onClick={()=>setFilter("pending")} data-testid="ss-count-pending" style={{background:filter==="pending"?"#F5A623":"#FEF3C7",color:filter==="pending"?"#fff":"#92400E",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Pending confirm</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.counts.pending||0}</div>
+      </button>
+      <button onClick={()=>setFilter("unsubscribed")} data-testid="ss-count-unsub" style={{background:filter==="unsubscribed"?"#6b7280":"#F3F4F6",color:filter==="unsubscribed"?"#fff":"#374151",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Unsubscribed</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.counts.unsubscribed||0}</div>
+      </button>
+    </div>
+
+    {runResult && (
+      <div className="notice" style={{background:runResult.error?"#FEE2E2":"#F0FDF4",borderColor:runResult.error?"#DC2626":"#22C55E",marginBottom:"1.25rem"}} data-testid="ss-matcher-result">
+        {runResult.error
+          ? <span>❌ {runResult.error}</span>
+          : <span>✅ Matcher ran — checked <strong>{runResult.searches_checked}</strong> subscriber(s), dispatched <strong>{runResult.digests_sent}</strong> digest email(s). {runResult.errors?.length>0 && <> Errors: {runResult.errors.length}</>}</span>}
+      </div>
+    )}
+
+    <table className="admin-table" data-testid="admin-saved-searches-table">
+      <thead><tr>
+        <th>Created</th><th>Email</th><th>Filters</th><th>Freq</th><th>Status</th><th>Sent</th><th>Last Sent</th>
+      </tr></thead>
+      <tbody>
+        {filtered.length===0
+          ? <tr><td colSpan="7" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No subscribers in this bucket yet. When users click "🔔 Get alerts for this search" on the /listings page, they'll appear here.</td></tr>
+          : filtered.map((r,i)=>(
+            <tr key={r.id || i}>
+              <td style={{whiteSpace:"nowrap"}}>{fmtDate(r.created_at)}</td>
+              <td>{r.email}</td>
+              <td style={{maxWidth:"18rem",fontSize:"0.85rem",color:"var(--muted)"}}>
+                {r.label && <div style={{color:"var(--brand-navy)",fontWeight:600,marginBottom:"0.15rem"}}>{r.label}</div>}
+                {fmtFilters(r.filters)}
+              </td>
+              <td>{r.frequency||"instant"}</td>
+              <td>
+                <span style={{
+                  fontSize:"0.72rem",fontWeight:700,padding:"0.2rem 0.55rem",borderRadius:999,
+                  background:r.status==="verified"?"#F0FDF4":r.status==="pending"?"#FEF3C7":"#F3F4F6",
+                  color:r.status==="verified"?"#166534":r.status==="pending"?"#92400E":"#374151",
+                  textTransform:"uppercase",letterSpacing:"0.04em",
+                }}>{r.status}</span>
+              </td>
+              <td style={{textAlign:"center"}}>{r.notified_count || 0}</td>
+              <td style={{whiteSpace:"nowrap",fontSize:"0.85rem",color:"var(--muted)"}}>{fmtDate(r.last_notified_at)}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
   </AdminShell>;
 };
 
@@ -5131,6 +5232,7 @@ function App() {
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
+      <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
