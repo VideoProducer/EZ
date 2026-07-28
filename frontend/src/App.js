@@ -4308,6 +4308,11 @@ const BetaFeedbackWidget = () => {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
+  // Hide the feedback FAB while the PIPA cookie banner is visible (they share the
+  // bottom-left corner and overlap the "Reject optional" / "Customize" buttons).
+  const [cookieBannerVisible, setCookieBannerVisible] = useState(
+    () => typeof window !== "undefined" && !localStorage.getItem("ez_cookie")
+  );
   const loc = useLocation();
 
   // Remember tester name/email across visits (nice UX for repeat testers)
@@ -4315,6 +4320,18 @@ const BetaFeedbackWidget = () => {
     const cached = localStorage.getItem("beta_tester");
     if (cached) { try { const c = JSON.parse(cached); setF(x => ({...x, name:c.name||"", email:c.email||""})); } catch(_){} }
   }, []);
+
+  // Poll for cookie decision so we can un-hide the FAB after the banner is dismissed.
+  useEffect(() => {
+    if (!cookieBannerVisible) return;
+    const iv = setInterval(() => {
+      if (localStorage.getItem("ez_cookie")) {
+        setCookieBannerVisible(false);
+        clearInterval(iv);
+      }
+    }, 400);
+    return () => clearInterval(iv);
+  }, [cookieBannerVisible]);
 
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
@@ -4339,6 +4356,7 @@ const BetaFeedbackWidget = () => {
 
   return (
     <>
+      {!cookieBannerVisible && (
       <button
         onClick={()=>{setOpen(true); reset();}}
         data-testid="beta-feedback-fab"
@@ -4355,6 +4373,7 @@ const BetaFeedbackWidget = () => {
       >
         <span aria-hidden="true">💬</span> Send Feedback
       </button>
+      )}
 
       {open && (
         <div
