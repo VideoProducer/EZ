@@ -4406,8 +4406,11 @@ const BetaFeedbackWidget = () => {
                     placeholder="What did you try? What worked? What didn't? Anything confusing or missing?"
                     style={{width:"100%", padding:"0.65rem", border:"1px solid rgba(15,42,91,0.15)", borderRadius:8, fontFamily:"Inter,sans-serif", fontSize:"0.92rem", lineHeight:1.5, resize:"vertical"}}/>
                 </div>
-                <div style={{fontSize:"0.75rem", color:"var(--muted)", marginBottom:"0.75rem"}}>
+                <div style={{fontSize:"0.75rem", color:"var(--muted)", marginBottom:"0.5rem"}}>
                   Also captured: current page URL &amp; your browser info (so Doug can reproduce).
+                </div>
+                <div style={{fontSize:"0.7rem", color:"var(--muted)", lineHeight:1.5, background:"#F5F0E1", border:"1px solid rgba(15,42,91,0.12)", borderRadius:6, padding:"0.55rem 0.7rem", marginBottom:"0.75rem"}}>
+                  By submitting, you grant Doug LeMaire and EZtoFind.ca a perpetual, royalty-free licence to use this feedback and confirm you have no expectation of compensation, credit, or ownership rights over any features that may result.
                 </div>
                 {err && <div style={{background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:8, padding:"0.6rem 0.85rem", fontSize:"0.85rem", color:"#991B1B", marginBottom:"0.75rem"}} data-testid="beta-error">{typeof err==="string"?err:"Something went wrong."}</div>}
                 <button type="submit" className="btn btn-primary" disabled={busy} style={{width:"100%", padding:"0.75rem"}} data-testid="beta-submit">
