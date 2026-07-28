@@ -161,6 +161,15 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 - Advanced analytics + heatmaps
 - Doug's real headshot upload (currently placeholder)
 
+### 🅰️ Alberta Expansion — PARKED (Feb 27, 2026)
+- **Status:** Blueprint locked. Do NOT execute until Doug signals "go" AND BC site is stable for 7+ days.
+- **Approach:** Route-namespace split. Same domain (`eztofind.ca`), new prefix `/ab/*`. Not a new site.
+- **Doug's Alberta service area:** Calgary, Airdrie, Chestermere, Cochrane, Okotoks, Springbank, Bearspaw, Elbow Valley, Heritage Pointe, Priddis, Bragg Creek, Foothills County, Rocky View County.
+- **Pre-conditions before build:** Doug's RECA license issued, AB brokerage confirmed, AB E&O insurance active, CREA DDF® extended to include AB listings.
+- **Full plan document:** `/app/memory/ALBERTA_EXPANSION_PLAN.md` — 10-phase execution plan, ~40-60 hr estimated effort.
+- **Activation trigger:** Single env-flag flip `AB_LAUNCH_MODE=live` + robots.txt update + sitemap regen.
+- **Compliance guardrails:** No AB REALTOR® services offered until RECA license verifiable; no AB MLS data pulled until DDF extension confirmed; no CASL emails to AB residents until AB-specific consent captured.
+
 ## Emails Configured (routing only — actual sending needs Resend setup)
 - info@eztofind.ca — general
 - realtor@eztofind.ca — REALTOR® application workflow
