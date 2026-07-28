@@ -1,8 +1,10 @@
 # EZtoFind.ca — Alberta Expansion Plan
 
-**Status:** PARKED — do not execute until Doug signals "go" post-BC launch stabilization
-**Owner:** Doug LeMaire (will hold both BCFSA + RECA licenses at execution time)
+**Status:** PARKED — do not execute until Doug issues an **explicit build-out command** in chat (e.g., *"Start Alberta build."*). Trigger is time-agnostic — could be a week from now or a year from now.
+**Owner:** Doug LeMaire (will hold both BCFSA + RECA licenses at execution time via reciprocity transfer)
+**Architecture (locked):** **Province-config-driven platform** — refactor eztofind.ca so every province is a `PROVINCE_CONFIG` object. First Alberta build **includes** the platform refactor. All future provinces (ON, SK, MB, NS, etc.) become content-only additions.
 **Created:** 2026-02-27
+**Updated:** 2026-02-27 — locked province-config approach + explicit build-command trigger
 
 ---
 
@@ -321,13 +323,16 @@ The moment Doug signals "unpark AB and go live":
 
 ## 📅 When to Execute
 
-**Do not start until ALL of the following are true:**
+**Do not start until Doug issues an explicit build-out command** (e.g., *"Start Alberta build"* / *"Begin AB expansion"*). This is a **time-agnostic trigger** — could come tomorrow, in 3 months, or in a year.
 
-- [ ] BC site is stable for **at least 7 days** post-launch (no critical bug reports)
-- [ ] Doug's initial Google Search Console indexing has begun (some pages showing up in Search)
+When the command is received, verify the following pre-conditions before Phase 1:
+
+- [ ] BC site is stable (no critical bug reports in the preceding week)
+- [ ] Doug's initial Google Search Console indexing has begun
 - [ ] Doug's inbox is receiving live leads through the BC funnel (proves email pipeline is production-solid)
-- [ ] Doug has **either**: (a) his RECA license in-hand, or (b) confirmed his RECA license will be issued within the next 60 days
-- [ ] Doug says "go" in chat
+- [ ] Doug has **either**: (a) his RECA license in-hand, or (b) confirmed his RECA license transfer application has been submitted
+
+**Even if pre-conditions aren't fully met, the build itself is safe to start** — the whole plan produces a gated (`AB_LAUNCH_MODE=preview`) system that stays hidden from public until Doug flips the flag on his terms.
 
 ---
 

@@ -162,13 +162,15 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 - Doug's real headshot upload (currently placeholder)
 
 ### 🅰️ Alberta Expansion — PARKED (Feb 27, 2026)
-- **Status:** Blueprint locked. Do NOT execute until Doug signals "go" AND BC site is stable for 7+ days.
+- **Status:** Blueprint locked. **Do NOT execute until Doug issues an explicit build-out command** (e.g., "Start Alberta build"). Time-agnostic trigger — could be next week or 6+ months from now.
+- **Architecture (LOCKED):** Province-config-driven platform. First Alberta build **includes** a refactor of BC code to consume a `PROVINCE_CONFIG` object. After that, every future province (ON, SK, MB, NS, etc.) is a content-only addition — no code duplication.
 - **Approach:** Route-namespace split. Same domain (`eztofind.ca`), new prefix `/ab/*`. Not a new site.
 - **Doug's Alberta service area:** Calgary, Airdrie, Chestermere, Cochrane, Okotoks, Springbank, Bearspaw, Elbow Valley, Heritage Pointe, Priddis, Bragg Creek, Foothills County, Rocky View County.
-- **Pre-conditions before build:** Doug's RECA license issued, AB brokerage confirmed, AB E&O insurance active, CREA DDF® extended to include AB listings.
-- **Full plan document:** `/app/memory/ALBERTA_EXPANSION_PLAN.md` — 10-phase execution plan, ~40-60 hr estimated effort.
-- **Activation trigger:** Single env-flag flip `AB_LAUNCH_MODE=live` + robots.txt update + sitemap regen.
-- **Compliance guardrails:** No AB REALTOR® services offered until RECA license verifiable; no AB MLS data pulled until DDF extension confirmed; no CASL emails to AB residents until AB-specific consent captured.
+- **License:** BCFSA→RECA reciprocity transfer (paperwork only, ~2-6 weeks — no exams). Doug will hold both licenses simultaneously.
+- **CREA DDF®:** National feed — Alberta listings already accessible via existing agreement + credentials. Single env-var change activates them.
+- **Full plan document:** `/app/memory/ALBERTA_EXPANSION_PLAN.md` — 10-phase execution plan, ~28-45 hr estimated effort.
+- **Activation trigger post-build:** Single env-flag flip `AB_LAUNCH_MODE=live` + robots.txt update + sitemap regen.
+- **Compliance guardrails:** No AB REALTOR® services offered until RECA license verifiable; no AB MLS® listings published under Doug's brand until AB license active; no CASL emails to AB residents until AB-specific consent captured.
 
 ## Emails Configured (routing only — actual sending needs Resend setup)
 - info@eztofind.ca — general
