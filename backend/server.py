@@ -628,11 +628,34 @@ async def doogie_chat(request: Request, body: ChatIn):
     }
     lang = (body.language or "en").strip()
     lang_addon = LANG_INSTRUCT.get(lang, "")
-    # For non-English replies, add a hard rule: append a translation-quality note
-    # at the end of every substantive reply. Protects Doug against reliance-on-mistranslation
-    # claims — visitor is repeatedly reminded to verify money decisions with a professional.
+    # For non-English replies, add TWO closing rules that must appear at the very
+    # end of every substantive reply, in this exact order:
+    #   1. A localized "Would you like a referral to a same-language REALTOR®?" CTA
+    #      followed by an HTML anchor to /referral-request. The frontend chat renderer
+    #      converts any /referral-request anchor into the branded pill button style.
+    #   2. A localized "AI translation — verify with a professional" caveat.
     if lang != "en" and lang_addon:
-        lang_addon += " IMPORTANT: At the end of every substantive reply (any reply longer than a one-line greeting or acknowledgement), append this exact line on its own paragraph in the target language: 'AI translation — verify important details with a licensed professional before acting.' Translate that sentence into the target language. Do NOT append it to trivial greetings, one-line clarifying questions, or listing-search results."
+        _lang_names_for_cta = {
+            "fr":      ("Français",             "Voulez-vous être mis en relation avec un(e) courtier(ère) immobilier(ère) qui parle français ?", "Demander un(e) REALTOR® en"),
+            "zh-Hant": ("繁體中文",              "您想聯繫一位會說中文的 REALTOR® 嗎？",                                                    "在此地區申請 REALTOR® 推薦"),
+            "zh-Hans": ("简体中文",              "您想联系一位会说中文的 REALTOR® 吗？",                                                    "在此地区申请 REALTOR® 推荐"),
+            "pa":      ("ਪੰਜਾਬੀ",                "ਕੀ ਤੁਸੀਂ ਕਿਸੇ ਅਜਿਹੇ REALTOR® ਨਾਲ ਸੰਪਰਕ ਕਰਨਾ ਚਾਹੋਗੇ ਜੋ ਪੰਜਾਬੀ ਬੋਲਦਾ ਹੈ?",                    "REALTOR® ਰੈਫਰਲ ਦੀ ਬੇਨਤੀ ਕਰੋ"),
+            "fa":      ("فارسی",                 "آیا مایلید با یک REALTOR® فارسی‌زبان در ارتباط قرار بگیرید؟",                             "درخواست معرفی REALTOR® در"),
+            "pt-PT":   ("Português",             "Gostaria de ser encaminhado para um(a) REALTOR® que fala Português?",                     "Solicitar Encaminhamento REALTOR® em"),
+        }
+        _lang_data = _lang_names_for_cta.get(lang)
+        if _lang_data:
+            lang_native, cta_question, button_label = _lang_data
+            lang_addon += (
+                f" CLOSING FORMULA — MANDATORY for any reply longer than a one-line greeting or clarification. "
+                f"End every substantive reply with these two blocks, in this exact order, each on its own paragraph in the target language:\n"
+                f"1. The following localized referral invitation, formatted as: "
+                f"'{cta_question}' followed by an HTML anchor exactly like this: "
+                f'<a href="/referral-request?lang={lang}&language_preference={lang}&city=[INFER_CITY_FROM_CONVERSATION_OR_LEAVE_BLANK]">{button_label} [CITY_OR_AREA_MENTIONED]</a>. '
+                f"If a specific BC city or area was mentioned in the conversation, use it in both the URL and the button label (e.g. 'Vancouver'). If unspecified, use the phrase equivalent to 'your area' in the target language and leave city empty in the URL. Never invent a fake area.\n"
+                f"2. The AI translation caveat sentence translated to the target language: 'AI translation — verify important details with a licensed professional before acting.'\n"
+                f"Do NOT include these closing blocks for trivial one-line greetings, one-line clarifying questions, or listing-search-result responses (those already have their own pill buttons)."
+            )
     system_prompt = DOOGIE_SYSTEM + ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon if lang_addon else "")
 
     await db.chat_messages.insert_one({

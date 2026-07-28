@@ -98,6 +98,14 @@ const renderChatContent = (raw, lang) => {
     '<a href="/referral-request" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
   // 4c. If a non-English chat language is active, append ?lang=xx to lead conversion routes.
   s = _appendLangToHref(s, lang);
+  // 4d. Promote any /referral-request anchor to the pill/bubble button style used
+  //     across the site. This turns Doogie's closing referral CTA into a visually
+  //     distinct navy pill so multilingual visitors immediately recognize it as an
+  //     action button (not just another link).
+  s = s.replace(
+    /<a\s+href="(\/referral-request[^"]*)"[^>]*>([^<]+)<\/a>/gi,
+    '<a href="$1" class="doogie-referral-pill" style="display:inline-block;background:var(--brand-navy);color:#fff;font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;padding:0.7rem 1.15rem;border-radius:999px;text-decoration:none;margin:0.5rem 0;box-shadow:0 6px 14px rgba(15,42,91,0.28);text-align:center">$2</a>'
+  );
   // 5. Line breaks
   s = s.replace(/\n/g, "<br/>");
   return s;
