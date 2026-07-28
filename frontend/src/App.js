@@ -1594,7 +1594,7 @@ const Listings = () => {
       <div style={{textAlign:"center",marginBottom:"2rem"}}>
         <div className="eyebrow">Live MLS® Listings</div>
         <h1 className="section-title">British Columbia Real Estate — Search MLS® Listings</h1>
-        <p className="section-sub" style={{maxWidth:820,margin:"0 auto"}}>Search active listings across Doug's practice area and beyond. Data provided under license by The Canadian Real Estate Association via CREA DDF®. Compliant with MLS®, REALTOR®, and BCFSA rules.</p>
+        <p className="section-sub" style={{maxWidth:820,margin:"0 auto"}}>Search live MLS® listings across British Columbia. Prices and availability are updated every 4 hours direct from CREA.</p>
         {results.using_mock_data && (
           <div style={{background:"#FEF3C7",border:"1px solid #F59E0B",color:"#92400E",padding:"0.65rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",display:"inline-block",marginTop:"0.75rem",fontWeight:600}} data-testid="mock-data-banner">
             🟡 DEMO MODE — Showing 15 sample listings. Live CREA DDF® feed will replace these once credentials are provisioned.
