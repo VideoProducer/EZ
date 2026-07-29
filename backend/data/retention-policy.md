@@ -35,7 +35,7 @@ designed to satisfy:
 ## 3. Secure destruction
 When a record reaches the end of its retention period:
 - A daily background job (`retention_purger`) permanently deletes the document
-  from MongoDB (no soft-delete or shadow copy);
+  from our production database (no soft-delete or shadow copy);
 - A hashed digest of the destruction event (record class + count + timestamp)
   is written to `retention_purge_log` so BCFSA/CRTC/OIPC auditors can verify
   the destruction happened, without the destroyed personal data being retained.
