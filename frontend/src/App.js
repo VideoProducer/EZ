@@ -1050,6 +1050,21 @@ const DoogieChat = () => {
 
   // Voice input via MediaRecorder → OpenAI Whisper (backend endpoint /doogie/transcribe).
   // Powered by the Emergent Universal LLM Key — no user-provided OpenAI key required.
+  //
+  // Latency notes (why we do what we do):
+  //  - `getUserMedia` takes 500–1500ms on the FIRST click because the browser
+  //    is negotiating with the OS/hardware. If the user starts talking during
+  //    this window, the beginning of their sentence is lost. To fix, we open
+  //    the stream FIRST and only flip `listening` state (which turns the button
+  //    red and shows the "listening…" label) once the recorder is actually
+  //    live — so the user gets an accurate "you can talk now" signal.
+  //  - MediaRecorder with NO timeslice buffers audio internally and only flushes
+  //    on stop. Passing `100` (ms) makes it emit chunks every 100ms so early
+  //    samples are captured reliably.
+  //  - After the user stops, uploading + Whisper transcription takes 2–4s. We
+  //    surface "transcribing…" via the shared `busy` flag so it doesn't look
+  //    like Doogie froze.
+  const [transcribing, setTranscribing] = useState(false);
   const toggleMic = async () => {
     if (listening) {
       try { mediaRef.current?.stop(); } catch {}
@@ -1061,9 +1076,19 @@ const DoogieChat = () => {
       const rec = new MediaRecorder(stream, { mimeType: "audio/webm" });
       const chunks = [];
       rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstart = () => {
+        // Fires the moment MediaRecorder is ACTUALLY capturing — this is our
+        // accurate "you can talk now" signal, not the click event.
+        setListening(true);
+        // Small haptic tap on mobile so the user knows to start speaking.
+        if (navigator.vibrate) navigator.vibrate(30);
+      };
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        setListening(false);
         const blob = new Blob(chunks, { type: "audio/webm" });
+        if (blob.size < 500) return; // skip empty / dropped-immediately recordings
+        setTranscribing(true);
         const fd = new FormData();
         fd.append("audio", blob, "voice.webm");
         fd.append("language", lang);
@@ -1072,12 +1097,14 @@ const DoogieChat = () => {
           if (r.data?.text) setInput(prev => prev ? `${prev} ${r.data.text}` : r.data.text);
           else if (r.data?.error) alert("Voice: " + r.data.error);
         } catch(e) { alert("Voice transcription unavailable right now — please type instead."); }
+        finally { setTranscribing(false); }
       };
       mediaRef.current = rec;
-      rec.start();
-      setListening(true);
+      // Pass timeslice=100ms so early samples are flushed to chunks instead of
+      // being buffered internally (was causing lost audio at the start).
+      rec.start(100);
       // Auto-stop after 30s to avoid runaway recordings
-      setTimeout(() => { if (rec.state === "recording") { try { rec.stop(); } catch{} setListening(false); } }, 30000);
+      setTimeout(() => { if (rec.state === "recording") { try { rec.stop(); } catch{} } }, 30000);
     } catch (err) { alert("Microphone permission is needed for voice input."); }
   };
 
@@ -1214,12 +1241,13 @@ const DoogieChat = () => {
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
-          aria-label={listening ? "Stop recording" : "Start voice input"}
-          title={listening ? "Recording… tap to stop" : "Voice input (Whisper)"}
-          style={{width:44,height:44,borderRadius:"50%",border:"1px solid rgba(15,42,91,0.15)",background:listening?"#DC2626":"#F5F0E1",color:listening?"#fff":"var(--brand-navy)",cursor:"pointer",fontSize:"1.15rem",flexShrink:0}}>
-          {listening ? "⏺" : "🎤"}
+          disabled={transcribing}
+          aria-label={listening ? "Stop recording" : transcribing ? "Transcribing your voice" : "Start voice input"}
+          title={listening ? "Recording… tap to stop" : transcribing ? "Transcribing…" : "Voice input"}
+          style={{width:44,height:44,borderRadius:"50%",border:"1px solid rgba(15,42,91,0.15)",background:listening?"#DC2626":transcribing?"#F5A623":"#F5F0E1",color:(listening||transcribing)?"#fff":"var(--brand-navy)",cursor:transcribing?"wait":"pointer",fontSize:"1.15rem",flexShrink:0,opacity:transcribing?0.85:1}}>
+          {listening ? "⏺" : transcribing ? "⏳" : "🎤"}
         </button>
-        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "Listening…" : "Ask Doogie…"} data-testid="doogie-input" style={{flex:1}}/>
+        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "🔴 Listening — speak now" : transcribing ? "Transcribing your voice…" : "Ask Doogie…"} data-testid="doogie-input" style={{flex:1}}/>
         <button type="submit" disabled={busy} data-testid="doogie-send">Send</button>
       </form>
       </>}
