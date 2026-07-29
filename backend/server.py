@@ -4487,14 +4487,78 @@ async def _get_localities() -> dict:
     _locality_cache["loaded_at"] = now
     return _locality_cache
 
+# Vancouver & Metro-Vancouver neighbourhoods aren't stored as `city` in the
+# CREA DDF feed (which uses only municipal boundaries), so a bare "Kitsilano"
+# or "Yaletown" search returns nothing. This map resolves the neighbourhood
+# to its parent city + a description-keyword hint. The endpoint then applies:
+#   city = parent AND description contains neighbourhood
+# tightening results to the actual neighbourhood, not all of Vancouver.
+NEIGHBOURHOOD_TO_PARENT_CITY = {
+    # Vancouver neighbourhoods (west side)
+    "kitsilano": "Vancouver", "kits": "Vancouver",
+    "point grey": "Vancouver", "west point grey": "Vancouver",
+    "dunbar": "Vancouver", "dunbar-southlands": "Vancouver", "southlands": "Vancouver",
+    "kerrisdale": "Vancouver",
+    "shaughnessy": "Vancouver", "south granville": "Vancouver",
+    "arbutus": "Vancouver", "arbutus ridge": "Vancouver",
+    "west end": "Vancouver", "downtown vancouver": "Vancouver",
+    "coal harbour": "Vancouver", "yaletown": "Vancouver",
+    "gastown": "Vancouver", "chinatown": "Vancouver",
+    "fairview": "Vancouver", "cambie": "Vancouver", "south cambie": "Vancouver",
+    "mount pleasant": "Vancouver", "main street": "Vancouver", "riley park": "Vancouver",
+    "marpole": "Vancouver", "oakridge": "Vancouver",
+    "sunset": "Vancouver", "victoria fraserview": "Vancouver", "fraserview": "Vancouver",
+    "kensington": "Vancouver", "kensington-cedar cottage": "Vancouver", "cedar cottage": "Vancouver",
+    "commercial drive": "Vancouver", "grandview": "Vancouver", "grandview-woodland": "Vancouver",
+    "strathcona": "Vancouver",
+    "hastings-sunrise": "Vancouver", "hastings sunrise": "Vancouver",
+    "renfrew": "Vancouver", "renfrew-collingwood": "Vancouver", "collingwood": "Vancouver",
+    "killarney": "Vancouver", "champlain heights": "Vancouver",
+    # North Vancouver neighbourhoods
+    "lynn valley": "North Vancouver", "deep cove": "North Vancouver",
+    "lonsdale": "North Vancouver", "lower lonsdale": "North Vancouver", "upper lonsdale": "North Vancouver",
+    "grouse mountain": "North Vancouver", "seymour": "North Vancouver",
+    # Burnaby
+    "metrotown": "Burnaby", "brentwood": "Burnaby", "brentwood park": "Burnaby",
+    "burnaby heights": "Burnaby", "capitol hill": "Burnaby", "deer lake": "Burnaby",
+    "edmonds": "Burnaby", "sperling": "Burnaby",
+    # Surrey / South Surrey
+    "guildford": "Surrey", "fleetwood": "Surrey", "newton": "Surrey", "cloverdale": "Surrey",
+    "south surrey": "Surrey", "morgan creek": "Surrey", "white rock": "White Rock",
+    "grandview surrey": "Surrey",
+    # Richmond
+    "steveston": "Richmond", "brighouse": "Richmond", "terra nova": "Richmond",
+    # Coquitlam
+    "burke mountain": "Coquitlam", "westwood plateau": "Coquitlam",
+    # Delta neighbourhoods (Tsawwassen IS its own municipality — no mapping needed)
+    "ladner": "Delta", "north delta": "Delta",
+    # West Vancouver
+    "ambleside": "West Vancouver", "dundarave": "West Vancouver",
+    "british properties": "West Vancouver", "cypress park": "West Vancouver",
+    # Victoria
+    "oak bay": "Oak Bay", "fairfield": "Victoria", "james bay": "Victoria",
+    "cook street village": "Victoria", "rockland": "Victoria",
+    # Kelowna
+    "lower mission": "Kelowna", "upper mission": "Kelowna", "glenmore": "Kelowna",
+    "rutland": "Kelowna",
+}
+
 async def _resolve_bc_locality(q: str) -> Optional[dict]:
     """Given a natural-language query, return {"city": "..."} or {"region": "..."}
     if the query matches a known BC city or CREA CityRegion (case-insensitive).
-    Match is: exact match wins → whole-word substring match on cities → then regions.
-    Returns None if no locality is detected (caller can fall back to $text search)."""
+    Match order: neighbourhood → exact city → exact region → substring city → substring region.
+    A neighbourhood match returns {"city": parent, "neighbourhood": hood} so callers
+    can tighten the query to city=parent AND description matches the hood."""
     if not q or not q.strip():
         return None
     ql = q.strip().lower()
+    # 0) Vancouver / Metro Vancouver / Victoria / Kelowna neighbourhood → parent city
+    #    (checked BEFORE cities so "Kitsilano" resolves to Vancouver+hint, not the null city)
+    for hood, parent in NEIGHBOURHOOD_TO_PARENT_CITY.items():
+        # Whole-word match: "condo in kitsilano" matches, but "kits-eating" does not
+        import re as _re
+        if _re.search(rf"\b{_re.escape(hood)}\b", ql):
+            return {"city": parent, "neighbourhood": hood}
     localities = await _get_localities()
     # 1) Exact match (e.g. user typed just "Whistler")
     for c in localities["cities"]:
@@ -4667,8 +4731,19 @@ async def search_listings(
     if q and not (city or region or nl_extracted.get("city")):
         loc = await _resolve_bc_locality(q)
         if loc:
+            neighbourhood = loc.pop("neighbourhood", None)
             for k, v in loc.items():
                 query[k] = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
+            # If we resolved via a Vancouver/Metro neighbourhood, tighten the
+            # results to only listings whose description/address mentions that hood.
+            if neighbourhood:
+                query.setdefault("$and", []).append({
+                    "$or": [
+                        {"description": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                        {"unparsed_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                        {"street_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                    ],
+                })
         else:
             query["$text"] = {"$search": q}
     elif q and nl_extracted.get("city") and not city:
@@ -4680,6 +4755,16 @@ async def search_listings(
         query["city"] = _city_query(chosen_city)
         if (resolved or {}).get("region"):
             query["region"] = {"$regex": f"^{re.escape(resolved['region'])}$", "$options": "i"}
+        # Neighbourhood tightener same as above
+        if (resolved or {}).get("neighbourhood"):
+            hood = resolved["neighbourhood"]
+            query.setdefault("$and", []).append({
+                "$or": [
+                    {"description": {"$regex": re.escape(hood), "$options": "i"}},
+                    {"unparsed_address": {"$regex": re.escape(hood), "$options": "i"}},
+                    {"street_address": {"$regex": re.escape(hood), "$options": "i"}},
+                ],
+            })
     elif q:
         # City/region already set explicitly — still let q filter within that
         # scope (e.g. city=Vancouver & q="ocean view")
