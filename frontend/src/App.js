@@ -821,9 +821,20 @@ const Footer = () => (
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
       <div style={{maxWidth:"58ch"}}>
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
-        <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). REALTOR® &amp; MLS® are trademarks of the Canadian Real Estate Association (CREA), used under license. Multiple Listing Service® and MLS® are trademarks owned by CREA. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
+        <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
       <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
+    </div>
+    {/* CREA-required trademark attribution — MUST appear on every page displaying MLS® data. Verbatim wording per CREA Trademark Policy 2019 s.4. */}
+    <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"1.5rem",paddingTop:"1.25rem",fontSize:"0.72rem",lineHeight:1.55,opacity:0.7,color:"rgba(255,255,255,0.85)"}} data-testid="crea-trademark-notice">
+      <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",marginBottom:"0.6rem"}}>
+        <div aria-hidden="true" style={{flexShrink:0,width:30,height:30,border:"1.5px solid rgba(255,255,255,0.85)",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"Georgia,serif",fontWeight:700,fontSize:"1.05rem",color:"rgba(255,255,255,0.95)"}}>R</div>
+        <p style={{margin:0}}>The trademarks REALTOR®, REALTORS®, and the REALTOR® logo are controlled by The Canadian Real Estate Association (CREA) and identify real estate professionals who are members of CREA.</p>
+      </div>
+      <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start"}}>
+        <div aria-hidden="true" style={{flexShrink:0,width:30,height:30,border:"1.5px solid rgba(255,255,255,0.85)",borderRadius:4,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"Arial,sans-serif",fontWeight:700,fontSize:"0.65rem",lineHeight:1,color:"rgba(255,255,255,0.95)",padding:"3px 0"}}><div>MLS</div><div style={{fontSize:"0.35rem",marginTop:"1px",letterSpacing:"0.05em"}}>MULTIPLE LISTING SERVICE</div></div>
+        <p style={{margin:0}}>The trademarks MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA) and identify the quality of services provided by real estate professionals who are members of CREA.</p>
+      </div>
     </div>
   </div></footer>
 );
