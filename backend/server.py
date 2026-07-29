@@ -4368,13 +4368,89 @@ async def search_listings(
     # never leaks Vancouver/Bowen listings whose description happens to
     # mention Whistler. Only if we cannot resolve a locality do we fall
     # back to Mongo's full-text index.
-    if q and not (city or region):
+    #
+    # In addition, we ALWAYS run the same natural-language filter extractor
+    # that Doogie uses (`_extract_listing_filters`) whenever a `q` is
+    # provided, so queries like "condos in tofino" or "3 bedroom townhouse
+    # in surrey" pull the property_type, beds, price, and features out
+    # exactly the same way — regardless of whether the user came from
+    # Doogie, the hero search bar, or a bookmarked URL. Explicit query
+    # parameters always win over anything the extractor infers.
+    nl_extracted: dict = {}
+    if q:
+        try:
+            nl_extracted = await _extract_listing_filters(q) or {}
+        except Exception as e:
+            logger.warning(f"NL extraction inside /listings failed (silent-fail): {e}")
+
+        # Merge extracted values into the query — but ONLY where the caller
+        # did not already pass an explicit param (explicit > inferred).
+        if nl_extracted.get("property_type") and not property_type:
+            pt = nl_extracted["property_type"]
+            if pt in EXCLUDED_PROPERTY_TYPES:
+                # Doug intentionally excludes commercial + recreational listings.
+                # Instead of silently ignoring the user's intent, do a description
+                # keyword match — surfaces detached homes / townhouses that mention
+                # "cabin", "cottage", etc. so the search doesn't feel like it's
+                # ignoring the request entirely.
+                keyword_map = {
+                    "Recreation":  ["cabin", "cottage", "recreational"],
+                    "Recreational":["cabin", "cottage", "recreational"],
+                    "Recreational Property":["cabin", "cottage", "recreational"],
+                }
+                kws = keyword_map.get(pt, [])
+                if kws:
+                    existing_and = query.get("$and", [])
+                    query["$and"] = existing_and + [{
+                        "$or": [{"description": {"$regex": re.escape(k), "$options": "i"}} for k in kws]
+                    }]
+            elif pt in ("Equestrian", "Manufactured / Mobile"):
+                merged = query.get("$and", [])
+                merged.append(_property_type_or_feature_query(pt))
+                query["$and"] = merged
+                query.pop("property_type", None)
+            else:
+                query["property_type"] = _property_type_query(pt)
+        if nl_extracted.get("beds_exact") is not None and beds_exact is None and beds_min is None:
+            query["beds"] = int(nl_extracted["beds_exact"])
+        elif nl_extracted.get("beds_min") is not None and beds_min is None and beds_exact is None:
+            query["beds"] = {"$gte": int(nl_extracted["beds_min"])}
+        if nl_extracted.get("baths_exact") is not None and baths_exact is None and baths_min is None:
+            query["baths"] = int(nl_extracted["baths_exact"])
+        elif nl_extracted.get("baths_min") is not None and baths_min is None and baths_exact is None:
+            query["baths"] = {"$gte": int(nl_extracted["baths_min"])}
+        if nl_extracted.get("price_min") is not None and price_min is None:
+            price_q = query.get("list_price", {}) if isinstance(query.get("list_price"), dict) else {}
+            price_q["$gte"] = int(nl_extracted["price_min"])
+            query["list_price"] = price_q
+        if nl_extracted.get("price_max") is not None and price_max is None:
+            price_q = query.get("list_price", {}) if isinstance(query.get("list_price"), dict) else {}
+            price_q["$lte"] = int(nl_extracted["price_max"])
+            query["list_price"] = price_q
+        if nl_extracted.get("features") and not features:
+            feats = [f.strip() for f in nl_extracted["features"] if f and f.strip()]
+            if feats:
+                existing_and = query.get("$and", [])
+                query["$and"] = existing_and + _features_query(feats)
+        if nl_extracted.get("sort") and sort == "newest":
+            sort = nl_extracted["sort"]
+
+    if q and not (city or region or nl_extracted.get("city")):
         loc = await _resolve_bc_locality(q)
         if loc:
             for k, v in loc.items():
                 query[k] = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
         else:
             query["$text"] = {"$search": q}
+    elif q and nl_extracted.get("city") and not city:
+        # LLM extracted a city — but its output can be noisy ("West Vancouver
+        # Under" instead of "West Vancouver"). Cross-check against the curated
+        # BC locality resolver; if that finds a stricter match, trust it.
+        resolved = await _resolve_bc_locality(q)
+        chosen_city = (resolved or {}).get("city") or nl_extracted["city"]
+        query["city"] = _city_query(chosen_city)
+        if (resolved or {}).get("region"):
+            query["region"] = {"$regex": f"^{re.escape(resolved['region'])}$", "$options": "i"}
     elif q:
         # City/region already set explicitly — still let q filter within that
         # scope (e.g. city=Vancouver & q="ocean view")
@@ -4987,10 +5063,26 @@ RULES:
     • "minimum 3 beds"            → beds_min=3
     • "3 to 5 bedrooms"           → beds_min=3 (range: lower bound only; the upper bound is ignored)
   Same rules apply to bathrooms (baths_exact vs baths_min). NEVER set both _exact and _min for the same field.
-- Property type synonyms: "home"/"house" → Detached; "apartment"/"suite" → Condo; "townhome"/"townhouse" → Townhouse; "acreage"/"farm"/"ranch" → Acreage; "lot"/"vacant land"/"raw land" → Land.
-- Location: BC cities only. If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver").
+- Property type synonyms (CRITICAL — always extract when present, even in short queries like "condos in tofino"):
+    • "condo"/"condos"/"apartment"/"apartments"/"flat"/"flats"/"strata unit"  → property_type=Condo
+    • "house"/"houses"/"home"/"homes"/"detached"/"single family"               → property_type=Detached
+    • "townhouse"/"townhome"/"row house"/"attached home"                       → property_type=Townhouse
+    • "acreage"/"farm"/"ranch"/"agricultural"                                   → property_type=Acreage
+    • "equestrian"/"horse property"                                             → property_type=Equestrian
+    • "duplex"/"triplex"/"fourplex"                                             → property_type=Duplex
+    • "lot"/"lots"/"vacant land"/"raw land"/"building lot"                     → property_type=Land
+    • "mobile home"/"manufactured home"/"trailer"                              → property_type=Manufactured / Mobile
+    • "cabin"/"cottage"/"vacation home"/"recreational property"                → property_type=Recreational
+- Location: BC cities only. Always resolve typos ("tofino" → "Tofino", "vancoover" → "Vancouver"). If the user says "Vancouver" keep it as "Vancouver" (not "Greater Vancouver"). BC city names should be Title Case in the output.
 - FEATURES: extract ALL descriptive requirements as separate array entries. If the user says "indoor pool AND hot tub" → ["indoor pool", "hot tub"]. If they say "ocean view with a suite" → ["ocean view", "suite"]. If they say "waterfront home with private dock" → ["waterfront", "private dock"]. Every feature is a REQUIREMENT — the listing must match ALL of them.
 - If user says "top floor" or "penthouse" → features: ["top floor"] or ["penthouse"].
+- WORKED EXAMPLES (STUDY THESE):
+    • "condos in tofino"                  → {"city":"Tofino","property_type":"Condo"}
+    • "find me a house in whistler"       → {"city":"Whistler","property_type":"Detached"}
+    • "3 bedroom townhouse in surrey"     → {"city":"Surrey","property_type":"Townhouse","beds_exact":3}
+    • "acreage near chilliwack under 2M"  → {"city":"Chilliwack","property_type":"Acreage","price_max":2000000}
+    • "condo with ocean view in vancouver"→ {"city":"Vancouver","property_type":"Condo","features":["ocean view"]}
+    • "vacant land in squamish"           → {"city":"Squamish","property_type":"Land"}
 - If nothing extracted, return {"city":null,"property_type":null,"beds_exact":null,"beds_min":null,"baths_exact":null,"baths_min":null,"price_min":null,"price_max":null,"features":null,"sort":null}."""
 
 async def _extract_listing_filters(user_query: str) -> dict:
@@ -5003,8 +5095,9 @@ async def _extract_listing_filters(user_query: str) -> dict:
         d: dict = {}
         _apply_beds_baths_regex_override(user_query, d)
         _apply_price_regex_override(user_query, d)
-        m = re.search(r"\b(?:in|at|near|around)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})", user_query)
-        if m: d["city"] = m.group(1).strip()
+        _apply_property_type_regex_override(user_query, d)
+        m = re.search(r"\b(?:in|at|near|around)\s+([A-Za-z][a-zA-Z]+(?:\s+[A-Za-z][a-zA-Z]+){0,2})", user_query)
+        if m: d["city"] = m.group(1).strip().title()
         return d
 
     if not ANTHROPIC_API_KEY:
@@ -5041,6 +5134,7 @@ async def _extract_listing_filters(user_query: str) -> dict:
         # "or more"/"minimum"), force beds_exact and drop beds_min. Same for baths.
         _apply_beds_baths_regex_override(user_query, parsed)
         _apply_price_regex_override(user_query, parsed)
+        _apply_property_type_regex_override(user_query, parsed)
         return parsed
     except Exception as e:
         # Even when Claude fails (rate limit, network hiccup, malformed JSON),
@@ -5051,10 +5145,11 @@ async def _extract_listing_filters(user_query: str) -> dict:
         fallback: dict = {}
         _apply_beds_baths_regex_override(user_query, fallback)
         _apply_price_regex_override(user_query, fallback)
+        _apply_property_type_regex_override(user_query, fallback)
         # Attempt a naïve city grab: capitalized 1-3 word phrases after "in"/"at"/"near"
-        m = re.search(r"\b(?:in|at|near|around)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})", user_query)
+        m = re.search(r"\b(?:in|at|near|around)\s+([A-Za-z][a-zA-Z]+(?:\s+[A-Za-z][a-zA-Z]+){0,2})", user_query)
         if m:
-            fallback["city"] = m.group(1).strip()
+            fallback["city"] = m.group(1).strip().title()
         return fallback
 
 
@@ -5216,6 +5311,54 @@ def _apply_price_regex_override(raw_query: str, parsed: dict) -> None:
         if val and val >= 50_000:
             parsed["price_min"] = val
             parsed["price_max"] = None
+
+
+# --- Deterministic property-type regex fallback ---
+# Belt-and-suspenders extractor that runs even when the LLM misses the property
+# type. Maps every common word/plural/synonym a user might type ("condos",
+# "apartment", "flat", "houses", "townhomes", "acreage", "vacant lot", etc.)
+# to the canonical filter option that _property_type_query knows about.
+# Order matters: longer/more specific phrases first, so "manufactured home"
+# matches before "home", and "vacant land" beats a bare "land".
+_PROPERTY_TYPE_KEYWORDS = [
+    # (canonical, [regex fragments — case-insensitive, word-boundary-anchored])
+    ("Manufactured / Mobile", [r"manufactured homes?", r"mobile homes?", r"mobiles?", r"trailer homes?"]),
+    ("Equestrian",           [r"equestrian", r"horse propert(?:y|ies)", r"horse ranch(?:es)?", r"stable homes?"]),
+    ("Vacant Land",          [r"vacant lands?", r"vacant lots?", r"empty lots?", r"building lots?", r"raw lands?", r"bare lands?"]),
+    ("Recreation",           [r"recreational?\s+propert(?:y|ies)", r"cabins?", r"cottages?", r"vacation homes?"]),
+    ("Acreage",              [r"acreages?", r"farms?", r"ranch(?:es)?", r"agricultural?\s+propert(?:y|ies)"]),
+    ("Duplex",               [r"duplex(?:es)?", r"triplex(?:es)?", r"fourplex(?:es)?"]),
+    ("Multi-family",         [r"multi[-\s]?family", r"multi[-\s]?famil(?:y|ies)", r"apartment buildings?"]),
+    ("Townhouse",            [r"townhomes?", r"townhouses?", r"row houses?", r"row/townhouses?", r"attached homes?"]),
+    ("Condo",                [r"condos?", r"condominiums?", r"apartments?", r"flats?", r"strata\s+units?"]),
+    ("Detached",             [r"detached homes?", r"detached houses?", r"single[-\s]?family(?:\s+homes?)?", r"single detached", r"\bdetached\b"]),
+    # Bare "house"/"home" is intentionally LAST — high risk of false positives
+    # ("house hunting"). Only match when the word appears as a noun object.
+    ("Detached",             [r"\bhouses?\b(?!\s*hunt)"]),
+    ("Vacant Land",          [r"\bland\b(?!\w)"]),
+]
+
+# Pre-compile once
+_PROPERTY_TYPE_PATTERNS = [
+    (canon, [re.compile(rf"\b{p}\b", re.I) for p in patterns])
+    for canon, patterns in _PROPERTY_TYPE_KEYWORDS
+]
+
+
+def _apply_property_type_regex_override(raw_query: str, parsed: dict) -> None:
+    """Mutate `parsed` in place with `property_type` when the raw text mentions
+    an obvious property type that the LLM missed. First match wins (patterns
+    are ordered by specificity above). If the LLM already set property_type,
+    do NOT overwrite unless we're upgrading a generic label."""
+    if not raw_query:
+        return
+    # If LLM already set a valid property_type, respect it.
+    if parsed.get("property_type"):
+        return
+    for canonical, patterns in _PROPERTY_TYPE_PATTERNS:
+        if any(p.search(raw_query) for p in patterns):
+            parsed["property_type"] = canonical
+            return
 
 
 def _property_type_query(pt: str):
