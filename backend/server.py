@@ -5955,7 +5955,7 @@ async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("
 # ---------- Doogie TTS (voice output) ----------
 class DoogieTTSIn(BaseModel):
     text: str
-    voice: Optional[str] = "nova"    # nova = energetic, matches Doogie mascot
+    voice: Optional[str] = "ash"    # ash = warm, friendly male voice — best fit for Doogie mascot
     session_id: Optional[str] = None
 
 # TTS voice allow-list — anything else falls back to `nova`.

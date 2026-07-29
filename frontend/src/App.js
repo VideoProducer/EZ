@@ -1021,7 +1021,7 @@ const DoogieChat = () => {
       const r = await fetch(`${API}/doogie/tts`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text: text.slice(0, 3800), voice: "nova", session_id: sessionId}),
+        body: JSON.stringify({text: text.slice(0, 3800), voice: "ash", session_id: sessionId}),
       });
       if (!r.ok) return;
       if (mySeq !== speakSeqRef.current) return; // a newer request has since started — drop this one
@@ -1029,9 +1029,15 @@ const DoogieChat = () => {
       if (mySeq !== speakSeqRef.current) return; // check again after blob() awaits
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
+      // preload="auto" tells the browser to start buffering immediately instead
+      // of waiting until .play() — shaves ~100-300ms off perceived first-audio lag.
+      a.preload = "auto";
       audioRef.current = a;
       a.onended = () => { try { URL.revokeObjectURL(url); } catch(_){} if (audioRef.current === a) audioRef.current = null; };
-      await a.play();
+      // Start playback the moment the browser confirms it can play through
+      // without buffering — sounds cleaner than starting mid-buffer.
+      const tryPlay = () => a.play().catch(()=>{});
+      if (a.readyState >= 3) tryPlay(); else a.oncanplaythrough = tryPlay;
     } catch (e) {
       // Autoplay policies may throw NotAllowedError on some browsers until the user
       // interacts with the page. That's fine — the user just toggled the speaker
