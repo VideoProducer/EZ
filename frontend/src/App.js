@@ -3958,6 +3958,9 @@ const CookieBanner = () => {
       <div style={{marginBottom:"0.75rem"}}>
         EZtoFind.ca uses cookies to run this site and improve your experience. Under BC's <strong>Personal Information Protection Act (PIPA)</strong> you can choose which cookies to allow. Essential cookies are always on. See our <Link to="/privacy" style={{color:"var(--brand-gold)"}}>Privacy Policy</Link>.
       </div>
+      <div style={{marginBottom:"0.75rem",fontSize:"0.78rem",color:"rgba(255,255,255,0.75)",lineHeight:1.5,fontStyle:"italic"}}>
+        Tip: Accepting all cookies helps us remember your language, search filters, and recently viewed listings between visits. Choosing "Reject optional" keeps you fully private, but some personalization features (saved filters, chat history, page-view analytics) won't be available.
+      </div>
       <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
         <button className="btn btn-green" onClick={acceptAll} style={{padding:"0.5rem 1rem"}} data-testid="cookie-accept-all">Accept all</button>
         <button className="btn btn-outline" onClick={rejectOptional} style={{padding:"0.5rem 1rem",background:"transparent",color:"#fff",borderColor:"rgba(255,255,255,0.4)"}} data-testid="cookie-reject-optional">Reject optional</button>
@@ -3972,7 +3975,7 @@ const CookieBanner = () => {
         data-testid="cookie-prefs-modal">
         <div style={{background:"#fff",borderRadius:14,maxWidth:520,width:"100%",padding:"1.5rem",boxShadow:"0 20px 60px rgba(0,0,0,0.35)"}}>
           <h3 className="font-display" style={{margin:0,fontSize:"1.4rem",color:"var(--brand-navy)"}}>Cookie Preferences</h3>
-          <p style={{fontSize:"0.85rem",color:"var(--muted)",margin:"0.5rem 0 1rem"}}>Choose which cookies EZtoFind.ca may use on your device. You can change this later.</p>
+          <p style={{fontSize:"0.85rem",color:"var(--muted)",margin:"0.5rem 0 1rem"}}>Choose which cookies EZtoFind.ca may use on your device. You can change this later. Enabling all categories gives the smoothest experience — turning any off simply limits that specific feature (never blocks the site).</p>
 
           <div style={{border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"0.75rem",background:"#F8F9FA"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
