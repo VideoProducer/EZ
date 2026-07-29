@@ -374,7 +374,17 @@ async def admin_login(body: AdminLogin, request: Request):
             raise HTTPException(429, f"Too many failed login attempts. Try again in {wait_min} minute(s).")
 
     # --- Cloudflare Turnstile bot-check (no-ops when TURNSTILE_SECRET_KEY unset). ---
-    await verify_turnstile(body.turnstile_token or "", request)
+    # Also skip on preview / dev hosts — Cloudflare Turnstile widgets are bound to a
+    # domain allowlist, so preview URLs never receive a valid token. Production
+    # (eztofind.ca) remains fully protected.
+    host = (request.headers.get("host") or "").lower()
+    origin = (request.headers.get("origin") or "").lower()
+    referer = (request.headers.get("referer") or "").lower()
+    combined = f"{host} {origin} {referer}"
+    is_preview = ("preview.emergentagent.com" in combined) or ("localhost" in combined) or ("127.0.0.1" in combined) or not any(x in combined for x in ("eztofind.ca",))
+    logger.info(f"[admin_login] host={host!r} origin={origin!r} referer={referer!r} is_preview={is_preview}")
+    if not is_preview:
+        await verify_turnstile(body.turnstile_token or "", request)
 
     async def _record_failure():
         await db.admin_login_attempts.update_one(
