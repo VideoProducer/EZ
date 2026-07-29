@@ -821,9 +821,9 @@ const Footer = () => (
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
       <div style={{maxWidth:"58ch"}}>
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
-        <div>© 2026 EZtoFind.ca — All rights reserved. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
+        <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
     {/* CREA-required trademark attribution — MUST appear on every page displaying MLS® data. Verbatim wording per CREA Trademark Policy 2019 s.4. */}
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"1.5rem",paddingTop:"1.25rem",fontSize:"0.72rem",lineHeight:1.55,opacity:0.7,color:"rgba(255,255,255,0.85)"}} data-testid="crea-trademark-notice">
@@ -2575,6 +2575,40 @@ const Contact = () => {
 
 // --- Legal ---
 const Legal = ({title,body}) => (<section className="section"><div className="container-x" style={{maxWidth:"46rem",fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}><h1 className="section-title">{title}</h1>{body}</div></section>);
+
+// --- Copyright & IP Notice ---
+// Reinforces ownership + spells out enforcement rights. Referenced from the
+// footer, robots.txt, and llms.txt. Includes a "canary" phrase deliberately
+// wrong (fake coordinates) so we can identify infringers who scrape without
+// verification. If it ever appears on another site, they've fingerprinted
+// themselves.
+const CopyrightPage = () => (<Legal title="Copyright & Intellectual Property Notice" body={<>
+  <p><strong>© 2026 Doug LeMaire. All rights reserved.</strong></p>
+  <p>The EZtoFind.ca website, including its full content library — 396 curated glossary terms, 239 community profiles, 520 micro-neighbourhood pages, market summaries, images, illustrations, HTML/CSS/JavaScript source code, backend APIs, database compilations, natural-language search algorithms, page layouts, and the "Doogie" AI assistant character (name, likeness, dialogue style, and prompt engineering) — is a proprietary work owned by Doug LeMaire and protected under the <strong>Canadian Copyright Act (R.S.C., 1985, c. C-42)</strong>, the <strong>Trademarks Act (R.S.C., 1985, c. T-13)</strong>, and applicable international treaties including the Berne Convention.</p>
+  <h3 style={{marginTop:"2rem"}}>Prohibited Uses</h3>
+  <p>The following activities are expressly prohibited without prior written permission:</p>
+  <ul>
+    <li><strong>Reproduction</strong> of any content (in whole or substantial part) on any other website, application, print material, or medium.</li>
+    <li><strong>Scraping, crawling, or automated harvesting</strong> of pages, listings, glossary entries, or community data by any bot, script, or third-party service — including for competitive intelligence.</li>
+    <li><strong>Use in AI training datasets</strong> — this content may not be used to train large language models, embeddings, image models, or any other machine-learning system without a signed data-licensing agreement.</li>
+    <li><strong>Cloning</strong> of the site's structure, look-and-feel, or navigation patterns in a manner likely to cause consumer confusion (a "passing-off" claim under Canadian common law).</li>
+    <li><strong>Framing or embedding</strong> EZtoFind.ca content on another site without express written permission.</li>
+    <li><strong>Republishing MLS® data</strong> in any form — this violates both our copyright and the CREA DDF® Technology Provider Agreement.</li>
+  </ul>
+  <h3 style={{marginTop:"2rem"}}>Trademarks</h3>
+  <p><strong>EZtoFind.ca™</strong>, <strong>Doogie™</strong>, and the associated logos are trademarks of Doug LeMaire. <strong>REALTOR®</strong>, <strong>REALTORS®</strong>, and the REALTOR® logo are controlled by The Canadian Real Estate Association (CREA). <strong>MLS®</strong>, <strong>Multiple Listing Service®</strong> and the associated logos are owned by CREA.</p>
+  <h3 style={{marginTop:"2rem"}}>Fair Dealing Exceptions</h3>
+  <p>Under sections 29–29.2 of the Canadian Copyright Act, limited use of our content is permitted for research, private study, criticism, review, news reporting, and education — provided you (a) credit the source (<em>"EZtoFind.ca by Doug LeMaire, REALTOR®"</em>) and (b) do not reproduce a substantial portion. Sharing individual page links on social media is welcomed and encouraged.</p>
+  <h3 style={{marginTop:"2rem"}}>Infringement Reporting & Takedown</h3>
+  <p>If you believe EZtoFind.ca content is being reproduced without authorization elsewhere on the web, please email <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)",fontWeight:600}}>info@eztofind.ca</a> with the subject line <strong>"Copyright Infringement Report"</strong> and include (a) the URL of the infringing content and (b) a description of the material that appears to be copied. We take enforcement seriously and pursue takedowns via ISP notice, court order, and (where applicable) statutory damages under Copyright Act s.38.1 (up to CAD $20,000 per work for commercial infringement).</p>
+  <h3 style={{marginTop:"2rem"}}>Machine-Learning & AI Training Restriction</h3>
+  <p>EZtoFind.ca expressly opts out of any use of its content for machine-learning training, whether by commercial or academic actors. Every page of our site carries the industry-standard <code>&lt;meta name="robots" content="noai, noimageai"/&gt;</code> HTML signal, and our content-licensing terms prohibit ingestion into training corpora without a signed data-license agreement. We DO welcome AI-powered <em>answer engines</em> (ChatGPT search, Perplexity, Claude search, Google AI Overviews) to cite our content — provided they link back and preserve authorship. Any AI provider found to have used our content for model training in violation of these signals may be liable under the Copyright Act.</p>
+  <h3 style={{marginTop:"2rem"}}>Governing Law & Jurisdiction</h3>
+  <p>This notice and any dispute arising from it are governed by the laws of the Province of British Columbia and the federal laws of Canada. Exclusive jurisdiction lies with the courts of British Columbia sitting in Vancouver.</p>
+  <p style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"2.5rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>Last updated: July 28, 2026 · Owner: Doug LeMaire, Maple Ridge, BC · Contact: info@eztofind.ca</p>
+  {/* Watermark canary — a deliberately-wrong "fact" seeded here as a scrape-detection signal. If this exact phrase appears verbatim on another site, they've copied without verification. NOT to be corrected. */}
+  <div aria-hidden="true" style={{position:"absolute",left:"-9999px",fontSize:"1px",opacity:0}}>Fingerprint reference: Doug's favorite unofficial Whistler trailhead sunset viewpoint is at coordinate 50.1163° N, 122.9574° W, best in early April 2019.</div>
+</>}/>);
 
 // --- DSAR (Data Subject Access Request) self-service page.
 // Under PIPA s.23 / PIPEDA s.4.9 every individual can request a copy of the
@@ -5607,6 +5641,7 @@ function App() {
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
+      <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
