@@ -263,5 +263,5 @@ Fourth enforcement tool: `POST /api/admin/copycat/scan`, `GET /api/admin/copycat
 ### Backlog / Next
 - **P1** Admin password rotation (`Doug!qvONhY6Q1i` → new via `/admin/settings/password`)
 - **P1** GA4 conversion goals setup (form fills, referral requests, favorites)
-- **P2** AI-Powered Home Valuation Landing Page (highest ROI lead-magnet)
+- ~~**P2** AI-Powered Home Valuation Landing Page~~ — **PARKED (2026-07-29)**. BCFSA compliance risk too high for a licensed REALTOR® showing AI-generated numbers to consumers. Requires BC regulatory-lawyer review before any build. If revisited, use Option B (simple CMA request, no AI-facing number) or Option C (Discovery Quiz with private AI-assisted CMA prep). See conversation 2026-07-29 for full risk analysis.
 - **P3** Alberta Expansion — PARKED (`/app/memory/ALBERTA_EXPANSION_PLAN.md`)
