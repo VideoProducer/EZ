@@ -806,7 +806,7 @@ const Footer = () => (
         <li><Link to="/valuation">Home Valuation</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
-        <li><Link to="/realtors">BC Referral Network</Link></li>
+        <li><Link to="/realtors">BC REALTORS®</Link></li>
         <li><Link to="/realtors-outofprovince">Out of Province REALTORS®</Link></li>
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
