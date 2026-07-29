@@ -3019,6 +3019,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/snapshots")} className={active==="snapshots"?"active":""} data-testid="admin-nav-snapshots">📸 Evidence Chain</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/copycat-detector")} className={active==="copycat"?"active":""} data-testid="admin-nav-copycat">🕵️ Copycat Detector</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/cease-desist")} className={active==="cease-desist"?"active":""} data-testid="admin-nav-cease-desist">⚡ Cease & Desist</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
@@ -5737,12 +5738,174 @@ const AdminSnapshots = () => {
   </AdminShell>;
 };
 
+// =============== ADMIN: COPYCAT DETECTOR ===============
+// Fetches a suspect URL (or accepts pasted text) and hunts for canary phrases +
+// shingle overlaps against our glossary/community/neighbourhood library. If a
+// match is found, one-click hand-off to the Cease & Desist drafter.
+const AdminCopycatDetector = () => {
+  const {headers} = useAdmin();
+  const nav = useNavigate();
+  const [mode, setMode] = useState("url"); // "url" | "paste"
+  const [url, setUrl] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [threshold, setThreshold] = useState(3);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+  const loadHistory = () => axios.get(`${API}/admin/copycat/scans`, {headers}).then(r => setHistory(r.data.scans || [])).catch(()=>{});
+  useEffect(()=>{ if(headers) loadHistory(); }, []);
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr(null); setResult(null);
+    try {
+      const body = mode === "url"
+        ? {suspect_url: url.trim(), min_shingles: parseInt(threshold) || 3}
+        : {raw_text: pasteText, min_shingles: parseInt(threshold) || 3};
+      const r = await axios.post(`${API}/admin/copycat/scan`, body, {headers, timeout: 60000});
+      setResult(r.data);
+      loadHistory();
+    } catch (x) { setErr(x?.response?.data?.detail || "Scan failed."); }
+    finally { setBusy(false); }
+  };
+  const draftCnd = () => {
+    // Hand off to the C&D drafter with pre-filled fields
+    if (!result) return;
+    const params = new URLSearchParams({
+      copycat_url: result.suspect_url,
+      pages_copied: (result.matches || []).map(m => m.source_url).slice(0, 10).join("\n"),
+      what_was_copied: `Detected via automated copycat scan (${result.verdict}): ${result.canary_hits?.length || 0} canary phrase hit(s) + ${result.match_count || 0} matched content passage(s) from EZtoFind.ca's proprietary glossary, community, and micro-neighbourhood library.`,
+    });
+    nav(`/admin/cease-desist?${params.toString()}`);
+  };
+  const verdictColor = (v) => ({
+    smoking_gun: {bg:"#FEE2E2", border:"#DC2626", text:"#7F1D1D"},
+    high_confidence: {bg:"#FEF3C7", border:"#F59E0B", text:"#78350F"},
+    possible: {bg:"#FEF3C7", border:"#FBBF24", text:"#92400E"},
+    clean: {bg:"#F0FDF4", border:"#22C55E", text:"#166534"},
+  }[v] || {bg:"#F3F4F6", border:"#6b7280", text:"#374151"});
+  const fmtDate = s => s ? String(s).slice(0,16).replace("T"," ") : "—";
+  return <AdminShell active="copycat">
+    <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>🕵️ Copycat Detector</h1>
+    <p style={{color:"var(--muted)",marginTop:"0.4rem",maxWidth:"64ch"}}>Paste a suspect URL or its text content. We'll compare against your <strong>4 canary phrases</strong> and 8-word shingles across <strong>1,059 pieces</strong> of copyrighted content (glossary + communities + micro-neighbourhoods). Any match tied to <strong>CIPO Reg. No. 1247822</strong>.</p>
+
+    <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderLeft:"4px solid #3B82F6",padding:"1rem 1.25rem",borderRadius:8,margin:"1.5rem 0",fontSize:"0.9rem",color:"#1E3A8A"}}>
+      <strong>Tip:</strong> Some sites (React SPAs, auth-walled, Cloudflare-protected) return empty HTML to our fetcher. If a URL comes back "clean" but you know it looks suspicious, switch to <strong>Paste Text</strong> mode — open the site in your browser, right-click → "View Page Source" (or copy the visible text), and paste it here.
+    </div>
+
+    <form onSubmit={submit} className="paper" style={{padding:"1.5rem",marginBottom:"2rem"}}>
+      <div style={{display:"flex",gap:"0.5rem",marginBottom:"1rem"}}>
+        <button type="button" onClick={()=>setMode("url")} className={mode==="url"?"btn btn-primary":"btn btn-ghost"} data-testid="copycat-mode-url">🌐 Fetch URL</button>
+        <button type="button" onClick={()=>setMode("paste")} className={mode==="paste"?"btn btn-primary":"btn btn-ghost"} data-testid="copycat-mode-paste">📋 Paste Text</button>
+      </div>
+      {mode === "url" ? (
+        <div className="field"><label>Suspect URL</label>
+          <input required={mode==="url"} placeholder="https://example-copycat.com/page-with-copied-content" value={url} onChange={e=>setUrl(e.target.value)} data-testid="copycat-url"/>
+        </div>
+      ) : (
+        <div className="field"><label>Paste page text or HTML source</label>
+          <textarea rows={8} required={mode==="paste"} placeholder="Paste the visible text from the suspect page (or right-click → View Source)…" value={pasteText} onChange={e=>setPasteText(e.target.value)} data-testid="copycat-paste" style={{fontFamily:"Menlo,Consolas,monospace",fontSize:"0.85rem"}}/>
+        </div>
+      )}
+      <div className="field" style={{marginTop:"1rem",maxWidth:280}}><label>Match sensitivity (min shingles per item)</label>
+        <select value={threshold} onChange={e=>setThreshold(e.target.value)} data-testid="copycat-threshold" style={{width:"100%",padding:"0.55rem 0.8rem",borderRadius:8,border:"2px solid rgba(15,42,91,0.15)",fontFamily:"Inter,sans-serif"}}>
+          <option value="2">Loose (2 shingles — catches paraphrases)</option>
+          <option value="3">Balanced (3 shingles — default)</option>
+          <option value="6">Strict (6 shingles — only verbatim)</option>
+        </select>
+      </div>
+      {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}} data-testid="copycat-err">{err}</div>}
+      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} disabled={busy} data-testid="copycat-submit">
+        {busy ? "Scanning (5-30 sec)…" : "🕵️ Run Copycat Scan"}
+      </button>
+    </form>
+
+    {result && (() => {
+      const vc = verdictColor(result.verdict);
+      return (
+        <div className="paper" style={{padding:"1.5rem",marginBottom:"2rem"}} data-testid="copycat-result">
+          <div style={{background:vc.bg,border:`2px solid ${vc.border}`,borderRadius:10,padding:"1.25rem 1.5rem",marginBottom:"1.25rem"}}>
+            <div style={{fontSize:"1.2rem",fontWeight:700,color:vc.text}} data-testid="copycat-verdict">{result.verdict_label}</div>
+            <div style={{fontSize:"0.82rem",color:vc.text,opacity:0.85,marginTop:"0.35rem"}}>
+              Suspect: <a href={result.suspect_url === "(pasted text)" ? "#" : result.suspect_url} target="_blank" rel="noopener noreferrer" style={{color:vc.text,fontWeight:600}}>{result.suspect_url}</a>
+              {result.status_code ? ` · HTTP ${result.status_code}` : ""} · {result.total_words?.toLocaleString?.() || 0} words scanned
+            </div>
+          </div>
+
+          {result.canary_hits && result.canary_hits.length > 0 && (
+            <div style={{marginBottom:"1.5rem"}}>
+              <h3 style={{fontFamily:"Georgia,serif",fontSize:"1.15rem",color:"#7F1D1D",margin:"0 0 0.75rem"}}>🚨 Canary Phrase Hits ({result.canary_hits.length})</h3>
+              <p style={{fontSize:"0.85rem",color:"var(--muted)",marginBottom:"0.75rem"}}>These phrases are invisible on our site (aria-hidden). Their appearance elsewhere is court-grade proof of scraping.</p>
+              {result.canary_hits.map((c,i) => (
+                <div key={i} className="paper" style={{padding:"0.9rem 1.25rem",marginBottom:"0.5rem",background:"#FEF2F2",border:"1px solid #FCA5A5",borderLeft:"4px solid #DC2626"}}>
+                  <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"#7F1D1D",fontWeight:700}}>{c.canary_id}</div>
+                  <div style={{fontFamily:"Menlo,Consolas,monospace",fontSize:"0.85rem",marginTop:"0.25rem",color:"#450A0A"}}>{c.phrase}</div>
+                  <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.35rem",fontStyle:"italic"}}>…{c.snippet}…</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.matches && result.matches.length > 0 && (
+            <div style={{marginBottom:"1rem"}}>
+              <h3 style={{fontFamily:"Georgia,serif",fontSize:"1.15rem",color:"var(--brand-navy)",margin:"0 0 0.75rem"}}>📝 Matched Content ({result.matches.length})</h3>
+              <p style={{fontSize:"0.85rem",color:"var(--muted)",marginBottom:"0.75rem"}}>Our content pages whose 8-word phrases appear on the suspect page. Higher shingle count = stronger evidence.</p>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:"0.75rem"}} data-testid="copycat-matches">
+                {result.matches.map((m,i) => (
+                  <a key={i} href={m.source_url} target="_blank" rel="noopener noreferrer" className="paper" style={{padding:"0.9rem 1rem",textDecoration:"none",color:"inherit",borderLeft:"4px solid var(--brand-blue)"}} data-testid={`copycat-match-${m.slug}`}>
+                    <div style={{fontSize:"0.7rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"var(--muted)",fontWeight:600}}>{m.kind}</div>
+                    <div style={{fontWeight:600,marginTop:"0.2rem",color:"var(--brand-navy)"}}>{m.name}</div>
+                    <div style={{fontSize:"0.85rem",marginTop:"0.35rem",color:"#DC2626",fontWeight:600}}>{m.matched_shingles} matched phrases ({m.overlap_pct}% overlap)</div>
+                    <div style={{fontSize:"0.75rem",fontFamily:"Menlo,Consolas,monospace",color:"var(--muted)",marginTop:"0.35rem",fontStyle:"italic"}}>"{(m.sample_shingle || "").slice(0, 60)}…"</div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(result.verdict !== "clean") && (
+            <div style={{marginTop:"1.5rem",padding:"1rem 1.25rem",background:"#0F2A5B",borderRadius:10,color:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+              <div>
+                <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.08em",opacity:0.8}}>Next step</div>
+                <div style={{fontWeight:600,marginTop:"0.15rem"}}>Draft a Cease & Desist letter with all matched pages pre-filled</div>
+              </div>
+              <button className="btn" onClick={draftCnd} style={{background:"#F5A623",color:"#0F2A5B",border:"none",padding:"0.75rem 1.5rem",borderRadius:999,fontWeight:700,cursor:"pointer"}} data-testid="copycat-draft-cnd">⚡ Draft C&D →</button>
+            </div>
+          )}
+        </div>
+      );
+    })()}
+
+    <h2 style={{fontFamily:"Georgia,serif",marginTop:"3rem"}}>Scan History ({history.length})</h2>
+    {history.length === 0 && <p style={{color:"var(--muted)"}}>No scans yet.</p>}
+    <div data-testid="copycat-history">
+      {history.map(h => {
+        const vc = verdictColor(h.verdict);
+        return (
+          <div key={h.id} className="paper" style={{marginBottom:"0.5rem",padding:"0.9rem 1.25rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.75rem",borderLeft:`4px solid ${vc.border}`}}>
+            <div style={{flex:"1 1 300px"}}>
+              <div style={{fontSize:"0.72rem",letterSpacing:"0.05em",textTransform:"uppercase",color:"var(--muted)"}}>{fmtDate(h.created_at)}</div>
+              <div style={{fontWeight:600,marginTop:"0.2rem",color:vc.text}}>{h.verdict_label}</div>
+              <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.2rem",wordBreak:"break-all"}}>{h.suspect_url}</div>
+              <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.15rem"}}>{h.canary_hits?.length || 0} canary hit(s) · {h.match_count || 0} content match(es)</div>
+            </div>
+            <button className="btn btn-ghost" onClick={()=>setResult(h)} data-testid={`copycat-view-${h.id}`}>View</button>
+          </div>
+        );
+      })}
+    </div>
+  </AdminShell>;
+};
+
+
+
 // =============== ADMIN: CEASE & DESIST DRAFTER ===============
 // One-click AI-drafted legal letter tied to CIPO Reg. #1247822. Sends to Doug's
 // backend which uses Claude to generate a full HTML letter he can copy/paste
 // into email or print & sign.
 const AdminCeaseDesist = () => {
   const {headers} = useAdmin();
+  const loc = useLocation();
   const [f, setF] = useState({copycat_url:"", copycat_name:"", pages_copied:"", what_was_copied:"", deadline_days:14});
   const [busy, setBusy] = useState(false);
   const [letter, setLetter] = useState(null);
@@ -5750,6 +5913,18 @@ const AdminCeaseDesist = () => {
   const [err, setErr] = useState(null);
   const loadDrafts = () => axios.get(`${API}/admin/cease-desist/log`, {headers}).then(r => setDrafts(r.data.drafts || [])).catch(()=>{});
   useEffect(()=>{ if(headers) loadDrafts(); }, []);
+  // Pre-fill from ?copycat_url=…&pages_copied=…&what_was_copied=… (Copycat Detector hand-off)
+  useEffect(() => {
+    const p = new URLSearchParams(loc.search);
+    if (p.get("copycat_url") || p.get("pages_copied") || p.get("what_was_copied")) {
+      setF(prev => ({
+        ...prev,
+        copycat_url: p.get("copycat_url") || prev.copycat_url,
+        pages_copied: p.get("pages_copied") || prev.pages_copied,
+        what_was_copied: p.get("what_was_copied") || prev.what_was_copied,
+      }));
+    }
+  }, [loc.search]);
   const submit = async (e) => {
     e.preventDefault();
     if (!f.copycat_url.trim()) { setErr("Copycat URL is required."); return; }
@@ -5919,6 +6094,7 @@ function App() {
       <Route path="/admin/definition-audit" element={<AdminDefinitionAudit/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
       <Route path="/admin/snapshots" element={<AdminSnapshots/>}/>
+      <Route path="/admin/copycat-detector" element={<AdminCopycatDetector/>}/>
       <Route path="/admin/cease-desist" element={<AdminCeaseDesist/>}/>
     </Routes>
   </BrowserRouter>);

@@ -238,13 +238,27 @@ Doug filed for federal copyright registration with the Canadian Intellectual Pro
 
 ### Frontend Additions (`App.js`)
 - Shared `<Canary phrase testId>` component (offscreen absolute-positioned div).
-- Admin components `AdminSnapshots` + `AdminCeaseDesist` + sidebar nav entries with test IDs `admin-nav-snapshots` + `admin-nav-cease-desist`.
-- Routes `/admin/snapshots` + `/admin/cease-desist`.
+- Admin components `AdminSnapshots` + `AdminCeaseDesist` + `AdminCopycatDetector` with sidebar test IDs `admin-nav-snapshots` / `admin-nav-cease-desist` / `admin-nav-copycat`.
+- Routes `/admin/snapshots` + `/admin/copycat-detector` + `/admin/cease-desist`.
+- `AdminCeaseDesist` accepts URL search-params (`copycat_url`, `pages_copied`, `what_was_copied`) for one-click hand-off from the Copycat Detector.
+
+### 🕵️ Copycat Detector (added Jul 29, 2026 evening)
+Fourth enforcement tool: `POST /api/admin/copycat/scan`, `GET /api/admin/copycat/scans[/{id}]`.
+- **Two input modes**: fetch URL (via httpx w/ browser UA) OR paste text (bypasses JS-rendered / auth-walled sites).
+- **Detection algorithm**:
+  1. Canary-phrase substring match (normalized: lowercase + punctuation-stripped). Includes cross-check IDs `EZTF-GLX/HMX/CMX-2026-0729-*` for absolute proof.
+  2. 8-word rolling shingle set (industry-standard for near-duplicate detection). Compares against ~30K shingles from all 396 glossary + 242 community synopses + 246 community weather + 421 micro-neighbourhood synopses.
+  3. Configurable threshold (2 / 3 / 6 min matched shingles per item).
+- **Verdict tiers**: `smoking_gun` (canary hit) → `high_confidence` (5+ matches or 10+ shingles) → `possible` → `clean`.
+- **One-click C&D hand-off** — "Draft C&D →" button pushes pre-filled URL search-params to `/admin/cease-desist`.
+- Storage: `copycat_scans` collection with full match arrays + verdict + timestamps.
+- **Verified via curl**: PTT test triggered 107-shingle 100%-overlap match on `2-5-10-home-warranty` glossary term. Canary "Project Alder" + `EZTF-CMX-2026-0729-C` cross-check ID both fired smoking-gun verdicts.
 
 ### Currently Verified (via curl + screenshots)
 - Snapshot manifest: 396 glossary + 242 communities + 421 neighbourhoods (1,059 items, ~4.4 MB hashed).
 - Combined fingerprint: `6dc4c44a29f3a304068c5c5c3053e5d8...` (deterministic across runs when content unchanged).
 - C&D letter draft: ~15 KB HTML letter generated in ~30 sec via Claude, saved to Mongo, viewable + printable from admin UI.
+- Copycat detector: correctly identifies pasted glossary text with 100% overlap; canary phrases trigger smoking-gun verdict; false-negatives on clean unrelated text.
 
 ### Backlog / Next
 - **P1** Admin password rotation (`Doug!qvONhY6Q1i` → new via `/admin/settings/password`)

@@ -6146,6 +6146,200 @@ async def _weekly_snapshot_email(db):
         logger.exception(f"[evidence_chain] weekly snapshot failed: {e}")
 
 
+# ============================================================
+# =============== COPYCAT DETECTOR (SCANNER) ==================
+# Fetches a suspect URL, strips HTML, then compares against our
+# canary phrases + n-gram shingles of the glossary/community/
+# neighbourhood library. Returns matched content with confidence
+# score and links straight into the C&D drafter.
+# ============================================================
+
+# The 4 canary phrases we've seeded across the site. Verbatim match on ANY of
+# these is a smoking-gun signal — real users never see them (they're aria-hidden).
+CANARY_PHRASES = [
+    ("copyright-page-whistler-coord", "Doug's favorite unofficial Whistler trailhead sunset viewpoint is at coordinate 50.1163° N, 122.9574° W"),
+    ("glossary-fraser-levy",          "Fraser Levy"),
+    ("home-first-week-count",         "51,847 BC MLS® listings before its evening CREA DDF resync"),
+    ("community-project-alder",       "working-title codename of 'Project Alder'"),
+    ("cross-check-id-a",              "EZTF-GLX-2026-0729-A"),
+    ("cross-check-id-b",              "EZTF-HMX-2026-0729-B"),
+    ("cross-check-id-c",              "EZTF-CMX-2026-0729-C"),
+]
+
+_STRIP_TAGS_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE)
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_NORMALIZE_RE = re.compile(r"[^\w\s]+")
+_WS_RE = re.compile(r"\s+")
+
+def _strip_html_to_text(html: str) -> str:
+    """Extract visible body text from an HTML page."""
+    if not html:
+        return ""
+    # remove <script> + <style> blocks entirely
+    s = _STRIP_TAGS_RE.sub(" ", html)
+    # strip all remaining tags
+    s = _HTML_TAG_RE.sub(" ", s)
+    # decode common HTML entities cheaply
+    for a, b in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", '"'), ("&#39;", "'"), ("&nbsp;", " ")]:
+        s = s.replace(a, b)
+    return _WS_RE.sub(" ", s).strip()
+
+def _normalize_for_shingles(text: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace — for fuzzy comparison."""
+    return _WS_RE.sub(" ", _NORMALIZE_RE.sub(" ", (text or "").lower())).strip()
+
+def _shingles(text: str, n: int = 8) -> set:
+    """Rolling n-word shingles from normalized text. Copying detection industry standard."""
+    words = _normalize_for_shingles(text).split()
+    if len(words) < n:
+        # short passage — use whole thing as one shingle
+        return {" ".join(words)} if words else set()
+    return {" ".join(words[i:i+n]) for i in range(len(words) - n + 1)}
+
+
+class CopycatScanIn(BaseModel):
+    suspect_url: Optional[str] = None
+    raw_text: Optional[str] = None   # paste text directly (bypasses fetch — for JS-rendered / auth-walled sites)
+    min_shingles: int = 3   # minimum overlapping 8-word shingles to count as a match
+    ua: Optional[str] = None  # override user-agent (some sites 403 curl-like bots)
+
+
+@api.post("/admin/copycat/scan")
+async def admin_copycat_scan(body: CopycatScanIn, _=Depends(verify_admin)):
+    """Fetches a URL (or accepts pasted text), strips HTML, then hunts for canary
+    phrases + shingle overlaps with our glossary/community/neighbourhood library."""
+    if not body.suspect_url and not body.raw_text:
+        raise HTTPException(400, "Provide either suspect_url or raw_text.")
+    ua = body.ua or "Mozilla/5.0 (compatible; EZtoFindCopyrightMonitor/1.0; +https://eztofind.ca/copyright)"
+    started = now_iso()
+    final_url = body.suspect_url or "(pasted text)"
+    status_code = 0
+    raw_html = ""
+    if body.raw_text and not body.suspect_url:
+        # Skip fetch — use pasted text directly
+        raw_html = body.raw_text
+        status_code = 200
+    else:
+        try:
+            async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+                resp = await client.get(body.suspect_url, headers={"User-Agent": ua, "Accept": "text/html,application/xhtml+xml"})
+                resp.raise_for_status()
+                raw_html = resp.text
+                final_url = str(resp.url)
+                status_code = resp.status_code
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(400, f"Suspect site returned HTTP {e.response.status_code}. It may be blocking our fetch — try again from a different network, view-source paste, or archive.org snapshot.")
+        except Exception as e:
+            raise HTTPException(400, f"Could not fetch {body.suspect_url}: {e}")
+
+    plain_text = _strip_html_to_text(raw_html)
+    suspect_shingles = _shingles(plain_text, n=8)
+    total_words = len(_normalize_for_shingles(plain_text).split())
+
+    # ---- 1. Canary phrase check ----
+    # Normalize both sides: strip punctuation + lowercase + collapse whitespace,
+    # so copycats can't defeat detection by tweaking quotes / apostrophes / dashes.
+    canary_hits = []
+    plain_norm = _normalize_for_shingles(plain_text)
+    for cid, phrase in CANARY_PHRASES:
+        phrase_norm = _normalize_for_shingles(phrase)
+        if phrase_norm and phrase_norm in plain_norm:
+            idx = plain_norm.find(phrase_norm)
+            snippet = plain_norm[max(0, idx-60):idx+len(phrase_norm)+60]
+            canary_hits.append({"canary_id": cid, "phrase": phrase, "snippet": snippet.strip()})
+
+    # ---- 2. Shingle overlap against our content library ----
+    matches = []  # {kind, slug, name, source_url, matched_shingles, total_shingles, overlap_pct, sample_shingle}
+    min_shingles = max(1, int(body.min_shingles or 3))
+
+    async def _check_item(kind: str, slug: str, name: str, source_url: str, content: str):
+        our_shingles = _shingles(content, n=8)
+        if not our_shingles:
+            return
+        overlap = suspect_shingles & our_shingles
+        if len(overlap) >= min_shingles:
+            sample = next(iter(sorted(overlap)), "")
+            matches.append({
+                "kind": kind,
+                "slug": slug,
+                "name": name,
+                "source_url": source_url,
+                "matched_shingles": len(overlap),
+                "total_shingles": len(our_shingles),
+                "overlap_pct": round(100.0 * len(overlap) / max(1, len(our_shingles)), 1),
+                "sample_shingle": sample,
+            })
+
+    # Glossary
+    async for g in db.glossary.find({}, {"slug": 1, "term": 1, "definition": 1}):
+        await _check_item("glossary", g.get("slug"), g.get("term"), f"https://eztofind.ca/glossary/{g.get('slug')}", g.get("definition","") or "")
+    # Community synopses (approved-only)
+    async for c in db.community_synopses.find({"approved": True}, {"slug": 1, "name": 1, "synopsis": 1}):
+        await _check_item("community", c.get("slug"), c.get("name"), f"https://eztofind.ca/community/{c.get('slug')}", c.get("synopsis","") or "")
+    # Community weather
+    async for w in db.community_weather.find({"approved": True}, {"slug": 1, "name": 1, "weather": 1}):
+        await _check_item("weather", w.get("slug"), w.get("name"), f"https://eztofind.ca/community/{w.get('slug')}", w.get("weather","") or "")
+    # Micro-neighbourhoods
+    async for h in db.neighbourhood_synopses.find({"approved": True}, {"slug": 1, "n_slug": 1, "neighbourhood": 1, "synopsis": 1}):
+        await _check_item("neighbourhood", f"{h.get('slug')}/{h.get('n_slug')}", h.get("neighbourhood"), f"https://eztofind.ca/community/{h.get('slug')}/n/{h.get('n_slug')}", h.get("synopsis","") or "")
+
+    # Sort matches by strongest signal
+    matches.sort(key=lambda m: (-m["matched_shingles"], -m["overlap_pct"]))
+    matches = matches[:100]  # cap output
+
+    # Verdict scoring
+    if canary_hits:
+        verdict = "smoking_gun"
+        verdict_label = "🚨 SMOKING-GUN COPY — verbatim canary phrase present"
+    elif len(matches) >= 5 or (matches and matches[0]["matched_shingles"] >= 10):
+        verdict = "high_confidence"
+        verdict_label = "⚠️ HIGH-CONFIDENCE COPY — multiple content passages match"
+    elif matches:
+        verdict = "possible"
+        verdict_label = "🟡 POSSIBLE COPY — some phrase overlap detected"
+    else:
+        verdict = "clean"
+        verdict_label = "✅ NO MATCHES — no evidence of copying detected"
+
+    scan_id = str(uuid.uuid4())
+    record = {
+        "id": scan_id,
+        "created_at": started,
+        "finished_at": now_iso(),
+        "suspect_url": body.suspect_url or "(pasted text)",
+        "final_url": final_url,
+        "status_code": status_code,
+        "content_length": len(raw_html),
+        "text_length": len(plain_text),
+        "total_words": total_words,
+        "verdict": verdict,
+        "verdict_label": verdict_label,
+        "canary_hits": canary_hits,
+        "matches": matches,
+        "match_count": len(matches),
+        "min_shingles_threshold": min_shingles,
+        "cipo_registration_no": CIPO_REG_NO,
+    }
+    await db.copycat_scans.insert_one({**record})
+    return record
+
+
+@api.get("/admin/copycat/scans")
+async def admin_copycat_scans(_=Depends(verify_admin)):
+    out = []
+    async for r in db.copycat_scans.find({}, {"_id": 0}).sort("created_at", -1).limit(200):
+        out.append(r)
+    return {"scans": out}
+
+
+@api.get("/admin/copycat/scans/{scan_id}")
+async def admin_copycat_scan_get(scan_id: str, _=Depends(verify_admin)):
+    r = await db.copycat_scans.find_one({"id": scan_id}, {"_id": 0})
+    if not r:
+        raise HTTPException(404, "Scan not found")
+    return r
+
+
 app.include_router(api)
 
 # =============== DOOGIE VOICE (Whisper) — scaffold ===============
