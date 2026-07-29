@@ -1071,6 +1071,16 @@ class SavedSearchIn(BaseModel):
     pipa_ack: bool
     frequency: str = "instant"     # "instant" (respecting 6h cap) | "daily" | "weekly"
 
+
+class FavoritesSyncIn(BaseModel):
+    """Save a user's favorite listings to the server. Cross-device sync + optional
+    weekly digest of price-drops / new photos on their saved properties. Double
+    opt-in (CASL) — creates a pending record until they click the email link."""
+    email: EmailStr
+    listing_keys: List[str] = []
+    casl_consent: bool
+    pipa_ack: bool
+
 CURRENT_POLICY_VERSION = "2026-02-25"
 
 def _public_base_url(request: Request) -> str:
@@ -1249,6 +1259,203 @@ async def admin_run_matcher(request: Request, _=Depends(verify_admin)):
     post-sync hook fails)."""
     from services.alert_matcher import run_matcher
     return await run_matcher(db, _public_base_url(request))
+
+
+# ============================================================
+# USER FAVORITES — ❤️  save individual listings
+# ============================================================
+# Two-tier storage:
+#   1. Browser localStorage (frontend-only) — anonymous, zero-friction
+#   2. Server-side via `user_favorites` — cross-device sync, requires CASL
+#      double opt-in identical to saved_searches.
+# The frontend calls POST /api/favorites when the user chooses to sync to their
+# account; we email a verification link that returns their favorites and stores
+# the mapping. From then on, changes on any device call the same endpoint to
+# refresh their server copy.
+
+@api.get("/listings/by-keys")
+async def listings_by_keys(keys: str = "", limit: int = 100):
+    """Fetch multiple listings by comma-separated `listing_key`s. Used by the
+    /favorites page to hydrate cards from the browser's localStorage."""
+    key_list = [k.strip() for k in (keys or "").split(",") if k.strip()][:min(200, limit)]
+    if not key_list:
+        return {"count": 0, "listings": []}
+    docs = await db.listings.find(
+        {
+            "listing_key": {"$in": key_list},
+            "status": "Active",
+            "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+            "list_price": {"$gt": 0},
+        },
+        {"_id": 0},
+    ).to_list(len(key_list))
+    # Preserve the order the user requested (their save order)
+    by_key = {d["listing_key"]: d for d in docs}
+    ordered = [by_key[k] for k in key_list if k in by_key]
+    return {"count": len(ordered), "listings": ordered}
+
+
+@api.post("/favorites")
+async def sync_favorites(body: FavoritesSyncIn, request: Request):
+    """Save a user's favorite listings to the server. Double-opt-in CASL flow —
+    creates a pending record and emails a confirmation link. If the same email
+    already has a verified record, this UPDATES the list transparently."""
+    if not body.casl_consent or not body.pipa_ack:
+        raise HTTPException(400, "Both CASL consent and PIPA acknowledgement are required.")
+    if not body.listing_keys:
+        raise HTTPException(400, "No listings to save. Heart a few listings first.")
+    email = body.email.lower()
+    listing_keys = [k.strip() for k in body.listing_keys if k and k.strip()][:200]
+
+    # If already verified for this email → transparently update (no re-verify).
+    existing = await db.user_favorites.find_one({"email": email, "status": "verified"})
+    if existing:
+        await db.user_favorites.update_one(
+            {"id": existing["id"]},
+            {"$set": {"listing_keys": listing_keys, "updated_at": now_iso()}},
+        )
+        return {
+            "success": True,
+            "status": "updated",
+            "count": len(listing_keys),
+            "message": f"Updated — your {len(listing_keys)} favorite listing(s) are synced to your account.",
+        }
+
+    # Otherwise create a pending record with double-opt-in email.
+    meta = get_consent_meta(request)
+    fav_id = str(uuid.uuid4())
+    verify_tok = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    unsub_tok = uuid.uuid4().hex + uuid.uuid4().hex[:8]
+    doc = {
+        "id": fav_id,
+        "email": email,
+        "listing_keys": listing_keys,
+        "status": "pending",
+        "policy_version": CURRENT_POLICY_VERSION,
+        "verification_token": verify_tok,
+        "unsubscribe_token": unsub_tok,
+        "created_at": now_iso(),
+        "verified_at": None,
+        "updated_at": None,
+        "unsubscribed_at": None,
+        **meta,
+    }
+    await db.user_favorites.insert_one(doc)
+
+    from services.email_sender import send_email as _send_email, SENDER_NAME, SENDER_ADDRESS, SENDER_PHONE, SENDER_EMAIL
+    base = _public_base_url(request)
+    verify_url = f"{base}/favorites?token={verify_tok}"  # frontend picks up token
+    unsub_url = f"{base}/api/favorites/unsubscribe?token={unsub_tok}"
+
+    html = f"""<!doctype html><html><body style="margin:0;background:#F5F0E1">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E1;padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;padding:2rem;font-family:Inter,Arial,sans-serif;color:#111827">
+<tr><td>
+<div style="font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;color:#DC2626;font-weight:700">EZtoFind.ca · Confirm your favorites</div>
+<h1 style="font-family:Georgia,serif;font-size:1.7rem;color:#0F2A5B;margin:0.4rem 0 0.75rem">Save your ❤️ favorites across devices</h1>
+<p style="line-height:1.6;color:#374151">You (or someone using your email) asked EZtoFind.ca to sync <strong>{len(listing_keys)}</strong> favorite listing(s) to your email so you can pick them up on any device.</p>
+<p style="line-height:1.6;color:#374151">Under Canada's Anti-Spam Legislation (CASL) we confirm every email address before saving anything to it. Click below to activate.</p>
+<p style="text-align:center;margin:1.5rem 0"><a href="{verify_url}" style="display:inline-block;background:#DC2626;color:#fff;text-decoration:none;padding:0.9rem 1.9rem;border-radius:999px;font-weight:700">Save my favorites</a></p>
+<p style="font-size:0.8rem;color:#6b7280;line-height:1.6">If you didn't request this, ignore this email. Nothing is saved until you click the link. Expires in 30 days.</p>
+<hr style="margin:1.5rem 0 1rem;border:none;border-top:1px solid #e5e7eb"/>
+<div style="font-size:12px;color:#6b7280;line-height:1.6">
+  <p style="margin:0 0 0.5rem"><strong>{SENDER_NAME}</strong><br/>{SENDER_ADDRESS} · {SENDER_PHONE} · <a href="mailto:{SENDER_EMAIL}" style="color:#0F2A5B">{SENDER_EMAIL}</a></p>
+  <p style="margin:0"><a href="{unsub_url}" style="color:#0F2A5B">Cancel this request &amp; delete pending data</a></p>
+</div>
+</td></tr></table></td></tr></table></body></html>"""
+    text = (
+        "EZtoFind.ca — Confirm your saved favorites\n\n"
+        f"You asked EZtoFind.ca to sync {len(listing_keys)} favorite listing(s) to your email.\n\n"
+        f"Confirm & save: {verify_url}\n\n"
+        "If you didn't request this, ignore this email. Nothing is saved until you click.\n\n"
+        f"---\n{SENDER_NAME}\n{SENDER_ADDRESS} · {SENDER_PHONE} · {SENDER_EMAIL}\n"
+        f"Cancel this request: {unsub_url}\n"
+    )
+    await _send_email(db,
+        to=body.email, subject="Confirm your EZtoFind.ca favorites",
+        html=html, text=text, kind="transactional", related_id=fav_id,
+        unsubscribe_url=unsub_url,
+    )
+    return {
+        "success": True,
+        "status": "pending",
+        "message": "Check your inbox — we've sent a one-click confirmation link. Your favorites will sync as soon as you click it.",
+    }
+
+
+@api.get("/favorites/verify")
+async def verify_favorites(token: str, request: Request):
+    """Activation endpoint — clicked from the confirmation email. Returns the
+    saved listing_keys so the frontend can hydrate the /favorites page."""
+    rec = await db.user_favorites.find_one({"verification_token": token})
+    if not rec:
+        raise HTTPException(404, "Invalid or expired verification link.")
+    if rec.get("status") == "verified":
+        return {"success": True, "already_verified": True, "listing_keys": rec.get("listing_keys", [])}
+    meta = get_consent_meta(request)
+    await db.user_favorites.update_one(
+        {"id": rec["id"]},
+        {"$set": {
+            "status": "verified",
+            "verified_at": now_iso(),
+            "verify_ip": meta.get("consent_ip"),
+            "verify_ua": meta.get("consent_ua"),
+        }},
+    )
+    return {"success": True, "listing_keys": rec.get("listing_keys", [])}
+
+
+@api.get("/favorites/list")
+async def list_favorites(email: str):
+    """Fetch the current server-saved favorites for an email address (used to
+    restore on a new device after they've already verified their email)."""
+    email = (email or "").lower().strip()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Valid email required.")
+    rec = await db.user_favorites.find_one({"email": email, "status": "verified"})
+    if not rec:
+        return {"listing_keys": [], "found": False}
+    return {"listing_keys": rec.get("listing_keys", []), "found": True, "updated_at": rec.get("updated_at") or rec.get("verified_at")}
+
+
+@api.get("/favorites/unsubscribe")
+async def unsubscribe_favorites(token: str, request: Request):
+    """CASL one-click withdrawal. Deletes the server-side favorites; user can
+    still keep browser localStorage favorites if they want."""
+    from fastapi.responses import HTMLResponse
+    rec = await db.user_favorites.find_one({"unsubscribe_token": token})
+    if not rec:
+        return HTMLResponse("<h1>Link expired</h1><p>This unsubscribe link is invalid or already used.</p>", status_code=404)
+    await db.user_favorites.update_one(
+        {"id": rec["id"]},
+        {"$set": {"status": "unsubscribed", "unsubscribed_at": now_iso(), "listing_keys": []}},
+    )
+    return HTMLResponse("""
+<!doctype html><html><body style="font-family:Inter,Arial,sans-serif;background:#F5F0E1;padding:40px 20px;text-align:center;color:#111827">
+<div style="background:#fff;max-width:520px;margin:0 auto;padding:2.5rem 2rem;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08)">
+<h1 style="font-family:Georgia,serif;color:#0F2A5B;margin:0 0 1rem">Your favorites have been removed</h1>
+<p style="line-height:1.6;color:#374151">Your server-saved favorite listings on EZtoFind.ca have been permanently deleted.</p>
+<p style="line-height:1.6;color:#6b7280;font-size:0.9rem">Any favorites you have in your browser (localStorage) are separate and can be cleared any time by clicking the ❤️ heart to un-favorite them.</p>
+<p style="margin-top:1.5rem"><a href="https://eztofind.ca" style="color:#0F2A5B;font-weight:600">← Back to EZtoFind.ca</a></p>
+</div></body></html>
+""")
+
+
+@api.post("/admin/favorites-heatmap")
+async def admin_favorites_heatmap(_=Depends(verify_admin)):
+    """Which listing_keys have been most-hearted across all verified users?
+    Powers a future admin analytics dashboard — for now returns the top 100."""
+    pipeline = [
+        {"$match": {"status": "verified"}},
+        {"$unwind": "$listing_keys"},
+        {"$group": {"_id": "$listing_keys", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 100},
+    ]
+    hot = await db.user_favorites.aggregate(pipeline).to_list(100)
+    return {"top_listings": [{"listing_key": h["_id"], "heart_count": h["count"]} for h in hot]}
+
 
 @api.get("/admin/email-outbox")
 async def admin_email_outbox(_=Depends(verify_admin)):

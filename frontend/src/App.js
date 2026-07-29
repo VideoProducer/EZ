@@ -747,6 +747,14 @@ const FeaturedListing = () => {
 // --- Nav / Footer ---
 const Nav = () => {
   const [open, setOpen] = useState(false);
+  const [favCount, setFavCount] = useState(() => _readFavs().length);
+  useEffect(() => {
+    const h = (e) => setFavCount((e.detail || _readFavs()).length);
+    window.addEventListener("ez-favorites-changed", h);
+    // Also refresh on nav mount in case another tab changed it
+    setFavCount(_readFavs().length);
+    return () => window.removeEventListener("ez-favorites-changed", h);
+  }, []);
   const close = () => setOpen(false);
   return (
     <nav className="nav"><div className="container-x nav-inner">
@@ -766,6 +774,10 @@ const Nav = () => {
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
+        <NavLink to="/favorites" onClick={close} data-testid="nav-favorites" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>
+          ❤️ Favorites
+          {favCount > 0 && <span data-testid="nav-favorites-badge" style={{background:"#DC2626",color:"#fff",fontSize:"0.68rem",fontWeight:700,padding:"0.1rem 0.45rem",borderRadius:999,minWidth:"1.1rem",textAlign:"center"}}>{favCount}</span>}
+        </NavLink>
         <span className="nav-divider" aria-hidden="true"/>
         <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">BC REALTORS®</NavLink>
         <NavLink to="/realtors-outofprovince" onClick={close} data-testid="nav-realtors-oop">Out of Province REALTORS®</NavLink>
@@ -839,11 +851,78 @@ const LISTING_INTENT_REGEX = new RegExp(
 );
 const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
 
+// --- Favorites (❤️) — localStorage-backed heart button
+// -------------------------------------------------------
+// Anonymous, zero-friction save. Users can heart any listing card; state is
+// stored in localStorage["ez_favorites"] (JSON array of listing_keys). The
+// /favorites page reads this list and hydrates cards via /api/listings/by-keys.
+// Optionally, users can sync to their email (server-side, CASL double-opt-in)
+// for cross-device access — that flow lives in the <Favorites> page component.
+const FAV_STORAGE_KEY = "ez_favorites";
+const _readFavs = () => {
+  try {
+    const s = localStorage.getItem(FAV_STORAGE_KEY);
+    if (!s) return [];
+    const arr = JSON.parse(s);
+    return Array.isArray(arr) ? arr.filter(k => typeof k === "string") : [];
+  } catch { return []; }
+};
+const _writeFavs = (arr) => {
+  try {
+    localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(arr));
+    // Notify other components (nav badge, /favorites page, other cards) that
+    // the list changed without waiting for a full page reload.
+    window.dispatchEvent(new CustomEvent("ez-favorites-changed", { detail: arr }));
+  } catch {}
+};
+
+const FavoriteButton = ({ listingKey, size = "md" }) => {
+  const [saved, setSaved] = useState(() => _readFavs().includes(listingKey));
+  useEffect(() => {
+    const handler = (e) => setSaved((e.detail || _readFavs()).includes(listingKey));
+    window.addEventListener("ez-favorites-changed", handler);
+    return () => window.removeEventListener("ez-favorites-changed", handler);
+  }, [listingKey]);
+  const toggle = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const current = _readFavs();
+    const next = saved ? current.filter(k => k !== listingKey) : [listingKey, ...current];
+    _writeFavs(next);
+    setSaved(!saved);
+  };
+  const dim = size === "sm" ? 30 : 40;
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={saved}
+      aria-label={saved ? "Remove from favorites" : "Save to favorites"}
+      title={saved ? "Remove from favorites" : "Save to favorites"}
+      data-testid={`fav-toggle-${listingKey}`}
+      style={{
+        width: dim, height: dim, borderRadius:"50%", border:"none", cursor:"pointer",
+        background: saved ? "rgba(220,38,38,0.95)" : "rgba(255,255,255,0.9)",
+        color: saved ? "#fff" : "#DC2626",
+        boxShadow:"0 2px 8px rgba(0,0,0,0.15)",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        fontSize: size === "sm" ? "0.95rem" : "1.15rem",
+        transition:"transform 0.15s, background 0.2s",
+      }}
+      onMouseDown={e => e.currentTarget.style.transform = "scale(0.9)"}
+      onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
+      onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+    >
+      {saved ? "❤️" : "🤍"}
+    </button>
+  );
+};
+
 // Compact listing card used inside Doogie chat (smaller than the search-page card).
 const DoogieListingCard = ({ listing }) => {
   const price = (listing.list_price || 0).toLocaleString("en-CA");
   const photo = (listing.photos && listing.photos[0]) || "";
   return (
+    <div style={{position:"relative"}}>
     <Link to={`/listing/${listing.listing_key}`} data-testid={`doogie-listing-${listing.listing_key}`}
       style={{display:"flex",gap:"0.6rem",background:"#fff",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.5rem",textDecoration:"none",color:"inherit",marginTop:"0.5rem",boxShadow:"0 2px 6px rgba(15,42,91,0.06)"}}>
       {photo && <img src={photo} alt="" style={{width:78,height:78,objectFit:"cover",borderRadius:6,flexShrink:0}} loading="lazy"/>}
@@ -854,6 +933,10 @@ const DoogieListingCard = ({ listing }) => {
         {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.1rem"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
+    <div style={{position:"absolute",top:8,right:8,zIndex:2}}>
+      <FavoriteButton listingKey={listing.listing_key} size="sm"/>
+    </div>
+    </div>
   );
 };
 
@@ -1404,6 +1487,7 @@ const ListingCard = ({ listing }) => {
   const price = (listing.list_price || 0).toLocaleString("en-CA");
   const photo = (listing.photos && listing.photos[0]) || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200";
   return (
+    <div style={{position:"relative"}}>
     <Link to={`/listing/${listing.listing_key}`} data-testid={`listing-card-${listing.listing_key}`} style={{textDecoration:"none",color:"inherit",display:"block",background:"white",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.12)",boxShadow:"0 4px 12px rgba(15,42,91,0.06)",transition:"transform 0.15s, box-shadow 0.15s"}}
       onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow="0 10px 22px rgba(15,42,91,0.12)";}}
       onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 12px rgba(15,42,91,0.06)";}}
@@ -1424,6 +1508,10 @@ const ListingCard = ({ listing }) => {
         {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",paddingTop:"0.55rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
+    <div style={{position:"absolute",top:"0.75rem",right:"0.75rem",zIndex:2}}>
+      <FavoriteButton listingKey={listing.listing_key} size="md"/>
+    </div>
+    </div>
   );
 };
 
@@ -1969,7 +2057,10 @@ const ListingDetail = () => {
         {/* Main column */}
         <div>
           <div className="eyebrow">{listing.region} · {listing.city}</div>
-          <h1 className="section-title" style={{margin:"0.5rem 0"}} data-testid="listing-address">{listing.street_address}</h1>
+          <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap"}}>
+            <h1 className="section-title" style={{margin:"0.5rem 0",flex:"1 1 auto"}} data-testid="listing-address">{listing.street_address}</h1>
+            <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} size="md"/></div>
+          </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
             <span>🛏 {listing.beds} bed</span>
@@ -3876,6 +3967,154 @@ const Calculators = () => (
   </div></section>
 );
 
+// --- Favorites page — hydrates cards from localStorage + optional email sync
+// --------------------------------------------------------------------------
+// Reads listing_keys from localStorage["ez_favorites"], fetches full listing
+// data via /api/listings/by-keys, and renders them as cards. If the URL has
+// ?token=... (from a confirmation email), it fetches the server-saved list
+// and merges it into local storage.
+const Favorites = () => {
+  const [params] = useSearchParams();
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  // Server-sync form state
+  const [showSync, setShowSync] = useState(false);
+  const [syncEmail, setSyncEmail] = useState("");
+  const [syncCasl, setSyncCasl] = useState(false);
+  const [syncPipa, setSyncPipa] = useState(false);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
+  const [syncErr, setSyncErr] = useState("");
+
+  const hydrate = async () => {
+    const keys = _readFavs();
+    if (keys.length === 0) { setListings([]); setLoading(false); return; }
+    setLoading(true);
+    try {
+      const r = await axios.get(`${API}/listings/by-keys?keys=${encodeURIComponent(keys.join(","))}`);
+      setListings(r.data.listings || []);
+    } catch { setListings([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { hydrate(); }, []);
+  useEffect(() => {
+    const h = () => hydrate();
+    window.addEventListener("ez-favorites-changed", h);
+    return () => window.removeEventListener("ez-favorites-changed", h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Handle server-confirmation redirect: /favorites?token=xyz
+  useEffect(() => {
+    const tok = params.get("token");
+    if (!tok) return;
+    axios.get(`${API}/favorites/verify?token=${encodeURIComponent(tok)}`)
+      .then(r => {
+        const serverKeys = r.data.listing_keys || [];
+        if (serverKeys.length > 0) {
+          // Merge server list into local (dedup, preserve local order first)
+          const localKeys = _readFavs();
+          const merged = [...new Set([...localKeys, ...serverKeys])];
+          _writeFavs(merged);
+          setNotice(`✅ Confirmed! ${serverKeys.length} favorite(s) synced from your account.`);
+        } else {
+          setNotice("✅ Confirmed! Nothing to import yet — heart some listings to get started.");
+        }
+      })
+      .catch(() => setNotice("This confirmation link is expired or invalid. Please re-submit your email below to try again."));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const clearAll = () => {
+    if (!window.confirm("Remove all favorites from this browser? (Server-synced favorites are unaffected — you can restore them by entering your email below.)")) return;
+    _writeFavs([]);
+  };
+
+  const syncSubmit = async (e) => {
+    e.preventDefault(); setSyncErr(""); setSyncMsg("");
+    if (!syncCasl || !syncPipa) { setSyncErr("Please tick both consent boxes."); return; }
+    const keys = _readFavs();
+    if (keys.length === 0) { setSyncErr("Heart a few listings first — nothing to sync yet."); return; }
+    setSyncBusy(true);
+    try {
+      const r = await axios.post(`${API}/favorites`, {
+        email: syncEmail, listing_keys: keys,
+        casl_consent: syncCasl, pipa_ack: syncPipa,
+      });
+      setSyncMsg(r.data.message || "Check your email for the confirmation link.");
+    } catch (x) {
+      setSyncErr(x?.response?.data?.detail || "Could not send confirmation. Please try again.");
+    } finally { setSyncBusy(false); }
+  };
+
+  return (
+    <section className="section"><div className="container-x">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"1rem"}}>
+        <div>
+          <h1 className="section-title" style={{margin:0}}>❤️ My Favorites</h1>
+          <p style={{color:"var(--muted)",marginTop:"0.5rem",maxWidth:"46rem"}}>Listings you've hearted while browsing. Saved to this browser only unless you sync to your email below.</p>
+        </div>
+        {listings.length > 0 && (
+          <button onClick={clearAll} className="btn btn-outline" data-testid="fav-clear-all" style={{fontSize:"0.85rem"}}>Clear all from this browser</button>
+        )}
+      </div>
+
+      {notice && (
+        <div className="notice" style={{background:"#F0FDF4",borderColor:"#22C55E",marginTop:"1.5rem"}} data-testid="fav-notice">{notice}</div>
+      )}
+
+      {loading ? (
+        <div style={{textAlign:"center",padding:"3rem 0",color:"var(--muted)"}}>Loading your saved listings…</div>
+      ) : listings.length === 0 ? (
+        <div className="paper" style={{marginTop:"2rem",textAlign:"center",padding:"3rem 1.5rem"}} data-testid="fav-empty">
+          <div style={{fontSize:"3rem",marginBottom:"0.5rem"}}>🤍</div>
+          <h2 style={{fontFamily:"Sora,sans-serif",fontSize:"1.4rem",color:"var(--brand-navy)",marginBottom:"0.5rem"}}>No favorites yet</h2>
+          <p style={{color:"var(--muted)",maxWidth:"32rem",margin:"0 auto 1.5rem"}}>Browse BC MLS® listings and click the heart on any card to save it here. Great for shortlisting properties before you talk to a REALTOR®.</p>
+          <Link to="/listings" className="btn btn-primary" data-testid="fav-browse-cta">Browse Listings</Link>
+        </div>
+      ) : (
+        <>
+          <div style={{marginTop:"2rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)"}}>{listings.length} saved listing{listings.length===1?"":"s"}</div>
+          <div className="listings-grid" style={{marginTop:"1rem"}} data-testid="fav-grid">
+            {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+          </div>
+        </>
+      )}
+
+      {/* Email-sync CTA */}
+      <div className="paper" style={{marginTop:"3rem",background:"#FEF3C7"}}>
+        <h2 style={{fontFamily:"Sora,sans-serif",fontSize:"1.35rem",color:"var(--brand-navy)",marginTop:0}}>📱 Access on all your devices</h2>
+        <p style={{color:"var(--ink)",lineHeight:1.6}}>Save your favorites to your email so you can pick up where you left off on your phone, tablet, or another computer. We'll also let you know if a saved listing drops in price or has new photos (optional).</p>
+        {!showSync ? (
+          <button onClick={()=>setShowSync(true)} className="btn btn-primary" data-testid="fav-show-sync">Save to my email</button>
+        ) : (
+          <form onSubmit={syncSubmit} style={{marginTop:"1rem"}}>
+            <div className="field"><label>Email address</label>
+              <input type="email" required value={syncEmail} onChange={e=>setSyncEmail(e.target.value)} data-testid="fav-sync-email" placeholder="you@example.com"/>
+            </div>
+            <label style={{display:"flex",gap:"0.6rem",marginTop:"1rem",alignItems:"flex-start",fontSize:"0.85rem",lineHeight:1.5}}>
+              <input type="checkbox" checked={syncCasl} onChange={e=>setSyncCasl(e.target.checked)} data-testid="fav-sync-casl" style={{marginTop:"0.2rem"}}/>
+              <span><strong>CASL consent:</strong> I consent to receive a confirmation email and (optionally) occasional updates about my saved listings (price changes, new photos, status changes). I can unsubscribe any time with one click.</span>
+            </label>
+            <label style={{display:"flex",gap:"0.6rem",marginTop:"0.75rem",alignItems:"flex-start",fontSize:"0.85rem",lineHeight:1.5}}>
+              <input type="checkbox" checked={syncPipa} onChange={e=>setSyncPipa(e.target.checked)} data-testid="fav-sync-pipa" style={{marginTop:"0.2rem"}}/>
+              <span><strong>PIPA acknowledgement:</strong> I've read the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy</Link> and understand my email and saved listings will be stored securely for the purpose of cross-device sync and optional listing-update notifications.</span>
+            </label>
+            {syncErr && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}} data-testid="fav-sync-error">{syncErr}</div>}
+            {syncMsg && <div className="notice" style={{background:"#F0FDF4",borderColor:"#22C55E",marginTop:"1rem"}} data-testid="fav-sync-success">{syncMsg}</div>}
+            <button type="submit" className="btn btn-primary" disabled={syncBusy} style={{marginTop:"1.5rem"}} data-testid="fav-sync-submit">
+              {syncBusy ? "Sending…" : "Send confirmation email"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div></section>
+  );
+};
+
+
 // --- Data Attribution (CREA DDF® direct feed) ---
 const DataAttribution = () => (<Legal title="MLS® Data Attribution" body={<>
   <p>Listings displayed on EZtoFind.ca are sourced under license directly from the <strong>Canadian Real Estate Association's Data Distribution Facility (CREA DDF®)</strong> under a signed technology-provider agreement. The DDF® aggregates active MLS® listings from participating real estate boards across British Columbia, including:</p>
@@ -5358,6 +5597,7 @@ function App() {
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
+      <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
       <Route path="/compliance" element={<AppLayout><Compliance/></AppLayout>}/>
       <Route path="/complaints" element={<AppLayout><Complaints/></AppLayout>}/>
