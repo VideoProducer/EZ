@@ -4224,16 +4224,38 @@ _CITY_SUFFIX_RE = re.compile(
 
 
 def _city_query(city: str) -> dict:
-    """Mongo query fragment for city that handles municipal-suffix aliasing.
-    Matches the user's exact input AND the suffix-stripped form (case-insensitive)."""
+    """Mongo query fragment for city that handles municipal-suffix aliasing +
+    punctuation-forgiveness. Matches every reasonable spelling a user might
+    type: with/without periods ("Fort St John" ↔ "Fort St. John"), with/
+    without ampersand spacing, plus the standard municipal-suffix stripping.
+    """
     if not city:
         return {}
     city = city.strip()
     stripped = _CITY_SUFFIX_RE.sub("", city).strip()
-    variants = [city]
+    variants = {city}
     if stripped and stripped.lower() != city.lower():
-        variants.append(stripped)
-    escaped = "|".join(re.escape(v) for v in variants)
+        variants.add(stripped)
+
+    # Punctuation-forgiveness: build alternates with/without periods and with
+    # "St"/"St." interchangeable. This solves the common CREA convention where
+    # cities are stored as "Fort St. John" but users type "Fort St John".
+    def _punct_variants(v: str) -> set:
+        out = {v}
+        # Toggle "St." ↔ "St " (and "Ste." ↔ "Ste " similarly)
+        for a, b in (("St.", "St"), ("Ste.", "Ste"), ("Mt.", "Mt")):
+            if a in v:
+                out.add(v.replace(a, b))
+            if f"{b} " in v and a not in v:
+                out.add(v.replace(f"{b} ", f"{a} "))
+        # Also strip any trailing period(s) as a catch-all
+        out.add(v.rstrip("."))
+        return out
+
+    expanded = set()
+    for v in variants:
+        expanded |= _punct_variants(v)
+    escaped = "|".join(sorted({re.escape(v) for v in expanded}, key=len, reverse=True))
     return {"$regex": f"^({escaped})$", "$options": "i"}
 
 
