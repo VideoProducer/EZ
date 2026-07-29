@@ -3302,6 +3302,20 @@ async def startup():
             await _a.sleep(4 * 3600)  # every 4 hours
     asyncio.create_task(asyncio.sleep(600)).add_done_callback(lambda _: asyncio.create_task(_ddf_auto_sync_loop()))
 
+    # Weekly evidence-chain snapshot — creates a SHA-256 fingerprint of all
+    # site content and emails the digest to Doug. Tamper-evident timeline for
+    # any future copyright dispute tied to CIPO Reg. No. 1247822.
+    async def _evidence_chain_loop():
+        import asyncio as _a
+        while True:
+            try:
+                await _weekly_snapshot_email(db)
+            except Exception as e:
+                logger.error(f"evidence_chain loop iteration failed: {e}")
+            await _a.sleep(7 * 24 * 3600)  # weekly
+    # First run 24 h after boot so redeploy-storms don't spam the mailbox
+    asyncio.create_task(asyncio.sleep(24 * 3600)).add_done_callback(lambda _: asyncio.create_task(_evidence_chain_loop()))
+
     # Generate sitemap.xml on startup so search engines get a fresh copy
     try:
         from sitemap_generator import generate_sitemap
@@ -5907,6 +5921,230 @@ async def doogie_mls_search(request: Request, payload: dict):
         "summary": summary,
         "using_mock_data": not _ddf_ready(),
     }
+
+# ============================================================
+# =============== COPYRIGHT ENFORCEMENT MODULE ================
+# Provides three tools tied to CIPO Copyright Registration No. 1247822:
+#   1. Content snapshot manifest (SHA-256 fingerprints) — evidence chain
+#      for a court to prove what content existed on our site on a given date.
+#   2. Weekly auto-snapshot digest emailed to Doug — tamper-evident timeline.
+#   3. Cease-&-Desist letter drafter — LLM-generated legal letter pre-filled
+#      with the registration number, statute cites, and site owner details.
+# ============================================================
+
+CIPO_REG_NO = "1247822"
+
+async def _generate_content_snapshot(db) -> Dict[str, Any]:
+    """Builds a tamper-evident manifest of all copyrightable content on the
+    site: glossary terms, community pages, micro-neighbourhoods, and legal
+    boilerplate. Each item gets a SHA-256 hash so we can prove *what* the
+    content said on the snapshot's timestamp. Manifest is stored in Mongo
+    (`content_snapshots`) and returned as JSON."""
+    def _sha256(s: str) -> str:
+        return hashlib.sha256((s or "").encode("utf-8")).hexdigest()
+
+    # 1. Glossary entries
+    glossary_fps = []
+    async for g in db.glossary.find({}, {"slug": 1, "term": 1, "definition": 1, "faqs": 1}):
+        payload = (g.get("term","") + "\n" + (g.get("definition","") or "") + "\n" +
+                   json.dumps(g.get("faqs") or [], sort_keys=True, ensure_ascii=False))
+        glossary_fps.append({"slug": g.get("slug"), "term": g.get("term"), "sha256": _sha256(payload), "bytes": len(payload)})
+
+    # 2. Community pages (approved AI-drafted synopses + weather summaries)
+    community_fps = []
+    async for c in db.community_synopses.find({"approved": True}, {"slug": 1, "name": 1, "synopsis": 1}):
+        wx = await db.community_weather.find_one({"slug": c.get("slug"), "approved": True}, {"weather": 1})
+        payload = (c.get("name","") + "\n" + (c.get("synopsis","") or "") + "\n" + ((wx or {}).get("weather","") or ""))
+        community_fps.append({"slug": c.get("slug"), "name": c.get("name"), "sha256": _sha256(payload), "bytes": len(payload)})
+
+    # 3. Micro-neighbourhoods (approved AI-drafted synopses)
+    hood_fps = []
+    async for h in db.neighbourhood_synopses.find({"approved": True}, {"slug": 1, "n_slug": 1, "neighbourhood": 1, "synopsis": 1}):
+        payload = ((h.get("neighbourhood","") or "") + "\n" + (h.get("synopsis","") or ""))
+        hood_fps.append({"slug": f"{h.get('slug')}/{h.get('n_slug')}", "name": h.get("neighbourhood"), "sha256": _sha256(payload), "bytes": len(payload)})
+
+    total_bytes = sum(x["bytes"] for x in glossary_fps + community_fps + hood_fps)
+    combined_hash = _sha256("\n".join(sorted(x["sha256"] for x in glossary_fps + community_fps + hood_fps)))
+
+    snapshot = {
+        "id": str(uuid.uuid4()),
+        "created_at": now_iso(),
+        "cipo_registration_no": CIPO_REG_NO,
+        "owner": "Doug LeMaire",
+        "site": "eztofind.ca",
+        "counts": {
+            "glossary_terms": len(glossary_fps),
+            "communities": len(community_fps),
+            "neighbourhoods": len(hood_fps),
+        },
+        "total_bytes_hashed": total_bytes,
+        "combined_fingerprint_sha256": combined_hash,
+        "glossary": glossary_fps,
+        "communities": community_fps,
+        "neighbourhoods": hood_fps,
+    }
+    await db.content_snapshots.insert_one({**snapshot})
+    return snapshot
+
+
+@api.post("/admin/snapshot/create")
+async def admin_snapshot_create(_=Depends(verify_admin)):
+    """Manually trigger a content snapshot. Also runs on the weekly schedule."""
+    snap = await _generate_content_snapshot(db)
+    return {"success": True, "snapshot_id": snap["id"], "combined_fingerprint_sha256": snap["combined_fingerprint_sha256"], "counts": snap["counts"], "created_at": snap["created_at"]}
+
+
+@api.get("/admin/snapshots")
+async def admin_snapshots_list(_=Depends(verify_admin)):
+    """List all historical snapshots (newest first). Metadata only — no fingerprint arrays."""
+    out = []
+    async for s in db.content_snapshots.find({}, {"_id": 0, "glossary": 0, "communities": 0, "neighbourhoods": 0}).sort("created_at", -1).limit(500):
+        out.append(s)
+    return {"snapshots": out}
+
+
+@api.get("/admin/snapshots/{snap_id}")
+async def admin_snapshot_download(snap_id: str, _=Depends(verify_admin)):
+    """Download the full JSON manifest of a specific snapshot (includes every per-item SHA-256)."""
+    snap = await db.content_snapshots.find_one({"id": snap_id}, {"_id": 0})
+    if not snap:
+        raise HTTPException(404, "Snapshot not found")
+    return snap
+
+
+class CeaseDesistDraft(BaseModel):
+    copycat_url: str
+    copycat_name: Optional[str] = None
+    pages_copied: Optional[List[str]] = None  # URLs on eztofind.ca that appear to be copied
+    what_was_copied: Optional[str] = None      # free-text description
+    deadline_days: int = 14
+
+
+@api.post("/admin/cease-desist/draft")
+async def admin_cease_desist_draft(body: CeaseDesistDraft, _=Depends(verify_admin)):
+    """AI-drafts a formal cease-&-desist letter pre-filled with our CIPO
+    registration number, statute cites, and Doug's contact info. Output is
+    an HTML letter + plain-text version ready to email to the infringer's
+    hosting provider, domain registrar, and (if identifiable) the site owner."""
+    pages_txt = "\n".join(f"- {p}" for p in (body.pages_copied or [])) or "(none specified)"
+    system_prompt = (
+        "You are a Canadian intellectual-property lawyer drafting a formal "
+        "cease-&-desist letter. Tone: firm, professional, no threats beyond "
+        "what is legally available. Cite the Canadian Copyright Act (R.S.C., "
+        "1985, c. C-42) sections 3, 27, 34, and 38.1 (statutory damages up to "
+        "CAD $20,000 per work for commercial infringement). Reference the "
+        "sender's federal Copyright Registration Number where relevant. "
+        "Output a complete letter in valid HTML (headings, paragraphs, "
+        "signature block). Do NOT include any preface, explanation, or "
+        "markdown code fences — output only the HTML letter body starting "
+        "with <p>.")
+    user_prompt = f"""Draft a cease-&-desist letter with the following facts:
+
+**Sender (rights holder):**
+- Name: Doug LeMaire
+- Business: Fraser Property Management Realty Services Ltd. (BCFSA-licensed REALTOR®)
+- Website: eztofind.ca
+- Address: 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5
+- Email: info@eztofind.ca
+- Federal Copyright Registration: CIPO Registration No. {CIPO_REG_NO} (registered under the Canadian Copyright Act as a literary work covering the full EZtoFind.ca website, code, content library of curated glossary terms, community pages, micro-neighbourhood pages, and the "Doogie" AI assistant character)
+
+**Recipient (alleged infringer):**
+- Website / URL: {body.copycat_url}
+- Name/entity: {body.copycat_name or 'Unknown site operator'}
+
+**Content copied from EZtoFind.ca:**
+{body.what_was_copied or '(unspecified — the recipient should investigate their site against ours)'}
+
+**Specific EZtoFind.ca URLs / pages that appear to be reproduced without authorization:**
+{pages_txt}
+
+**Demanded actions (with {body.deadline_days}-day compliance deadline from date of letter):**
+1. Immediately cease and desist from reproducing, distributing, or displaying any content taken from EZtoFind.ca.
+2. Remove all infringing content from the recipient's website, any cached copies, and any AI training datasets.
+3. Provide a written accounting of when the content was copied, by whom, and any monetization (advertising, subscription, lead-gen revenue) derived from it.
+4. Confirm in writing within {body.deadline_days} days that these steps have been completed.
+
+Also warn that failure to comply may result in: (a) a formal complaint to the recipient's hosting provider and domain registrar under the Canadian Notice-and-Notice regime (Copyright Modernization Act, 2012) demanding takedown; (b) a Federal Court of Canada action for statutory damages up to CAD $20,000 per infringed work under s.38.1 of the Copyright Act; (c) an injunction; and (d) recovery of legal costs.
+
+End with a professional signature block from Doug LeMaire, dated today.
+"""
+    chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"cnd-{uuid.uuid4()}", system_message=system_prompt).with_model("anthropic", "claude-sonnet-4-6")
+    full_html = ""
+    try:
+        async for ev in chat.stream_message(UserMessage(text=user_prompt)):
+            if isinstance(ev, TextDelta):
+                full_html += ev.content
+    except Exception as e:
+        logger.exception(f"cease-desist draft failed: {e}")
+        raise HTTPException(502, f"LLM draft failed: {e}")
+
+    # Log the draft (for audit + so we don't repeatedly regenerate the same letter)
+    log_id = str(uuid.uuid4())
+    await db.cease_desist_log.insert_one({
+        "id": log_id,
+        "created_at": now_iso(),
+        "copycat_url": body.copycat_url,
+        "copycat_name": body.copycat_name,
+        "pages_copied": body.pages_copied or [],
+        "what_was_copied": body.what_was_copied,
+        "deadline_days": body.deadline_days,
+        "letter_html": full_html,
+        "status": "draft",
+    })
+    return {"success": True, "id": log_id, "letter_html": full_html, "cipo_registration_no": CIPO_REG_NO}
+
+
+@api.get("/admin/cease-desist/log")
+async def admin_cease_desist_log(_=Depends(verify_admin)):
+    """List all C&D drafts (newest first)."""
+    out = []
+    async for r in db.cease_desist_log.find({}, {"_id": 0}).sort("created_at", -1).limit(200):
+        out.append(r)
+    return {"drafts": out}
+
+
+async def _weekly_snapshot_email(db):
+    """Runs once/week. Creates a snapshot and emails Doug a digest with the
+    combined fingerprint (proof-of-existence hash). If a court ever asks
+    'what was your site's content on 2026-03-01?', we can pull the email
+    from Doug's inbox + the matching snapshot from the DB."""
+    try:
+        from services.email_sender import send_email as _send
+        snap = await _generate_content_snapshot(db)
+        html = (f"<div style='font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:2rem 1.5rem;color:#111827'>"
+                f"<div style='background:linear-gradient(135deg,#0F2A5B,#1a3a72);color:#fff;padding:1.5rem;border-radius:12px 12px 0 0'>"
+                f"<div style='font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;margin-bottom:0.35rem'>Evidence Chain · Weekly Digest</div>"
+                f"<h2 style='margin:0;font-family:Georgia,serif;font-size:1.5rem'>EZtoFind.ca Content Fingerprint</h2>"
+                f"<div style='margin-top:0.4rem;font-size:0.85rem;opacity:0.85'>Snapshot date: <strong>{snap['created_at']}</strong></div>"
+                f"</div>"
+                f"<div style='background:#fff;padding:1.5rem;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px'>"
+                f"<p style='margin:0 0 1rem'>Hi Doug — here's this week's tamper-evident content snapshot for <strong>CIPO Copyright Reg. No. {CIPO_REG_NO}</strong>.</p>"
+                f"<table style='width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem'>"
+                f"<tr><td style='padding:0.5rem 0;border-bottom:1px solid #f3f4f6'>Glossary terms</td><td style='text-align:right;font-weight:600'>{snap['counts']['glossary_terms']}</td></tr>"
+                f"<tr><td style='padding:0.5rem 0;border-bottom:1px solid #f3f4f6'>Community pages</td><td style='text-align:right;font-weight:600'>{snap['counts']['communities']}</td></tr>"
+                f"<tr><td style='padding:0.5rem 0;border-bottom:1px solid #f3f4f6'>Micro-neighbourhoods</td><td style='text-align:right;font-weight:600'>{snap['counts']['neighbourhoods']}</td></tr>"
+                f"<tr><td style='padding:0.5rem 0'>Total bytes hashed</td><td style='text-align:right;font-weight:600'>{snap['total_bytes_hashed']:,}</td></tr>"
+                f"</table>"
+                f"<div style='background:#fef3c7;border-left:4px solid #f59e0b;padding:1rem;border-radius:6px;margin:1rem 0'>"
+                f"<div style='font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;color:#92400e;font-weight:700;margin-bottom:0.4rem'>Combined Content Fingerprint (SHA-256)</div>"
+                f"<code style='font-family:Menlo,Consolas,monospace;font-size:0.72rem;word-break:break-all;color:#1a1a1a'>{snap['combined_fingerprint_sha256']}</code>"
+                f"</div>"
+                f"<p style='font-size:0.85rem;color:#4b5563;margin:1.5rem 0 0'>Keep this email. If a copycat is ever discovered, the fingerprint above cryptographically proves what your site's content was on this date. Full per-item hashes are stored in the admin panel at <a href='https://eztofind.ca/admin/snapshots' style='color:#0F2A5B;font-weight:600'>/admin/snapshots</a>.</p>"
+                f"<p style='font-size:0.85rem;color:#4b5563;margin-top:1rem'>— Evidence Chain (automated weekly)</p>"
+                f"</div></div>")
+        text = (f"EZtoFind.ca — Weekly Content Fingerprint (CIPO Reg. No. {CIPO_REG_NO})\n"
+                f"Snapshot date: {snap['created_at']}\n\n"
+                f"Glossary terms: {snap['counts']['glossary_terms']}\n"
+                f"Community pages: {snap['counts']['communities']}\n"
+                f"Micro-neighbourhoods: {snap['counts']['neighbourhoods']}\n"
+                f"Total bytes hashed: {snap['total_bytes_hashed']:,}\n\n"
+                f"Combined Fingerprint (SHA-256): {snap['combined_fingerprint_sha256']}\n\n"
+                f"Full per-item hashes: https://eztofind.ca/admin/snapshots\n")
+        await _send(db, to=ADMIN_EMAIL, subject=f"[EZtoFind.ca] Weekly evidence-chain fingerprint · {snap['created_at'][:10]}", html=html, text=text, tag="evidence_chain")
+        logger.info(f"[evidence_chain] weekly snapshot emailed · fp={snap['combined_fingerprint_sha256'][:16]}…")
+    except Exception as e:
+        logger.exception(f"[evidence_chain] weekly snapshot failed: {e}")
+
 
 app.include_router(api)
 

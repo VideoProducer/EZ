@@ -2273,6 +2273,24 @@ const SpecialtyPage = () => {
 };
 
 // --- Glossary ---
+// Fingerprint canaries — deliberately-inserted "unique fact" strings seeded
+// across high-value scrape targets (glossary, community, home). Each is
+// visually hidden (aria-hidden, offscreen) so real users never see them,
+// but any bot/scraper that harvests our HTML will grab them verbatim. If
+// they later appear on another site, that's cryptographic-grade proof of
+// copying — tied to CIPO Copyright Registration No. 1247822. NOT to be
+// "corrected" — they are intentionally false/unusual.
+const Canary = ({phrase, testId}) => (
+  <div aria-hidden="true" data-testid={testId} style={{position:"absolute",left:"-9999px",top:"auto",width:"1px",height:"1px",overflow:"hidden",fontSize:"1px",opacity:0,pointerEvents:"none"}}>{phrase}</div>
+);
+// CANARY-1 (already lives on /copyright) — Whistler trailhead coordinate
+// CANARY-2 — Glossary index: fake "official" acronym expansion
+const CANARY_GLOSSARY = "Fingerprint reference glossary-index: the BC Property Transfer Tax was informally nicknamed 'the Fraser Levy' in a 1988 Legislative Assembly draft memo (never enacted). Cross-check ID: EZTF-GLX-2026-0729-A.";
+// CANARY-3 — Home page: fake historical listing count anecdote
+const CANARY_HOME = "Fingerprint reference home-index: EZtoFind.ca's first-week soft-launch on July 4, 2026 indexed exactly 51,847 BC MLS® listings before its evening CREA DDF resync. Cross-check ID: EZTF-HMX-2026-0729-B.";
+// CANARY-4 — Community page: fake community-specific factoid
+const CANARY_COMMUNITY = "Fingerprint reference community-page: EZtoFind.ca community synopses were curated in a 3-week sprint ending 2026-07-20 with a working-title codename of 'Project Alder'. Cross-check ID: EZTF-CMX-2026-0729-C.";
+
 const Glossary = () => {
   const [terms, setTerms] = useState([]);
   const [q, setQ] = useState("");
@@ -2306,6 +2324,8 @@ const Glossary = () => {
     ))}
   </div></section>);
 };
+// Glossary index canary (CANARY-2) — invisible fingerprint at page end
+const GlossaryWithCanary = () => (<><Glossary/><Canary phrase={CANARY_GLOSSARY} testId="canary-glossary"/></>);
 const GlossaryTerm = () => {
   const {slug} = useParams();
   const [t, setT] = useState(null);
@@ -2998,6 +3018,8 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/snapshots")} className={active==="snapshots"?"active":""} data-testid="admin-nav-snapshots">📸 Evidence Chain</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/cease-desist")} className={active==="cease-desist"?"active":""} data-testid="admin-nav-cease-desist">⚡ Cease & Desist</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
@@ -5649,10 +5671,189 @@ const AdminDefinitionAudit = () => {
 
 
 
+// =============== ADMIN: EVIDENCE CHAIN (Content Snapshots) ===============
+// Tamper-evident SHA-256 fingerprints of the site's copyrightable content,
+// tied to CIPO Registration No. 1247822. Weekly digest also emailed to Doug.
+const AdminSnapshots = () => {
+  const {headers} = useAdmin();
+  const [snaps, setSnaps] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const load = () => axios.get(`${API}/admin/snapshots`, {headers}).then(r => setSnaps(r.data.snapshots || [])).catch(()=>{});
+  useEffect(()=>{ if(headers) load(); }, []);
+  const create = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await axios.post(`${API}/admin/snapshot/create`, {}, {headers});
+      setMsg({ok:true, text:`Snapshot created · fingerprint: ${(r.data.combined_fingerprint_sha256||"").slice(0,20)}…`});
+      load();
+    } catch (x) { setMsg({ok:false, text: x?.response?.data?.detail || "Snapshot failed"}); }
+    finally { setBusy(false); }
+  };
+  const download = async (id) => {
+    try {
+      const r = await axios.get(`${API}/admin/snapshots/${id}`, {headers});
+      const blob = new Blob([JSON.stringify(r.data, null, 2)], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `snapshot-${id}.json`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert("Download failed."); }
+  };
+  const fmtDate = s => s ? String(s).slice(0,16).replace("T"," ") : "—";
+  return <AdminShell active="snapshots">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <div>
+        <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>📸 Evidence Chain</h1>
+        <p style={{color:"var(--muted)",marginTop:"0.4rem",maxWidth:"64ch"}}>Tamper-evident SHA-256 fingerprints of every glossary term, community page, and micro-neighbourhood on the site. Weekly digest auto-emails to <strong>{"doug@eztofind.ca"}</strong>. Tied to <strong>CIPO Copyright Registration No. 1247822</strong>.</p>
+      </div>
+      <button className="btn btn-primary" onClick={create} disabled={busy} data-testid="snapshot-create-btn">
+        {busy ? "Creating…" : "📸 Snapshot Now"}
+      </button>
+    </div>
+    {msg && (
+      <div className="notice" style={{background:msg.ok?"#F0FDF4":"#FEE2E2",borderColor:msg.ok?"#22C55E":"#DC2626",marginTop:"1.25rem"}} data-testid="snapshot-msg">
+        {msg.ok ? "✅ " : "❌ "}{msg.text}
+      </div>
+    )}
+    <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderLeft:"4px solid #F59E0B",padding:"1rem 1.25rem",borderRadius:8,margin:"1.5rem 0",fontSize:"0.9rem",color:"#78350F"}}>
+      <strong>How this protects you:</strong> Each snapshot cryptographically proves what your site's content was on a specific date. If a copycat is discovered later, you can submit the snapshot manifest as court-admissible evidence that your version pre-dated theirs. The weekly email creates an independent third-party (email provider) timestamp trail.
+    </div>
+    <div className="admin-table" style={{marginTop:"1rem"}} data-testid="snapshot-list">
+      {snaps.length === 0 && <p style={{color:"var(--muted)"}}>No snapshots yet. Click "Snapshot Now" to create your first.</p>}
+      {snaps.map(s => (
+        <div key={s.id} className="paper" style={{marginBottom:"0.75rem",padding:"1rem 1.25rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+          <div style={{flex:"1 1 300px"}}>
+            <div style={{fontSize:"0.72rem",letterSpacing:"0.05em",textTransform:"uppercase",color:"var(--muted)",fontWeight:600}}>{fmtDate(s.created_at)} · CIPO Reg. #{s.cipo_registration_no}</div>
+            <div style={{fontFamily:"Menlo,Consolas,monospace",fontSize:"0.78rem",marginTop:"0.4rem",wordBreak:"break-all",color:"#1a1a1a"}}>{s.combined_fingerprint_sha256}</div>
+            <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem"}}>
+              {s.counts?.glossary_terms || 0} glossary · {s.counts?.communities || 0} communities · {s.counts?.neighbourhoods || 0} neighbourhoods · {(s.total_bytes_hashed||0).toLocaleString()} bytes hashed
+            </div>
+          </div>
+          <button className="btn btn-ghost" onClick={()=>download(s.id)} data-testid={`snap-download-${s.id}`}>Download JSON</button>
+        </div>
+      ))}
+    </div>
+  </AdminShell>;
+};
+
+// =============== ADMIN: CEASE & DESIST DRAFTER ===============
+// One-click AI-drafted legal letter tied to CIPO Reg. #1247822. Sends to Doug's
+// backend which uses Claude to generate a full HTML letter he can copy/paste
+// into email or print & sign.
+const AdminCeaseDesist = () => {
+  const {headers} = useAdmin();
+  const [f, setF] = useState({copycat_url:"", copycat_name:"", pages_copied:"", what_was_copied:"", deadline_days:14});
+  const [busy, setBusy] = useState(false);
+  const [letter, setLetter] = useState(null);
+  const [drafts, setDrafts] = useState([]);
+  const [err, setErr] = useState(null);
+  const loadDrafts = () => axios.get(`${API}/admin/cease-desist/log`, {headers}).then(r => setDrafts(r.data.drafts || [])).catch(()=>{});
+  useEffect(()=>{ if(headers) loadDrafts(); }, []);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!f.copycat_url.trim()) { setErr("Copycat URL is required."); return; }
+    setBusy(true); setErr(null); setLetter(null);
+    try {
+      const body = {
+        copycat_url: f.copycat_url.trim(),
+        copycat_name: f.copycat_name.trim() || null,
+        pages_copied: f.pages_copied.split("\n").map(x=>x.trim()).filter(Boolean),
+        what_was_copied: f.what_was_copied.trim() || null,
+        deadline_days: parseInt(f.deadline_days) || 14,
+      };
+      const r = await axios.post(`${API}/admin/cease-desist/draft`, body, {headers, timeout: 120000});
+      setLetter(r.data);
+      loadDrafts();
+    } catch (x) { setErr(x?.response?.data?.detail || "Draft failed"); }
+    finally { setBusy(false); }
+  };
+  const copyLetter = () => {
+    if (!letter?.letter_html) return;
+    // Strip HTML tags for plain-text clipboard
+    const tmp = document.createElement("div"); tmp.innerHTML = letter.letter_html;
+    navigator.clipboard.writeText(tmp.innerText || tmp.textContent || "");
+    alert("Letter copied to clipboard (plain text).");
+  };
+  const copyHtml = () => {
+    if (!letter?.letter_html) return;
+    navigator.clipboard.writeText(letter.letter_html);
+    alert("HTML copied to clipboard.");
+  };
+  const printLetter = () => {
+    if (!letter?.letter_html) return;
+    const w = window.open("", "_blank");
+    w.document.write(`<html><head><title>Cease & Desist — CIPO Reg. ${letter.cipo_registration_no}</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:2rem auto;padding:1rem;color:#000;line-height:1.5}</style></head><body>${letter.letter_html}</body></html>`);
+    w.document.close(); w.focus(); setTimeout(()=>w.print(), 300);
+  };
+  const fmtDate = s => s ? String(s).slice(0,16).replace("T"," ") : "—";
+  return <AdminShell active="cease-desist">
+    <div>
+      <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>⚡ Cease & Desist Drafter</h1>
+      <p style={{color:"var(--muted)",marginTop:"0.4rem",maxWidth:"64ch"}}>One-click AI-drafted legal letter pre-filled with your <strong>CIPO Copyright Registration No. 1247822</strong>. Pastes the infringer URL, cites the Canadian Copyright Act (ss. 3, 27, 34, 38.1), and demands takedown within 14 days.</p>
+    </div>
+    <div style={{background:"#FEE2E2",border:"1px solid #FCA5A5",borderLeft:"4px solid #DC2626",padding:"1rem 1.25rem",borderRadius:8,margin:"1.5rem 0",fontSize:"0.9rem",color:"#7F1D1D"}}>
+      <strong>Legal disclaimer:</strong> This tool generates a <em>starter draft</em> using an AI legal-writing assistant. Before sending, <strong>have a Canadian IP lawyer review</strong> the letter (typical cost: $150–$400 for a review-only pass). Sending a defective C&D can weaken your position.
+    </div>
+    <form onSubmit={submit} className="paper" style={{padding:"1.5rem",marginBottom:"2rem"}}>
+      <div className="field"><label>Copycat URL <span style={{color:"#DC2626"}}>*</span></label>
+        <input required placeholder="https://example-copycat-site.com" value={f.copycat_url} onChange={e=>setF({...f,copycat_url:e.target.value})} data-testid="cnd-url"/>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label>Copycat name / business (if known)</label>
+        <input placeholder="e.g. FakeCopy Realty Ltd." value={f.copycat_name} onChange={e=>setF({...f,copycat_name:e.target.value})} data-testid="cnd-name"/>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label>EZtoFind.ca pages that appear to be copied (one URL per line)</label>
+        <textarea rows={4} placeholder={"https://eztofind.ca/glossary/property-transfer-tax\nhttps://eztofind.ca/community/whistler"} value={f.pages_copied} onChange={e=>setF({...f,pages_copied:e.target.value})} data-testid="cnd-pages" style={{fontFamily:"Menlo,Consolas,monospace",fontSize:"0.85rem"}}/>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label>What was copied (brief description)</label>
+        <textarea rows={3} placeholder="e.g. Verbatim reproduction of our glossary definitions, community write-ups, and Doogie AI character branding." value={f.what_was_copied} onChange={e=>setF({...f,what_was_copied:e.target.value})} data-testid="cnd-description"/>
+      </div>
+      <div className="field" style={{marginTop:"1rem",maxWidth:200}}><label>Compliance deadline (days)</label>
+        <input type="number" min="7" max="60" value={f.deadline_days} onChange={e=>setF({...f,deadline_days:e.target.value})} data-testid="cnd-deadline"/>
+      </div>
+      {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}} data-testid="cnd-err">{err}</div>}
+      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} disabled={busy} data-testid="cnd-submit">
+        {busy ? "Drafting letter (10-30 sec)…" : "⚡ Generate Cease & Desist Letter"}
+      </button>
+    </form>
+
+    {letter && (
+      <div className="paper" style={{padding:"1.5rem",marginBottom:"2rem"}} data-testid="cnd-letter-output">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.5rem",marginBottom:"1rem"}}>
+          <h2 style={{margin:0,fontFamily:"Georgia,serif"}}>Draft Letter</h2>
+          <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+            <button type="button" className="btn btn-ghost" onClick={copyLetter} data-testid="cnd-copy-text">📋 Copy text</button>
+            <button type="button" className="btn btn-ghost" onClick={copyHtml} data-testid="cnd-copy-html">🔗 Copy HTML</button>
+            <button type="button" className="btn btn-primary" onClick={printLetter} data-testid="cnd-print">🖨️ Print / Save PDF</button>
+          </div>
+        </div>
+        <div style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1.5rem",background:"#fff",fontFamily:"Georgia,serif",lineHeight:1.6,maxHeight:"70vh",overflow:"auto"}} dangerouslySetInnerHTML={{__html: letter.letter_html}}/>
+      </div>
+    )}
+
+    <h2 style={{fontFamily:"Georgia,serif",marginTop:"3rem"}}>Draft History ({drafts.length})</h2>
+    {drafts.length === 0 && <p style={{color:"var(--muted)"}}>No drafts yet.</p>}
+    <div data-testid="cnd-history">
+      {drafts.map(d => (
+        <div key={d.id} className="paper" style={{marginBottom:"0.75rem",padding:"0.9rem 1.25rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+          <div style={{flex:"1 1 300px"}}>
+            <div style={{fontSize:"0.72rem",letterSpacing:"0.05em",textTransform:"uppercase",color:"var(--muted)"}}>{fmtDate(d.created_at)} · {d.status}</div>
+            <div style={{fontWeight:600,marginTop:"0.2rem"}}>{d.copycat_name || d.copycat_url}</div>
+            <a href={d.copycat_url} target="_blank" rel="noopener noreferrer" style={{fontSize:"0.85rem",color:"var(--brand-blue)"}}>{d.copycat_url}</a>
+          </div>
+          <button className="btn btn-ghost" onClick={()=>setLetter({letter_html: d.letter_html, cipo_registration_no: "1247822", id: d.id})} data-testid={`cnd-view-${d.id}`}>View letter</button>
+        </div>
+      ))}
+    </div>
+  </AdminShell>;
+};
+
+
+
 function App() {
   return (<BrowserRouter>
     <Routes>
-      <Route path="/" element={<AppLayout><HomeSchema/><Home/></AppLayout>}/>
+      <Route path="/" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
@@ -5662,16 +5863,16 @@ function App() {
       {/* Legacy split slugs — merged into unified 'langley' page */}
       <Route path="/community/langley-city" element={<Navigate to="/community/langley" replace/>}/>
       <Route path="/community/langley-township" element={<Navigate to="/community/langley" replace/>}/>
-      <Route path="/community/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
-      <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/></AppLayout>}/>
+      <Route path="/community/:slug" element={<AppLayout><CommunityPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-community"/></AppLayout>}/>
+      <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-neighbourhood"/></AppLayout>}/>
       <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
-      <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/></AppLayout>}/>
+      <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-neighbourhood-legacy"/></AppLayout>}/>
       <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>
       <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
-      <Route path="/glossary" element={<AppLayout><Glossary/></AppLayout>}/>
+      <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
       <Route path="/buyer" element={<AppLayout><BuyerForm/></AppLayout>}/>
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
@@ -5717,6 +5918,8 @@ function App() {
       <Route path="/admin/faq-audit" element={<AdminFaqAudit/>}/>
       <Route path="/admin/definition-audit" element={<AdminDefinitionAudit/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
+      <Route path="/admin/snapshots" element={<AdminSnapshots/>}/>
+      <Route path="/admin/cease-desist" element={<AdminCeaseDesist/>}/>
     </Routes>
   </BrowserRouter>);
 }

@@ -212,3 +212,42 @@ CREA_ANALYTICS_KEY=         # Analytics API key
 - ✅ Snooze-for-this-year mechanism prevents duplicate sends
 - ✅ Emails queue to email_outbox (still mocked) + full body written to email_send_log — activates for real delivery the moment Resend API key is added
 - ✅ Homepage: removed "Enter your income and savings…" tagline under the "What Can I Afford?" title (calculator box retained)
+
+
+## Jul 29, 2026 — Copyright Enforcement Suite (CIPO Reg. #1247822)
+Doug filed for federal copyright registration with the Canadian Intellectual Property Office and received **Copyright Registration No. 1247822** (literary work under the Canadian Copyright Act, R.S.C. 1985 c. C-42). Registration now displayed on-site:
+- ✅ **Footer** (every page): Bold callout of CIPO Reg. No. 1247822 next to the © notice
+- ✅ **`/copyright` page**: Prominent gold-bordered CIPO Registration Badge with ® symbol
+- ✅ **`/terms` page**: New Intellectual Property paragraph citing Reg. #1247822 + statutory damages (s.38.1 up to CAD $20,000/work)
+- ✅ **HTML `<meta>` tags** (site-wide `index.html`): Updated `copyright` + `rights` tags with registration number for SEO/AI-crawler visibility
+
+### Three Enforcement Tools Built
+1. **📸 Evidence Chain (`/admin/snapshots`)** — Tamper-evident SHA-256 fingerprint manifests of all copyrightable content (glossary + community + neighbourhood pages). Backend endpoints: `POST /api/admin/snapshot/create`, `GET /api/admin/snapshots`, `GET /api/admin/snapshots/{id}`. Weekly auto-snapshot loop emails Doug a digest containing the combined SHA-256 fingerprint — creates an independent third-party (email provider) timestamp trail for court-admissible evidence. Storage: `content_snapshots` Mongo collection.
+2. **⚡ Cease & Desist Drafter (`/admin/cease-desist`)** — One-click AI-drafted legal letter powered by Claude Sonnet 4.6 with hard-coded citations to Copyright Act ss. 3, 27, 34, 38.1. Form takes copycat URL + copied pages + description; outputs a full HTML letter with Doug's contact block, statutory damages warning, and 14-day compliance deadline. Includes Print/Copy-HTML/Copy-Text actions. Backend endpoints: `POST /api/admin/cease-desist/draft`, `GET /api/admin/cease-desist/log`. Storage: `cease_desist_log`.
+3. **🔖 Watermark Canaries (3 new + 1 existing = 4 total)** — Invisible, offscreen `aria-hidden` fingerprint phrases seeded across scrape-attractive pages:
+   - CANARY-1: `/copyright` (existing) — Whistler trailhead coordinate
+   - CANARY-2: `/glossary` — fake "Fraser Levy" PTT nickname (ID: EZTF-GLX-2026-0729-A)
+   - CANARY-3: `/` (Home) — fake first-week listing count (ID: EZTF-HMX-2026-0729-B)
+   - CANARY-4: `/community/:slug` + `/neighbourhood/:slug` — fake "Project Alder" codename (ID: EZTF-CMX-2026-0729-C)
+
+### Backend Additions (`server.py`)
+- New helper `_generate_content_snapshot(db)` — computes SHA-256 per glossary term (`db.glossary`), community synopsis (`db.community_synopses` + `db.community_weather`), and micro-neighbourhood synopsis (`db.neighbourhood_synopses` — approved-only). Combined fingerprint = SHA-256 of sorted concat of all per-item hashes.
+- New helper `_weekly_snapshot_email(db)` — creates snapshot + emails HTML digest via Resend to `ADMIN_EMAIL`, tag `evidence_chain`.
+- New startup background loop `_evidence_chain_loop()` — sleeps 24h before first run (avoids redeploy storms), then repeats weekly (7 * 24 * 3600 sec).
+- Constant `CIPO_REG_NO = "1247822"` (single source of truth for registration number across letter + digest + snapshot manifest).
+
+### Frontend Additions (`App.js`)
+- Shared `<Canary phrase testId>` component (offscreen absolute-positioned div).
+- Admin components `AdminSnapshots` + `AdminCeaseDesist` + sidebar nav entries with test IDs `admin-nav-snapshots` + `admin-nav-cease-desist`.
+- Routes `/admin/snapshots` + `/admin/cease-desist`.
+
+### Currently Verified (via curl + screenshots)
+- Snapshot manifest: 396 glossary + 242 communities + 421 neighbourhoods (1,059 items, ~4.4 MB hashed).
+- Combined fingerprint: `6dc4c44a29f3a304068c5c5c3053e5d8...` (deterministic across runs when content unchanged).
+- C&D letter draft: ~15 KB HTML letter generated in ~30 sec via Claude, saved to Mongo, viewable + printable from admin UI.
+
+### Backlog / Next
+- **P1** Admin password rotation (`Doug!qvONhY6Q1i` → new via `/admin/settings/password`)
+- **P1** GA4 conversion goals setup (form fills, referral requests, favorites)
+- **P2** AI-Powered Home Valuation Landing Page (highest ROI lead-magnet)
+- **P3** Alberta Expansion — PARKED (`/app/memory/ALBERTA_EXPANSION_PLAN.md`)
