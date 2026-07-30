@@ -1719,6 +1719,330 @@ async def update_realtor_status(app_id: str, status: str, _=Depends(verify_admin
     await db.realtor_applications.update_one({"id": app_id}, {"$set": {"status": status, "updated_at": now_iso()}})
     return {"success": True}
 
+# =============== NATIONAL REFERRAL PIPELINE ("Model A") ===============
+# Tracks every outbound referral (BC out-of-area OR out-of-province) Doug hands off
+# to a partner REALTOR® in the network. This is the monetization spine: every
+# closed referral earns Doug 25% of the receiving broker's commission per the
+# signed CREA Inter-Board Referral Agreement.
+#
+# Status pipeline: new → assigned → contacted → working → offer_accepted →
+#                  closed_won → paid   (or closed_lost / cancelled at any stage)
+#
+# The public /api/find-realtor endpoint accepts a nationwide referral request
+# (any Canadian province/territory) and simultaneously creates:
+#   1. A buyer_leads doc (for CASL/PIPA audit-trail parity with all lead forms)
+#   2. A referrals doc (this new pipeline) — status="new"
+CANADIAN_PROVINCES = [
+    "British Columbia", "Alberta", "Saskatchewan", "Manitoba", "Ontario",
+    "Quebec", "New Brunswick", "Nova Scotia", "Prince Edward Island",
+    "Newfoundland and Labrador", "Yukon", "Northwest Territories", "Nunavut",
+]
+
+class Referral(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    # Origin
+    lead_id: Optional[str] = None                # linked buyer_leads.id (if from form)
+    lead_source: str = "find_realtor"            # "find_realtor" | "buyer_form" | "manual"
+    # Client
+    client_name: str
+    client_email: EmailStr
+    client_phone: Optional[str] = ""
+    # Location
+    province: str
+    city: Optional[str] = ""
+    # Intent
+    intent: str = "buyer"                        # "buyer" | "seller" | "both"
+    property_type: Optional[str] = ""
+    budget_range: Optional[str] = ""
+    timeline: Optional[str] = ""
+    notes: Optional[str] = ""
+    # Assignment (partner REALTOR®)
+    assigned_realtor_id: Optional[str] = None    # realtor_applications.id
+    assigned_realtor_name: Optional[str] = ""
+    assigned_realtor_email: Optional[str] = ""
+    assigned_at: Optional[str] = None
+    # Pipeline
+    status: str = "new"                          # see status pipeline above
+    # Fee tracking
+    expected_price: Optional[float] = 0.0
+    commission_pct: Optional[float] = 2.5        # receiving broker's typical gross commission % (BC: 3.22% first 100k + 1.15% remainder averages ~2.5% on $1.5M)
+    referral_split_pct: Optional[float] = 25.0   # Doug's share of gross commission
+    estimated_fee: Optional[float] = 0.0         # auto-derived from above
+    actual_fee_collected: Optional[float] = 0.0
+    close_date: Optional[str] = None
+    paid_date: Optional[str] = None
+    # Meta
+    created_at: str = Field(default_factory=now_iso)
+    updated_at: str = Field(default_factory=now_iso)
+
+
+def _referral_estimate_fee(expected_price: float, commission_pct: float, referral_split_pct: float) -> float:
+    """Doug's expected earnings on this referral if it closes."""
+    try:
+        return round((expected_price or 0) * (commission_pct or 0) / 100 * (referral_split_pct or 0) / 100, 2)
+    except Exception:
+        return 0.0
+
+
+class FindRealtorBody(BaseModel):
+    full_name: str
+    email: EmailStr
+    phone: str
+    province: str
+    city: Optional[str] = ""
+    intent: str = "buyer"                        # buyer / seller / both
+    property_type: Optional[str] = "Detached"
+    budget_range: Optional[str] = "Not sure"
+    timeline: Optional[str] = "3-6 months"
+    notes: Optional[str] = ""
+    casl_consent: bool
+    pipa_ack: bool
+    turnstile_token: Optional[str] = ""
+
+
+@api.post("/find-realtor")
+async def create_find_realtor_referral(body: FindRealtorBody, request: Request):
+    """Public endpoint for nationwide referral requests. Any Canadian province."""
+    await verify_turnstile(body.turnstile_token or "", request)
+    if not body.casl_consent or not body.pipa_ack:
+        raise HTTPException(400, "Consent required")
+    if body.province not in CANADIAN_PROVINCES:
+        raise HTTPException(400, "Please select a valid Canadian province or territory.")
+
+    consent_meta = get_consent_meta(request)
+
+    # 1) Create a buyer_leads-style CASL record so the consent surface is
+    #    identical to every other form submission (audit trail + CSV export).
+    lead_id = str(uuid.uuid4())
+    lead_notes = (
+        f"NATIONAL REFERRAL REQUEST — {body.city + ', ' if body.city else ''}{body.province}. "
+        f"Intent: {body.intent}. {body.notes or ''}"
+    )
+    buyer_doc = {
+        "id": lead_id,
+        "full_name": body.full_name,
+        "email": body.email,
+        "phone": body.phone,
+        "areas": [f"{body.city + ', ' if body.city else ''}{body.province}"],
+        "property_type": body.property_type or "Detached",
+        "budget_range": body.budget_range or "Not sure",
+        "timeline": body.timeline or "3-6 months",
+        "financing_status": "Not specified",
+        "first_time_buyer": False,
+        "working_with_realtor": False,
+        "preferred_contact": "email",
+        "notes": lead_notes,
+        "casl_consent": True,
+        "pipa_ack": True,
+        "source": "find_realtor",
+        "status": "new",
+        "form_lang": "en",
+        "notes_en": lead_notes,
+        "created_at": now_iso(),
+        **consent_meta,
+        "unsubscribed": False,
+    }
+    await db.buyer_leads.insert_one(buyer_doc)
+
+    # 2) Create the referral pipeline record
+    ref = Referral(
+        lead_id=lead_id,
+        lead_source="find_realtor",
+        client_name=body.full_name,
+        client_email=body.email,
+        client_phone=body.phone,
+        province=body.province,
+        city=body.city or "",
+        intent=body.intent,
+        property_type=body.property_type,
+        budget_range=body.budget_range,
+        timeline=body.timeline,
+        notes=body.notes or "",
+    )
+    await db.referrals.insert_one(ref.model_dump())
+
+    # 3) CASL welcome-series auto-enroll (same behaviour as buyer form)
+    try:
+        await campaign_record_consent(body.email, "welcome_series", request,
+            opt_in_text="Find-a-REALTOR form — I consent to receive commercial electronic messages (CASL).",
+            source="find_realtor")
+    except Exception as e:
+        logger.warning(f"[campaigns] auto-opt welcome_series failed for find_realtor: {e}")
+
+    # 4) Notify Doug via referrals@ mailbox
+    asyncio.create_task(_notify_admin_of_lead(
+        kind="National Referral Request",
+        to=REFERRAL_MAILBOX,
+        subject=f"🐾 New National Referral — {body.full_name} → {body.city + ', ' if body.city else ''}{body.province}",
+        body_html=(
+            f"<p><strong>Name:</strong> {body.full_name}<br/>"
+            f"<strong>Email:</strong> {body.email}<br/>"
+            f"<strong>Phone:</strong> {body.phone or '—'}<br/>"
+            f"<strong>Province:</strong> {body.province}<br/>"
+            f"<strong>City:</strong> {body.city or '—'}<br/>"
+            f"<strong>Intent:</strong> {body.intent}<br/>"
+            f"<strong>Property type:</strong> {body.property_type or '—'}<br/>"
+            f"<strong>Budget:</strong> {body.budget_range or '—'}<br/>"
+            f"<strong>Timeline:</strong> {body.timeline or '—'}</p>"
+            f"<p><strong>Notes:</strong><br/>{(body.notes or '—').replace(chr(10), '<br/>')}</p>"
+            f"<p style='color:#059669;font-weight:600'>💼 Assign a partner REALTOR® in the Referrals CRM to activate the 25% referral fee agreement.</p>"
+            f"<p style='color:#6b7280;font-size:0.85em'>Open referral: <a href='https://eztofind.ca/admin/referrals'>Admin → Referrals → {body.email}</a></p>"
+        ),
+        related_id=ref.id,
+    ))
+
+    logger.info(f"National referral: {body.full_name} → {body.city}, {body.province} (intent={body.intent})")
+    return {"success": True, "id": ref.id, "message": "Thank you! Doug will match you with a vetted partner REALTOR® in your area and introduce you by email within 1 business day."}
+
+
+@api.get("/admin/referrals")
+async def admin_list_referrals(status: Optional[str] = None, province: Optional[str] = None, _=Depends(verify_admin)):
+    q: dict = {}
+    if status: q["status"] = status
+    if province: q["province"] = province
+    rows = await db.referrals.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    return rows
+
+
+@api.get("/admin/referrals/stats")
+async def admin_referral_stats(_=Depends(verify_admin)):
+    """Pipeline snapshot: counts + $ value by status."""
+    from collections import defaultdict
+    rows = await db.referrals.find({}, {"_id": 0}).to_list(5000)
+    by_status: dict = defaultdict(lambda: {"count": 0, "est_fee": 0.0, "actual_fee": 0.0})
+    by_province: dict = defaultdict(lambda: {"count": 0, "est_fee": 0.0})
+    total_est = 0.0
+    total_collected = 0.0
+    for r in rows:
+        s = r.get("status", "new")
+        p = r.get("province", "Unknown")
+        est = float(r.get("estimated_fee") or 0)
+        act = float(r.get("actual_fee_collected") or 0)
+        by_status[s]["count"] += 1
+        by_status[s]["est_fee"] += est
+        by_status[s]["actual_fee"] += act
+        by_province[p]["count"] += 1
+        by_province[p]["est_fee"] += est
+        if s not in ("closed_lost", "cancelled"):
+            total_est += est
+        total_collected += act
+    return {
+        "total_open": sum(v["count"] for k, v in by_status.items() if k not in ("closed_won", "closed_lost", "paid", "cancelled")),
+        "total_paid": by_status.get("paid", {}).get("count", 0),
+        "pipeline_est_value": round(total_est, 2),
+        "collected_ytd": round(total_collected, 2),
+        "by_status": {k: {"count": v["count"], "est_fee": round(v["est_fee"], 2), "actual_fee": round(v["actual_fee"], 2)} for k, v in by_status.items()},
+        "by_province": {k: {"count": v["count"], "est_fee": round(v["est_fee"], 2)} for k, v in by_province.items()},
+    }
+
+
+class ReferralUpdate(BaseModel):
+    status: Optional[str] = None
+    assigned_realtor_id: Optional[str] = None
+    assigned_realtor_name: Optional[str] = None
+    assigned_realtor_email: Optional[str] = None
+    expected_price: Optional[float] = None
+    commission_pct: Optional[float] = None
+    referral_split_pct: Optional[float] = None
+    actual_fee_collected: Optional[float] = None
+    close_date: Optional[str] = None
+    paid_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+VALID_REFERRAL_STATUSES = {
+    "new", "assigned", "contacted", "working", "offer_accepted",
+    "closed_won", "closed_lost", "paid", "cancelled",
+}
+
+
+@api.patch("/admin/referrals/{referral_id}")
+async def admin_update_referral(referral_id: str, body: ReferralUpdate, _=Depends(verify_admin)):
+    existing = await db.referrals.find_one({"id": referral_id})
+    if not existing:
+        raise HTTPException(404, "Referral not found")
+    if body.status and body.status not in VALID_REFERRAL_STATUSES:
+        raise HTTPException(400, f"Invalid status. Valid: {sorted(VALID_REFERRAL_STATUSES)}")
+
+    update = {k: v for k, v in body.model_dump(exclude_none=True).items()}
+    if update.get("assigned_realtor_id") and not existing.get("assigned_at"):
+        update["assigned_at"] = now_iso()
+        # If the incoming payload doesn't already move the status forward, bump to "assigned"
+        if not update.get("status") and existing.get("status") == "new":
+            update["status"] = "assigned"
+
+    # Auto-recompute estimated_fee whenever any of the 3 inputs change
+    merged = {**existing, **update}
+    update["estimated_fee"] = _referral_estimate_fee(
+        merged.get("expected_price") or 0,
+        merged.get("commission_pct") or 0,
+        merged.get("referral_split_pct") or 0,
+    )
+    update["updated_at"] = now_iso()
+
+    await db.referrals.update_one({"id": referral_id}, {"$set": update})
+    result = await db.referrals.find_one({"id": referral_id}, {"_id": 0})
+    return result
+
+
+@api.delete("/admin/referrals/{referral_id}")
+async def admin_delete_referral(referral_id: str, _=Depends(verify_admin)):
+    r = await db.referrals.delete_one({"id": referral_id})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Referral not found")
+    return {"success": True}
+
+
+@api.post("/admin/referrals/backfill")
+async def admin_referrals_backfill(_=Depends(verify_admin)):
+    """One-time migration: creates referrals docs for every existing buyer_leads
+    row tagged with 'OUT-OF-AREA REFERRAL REQUEST' or 'NATIONAL REFERRAL REQUEST'
+    in notes, so the CRM starts populated. Idempotent (skips rows that already
+    have a matching referral by lead_id)."""
+    created = 0
+    skipped = 0
+    existing_lead_ids = {r["lead_id"] async for r in db.referrals.find({"lead_id": {"$ne": None}}, {"lead_id": 1})}
+    async for lead in db.buyer_leads.find({}, {"_id": 0}):
+        notes_upper = (lead.get("notes") or "").upper()
+        if "REFERRAL REQUEST" not in notes_upper:
+            continue
+        if lead.get("id") in existing_lead_ids:
+            skipped += 1
+            continue
+        # Infer province: default BC for legacy "OUT-OF-AREA" (they're all BC), else parse from areas
+        areas = lead.get("areas") or []
+        area_str = areas[0] if areas else ""
+        province = "British Columbia"
+        for p in CANADIAN_PROVINCES:
+            if p.lower() in area_str.lower() or p.lower() in notes_upper.lower():
+                province = p
+                break
+        # Extract city (first token before comma if present)
+        city = ""
+        if area_str:
+            city = area_str.split(",")[0].strip()
+
+        ref = Referral(
+            lead_id=lead.get("id"),
+            lead_source="buyer_form" if "NATIONAL" not in notes_upper else "find_realtor",
+            client_name=lead.get("full_name") or "",
+            client_email=lead.get("email") or "",
+            client_phone=lead.get("phone") or "",
+            province=province,
+            city=city,
+            intent="buyer",
+            property_type=lead.get("property_type") or "",
+            budget_range=lead.get("budget_range") or "",
+            timeline=lead.get("timeline") or "",
+            notes=lead.get("notes") or "",
+            status="new",
+            created_at=lead.get("created_at") or now_iso(),
+        )
+        await db.referrals.insert_one(ref.model_dump())
+        created += 1
+    return {"success": True, "created": created, "skipped": skipped}
+
+
 # =============== CRM CLIENTS ===============
 @api.post("/admin/clients")
 async def create_client(c: Client, _=Depends(verify_admin)):
