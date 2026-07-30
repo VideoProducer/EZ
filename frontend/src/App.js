@@ -1780,7 +1780,7 @@ const TermsGate = ({ children }) => {
           <p style={{marginBottom:"0.75rem"}}>Before we show you live MLS® data, we're required by the Canadian Real Estate Association (CREA) to ask you to agree to a few common-sense terms:</p>
           <ul style={{paddingLeft:"1.25rem",marginBottom:"0.75rem"}}>
             <li style={{marginBottom:"0.35rem"}}>The listings are for your <strong>personal browsing</strong>, not for resale or scraping.</li>
-            <li style={{marginBottom:"0.35rem"}}>Prices and availability can change — always verify with <strong>Doug LeMaire, REALTOR®</strong> before making an offer.</li>
+            <li style={{marginBottom:"0.35rem"}}>Prices and availability can change — always verify with <strong>a REALTOR®</strong> before making an offer.</li>
             <li style={{marginBottom:"0.35rem"}}>MLS® and REALTOR® are CREA trademarks.</li>
           </ul>
           <p style={{fontSize:"0.82rem",color:"var(--muted)"}}><a href="https://www.crea.ca/legal/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Full CREA terms ↗</a> · <Link to="/privacy" style={{color:"var(--brand-blue)"}}>EZtoFind.ca privacy ↗</Link></p>
