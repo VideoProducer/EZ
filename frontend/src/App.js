@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, us
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import DOMPurify from "dompurify";
+import HobbyFarmResearch from "./pages/HobbyFarmResearch";
 import "./App.css";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 
@@ -6925,6 +6926,7 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
+      <Route path="/research/south-okanagan-hobby-farms" element={<AppLayout><HobbyFarmResearch/></AppLayout>}/>
       <Route path="/realtors" element={<AppLayout><RealtorApply/></AppLayout>}/>
       <Route path="/realtors-outofprovince" element={<AppLayout><RealtorApplyOutOfProvince/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
