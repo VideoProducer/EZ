@@ -1342,6 +1342,207 @@ const DoogieChat = () => {
   </>);
 };
 
+// =============== "WHERE SHOULD YOU LIVE?" COMMUNITY MATCHER ===============
+// 5-question quiz that suggests 3-5 BC communities based on preferences.
+// COMPLIANCE:
+// - BCFSA: purely factual; "suggested, not recommended" caveat; no opinions of value
+// - PIPA: preferences transient (component state only); no PII collected; server does not persist
+// - CASL: no email; no CEM
+const WSYL_QUESTIONS = [
+  {id:"lifestyle", label:"What type of lifestyle are you looking for?", multi:false, options:[
+    {v:"urban", l:"Urban / Downtown"},{v:"suburban", l:"Suburban"},{v:"small-town", l:"Small Town"},
+    {v:"rural", l:"Rural / Acreage"},{v:"waterfront", l:"Waterfront"},{v:"mountain", l:"Mountain / Recreation"},
+  ]},
+  {id:"home_type", label:"What type of home are you looking for?", multi:false, options:[
+    {v:"condo", l:"Condo"},{v:"townhome", l:"Townhome"},{v:"detached", l:"Detached Home"},
+    {v:"acreage", l:"Acreage"},{v:"luxury", l:"Luxury Home"},
+  ]},
+  {id:"budget", label:"What is your approximate budget?", multi:false, options:[
+    {v:"under-500", l:"Under $500,000"},{v:"500-750", l:"$500,000 – $750,000"},
+    {v:"750-1m", l:"$750,000 – $1M"},{v:"1m-2m", l:"$1M – $2M"},{v:"over-2m", l:"Over $2M"},
+  ]},
+  {id:"matters", label:"What matters most to you? (choose any that apply)", multi:true, options:[
+    {v:"walkability", l:"Walkability"},{v:"good-schools", l:"Good Schools"},{v:"outdoor", l:"Outdoor Recreation"},
+    {v:"quiet", l:"Quiet Neighborhoods"},{v:"restaurants", l:"Restaurants & Shopping"},{v:"transit", l:"Public Transit"},
+    {v:"commute", l:"Short Commute"},{v:"waterfront-access", l:"Waterfront Access"},{v:"low-maintenance", l:"Low-Maintenance Living"},
+    {v:"family", l:"Family Friendly"},{v:"nightlife", l:"Nightlife"},
+  ]},
+  {id:"region", label:"Where are you looking?", multi:false, options:[
+    {v:"anywhere", l:"Anywhere in British Columbia"},{v:"lower-mainland", l:"Lower Mainland"},
+    {v:"fraser-valley", l:"Fraser Valley"},{v:"sea-to-sky", l:"Sea-to-Sky"},{v:"okanagan", l:"Okanagan"},
+    {v:"vancouver-island", l:"Vancouver Island"},{v:"kootenays", l:"Kootenays"},{v:"northern-bc", l:"Northern BC"},
+  ]},
+];
+
+const WhereShouldYouLive = () => {
+  const [step, setStep] = useState(-1); // -1 = intro, 0..4 = questions, 5 = results
+  const [answers, setAnswers] = useState({lifestyle:null, home_type:null, budget:null, matters:[], region:null});
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [compare, setCompare] = useState([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const fmt = n => (typeof n === "number" && n > 0) ? "$" + Math.round(n).toLocaleString() : "—";
+  const pick = (q, v) => {
+    if (q.multi) {
+      const cur = answers[q.id] || [];
+      const next = cur.includes(v) ? cur.filter(x=>x!==v) : [...cur, v];
+      setAnswers({...answers, [q.id]: next});
+    } else {
+      setAnswers({...answers, [q.id]: v});
+      setTimeout(()=>setStep(step+1), 250);
+    }
+  };
+  const submit = async () => {
+    setLoading(true);
+    try {
+      const r = await axios.post(`${API}/community-match`, answers);
+      setResults(r.data);
+      setStep(5);
+    } catch { setResults({matches:[], disclaimer:"Something went wrong. Please try again."}); setStep(5); }
+    finally { setLoading(false); }
+  };
+  const toggleCompare = (m) => {
+    if (compare.find(c => c.slug === m.slug)) setCompare(compare.filter(c => c.slug !== m.slug));
+    else if (compare.length < 4) setCompare([...compare, m]);
+  };
+  const reset = () => { setStep(-1); setAnswers({lifestyle:null, home_type:null, budget:null, matters:[], region:null}); setResults(null); setCompare([]); setShowCompare(false); };
+
+  return (
+    <section className="section" data-testid="where-should-you-live" style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.05))"}}>
+      <div className="container-x" style={{maxWidth:"52rem"}}>
+        <div style={{textAlign:"center",marginBottom:"1.75rem"}}>
+          <div className="eyebrow" style={{color:"var(--brand-gold)"}}>📍 Community Finder</div>
+          <h2 className="section-title" style={{margin:"0.4rem 0 0.6rem"}}>Where should you live?</h2>
+          <p className="section-sub">Here are 5 quick questions to help you explore communities that may fit your preferences.</p>
+        </div>
+
+        {step === -1 && (
+          <div style={{textAlign:"center"}}>
+            <button className="btn btn-primary" onClick={()=>setStep(0)} data-testid="wsyl-start" style={{padding:"0.85rem 2rem",fontSize:"1rem"}}>Start the 5-question quiz →</button>
+            <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)"}}>Anonymous · Takes ~60 seconds · No email required</div>
+          </div>
+        )}
+
+        {step >= 0 && step <= 4 && (() => {
+          const q = WSYL_QUESTIONS[step];
+          const val = answers[q.id];
+          const chosen = q.multi ? (val || []) : val;
+          return (
+            <div className="paper" style={{padding:"1.75rem 1.5rem"}} data-testid={`wsyl-q-${q.id}`}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",fontSize:"0.78rem",color:"var(--muted)"}}>
+                <span>Question {step+1} of 5</span>
+                <div style={{display:"flex",gap:"0.25rem"}}>{[0,1,2,3,4].map(i => <div key={i} style={{width:20,height:4,borderRadius:2,background: i <= step ? "var(--brand-blue)" : "rgba(15,42,91,0.15)"}}/>)}</div>
+              </div>
+              <h3 style={{fontFamily:"Georgia,serif",fontSize:"1.35rem",margin:"0 0 1.25rem",color:"var(--brand-navy)"}}>{q.label}</h3>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:"0.55rem"}}>
+                {q.options.map(o => {
+                  const selected = q.multi ? chosen.includes(o.v) : chosen === o.v;
+                  return (
+                    <button key={o.v} type="button" onClick={()=>pick(q,o.v)} data-testid={`wsyl-opt-${q.id}-${o.v}`} style={{padding:"0.75rem 0.9rem",borderRadius:10,border:`2px solid ${selected ? "var(--brand-blue)" : "rgba(15,42,91,0.15)"}`,background:selected ? "rgba(14,165,233,0.08)" : "#fff",cursor:"pointer",textAlign:"left",fontWeight:selected ? 600 : 500,color:"var(--brand-navy)",fontSize:"0.9rem",transition:"all 0.15s"}}>
+                      {selected && "✓ "}{o.l}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{marginTop:"1.5rem",display:"flex",justifyContent:"space-between",gap:"0.5rem"}}>
+                <button className="btn btn-ghost" onClick={()=>step>0 ? setStep(step-1) : setStep(-1)} data-testid="wsyl-back">← Back</button>
+                {q.multi ? (
+                  <button className="btn btn-primary" onClick={()=>step===4 ? submit() : setStep(step+1)} data-testid="wsyl-next" disabled={q.multi && chosen.length===0}>Next →</button>
+                ) : step===4 ? (
+                  <button className="btn btn-primary" onClick={submit} disabled={!chosen || loading} data-testid="wsyl-submit">{loading ? "Finding matches…" : "Show my matches →"}</button>
+                ) : null}
+              </div>
+            </div>
+          );
+        })()}
+
+        {step === 5 && results && (
+          <div data-testid="wsyl-results">
+            {/* BCFSA-safe disclaimer at top */}
+            <div style={{background:"#FEF3C7",border:"1px solid #FDE68A",borderLeft:"4px solid #F59E0B",padding:"0.85rem 1.15rem",borderRadius:8,marginBottom:"1.5rem",fontSize:"0.85rem",color:"#78350F"}}>
+              <strong>⚠️ Suggested, not recommended.</strong> {results.disclaimer}
+            </div>
+            {results.matches.length === 0 ? (
+              <div className="paper" style={{padding:"1.5rem",textAlign:"center"}}>
+                <p style={{margin:"0 0 1rem"}}>No perfect matches for that combination. Try broadening your criteria.</p>
+                <button className="btn btn-primary" onClick={reset} data-testid="wsyl-retry">Start over</button>
+              </div>
+            ) : (
+              <>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
+                  <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>{results.matches.length} suggestion{results.matches.length===1?"":"s"} based on your answers</div>
+                  <div style={{display:"flex",gap:"0.4rem"}}>
+                    {compare.length >= 2 && <button className="btn btn-primary" onClick={()=>setShowCompare(true)} data-testid="wsyl-compare-btn" style={{fontSize:"0.82rem",padding:"0.4rem 0.9rem"}}>Compare {compare.length} communities →</button>}
+                    <button className="btn btn-ghost" onClick={reset} data-testid="wsyl-reset" style={{fontSize:"0.82rem",padding:"0.4rem 0.9rem"}}>↻ Start over</button>
+                  </div>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}>
+                  {results.matches.map(m => {
+                    const inCompare = compare.find(c => c.slug === m.slug);
+                    return (
+                      <div key={m.slug} className="paper" style={{padding:"1.25rem 1.4rem",borderLeft:`4px solid ${inCompare ? "#F59E0B" : "var(--brand-blue)"}`}} data-testid={`wsyl-match-${m.slug}`}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"1rem",flexWrap:"wrap"}}>
+                          <div style={{flex:"1 1 250px"}}>
+                            <h3 style={{fontFamily:"Georgia,serif",fontSize:"1.3rem",margin:"0 0 0.2rem",color:"var(--brand-navy)"}}>{m.name}</h3>
+                            <div style={{fontSize:"0.78rem",color:"var(--muted)",marginBottom:"0.75rem"}}>{m.region}</div>
+                            <div style={{marginBottom:"0.85rem"}}>
+                              <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"var(--brand-gold)",fontWeight:700,marginBottom:"0.3rem"}}>Why it matches</div>
+                              <ul style={{margin:0,paddingLeft:"1.1rem",fontSize:"0.88rem",color:"#111",lineHeight:1.6}}>
+                                {m.reasons.map((r,i) => <li key={i}>{r.replace(/\*\*/g,"")}</li>)}
+                              </ul>
+                            </div>
+                            <div style={{fontSize:"0.85rem",color:"#333",lineHeight:1.5,marginBottom:"0.5rem"}}><strong>Community vibe:</strong> {m.synopsis}{m.synopsis.length >= 300 ? "…" : ""}</div>
+                            <div style={{fontSize:"0.85rem",color:"#333"}}><strong>Average price range:</strong> {m.median_price ? `Median list price ${fmt(m.median_price)} · ${m.active_count} active listings` : "Data not currently available"}</div>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",flexWrap:"wrap"}}>
+                          <Link to={`/community/${m.slug}`} className="btn btn-primary" data-testid={`wsyl-view-community-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View community →</Link>
+                          <Link to={`/listings?city=${encodeURIComponent(m.name)}`} className="btn btn-ghost" data-testid={`wsyl-view-listings-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View listings →</Link>
+                          <button type="button" className="btn btn-ghost" onClick={()=>toggleCompare(m)} data-testid={`wsyl-compare-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem",borderColor: inCompare ? "#F59E0B" : undefined, color: inCompare ? "#F59E0B" : undefined}}>{inCompare ? "✓ In compare" : "+ Add to compare"}</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {showCompare && compare.length >= 2 && (
+          <div onClick={()=>setShowCompare(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}} data-testid="wsyl-compare-modal">
+            <div onClick={e=>e.stopPropagation()} style={{background:"#fff",maxWidth:1100,width:"100%",maxHeight:"90vh",overflow:"auto",borderRadius:12,padding:"1.5rem"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+                <h3 style={{margin:0,fontFamily:"Georgia,serif"}}>Compare communities ({compare.length})</h3>
+                <button className="btn btn-ghost" onClick={()=>setShowCompare(false)} data-testid="wsyl-compare-close">Close</button>
+              </div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.85rem"}}>
+                  <thead>
+                    <tr>
+                      <th style={{padding:"0.6rem",textAlign:"left",borderBottom:"2px solid var(--brand-navy)",width:"140px"}}></th>
+                      {compare.map(c => <th key={c.slug} style={{padding:"0.6rem",textAlign:"left",borderBottom:"2px solid var(--brand-navy)",fontFamily:"Georgia,serif",color:"var(--brand-navy)"}}>{c.name}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Region</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}>{c.region}</td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Median list price</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB",fontFamily:"Sora,sans-serif",fontWeight:600}}>{fmt(c.median_price)}</td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Active listings</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}>{c.active_count}</td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Why it matched</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}><ul style={{margin:0,paddingLeft:"1rem"}}>{c.reasons.map((r,i)=><li key={i}>{r.replace(/\*\*/g,"")}</li>)}</ul></td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Vibe</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB",lineHeight:1.4}}>{c.synopsis.slice(0,200)}…</td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Explore</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}><Link to={`/community/${c.slug}`} style={{color:"var(--brand-blue)",fontWeight:600,display:"block",marginBottom:"0.35rem"}}>View community →</Link><Link to={`/listings?city=${encodeURIComponent(c.name)}`} style={{color:"var(--brand-blue)",fontWeight:600}}>View listings →</Link></td>)}</tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style={{marginTop:"1rem",fontSize:"0.75rem",color:"var(--muted)",fontStyle:"italic"}}>Data from MLS® active listings via CREA DDF® feed. Median values are snapshots — not opinions of value.</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
 // --- HOME ---
 const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 
@@ -1668,6 +1869,8 @@ const Home = () => {
         <img className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
+
+    <WhereShouldYouLive/>
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>

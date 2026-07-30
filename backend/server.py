@@ -2762,6 +2762,138 @@ async def community_stats(slug: str):
     }
 
 
+# =============== COMMUNITY MATCHER (Where Should You Live?) ===============
+# Rule-based scoring against approved community synopses. BCFSA-safe: purely
+# factual matching with "Suggested, not recommended" disclaimer. PIPA-clean:
+# preferences are transient, not stored; no PII collected.
+
+# Keyword tags per lifestyle answer — matched against synopsis text (case-insensitive)
+_LIFESTYLE_TAGS = {
+    "urban":       ["downtown", "urban", "highrise", "high-rise", "city centre", "city center", "core"],
+    "suburban":    ["suburb", "suburban", "family neighbourhood", "family neighborhood", "commuter"],
+    "small-town":  ["small town", "small-town", "village", "quaint", "historic downtown"],
+    "rural":       ["acreage", "rural", "farm", "hobby farm", "equestrian", "large lot"],
+    "waterfront":  ["waterfront", "beach", "oceanfront", "lakefront", "riverfront", "marina", "seaside"],
+    "mountain":    ["mountain", "ski", "whistler", "alpine", "sea-to-sky", "recreational"],
+}
+_MATTERS_TAGS = {
+    "walkability":       ["walkable", "walkability", "pedestrian", "walk to"],
+    "good-schools":      ["schools", "school district", "family friendly", "family-friendly"],
+    "outdoor":           ["hiking", "trails", "parks", "outdoor", "recreation", "biking"],
+    "quiet":             ["quiet", "peaceful", "tranquil", "low traffic"],
+    "restaurants":       ["restaurants", "dining", "shopping", "cafes", "boutique"],
+    "transit":           ["skytrain", "transit", "bus", "canada line", "expo line"],
+    "commute":           ["commute", "commuter", "20 minutes to", "close to downtown"],
+    "waterfront-access": ["waterfront", "beach", "marina", "lake access", "ocean access"],
+    "low-maintenance":   ["condo", "strata", "low maintenance", "lock and leave"],
+    "family":            ["family", "family friendly", "family-friendly", "schools", "playground"],
+    "nightlife":         ["nightlife", "bars", "clubs", "entertainment", "live music"],
+}
+_REGION_MAP = {
+    "lower-mainland": ["Greater Vancouver", "Fraser Valley"],
+    "fraser-valley":  ["Fraser Valley"],
+    "sea-to-sky":     ["Sea-to-Sky"],
+    "okanagan":       ["Okanagan"],
+    "vancouver-island":["Vancouver Island"],
+    "kootenays":      ["Kootenays"],
+    "northern-bc":    ["Northern BC"],
+    "anywhere":       None,
+}
+_BUDGET_BRACKETS = {
+    "under-500":   (0, 500_000),
+    "500-750":     (500_000, 750_000),
+    "750-1m":      (750_000, 1_000_000),
+    "1m-2m":       (1_000_000, 2_000_000),
+    "over-2m":     (2_000_000, 99_999_999),
+}
+
+
+class CommunityMatchIn(BaseModel):
+    lifestyle: Optional[str] = None
+    home_type: Optional[str] = None
+    budget: Optional[str] = None
+    matters: List[str] = []
+    region: Optional[str] = None
+
+
+@api.post("/community-match")
+async def community_match(body: CommunityMatchIn):
+    """Rule-based community suggestions. Server never stores the preferences —
+    they're used to compute the ranking and discarded. BCFSA-safe: results
+    are marked 'suggested, not recommended'."""
+    # Region filter
+    region_names = _REGION_MAP.get(body.region or "anywhere")
+    q = {"approved": True}
+    if region_names:
+        q["region"] = {"$in": region_names}
+
+    # Pull candidates
+    candidates = []
+    async for c in db.community_synopses.find(q, {"_id": 0, "slug": 1, "name": 1, "region": 1, "synopsis": 1}):
+        candidates.append(c)
+    if not candidates:
+        # Fall back to no region filter
+        candidates = [c async for c in db.community_synopses.find({"approved": True}, {"_id": 0, "slug": 1, "name": 1, "region": 1, "synopsis": 1})]
+
+    lifestyle_tags = _LIFESTYLE_TAGS.get((body.lifestyle or "").lower(), [])
+    matters_tag_sets = [(m, _MATTERS_TAGS.get(m, [])) for m in (body.matters or [])]
+    budget_range = _BUDGET_BRACKETS.get(body.budget or "")
+
+    scored = []
+    for c in candidates:
+        synopsis_lc = (c.get("synopsis") or "").lower()
+        reasons = []
+        score = 0
+
+        # Lifestyle scoring
+        if lifestyle_tags:
+            hits = [t for t in lifestyle_tags if t in synopsis_lc]
+            if hits:
+                score += 3 * len(hits)
+                reasons.append(f"Matches your **{body.lifestyle}** lifestyle preference")
+
+        # Matters scoring — one reason per matched category
+        for mid, tags in matters_tag_sets:
+            hits = [t for t in tags if t in synopsis_lc]
+            if hits:
+                score += 2
+                label = {"walkability":"walkable streets","good-schools":"good schools","outdoor":"outdoor recreation","quiet":"quiet atmosphere","restaurants":"restaurants and shopping","transit":"public transit access","commute":"short commute","waterfront-access":"waterfront access","low-maintenance":"low-maintenance living","family":"family-friendly","nightlife":"nightlife"}.get(mid, mid)
+                reasons.append(f"Offers {label}")
+
+        # Home-type nudge (small — real filter would need listing_type per community)
+        if body.home_type == "acreage" and "acreage" in synopsis_lc:
+            score += 2; reasons.append("Has acreage properties available")
+        if body.home_type == "luxury" and any(k in synopsis_lc for k in ("luxury","estate","waterfront estate")):
+            score += 2; reasons.append("Known for luxury and estate homes")
+        if body.home_type == "condo" and any(k in synopsis_lc for k in ("condo", "highrise", "high-rise")):
+            score += 2; reasons.append("Strong condo market")
+        if body.home_type == "townhome" and "townhome" in synopsis_lc:
+            score += 1; reasons.append("Townhome inventory available")
+        if body.home_type == "detached" and any(k in synopsis_lc for k in ("detached","single-family","single family")):
+            score += 1; reasons.append("Established detached-home market")
+
+        # Budget: score if community median falls in bracket (fetch stats)
+        median_price = None
+        active_count = 0
+        if budget_range:
+            match = {"status": "Active", "city": _city_query(c["name"]), "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
+            prices = [l["list_price"] async for l in db.listings.find(match, {"list_price": 1, "_id": 0}) if l.get("list_price")]
+            prices = sorted([p for p in prices if p])
+            if prices:
+                median_price = prices[len(prices)//2]
+                active_count = len(prices)
+                lo, hi = budget_range
+                if lo <= median_price <= hi:
+                    score += 4
+                    reasons.append(f"Median list price in {c['name']} ({'$' + format(int(median_price), ',')}) fits your budget")
+
+        if score > 0:
+            scored.append({"slug": c["slug"], "name": c["name"], "region": c["region"], "synopsis": c.get("synopsis","")[:300], "median_price": median_price, "active_count": active_count, "reasons": reasons[:4], "score": score})
+
+    scored.sort(key=lambda x: -x["score"])
+    return {"matches": scored[:5], "total_candidates": len(candidates), "disclaimer": "These communities are suggested based on the preferences you have entered. They are intended to help you explore your options and are not recommendations. Always verify with a REALTOR® before making an offer."}
+
+
 # =============== MUNICIPAL ZONING ===============
 # Claude-authored plain-English list of the common residential zone codes for
 # each BC community (R-1, RM-1, RS-1, CD-1, etc.) with a short explainer per
