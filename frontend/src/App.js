@@ -2134,6 +2134,9 @@ const SavedSearchModal = ({ open, onClose, currentFilters }) => {
   const [label, setLabel] = useState("");
   const [casl, setCasl] = useState(false);
   const [pipa, setPipa] = useState(false);
+  const [optWelcome, setOptWelcome] = useState(false);
+  const [optDormant, setOptDormant] = useState(false);
+  const [optNews, setOptNews] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
@@ -2154,6 +2157,15 @@ const SavedSearchModal = ({ open, onClose, currentFilters }) => {
         email, label, filters: cleanFilters,
         casl_consent: casl, pipa_ack: pipa,
       });
+      // Per-campaign CASL opt-ins. `buyer_digest` is the campaign for this saved
+      // search; auto-opt-in because that IS the consent they just gave (checkbox
+      // wording explicitly mentions listing-alert emails). The other campaigns
+      // are separate, unchecked-by-default checkboxes below.
+      const campaigns = ["buyer_digest"];
+      if (optWelcome) campaigns.push("welcome_series");
+      if (optDormant) campaigns.push("dormant_wakeup");
+      if (optNews) campaigns.push("news_tips");
+      try { await axios.post(`${API}/campaigns/opt-in`, { email, campaigns, opt_in_text: "Saved-search modal signup — I consent to receive listing-alert emails from EZtoFind.ca (CASL).", source: "saved_search_modal" }); } catch {}
       setDone(true);
     } catch (x) {
       setErr(x?.response?.data?.detail || "Something went wrong. Please try again.");
@@ -2192,6 +2204,13 @@ const SavedSearchModal = ({ open, onClose, currentFilters }) => {
                 <input required type="checkbox" checked={pipa} onChange={e=>setPipa(e.target.checked)} data-testid="saved-search-pipa"/>
                 &nbsp;I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}} target="_blank" rel="noopener">Privacy Policy (PIPA)</Link>.
               </label></div>
+              {/* Optional per-campaign opt-ins — CASL requires separate consent per campaign. */}
+              <div style={{marginTop:"0.85rem",background:"#FEFCE8",border:"1px solid #FDE68A",borderRadius:8,padding:"0.75rem 0.9rem"}}>
+                <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"#78350F",fontWeight:700,marginBottom:"0.4rem"}}>Optional — separate consents</div>
+                <label className="check" style={{fontSize:"0.85rem",display:"block",marginBottom:"0.35rem"}}><input type="checkbox" checked={optWelcome} onChange={e=>setOptWelcome(e.target.checked)} data-testid="opt-welcome-series"/>&nbsp;Send me the 3-part welcome series (intro to Doug + site tips)</label>
+                <label className="check" style={{fontSize:"0.85rem",display:"block",marginBottom:"0.35rem"}}><input type="checkbox" checked={optDormant} onChange={e=>setOptDormant(e.target.checked)} data-testid="opt-dormant-wakeup"/>&nbsp;Nudge me if I go quiet — one market update after 30 days of inactivity</label>
+                <label className="check" style={{fontSize:"0.85rem",display:"block"}}><input type="checkbox" checked={optNews} onChange={e=>setOptNews(e.target.checked)} data-testid="opt-news-tips"/>&nbsp;Occasional EZtoFind news + tips (new BC Glossary terms, community additions)</label>
+              </div>
               {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"0.75rem",fontSize:"0.85rem"}} data-testid="saved-search-error">{err}</div>}
               <button type="submit" disabled={busy} className="btn btn-primary" style={{marginTop:"1rem",width:"100%",opacity:busy?0.6:1}} data-testid="saved-search-submit">{busy?"Sending…":"Send me the confirmation email"}</button>
             </form>
@@ -3282,6 +3301,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/snapshots")} className={active==="snapshots"?"active":""} data-testid="admin-nav-snapshots">📸 Evidence Chain</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/campaigns")} className={active==="campaigns"?"active":""} data-testid="admin-nav-campaigns">📧 Campaigns</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/copycat-detector")} className={active==="copycat"?"active":""} data-testid="admin-nav-copycat">🕵️ Copycat Detector</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/cease-desist")} className={active==="cease-desist"?"active":""} data-testid="admin-nav-cease-desist">⚡ Cease & Desist</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
@@ -4519,6 +4539,94 @@ const DataAttribution = () => (<Legal title="MLS® Data Attribution" body={<>
   </ul>
   <p>REALTOR® and MLS® are certification marks owned by the Canadian Real Estate Association (CREA) and used under license. Listing data is the property of the applicable listing brokerage and board. EZtoFind.ca does not scrape or mirror data from third-party websites — all listings shown on this site are received directly through CREA's authorized DDF® data feed and refreshed on a compliant cadence.</p>
 </>}/>);
+
+// --- Email Preferences (per-campaign CASL preference center) ---
+// Reached via a signed token in every CASL email footer:
+//   https://eztofind.ca/email-preferences?token=xyz
+// Also supports one-click campaign unsub via ?unsub=<campaign>
+const EmailPreferences = () => {
+  const [params] = useSearchParams();
+  const token = params.get("token") || "";
+  const unsubCampaign = params.get("unsub") || "";
+  const [state, setState] = useState({ loading: true, data: null, err: null });
+  const [saving, setSaving] = useState(null);   // campaign_id currently saving
+  const [autoUnsubDone, setAutoUnsubDone] = useState(false);
+  useEffect(() => {
+    if (!token) { setState({ loading: false, data: null, err: "Missing preference token. Please use the link from any EZtoFind.ca email." }); return; }
+    axios.get(`${API}/email-preferences`, { params: { token } })
+      .then(async r => {
+        // If ?unsub=<campaign> was present, auto-toggle that campaign off first
+        if (unsubCampaign && r.data.campaigns.find(c => c.id === unsubCampaign)?.opted_in && !autoUnsubDone) {
+          try {
+            await axios.post(`${API}/email-preferences/update`, { token, campaign: unsubCampaign, opt_in: false });
+            setAutoUnsubDone(true);
+            const r2 = await axios.get(`${API}/email-preferences`, { params: { token } });
+            setState({ loading: false, data: r2.data, err: null });
+          } catch { setState({ loading: false, data: r.data, err: null }); }
+        } else { setState({ loading: false, data: r.data, err: null }); }
+      })
+      .catch(x => setState({ loading: false, data: null, err: x?.response?.data?.detail || "Invalid or expired link." }));
+  }, [token, unsubCampaign]);
+  const toggle = async (campaign, opt_in) => {
+    setSaving(campaign);
+    try {
+      await axios.post(`${API}/email-preferences/update`, { token, campaign, opt_in });
+      const r = await axios.get(`${API}/email-preferences`, { params: { token } });
+      setState({ loading: false, data: r.data, err: null });
+    } catch (x) { alert("Could not save. Try again or email info@eztofind.ca."); }
+    finally { setSaving(null); }
+  };
+  const unsubAll = async () => {
+    if (!window.confirm("Unsubscribe from ALL EZtoFind.ca emails? You can re-subscribe here anytime.")) return;
+    setSaving("_all");
+    try {
+      await axios.get(`${API}/email-preferences/unsubscribe-all`, { params: { token } });
+      const r = await axios.get(`${API}/email-preferences`, { params: { token } });
+      setState({ loading: false, data: r.data, err: null });
+    } catch { alert("Could not unsubscribe. Email info@eztofind.ca for manual removal."); }
+    finally { setSaving(null); }
+  };
+  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
+    <SEO title="Email Preferences — EZtoFind.ca" description="Manage your EZtoFind.ca email preferences under CASL." path="/email-preferences"/>
+    <div className="eyebrow">Email preferences</div>
+    <h1 className="section-title">Manage your email preferences</h1>
+    <p className="section-sub">Under Canada's Anti-Spam Legislation (CASL), you can opt in or out of each email type independently. Changes take effect immediately.</p>
+    {state.loading && <p style={{marginTop:"2rem"}} data-testid="prefs-loading">Loading your preferences…</p>}
+    {state.err && !state.loading && (
+      <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1.5rem"}} data-testid="prefs-err">
+        ⚠️ {state.err}<br/><br/>You can still unsubscribe by emailing <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a>.
+      </div>
+    )}
+    {autoUnsubDone && <div className="notice" style={{background:"#F0FDF4",borderColor:"#22C55E",marginTop:"1.5rem"}} data-testid="prefs-auto-unsub">✅ You've been unsubscribed from that campaign. Manage other preferences below.</div>}
+    {state.data && (
+      <div style={{marginTop:"2rem"}} data-testid="prefs-panel">
+        <p style={{fontSize:"0.9rem",color:"var(--muted)"}}>Signed in as <strong>{state.data.email}</strong></p>
+        <div style={{marginTop:"1.5rem",display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+          {state.data.campaigns.map(c => (
+            <label key={c.id} className="paper" style={{padding:"1rem 1.25rem",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"1rem",cursor: saving===c.id?"wait":"pointer"}} data-testid={`prefs-row-${c.id}`}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,color:"var(--brand-navy)"}}>{c.label}</div>
+                <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.2rem"}}>{c.description}</div>
+              </div>
+              <input type="checkbox" checked={c.opted_in} disabled={saving===c.id}
+                onChange={e => toggle(c.id, e.target.checked)}
+                data-testid={`prefs-toggle-${c.id}`}
+                style={{width:22,height:22,cursor: saving===c.id?"wait":"pointer",accentColor:"var(--brand-blue)"}}/>
+            </label>
+          ))}
+        </div>
+        <div style={{marginTop:"2rem",padding:"1rem 1.25rem",background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:8}}>
+          <div style={{fontWeight:600,color:"#7F1D1D",marginBottom:"0.4rem"}}>Global unsubscribe</div>
+          <p style={{fontSize:"0.85rem",color:"#7F1D1D",margin:"0 0 0.75rem"}}>Kill everything at once. You can always re-subscribe here later.</p>
+          <button className="btn btn-ghost" onClick={unsubAll} disabled={saving==="_all"} data-testid="prefs-unsub-all" style={{borderColor:"#DC2626",color:"#DC2626"}}>
+            {saving==="_all" ? "Unsubscribing…" : "Unsubscribe from all EZtoFind.ca emails"}
+          </button>
+        </div>
+      </div>
+    )}
+  </div></section>);
+};
+
 
 // --- Unsubscribe (CASL) ---
 const Unsubscribe = () => {
@@ -6017,6 +6125,148 @@ const AdminSnapshots = () => {
   </AdminShell>;
 };
 
+// =============== ADMIN: CAMPAIGNS (CASL Drip Email) ===============
+// Dashboard for all 5 drip campaigns: opt-in counts, 30-day send counts,
+// pending-approval drafts for approval-gated campaigns (seller_updates, news_tips),
+// manual run/approve/release buttons.
+const AdminCampaigns = () => {
+  const {headers} = useAdmin();
+  const [stats, setStats] = useState([]);
+  const [drafts, setDrafts] = useState([]);
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const [previewDraft, setPreviewDraft] = useState(null);
+  const load = () => {
+    axios.get(`${API}/admin/campaigns/stats`, {headers}).then(r => setStats(r.data.campaigns || [])).catch(()=>{});
+    axios.get(`${API}/admin/campaigns/drafts`, {headers}).then(r => setDrafts(r.data.drafts || [])).catch(()=>{});
+  };
+  useEffect(()=>{ if(headers) load(); }, []);
+  const run = async (cid) => {
+    setBusy(cid); setMsg(null);
+    try {
+      const r = await axios.post(`${API}/admin/campaigns/${cid}/run`, {}, {headers, timeout: 60000});
+      const res = r.data.result || {};
+      const summary = res.sent !== undefined ? `sent ${res.sent} of ${res.considered || 0} opted-in users` : `prepared ${res.drafts_prepared || 0} drafts across ${res.communities || 0} communities`;
+      setMsg({ok:true, text:`✅ ${cid}: ${summary}`});
+      load();
+    } catch (x) { setMsg({ok:false, text: x?.response?.data?.detail || "Run failed"}); }
+    finally { setBusy(null); }
+  };
+  const approve = async (ids) => {
+    setBusy("_approve");
+    try { await axios.post(`${API}/admin/campaigns/drafts/approve`, {draft_ids: ids}, {headers}); setMsg({ok:true, text:`✅ Approved ${ids.length} draft(s). Click "Release" to send.`}); load(); }
+    catch(x){ setMsg({ok:false, text: x?.response?.data?.detail || "Approve failed"}); }
+    finally { setBusy(null); }
+  };
+  const reject = async (ids) => {
+    if (!window.confirm(`Reject ${ids.length} draft(s)? They won't be sent.`)) return;
+    setBusy("_reject");
+    try { await axios.post(`${API}/admin/campaigns/drafts/reject`, {draft_ids: ids}, {headers}); setMsg({ok:true, text:`Rejected ${ids.length} draft(s).`}); load(); }
+    catch(x){ setMsg({ok:false, text: x?.response?.data?.detail || "Reject failed"}); }
+    finally { setBusy(null); }
+  };
+  const release = async (cid) => {
+    if (!window.confirm(`Send all APPROVED drafts for '${cid}'? This will deliver them via Resend now.`)) return;
+    setBusy(`_release-${cid}`);
+    try { const r = await axios.post(`${API}/admin/campaigns/drafts/release`, {}, {headers, params:{campaign: cid}}); setMsg({ok:true, text:`✅ Released ${r.data.result?.sent||0} email(s) for ${cid}.`}); load(); }
+    catch(x){ setMsg({ok:false, text: x?.response?.data?.detail || "Release failed"}); }
+    finally { setBusy(null); }
+  };
+  const cadenceLabel = c => ({weekly:"Every Sunday", monthly:"1st of month", trigger:"Event-triggered", occasional:"Manual"}[c] || c);
+  const draftsByCampaign = drafts.reduce((a,d) => ({...a, [d.campaign]: [...(a[d.campaign]||[]), d]}), {});
+
+  return <AdminShell active="campaigns">
+    <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>📧 Email Campaigns</h1>
+    <p style={{color:"var(--muted)",marginTop:"0.4rem",maxWidth:"64ch"}}>CASL-compliant drip email system. Each user opts in per-campaign; every send is logged in <code>campaign_sends</code>; per-campaign unsubscribe via preference center at <code>/email-preferences</code>. Approval-gated campaigns (marked 🔒) prepare drafts you must review before release.</p>
+
+    {msg && <div className="notice" style={{background:msg.ok?"#F0FDF4":"#FEE2E2",borderColor:msg.ok?"#22C55E":"#DC2626",marginTop:"1.25rem"}} data-testid="campaigns-msg">{msg.text}</div>}
+
+    <div style={{marginTop:"1.5rem",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(320px,1fr))",gap:"1rem"}} data-testid="campaigns-grid">
+      {stats.map(s => (
+        <div key={s.id} className="paper" style={{padding:"1.25rem"}} data-testid={`campaign-card-${s.id}`}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"0.5rem"}}>
+            <div>
+              <div style={{fontSize:"0.7rem",letterSpacing:"0.08em",textTransform:"uppercase",color:"var(--muted)",fontWeight:600}}>
+                {cadenceLabel(s.cadence)} {s.requires_approval && "· 🔒 approval required"}
+              </div>
+              <div style={{fontFamily:"Georgia,serif",fontSize:"1.15rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.2rem"}}>{s.label}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:"1.25rem",marginTop:"0.9rem"}}>
+            <div><div style={{fontSize:"0.68rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"var(--muted)"}}>Opted in</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)"}}>{s.opted_in}</div></div>
+            <div><div style={{fontSize:"0.68rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"var(--muted)"}}>Sent 30d</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)"}}>{s.sends_30d}</div></div>
+            {s.requires_approval && <div><div style={{fontSize:"0.68rem",textTransform:"uppercase",letterSpacing:"0.05em",color:"#F59E0B"}}>Pending</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.5rem",fontWeight:700,color:"#F59E0B"}}>{s.pending_drafts}</div></div>}
+          </div>
+          <div style={{display:"flex",gap:"0.4rem",marginTop:"1rem",flexWrap:"wrap"}}>
+            <button className="btn btn-ghost" onClick={()=>run(s.id)} disabled={busy===s.id} data-testid={`campaign-run-${s.id}`} style={{fontSize:"0.82rem",padding:"0.4rem 0.85rem"}}>
+              {busy===s.id ? "…running" : (s.requires_approval ? "▶ Prepare drafts" : "▶ Run now")}
+            </button>
+            {s.requires_approval && s.pending_drafts > 0 && (
+              <button className="btn btn-primary" onClick={()=>release(s.id)} disabled={busy===`_release-${s.id}`} data-testid={`campaign-release-${s.id}`} style={{fontSize:"0.82rem",padding:"0.4rem 0.85rem"}}>Release approved →</button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {drafts.length > 0 && (
+      <div style={{marginTop:"3rem"}} data-testid="pending-drafts-section">
+        <h2 style={{fontFamily:"Georgia,serif",fontSize:"1.4rem"}}>🔒 Pending approval ({drafts.length})</h2>
+        <p style={{color:"var(--muted)",fontSize:"0.9rem",maxWidth:"64ch"}}>Under BCFSA AI Guidelines, drafts containing AI-generated content require your review before send. Approve individually or in bulk; only approved drafts are released.</p>
+        {Object.entries(draftsByCampaign).map(([cid, list]) => (
+          <div key={cid} style={{marginTop:"1.25rem"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.5rem"}}>
+              <h3 style={{margin:0,fontFamily:"Georgia,serif",fontSize:"1.1rem"}}>{CAMPAIGN_REGISTRY_CLIENT[cid]?.label || cid} <span style={{color:"var(--muted)",fontWeight:400}}>({list.length})</span></h3>
+              <div style={{display:"flex",gap:"0.4rem"}}>
+                <button className="btn btn-ghost" onClick={()=>approve(list.map(d=>d.id))} disabled={busy==="_approve"} data-testid={`drafts-approve-all-${cid}`} style={{fontSize:"0.78rem",padding:"0.35rem 0.75rem"}}>✓ Approve all</button>
+                <button className="btn btn-ghost" onClick={()=>reject(list.map(d=>d.id))} disabled={busy==="_reject"} data-testid={`drafts-reject-all-${cid}`} style={{fontSize:"0.78rem",padding:"0.35rem 0.75rem",color:"#DC2626",borderColor:"#DC2626"}}>✕ Reject all</button>
+              </div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:"0.4rem"}}>
+              {list.map(d => (
+                <div key={d.id} className="paper" style={{padding:"0.75rem 1rem",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"0.75rem",flexWrap:"wrap"}} data-testid={`draft-${d.id}`}>
+                  <div style={{flex:"1 1 200px",minWidth:0}}>
+                    <div style={{fontSize:"0.7rem",color:"var(--muted)"}}>{d.email}</div>
+                    <div style={{fontWeight:600,color:"var(--brand-navy)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.subject}</div>
+                  </div>
+                  <div style={{display:"flex",gap:"0.3rem"}}>
+                    <button className="btn btn-ghost" onClick={()=>setPreviewDraft(d)} data-testid={`draft-preview-${d.id}`} style={{fontSize:"0.75rem",padding:"0.3rem 0.7rem"}}>Preview</button>
+                    <button className="btn btn-ghost" onClick={()=>approve([d.id])} data-testid={`draft-approve-${d.id}`} style={{fontSize:"0.75rem",padding:"0.3rem 0.7rem"}}>✓ Approve</button>
+                    <button className="btn btn-ghost" onClick={()=>reject([d.id])} data-testid={`draft-reject-${d.id}`} style={{fontSize:"0.75rem",padding:"0.3rem 0.7rem",color:"#DC2626"}}>✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {previewDraft && (
+      <div onClick={()=>setPreviewDraft(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:"2rem"}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#fff",maxWidth:720,width:"100%",maxHeight:"90vh",overflow:"auto",borderRadius:12,padding:"1.5rem"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+            <div><div style={{fontSize:"0.72rem",color:"var(--muted)"}}>Preview draft to {previewDraft.email}</div><div style={{fontWeight:700,fontFamily:"Georgia,serif"}}>{previewDraft.subject}</div></div>
+            <button className="btn btn-ghost" onClick={()=>setPreviewDraft(null)}>Close</button>
+          </div>
+          <div dangerouslySetInnerHTML={{__html: previewDraft.html}} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1rem"}}/>
+        </div>
+      </div>
+    )}
+  </AdminShell>;
+};
+
+// Client-side copy of the campaign labels for the drafts UI (avoids extra fetch)
+const CAMPAIGN_REGISTRY_CLIENT = {
+  buyer_digest:     {label: "Weekly listing digest"},
+  seller_updates:   {label: "Monthly market update"},
+  welcome_series:   {label: "Welcome series (3 emails)"},
+  dormant_wakeup:   {label: "Dormant buyer re-engagement"},
+  news_tips:        {label: "News & tips (occasional)"},
+};
+
+
+
 // =============== ADMIN: COPYCAT DETECTOR ===============
 // Fetches a suspect URL (or accepts pasted text) and hunts for canary phrases +
 // shingle overlaps against our glossary/community/neighbourhood library. If a
@@ -6352,6 +6602,7 @@ function App() {
       <Route path="/code-of-ethics" element={<AppLayout><CodeOfEthics/></AppLayout>}/>
       <Route path="/data-attribution" element={<AppLayout><DataAttribution/></AppLayout>}/>
       <Route path="/unsubscribe" element={<AppLayout><Unsubscribe/></AppLayout>}/>
+      <Route path="/email-preferences" element={<AppLayout><EmailPreferences/></AppLayout>}/>
       <Route path="/breach-policy" element={<AppLayout><BreachPolicy/></AppLayout>}/>
       <Route path="/admin/login" element={<AdminLogin/>}/>
       <Route path="/admin" element={<AdminDash/>}/>
@@ -6373,6 +6624,7 @@ function App() {
       <Route path="/admin/definition-audit" element={<AdminDefinitionAudit/>}/>
       <Route path="/admin/policies" element={<AdminPolicies/>}/>
       <Route path="/admin/snapshots" element={<AdminSnapshots/>}/>
+      <Route path="/admin/campaigns" element={<AdminCampaigns/>}/>
       <Route path="/admin/copycat-detector" element={<AdminCopycatDetector/>}/>
       <Route path="/admin/cease-desist" element={<AdminCeaseDesist/>}/>
     </Routes>

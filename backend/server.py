@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, HTMLResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, json, uuid, logging, bcrypt, jwt, asyncio, hashlib
+import os, json, uuid, logging, bcrypt, jwt, asyncio, hashlib, urllib.parse
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal, Dict, Any
@@ -983,6 +983,17 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     doc.pop("turnstile_token", None)  # don't persist the CAPTCHA token
     await db.buyer_leads.insert_one(doc)
+    # CASL: auto-enroll into welcome_series based on the blanket consent given
+    # via the form's "I consent to receive commercial electronic messages" checkbox.
+    # welcome_series is a category of commercial message, so this is covered by
+    # that express consent. Recorded here for audit; user can opt out anytime via
+    # /email-preferences.
+    try:
+        await campaign_record_consent(lead.email, "welcome_series", request,
+            opt_in_text="Buyer lead form — I consent to receive commercial electronic messages (CASL).",
+            source="buyer_leads")
+    except Exception as e:
+        logger.warning(f"[campaigns] auto-opt welcome_series failed for buyer_leads: {e}")
     # Background translation of the visitor's free-text note (non-EN forms)
     if (lead.form_lang or "en") != "en" and (lead.notes or "").strip():
         asyncio.create_task(_translate_lead_notes("buyer_leads", lead.id, "notes", lead.notes or "", lead.form_lang or "en"))
@@ -1024,6 +1035,16 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
     doc.pop("turnstile_token", None)
     await db.seller_leads.insert_one(doc)
+    # CASL: auto-enroll into welcome_series + seller_updates based on the blanket
+    # consent given via the form. Seller leads are the primary target for the
+    # monthly market update campaign — that's why they filled out a seller form.
+    try:
+        for c in ("welcome_series", "seller_updates"):
+            await campaign_record_consent(lead.email, c, request,
+                opt_in_text="Seller lead form — I consent to receive commercial electronic messages (CASL).",
+                source="seller_leads")
+    except Exception as e:
+        logger.warning(f"[campaigns] auto-opt seller_leads failed: {e}")
     if (lead.form_lang or "en") != "en" and (lead.reason or "").strip():
         asyncio.create_task(_translate_lead_notes("seller_leads", lead.id, "reason", lead.reason or "", lead.form_lang or "en"))
     logger.info(f"Seller lead from {lead.email} (lang={lead.form_lang})")
@@ -3368,6 +3389,32 @@ async def startup():
             await _a.sleep(7 * 24 * 3600)  # weekly
     # First run 24 h after boot so redeploy-storms don't spam the mailbox
     asyncio.create_task(asyncio.sleep(24 * 3600)).add_done_callback(lambda _: asyncio.create_task(_evidence_chain_loop()))
+
+    # =============== DRIP CAMPAIGN SCHEDULERS ===============
+    # buyer_digest      → Sundays (weekly)
+    # welcome_series    → Daily scan (users hit Day 0/3/7 stages)
+    # dormant_wakeup    → Daily scan (users idle 30+ days)
+    # seller_updates    → 1st of month (PREPARES drafts, Doug approves manually)
+    async def _campaigns_daily_loop():
+        import asyncio as _a
+        # First run ~1 hour after boot to let indexes settle
+        await _a.sleep(3600)
+        while True:
+            try:
+                # Daily: welcome_series + dormant_wakeup
+                await _run_welcome_series()
+                await _run_dormant_wakeup()
+                now = datetime.now(timezone.utc)
+                # Weekly on Sundays (weekday()==6) — buyer_digest
+                if now.weekday() == 6 and 15 <= now.hour < 17:  # ~8am PT on Sunday (15:00 UTC)
+                    await _run_buyer_digest_batch()
+                # Monthly on the 1st — prepare seller_updates drafts (Doug approves manually)
+                if now.day == 1 and 15 <= now.hour < 17:
+                    await _prepare_seller_updates()
+            except Exception as e:
+                logger.error(f"[campaigns] daily loop iteration failed: {e}")
+            await _a.sleep(24 * 3600)   # once per day
+    asyncio.create_task(_campaigns_daily_loop())
 
     # Generate sitemap.xml on startup so search engines get a fresh copy
     try:
@@ -6391,6 +6438,505 @@ async def admin_copycat_scan_get(scan_id: str, _=Depends(verify_admin)):
     if not r:
         raise HTTPException(404, "Scan not found")
     return r
+
+
+# ============================================================
+# =============== CAMPAIGN / DRIP EMAIL SYSTEM ================
+# CASL-compliant multi-campaign email system. Each user has an
+# opt-in record PER CAMPAIGN (not per-site). Every send is logged.
+# Preference center allows per-campaign opt-out. Global unsub kills all.
+#
+# Campaigns (see CAMPAIGN_REGISTRY below):
+#   • buyer_digest       — Weekly Sunday listings digest (uses saved_searches)
+#   • seller_updates     — Monthly community market update (approval-gated)
+#   • welcome_series     — 3-part onboarding (Day 0, 3, 7) after any lead form
+#   • dormant_wakeup     — 30-day re-engagement (buyer leads, opt-in via buyer form)
+# ============================================================
+
+CAMPAIGN_REGISTRY: Dict[str, Dict[str, Any]] = {
+    "buyer_digest": {
+        "label": "Weekly listing digest",
+        "description": "New MLS® listings matching your saved search — every Sunday morning.",
+        "cadence": "weekly",
+        "requires_approval": False,
+        "form_checkbox_label": "Send me new listings matching my saved search (weekly digest)",
+    },
+    "seller_updates": {
+        "label": "Monthly market update",
+        "description": "Factual monthly market stats for your community (sold count, median price, YoY change).",
+        "cadence": "monthly",
+        "requires_approval": True,   # BCFSA AI-content approval gate before send
+        "form_checkbox_label": "Send me monthly market updates for my area",
+    },
+    "welcome_series": {
+        "label": "Welcome series (3 emails)",
+        "description": "A short intro to Doug, EZtoFind features, and how we can help — 3 emails over 7 days.",
+        "cadence": "trigger",   # scheduled per-user after signup
+        "requires_approval": False,
+        "form_checkbox_label": "Send me the 3-part welcome series (intro to Doug + site tips)",
+    },
+    "dormant_wakeup": {
+        "label": "Dormant buyer re-engagement",
+        "description": "If you go 30+ days without visiting, we'll send one gentle nudge with market updates.",
+        "cadence": "trigger",   # daily scan
+        "requires_approval": False,
+        "form_checkbox_label": "Nudge me if I go quiet — send a market update after 30 days of inactivity",
+    },
+    "news_tips": {
+        "label": "News & tips (occasional)",
+        "description": "Occasional EZtoFind announcements, new BC Glossary terms, community additions.",
+        "cadence": "occasional",
+        "requires_approval": True,   # every broadcast needs your click
+        "form_checkbox_label": "Send me EZtoFind news + tips (occasional)",
+    },
+}
+
+# ------------- Preference-center token helpers -------------
+def _prefs_token(email: str) -> str:
+    """Signed opaque token embedded in email preference links. Non-guessable,
+    per-user, no expiry (users need it to unsubscribe forever). Uses JWT_SECRET."""
+    return jwt.encode({"email": email.lower(), "sub": "email_prefs"}, JWT_SECRET, algorithm="HS256")
+
+def _prefs_verify(token: str) -> Optional[str]:
+    try:
+        p = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        if p.get("sub") != "email_prefs":
+            return None
+        return (p.get("email") or "").lower() or None
+    except Exception:
+        return None
+
+
+# ------------- CASL consent + send logging -------------
+async def campaign_record_consent(email: str, campaign: str, request: Optional[Request], opt_in_text: str, source: str) -> None:
+    """Record a per-campaign consent event. Idempotent — re-opting stores a
+    new record (audit trail) and sets the current status to opted_in."""
+    if campaign not in CAMPAIGN_REGISTRY:
+        return
+    meta = get_consent_meta(request) if request is not None else {"consent_ip": None, "consent_ua": None}
+    now = now_iso()
+    await db.casl_consents.insert_one({
+        "id": str(uuid.uuid4()),
+        "email": email.lower(),
+        "campaign": campaign,
+        "opt_in_at": now,
+        "opt_in_text": opt_in_text,
+        "source": source,
+        "ip": meta.get("consent_ip"),
+        "ua": meta.get("consent_ua"),
+        "status": "opted_in",
+    })
+
+async def campaign_revoke_consent(email: str, campaign: str, request: Optional[Request], reason: str = "user_unsubscribe") -> None:
+    if campaign not in CAMPAIGN_REGISTRY:
+        return
+    meta = get_consent_meta(request) if request is not None else {"consent_ip": None, "consent_ua": None}
+    await db.casl_consents.insert_one({
+        "id": str(uuid.uuid4()),
+        "email": email.lower(),
+        "campaign": campaign,
+        "opt_in_at": now_iso(),
+        "opt_in_text": None,
+        "source": reason,
+        "ip": meta.get("consent_ip"),
+        "ua": meta.get("consent_ua"),
+        "status": "revoked",
+    })
+    # Also log to the existing unsubscribe_log for the global CASL audit trail
+    await db.unsubscribe_log.insert_one({
+        "email": email.lower(),
+        "ts": now_iso(),
+        "campaign": campaign,
+        "reason": reason,
+        "ip": meta.get("consent_ip"),
+    })
+
+async def campaign_has_consent(email: str, campaign: str) -> bool:
+    """Latest consent event decides current status."""
+    doc = await db.casl_consents.find_one(
+        {"email": email.lower(), "campaign": campaign},
+        sort=[("opt_in_at", -1)],
+    )
+    return bool(doc) and doc.get("status") == "opted_in"
+
+async def campaign_record_send(email: str, campaign: str, subject: str, provider_message_id: Optional[str], meta: Optional[Dict[str, Any]] = None) -> None:
+    await db.campaign_sends.insert_one({
+        "id": str(uuid.uuid4()),
+        "email": email.lower(),
+        "campaign": campaign,
+        "subject": subject,
+        "sent_at": now_iso(),
+        "provider_message_id": provider_message_id,
+        "meta": meta or {},
+    })
+
+
+def _campaign_footer_html(email: str, campaign: str, opt_in_at: Optional[str]) -> str:
+    """Per-campaign CASL footer — sender identity + reason + per-campaign unsub
+    + preference center link. Overrides the generic email_sender footer."""
+    from services.email_sender import SENDER_NAME, SENDER_ORG, SENDER_ADDRESS, SENDER_PHONE, SENDER_EMAIL
+    token = _prefs_token(email)
+    prefs_url = f"https://eztofind.ca/email-preferences?token={token}"
+    unsub_url = f"https://eztofind.ca/email-preferences?token={token}&unsub={campaign}"
+    label = CAMPAIGN_REGISTRY.get(campaign, {}).get("label", campaign)
+    when = (opt_in_at or "").split("T")[0] or "signup"
+    return f"""
+<hr style="margin:2rem 0 1rem;border:none;border-top:1px solid #e5e7eb"/>
+<div style="font-size:12px;color:#6b7280;line-height:1.6;font-family:Inter,Arial,sans-serif">
+  <p style="margin:0 0 0.5rem"><strong>{SENDER_NAME}</strong><br/>
+  {SENDER_ORG}<br/>
+  {SENDER_ADDRESS} · {SENDER_PHONE} · <a href="mailto:{SENDER_EMAIL}" style="color:#0F2A5B">{SENDER_EMAIL}</a></p>
+  <p style="margin:0 0 0.5rem">You are receiving this because you opted in to <strong>{label}</strong> on {when} at eztofind.ca. Under CASL, you can opt out at any time.</p>
+  <p style="margin:0"><a href="{unsub_url}" style="color:#0F2A5B;text-decoration:underline">Unsubscribe from {label} (one click)</a> · <a href="{prefs_url}" style="color:#0F2A5B;text-decoration:underline">Manage all email preferences</a> · <a href="https://eztofind.ca/privacy" style="color:#0F2A5B;text-decoration:underline">Privacy (PIPA)</a></p>
+</div>
+""".strip()
+
+
+# ------------- Public: preference center endpoints -------------
+@api.get("/email-preferences")
+async def email_prefs_get(token: str):
+    """Load a user's current per-campaign opt-in status via signed token."""
+    email = _prefs_verify(token)
+    if not email:
+        raise HTTPException(400, "Invalid or expired preference link.")
+    campaigns = []
+    for cid, meta in CAMPAIGN_REGISTRY.items():
+        opted_in = await campaign_has_consent(email, cid)
+        campaigns.append({"id": cid, "label": meta["label"], "description": meta["description"], "opted_in": opted_in})
+    return {"email": email, "campaigns": campaigns}
+
+
+class EmailPrefsUpdate(BaseModel):
+    token: str
+    campaign: str
+    opt_in: bool
+
+
+@api.post("/email-preferences/update")
+async def email_prefs_update(body: EmailPrefsUpdate, request: Request):
+    email = _prefs_verify(body.token)
+    if not email:
+        raise HTTPException(400, "Invalid preference link.")
+    if body.campaign not in CAMPAIGN_REGISTRY:
+        raise HTTPException(400, "Unknown campaign.")
+    if body.opt_in:
+        opt_in_text = f"Re-subscribed to '{CAMPAIGN_REGISTRY[body.campaign]['label']}' via preference center."
+        await campaign_record_consent(email, body.campaign, request, opt_in_text, source="preference_center")
+    else:
+        await campaign_revoke_consent(email, body.campaign, request, reason="preference_center")
+    return {"success": True, "email": email, "campaign": body.campaign, "opted_in": body.opt_in}
+
+
+@api.get("/email-preferences/unsubscribe-all")
+async def email_prefs_unsub_all(token: str, request: Request):
+    """CASL 'global unsubscribe' — kills every campaign in one click."""
+    email = _prefs_verify(token)
+    if not email:
+        raise HTTPException(400, "Invalid preference link.")
+    for cid in CAMPAIGN_REGISTRY.keys():
+        await campaign_revoke_consent(email, cid, request, reason="global_unsubscribe")
+    return {"success": True, "email": email, "unsubscribed": list(CAMPAIGN_REGISTRY.keys())}
+
+
+# ------------- Campaign #1: Buyer weekly listing digest -------------
+async def _run_buyer_digest_batch(dry_run: bool = False) -> Dict[str, Any]:
+    """For each user opted into buyer_digest, find their saved searches, pull
+    up-to-5 fresh matches from the last 7 days, and send a digest.
+    Delegates listing-matching to the existing saved-search structure."""
+    from services.email_sender import send_email as _send
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    sent = 0
+    considered = 0
+    async for ss in db.saved_searches.find({"status": "verified", "unsubscribed_at": None}):
+        considered += 1
+        email = (ss.get("email") or "").lower()
+        if not email or not await campaign_has_consent(email, "buyer_digest"):
+            continue
+        filters = ss.get("filters") or {}
+        # Query: match saved-search filters AND synced_at within last 7 days
+        query = {"status": "Active", "list_price": {"$gt": 0}, "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "synced_at": {"$gte": week_ago}}
+        for k in ("city", "region", "property_type"):
+            if filters.get(k): query[k] = filters[k]
+        if filters.get("beds_min"): query["beds"] = {"$gte": int(filters["beds_min"])}
+        if filters.get("baths_min"): query["baths"] = {"$gte": int(filters["baths_min"])}
+        if filters.get("price_min") or filters.get("price_max"):
+            pr = {}
+            if filters.get("price_min"): pr["$gte"] = float(filters["price_min"])
+            if filters.get("price_max"): pr["$lte"] = float(filters["price_max"])
+            query["list_price"] = pr
+        matches = []
+        async for l in db.listings.find(query, {"_id": 0, "listing_key": 1, "street_address": 1, "city": 1, "list_price": 1, "beds": 1, "baths": 1, "photo_url": 1}).sort("synced_at", -1).limit(5):
+            matches.append(l)
+        if not matches:
+            continue
+        # Build the digest HTML
+        rows = "".join(
+            f'<tr><td style="padding:1rem 0;border-bottom:1px solid #f3f4f6"><a href="https://eztofind.ca/listing/{m["listing_key"]}" style="color:#0F2A5B;text-decoration:none"><div style="display:flex;gap:1rem;align-items:center"><img src="{m.get("photo_url","")}" alt="" style="width:100px;height:70px;object-fit:cover;border-radius:6px"/><div><div style="font-family:Sora,sans-serif;font-weight:700;color:#0F2A5B;font-size:1.15rem">${int(m.get("list_price",0)):,}</div><div style="font-size:0.9rem;color:#111">{m.get("street_address","—")}</div><div style="font-size:0.78rem;color:#6b7280">{m.get("city","")} · {m.get("beds","?")} bed · {m.get("baths","?")} bath</div></div></div></a></td></tr>'
+            for m in matches
+        )
+        opt_at = ss.get("verified_at") or ss.get("created_at")
+        html = f'<div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:2rem 1.5rem;color:#111"><div style="background:linear-gradient(135deg,#0F2A5B,#1a3a72);color:#fff;padding:1.5rem;border-radius:12px 12px 0 0"><div style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;margin-bottom:0.35rem">📍 Weekly Listing Digest</div><h2 style="margin:0;font-family:Georgia,serif;font-size:1.5rem">{len(matches)} new match{"es" if len(matches)!=1 else ""} for your saved search</h2></div><div style="background:#fff;padding:1.5rem;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px"><p style="margin:0 0 1rem">Here are the newest MLS® listings that matched your saved criteria this week:</p><table style="width:100%;border-collapse:collapse">{rows}</table><p style="margin:1.5rem 0 0"><a href="https://eztofind.ca/listings?{urllib.parse.urlencode({k:v for k,v in filters.items() if v})}" style="display:inline-block;background:#0F2A5B;color:#fff;padding:0.75rem 1.25rem;border-radius:999px;text-decoration:none;font-weight:600">See all matches →</a></p></div>{_campaign_footer_html(email, "buyer_digest", opt_at)}</div>'
+        text = f"Weekly Listing Digest — {len(matches)} new matches\n\n" + "\n".join(f'${int(m.get("list_price",0)):,} · {m.get("street_address","")} · {m.get("city","")}\nhttps://eztofind.ca/listing/{m["listing_key"]}\n' for m in matches) + f"\n\nManage preferences: https://eztofind.ca/email-preferences?token={_prefs_token(email)}"
+        subject = f"📍 {len(matches)} new listings matching your saved search"
+        if dry_run:
+            sent += 1
+            continue
+        result = await _send(db, to=email, subject=subject, html=html, text=text, kind="commercial", related_id=ss.get("id"), unsubscribe_url=f"https://eztofind.ca/email-preferences?token={_prefs_token(email)}&unsub=buyer_digest")
+        await campaign_record_send(email, "buyer_digest", subject, result.get("provider_message_id"), meta={"matches": len(matches), "saved_search_id": ss.get("id")})
+        sent += 1
+    return {"campaign": "buyer_digest", "considered": considered, "sent": sent, "dry_run": dry_run}
+
+
+# ------------- Campaign #2: Seller monthly market update -------------
+async def _prepare_seller_updates(dry_run: bool = False) -> Dict[str, Any]:
+    """Draft one email per seller lead grouped by community. STOPS BEFORE SEND:
+    inserts each draft into `campaign_drafts` with status=pending_approval.
+    Doug reviews + clicks Approve in /admin/campaigns/seller_updates/approve to release."""
+    prepared = 0
+    grouped: Dict[str, List[str]] = {}
+    async for lead in db.seller_leads.find({"unsubscribed": {"$ne": True}}, {"email": 1, "city": 1, "community": 1, "created_at": 1}):
+        email = (lead.get("email") or "").lower()
+        if not email or not await campaign_has_consent(email, "seller_updates"):
+            continue
+        community = lead.get("community") or lead.get("city")
+        if not community:
+            continue
+        grouped.setdefault(community, []).append(email)
+
+    for community, emails in grouped.items():
+        # Compute community stats using the same public endpoint logic
+        slug = community.lower().replace(" ", "-").replace(".", "")
+        try:
+            name, _region = _resolve_community(slug)
+            if not name:
+                continue
+            match = {"status": "Active", "city": _city_query(name), "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
+            active = await db.listings.count_documents(match)
+            prices = [l.get("list_price") async for l in db.listings.find(match, {"list_price": 1, "_id": 0}) if l.get("list_price")]
+            prices = sorted([p for p in prices if p])
+            median = prices[len(prices)//2] if prices else None
+        except Exception as e:
+            logger.warning(f"[seller_updates] stats failed for {community}: {e}")
+            continue
+
+        subject = f"🏡 {community} Market Update — {datetime.now(timezone.utc).strftime('%B %Y')}"
+        body_lines = [
+            f"<p><strong>{active} active listings</strong> right now in {community}.</p>",
+            f"<p>Current median list price: <strong>${int(median):,}</strong>.</p>" if median else "",
+            "<p>These are factual snapshots from the MLS® — not opinions of value. For a formal Comparative Market Analysis (CMA) tailored to your specific property, reply to this email.</p>",
+        ]
+        html_body = "".join(body_lines)
+        for email in emails:
+            # Find latest opt-in for this email
+            latest = await db.casl_consents.find_one({"email": email, "campaign": "seller_updates", "status": "opted_in"}, sort=[("opt_in_at", -1)])
+            opt_at = (latest or {}).get("opt_in_at")
+            full_html = f'<div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:2rem 1.5rem;color:#111"><div style="background:linear-gradient(135deg,#0F2A5B,#1a3a72);color:#fff;padding:1.5rem;border-radius:12px 12px 0 0"><div style="font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;margin-bottom:0.35rem">📊 Monthly Market Update</div><h2 style="margin:0;font-family:Georgia,serif;font-size:1.5rem">{community} · {datetime.now(timezone.utc).strftime("%B %Y")}</h2></div><div style="background:#fff;padding:1.5rem;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px">{html_body}</div>{_campaign_footer_html(email, "seller_updates", opt_at)}</div>'
+            full_text = f"{community} Market Update — {datetime.now(timezone.utc).strftime('%B %Y')}\n\n{active} active listings.\n" + (f"Current median list price: ${int(median):,}\n" if median else "") + "\nFactual snapshot only — not an opinion of value.\n"
+            draft = {
+                "id": str(uuid.uuid4()),
+                "campaign": "seller_updates",
+                "email": email,
+                "subject": subject,
+                "html": full_html,
+                "text": full_text,
+                "created_at": now_iso(),
+                "status": "pending_approval" if not dry_run else "dry_run",
+                "meta": {"community": community, "active": active, "median": median},
+            }
+            await db.campaign_drafts.insert_one(draft)
+            prepared += 1
+    return {"campaign": "seller_updates", "drafts_prepared": prepared, "communities": len(grouped)}
+
+
+async def _release_approved_drafts(campaign: str) -> Dict[str, Any]:
+    """Send all drafts flagged 'approved' for the given campaign."""
+    from services.email_sender import send_email as _send
+    sent = 0
+    async for d in db.campaign_drafts.find({"campaign": campaign, "status": "approved"}):
+        email = d.get("email")
+        unsub_url = f"https://eztofind.ca/email-preferences?token={_prefs_token(email)}&unsub={campaign}"
+        result = await _send(db, to=email, subject=d["subject"], html=d["html"], text=d["text"], kind="commercial", unsubscribe_url=unsub_url)
+        await campaign_record_send(email, campaign, d["subject"], result.get("provider_message_id"), meta=d.get("meta"))
+        await db.campaign_drafts.update_one({"id": d["id"]}, {"$set": {"status": "sent", "sent_at": now_iso(), "provider_message_id": result.get("provider_message_id")}})
+        sent += 1
+    return {"campaign": campaign, "sent": sent}
+
+
+# ------------- Campaign #3: Welcome series (3 emails: Day 0, 3, 7) -------------
+WELCOME_SERIES = [
+    (0, "👋 Welcome to EZtoFind.ca — I'm Doug",
+     "<p>Hi there,</p><p>Thanks for reaching out — I'm Doug LeMaire, REALTOR® in BC. I built EZtoFind.ca to make BC real estate genuinely EZ to research: no gated content, no upsells, no BS.</p><p>Two things you might not have tried yet:</p><ul><li><strong>Doogie</strong>, our AI helper — ask him anything about BC glossary terms, taxes, or how to find a listing (bottom-right icon).</li><li><strong>Saved searches</strong> — get notified when new listings match your criteria. Set one up at <a href='https://eztofind.ca/listings'>eztofind.ca/listings</a>.</li></ul><p>Reply anytime — I read every message.</p><p>— Doug</p>"),
+    (3, "📚 Have you tried the BC Glossary?",
+     "<p>Quick tip: our <a href='https://eztofind.ca/glossary'>BC Glossary</a> has 396 real estate terms explained in plain English — with links to the authoritative BC source for each.</p><p>Most useful ones:</p><ul><li><a href='https://eztofind.ca/glossary/property-transfer-tax'>Property Transfer Tax (PTT)</a> — the one everyone forgets to budget for</li><li><a href='https://eztofind.ca/glossary/strata-fees'>Strata Fees</a> — how they work, what they cover</li><li><a href='https://eztofind.ca/glossary/subject-to-clauses'>Subject-to Clauses</a> — how to protect yourself in an offer</li></ul><p>— Doug</p>"),
+    (7, "👋 Meet Doug — 60 seconds",
+     "<p>One-week check-in: I'm a BCFSA-licensed REALTOR® based in Maple Ridge, BC — 15 years in the game, specializing in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential stratas.</p><p>Primary practice areas: Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor.</p><p>Outside my service area? No problem — I run a referral network of trusted REALTOR®s across BC. Ask me anytime.</p><p>Ready to move forward? Just reply, or book a 20-min free chat: <a href='mailto:info@eztofind.ca'>info@eztofind.ca</a>.</p><p>— Doug</p>"),
+]
+
+
+async def _run_welcome_series() -> Dict[str, Any]:
+    """Daily scan: for each user opted into welcome_series, send the next email
+    in the sequence based on how many days since their signup."""
+    from services.email_sender import send_email as _send
+    sent = 0
+    considered = 0
+    # Collect the newest opt_in per email
+    seen_emails = set()
+    async for c in db.casl_consents.find({"campaign": "welcome_series", "status": "opted_in"}, sort=[("opt_in_at", -1)]):
+        email = c.get("email")
+        if email in seen_emails: continue
+        seen_emails.add(email)
+        considered += 1
+        try:
+            signup_dt = datetime.fromisoformat(c.get("opt_in_at").replace("Z", "+00:00"))
+        except Exception:
+            continue
+        days_since = (datetime.now(timezone.utc) - signup_dt).days
+        # For each stage, send only if we haven't sent it yet
+        for stage_day, subject, html_body in WELCOME_SERIES:
+            if days_since < stage_day:
+                continue
+            already = await db.campaign_sends.find_one({"email": email, "campaign": "welcome_series", "meta.stage_day": stage_day})
+            if already:
+                continue
+            html = f'<div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:2rem 1.5rem;color:#111">{html_body}{_campaign_footer_html(email, "welcome_series", c.get("opt_in_at"))}</div>'
+            text = re.sub(r"<[^>]+>", "", html_body).replace("&amp;", "&") + f"\n\nManage preferences: https://eztofind.ca/email-preferences?token={_prefs_token(email)}"
+            unsub_url = f"https://eztofind.ca/email-preferences?token={_prefs_token(email)}&unsub=welcome_series"
+            result = await _send(db, to=email, subject=subject, html=html, text=text, kind="commercial", unsubscribe_url=unsub_url)
+            await campaign_record_send(email, "welcome_series", subject, result.get("provider_message_id"), meta={"stage_day": stage_day})
+            sent += 1
+            # Only send one stage per run
+            break
+    return {"campaign": "welcome_series", "considered": considered, "sent": sent}
+
+
+# ------------- Campaign #4: Dormant buyer wake-up -------------
+async def _run_dormant_wakeup() -> Dict[str, Any]:
+    """Daily scan: buyers opted-in to dormant_wakeup who haven't had ANY email
+    activity in 30+ days. Sends one gentle nudge."""
+    from services.email_sender import send_email as _send
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    sent = 0
+    considered = 0
+    seen = set()
+    async for c in db.casl_consents.find({"campaign": "dormant_wakeup", "status": "opted_in"}, sort=[("opt_in_at", -1)]):
+        email = c.get("email")
+        if email in seen: continue
+        seen.add(email)
+        considered += 1
+        # Skip if we've sent them a wake-up in the last 30 days (avoid spam)
+        recent = await db.campaign_sends.find_one({"email": email, "campaign": "dormant_wakeup", "sent_at": {"$gte": cutoff}})
+        if recent: continue
+        # Skip if they've received ANY campaign send in the last 30 days
+        recent_any = await db.campaign_sends.find_one({"email": email, "sent_at": {"$gte": cutoff}})
+        if recent_any: continue
+        # Try to grab their saved-search city for personalization
+        ss = await db.saved_searches.find_one({"email": email, "status": "verified", "unsubscribed_at": None})
+        city = (ss or {}).get("filters", {}).get("city") or "your area"
+        subject = f"👋 Still looking in {city}? Here's what changed this month"
+        body_html = f"<p>Hi again — Doug here.</p><p>It's been a while since we caught up. I don't want to spam you, so this is a one-off nudge (unless you tell me otherwise).</p><p><strong>{city}</strong> market has moved. If you're still exploring, reply and I'll send you 3 fresh listings hand-picked for what you told me.</p><p>Or — if you've decided to pause your search, just click the unsubscribe link below. No hard feelings.</p><p>— Doug</p>"
+        html = f'<div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:2rem 1.5rem;color:#111">{body_html}{_campaign_footer_html(email, "dormant_wakeup", c.get("opt_in_at"))}</div>'
+        text = re.sub(r"<[^>]+>", "", body_html) + f"\n\nManage preferences: https://eztofind.ca/email-preferences?token={_prefs_token(email)}"
+        unsub_url = f"https://eztofind.ca/email-preferences?token={_prefs_token(email)}&unsub=dormant_wakeup"
+        result = await _send(db, to=email, subject=subject, html=html, text=text, kind="commercial", unsubscribe_url=unsub_url)
+        await campaign_record_send(email, "dormant_wakeup", subject, result.get("provider_message_id"), meta={"city": city})
+        sent += 1
+    return {"campaign": "dormant_wakeup", "considered": considered, "sent": sent}
+
+
+# ------------- Admin: campaign management -------------
+@api.post("/admin/campaigns/{campaign}/run")
+async def admin_campaign_run(campaign: str, request: Request, _=Depends(verify_admin)):
+    """Manually trigger a campaign run. For approval-gated campaigns (seller_updates,
+    news_tips), this only PREPARES drafts — Doug still has to approve before send."""
+    dispatch = {
+        "buyer_digest": _run_buyer_digest_batch,
+        "seller_updates": _prepare_seller_updates,
+        "welcome_series": _run_welcome_series,
+        "dormant_wakeup": _run_dormant_wakeup,
+    }
+    if campaign not in dispatch:
+        raise HTTPException(400, f"Unknown campaign: {campaign}")
+    result = await dispatch[campaign]()
+    return {"success": True, "result": result}
+
+
+@api.get("/admin/campaigns/drafts")
+async def admin_campaign_drafts(campaign: Optional[str] = None, _=Depends(verify_admin)):
+    """List all pending-approval drafts (approval-gated campaigns)."""
+    q = {"status": "pending_approval"}
+    if campaign: q["campaign"] = campaign
+    out = []
+    async for d in db.campaign_drafts.find(q, {"_id": 0}).sort("created_at", -1).limit(500):
+        out.append(d)
+    return {"drafts": out}
+
+
+class DraftAction(BaseModel):
+    draft_ids: List[str]
+
+
+@api.post("/admin/campaigns/drafts/approve")
+async def admin_campaign_drafts_approve(body: DraftAction, _=Depends(verify_admin)):
+    r = await db.campaign_drafts.update_many({"id": {"$in": body.draft_ids}, "status": "pending_approval"}, {"$set": {"status": "approved", "approved_at": now_iso()}})
+    return {"approved": r.modified_count}
+
+
+@api.post("/admin/campaigns/drafts/reject")
+async def admin_campaign_drafts_reject(body: DraftAction, _=Depends(verify_admin)):
+    r = await db.campaign_drafts.update_many({"id": {"$in": body.draft_ids}, "status": "pending_approval"}, {"$set": {"status": "rejected", "rejected_at": now_iso()}})
+    return {"rejected": r.modified_count}
+
+
+@api.post("/admin/campaigns/drafts/release")
+async def admin_campaign_drafts_release(campaign: str, _=Depends(verify_admin)):
+    """Send all approved drafts for a campaign."""
+    result = await _release_approved_drafts(campaign)
+    return {"success": True, "result": result}
+
+
+@api.get("/admin/campaigns/stats")
+async def admin_campaign_stats(_=Depends(verify_admin)):
+    """Dashboard summary — opt-in counts + send counts per campaign."""
+    stats = []
+    for cid, meta in CAMPAIGN_REGISTRY.items():
+        opted_in = 0
+        seen = set()
+        async for c in db.casl_consents.find({"campaign": cid, "status": "opted_in"}, sort=[("opt_in_at", -1)]):
+            e = c.get("email")
+            if e in seen: continue
+            seen.add(e)
+            # Only count as active if latest event was opt-in (not revoked)
+            latest = await db.casl_consents.find_one({"email": e, "campaign": cid}, sort=[("opt_in_at", -1)])
+            if latest and latest.get("status") == "opted_in":
+                opted_in += 1
+        sends_30d = await db.campaign_sends.count_documents({"campaign": cid, "sent_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()}})
+        pending = await db.campaign_drafts.count_documents({"campaign": cid, "status": "pending_approval"})
+        stats.append({"id": cid, "label": meta["label"], "cadence": meta["cadence"], "requires_approval": meta["requires_approval"], "opted_in": opted_in, "sends_30d": sends_30d, "pending_drafts": pending})
+    return {"campaigns": stats}
+
+
+# ------------- Signup helper (called by existing lead endpoints) -------------
+class CampaignSignup(BaseModel):
+    email: str
+    campaigns: List[str] = []   # e.g. ["buyer_digest", "welcome_series"]
+    opt_in_text: str = "Opted in via signup form."
+    source: str = "lead_form"
+
+
+@api.post("/campaigns/opt-in")
+async def campaigns_opt_in(body: CampaignSignup, request: Request):
+    """Public endpoint used by existing signup forms to record per-campaign
+    consents. All emails are lowercased. Unknown campaigns are silently
+    dropped (defensive against tampering)."""
+    email = (body.email or "").lower().strip()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Valid email required.")
+    accepted = []
+    for c in body.campaigns:
+        if c in CAMPAIGN_REGISTRY:
+            await campaign_record_consent(email, c, request, body.opt_in_text, source=body.source)
+            accepted.append(c)
+    return {"success": True, "email": email, "accepted": accepted}
 
 
 app.include_router(api)

@@ -298,6 +298,32 @@ Extended the Doogie AI chat launcher to tailor its opening greeting to returning
 - Reads `ez_last_community`, `ez_last_search`, and `ez_favorites` from localStorage on mount (device-only)
 - If user has a last-viewed community: *"Welcome back! 🐾 Any new questions about Kitsilano?"* + a follow-up tailored to whether they have favorites or a saved search
 - If no community but has a last search: *"Welcome back! 🐾 Want to see new listings in Vancouver, or shall we look somewhere else?"*
+
+## Jul 30, 2026 — CASL-Compliant Drip Email System (4 Campaigns)
+Built full drip-email infrastructure with per-campaign opt-in, approval gates for AI content, and a public preference center.
+
+**Campaigns shipped:**
+1. `buyer_digest` (Weekly Sundays 8am PT) — MLS® listings matching saved search
+2. `seller_updates` (Monthly 1st, 🔒 approval-gated) — factual community market stats
+3. `welcome_series` (Day 0/3/7 after lead form) — 3-part onboarding
+4. `dormant_wakeup` (Daily scan) — nudge users idle 30+ days
+5. `news_tips` (Manual, 🔒 approval-gated) — occasional announcements
+
+**Backend:** New `casl_consents`, `campaign_sends`, `campaign_drafts` collections. `CAMPAIGN_REGISTRY` config. Per-campaign helpers (record/revoke/has/log). Signed-token JWT preference center. Per-campaign CASL footer. 4 campaign runners. Daily background scheduler loop (welcome+dormant daily, buyer_digest Sundays 15:00-17:00 UTC, seller_updates monthly 1st). Auto-opt-in hooks in buyer_leads/seller_leads endpoints tied to existing casl_consent checkbox.
+
+**New public endpoints:** `GET/POST /api/email-preferences`, `GET /api/email-preferences/unsubscribe-all`, `POST /api/campaigns/opt-in`.
+**New admin endpoints:** `/api/admin/campaigns/{campaign}/run`, `/api/admin/campaigns/drafts` (GET), `/drafts/approve`, `/drafts/reject`, `/drafts/release`, `/api/admin/campaigns/stats`.
+
+**Frontend:** New `/email-preferences?token=...` public preference center (also handles `?unsub=<campaign>` one-click). New `/admin/campaigns` dashboard with 5 campaign cards + pending-drafts approval queue + preview modal. Extended saved-search modal with 3 additional per-campaign checkboxes (all unchecked by default per CASL).
+
+**Compliance guardrails baked in:**
+- Rule 1 (per-campaign consent): Each opt-in is a separate `casl_consents` record with campaign field
+- Rule 2 (email requirements): Every campaign email uses `_campaign_footer_html()` → sender identity + reason line + one-click unsub + preference center link
+- Rule 3 (per-campaign unsub): Preference center toggles individual campaigns; global unsub kills all
+- Rule 4 (retention): `casl_consents` collection retains all opt-in/opt-out events; existing `unsubscribe_log` also logged
+- Rule 5 (no bonus broadcasts): Every send checks `campaign_has_consent()` before delivering; approval gate on `news_tips` prevents ad-hoc blasts
+
+**Verified via curl:** opt-in → preference center read → campaign run → send logged → per-campaign unsub → preference center reflects update. Admin dashboard screenshot confirmed rendering.
 - If neither: falls back to the standard first-time-visitor greeting (unchanged for new users)
 - Respects the same "session"/Personalization cookie category — if user disabled it, greeting is generic
 - All in the DoogieChat component's `_initialGreeting()` helper (~25 lines)
