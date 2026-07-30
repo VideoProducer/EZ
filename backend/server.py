@@ -85,6 +85,17 @@ else:
 app = FastAPI(title="EZtoFind.ca API")
 api = APIRouter(prefix="/api")
 
+# CORS middleware — required for cross-origin API access when frontend and
+# backend are hosted on different domains. Reads allowed origins from
+# CORS_ORIGINS env var (comma-separated); defaults to "*" for wildcard.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # =============== RATE LIMITING (defined early so @_limiter.limit works on ANY route below) ===============
 # CREA Rules require anti-scraping controls on MLS® endpoints. We also protect Doogie
 # (Anthropic-billed) and lead-form endpoints against bot abuse.
