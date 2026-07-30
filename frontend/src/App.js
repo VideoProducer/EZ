@@ -804,7 +804,6 @@ const Footer = () => (
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
-        <li><Link to="/find-realtor" data-testid="footer-find-realtor">Find a REALTOR® (Canada-wide)</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
         <li><Link to="/realtors">BC REALTORS®</Link></li>
@@ -1370,8 +1369,9 @@ const WSYL_QUESTIONS = [
   ]},
   {id:"region", label:"Where are you looking?", multi:false, options:[
     {v:"anywhere", l:"Anywhere in British Columbia"},{v:"lower-mainland", l:"Lower Mainland"},
-    {v:"fraser-valley", l:"Fraser Valley"},{v:"sea-to-sky", l:"Sea-to-Sky"},{v:"okanagan", l:"Okanagan"},
-    {v:"vancouver-island", l:"Vancouver Island"},{v:"kootenays", l:"Kootenays"},{v:"northern-bc", l:"Northern BC"},
+    {v:"fraser-valley", l:"Fraser Valley"},{v:"okanagan", l:"Okanagan"},
+    {v:"vancouver-island", l:"Vancouver Island"},{v:"kootenays", l:"Kootenays"},
+    {v:"northern-bc", l:"Northern BC"},{v:"have-city", l:"I already have a city or region in mind"},
   ]},
 ];
 
@@ -1389,8 +1389,13 @@ const WhereShouldYouLive = () => {
       const next = cur.includes(v) ? cur.filter(x=>x!==v) : [...cur, v];
       setAnswers({...answers, [q.id]: next});
     } else {
-      setAnswers({...answers, [q.id]: v});
-      setTimeout(()=>setStep(step+1), 250);
+      const nextAnswers = {...answers, [q.id]: v};
+      setAnswers(nextAnswers);
+      // Last question (step 4, region): don't auto-advance — user must click
+      // "Show my matches →" so submit() runs. Otherwise auto-advance to next Q.
+      if (step < 4) {
+        setTimeout(()=>setStep(step+1), 250);
+      }
     }
   };
   const submit = async () => {
@@ -2272,10 +2277,6 @@ const Listings = () => {
         <div className="eyebrow">Live MLS® Listings</div>
         <h1 className="section-title">British Columbia Real Estate — Search MLS® Listings</h1>
         <p className="section-sub" style={{maxWidth:820,margin:"0 auto"}}>Search live MLS® listings across British Columbia. Prices and availability are updated every 4 hours direct from CREA.</p>
-        <div data-testid="find-realtor-banner" style={{marginTop:"1rem",display:"inline-flex",alignItems:"center",gap:"0.6rem",background:"#F5F0E1",border:"1px solid var(--brand-gold)",borderRadius:999,padding:"0.5rem 1.1rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--brand-navy)"}}>
-          <span style={{fontSize:"1.05rem"}}>🍁</span>
-          <span>Looking outside BC? <Link to="/find-realtor" data-testid="listings-find-realtor-link" style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}}>Find a vetted REALTOR® anywhere in Canada →</Link></span>
-        </div>
         {results.using_mock_data && (
           <div style={{background:"#FEF3C7",border:"1px solid #F59E0B",color:"#92400E",padding:"0.65rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",display:"inline-block",marginTop:"0.75rem",fontWeight:600}} data-testid="mock-data-banner">
             🟡 DEMO MODE — Showing 15 sample listings. Live CREA DDF® feed will replace these once credentials are provisioned.
@@ -3556,7 +3557,6 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
-      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💼 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/clients")} className={active==="clients"?"active":""} data-testid="admin-nav-clients">📇 CRM Clients</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminders")} className={active==="reminders"?"active":""} data-testid="admin-nav-reminders">🎂 Reminders</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminder-templates")} className={active==="rem-templates"?"active":""} data-testid="admin-nav-rem-templates">📧 Reminder Templates</a>
@@ -3638,261 +3638,6 @@ const AdminList = ({title,url,cols,active}) => {
     <table className="admin-table"><thead><tr>{cols.map(c=><th key={c[0]}>{c[1]}</th>)}</tr></thead>
       <tbody>{rows.length===0 ? <tr><td colSpan={cols.length} style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No records yet.</td></tr> : rows.map((r,i)=><tr key={i}>{cols.map(c=><td key={c[0]}>{typeof r[c[0]]==="boolean"? (r[c[0]]?"Yes":"No") : Array.isArray(r[c[0]])? r[c[0]].join(", ") : (r[c[0]]||"—")}</td>)}</tr>)}</tbody>
     </table>
-  </AdminShell>;
-};
-
-// --- Admin Referrals CRM (Model A monetization pipeline) ---
-// Kanban-style tracker for every outbound referral Doug hands off. Each row is
-// editable inline; the "Est. fee" column auto-recomputes from expected price
-// × commission % × referral split %. See backend /admin/referrals endpoints.
-const REFERRAL_STATUSES = [
-  { key:"new",              label:"New",             color:"#2563EB" },
-  { key:"assigned",         label:"Assigned",        color:"#7C3AED" },
-  { key:"contacted",        label:"Contacted",       color:"#0891B2" },
-  { key:"working",          label:"Working",         color:"#059669" },
-  { key:"offer_accepted",   label:"Offer accepted",  color:"#D97706" },
-  { key:"closed_won",       label:"Closed (won)",    color:"#15803D" },
-  { key:"paid",             label:"Paid ✓",          color:"#166534" },
-  { key:"closed_lost",      label:"Closed (lost)",   color:"#6B7280" },
-  { key:"cancelled",        label:"Cancelled",       color:"#9CA3AF" },
-];
-const referralStatusMeta = (k) => REFERRAL_STATUSES.find(s => s.key === k) || REFERRAL_STATUSES[0];
-
-const _fmtMoney = (n) => (Number(n)||0).toLocaleString(undefined, {style:"currency", currency:"CAD", maximumFractionDigits:0});
-
-const AdminReferrals = () => {
-  const {headers} = useAdmin();
-  const [rows, setRows] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [provinceFilter, setProvinceFilter] = useState("");
-  const [realtors, setRealtors] = useState([]);
-  const [editing, setEditing] = useState(null);       // full referral doc being edited
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  const load = async () => {
-    setBusy(true);
-    try {
-      const q = [];
-      if (statusFilter) q.push(`status=${encodeURIComponent(statusFilter)}`);
-      if (provinceFilter) q.push(`province=${encodeURIComponent(provinceFilter)}`);
-      const url = `${API}/admin/referrals${q.length?`?${q.join("&")}`:""}`;
-      const [r, s, rl] = await Promise.all([
-        axios.get(url, {headers}),
-        axios.get(`${API}/admin/referrals/stats`, {headers}),
-        axios.get(`${API}/admin/realtors`, {headers}).catch(()=>({data:[]})),
-      ]);
-      setRows(r.data || []);
-      setStats(s.data || null);
-      setRealtors((rl.data || []).filter(x => (x.status || "pending") === "approved" || x.stage === "profile"));
-    } finally { setBusy(false); }
-  };
-
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [statusFilter, provinceFilter]);
-
-  const save = async () => {
-    if (!editing) return;
-    setBusy(true); setMsg("");
-    try {
-      const payload = {
-        status: editing.status,
-        assigned_realtor_id: editing.assigned_realtor_id || null,
-        assigned_realtor_name: editing.assigned_realtor_name || "",
-        assigned_realtor_email: editing.assigned_realtor_email || "",
-        expected_price: Number(editing.expected_price) || 0,
-        commission_pct: Number(editing.commission_pct) || 0,
-        referral_split_pct: Number(editing.referral_split_pct) || 0,
-        actual_fee_collected: Number(editing.actual_fee_collected) || 0,
-        close_date: editing.close_date || null,
-        paid_date: editing.paid_date || null,
-        notes: editing.notes || "",
-      };
-      await axios.patch(`${API}/admin/referrals/${editing.id}`, payload, {headers});
-      setMsg("Saved ✓");
-      setEditing(null);
-      await load();
-    } catch (e) {
-      setMsg(e?.response?.data?.detail || "Save failed");
-    } finally { setBusy(false); }
-  };
-
-  const del = async (id) => {
-    if (!window.confirm("Delete this referral permanently?")) return;
-    await axios.delete(`${API}/admin/referrals/${id}`, {headers});
-    await load();
-  };
-
-  const backfill = async () => {
-    if (!window.confirm("Import all existing 'referral request' buyer_leads into the Referrals CRM?\n\nThis is safe — it skips any lead that already has a matching referral. Legacy BC out-of-area referrals will be imported as province='British Columbia'.")) return;
-    setBusy(true); setMsg("");
-    try {
-      const r = await axios.post(`${API}/admin/referrals/backfill`, {}, {headers});
-      setMsg(`Imported ${r.data.created} new · Skipped ${r.data.skipped}`);
-      await load();
-    } catch (e) {
-      setMsg(e?.response?.data?.detail || "Backfill failed");
-    } finally { setBusy(false); }
-  };
-
-  const applyRealtor = (rid) => {
-    const r = realtors.find(x => x.id === rid);
-    setEditing(prev => ({
-      ...prev,
-      assigned_realtor_id: rid || null,
-      assigned_realtor_name: r ? r.full_name : "",
-      assigned_realtor_email: r ? r.email : "",
-    }));
-  };
-
-  const provinceOpts = stats?.by_province ? Object.keys(stats.by_province).sort() : [];
-
-  return <AdminShell active="referrals">
-    <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,display:"flex",alignItems:"center",gap:"0.7rem"}}>
-      💼 Referrals CRM
-      <span style={{fontSize:"0.9rem",fontWeight:400,color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>National pipeline · 25% referral fee tracking</span>
-    </h1>
-
-    {/* Stats bar */}
-    {stats && (
-      <div className="stat-grid" data-testid="referrals-stats" style={{gridTemplateColumns:"repeat(4, minmax(0,1fr))",gap:"1rem",marginTop:"1.25rem",marginBottom:"1.75rem",display:"grid"}}>
-        <div className="paper" style={{textAlign:"center"}}>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-blue)"}} data-testid="stat-total-open">{stats.total_open}</div>
-          <div style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>Open referrals</div>
-        </div>
-        <div className="paper" style={{textAlign:"center"}}>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"#059669"}} data-testid="stat-pipeline-value">{_fmtMoney(stats.pipeline_est_value)}</div>
-          <div style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>Estimated pipeline fee</div>
-        </div>
-        <div className="paper" style={{textAlign:"center"}}>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"#166534"}} data-testid="stat-collected">{_fmtMoney(stats.collected_ytd)}</div>
-          <div style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>Collected YTD</div>
-        </div>
-        <div className="paper" style={{textAlign:"center"}}>
-          <div style={{fontSize:"2.2rem",fontWeight:700,color:"var(--brand-gold)"}} data-testid="stat-paid">{stats.total_paid}</div>
-          <div style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>Deals paid</div>
-        </div>
-      </div>
-    )}
-
-    {/* Filters */}
-    <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",alignItems:"center",marginBottom:"1rem",fontFamily:"Inter,sans-serif"}}>
-      <label style={{display:"flex",alignItems:"center",gap:"0.4rem",fontSize:"0.9rem"}}>Status:
-        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} data-testid="filter-status" style={{padding:"0.35rem 0.6rem"}}>
-          <option value="">All</option>
-          {REFERRAL_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-        </select>
-      </label>
-      <label style={{display:"flex",alignItems:"center",gap:"0.4rem",fontSize:"0.9rem"}}>Province:
-        <select value={provinceFilter} onChange={e=>setProvinceFilter(e.target.value)} data-testid="filter-province" style={{padding:"0.35rem 0.6rem"}}>
-          <option value="">All</option>
-          {provinceOpts.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </label>
-      <button className="btn btn-ghost" onClick={load} disabled={busy} style={{fontSize:"0.85rem",padding:"0.4rem 0.9rem"}} data-testid="referrals-refresh">↻ Refresh</button>
-      <button className="btn btn-ghost" onClick={backfill} disabled={busy} style={{fontSize:"0.85rem",padding:"0.4rem 0.9rem"}} data-testid="referrals-backfill">⬇ Import legacy referrals</button>
-      {msg && <span style={{color:"var(--muted)",fontSize:"0.9rem"}} data-testid="referrals-msg">{msg}</span>}
-    </div>
-
-    {/* Table */}
-    <table className="admin-table" data-testid="referrals-table">
-      <thead><tr>
-        <th>Received</th><th>Client</th><th>Location</th><th>Intent</th><th>Status</th>
-        <th>Assigned to</th><th>Est. fee</th><th>Paid</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr><td colSpan="9" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>
-            No referrals yet. Once visitors submit the <Link to="/find-realtor" style={{color:"var(--brand-blue)"}}>/find-realtor</Link> form or the <Link to="/referral-request" style={{color:"var(--brand-blue)"}}>BC referral form</Link>, they'll appear here. Existing lead records can be imported via "Import legacy referrals" above.
-          </td></tr>
-        ) : rows.map(r => {
-          const m = referralStatusMeta(r.status);
-          return <tr key={r.id} data-testid={`referral-row-${r.id}`}>
-            <td>{(r.created_at||"").slice(0,10)}</td>
-            <td>
-              <div style={{fontWeight:600}}>{r.client_name}</div>
-              <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>{r.client_email}</div>
-              {r.client_phone && <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>{r.client_phone}</div>}
-            </td>
-            <td>
-              <div>{r.city || "—"}</div>
-              <div style={{fontSize:"0.8rem",color:"var(--muted)"}}>{r.province}</div>
-            </td>
-            <td style={{textTransform:"capitalize"}}>{r.intent}</td>
-            <td><span style={{display:"inline-block",padding:"0.2rem 0.6rem",borderRadius:"999px",fontSize:"0.75rem",fontWeight:600,background:`${m.color}20`,color:m.color}}>{m.label}</span></td>
-            <td>
-              {r.assigned_realtor_name ? <>
-                <div style={{fontSize:"0.85rem"}}>{r.assigned_realtor_name}</div>
-                <div style={{fontSize:"0.75rem",color:"var(--muted)"}}>{r.assigned_realtor_email}</div>
-              </> : <span style={{color:"var(--muted)",fontSize:"0.85rem"}}>— unassigned —</span>}
-            </td>
-            <td style={{whiteSpace:"nowrap"}}>{r.estimated_fee ? _fmtMoney(r.estimated_fee) : "—"}</td>
-            <td style={{whiteSpace:"nowrap",color:r.actual_fee_collected?"#166534":"var(--muted)"}}>{r.actual_fee_collected ? _fmtMoney(r.actual_fee_collected) : "—"}</td>
-            <td>
-              <button className="btn btn-ghost" onClick={()=>setEditing({...r})} data-testid={`edit-${r.id}`} style={{fontSize:"0.8rem",padding:"0.3rem 0.65rem"}}>Edit</button>
-              <button className="btn btn-ghost" onClick={()=>del(r.id)} data-testid={`delete-${r.id}`} style={{fontSize:"0.8rem",padding:"0.3rem 0.65rem",color:"#DC2626"}}>Delete</button>
-            </td>
-          </tr>;
-        })}
-      </tbody>
-    </table>
-
-    {/* Edit drawer */}
-    {editing && (
-      <div style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem"}} onClick={()=>setEditing(null)}>
-        <div className="paper" style={{maxWidth:"640px",width:"100%",maxHeight:"92vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()} data-testid="referral-edit-drawer">
-          <h2 className="font-display" style={{marginTop:0,fontSize:"1.5rem"}}>Edit referral · {editing.client_name}</h2>
-          <div style={{color:"var(--muted)",fontSize:"0.88rem",marginBottom:"1.25rem",fontFamily:"Inter,sans-serif"}}>
-            {editing.city ? `${editing.city}, ${editing.province}` : editing.province} · {editing.intent} · Received {(editing.created_at||"").slice(0,10)}
-          </div>
-
-          <div className="form-grid">
-            <div className="field"><label>Status</label>
-              <select value={editing.status} onChange={e=>setEditing({...editing, status:e.target.value})} data-testid="edit-status">
-                {REFERRAL_STATUSES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
-            </div>
-            <div className="field"><label>Assign partner REALTOR®</label>
-              <select value={editing.assigned_realtor_id || ""} onChange={e=>applyRealtor(e.target.value)} data-testid="edit-realtor">
-                <option value="">— Unassigned —</option>
-                {realtors.map(r => <option key={r.id} value={r.id}>{r.full_name} ({r.brokerage || "—"})</option>)}
-              </select>
-              {realtors.length === 0 && <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.35rem"}}>No approved partners yet. Approve applications in <Link to="/admin/realtors" style={{color:"var(--brand-blue)"}}>REALTORS®</Link>.</div>}
-            </div>
-            <div className="field"><label>Expected price (CAD)</label>
-              <input type="number" value={editing.expected_price||0} onChange={e=>setEditing({...editing, expected_price:e.target.value})} data-testid="edit-price"/>
-            </div>
-            <div className="field"><label>Gross commission %</label>
-              <input type="number" step="0.1" value={editing.commission_pct||0} onChange={e=>setEditing({...editing, commission_pct:e.target.value})} data-testid="edit-commission"/>
-            </div>
-            <div className="field"><label>Referral split % (Doug's share)</label>
-              <input type="number" step="1" value={editing.referral_split_pct||0} onChange={e=>setEditing({...editing, referral_split_pct:e.target.value})} data-testid="edit-split"/>
-            </div>
-            <div className="field"><label>Estimated fee (auto)</label>
-              <input readOnly value={_fmtMoney(((Number(editing.expected_price)||0) * (Number(editing.commission_pct)||0) / 100 * (Number(editing.referral_split_pct)||0) / 100))} data-testid="edit-est-fee" style={{background:"#F3F4F6"}}/>
-            </div>
-            <div className="field"><label>Actual fee collected (CAD)</label>
-              <input type="number" value={editing.actual_fee_collected||0} onChange={e=>setEditing({...editing, actual_fee_collected:e.target.value})} data-testid="edit-actual-fee"/>
-            </div>
-            <div className="field"><label>Close date</label>
-              <input type="date" value={editing.close_date||""} onChange={e=>setEditing({...editing, close_date:e.target.value})} data-testid="edit-close-date"/>
-            </div>
-            <div className="field"><label>Paid date</label>
-              <input type="date" value={editing.paid_date||""} onChange={e=>setEditing({...editing, paid_date:e.target.value})} data-testid="edit-paid-date"/>
-            </div>
-          </div>
-          <div className="field" style={{marginTop:"1rem"}}>
-            <label>Notes</label>
-            <textarea rows="4" value={editing.notes||""} onChange={e=>setEditing({...editing, notes:e.target.value})} data-testid="edit-notes"/>
-          </div>
-
-          <div style={{display:"flex",gap:"0.75rem",marginTop:"1.5rem",justifyContent:"flex-end"}}>
-            <button className="btn btn-ghost" onClick={()=>setEditing(null)} data-testid="edit-cancel">Cancel</button>
-            <button className="btn btn-primary" onClick={save} disabled={busy} data-testid="edit-save">{busy?"Saving…":"Save changes"}</button>
-          </div>
-        </div>
-      </div>
-    )}
   </AdminShell>;
 };
 
@@ -4600,134 +4345,6 @@ const ReferralRequest = () => {
       <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="referral-submit">{t("ref.submit")}</button>
     </form>
   </div></section>);
-};
-
-// --- Find a REALTOR® — nationwide out-of-province referral routing page ("Model A") ---
-// This is a Canadian-wide referral request form. Distinct from /referral-request,
-// which is BC-focused (Doug's home province). This new page captures out-of-
-// province leads (Ontario, Alberta, Quebec, etc.) so they enter the Referrals
-// CRM pipeline where Doug tracks the 25% referral-fee lifecycle.
-const CANADIAN_PROVINCE_OPTIONS = [
-  "British Columbia", "Alberta", "Saskatchewan", "Manitoba", "Ontario",
-  "Quebec", "New Brunswick", "Nova Scotia", "Prince Edward Island",
-  "Newfoundland and Labrador", "Yukon", "Northwest Territories", "Nunavut",
-];
-
-const FindRealtor = () => {
-  const [f, setF] = useState({
-    full_name: "", email: "", phone: "", province: "", city: "",
-    intent: "buyer", property_type: "Detached", budget_range: "Not sure",
-    timeline: "3-6 months", notes: "", casl_consent: false, pipa_ack: false,
-  });
-  const [done, setDone] = useState(false);
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  // Pre-fill from ?province=X&city=Y (e.g. from a listings deep-link)
-  useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const p = sp.get("province"); const c = sp.get("city");
-    setF(prev => ({ ...prev, province: p || prev.province, city: c || prev.city }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const submit = async e => {
-    e.preventDefault();
-    setErr(""); setBusy(true);
-    try {
-      await axios.post(`${API}/find-realtor`, { ...f, turnstile_token: getTurnstileToken() });
-      setDone(true);
-    } catch (x) {
-      setErr(x?.response?.data?.detail || "Something went wrong — please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (done) return (
-    <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}>
-      <img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/>
-      <h1 className="section-title">Referral request received!</h1>
-      <p className="section-sub">Thanks {f.full_name.split(" ")[0]} — Doug will personally match you with a vetted partner REALTOR® in {f.city ? `${f.city}, ${f.province}` : f.province} and introduce you by email within 1 business day. Watch your inbox for a note from <strong>referrals@eztofind.ca</strong>.</p>
-      <p style={{color:"var(--muted)",fontSize:"0.9rem",marginTop:"1.25rem"}}>Standard CREA Inter-Board Referral Agreement — the receiving REALTOR® pays a referral fee to Doug at closing. Zero cost to you.</p>
-    </div></section>
-  );
-
-  return (
-    <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
-      <div className="eyebrow" data-testid="find-realtor-eyebrow">National Referral Network</div>
-      <h1 className="section-title" data-testid="find-realtor-title">Find a vetted REALTOR® anywhere in Canada</h1>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.75,marginBottom:"1.5rem",fontSize:"1.02rem"}}>
-        Buying or selling outside British Columbia? Doug LeMaire, REALTOR® maintains a coast-to-coast network of pre-vetted partner REALTORs® — every province and territory. Tell us where you're headed and we'll introduce you personally.
-      </p>
-      <div className="notice" data-testid="find-realtor-notice" style={{background:"#F5F0E1",borderColor:"var(--brand-gold)",fontFamily:"Inter,sans-serif",marginBottom:"1.75rem"}}>
-        <strong>How it works:</strong> You submit this form → Doug hand-picks a partner REALTOR® active in your city → he introduces you by email → you work directly with the local expert. Standard CREA Inter-Board Referral Agreement (25% referral fee, paid by the receiving REALTOR® at closing). <strong>Zero cost to you.</strong>
-      </div>
-      <form onSubmit={submit} className="paper" data-testid="find-realtor-form">
-        <div className="form-grid">
-          <div className="field"><label>Full name *</label><input required data-testid="find-realtor-name" value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-          <div className="field"><label>Email *</label><input required type="email" data-testid="find-realtor-email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-          <div className="field"><label>Phone *</label><input required data-testid="find-realtor-phone" value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-          <div className="field"><label>Province / territory *</label>
-            <select required data-testid="find-realtor-province" value={f.province} onChange={e=>setF({...f,province:e.target.value})}>
-              <option value="">— Select —</option>
-              {CANADIAN_PROVINCE_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div className="field"><label>City / town *</label><input required data-testid="find-realtor-city" placeholder="e.g. Toronto, Calgary, Halifax" value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
-          <div className="field"><label>Are you buying or selling? *</label>
-            <select required data-testid="find-realtor-intent" value={f.intent} onChange={e=>setF({...f,intent:e.target.value})}>
-              <option value="buyer">Buying</option>
-              <option value="seller">Selling</option>
-              <option value="both">Both — I'm buying AND selling</option>
-            </select>
-          </div>
-          <div className="field"><label>Property type</label>
-            <select data-testid="find-realtor-ptype" value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}>
-              <option>Detached</option><option>Condo</option><option>Townhouse</option>
-              <option>Acreage / Rural</option><option>Luxury</option><option>Not sure yet</option>
-            </select>
-          </div>
-          <div className="field"><label>Budget</label>
-            <select data-testid="find-realtor-budget" value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}>
-              <option value="Under $500K">Under $500K</option>
-              <option value="$500K – $1M">$500K – $1M</option>
-              <option value="$1M – $2M">$1M – $2M</option>
-              <option value="$2M+">$2M+</option>
-              <option value="Not sure">Not sure</option>
-            </select>
-          </div>
-          <div className="field"><label>Timeline</label>
-            <select data-testid="find-realtor-timeline" value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}>
-              <option>ASAP</option><option>1-3 months</option><option>3-6 months</option>
-              <option>6-12 months</option><option>Just researching</option>
-            </select>
-          </div>
-        </div>
-        <div style={{marginTop:"1rem"}} className="field"><label>Anything else Doug should know?</label>
-          <textarea rows="3" data-testid="find-realtor-notes" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})} placeholder="Relocating for a job, prefer a specific neighbourhood, downsizing, etc."/>
-        </div>
-        <div className="field" style={{marginTop:"1rem"}}>
-          <label className="check"><input required type="checkbox" data-testid="find-realtor-casl" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/>
-            I consent to receive commercial electronic messages from EZtoFind.ca / Doug LeMaire regarding my referral (CASL). I can unsubscribe anytime.
-          </label>
-        </div>
-        <div className="field">
-          <label className="check"><input required type="checkbox" data-testid="find-realtor-pipa" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/>
-            I acknowledge my personal information will be handled per the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link> and shared with the receiving REALTOR® once assigned.
-          </label>
-        </div>
-        {err && <div className="notice" data-testid="find-realtor-error" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
-        <TurnstileWidget/>
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{marginTop:"1.5rem"}} data-testid="find-realtor-submit">
-          {busy ? "Sending…" : "Find me a REALTOR®"}
-        </button>
-      </form>
-      <p style={{color:"var(--muted)",fontSize:"0.85rem",marginTop:"1.5rem",fontFamily:"Inter,sans-serif",lineHeight:1.65,textAlign:"center"}}>
-        Already looking somewhere in British Columbia? Use our <Link to="/referral-request" style={{color:"var(--brand-blue)"}}>BC-specific referral form</Link> instead — same process, faster match.
-      </p>
-    </div></section>
-  );
 };
 
 // --- Calculators (Mortgage + PTT — stacked, independent) ---
@@ -7233,7 +6850,6 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
-      <Route path="/find-realtor" element={<AppLayout><FindRealtor/></AppLayout>}/>
       <Route path="/realtors" element={<AppLayout><RealtorApply/></AppLayout>}/>
       <Route path="/realtors-outofprovince" element={<AppLayout><RealtorApplyOutOfProvince/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
@@ -7262,7 +6878,6 @@ function App() {
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
-      <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
