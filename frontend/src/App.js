@@ -1451,7 +1451,7 @@ const WhereShouldYouLive = () => {
   };
   const toggleCompare = (m) => {
     if (compare.find(c => c.slug === m.slug)) setCompare(compare.filter(c => c.slug !== m.slug));
-    else if (compare.length < 4) setCompare([...compare, m]);
+    else if (compare.length < 5) setCompare([...compare, m]);
   };
   const reset = () => { setStep(-1); setAnswers({lifestyle:null, home_type:null, budget:null, matters:[], region:null}); setResults(null); setCompare([]); setShowCompare(false); };
 
@@ -1524,6 +1524,10 @@ const WhereShouldYouLive = () => {
                     <button className="btn btn-ghost" onClick={reset} data-testid="wsyl-reset" style={{fontSize:"0.82rem",padding:"0.4rem 0.9rem"}}>↻ Start over</button>
                   </div>
                 </div>
+                {/* Helper hint above the community cards */}
+                <div data-testid="wsyl-compare-hint" style={{fontSize:"0.82rem",color:"var(--muted)",marginBottom:"0.85rem",fontFamily:"Inter,sans-serif",background:"#F3F6FD",padding:"0.6rem 0.9rem",borderRadius:8,borderLeft:"3px solid var(--brand-blue)"}}>
+                  💡 Tap <strong>+ Add to compare</strong> on any 2–5 community cards below, then hit the sticky <strong>Compare</strong> bar at the bottom of your screen for a side-by-side view.
+                </div>
                 <div style={{display:"flex",flexDirection:"column",gap:"0.85rem"}}>
                   {results.matches.map(m => {
                     const inCompare = compare.find(c => c.slug === m.slug);
@@ -1546,7 +1550,7 @@ const WhereShouldYouLive = () => {
                         <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",flexWrap:"wrap"}}>
                           <Link to={`/community/${m.slug}`} className="btn btn-primary" data-testid={`wsyl-view-community-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View community →</Link>
                           <Link to={listingsLinkFor(m)} className="btn btn-ghost" data-testid={`wsyl-view-listings-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View matching listings →</Link>
-                          <button type="button" className="btn btn-ghost" onClick={()=>toggleCompare(m)} data-testid={`wsyl-compare-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem",borderColor: inCompare ? "#F59E0B" : undefined, color: inCompare ? "#F59E0B" : undefined}}>{inCompare ? "✓ In compare" : "+ Add to compare"}</button>
+                          <button type="button" className="btn btn-ghost" onClick={()=>toggleCompare(m)} disabled={!inCompare && compare.length >= 5} data-testid={`wsyl-compare-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem",borderColor: inCompare ? "#F59E0B" : undefined, color: inCompare ? "#F59E0B" : undefined, opacity: (!inCompare && compare.length >= 5) ? 0.45 : 1, cursor: (!inCompare && compare.length >= 5) ? "not-allowed" : "pointer"}}>{inCompare ? "✓ In compare" : (compare.length >= 5 ? "Max 5 reached" : "+ Add to compare")}</button>
                         </div>
                       </div>
                     );
@@ -1554,6 +1558,23 @@ const WhereShouldYouLive = () => {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* Sticky compare bar — appears at the bottom of the viewport as soon as
+            the user adds their first community. Removes the "did I actually add
+            anything?" ambiguity and puts the Compare CTA in easy reach. */}
+        {step === 5 && compare.length > 0 && (
+          <div data-testid="wsyl-sticky-bar" style={{position:"fixed",bottom:"1rem",left:"50%",transform:"translateX(-50%)",zIndex:150,background:"var(--brand-navy)",color:"#fff",padding:"0.85rem 1.25rem",borderRadius:"999px",boxShadow:"0 12px 30px rgba(15,42,91,0.35)",display:"flex",gap:"1rem",alignItems:"center",fontFamily:"Inter,sans-serif",maxWidth:"90vw",flexWrap:"wrap",justifyContent:"center"}}>
+            <span style={{fontSize:"0.88rem",fontWeight:600}}>
+              {compare.length === 1
+                ? "1 community selected — add 1 more to compare"
+                : `${compare.length} of 5 selected · ${compare.map(c=>c.name).join(", ")}`}
+            </span>
+            {compare.length >= 2 && (
+              <button onClick={()=>setShowCompare(true)} data-testid="wsyl-sticky-compare-btn" style={{background:"var(--brand-gold, #F5A623)",color:"var(--brand-navy)",border:"none",padding:"0.5rem 1.1rem",borderRadius:"999px",fontWeight:700,cursor:"pointer",fontSize:"0.88rem",whiteSpace:"nowrap"}}>Compare side-by-side →</button>
+            )}
+            <button onClick={()=>setCompare([])} data-testid="wsyl-sticky-clear-btn" title="Clear selection" style={{background:"transparent",color:"#fff",border:"1px solid rgba(255,255,255,0.35)",padding:"0.4rem 0.7rem",borderRadius:"999px",fontSize:"0.78rem",cursor:"pointer"}}>Clear</button>
           </div>
         )}
 
