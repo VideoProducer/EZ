@@ -328,4 +328,24 @@ Built full drip-email infrastructure with per-campaign opt-in, approval gates fo
 - Respects the same "session"/Personalization cookie category — if user disabled it, greeting is generic
 - All in the DoogieChat component's `_initialGreeting()` helper (~25 lines)
 
+
+## Jul 30, 2026 — "Ask Doogie about this listing" (Listing Card → Chat Bridge)
+Turned every listing into an engagement opportunity: a "🐾 Ask Doogie" pill button on every listing card + a prominent CTA on the listing detail page.
+
+**How it works (all client-side):**
+- New helper `askDoogieAboutListing(l, e)` composes a natural prompt from listing public data: *"Tell me about MLS® R3149680, 4335 NORTHLANDS Boulevard #69, Whistler — 2 bed, 2 bath, 1350 sqft, Row / Townhouse at $1,489,000. What should I know about this listing, the neighbourhood, and the market context?"*
+- Prompt saved to `localStorage.ez_doogie_prefill`
+- New `CustomEvent("ez-open-doogie")` dispatched to the window
+- DoogieChat component's new useEffect listens for the event and opens the panel
+- The existing prefill useEffect (was already there for the affordability calculator handoff) reads the prefill into the input on next open
+- Server never learns which listing the user tapped — pure browser-side prompt injection
+
+**UI additions:**
+- Navy pill button (`🐾 Ask Doogie`) in the bottom-right of every listing card (`ListingCard` component) — data-testid `ask-doogie-{listing_key}`
+- Prominent CTA button on the listing detail page directly below the price — data-testid `listing-ask-doogie`
+- Both use the shared `askDoogieAboutListing()` helper — no code duplication
+
+**Compliance:** No new surface. localStorage-only + existing Doogie chat, which already has PIPA cookie consent and CASL-compliant AI disclosure. BCFSA: Doogie's system prompt already prevents opinions of value / property-specific advice; the AI will discuss the listing in generic terms and redirect specific questions to Doug.
+
+**Verified:** Screenshot on `/listings?city=Whistler` shows the button rendering on 3 visible listing cards. Frontend compiled clean.
 **Compliance**: Identical profile to the personalized homepage — 100% localStorage, no server call, no identifier crossing to backend. PIPA/CASL/BCFSA all clean.

@@ -878,6 +878,36 @@ const _readFavPrices = () => {
   catch { return {}; }
 };
 const _writeFavPrices = (obj) => { try { localStorage.setItem(FAV_PRICES_KEY, JSON.stringify(obj)); } catch {} };
+
+// --- Ask Doogie about a specific listing ---
+// Called from listing cards and the listing detail page. Composes a natural
+// prompt from the listing's public data, saves it to localStorage where the
+// DoogieChat useEffect picks it up on open, then dispatches "ez-open-doogie"
+// to reveal the chat panel. Purely client-side — no server call.
+const askDoogieAboutListing = (l, e) => {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (!l) return;
+  const price = (l.list_price || 0).toLocaleString("en-CA");
+  const parts = [];
+  if (l.mls_number) parts.push(`MLS® ${l.mls_number}`);
+  else if (l.listing_key) parts.push(`Listing ${l.listing_key}`);
+  if (l.street_address) parts.push(l.street_address);
+  if (l.city) parts.push(l.city);
+  const specs = [];
+  if (l.beds) specs.push(`${l.beds} bed`);
+  if (l.baths) specs.push(`${l.baths} bath`);
+  if (l.living_area_sqft) specs.push(`${l.living_area_sqft.toLocaleString()} sqft`);
+  if (l.property_type) specs.push(l.property_type);
+  const head = parts.join(", ");
+  const tail = specs.length ? ` — ${specs.join(", ")}` : "";
+  const priceStr = l.list_price ? ` at $${price}` : "";
+  const prompt = `Tell me about ${head}${tail}${priceStr}. What should I know about this listing, the neighbourhood, and the market context?`;
+  try {
+    localStorage.setItem("ez_doogie_prefill", prompt);
+    window.dispatchEvent(new CustomEvent("ez-open-doogie"));
+  } catch {}
+};
+
 const _readFavs = () => {
   try {
     const s = localStorage.getItem(FAV_STORAGE_KEY);
@@ -1033,11 +1063,20 @@ const DoogieChat = () => {
   const spokenRef = useRef(new Set());  // set of message-indices we've already spoken — bulletproof against double-fire
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
-  // Pre-fill from affordability calculator handoff
+  // Pre-fill from affordability calculator handoff, OR from a listing card
+  // "Ask Doogie" click. Both paths write to localStorage "ez_doogie_prefill"
+  // and (in the case of listing cards) dispatch "ez-open-doogie" to open the panel.
   useEffect(() => {
     const pre = localStorage.getItem("ez_doogie_prefill");
     if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
   }, [open, consented]);
+  // Allow any component to open Doogie via `window.dispatchEvent(new CustomEvent("ez-open-doogie"))`.
+  // If a prefill was set, the useEffect above will pick it up once panel state = open + consented.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("ez-open-doogie", handler);
+    return () => window.removeEventListener("ez-open-doogie", handler);
+  }, []);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
 
@@ -1808,6 +1847,18 @@ const ListingCard = ({ listing }) => {
         {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",paddingTop:"0.55rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
+    {/* Floating "Ask Doogie" button — client-side prompt-fill + open the chat panel */}
+    <button
+      type="button"
+      onClick={e => askDoogieAboutListing(listing, e)}
+      title="Ask Doogie about this listing"
+      data-testid={`ask-doogie-${listing.listing_key}`}
+      style={{position:"absolute",bottom:"0.75rem",right:"0.75rem",background:"var(--brand-navy)",color:"#F5F0E1",border:"none",borderRadius:999,padding:"0.4rem 0.85rem",fontSize:"0.78rem",fontWeight:600,cursor:"pointer",boxShadow:"0 3px 10px rgba(15,42,91,0.25)",display:"flex",alignItems:"center",gap:"0.35rem",zIndex:2,transition:"transform 0.15s"}}
+      onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
+    >
+      🐾 Ask Doogie
+    </button>
     <div style={{position:"absolute",top:"0.75rem",right:"0.75rem",zIndex:2}}>
       <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
     </div>
@@ -2389,6 +2440,14 @@ const ListingDetail = () => {
             <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
+          <button
+            type="button"
+            onClick={e => askDoogieAboutListing(listing, e)}
+            data-testid="listing-ask-doogie"
+            style={{marginTop:"0.9rem",background:"var(--brand-navy)",color:"#F5F0E1",border:"none",borderRadius:999,padding:"0.6rem 1.15rem",fontSize:"0.9rem",fontWeight:600,cursor:"pointer",boxShadow:"0 3px 10px rgba(15,42,91,0.25)",display:"inline-flex",alignItems:"center",gap:"0.45rem"}}
+          >
+            🐾 Ask Doogie about this listing
+          </button>
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
             <span>🛏 {listing.beds} bed</span>
             <span>🛁 {listing.baths}{listing.half_baths ? ` + ${listing.half_baths}½` : ""} bath</span>
