@@ -20,6 +20,7 @@ STATIC_URLS = [
     ("/",                  "1.0", "daily"),
     ("/listings",          "0.9", "daily"),
     ("/communities",       "0.9", "weekly"),
+    ("/neighbourhoods",    "0.85", "weekly"),
     ("/glossary",          "0.9", "weekly"),
     ("/valuation",         "0.7", "monthly"),
     ("/relocating",        "0.9", "weekly"),
@@ -30,18 +31,33 @@ STATIC_URLS = [
     ("/buyer",             "0.7", "monthly"),
     ("/seller",            "0.7", "monthly"),
     ("/contact",           "0.6", "yearly"),
+    # Regions index + 3 corridor pages (Doug's focus areas)
+    ("/regions",                    "0.85", "monthly"),
+    ("/regions/greater-vancouver",  "0.85", "monthly"),
+    ("/regions/fraser-valley",      "0.85", "monthly"),
+    ("/regions/sea-to-sky",         "0.85", "monthly"),
+    # Specialty pages (Doug's 6 practice areas)
+    ("/specialties",               "0.8", "monthly"),
+    ("/specialties/detached",      "0.75", "monthly"),
+    ("/specialties/luxury",        "0.75", "monthly"),
+    ("/specialties/equestrian",    "0.75", "monthly"),
+    ("/specialties/estate-sales",  "0.75", "monthly"),
+    ("/specialties/condos",        "0.75", "monthly"),
+    ("/specialties/townhomes",     "0.75", "monthly"),
     # Legal / compliance pages — indexable for trust signals and E-E-A-T.
     ("/privacy",           "0.4", "yearly"),
     ("/terms",             "0.4", "yearly"),
     ("/compliance",        "0.5", "yearly"),
+    ("/copyright",         "0.5", "yearly"),
     ("/data-attribution",  "0.4", "yearly"),
     ("/breach-policy",     "0.4", "yearly"),
     ("/dorts",             "0.5", "yearly"),
     ("/legal/retention",   "0.4", "yearly"),
     ("/code-of-ethics",    "0.4", "yearly"),
     ("/complaints",        "0.4", "yearly"),
-    # NOTE: /beta (invitation-only), /unsubscribe (per-user tokens), and /admin/*
-    # are DELIBERATELY EXCLUDED from the public sitemap.
+    # NOTE: /beta (invitation-only), /unsubscribe (per-user tokens), /email-preferences,
+    # /privacy/data-request, /favorites (per-visitor), and /admin/* are
+    # DELIBERATELY EXCLUDED from the public sitemap.
 ]
 
 def _url_tag(loc: str, lastmod: str, changefreq: str, priority: str) -> str:
