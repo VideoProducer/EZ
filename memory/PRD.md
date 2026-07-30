@@ -291,3 +291,15 @@ Added a compliance-safe "Welcome back — picking up where you left off" section
 - "Hide" button dismisses the module for the session (localStorage flag)
 - "Not you? Clear my browser data" link removes all personalization data + resets
 - Standard cookie preferences panel (footer) can disable Personalization category entirely
+
+## Jul 30, 2026 — "Doogie Remembers You" (personalized chat greeting)
+Extended the Doogie AI chat launcher to tailor its opening greeting to returning visitors — creates a "Doogie remembers me" moment without any server-side identification.
+
+- Reads `ez_last_community`, `ez_last_search`, and `ez_favorites` from localStorage on mount (device-only)
+- If user has a last-viewed community: *"Welcome back! 🐾 Any new questions about Kitsilano?"* + a follow-up tailored to whether they have favorites or a saved search
+- If no community but has a last search: *"Welcome back! 🐾 Want to see new listings in Vancouver, or shall we look somewhere else?"*
+- If neither: falls back to the standard first-time-visitor greeting (unchanged for new users)
+- Respects the same "session"/Personalization cookie category — if user disabled it, greeting is generic
+- All in the DoogieChat component's `_initialGreeting()` helper (~25 lines)
+
+**Compliance**: Identical profile to the personalized homepage — 100% localStorage, no server call, no identifier crossing to backend. PIPA/CASL/BCFSA all clean.

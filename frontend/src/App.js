@@ -991,7 +991,35 @@ const DoogieChat = () => {
   const [open, setOpen] = useState(false);
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
   const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
-  const [msgs, setMsgs] = useState([{role:"assistant",content:"Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\"."}]);
+  // --- Personalized greeting for returning visitors ---
+  // Reads localStorage (device-only) to see if the user has previously visited
+  // a community page. If so, Doogie's opening line references it — creates a
+  // "Doogie remembers me" moment without any server-side identification.
+  // PIPA/BCFSA/CASL-safe: no personal data crosses to the server.
+  const _initialGreeting = () => {
+    const defaultMsg = "Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\".";
+    try {
+      // Only personalize if user has consented to Personalization ("session") cookies
+      const rawPrefs = localStorage.getItem("ez_cookie_prefs");
+      if (rawPrefs) { const p = JSON.parse(rawPrefs); if (p && p.session === false) return defaultMsg; }
+      const lc = JSON.parse(localStorage.getItem("ez_last_community") || "null");
+      const ls = JSON.parse(localStorage.getItem("ez_last_search") || "null");
+      const favs = JSON.parse(localStorage.getItem("ez_favorites") || "[]");
+      if (lc && lc.name) {
+        let msg = `Welcome back! 🐾 Any new questions about ${lc.name}?`;
+        if (favs && favs.length > 0) msg += ` You've got ${favs.length} favorite${favs.length === 1 ? "" : "s"} saved — I can help compare them.`;
+        else if (ls && ls.filters) msg += " I can also refresh your last search or find something new.";
+        else msg += " Or I can help you explore any BC community, glossary term, or listing.";
+        return msg;
+      }
+      if (ls && ls.filters) {
+        const city = ls.filters.city || ls.filters.community || ls.filters.region;
+        if (city) return `Welcome back! 🐾 Want to see new listings in ${city}, or shall we look somewhere else?`;
+      }
+    } catch {}
+    return defaultMsg;
+  };
+  const [msgs, setMsgs] = useState([{role:"assistant",content: _initialGreeting()}]);
   const [input, setInput] = useState("");
   const [sessionId] = useState(() => "sess-" + Math.random().toString(36).slice(2));
   const [busy, setBusy] = useState(false);
