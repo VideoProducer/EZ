@@ -2687,6 +2687,49 @@ async def community_neighbourhoods(slug: str):
     return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
 
 
+@api.get("/community/{slug}/stats")
+async def community_stats(slug: str):
+    """Public community-level market stats. Used by the personalized-homepage
+    module to show returning visitors a 'market since your last visit' delta.
+    No user identifier in the request — same anonymous data everyone gets."""
+    name, region = _resolve_community(slug)
+    if not name:
+        raise HTTPException(404, "Community not found")
+    match = {
+        "status": "Active",
+        "city": _city_query(name),
+        "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        "list_price": {"$gt": 0},
+    }
+    pipeline = [
+        {"$match": match},
+        {"$group": {
+            "_id": None,
+            "count": {"$sum": 1},
+            "prices": {"$push": "$list_price"},
+            "min_price": {"$min": "$list_price"},
+            "max_price": {"$max": "$list_price"},
+        }},
+    ]
+    doc = None
+    async for row in db.listings.aggregate(pipeline):
+        doc = row
+        break
+    if not doc:
+        return {"community": name, "count": 0, "median_price": None, "min_price": None, "max_price": None, "updated_at": now_iso()}
+    prices = sorted([p for p in doc.get("prices") or [] if p])
+    median = prices[len(prices)//2] if prices else None
+    return {
+        "community": name,
+        "slug": slug,
+        "count": doc.get("count", 0),
+        "median_price": median,
+        "min_price": doc.get("min_price"),
+        "max_price": doc.get("max_price"),
+        "updated_at": now_iso(),
+    }
+
+
 # =============== MUNICIPAL ZONING ===============
 # Claude-authored plain-English list of the common residential zone codes for
 # each BC community (R-1, RM-1, RS-1, CD-1, etc.) with a short explainer per

@@ -870,6 +870,14 @@ const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
 // Optionally, users can sync to their email (server-side, CASL double-opt-in)
 // for cross-device access — that flow lives in the <Favorites> page component.
 const FAV_STORAGE_KEY = "ez_favorites";
+// Track the price we FIRST saw for each favorited listing so the personalized
+// homepage can flag price drops. Purely client-side — server never sees this.
+const FAV_PRICES_KEY = "ez_fav_prices";
+const _readFavPrices = () => {
+  try { const s = localStorage.getItem(FAV_PRICES_KEY); return s ? JSON.parse(s) : {}; }
+  catch { return {}; }
+};
+const _writeFavPrices = (obj) => { try { localStorage.setItem(FAV_PRICES_KEY, JSON.stringify(obj)); } catch {} };
 const _readFavs = () => {
   try {
     const s = localStorage.getItem(FAV_STORAGE_KEY);
@@ -887,7 +895,7 @@ const _writeFavs = (arr) => {
   } catch {}
 };
 
-const FavoriteButton = ({ listingKey, size = "md" }) => {
+const FavoriteButton = ({ listingKey, currentPrice, size = "md" }) => {
   const [saved, setSaved] = useState(() => _readFavs().includes(listingKey));
   useEffect(() => {
     const handler = (e) => setSaved((e.detail || _readFavs()).includes(listingKey));
@@ -897,9 +905,15 @@ const FavoriteButton = ({ listingKey, size = "md" }) => {
   const toggle = (e) => {
     e.preventDefault(); e.stopPropagation();
     const current = _readFavs();
-    const next = saved ? current.filter(k => k !== listingKey) : [listingKey, ...current];
+    const nextSaved = !saved;
+    const next = nextSaved ? [listingKey, ...current] : current.filter(k => k !== listingKey);
     _writeFavs(next);
-    setSaved(!saved);
+    // Track price snapshot on first favorite for price-drop detection on personalized home
+    if (nextSaved && currentPrice) {
+      const prices = _readFavPrices();
+      if (!prices[listingKey]) { prices[listingKey] = { first_seen_price: currentPrice, at: new Date().toISOString() }; _writeFavPrices(prices); }
+    }
+    setSaved(nextSaved);
   };
   const dim = size === "sm" ? 30 : 40;
   return (
@@ -945,7 +959,7 @@ const DoogieListingCard = ({ listing }) => {
       </div>
     </Link>
     <div style={{position:"absolute",top:8,right:8,zIndex:2}}>
-      <FavoriteButton listingKey={listing.listing_key} size="sm"/>
+      <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="sm"/>
     </div>
     </div>
   );
@@ -1263,6 +1277,218 @@ const DoogieChat = () => {
 
 // --- HOME ---
 const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+
+// =============== PERSONALIZED HOMEPAGE MODULE ===============
+// Shows returning visitors a tailored top-of-page module with:
+//   1. New listings matching their last search
+//   2. Their saved favorites (with ❗ if any dropped in price since favorited)
+//   3. A "continue exploring [community]" link
+//   4. A "since your last visit" market delta widget for their last-viewed community
+//
+// COMPLIANCE:
+//   • PIPA: All personalization data lives in localStorage on the user's OWN device.
+//     Server never learns who they are or what they've saved. Anonymous API calls
+//     (public /api/listings + /api/community/:slug/stats) — same data everyone
+//     gets. localStorage already covered under the "session" cookie category which
+//     the user has already consented to via the PIPA cookie banner.
+//   • CASL: Not applicable — no electronic messaging involved.
+//   • BCFSA: Purely factual content — listing cards + community stats. No opinions
+//     of value, no AI-generated recommendations.
+const _hasPersonalization = () => {
+  try {
+    // Respect the "session" cookie category — if user turned off Personalization
+    // in the cookie preferences, do not display the personalized module even if
+    // legacy localStorage entries exist.
+    const rawPrefs = localStorage.getItem("ez_cookie_prefs");
+    if (rawPrefs) {
+      const p = JSON.parse(rawPrefs);
+      if (p && p.session === false) return false;
+    }
+    return !!(localStorage.getItem("ez_last_search") ||
+              localStorage.getItem("ez_favorites") ||
+              localStorage.getItem("ez_last_community"));
+  } catch { return false; }
+};
+
+const PersonalizedHome = () => {
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("ez_personalized_dismissed") === "1");
+  const [lastSearchListings, setLastSearchListings] = useState([]);
+  const [favListings, setFavListings] = useState([]);
+  const [lastCommunity, setLastCommunity] = useState(null);
+  const [lastSearchMeta, setLastSearchMeta] = useState(null);
+  const [communityDelta, setCommunityDelta] = useState(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (dismissed) return;
+    if (!_hasPersonalization()) return;
+    setVisible(true);
+
+    // Load last search meta + matching listings (up to 3, newest first)
+    try {
+      const ls = JSON.parse(localStorage.getItem("ez_last_search") || "null");
+      if (ls && ls.filters) {
+        setLastSearchMeta(ls);
+        const params = { ...ls.filters, limit: 3, sort: "newest", offset: 0 };
+        axios.get(`${API}/listings`, { params }).then(r => setLastSearchListings((r.data && r.data.listings) || [])).catch(() => {});
+      }
+    } catch {}
+
+    // Load favorites — hydrate cards + compute price-drop signals
+    try {
+      const favs = JSON.parse(localStorage.getItem("ez_favorites") || "[]");
+      if (favs.length > 0) {
+        axios.get(`${API}/listings/by-keys`, { params: { keys: favs.slice(0, 6).join(",") } }).then(r => {
+          const items = (r.data && r.data.listings) || [];
+          const prices = _readFavPrices();
+          const enriched = items.map(x => {
+            const seen = prices[x.listing_key];
+            const first = seen && seen.first_seen_price;
+            const dropped = first && x.list_price && x.list_price < first;
+            return { ...x, first_seen_price: first, price_dropped: !!dropped };
+          });
+          // Sort: price drops first, then most recently favorited
+          enriched.sort((a, b) => (b.price_dropped ? 1 : 0) - (a.price_dropped ? 1 : 0));
+          setFavListings(enriched.slice(0, 2));
+        }).catch(() => {});
+      }
+    } catch {}
+
+    // Load last community + compute market delta since first visit
+    try {
+      const lc = JSON.parse(localStorage.getItem("ez_last_community") || "null");
+      if (lc && lc.slug) {
+        setLastCommunity(lc);
+        axios.get(`${API}/community/${lc.slug}/stats`, {timeout: 12000}).then(r => {
+          const current = r.data || {};
+          const first = lc.first_median_price;
+          if (first && current.median_price) {
+            const delta_pct = ((current.median_price - first) / first) * 100;
+            setCommunityDelta({
+              current_median: current.median_price,
+              first_median: first,
+              current_count: current.count,
+              delta_pct: delta_pct,
+              first_at: lc.first_at,
+            });
+          }
+        }).catch(() => {});
+      }
+    } catch {}
+  }, [dismissed]);
+
+  const dismiss = () => {
+    localStorage.setItem("ez_personalized_dismissed", "1");
+    setDismissed(true); setVisible(false);
+  };
+  const resetPersonalization = () => {
+    if (!window.confirm("This will clear your saved searches, favorites, and recently-viewed communities from this browser. Continue?")) return;
+    ["ez_favorites","ez_fav_prices","ez_last_search","ez_last_community","ez_personalized_dismissed"].forEach(k => localStorage.removeItem(k));
+    setVisible(false);
+    window.dispatchEvent(new CustomEvent("ez-favorites-changed", { detail: [] }));
+  };
+  const fmt = (n) => (typeof n === "number" && n > 0) ? "$" + Math.round(n).toLocaleString() : "—";
+  const fmtSince = (iso) => {
+    if (!iso) return "recently";
+    try {
+      const d = new Date(iso);
+      const days = Math.round((Date.now() - d.getTime()) / 86400000);
+      if (days <= 0) return "today";
+      if (days === 1) return "yesterday";
+      if (days < 7) return `${days} days ago`;
+      if (days < 30) return `${Math.round(days / 7)} weeks ago`;
+      return `${Math.round(days / 30)} months ago`;
+    } catch { return "recently"; }
+  };
+
+  if (!visible) return null;
+
+  const hasAny = lastSearchListings.length > 0 || favListings.length > 0 || lastCommunity || communityDelta;
+  if (!hasAny) return null;
+
+  return (
+    <section data-testid="personalized-home" style={{background:"linear-gradient(135deg, rgba(212,175,55,0.08), rgba(15,42,91,0.04))",borderTop:"1px solid rgba(15,42,91,0.08)",borderBottom:"1px solid rgba(15,42,91,0.08)",padding:"2.5rem 0",marginBottom:"1rem"}}>
+      <div className="container">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"1rem",flexWrap:"wrap",marginBottom:"1.5rem"}}>
+          <div>
+            <div className="eyebrow" style={{color:"var(--brand-gold)"}}>Welcome back</div>
+            <h2 className="font-display" style={{fontSize:"1.8rem",margin:"0.15rem 0 0",color:"var(--brand-navy)"}}>Picking up where you left off</h2>
+          </div>
+          <button onClick={dismiss} data-testid="personalized-dismiss" title="Hide this section" style={{background:"transparent",border:"1px solid rgba(15,42,91,0.2)",borderRadius:999,padding:"0.4rem 0.9rem",fontSize:"0.78rem",cursor:"pointer",color:"var(--muted)"}}>Hide</button>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"1.25rem"}}>
+
+          {/* --- Last search matches --- */}
+          {lastSearchListings.length > 0 && (
+            <div className="paper" style={{padding:"1.25rem"}} data-testid="personalized-last-search">
+              <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",color:"var(--brand-blue)",fontWeight:700,marginBottom:"0.5rem"}}>📍 New for your search</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginBottom:"0.75rem"}}>Since {fmtSince(lastSearchMeta?.at)}, {lastSearchListings.length} listing{lastSearchListings.length !== 1 ? "s" : ""} matched.</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                {lastSearchListings.map(l => (
+                  <Link key={l.listing_key} to={`/listing/${l.listing_key}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"0.75rem",padding:"0.55rem 0.75rem",background:"#fff",borderRadius:8,textDecoration:"none",color:"inherit",border:"1px solid rgba(15,42,91,0.08)"}} data-testid={`personalized-search-${l.listing_key}`}>
+                    <div style={{minWidth:0,flex:1}}>
+                      <div style={{fontSize:"0.85rem",fontWeight:600,color:"var(--brand-navy)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.street_address}</div>
+                      <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{l.city} · {l.beds} bed · {l.baths} bath</div>
+                    </div>
+                    <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",fontSize:"0.9rem"}}>{fmt(l.list_price)}</div>
+                  </Link>
+                ))}
+              </div>
+              <Link to={`/listings?${new URLSearchParams(Object.fromEntries(Object.entries(lastSearchMeta?.filters || {}).filter(([_,v]) => v))).toString()}`} style={{display:"inline-block",marginTop:"0.9rem",fontSize:"0.85rem",fontWeight:600,color:"var(--brand-blue)"}} data-testid="personalized-search-view-all">See all matches →</Link>
+            </div>
+          )}
+
+          {/* --- Favorites --- */}
+          {favListings.length > 0 && (
+            <div className="paper" style={{padding:"1.25rem"}} data-testid="personalized-favorites">
+              <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",color:"#DC2626",fontWeight:700,marginBottom:"0.5rem"}}>❤️ Your favorites</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginBottom:"0.75rem"}}>Saved listings on this device.</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"0.5rem"}}>
+                {favListings.map(l => (
+                  <Link key={l.listing_key} to={`/listing/${l.listing_key}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"0.75rem",padding:"0.55rem 0.75rem",background:"#fff",borderRadius:8,textDecoration:"none",color:"inherit",border:l.price_dropped ? "1px solid #F59E0B" : "1px solid rgba(15,42,91,0.08)"}} data-testid={`personalized-fav-${l.listing_key}`}>
+                    <div style={{minWidth:0,flex:1}}>
+                      <div style={{fontSize:"0.85rem",fontWeight:600,color:"var(--brand-navy)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.street_address}</div>
+                      <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{l.city} · {l.beds} bed · {l.baths} bath</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",fontSize:"0.9rem"}}>{fmt(l.list_price)}</div>
+                      {l.price_dropped && (<div style={{fontSize:"0.68rem",color:"#F59E0B",fontWeight:700,marginTop:"0.1rem"}}>❗ Price drop from {fmt(l.first_seen_price)}</div>)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <Link to="/favorites" style={{display:"inline-block",marginTop:"0.9rem",fontSize:"0.85rem",fontWeight:600,color:"var(--brand-blue)"}} data-testid="personalized-fav-view-all">View all favorites →</Link>
+            </div>
+          )}
+
+          {/* --- Market delta for last community --- */}
+          {communityDelta && lastCommunity && (
+            <div className="paper" style={{padding:"1.25rem"}} data-testid="personalized-community-delta">
+              <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",color:"var(--brand-gold)",fontWeight:700,marginBottom:"0.5rem"}}>📊 Since your last visit</div>
+              <div style={{fontSize:"0.85rem",color:"var(--muted)",marginBottom:"0.75rem"}}>{lastCommunity.name} market · first viewed {fmtSince(communityDelta.first_at)}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:"0.5rem",marginBottom:"0.4rem"}}>
+                <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.8rem",fontWeight:700,color:"var(--brand-navy)"}}>{fmt(communityDelta.current_median)}</div>
+                <div style={{fontSize:"0.85rem",fontWeight:700,color: communityDelta.delta_pct >= 0 ? "#16A34A" : "#DC2626"}}>
+                  {communityDelta.delta_pct >= 0 ? "▲" : "▼"} {Math.abs(communityDelta.delta_pct).toFixed(1)}%
+                </div>
+              </div>
+              <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>Current median list price · {communityDelta.current_count} active</div>
+              <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>Median list price, active MLS® listings. Not an opinion of value.</div>
+              <Link to={`/community/${lastCommunity.slug}`} style={{display:"inline-block",marginTop:"0.9rem",fontSize:"0.85rem",fontWeight:600,color:"var(--brand-blue)"}} data-testid="personalized-community-link">Continue exploring {lastCommunity.name} →</Link>
+            </div>
+          )}
+        </div>
+
+        <div style={{marginTop:"1.5rem",fontSize:"0.75rem",color:"var(--muted)",textAlign:"center"}}>
+          Personalized from data on this device only — never sent to our servers.{" "}
+          <a href="#" onClick={(e)=>{e.preventDefault(); resetPersonalization();}} style={{color:"var(--brand-blue)",fontWeight:600}} data-testid="personalized-reset">Not you? Clear my browser data →</a>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Home = () => {
   const [q, setQ] = useState("");
   const [terms, setTerms] = useState([]);
@@ -1342,6 +1568,7 @@ const Home = () => {
         "description":"AI-powered British Columbia real estate research platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network."
       })}</script>
     </Helmet>
+    <PersonalizedHome/>
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
@@ -1554,7 +1781,7 @@ const ListingCard = ({ listing }) => {
       </div>
     </Link>
     <div style={{position:"absolute",top:"0.75rem",right:"0.75rem",zIndex:2}}>
-      <FavoriteButton listingKey={listing.listing_key} size="md"/>
+      <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
     </div>
     </div>
   );
@@ -1666,6 +1893,14 @@ const Listings = () => {
     });
     qp.limit = PAGE_SIZE;
     qp.offset = 0;
+    // Personalization: remember this search so returning visitors see it on the
+    // homepage. Purely client-side — no user identifier or request made to persist.
+    try {
+      const meaningful = Object.keys(qp).some(k => !["limit","offset","sort"].includes(k));
+      if (meaningful) {
+        localStorage.setItem("ez_last_search", JSON.stringify({ filters: qp, at: new Date().toISOString() }));
+      }
+    } catch {}
     axios.get(`${API}/listings`, { params: qp })
       .then(r => setResults(r.data))
       .catch(() => setResults({total:0, listings:[]}))
@@ -2104,7 +2339,7 @@ const ListingDetail = () => {
           <div className="eyebrow">{listing.region} · {listing.city}</div>
           <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap"}}>
             <h1 className="section-title" style={{margin:"0.5rem 0",flex:"1 1 auto"}} data-testid="listing-address">{listing.street_address}</h1>
-            <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} size="md"/></div>
+            <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
@@ -2725,7 +2960,7 @@ const DataRequest = () => {
     </div></section>
   );
 };
-const Privacy = () => <Legal title="Privacy Policy (PIPA)" body={<><p>EZtoFind.ca collects personal information under British Columbia's Personal Information Protection Act (PIPA). We collect information you voluntarily provide via forms and Doogie AI chat. We use it solely to respond to your inquiry, provide referrals within our network, and (with your consent) send commercial electronic messages under CASL.</p><p>Data is stored on secured servers. You may request a copy of your personal information at any time via our <Link to="/privacy/data-request" style={{color:"var(--brand-blue)",fontWeight:600}}>self-service data export tool</Link> (a secure download link is emailed within seconds under PIPA s.23). To request correction or deletion, email info@eztofind.ca. Our Privacy Officer: Doug LeMaire, Fraser Property Management Realty Services Ltd.</p><p>We do not sell your data. We may share your inquiry with a REALTOR® in our referral network only if it falls outside Doug's focus areas or specialties — and only with your submission of a lead form indicating consent.</p><h3 style={{marginTop:"2rem"}}>Data Residency & Hosting</h3><p>Personal information collected via EZtoFind.ca is stored in a secure, industry-standard cloud database managed by our platform hosting provider. Data may be transiently processed by our compliance-vetted AI provider (a leading commercial large-language-model service) solely to power the Doogie AI assistant. Personal data may be processed on servers located in Canada and/or the United States. By using EZtoFind.ca you consent to this cross-border processing, which remains subject to Canadian privacy law and this Privacy Policy. All providers are contractually bound to industry-standard security. If our hosting region changes materially, this policy will be updated and posted here.</p><h3 style={{marginTop:"2rem"}}>Retention</h3><p>Doogie chat messages are automatically purged after 30 days via a database time-to-live policy. Buyer/seller lead records and REALTOR® application data are retained for 7 years to comply with REALTOR® record-keeping obligations under RESA. You may request earlier deletion at any time by emailing info@eztofind.ca.</p><h3 style={{marginTop:"2rem"}}>Consent Records (CASL)</h3><p>When you submit a form with consent, we record your email, timestamp, IP address, and browser user-agent as tamper-evident proof of consent, retained for 3 years per CASL requirements.</p><h3 style={{marginTop:"2rem"}}>Breach Notification</h3><p>In the event of a privacy breach that could reasonably result in significant harm, we will notify the Office of the Information and Privacy Commissioner for British Columbia (OIPC BC) and affected individuals as soon as feasible, in accordance with PIPA and our internal <Link to="/breach-policy" style={{color:"var(--brand-blue)"}}>Breach Response Policy</Link>.</p><h3 style={{marginTop:"2rem"}}>AI Use Disclosure (BCFSA Compliance)</h3><p>EZtoFind.ca uses artificial intelligence in three specific ways: (1) <strong>Doogie</strong>, our on-site chat assistant, powered by a commercial large language model via a compliance-vetted AI provider. Chat messages are transmitted to that provider and, before storage in our system, are automatically scanned to redact personal identifiers such as SIN, credit card numbers, phone numbers, email addresses, postal codes, and street addresses. (2) <strong>AI-drafted content</strong> — community synopses, weather summaries, and glossary FAQs are drafted by the same AI provider and reviewed and approved by Doug LeMaire, REALTOR® before publication. (3) <strong>Compliance guardrails</strong> — Doogie is prompt-engineered to never provide financial, legal, tax, or property-specific advice; those matters are routed to a licensed REALTOR®.</p><p>Under BCFSA's AI Guidelines, licensees remain responsible for all AI-generated output. Please do not share confidential information (full names, addresses, financial details, negotiations) with Doogie. For personalized advice, contact Doug directly.</p><h3 style={{marginTop:"2rem"}}>AI Translation Disclaimer</h3><p>Doogie supports chat and lead-form completion in English, French, Traditional Chinese, Simplified Chinese, Punjabi, Farsi, and Portuguese. All non-English responses are generated by AI machine translation. While the model performs well on general real estate conversation, <strong>translation is not warranted to be error-free</strong>, particularly for BC-specific tax, regulatory, or legal terminology. BC compliance boilerplate (BCFSA licence numbers, MLS® trademark statements, CREA attribution) is preserved in English exactly as required by BCFSA and CREA rules. If you are relying on any translated content to make a decision involving money, contracts, taxes, or regulatory obligations, <strong>always verify the detail with a licensed professional (REALTOR®, lawyer, notary, accountant, or mortgage broker) before acting</strong>. EZtoFind.ca and Doug LeMaire, REALTOR® expressly disclaim liability for reliance on machine-translated content.</p></>}/>;
+const Privacy = () => <Legal title="Privacy Policy (PIPA)" body={<><p>EZtoFind.ca collects personal information under British Columbia's Personal Information Protection Act (PIPA). We collect information you voluntarily provide via forms and Doogie AI chat. We use it solely to respond to your inquiry, provide referrals within our network, and (with your consent) send commercial electronic messages under CASL.</p><p>Data is stored on secured servers. You may request a copy of your personal information at any time via our <Link to="/privacy/data-request" style={{color:"var(--brand-blue)",fontWeight:600}}>self-service data export tool</Link> (a secure download link is emailed within seconds under PIPA s.23). To request correction or deletion, email info@eztofind.ca. Our Privacy Officer: Doug LeMaire, Fraser Property Management Realty Services Ltd.</p><p>We do not sell your data. We may share your inquiry with a REALTOR® in our referral network only if it falls outside Doug's focus areas or specialties — and only with your submission of a lead form indicating consent.</p><h3 style={{marginTop:"2rem"}}>Data Residency & Hosting</h3><p>Personal information collected via EZtoFind.ca is stored in a secure, industry-standard cloud database managed by our platform hosting provider. Data may be transiently processed by our compliance-vetted AI provider (a leading commercial large-language-model service) solely to power the Doogie AI assistant. Personal data may be processed on servers located in Canada and/or the United States. By using EZtoFind.ca you consent to this cross-border processing, which remains subject to Canadian privacy law and this Privacy Policy. All providers are contractually bound to industry-standard security. If our hosting region changes materially, this policy will be updated and posted here.</p><h3 style={{marginTop:"2rem"}}>Retention</h3><p>Doogie chat messages are automatically purged after 30 days via a database time-to-live policy. Buyer/seller lead records and REALTOR® application data are retained for 7 years to comply with REALTOR® record-keeping obligations under RESA. You may request earlier deletion at any time by emailing info@eztofind.ca.</p><h3 style={{marginTop:"2rem"}}>Consent Records (CASL)</h3><p>When you submit a form with consent, we record your email, timestamp, IP address, and browser user-agent as tamper-evident proof of consent, retained for 3 years per CASL requirements.</p><h3 style={{marginTop:"2rem"}}>Breach Notification</h3><p>In the event of a privacy breach that could reasonably result in significant harm, we will notify the Office of the Information and Privacy Commissioner for British Columbia (OIPC BC) and affected individuals as soon as feasible, in accordance with PIPA and our internal <Link to="/breach-policy" style={{color:"var(--brand-blue)"}}>Breach Response Policy</Link>.</p><h3 style={{marginTop:"2rem"}}>Personalized Homepage (Local-Only)</h3><p>Returning visitors may see a "Welcome back — picking up where you left off" section on the homepage showing their last search, saved favorites, and a market-change indicator for the last community they viewed. This personalization is powered <strong>entirely by your browser's own local storage (device-side)</strong>. No user identifier, saved search, favorites list, or viewing history is ever transmitted to our servers for this feature — the module simply reads what your browser has stored and queries our same public listing/community endpoints anonymously. You can turn this off at any time by opening Cookie Preferences (footer) and disabling the "Personalization" category, by using the "Clear my browser data" link within the module, or by clearing your browser's site data. This feature falls under the "session" cookie category to which you have already consented via our PIPA cookie banner.</p><h3 style={{marginTop:"2rem"}}>AI Use Disclosure (BCFSA Compliance)</h3><p>EZtoFind.ca uses artificial intelligence in three specific ways: (1) <strong>Doogie</strong>, our on-site chat assistant, powered by a commercial large language model via a compliance-vetted AI provider. Chat messages are transmitted to that provider and, before storage in our system, are automatically scanned to redact personal identifiers such as SIN, credit card numbers, phone numbers, email addresses, postal codes, and street addresses. (2) <strong>AI-drafted content</strong> — community synopses, weather summaries, and glossary FAQs are drafted by the same AI provider and reviewed and approved by Doug LeMaire, REALTOR® before publication. (3) <strong>Compliance guardrails</strong> — Doogie is prompt-engineered to never provide financial, legal, tax, or property-specific advice; those matters are routed to a licensed REALTOR®.</p><p>Under BCFSA's AI Guidelines, licensees remain responsible for all AI-generated output. Please do not share confidential information (full names, addresses, financial details, negotiations) with Doogie. For personalized advice, contact Doug directly.</p><h3 style={{marginTop:"2rem"}}>AI Translation Disclaimer</h3><p>Doogie supports chat and lead-form completion in English, French, Traditional Chinese, Simplified Chinese, Punjabi, Farsi, and Portuguese. All non-English responses are generated by AI machine translation. While the model performs well on general real estate conversation, <strong>translation is not warranted to be error-free</strong>, particularly for BC-specific tax, regulatory, or legal terminology. BC compliance boilerplate (BCFSA licence numbers, MLS® trademark statements, CREA attribution) is preserved in English exactly as required by BCFSA and CREA rules. If you are relying on any translated content to make a decision involving money, contracts, taxes, or regulatory obligations, <strong>always verify the detail with a licensed professional (REALTOR®, lawyer, notary, accountant, or mortgage broker) before acting</strong>. EZtoFind.ca and Doug LeMaire, REALTOR® expressly disclaim liability for reliance on machine-translated content.</p></>}/>;
 
 const BreachPolicy = () => <Legal title="Privacy Breach Response Policy" body={<><p>EZtoFind.ca is committed to protecting personal information collected under the BC Personal Information Protection Act (PIPA). This policy outlines the steps we will take in the event of a privacy breach.</p><h3>What constitutes a breach</h3><p>A privacy breach means the unauthorized access, collection, use, disclosure, disposal, or loss of personal information. Examples: a database misconfiguration exposing lead information, unauthorized access to admin systems, phishing that compromises an account, or loss of a device containing personal information.</p><h3>Response steps</h3><p><strong>Step 1 — Contain (immediate):</strong> Isolate affected systems, revoke exposed credentials, stop the ongoing loss.</p><p><strong>Step 2 — Assess (within 24 hours):</strong> Determine scope: what data, how many individuals, what risk of significant harm.</p><p><strong>Step 3 — Notify (within 72 hours if significant harm is reasonably possible):</strong> Notify the Office of the Information and Privacy Commissioner for BC (OIPC) at <a href="mailto:privacyhelp@oipc.bc.ca" style={{color:"var(--brand-blue)"}}>privacyhelp@oipc.bc.ca</a> and each affected individual, describing what happened, what data was involved, and what steps we are taking.</p><p><strong>Step 4 — Remediate:</strong> Fix the root cause, update controls, document lessons learned.</p><p><strong>Step 5 — Record:</strong> All breaches are logged internally with description, affected records, and remediation steps, retained for 3 years.</p><h3>Privacy Officer</h3><p>Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. — info@eztofind.ca. Report a suspected breach anytime, including outside business hours.</p></>}/>;
 const Terms = () => <Legal title="Terms of Use" body={<><p>EZtoFind.ca provides general information about British Columbia real estate. Doogie (our AI assistant) does not provide financial, legal, tax, or investment advice. For advice, consult a licensed REALTOR®, lawyer, or accountant.</p><p>Listings data is sourced under license directly from the Canadian Real Estate Association's Data Distribution Facility (CREA DDF®) via an authorized technology-provider agreement. REALTOR® and MLS® are certification marks owned by the Canadian Real Estate Association (CREA).</p><p><strong>Intellectual Property.</strong> All EZtoFind.ca content, code, design, and the Doogie AI character are proprietary works of Doug LeMaire, federally registered with the Canadian Intellectual Property Office (<strong>Copyright Registration No. 1247822</strong>) under the Canadian Copyright Act (R.S.C., 1985, c. C-42). Unauthorized reproduction, scraping, cloning, or use in AI-training datasets is prohibited and subject to statutory damages up to CAD $20,000 per work under s.38.1. See our full <Link to="/copyright" style={{color:"var(--brand-blue)",fontWeight:600}}>Copyright &amp; IP Notice</Link>.</p></>}/>;
@@ -3626,6 +3861,22 @@ const CommunityPage = () => {
     axios.get(`${API}/community/${slug}/synopsis`, {timeout: 90000}).then(r => { setSyn(r.data); setLoading(false); }).catch(() => setLoading(false));
     axios.get(`${API}/community/${slug}/weather`, {timeout: 90000}).then(r => { setWx(r.data); setLoadingWx(false); }).catch(() => setLoadingWx(false));
     axios.get(`${API}/community/${slug}/climate-normals`, {timeout: 30000}).then(r => setClimate(r.data)).catch(() => setClimate(null));
+    // Personalization: remember this community + snapshot its median price so we
+    // can show a "since your last visit" delta on the homepage. Anonymous — no
+    // user identifier in the request. Same public data everyone gets.
+    axios.get(`${API}/community/${slug}/stats`, {timeout: 15000}).then(r => {
+      try {
+        const s = r.data || {};
+        const existing = JSON.parse(localStorage.getItem("ez_last_community") || "null");
+        // Preserve the earliest snapshot so the delta reflects true "since first visit"
+        const first_median = existing && existing.slug === slug ? (existing.first_median_price || existing.median_price_snapshot) : s.median_price;
+        const first_at = existing && existing.slug === slug ? existing.first_at || existing.at : new Date().toISOString();
+        localStorage.setItem("ez_last_community", JSON.stringify({
+          slug, name: s.community, first_median_price: first_median, first_at,
+          latest_median_price: s.median_price, latest_count: s.count, at: new Date().toISOString(),
+        }));
+      } catch {}
+    }).catch(() => {});
   }, [slug]);
   let found = null, region = null;
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => c.toLowerCase().replace(/[^a-z0-9]+/g,"-") === slug); if(m) { found = m; region = r; break; } }
@@ -4342,7 +4593,7 @@ const CookieBanner = () => {
 
           <label style={{display:"block",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,padding:"0.9rem 1rem",marginBottom:"1rem",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><strong>Personalization</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Remember your Doogie session, saved searches, and your name/email so you don't have to re-type it.</div></div>
+              <div><strong>Personalization</strong><div style={{fontSize:"0.8rem",color:"var(--muted)"}}>Remember your Doogie session, saved searches, favorites, last-viewed community, and your name/email so you don't have to re-type them. Powers the "welcome back" personalized homepage. All stored on this device only — never sent to our servers.</div></div>
               <input type="checkbox" checked={prefs.session} onChange={e=>setPrefs({...prefs,session:e.target.checked})} style={{width:20,height:20,cursor:"pointer"}} data-testid="cookie-toggle-session"/>
             </div>
           </label>

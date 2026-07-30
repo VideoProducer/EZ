@@ -261,7 +261,33 @@ Fourth enforcement tool: `POST /api/admin/copycat/scan`, `GET /api/admin/copycat
 - Copycat detector: correctly identifies pasted glossary text with 100% overlap; canary phrases trigger smoking-gun verdict; false-negatives on clean unrelated text.
 
 ### Backlog / Next
-- **P1** Admin password rotation (`Doug!qvONhY6Q1i` → new via `/admin/settings/password`)
+- **P1** Admin password rotation (current temp: `DougEZ2026!Reset`)
 - **P1** GA4 conversion goals setup (form fills, referral requests, favorites)
 - ~~**P2** AI-Powered Home Valuation Landing Page~~ — **PARKED (2026-07-29)**. BCFSA compliance risk too high for a licensed REALTOR® showing AI-generated numbers to consumers. Requires BC regulatory-lawyer review before any build. If revisited, use Option B (simple CMA request, no AI-facing number) or Option C (Discovery Quiz with private AI-assisted CMA prep). See conversation 2026-07-29 for full risk analysis.
 - **P3** Alberta Expansion — PARKED (`/app/memory/ALBERTA_EXPANSION_PLAN.md`)
+
+## Jul 30, 2026 — Personalized Homepage Module (returning-visitor experience)
+Added a compliance-safe "Welcome back — picking up where you left off" section at the top of the homepage that shows returning visitors:
+1. **📍 New listings matching their last search** — up to 3, sorted newest-first
+2. **❤️ Their saved favorites** — with ❗ orange badge for listings that have dropped in price since favorited
+3. **📊 Market delta widget** — median list price + since-first-visit % change for the last community they viewed, with BCFSA-safe *"Not an opinion of value"* disclaimer
+
+**Compliance guarantees** (documented in Privacy Policy):
+- **PIPA**: All personalization data lives in **localStorage on the user's own device**. The server never learns who the visitor is or what they've saved. The module makes anonymous calls to public endpoints (`/api/listings`, `/api/community/:slug/stats`) that return the same data to everyone. Covered under the existing "session" cookie category — no new consent surface. If user disables Personalization in cookie preferences, the module hides regardless of localStorage state.
+- **CASL**: Not applicable — no electronic messaging.
+- **BCFSA**: Content is purely factual (listing cards + market stats). No opinions of value, no AI-generated recommendations. Prominent "Not an opinion of value" caveat on the market delta widget.
+
+**Backend addition (`server.py`)**: New public endpoint `GET /api/community/{slug}/stats` returning `{community, count, median_price, min_price, max_price, updated_at}` for the community delta widget.
+
+**Frontend additions (`App.js`)**:
+- New `PersonalizedHome` React component (top of Home page, hides gracefully if no data)
+- New localStorage keys: `ez_last_search`, `ez_last_community` (with `first_median_price` snapshot), `ez_fav_prices` (per-favorite first-seen price for drop detection), `ez_personalized_dismissed`
+- Capture logic in `Listings` (persist search on every filter apply) + `CommunityPage` (persist visited community + stats snapshot on mount)
+- `FavoriteButton` extended with optional `currentPrice` prop that snapshots first-seen price on first favorite
+- Cookie banner "Personalization" category description updated to disclose the new behavior
+- Privacy Policy addendum: *"Personalized Homepage (Local-Only)"* section explaining the anonymous local-only architecture
+
+**User controls**:
+- "Hide" button dismisses the module for the session (localStorage flag)
+- "Not you? Clear my browser data" link removes all personalization data + resets
+- Standard cookie preferences panel (footer) can disable Personalization category entirely
