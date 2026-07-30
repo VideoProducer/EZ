@@ -2840,20 +2840,21 @@ async def community_match(body: CommunityMatchIn):
     matters_tag_sets = [(m, _MATTERS_TAGS.get(m, [])) for m in (body.matters or [])]
     budget_range = _BUDGET_BRACKETS.get(body.budget or "")
 
-    scored = []
+    # --- PASS 1: rule-based scoring (no DB hits) ---
+    # Score every candidate on lifestyle/matters/home_type using the cached
+    # synopsis text. Cheap in-memory work.
+    prelim = []
     for c in candidates:
         synopsis_lc = (c.get("synopsis") or "").lower()
-        reasons = []
+        reasons: List[str] = []
         score = 0
 
-        # Lifestyle scoring
         if lifestyle_tags:
             hits = [t for t in lifestyle_tags if t in synopsis_lc]
             if hits:
                 score += 3 * len(hits)
                 reasons.append(f"Matches your **{body.lifestyle}** lifestyle preference")
 
-        # Matters scoring — one reason per matched category
         for mid, tags in matters_tag_sets:
             hits = [t for t in tags if t in synopsis_lc]
             if hits:
@@ -2861,7 +2862,6 @@ async def community_match(body: CommunityMatchIn):
                 label = {"walkability":"walkable streets","good-schools":"good schools","outdoor":"outdoor recreation","quiet":"quiet atmosphere","restaurants":"restaurants and shopping","transit":"public transit access","commute":"short commute","waterfront-access":"waterfront access","low-maintenance":"low-maintenance living","family":"family-friendly","nightlife":"nightlife"}.get(mid, mid)
                 reasons.append(f"Offers {label}")
 
-        # Home-type nudge (small — real filter would need listing_type per community)
         if body.home_type == "acreage" and "acreage" in synopsis_lc:
             score += 2; reasons.append("Has acreage properties available")
         if body.home_type == "luxury" and any(k in synopsis_lc for k in ("luxury","estate","waterfront estate")):
@@ -2873,25 +2873,63 @@ async def community_match(body: CommunityMatchIn):
         if body.home_type == "detached" and any(k in synopsis_lc for k in ("detached","single-family","single family")):
             score += 1; reasons.append("Established detached-home market")
 
-        # Budget: score if community median falls in bracket (fetch stats)
-        median_price = None
-        active_count = 0
-        if budget_range:
-            match = {"status": "Active", "city": _city_query(c["name"]), "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
-            prices = [l["list_price"] async for l in db.listings.find(match, {"list_price": 1, "_id": 0}) if l.get("list_price")]
-            prices = sorted([p for p in prices if p])
-            if prices:
-                median_price = prices[len(prices)//2]
-                active_count = len(prices)
-                lo, hi = budget_range
-                if lo <= median_price <= hi:
-                    score += 4
-                    reasons.append(f"Median list price in {c['name']} ({'$' + format(int(median_price), ',')}) fits your budget")
-
         if score > 0:
-            scored.append({"slug": c["slug"], "name": c["name"], "region": c["region"], "synopsis": c.get("synopsis","")[:300], "median_price": median_price, "active_count": active_count, "reasons": reasons[:4], "score": score})
+            prelim.append({"community": c, "score": score, "reasons": reasons, "median_price": None, "active_count": 0})
 
-    scored.sort(key=lambda x: -x["score"])
+    prelim.sort(key=lambda x: -x["score"])
+
+    # --- PASS 2: budget scoring on top candidates only ---
+    # Previously ran one Mongo regex query per candidate (240× on "anywhere in BC")
+    # which pulled every list_price into Python — request timed out. Now we only
+    # hit the DB for the top 20 candidates and use count + sort+skip to find the
+    # median without pulling thousands of rows. Queries run in parallel.
+    async def _fetch_median(candidate_entry):
+        name = candidate_entry["community"]["name"]
+        match = {
+            "status": "Active",
+            "city": _city_query(name),
+            "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+            "list_price": {"$gt": 0},
+        }
+        count = await db.listings.count_documents(match)
+        if count == 0:
+            return candidate_entry
+        mid = count // 2
+        cursor = db.listings.find(match, {"list_price": 1, "_id": 0}).sort("list_price", 1).skip(mid).limit(1)
+        median_price = None
+        async for d in cursor:
+            median_price = d.get("list_price")
+        candidate_entry["median_price"] = median_price
+        candidate_entry["active_count"] = count
+        if budget_range and median_price:
+            lo, hi = budget_range
+            if lo <= median_price <= hi:
+                candidate_entry["score"] += 4
+                candidate_entry["reasons"].append(
+                    f"Median list price in {name} (${int(median_price):,}) fits your budget"
+                )
+        return candidate_entry
+
+    top_slice = prelim[:20]
+    if top_slice:
+        top_slice = await asyncio.gather(*[_fetch_median(e) for e in top_slice])
+        prelim = top_slice + prelim[20:]
+        prelim.sort(key=lambda x: -x["score"])
+
+    scored = [
+        {
+            "slug": e["community"]["slug"],
+            "name": e["community"]["name"],
+            "region": e["community"]["region"],
+            "synopsis": (e["community"].get("synopsis") or "")[:300],
+            "median_price": e["median_price"],
+            "active_count": e["active_count"],
+            "reasons": e["reasons"][:4],
+            "score": e["score"],
+        }
+        for e in prelim
+    ]
+
     return {"matches": scored[:5], "total_candidates": len(candidates), "disclaimer": "These communities are suggested based on the preferences you have entered. They are intended to help you explore your options and are not recommendations. Always verify with a REALTOR® before making an offer."}
 
 
