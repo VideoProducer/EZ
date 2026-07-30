@@ -1432,7 +1432,7 @@ const WhereShouldYouLive = () => {
         <div style={{textAlign:"center",marginBottom:"1.75rem"}}>
           <div className="eyebrow" style={{color:"var(--brand-gold)"}}>📍 Community Finder</div>
           <h2 className="section-title" style={{margin:"0.4rem 0 0.6rem"}}>Where should you live?</h2>
-          <p className="section-sub">Here are 5 quick questions to help you explore communities that may fit your preferences.</p>
+          <p className="section-sub">Here are 5 quick questions to help you explore communities that may fit your lifestyle.</p>
         </div>
 
         {step === -1 && (
