@@ -349,3 +349,69 @@ Turned every listing into an engagement opportunity: a "🐾 Ask Doogie" pill bu
 
 **Verified:** Screenshot on `/listings?city=Whistler` shows the button rendering on 3 visible listing cards. Frontend compiled clean.
 **Compliance**: Identical profile to the personalized homepage — 100% localStorage, no server call, no identifier crossing to backend. PIPA/CASL/BCFSA all clean.
+
+## 🧹 Tech Debt Sprint — Deferred from 2026-07-30 Code Review
+**Priority:** P3 (backlog, address in a dedicated 1-day sprint when features are stable)
+**Estimated effort:** ~8–12 hours total
+**Why deferred:** Working production site, high regression risk if refactored during active feature dev, low customer-visible value.
+
+### 1. `dangerouslySetInnerHTML` audit (12 instances in App.js)
+- **Current locations:** SEO structured data (JSON-LD), Cease & Desist letter previews (admin-only), campaign email draft previews (admin-only)
+- **Risk:** Low — none are user-input, all content sources are trusted (DB, LLM-generated for admin viewing)
+- **Fix:** Add DOMPurify sanitization pass on admin-only HTML previews as belt-and-suspenders. Leave SEO JSON-LD as-is (it's JSON.stringify escape-safe).
+- **Time:** ~2 hrs
+
+### 2. React hook dependency warnings (~68 instances)
+- **Current state:** ESLint `react-hooks/exhaustive-deps` warnings — advisory, not bugs
+- **Risk:** Low — most missing deps are stable references (state setters, refs) that don't trigger re-renders anyway
+- **Fix:** Audit each warning; wrap functions in `useCallback` where appropriate; add ESLint disable comments with justification where safe to ignore
+- **Time:** ~3 hrs
+
+### 3. Array-index-as-key warnings (29 instances)
+- **Current state:** Static lists (glossary letters, cookie categories, campaign definitions) using index as key
+- **Risk:** Zero — lists never reorder during session
+- **Fix:** Replace with unique keys from data where trivially available; skip otherwise
+- **Time:** ~1 hr
+
+### 4. High-complexity function refactors
+- `server.py: admin_login()` (complexity 22, 57 lines) — split into `_validate_login_body`, `_check_lockout`, `_authenticate`, `_issue_token`
+- `server.py: doogie_chat()` (complexity 17, 138 lines) — extract stream-handling, tool-call routing, response-formatting into helpers
+- `server.py: create_buyer_lead()` (complexity 26) and `create_seller_lead()` (complexity 20) — separate validation, transformation, persistence
+- `prerender_pages.py: render_communities()` (complexity 28, 104 lines) — split data-fetch / template-render / error-handling
+- **Time:** ~4 hrs
+- **Risk:** Medium — these are hot paths (auth, chat, lead capture). Refactor with tests, not blind.
+
+### 5. `App.js` monolith split (~5,700 lines → target ~200-line files)
+- Extract by domain: `/components/admin/`, `/components/listings/`, `/components/doogie/`, `/components/campaigns/`, `/components/personalized/`, `/components/legal/`
+- Move helpers into `/lib/` (favorites, personalization, canary, prefs)
+- **Time:** ~4–6 hrs (biggest task)
+- **Risk:** High — huge diff, deferred as low-ROI vs. lead-gen features
+
+### 6. Type hint coverage in `policies.py` + test files
+- **Current:** 0% type hint coverage in these files
+- **Fix:** Add signatures like `def foo(x: str) -> Optional[dict]`
+- **Time:** ~30 min
+- **Risk:** Zero (advisory only, doesn't change runtime)
+
+### 7. Vendor code exceptions
+- `App.js:5650` — PostHog official minified snippet uses `var` + `==`. **Do not touch.** Add ESLint ignore comment.
+- **Time:** 2 min
+
+### 8. Empty `catch {}` blocks (~397 instances)
+- **Current state:** Intentional silent-swallow for non-critical browser API calls (localStorage in private mode, optional analytics, feature-detection)
+- **Fix:** Leave as-is. Consider adding centralized `try_safe(fn)` helper for the ~10 cases where a debug log would help troubleshoot user reports.
+- **Time:** ~1 hr if pursued
+
+### 9. Hardcoded `SITE_URL` in App.js line 24
+- **Current state:** `SITE_URL = "https://eztofind.ca"` used only for SEO canonical URLs + OpenGraph tags
+- **Risk:** Zero — this IS the production domain by design; preview still works because SEO tags are ignored on preview.
+- **Fix:** No action needed. Deployment agent explicitly validated this as acceptable.
+
+### Kill criteria
+Don't schedule this sprint if:
+- Model A/B revenue growth is on-track (focus on features that drive money)
+- No customer complaints about slowness, bugs, or maintenance velocity
+- Model C SaaS is not yet on the horizon (multi-tenant refactor will restructure much of this anyway)
+
+Revisit when Model B has 3+ paying customers or before starting Phase 3 multi-tenant refactor.
+
