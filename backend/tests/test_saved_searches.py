@@ -8,8 +8,10 @@ from pymongo import MongoClient
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://proptech-hub-111.preview.emergentagent.com").rstrip("/")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "test_database")
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "EZtoFind2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD env var required for tests")
 
 TEST_EMAIL_PREFIX = "test_savedsearch_"
 

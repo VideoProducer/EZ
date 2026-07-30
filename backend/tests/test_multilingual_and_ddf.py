@@ -19,8 +19,10 @@ def _load_frontend_url():
 
 
 BASE_URL = _load_frontend_url()
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "EZtoFind2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD env var required for tests")
 
 # Background translation is fire-and-forget via asyncio.create_task; wait a bit.
 TRANSLATE_WAIT_SECONDS = 15

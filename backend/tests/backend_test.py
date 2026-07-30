@@ -17,8 +17,10 @@ def _load_frontend_url():
     raise RuntimeError("REACT_APP_BACKEND_URL not found")
 
 BASE_URL = _load_frontend_url()
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "EZtoFind2026!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD env var required for tests (see /app/backend/.env)")
 
 
 # ---------- Fixtures ----------
