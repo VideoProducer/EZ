@@ -1396,6 +1396,35 @@ const WhereShouldYouLive = () => {
   const [compare, setCompare] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
   const fmt = n => (typeof n === "number" && n > 0) ? "$" + Math.round(n).toLocaleString() : "—";
+
+  // Build a pre-filtered /listings URL from the quiz answers + a specific community.
+  // Maps budget → price_min / price_max and home_type → property_type using the
+  // exact facet values that /listings expects (see Listings component filters).
+  const listingsLinkFor = (community) => {
+    const p = new URLSearchParams();
+    p.set("city", community.name);
+    const budgetMap = {
+      "under-500":  { max: 500000 },
+      "500-750":    { min: 500000, max: 750000 },
+      "750-1m":     { min: 750000, max: 1000000 },
+      "1m-2m":      { min: 1000000, max: 2000000 },
+      "over-2m":    { min: 2000000 },
+    };
+    const b = budgetMap[answers.budget];
+    if (b?.min) p.set("price_min", String(b.min));
+    if (b?.max) p.set("price_max", String(b.max));
+    const propMap = {
+      "condo":     "Condo",
+      "townhome":  "Townhouse",
+      "detached":  "Detached",
+      "acreage":   "Acreage",
+      // "luxury" isn't a listings facet — the price filter carries that signal
+    };
+    if (propMap[answers.home_type]) p.set("property_type", propMap[answers.home_type]);
+    // For luxury preference, nudge the floor price up to $2M when no explicit budget was set
+    if (answers.home_type === "luxury" && !b?.min) p.set("price_min", "2000000");
+    return `/listings?${p.toString()}`;
+  };
   const pick = (q, v) => {
     if (q.multi) {
       const cur = answers[q.id] || [];
@@ -1516,7 +1545,7 @@ const WhereShouldYouLive = () => {
                         </div>
                         <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",flexWrap:"wrap"}}>
                           <Link to={`/community/${m.slug}`} className="btn btn-primary" data-testid={`wsyl-view-community-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View community →</Link>
-                          <Link to={`/listings?city=${encodeURIComponent(m.name)}`} className="btn btn-ghost" data-testid={`wsyl-view-listings-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View listings →</Link>
+                          <Link to={listingsLinkFor(m)} className="btn btn-ghost" data-testid={`wsyl-view-listings-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem"}}>View matching listings →</Link>
                           <button type="button" className="btn btn-ghost" onClick={()=>toggleCompare(m)} data-testid={`wsyl-compare-${m.slug}`} style={{fontSize:"0.85rem",padding:"0.5rem 1rem",borderColor: inCompare ? "#F59E0B" : undefined, color: inCompare ? "#F59E0B" : undefined}}>{inCompare ? "✓ In compare" : "+ Add to compare"}</button>
                         </div>
                       </div>
@@ -1549,7 +1578,7 @@ const WhereShouldYouLive = () => {
                     <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Active listings</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}>{c.active_count}</td>)}</tr>
                     <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Why it matched</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}><ul style={{margin:0,paddingLeft:"1rem"}}>{c.reasons.map((r,i)=><li key={i}>{r.replace(/\*\*/g,"")}</li>)}</ul></td>)}</tr>
                     <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Vibe</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB",lineHeight:1.4}}>{c.synopsis.slice(0,200)}…</td>)}</tr>
-                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Explore</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}><Link to={`/community/${c.slug}`} style={{color:"var(--brand-blue)",fontWeight:600,display:"block",marginBottom:"0.35rem"}}>View community →</Link><Link to={`/listings?city=${encodeURIComponent(c.name)}`} style={{color:"var(--brand-blue)",fontWeight:600}}>View listings →</Link></td>)}</tr>
+                    <tr><td style={{padding:"0.6rem",fontWeight:600,verticalAlign:"top",background:"#F9FAFB"}}>Explore</td>{compare.map(c => <td key={c.slug} style={{padding:"0.6rem",verticalAlign:"top",borderBottom:"1px solid #E5E7EB"}}><Link to={`/community/${c.slug}`} style={{color:"var(--brand-blue)",fontWeight:600,display:"block",marginBottom:"0.35rem"}}>View community →</Link><Link to={listingsLinkFor(c)} style={{color:"var(--brand-blue)",fontWeight:600}}>View matching listings →</Link></td>)}</tr>
                   </tbody>
                 </table>
               </div>
