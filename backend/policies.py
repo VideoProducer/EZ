@@ -1,7 +1,8 @@
 """Managing Broker policy templates for Fraser Property Management Realty Services Ltd.
 Served as printable HTML — Doug can print to PDF from browser."""
+from typing import Dict
 
-POLICY_CSS = """<style>
+POLICY_CSS: str = """<style>
 body{font-family:Georgia,serif;max-width:780px;margin:2rem auto;padding:2rem;color:#0B1930;line-height:1.6}
 h1{font-family:'Fraunces',Georgia,serif;color:#0F2A5B;border-bottom:3px solid #F5A623;padding-bottom:0.5rem}
 h2{color:#0F2A5B;margin-top:2rem}
@@ -16,7 +17,7 @@ ul{margin:0.5rem 0 1rem 1.25rem}li{margin:0.35rem 0}
 .btn{background:#0F2A5B;color:white;padding:0.6rem 1.2rem;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:0.9rem}
 </style>"""
 
-def wrap(title, body):
+def wrap(title: str, body: str) -> str:
     return f"""<!doctype html><html><head><meta charset="utf-8"><title>{title} — EZtoFind.ca</title>{POLICY_CSS}</head><body>
     <div class="no-print"><a href="javascript:window.print()" class="btn">🖨️ Print to PDF</a></div>
     <div class="hdr"><div><strong>Fraser Property Management Realty Services Ltd.</strong><br>Doug LeMaire, REALTOR®</div><div>EZtoFind.ca<br>Effective: __________</div></div>
@@ -24,7 +25,7 @@ def wrap(title, body):
     <div class="footer">Fraser Property Management Realty Services Ltd. · EZtoFind.ca · info@eztofind.ca</div>
     </body></html>"""
 
-POLICIES = {
+POLICIES: Dict[str, str] = {
 "ai-use-policy": wrap("AI Use Policy", """
 <h1>Artificial Intelligence Use Policy</h1>
 <p><em>Aligns with BCFSA AI Guidelines and RESA sections 28, 30, 33, 34, 40, and 41.</em></p>

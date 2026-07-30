@@ -350,16 +350,18 @@ Turned every listing into an engagement opportunity: a "🐾 Ask Doogie" pill bu
 **Verified:** Screenshot on `/listings?city=Whistler` shows the button rendering on 3 visible listing cards. Frontend compiled clean.
 **Compliance**: Identical profile to the personalized homepage — 100% localStorage, no server call, no identifier crossing to backend. PIPA/CASL/BCFSA all clean.
 
-## 🧹 Tech Debt Sprint — Deferred from 2026-07-30 Code Review
-**Priority:** P3 (backlog, address in a dedicated 1-day sprint when features are stable)
-**Estimated effort:** ~8–12 hours total
-**Why deferred:** Working production site, high regression risk if refactored during active feature dev, low customer-visible value.
+## 🧹 Tech Debt Sprint — Partially Landed 2026-07-30
+**Priority:** P3 remainder (backlog)
+**Estimated remaining effort:** ~7–10 hours
 
-### 1. `dangerouslySetInnerHTML` audit (12 instances in App.js)
-- **Current locations:** SEO structured data (JSON-LD), Cease & Desist letter previews (admin-only), campaign email draft previews (admin-only)
-- **Risk:** Low — none are user-input, all content sources are trusted (DB, LLM-generated for admin viewing)
-- **Fix:** Add DOMPurify sanitization pass on admin-only HTML previews as belt-and-suspenders. Leave SEO JSON-LD as-is (it's JSON.stringify escape-safe).
-- **Time:** ~2 hrs
+### ✅ Landed 2026-07-30 (safe wins, zero regression risk)
+- **DOMPurify sanitization** — installed `dompurify@3.4.12`; new `safeHtml()` helper wraps every content-bearing `dangerouslySetInnerHTML` (Doogie chat renderer, community synopsis, admin Xmas email preview, campaign draft preview, C&D letter preview). JSON-LD `<script>` tags left unwrapped (JSON.stringify is escape-safe).
+- **PostHog vendor snippet** — added targeted `/* eslint-disable no-var, eqeqeq, no-sequences, no-unused-expressions */` block instead of touching Emergent's official minified init.
+- **Type hints in `policies.py`** — `POLICIES: Dict[str, str]`, `wrap(title: str, body: str) -> str`, `POLICY_CSS: str`, `_load_frontend_url() -> str`, session fixture return type.
+
+### Deferred (kill-criteria per PRD)
+
+### 1. `dangerouslySetInnerHTML` audit — ✅ DONE 2026-07-30 (see landed section above)
 
 ### 2. React hook dependency warnings (~68 instances)
 - **Current state:** ESLint `react-hooks/exhaustive-deps` warnings — advisory, not bugs
@@ -387,15 +389,9 @@ Turned every listing into an engagement opportunity: a "🐾 Ask Doogie" pill bu
 - **Time:** ~4–6 hrs (biggest task)
 - **Risk:** High — huge diff, deferred as low-ROI vs. lead-gen features
 
-### 6. Type hint coverage in `policies.py` + test files
-- **Current:** 0% type hint coverage in these files
-- **Fix:** Add signatures like `def foo(x: str) -> Optional[dict]`
-- **Time:** ~30 min
-- **Risk:** Zero (advisory only, doesn't change runtime)
+### 6. Type hint coverage in `policies.py` + test files — ✅ DONE 2026-07-30 (see landed section above)
 
-### 7. Vendor code exceptions
-- `App.js:5650` — PostHog official minified snippet uses `var` + `==`. **Do not touch.** Add ESLint ignore comment.
-- **Time:** 2 min
+### 7. Vendor code exceptions — ✅ DONE 2026-07-30 (PostHog snippet wrapped with targeted ESLint disable/enable block)
 
 ### 8. Empty `catch {}` blocks (~397 instances)
 - **Current state:** Intentional silent-swallow for non-critical browser API calls (localStorage in private mode, optional analytics, feature-detection)

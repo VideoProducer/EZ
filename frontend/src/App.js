@@ -3,8 +3,21 @@ import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
+import DOMPurify from "dompurify";
 import "./App.css";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
+
+// DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
+// synopses, campaign drafts, C&D letters). All admin-facing previews and the
+// public chat renderer pass through this before hitting dangerouslySetInnerHTML.
+// Belt-and-suspenders: the source content is already trusted (LLM behind our
+// prompt guardrails + BCFSA-approval-gated for community synopses), but this
+// removes any script/onerror/etc. that could sneak through prompt injection.
+const safeHtml = (html) => DOMPurify.sanitize(html || "", {
+  ALLOWED_TAGS: ["a","p","br","strong","b","em","i","u","ul","ol","li","h1","h2","h3","h4","h5","h6","span","div","img","hr","blockquote","code","pre","table","thead","tbody","tr","th","td","sup","sub"],
+  ALLOWED_ATTR: ["href","target","rel","src","alt","style","class","data-testid","aria-hidden","width","height","colspan","rowspan"],
+  ALLOW_DATA_ATTR: false,
+});
 
 // Hook: read `?lang=` from URL and returns [locale, t(), langLinkSuffix] for
 // translated forms/pages. URL is the sole source of truth — visitors who arrive
@@ -1324,7 +1337,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: renderChatContent(m.content, lang)}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -3791,7 +3804,7 @@ const AdminReminders = () => {
         <div style={{background:"#F7FAFF",padding:"1rem",borderRadius:8,marginTop:"1rem"}}>
           <div style={{fontSize:"0.85rem",color:"var(--muted)"}}>Subject:</div>
           <div style={{fontWeight:600,marginBottom:"1rem"}}>{xmas.preview_subject || "(no consented clients yet)"}</div>
-          <div dangerouslySetInnerHTML={{__html: xmas.preview_html || "<p>No consented clients — add clients with email consent to preview.</p>"}} style={{fontSize:"0.9rem",lineHeight:1.5}}/>
+          <div dangerouslySetInnerHTML={{__html: safeHtml(xmas.preview_html || "<p>No consented clients — add clients with email consent to preview.</p>")}} style={{fontSize:"0.9rem",lineHeight:1.5}}/>
         </div>
         <div style={{display:"flex",gap:"0.75rem",justifyContent:"flex-end",marginTop:"1.5rem"}}>
           <button className="btn btn-ghost" onClick={()=>setShowXmasPreview(false)}>Cancel</button>
@@ -4248,7 +4261,7 @@ const CommunityPage = () => {
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
       {!loading && syn?.synopsis && <>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>')}}></div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: safeHtml(syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>'))}}></div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
         {syn.sources && syn.sources.length>0 && <SourcesBlock title="Authoritative Sources — Community Data" intro={`Verify official demographic, economic, and municipal information for ${found} directly with the governing authority:`} sources={syn.sources} testid="community-sources"/>}
         <PublishedByDoug compact/>
@@ -5856,7 +5869,9 @@ function PostHogGate() {
     initedRef.current = true;
     // Inject the official PostHog snippet. Kept identical to the one Emergent
     // shipped in index.html, minus the auto-init call.
+    /* eslint-disable no-var, eqeqeq, no-sequences, no-unused-expressions */
     (function(t,e){var o,n,p,r;if(!e.__SV){window.posthog=e;e._i=[];e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}p=t.createElement("script");p.type="text/javascript";p.crossOrigin="anonymous";p.async=!0;p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js";r=t.getElementsByTagName("script")[0];r.parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init me ws ys ps bs capture je Di ks register register_once register_for_session unregister unregister_for_session Ps getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty Es $s createPersonProfile Is opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing Ss debug xs getPageViewId captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])};e.__SV=1}})(document,window.posthog||[]);
+    /* eslint-enable no-var, eqeqeq, no-sequences, no-unused-expressions */
     try {
       window.posthog.init(POSTHOG_KEY, {
         api_host: POSTHOG_HOST,
@@ -6517,7 +6532,7 @@ const AdminCampaigns = () => {
             <div><div style={{fontSize:"0.72rem",color:"var(--muted)"}}>Preview draft to {previewDraft.email}</div><div style={{fontWeight:700,fontFamily:"Georgia,serif"}}>{previewDraft.subject}</div></div>
             <button className="btn btn-ghost" onClick={()=>setPreviewDraft(null)}>Close</button>
           </div>
-          <div dangerouslySetInnerHTML={{__html: previewDraft.html}} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1rem"}}/>
+          <div dangerouslySetInnerHTML={{__html: safeHtml(previewDraft.html)}} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1rem"}}/>
         </div>
       </div>
     )}
@@ -6799,7 +6814,7 @@ const AdminCeaseDesist = () => {
             <button type="button" className="btn btn-primary" onClick={printLetter} data-testid="cnd-print">🖨️ Print / Save PDF</button>
           </div>
         </div>
-        <div style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1.5rem",background:"#fff",fontFamily:"Georgia,serif",lineHeight:1.6,maxHeight:"70vh",overflow:"auto"}} dangerouslySetInnerHTML={{__html: letter.letter_html}}/>
+        <div style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"1.5rem",background:"#fff",fontFamily:"Georgia,serif",lineHeight:1.6,maxHeight:"70vh",overflow:"auto"}} dangerouslySetInnerHTML={{__html: safeHtml(letter.letter_html)}}/>
       </div>
     )}
 

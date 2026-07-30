@@ -6,9 +6,10 @@ import uuid
 import pytest
 import requests
 from datetime import date, timedelta
+from typing import Optional
 
 # Read from frontend .env for the external URL (mirrors what user sees)
-def _load_frontend_url():
+def _load_frontend_url() -> str:
     env_path = "/app/frontend/.env"
     with open(env_path) as f:
         for line in f:
@@ -16,16 +17,16 @@ def _load_frontend_url():
                 return line.split("=", 1)[1].strip().strip('"').rstrip("/")
     raise RuntimeError("REACT_APP_BACKEND_URL not found")
 
-BASE_URL = _load_frontend_url()
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+BASE_URL: str = _load_frontend_url()
+ADMIN_EMAIL: str = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD: Optional[str] = os.environ.get("ADMIN_PASSWORD")
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD env var required for tests (see /app/backend/.env)")
 
 
 # ---------- Fixtures ----------
 @pytest.fixture(scope="session")
-def api():
+def api() -> requests.Session:
     s = requests.Session()
     s.headers.update({"Content-Type": "application/json"})
     return s
