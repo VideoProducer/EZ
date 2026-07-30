@@ -1427,7 +1427,7 @@ const WhereShouldYouLive = () => {
   const reset = () => { setStep(-1); setAnswers({lifestyle:null, home_type:null, budget:null, matters:[], region:null}); setResults(null); setCompare([]); setShowCompare(false); };
 
   return (
-    <section className="section" data-testid="where-should-you-live" style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.05))"}}>
+    <section className="section" id="where-should-you-live" data-testid="where-should-you-live" style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.05))",scrollMarginTop:"90px"}}>
       <div className="container-x" style={{maxWidth:"52rem"}}>
         <div style={{textAlign:"center",marginBottom:"1.75rem"}}>
           <div className="eyebrow" style={{color:"var(--brand-gold)"}}>📍 Community Finder</div>
