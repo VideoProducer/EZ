@@ -1510,6 +1510,16 @@ const WhereShouldYouLive = () => {
             <div style={{background:"#FEF3C7",border:"1px solid #FDE68A",borderLeft:"4px solid #F59E0B",padding:"0.85rem 1.15rem",borderRadius:8,marginBottom:"1.5rem",fontSize:"0.85rem",color:"#78350F"}}>
               <strong>⚠️ Suggested, not recommended.</strong> {results.disclaimer}
             </div>
+            {/* Market-reality banner: shown when we couldn't find matches for the
+                exact filter combo. Tells the user the ranking has been relaxed
+                and what changed — critical UX for zero-inventory scenarios like
+                "detached under $500K anywhere in BC" where the market has zero
+                current supply. */}
+            {results.fallback_message && (
+              <div data-testid="wsyl-fallback-banner" style={{background:"#DBEAFE",border:"1px solid #93C5FD",borderLeft:"4px solid #2563EB",padding:"0.9rem 1.15rem",borderRadius:8,marginBottom:"1.5rem",fontSize:"0.88rem",color:"#1E3A8A",fontFamily:"Inter,sans-serif",lineHeight:1.55}}>
+                <strong>Market update:</strong> {results.fallback_message}
+              </div>
+            )}
             {results.matches.length === 0 ? (
               <div className="paper" style={{padding:"1.5rem",textAlign:"center"}}>
                 <p style={{margin:"0 0 1rem"}}>No perfect matches for that combination. Try broadening your criteria.</p>

@@ -2878,41 +2878,112 @@ async def community_match(body: CommunityMatchIn):
 
     prelim.sort(key=lambda x: -x["score"])
 
-    # --- PASS 2: budget scoring on top candidates only ---
+    # --- PASS 2: budget + property-type inventory check on top candidates only ---
     # Previously ran one Mongo regex query per candidate (240× on "anywhere in BC")
     # which pulled every list_price into Python — request timed out. Now we only
     # hit the DB for the top 20 candidates and use count + sort+skip to find the
     # median without pulling thousands of rows. Queries run in parallel.
+    # Also: count how many active listings actually match BOTH the budget bracket
+    # AND the requested property_type. That count drives the final ranking so
+    # results always reflect real inventory a buyer could purchase today.
+    home_type_facet = {
+        "condo": "Condo",
+        "townhome": "Townhouse",
+        "detached": "Detached",
+        "acreage": "Acreage",
+        # "luxury" isn't a listings facet — the price filter handles it
+    }.get(body.home_type or "", None)
+
     async def _fetch_median(candidate_entry):
         name = candidate_entry["community"]["name"]
-        match = {
+        base_match = {
             "status": "Active",
             "city": _city_query(name),
             "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
             "list_price": {"$gt": 0},
         }
-        count = await db.listings.count_documents(match)
+        count = await db.listings.count_documents(base_match)
         if count == 0:
             return candidate_entry
         mid = count // 2
-        cursor = db.listings.find(match, {"list_price": 1, "_id": 0}).sort("list_price", 1).skip(mid).limit(1)
+        cursor = db.listings.find(base_match, {"list_price": 1, "_id": 0}).sort("list_price", 1).skip(mid).limit(1)
         median_price = None
         async for d in cursor:
             median_price = d.get("list_price")
         candidate_entry["median_price"] = median_price
         candidate_entry["active_count"] = count
-        if budget_range and median_price:
-            lo, hi = budget_range
-            if lo <= median_price <= hi:
-                candidate_entry["score"] += 4
-                candidate_entry["reasons"].append(
-                    f"Median list price in {name} (${int(median_price):,}) fits your budget"
-                )
+
+        # Inventory match: how many listings fit BOTH budget AND property type?
+        if budget_range or home_type_facet:
+            inv_match = dict(base_match)
+            if home_type_facet:
+                inv_match["property_type"] = home_type_facet
+            if budget_range:
+                lo, hi = budget_range
+                inv_match["list_price"] = {"$gte": lo, "$lte": hi}
+            matching = await db.listings.count_documents(inv_match)
+            candidate_entry["matching_count"] = matching
+            if matching > 0:
+                # Strong bonus that dominates lifestyle score (+6) — plus scaling reward
+                candidate_entry["score"] += 6 + min(matching, 10)
+                filter_bits = []
+                if home_type_facet:
+                    filter_bits.append(home_type_facet.lower() + ("s" if home_type_facet != "Acreage" else ""))
+                if budget_range:
+                    filter_bits.append(f"under ${int(budget_range[1]):,}")
+                candidate_entry["reasons"].insert(0, f"{matching} {' '.join(filter_bits)} listing{'s' if matching != 1 else ''} available in {name}")
         return candidate_entry
 
     top_slice = prelim[:20]
+    fallback_message: Optional[str] = None
     if top_slice:
         top_slice = await asyncio.gather(*[_fetch_median(e) for e in top_slice])
+
+        # Hard filter: when the user supplied a budget AND a property type, drop
+        # communities with zero matching inventory. If that leaves too few
+        # results, relax gracefully and tell the user why.
+        strict = [e for e in top_slice if e.get("matching_count", 0) > 0]
+
+        if budget_range and home_type_facet and len(strict) < 3:
+            # Fallback 1: try budget-only (any property type)
+            async def _recheck_budget_only(entry):
+                name = entry["community"]["name"]
+                lo, hi = budget_range  # type: ignore[misc]
+                inv_match = {
+                    "status": "Active",
+                    "city": _city_query(name),
+                    "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+                    "list_price": {"$gte": lo, "$lte": hi},
+                }
+                cnt = await db.listings.count_documents(inv_match)
+                entry["matching_count_budget_only"] = cnt
+                return entry
+
+            top_slice = await asyncio.gather(*[_recheck_budget_only(e) for e in top_slice])
+            budget_only_hits = [e for e in top_slice if e.get("matching_count_budget_only", 0) > 0]
+
+            if budget_only_hits:
+                # Show budget-fitting communities of any type
+                fallback_message = (
+                    f"There are currently no active {home_type_facet.lower()} listings "
+                    f"under ${int(budget_range[1]):,} anywhere in BC. Showing communities "
+                    f"where other property types (condos, townhomes) fit your budget instead."
+                )
+                for e in budget_only_hits:
+                    e["score"] += 4
+                    n = e["matching_count_budget_only"]
+                    e["reasons"].insert(0, f"{n} listing{'s' if n != 1 else ''} under ${int(budget_range[1]):,} in {e['community']['name']} (any property type)")
+                top_slice = budget_only_hits + [e for e in top_slice if e not in budget_only_hits]
+            else:
+                # Fallback 2: nothing under budget anywhere — tell the user plainly
+                fallback_message = (
+                    f"There are currently no active listings under ${int(budget_range[1]):,} "
+                    f"in BC that also match your other preferences. Consider expanding your "
+                    f"budget — the next bracket up will show real options."
+                )
+        elif len(strict) >= 3:
+            top_slice = strict
+
         prelim = top_slice + prelim[20:]
         prelim.sort(key=lambda x: -x["score"])
 
@@ -2924,13 +2995,14 @@ async def community_match(body: CommunityMatchIn):
             "synopsis": (e["community"].get("synopsis") or "")[:300],
             "median_price": e["median_price"],
             "active_count": e["active_count"],
+            "matching_count": e.get("matching_count"),
             "reasons": e["reasons"][:4],
             "score": e["score"],
         }
         for e in prelim
     ]
 
-    return {"matches": scored[:5], "total_candidates": len(candidates), "disclaimer": "These communities are suggested based on the preferences you have entered. They are intended to help you explore your options and are not recommendations. Always verify with a REALTOR® before making an offer."}
+    return {"matches": scored[:5], "total_candidates": len(candidates), "fallback_message": fallback_message, "disclaimer": "These communities are suggested based on the preferences you have entered. They are intended to help you explore your options and are not recommendations. Always verify with a REALTOR® before making an offer."}
 
 
 # =============== MUNICIPAL ZONING ===============
