@@ -15,6 +15,17 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+html {
+  /* Explicit root font-size + zero text-size-adjust protects the layout from
+     browser defaults that differ from 16px (some Chromium/Edge builds on
+     Windows will drift under system Display Scaling). Note: this does NOT
+     override OS-level display scaling (Windows 125%/150%) — that is a
+     system setting we cannot control from CSS. It DOES keep our internal
+     spacing consistent across browsers when the OS scale is the same. */
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   font-family: 'Fraunces', 'Playfair Display', Georgia, serif;
   color: var(--ink);
@@ -42,7 +53,12 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
 
 /* Navbar */
 .nav { position: sticky; top:0; z-index: 50; background: rgba(253,252,248,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(15,42,91,0.08); }
-.nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; gap: 1rem; min-width: 0; }
+/* Logo/brand block must not shrink or wrap — that's how "EZtoFind.ca" was
+   overlapping the search button on Edge at 125% Windows display scaling
+   (effective viewport ~1024px on a 1280px screen). Fixing shrink+wrap keeps
+   the two flex children (brand + links) cleanly separated. */
+.nav-inner > a:first-child { flex-shrink: 0; white-space: nowrap; }
 .nav a { color: var(--ink); text-decoration: none; font-family: 'Inter',sans-serif; font-size: 0.95rem; font-weight: 500; padding: 0.5rem 0.9rem; border-radius: 8px; transition: all 0.2s; }
 .nav a:hover { background: rgba(30,79,207,0.08); color: var(--brand-blue); }
 .nav a.active { color: var(--brand-blue); }
@@ -176,7 +192,13 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
 .nav-hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
 .nav-hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
-@media(max-width: 980px) {
+@media(max-width: 1200px) {
+  /* Hamburger kicks in wider than the previous 980px breakpoint because
+     the desktop nav has 10 links (Search, Luxury, Equestrian, Communities,
+     Glossary, About, Home Estimate, Relocating, Favorites, REALTOR® Network).
+     Under Windows 125% display scaling (default on many laptops), the
+     effective viewport of a 1280px display is ~1024px — right in the
+     danger zone where "EZtoFind.ca" would overlap the desktop nav. */
   .nav-hamburger { display: flex; }
   .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; align-items: stretch; padding: 0.5rem; border-bottom: 1px solid rgba(15,42,91,0.1); box-shadow: 0 12px 28px rgba(15,42,91,0.12); gap: 0; max-height: calc(100vh - 80px); overflow-y: auto; }
   .nav-links.open { display: flex; }

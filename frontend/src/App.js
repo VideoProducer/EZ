@@ -1924,7 +1924,6 @@ const Home = () => {
             {label:"Detached",     slug:"detached"},
             {label:"Luxury",       slug:"luxury"},
             {label:"Equestrian",   slug:"equestrian"},
-            {label:"Estate Sales", slug:"estate-sales"},
             {label:"Condos",       slug:"condos"},
             {label:"Townhomes",    slug:"townhomes"},
           ].map(s => (
