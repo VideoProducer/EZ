@@ -783,6 +783,7 @@ const Nav = () => {
       <div className={`nav-links${open?" open":""}`}>
         <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
         <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
+        <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
@@ -816,6 +817,7 @@ const Footer = () => (
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
         <li><Link to="/specialties/luxury">Luxury Listings</Link></li>
+        <li><Link to="/specialties/equestrian">Equestrian Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
@@ -2852,6 +2854,7 @@ const SpecialtyPage = () => {
   // Luxury gets a richer experience: live listings preview across the 3
   // eligible property types (Detached / Townhouse / Condo) at $3M+ BC-wide.
   if (slug === "luxury") return <LuxurySection intro={d}/>;
+  if (slug === "equestrian") return <EquestrianSection intro={d}/>;
   return (<section className="section"><div className="container-x">
     <img src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
@@ -2962,8 +2965,125 @@ const LuxurySection = ({ intro }) => {
   </div></section>);
 };
 
+// --- Equestrian Section — Acreage / Equestrian / Detached across BC ---
+// Similar pattern to LuxurySection but tuned for horse-property buyers:
+// price-asc sort (affordability matters more than trophy pricing), region
+// chips because horse country clusters (Fraser Valley, Okanagan, Island,
+// Cariboo, Kootenays), and a yellow ALR-verify banner up top because most
+// equestrian buyers hit the Agricultural Land Reserve issue on their first
+// property tour. Cross-links to glossary terms Doug already publishes.
+const EQUESTRIAN_TABS = [
+  { key: "equestrian", label: "Dedicated Equestrian", property_type: "Equestrian",singular: "equestrian property", plural: "equestrian properties" },
+  { key: "acreage",    label: "All Acreage",          property_type: "Acreage",   singular: "acreage property",    plural: "acreage properties" },
+  { key: "detached",   label: "Detached on Land",     property_type: "Detached",  singular: "detached home",       plural: "detached homes" },
+];
+
+const EquestrianSection = ({ intro }) => {
+  const [tabKey, setTabKey] = useState("equestrian");
+  const [listings, setListings] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const tab = EQUESTRIAN_TABS.find(t => t.key === tabKey) || EQUESTRIAN_TABS[0];
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    axios.get(`${API}/listings`, {
+      params: { property_type: tab.property_type, sort: "price_asc", limit: 6 }
+    }).then(r => {
+      if (cancelled) return;
+      setListings(r.data?.listings || []);
+      setTotal(r.data?.total || 0);
+      setLoading(false);
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tabKey, tab.property_type]);
+
+  const viewAllHref = `/listings?property_type=${encodeURIComponent(tab.property_type)}&sort=price_asc`;
+
+  return (<section className="section" data-testid="equestrian-section"><div className="container-x">
+    <img src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <div style={{maxWidth:"52rem",marginBottom:"1.5rem"}}>
+      <div className="eyebrow">BC's Horse Country</div>
+      <h1 className="section-title" data-testid="equestrian-title">Equestrian Properties — British Columbia</h1>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"1rem"}}>
+        Live MLS® listings for horse-friendly acreage across all of British Columbia — hobby farms, dedicated equestrian facilities, and rural detached homes with paddock potential. From Langley's ALR corridor and Fraser Valley barn country, to South Okanagan orchards, Vancouver Island fields, Cariboo ranchland, and Kootenay foothill acreage. Every listing is pulled live from the CREA DDF® feed.
+      </p>
+    </div>
+
+    {/* ALR + zoning verification banner — critical BCFSA compliance moment */}
+    <div data-testid="equestrian-alr-banner" style={{background:"#FEF3C7",borderLeft:"4px solid #F59E0B",padding:"1rem 1.25rem",borderRadius:8,marginBottom:"1.75rem",fontSize:"0.92rem",color:"#78350F",fontFamily:"Inter,sans-serif",lineHeight:1.55}}>
+      <strong>⚠️ Verify before you buy.</strong> Many BC equestrian properties are inside the <Link to="/glossary/agricultural-land-reserve" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>Agricultural Land Reserve</Link>. Confirm ALR status, municipal zoning permitting stables, water rights under the Water Sustainability Act, septic capacity, and any registered <Link to="/glossary/restrictive-covenant" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>restrictive covenants</Link> or <Link to="/glossary/statutory-building-scheme" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>statutory building schemes</Link> BEFORE writing an offer.
+    </div>
+
+    {/* Property-type tabs */}
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem",borderBottom:"2px solid #E5E7EB",paddingBottom:"0.5rem"}} data-testid="equestrian-tabs">
+      {EQUESTRIAN_TABS.map(t => (
+        <button key={t.key} type="button"
+          onClick={() => setTabKey(t.key)}
+          data-testid={`equestrian-tab-${t.key}`}
+          style={{
+            background: tabKey === t.key ? "var(--brand-navy)" : "transparent",
+            color: tabKey === t.key ? "#F5F0E1" : "var(--brand-navy)",
+            border: `2px solid ${tabKey === t.key ? "var(--brand-navy)" : "#E5E7EB"}`,
+            padding: "0.5rem 1.1rem", borderRadius: 999,
+            fontFamily: "Inter,sans-serif", fontSize: "0.9rem", fontWeight: 600,
+            cursor: "pointer", transition: "all 0.15s"
+          }}>{t.label}</button>
+      ))}
+    </div>
+
+    {/* Region chips removed — CREA DDF stores 'region' as sub-area codes
+        (e.g., 'Eastern Highlands'), not the BC macro-regions we'd want to
+        expose. Buyers can drill into region on the /listings page after
+        clicking through to a specific tab. */}
+
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
+      <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
+        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? tab.singular : tab.plural} across BC</>}
+      </div>
+      <Link to={viewAllHref} className="btn btn-ghost" data-testid="equestrian-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {tab.plural} →</Link>
+    </div>
+
+    {loading ? (
+      <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading equestrian listings…</div>
+    ) : listings.length === 0 ? (
+      <div className="paper" style={{padding:"2rem",textAlign:"center"}}>
+        <p>No active {tab.singular} listings currently on the feed for that filter. Try a different tab or region — inventory turns over frequently.</p>
+      </div>
+    ) : (
+      <div className="grid-3" data-testid="equestrian-listings">
+        {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+      </div>
+    )}
+
+    {/* Buyer due-diligence checklist — the compliance / SEO win */}
+    <div style={{marginTop:"3rem",background:"#F9FAFB",border:"1px solid #E5E7EB",borderRadius:12,padding:"1.5rem 1.75rem"}} data-testid="equestrian-checklist">
+      <h3 style={{fontFamily:"Fraunces,Georgia,serif",fontSize:"1.4rem",color:"var(--brand-navy)",marginTop:0}}>5-Step Equestrian Buyer Checklist</h3>
+      <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",marginBottom:"1rem"}}>Every horse property in BC needs these 5 verifications before you write an offer. Skip any of them and you may end up with a beautiful lot you can't legally keep animals on.</p>
+      <ol style={{fontFamily:"Inter,sans-serif",lineHeight:1.8,color:"var(--ink)",paddingLeft:"1.25rem"}}>
+        <li><strong>ALR status</strong> — verify with the <a href="https://www.alc.gov.bc.ca/alc/content/alr-maps" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BC Agricultural Land Commission ALR map</a>. See our glossary: <Link to="/glossary/agricultural-land-reserve" style={{color:"var(--brand-blue)"}}>Agricultural Land Reserve</Link></li>
+        <li><strong>Municipal zoning</strong> — confirm the zone permits stables and your specific livestock in writing. Related terms: <Link to="/glossary/statutory-building-scheme" style={{color:"var(--brand-blue)"}}>Statutory Building Scheme</Link>, <Link to="/glossary/restrictive-covenant" style={{color:"var(--brand-blue)"}}>Restrictive Covenant</Link></li>
+        <li><strong>Water rights</strong> — most BC domestic wells authorize household use only. Livestock watering may require a separate Water Sustainability Act authorization from the Ministry of Water, Land and Resource Stewardship</li>
+        <li><strong>Septic capacity</strong> — barns, staff quarters, and secondary dwellings often require an engineered septic system. Confirm with a BC Registered Onsite Wastewater Practitioner (ROWP)</li>
+        <li><strong>Title search + covenants</strong> — pull a current title from the <a href="https://ltsa.ca/" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Land Title and Survey Authority</a>. Check for legacy covenants prohibiting livestock — very common in 1980s-90s Fraser Valley subdivisions. Related term: <Link to="/glossary/undersurface-rights" style={{color:"var(--brand-blue)"}}>Undersurface Rights</Link></li>
+      </ol>
+    </div>
+
+    <div style={{marginTop:"2.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
+      <Link to="/buyer" className="btn btn-primary" data-testid="equestrian-buyer">Start as an Equestrian Buyer</Link>
+      <Link to="/seller" className="btn btn-green" data-testid="equestrian-seller">List Your Horse Property</Link>
+      <Link to={viewAllHref} className="btn btn-ghost">Browse all BC {tab.plural}</Link>
+    </div>
+
+    {/* BCFSA compliance strip */}
+    <p style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"2.5rem",fontFamily:"Inter,sans-serif",lineHeight:1.6,fontStyle:"italic",borderTop:"1px solid #E5E7EB",paddingTop:"1rem"}}>
+      Listings shown are from the CREA DDF® feed and are current at time of load. All representations regarding specific properties (value, ALR status, permitted animals, water rights, condition) must be verified with the listing REALTOR®, a BC lawyer or notary, the applicable municipality, the Agricultural Land Commission, and independent inspectors. Doug LeMaire, REALTOR® provides general information and referral services under the BC Real Estate Services Act, regulated by BCFSA. Not an opinion of value.
+    </p>
+  </div></section>);
+};
+
 // --- Glossary ---
-// Fingerprint canaries — deliberately-inserted "unique fact" strings seeded
 // across high-value scrape targets (glossary, community, home). Each is
 // visually hidden (aria-hidden, offscreen) so real users never see them,
 // but any bot/scraper that harvests our HTML will grab them verbatim. If
