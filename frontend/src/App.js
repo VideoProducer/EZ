@@ -2983,11 +2983,13 @@ const EquestrianSection = ({ intro }) => {
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 12;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: 6, price_min: EQUESTRIAN_MIN_PRICE } }).then(r => {
+    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: PAGE_SIZE, offset: 0, price_min: EQUESTRIAN_MIN_PRICE } }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
       setTotal(r.data?.total || 0);
@@ -2996,7 +2998,14 @@ const EquestrianSection = ({ intro }) => {
     return () => { cancelled = true; };
   }, []);
 
-  const viewAllHref = `/listings?features=${encodeURIComponent("equestrian,horse property,barn,stable,arena,paddocks")}&sort=price_asc&price_min=${EQUESTRIAN_MIN_PRICE}`;
+  const loadMore = () => {
+    if (loadingMore || listings.length >= total) return;
+    setLoadingMore(true);
+    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: PAGE_SIZE, offset: listings.length, price_min: EQUESTRIAN_MIN_PRICE } })
+      .then(r => setListings(prev => [...prev, ...(r.data?.listings || [])]))
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  };
 
   return (<section className="section" data-testid="equestrian-section"><div className="container-x">
     <img src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
@@ -3021,9 +3030,8 @@ const EquestrianSection = ({ intro }) => {
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
-        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? EQUESTRIAN_LABEL_SINGULAR : EQUESTRIAN_LABEL_PLURAL} across BC</>}
+        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? EQUESTRIAN_LABEL_SINGULAR : EQUESTRIAN_LABEL_PLURAL} across BC · showing {listings.length}</>}
       </div>
-      <Link to={viewAllHref} className="btn btn-ghost" data-testid="equestrian-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {EQUESTRIAN_LABEL_PLURAL} →</Link>
     </div>
 
     {loading ? (
@@ -3033,9 +3041,18 @@ const EquestrianSection = ({ intro }) => {
         <p>No active {EQUESTRIAN_LABEL_SINGULAR} listings currently on the feed at $2,000,000 or above. Inventory turns over frequently — check back soon or contact Doug directly for off-market equestrian opportunities.</p>
       </div>
     ) : (
-      <div className="grid-3" data-testid="equestrian-listings">
-        {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
-      </div>
+      <>
+        <div className="grid-3" data-testid="equestrian-listings">
+          {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+        </div>
+        {listings.length < total && (
+          <div style={{textAlign:"center",marginTop:"1.75rem"}}>
+            <button type="button" className="btn btn-primary" data-testid="equestrian-load-more" onClick={loadMore} disabled={loadingMore} style={{minWidth:"14rem"}}>
+              {loadingMore ? "Loading…" : `Load ${Math.min(PAGE_SIZE, total - listings.length)} more →`}
+            </button>
+          </div>
+        )}
+      </>
     )}
 
     {/* Buyer due-diligence checklist — the compliance / SEO win */}
@@ -3054,7 +3071,6 @@ const EquestrianSection = ({ intro }) => {
     <div style={{marginTop:"2.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
       <Link to="/buyer" className="btn btn-primary" data-testid="equestrian-buyer">Start as an Equestrian Buyer</Link>
       <Link to="/seller" className="btn btn-green" data-testid="equestrian-seller">List Your Horse Property</Link>
-      <Link to={viewAllHref} className="btn btn-ghost">Browse all BC {EQUESTRIAN_LABEL_PLURAL}</Link>
     </div>
 
     {/* BCFSA compliance strip */}
