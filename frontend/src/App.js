@@ -3013,10 +3013,7 @@ const EquestrianSection = ({ intro }) => {
       <div className="eyebrow">BC's Horse Country</div>
       <h1 className="section-title" data-testid="equestrian-title">Equestrian Properties — British Columbia</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"1rem"}}>
-        Live MLS® listings for horse-friendly acreage across all of British Columbia — hobby farms, dedicated equestrian facilities, and rural detached homes with paddock potential. From Langley's ALR corridor and Fraser Valley barn country, to South Okanagan orchards, Vancouver Island fields, Cariboo ranchland, and Kootenay foothill acreage. Every listing is pulled live from the CREA DDF® feed.
-      </p>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem",lineHeight:1.65,marginBottom:"1rem",fontStyle:"italic"}}>
-        <strong>How we define "Equestrian Match":</strong> we scan each listing's feature sheet for any of these terms — <em>equestrian, horse property, horse friendly, horse farm, barn, stable, arena, riding ring, paddocks, ALR</em> — and filter to properties listed at <strong>$2,000,000 or above</strong>. That surfaces the premium tier of horse-friendly BC inventory that Doug's referral clients typically hunt for, including many properties filed as "Detached" or "Acreage" that describe equestrian features in the write-up.
+        Live MLS® listings for horse-friendly acreage across all of British Columbia — hobby farms, dedicated equestrian facilities, and rural detached homes with paddock potential. From Langley's ALR corridor and Fraser Valley barn country, to South Okanagan orchards, Vancouver Island fields, Cariboo ranchland, and Kootenay foothill acreage.
       </p>
     </div>
 
