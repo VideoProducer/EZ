@@ -892,39 +892,11 @@ const _readFavPrices = () => {
 };
 const _writeFavPrices = (obj) => { try { localStorage.setItem(FAV_PRICES_KEY, JSON.stringify(obj)); } catch {} };
 
-// --- Ask Doogie about a specific listing ---
-// Called from listing cards and the listing detail page. Composes a natural
-// prompt from the listing's public data, saves it to localStorage where the
-// DoogieChat useEffect picks it up on open, then dispatches "ez-open-doogie"
-// to reveal the chat panel. Purely client-side — no server call.
-const askDoogieAboutListing = (l, e) => {
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  if (!l) return;
-  const price = (l.list_price || 0).toLocaleString("en-CA");
-  const parts = [];
-  if (l.mls_number) parts.push(`MLS® ${l.mls_number}`);
-  else if (l.listing_key) parts.push(`Listing ${l.listing_key}`);
-  if (l.street_address) parts.push(l.street_address);
-  if (l.city) parts.push(l.city);
-  const specs = [];
-  if (l.beds) specs.push(`${l.beds} bed`);
-  if (l.baths) specs.push(`${l.baths} bath`);
-  if (l.living_area_sqft) specs.push(`${l.living_area_sqft.toLocaleString()} sqft`);
-  if (l.property_type) specs.push(l.property_type);
-  const head = parts.join(", ");
-  const tail = specs.length ? ` — ${specs.join(", ")}` : "";
-  const priceStr = l.list_price ? ` at $${price}` : "";
-  const prompt = `Tell me about ${head}${tail}${priceStr}. What should I know about this listing, the neighbourhood, and the market context?`;
-  try {
-    localStorage.setItem("ez_doogie_prefill", prompt);
-    // Flag this as a CONVERSATIONAL request. Without this, the listing-search
-    // intent regex would fire on "listing", "3 bed", "2 bath" etc. and Doogie
-    // would return "more listings" instead of chatting about THIS one.
-    // The DoogieChat send() reads this flag once and clears it.
-    localStorage.setItem("ez_doogie_prefill_kind", "listing_context");
-    window.dispatchEvent(new CustomEvent("ez-open-doogie"));
-  } catch {}
-};
+// --- Ask Doogie about a listing REMOVED (BCFSA compliance) ---
+// Doogie may not provide property-specific commentary under BCFSA rules for
+// unlicensed AI assistants. If Doug ever adds a licensed advisory feature,
+// wire it through a REALTOR®-in-the-loop consultation flow instead of a
+// direct-to-chat handoff. Prior helper and buttons were removed 2026-07-31.
 
 const _readFavs = () => {
   try {
@@ -1079,10 +1051,6 @@ const DoogieChat = () => {
   const mediaRef = useRef(null);
   const audioRef = useRef(null);   // currently-playing HTMLAudioElement, so we can stop mid-play
   const spokenRef = useRef(new Set());  // set of message-indices we've already spoken — bulletproof against double-fire
-  // When set to "listing_context" (or similar), forces the NEXT send() into
-  // conversational mode, bypassing the listing-search intent regex. Consumed
-  // exactly once (cleared inside send()).
-  const pendingKindRef = useRef(null);
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
   // Pre-fill from affordability calculator handoff, OR from a listing card
@@ -1090,16 +1058,7 @@ const DoogieChat = () => {
   // and (in the case of listing cards) dispatch "ez-open-doogie" to open the panel.
   useEffect(() => {
     const pre = localStorage.getItem("ez_doogie_prefill");
-    if (open && pre && consented) {
-      setInput(pre);
-      // Consume the "kind" flag alongside the prefill. When present, the next
-      // send() will skip the listing-search intent regex and force
-      // conversational mode. Critical for "Ask Doogie about this listing" so
-      // the user gets an answer ABOUT the listing, not more search results.
-      const kind = localStorage.getItem("ez_doogie_prefill_kind");
-      if (kind) { pendingKindRef.current = kind; localStorage.removeItem("ez_doogie_prefill_kind"); }
-      localStorage.removeItem("ez_doogie_prefill");
-    }
+    if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
   }, [open, consented]);
   // Allow any component to open Doogie via `window.dispatchEvent(new CustomEvent("ez-open-doogie"))`.
   // If a prefill was set, the useEffect above will pick it up once panel state = open + consented.
@@ -1231,16 +1190,9 @@ const DoogieChat = () => {
     if(!input.trim() || busy) return;
     const q = input; setInput(""); setBusy(true);
 
-    // If the current message was prefilled by "Ask Doogie about this listing"
-    // (or similar), force conversational mode. Otherwise the intent regex would
-    // trip on "listing", "3 bed", "2 bath" etc. and return more listings instead
-    // of chatting about THIS one. Consume the ref exactly once.
-    const forceConversational = pendingKindRef.current === "listing_context";
-    if (pendingKindRef.current) pendingKindRef.current = null;
-
     // LISTING SEARCH INTENT: skip the conversational chat entirely and only show listing results.
     // This avoids Doogie explaining "how to search" alongside the actual results.
-    if (!forceConversational && looksLikeListingSearch(q)) {
+    if (looksLikeListingSearch(q)) {
       setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
       try {
         const r = await axios.post(`${API}/doogie/mls-search`, { message: q });
@@ -2154,18 +2106,9 @@ const ListingCard = ({ listing }) => {
         {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",paddingTop:"0.55rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>MLS® #{listing.mls_number}</div>}
       </div>
     </Link>
-    {/* Floating "Ask Doogie" button — client-side prompt-fill + open the chat panel */}
-    <button
-      type="button"
-      onClick={e => askDoogieAboutListing(listing, e)}
-      title="Ask Doogie about this listing"
-      data-testid={`ask-doogie-${listing.listing_key}`}
-      style={{position:"absolute",bottom:"0.75rem",right:"0.75rem",background:"var(--brand-navy)",color:"#F5F0E1",border:"none",borderRadius:999,padding:"0.4rem 0.85rem",fontSize:"0.78rem",fontWeight:600,cursor:"pointer",boxShadow:"0 3px 10px rgba(15,42,91,0.25)",display:"flex",alignItems:"center",gap:"0.35rem",zIndex:2,transition:"transform 0.15s"}}
-      onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";}}
-    >
-      🐾 Ask Doogie
-    </button>
+    {/* Ask Doogie listing button removed per BCFSA compliance — Doogie cannot
+        provide property-specific commentary. Buyers with questions about a
+        specific listing should contact Doug directly or use the referral flow. */}
     <div style={{position:"absolute",top:"0.75rem",right:"0.75rem",zIndex:2}}>
       <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
     </div>
@@ -2747,14 +2690,8 @@ const ListingDetail = () => {
             <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
-          <button
-            type="button"
-            onClick={e => askDoogieAboutListing(listing, e)}
-            data-testid="listing-ask-doogie"
-            style={{marginTop:"0.9rem",background:"var(--brand-navy)",color:"#F5F0E1",border:"none",borderRadius:999,padding:"0.6rem 1.15rem",fontSize:"0.9rem",fontWeight:600,cursor:"pointer",boxShadow:"0 3px 10px rgba(15,42,91,0.25)",display:"inline-flex",alignItems:"center",gap:"0.45rem"}}
-          >
-            🐾 Ask Doogie about this listing
-          </button>
+          {/* Ask Doogie listing button removed per BCFSA compliance — Doogie
+              cannot provide property-specific commentary. */}
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
             <span>🛏 {listing.beds} bed</span>
             <span>🛁 {listing.baths}{listing.half_baths ? ` + ${listing.half_baths}½` : ""} bath</span>
