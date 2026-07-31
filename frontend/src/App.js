@@ -2118,6 +2118,114 @@ const ListingCard = ({ listing }) => {
   );
 };
 
+// Reusable "Refine your search" filter card used on specialty landing pages
+// (Equestrian, Luxury, Detached, Condos, Townhomes). Self-contained: fetches
+// its own community list + facets, keeps local state, and on submit navigates
+// to /listings?... with any page-level defaults merged in.
+//
+// `defaults` — e.g. { price_min: 2000000 } for Equestrian, { property_type:
+// "Detached", price_min: 3000000 } for Luxury/Detached tab. These values are
+// carried through as hidden filters so /listings retains the specialty
+// context (buyer stays within their price/type tier while adding city,
+// beds, keyword, sort, etc.).
+//
+// `lockPropertyType` — if true, hides the Property Type dropdown (used on
+// Detached/Condo/Townhomes pages where the type is inherent to the page).
+const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, title = "Filter Listings" }) => {
+  const navigate = useNavigate();
+  const [state, setState] = useState({
+    city: "", property_type: defaults.property_type || "",
+    beds_min: "", baths_min: "", price_max: "", q: "", sort: "newest",
+  });
+  const [facets, setFacets] = useState({});
+  const [allComms, setAllComms] = useState([]);
+  const [cityFocus, setCityFocus] = useState(false);
+
+  useEffect(() => {
+    axios.get(`${API}/listings/meta/facets`).then(r => setFacets(r.data)).catch(() => {});
+    axios.get(`${API}/communities`).then(r => {
+      const list = [];
+      Object.entries(r.data || {}).forEach(([region, arr]) => arr.forEach(name => list.push({ name, region })));
+      list.sort((a, b) => a.name.localeCompare(b.name));
+      setAllComms(list);
+    }).catch(() => {});
+  }, []);
+
+  const set = (k, v) => setState(s => ({ ...s, [k]: v }));
+  const cityQ = (state.city || "").trim().toLowerCase();
+  const suggestions = !cityQ ? [] : (allComms || [])
+    .filter(c => c.name.toLowerCase().includes(cityQ) && c.name.toLowerCase() !== cityQ)
+    .slice(0, 8);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const merged = { ...defaults, ...Object.fromEntries(Object.entries(state).filter(([, v]) => v !== "" && v !== undefined && v !== null)) };
+    // Ensure defaults survive (e.g., locked property_type on detached page)
+    if (lockPropertyType && defaults.property_type) merged.property_type = defaults.property_type;
+    const qs = new URLSearchParams(merged).toString();
+    navigate(`/listings?${qs}`);
+  };
+
+  return (
+    <form onSubmit={submit} className="paper" data-testid="specialty-filter-panel" style={{marginBottom:"1.75rem"}}>
+      <div className="eyebrow" style={{marginBottom:"1rem"}}>{title}</div>
+      <div className="field" style={{position:"relative"}}><label>Community / City</label>
+        <input type="text" value={state.city} onChange={e=>set("city", e.target.value)}
+          onFocus={()=>setCityFocus(true)} onBlur={()=>setTimeout(()=>setCityFocus(false), 200)}
+          placeholder="Type any BC community (e.g. Whistler, Nelson, Kelowna)"
+          data-testid="specialty-filter-city" autoComplete="off"/>
+        {cityFocus && suggestions.length > 0 && (
+          <div style={{position:"absolute",top:"100%",left:0,right:0,background:"white",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,marginTop:"0.25rem",boxShadow:"0 10px 24px rgba(15,42,91,0.12)",maxHeight:240,overflowY:"auto",zIndex:20}}>
+            {suggestions.map(s => (
+              <button key={`${s.name}-${s.region}`} type="button" onMouseDown={e=>{e.preventDefault(); set("city", s.name); setCityFocus(false);}}
+                style={{display:"block",width:"100%",textAlign:"left",padding:"0.6rem 0.85rem",background:"transparent",border:"none",cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",borderBottom:"1px solid rgba(15,42,91,0.05)"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#F5F0E1"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{fontWeight:600,color:"var(--ink)"}}>{s.name}</div>
+                <div style={{fontSize:"0.72rem",color:"var(--muted)"}}>{s.region}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {!lockPropertyType && (
+        <div className="field"><label>Property Type</label>
+          <select value={state.property_type} onChange={e=>set("property_type", e.target.value)} data-testid="specialty-filter-type">
+            <option value="">Any</option>
+            {(facets.property_types||[]).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      )}
+      <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
+        <div className="field"><label>Min beds</label>
+          <select value={state.beds_min} onChange={e=>set("beds_min", e.target.value)} data-testid="specialty-filter-beds">
+            <option value="">Any</option>{[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}+</option>)}
+          </select>
+        </div>
+        <div className="field"><label>Min baths</label>
+          <select value={state.baths_min} onChange={e=>set("baths_min", e.target.value)} data-testid="specialty-filter-baths">
+            <option value="">Any</option>{[1,2,3,4].map(n=><option key={n} value={n}>{n}+</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="field"><label>Maximum price ($)</label>
+        <input type="number" placeholder="Any" value={state.price_max} onChange={e=>set("price_max", e.target.value)} data-testid="specialty-filter-price-max"/>
+      </div>
+      <div className="field"><label>Keyword</label>
+        <input placeholder="e.g. suite, waterfront" value={state.q} onChange={e=>set("q", e.target.value)} data-testid="specialty-filter-keyword"/>
+      </div>
+      <div className="field"><label>Sort by</label>
+        <select value={state.sort} onChange={e=>set("sort", e.target.value)} data-testid="specialty-filter-sort">
+          <option value="newest">Newest first</option>
+          <option value="price_asc">Price — low to high</option>
+          <option value="price_desc">Price — high to low</option>
+        </select>
+      </div>
+      <button type="submit" className="btn btn-primary" style={{width:"100%",marginTop:"0.75rem"}} data-testid="specialty-filter-apply">Apply Filters</button>
+    </form>
+  );
+};
+
 // Search filter sidebar (used inside <Listings/>).
 const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => {
   const set = (k, v) => setFilters(f => ({ ...f, [k]: v }));
@@ -2853,13 +2961,22 @@ const SpecialtyPage = () => {
   // eligible property types (Detached / Townhouse / Condo) at $3M+ BC-wide.
   if (slug === "luxury") return <LuxurySection intro={d}/>;
   if (slug === "equestrian") return <EquestrianSection intro={d}/>;
+  // Detached / Condos / Townhomes: type is inherent to the page, so the
+  // filter panel pre-locks Property Type and just refines city/beds/etc.
+  const SPECIALTY_TYPE_MAP = { "detached":"Detached", "condos":"Condo", "townhomes":"Townhouse" };
+  const lockedType = SPECIALTY_TYPE_MAP[slug];
   return (<section className="section"><div className="container-x">
     <img src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">Specialty</div><h1 className="section-title">{d.t}</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.c}</p>
-      <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}><Link to="/buyer" className="btn btn-primary">Start as a Buyer</Link><Link to="/seller" className="btn btn-green">Start as a Seller</Link></div>
     </div>
+    {lockedType && (
+      <div style={{maxWidth:"36rem",marginBottom:"2rem"}}>
+        <SpecialtyFilterPanel defaults={{ property_type: lockedType, sort: "newest" }} lockPropertyType={true}/>
+      </div>
+    )}
+    <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}><Link to="/buyer" className="btn btn-primary">Start as a Buyer</Link><Link to="/seller" className="btn btn-green">Start as a Seller</Link></div>
   </div></section>);
 };
 
@@ -2911,6 +3028,11 @@ const LuxurySection = ({ intro }) => {
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.92rem",lineHeight:1.6,marginBottom:"1.5rem",fontStyle:"italic"}}>
         Discreet, professional representation for high-value buyers and sellers — coordinated with Doug LeMaire, REALTOR® and his BC referral network of specialists in the luxury segment. Contact Doug for a confidential consultation.
       </p>
+    </div>
+
+    {/* Refine-your-search filter — carries the $3M+ floor through to /listings */}
+    <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
+      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }}/>
     </div>
 
     {/* Property-type tabs */}
@@ -3024,6 +3146,11 @@ const EquestrianSection = ({ intro }) => {
 
     {/* Property-type tabs removed per product decision — page now shows only
         the dedicated Equestrian Match tier ($2M+ keyword scan). */}
+
+    {/* Refine-your-search filter — carries the $2M+ floor through to /listings */}
+    <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
+      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }}/>
+    </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
