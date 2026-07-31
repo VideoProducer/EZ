@@ -3036,11 +3036,6 @@ const LuxurySection = ({ intro }) => {
       </p>
     </div>
 
-    {/* Refine-your-search filter — carries the $3M+ floor through to /listings */}
-    <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }} hideFields={["property_type"]}/>
-    </div>
-
     {/* Property-type tabs */}
     <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1.5rem",borderBottom:"2px solid #E5E7EB",paddingBottom:"0.5rem"}} data-testid="luxury-tabs">
       {LUXURY_TABS.map(t => (
@@ -3152,11 +3147,6 @@ const EquestrianSection = ({ intro }) => {
 
     {/* Property-type tabs removed per product decision — page now shows only
         the dedicated Equestrian Match tier ($2M+ keyword scan). */}
-
-    {/* Refine-your-search filter — carries the $2M+ floor through to /listings */}
-    <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} hideFields={["property_type", "beds_min", "baths_min"]}/>
-    </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
