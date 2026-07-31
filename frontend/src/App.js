@@ -917,6 +917,11 @@ const askDoogieAboutListing = (l, e) => {
   const prompt = `Tell me about ${head}${tail}${priceStr}. What should I know about this listing, the neighbourhood, and the market context?`;
   try {
     localStorage.setItem("ez_doogie_prefill", prompt);
+    // Flag this as a CONVERSATIONAL request. Without this, the listing-search
+    // intent regex would fire on "listing", "3 bed", "2 bath" etc. and Doogie
+    // would return "more listings" instead of chatting about THIS one.
+    // The DoogieChat send() reads this flag once and clears it.
+    localStorage.setItem("ez_doogie_prefill_kind", "listing_context");
     window.dispatchEvent(new CustomEvent("ez-open-doogie"));
   } catch {}
 };
@@ -1074,6 +1079,10 @@ const DoogieChat = () => {
   const mediaRef = useRef(null);
   const audioRef = useRef(null);   // currently-playing HTMLAudioElement, so we can stop mid-play
   const spokenRef = useRef(new Set());  // set of message-indices we've already spoken — bulletproof against double-fire
+  // When set to "listing_context" (or similar), forces the NEXT send() into
+  // conversational mode, bypassing the listing-search intent regex. Consumed
+  // exactly once (cleared inside send()).
+  const pendingKindRef = useRef(null);
   useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => { localStorage.setItem("ez_doogie_lang", lang); }, [lang]);
   // Pre-fill from affordability calculator handoff, OR from a listing card
@@ -1081,7 +1090,16 @@ const DoogieChat = () => {
   // and (in the case of listing cards) dispatch "ez-open-doogie" to open the panel.
   useEffect(() => {
     const pre = localStorage.getItem("ez_doogie_prefill");
-    if (open && pre && consented) { setInput(pre); localStorage.removeItem("ez_doogie_prefill"); }
+    if (open && pre && consented) {
+      setInput(pre);
+      // Consume the "kind" flag alongside the prefill. When present, the next
+      // send() will skip the listing-search intent regex and force
+      // conversational mode. Critical for "Ask Doogie about this listing" so
+      // the user gets an answer ABOUT the listing, not more search results.
+      const kind = localStorage.getItem("ez_doogie_prefill_kind");
+      if (kind) { pendingKindRef.current = kind; localStorage.removeItem("ez_doogie_prefill_kind"); }
+      localStorage.removeItem("ez_doogie_prefill");
+    }
   }, [open, consented]);
   // Allow any component to open Doogie via `window.dispatchEvent(new CustomEvent("ez-open-doogie"))`.
   // If a prefill was set, the useEffect above will pick it up once panel state = open + consented.
@@ -1213,9 +1231,16 @@ const DoogieChat = () => {
     if(!input.trim() || busy) return;
     const q = input; setInput(""); setBusy(true);
 
+    // If the current message was prefilled by "Ask Doogie about this listing"
+    // (or similar), force conversational mode. Otherwise the intent regex would
+    // trip on "listing", "3 bed", "2 bath" etc. and return more listings instead
+    // of chatting about THIS one. Consume the ref exactly once.
+    const forceConversational = pendingKindRef.current === "listing_context";
+    if (pendingKindRef.current) pendingKindRef.current = null;
+
     // LISTING SEARCH INTENT: skip the conversational chat entirely and only show listing results.
     // This avoids Doogie explaining "how to search" alongside the actual results.
-    if (looksLikeListingSearch(q)) {
+    if (!forceConversational && looksLikeListingSearch(q)) {
       setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
       try {
         const r = await axios.post(`${API}/doogie/mls-search`, { message: q });
