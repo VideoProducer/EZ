@@ -1920,7 +1920,18 @@ const Home = () => {
           )}
         </form>
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-          {["Detached","Luxury","Equestrian","Estate Sales","Condos","Townhomes"].map(s => <span key={s} className="pill">{s}</span>)}
+          {[
+            {label:"Detached",     slug:"detached"},
+            {label:"Luxury",       slug:"luxury"},
+            {label:"Equestrian",   slug:"equestrian"},
+            {label:"Estate Sales", slug:"estate-sales"},
+            {label:"Condos",       slug:"condos"},
+            {label:"Townhomes",    slug:"townhomes"},
+          ].map(s => (
+            <Link key={s.slug} to={`/specialties/${s.slug}`} className="pill"
+              data-testid={`home-specialty-pill-${s.slug}`}
+              style={{textDecoration:"none",cursor:"pointer"}}>{s.label}</Link>
+          ))}
         </div>
       </div>
       <div className="doogie-hero-wrap" style={{textAlign:"center",overflow:"visible"}}>
