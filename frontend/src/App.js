@@ -322,6 +322,10 @@ const NeighbourhoodPage = () => {
       <div className="notice" style={{marginTop:"0.5rem"}}>{d.note || "Synopsis being generated — please refresh in a moment."}</div>
     )}
     {d.synopsis && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-authored, reviewed by Doug LeMaire, REALTOR®. General information only — not a substitute for professional advice.</div>}
+    {/* Consistent BCFSA byline (License #167790 + compliance disclaimer +
+        freshness stamp) on every neighbourhood page — matches glossary and
+        community pages, strengthens E-E-A-T for 520 micro-nhb URLs. */}
+    {d.synopsis && <PublishedByDoug compact lastReviewed={d.synopsis_generated_at || d.updated_at}/>}
   </div></section>);
 };
 
@@ -601,14 +605,28 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
   return (
   <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0"}} data-testid="published-by-doug">
     <img src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
-    <div style={{lineHeight:1.5}}>
+    <div style={{lineHeight:1.5,minWidth:0}}>
       <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
       <div style={{fontWeight:700,color:"var(--ink)"}} itemProp="name">Doug LeMaire, REALTOR®</div>
       <div style={{fontSize:"0.88rem",color:"var(--brand-blue)"}}>
+        {/* BCFSA license number surfaced on every content page — required
+            for E-E-A-T (regulator-verifiable authority) and BCFSA rule that
+            REALTORS® must be transparently identifiable when representing
+            themselves in public communications. */}
+        <span style={{color:"var(--muted)",fontFamily:"'Inter',sans-serif"}} itemProp="identifier">BCFSA #167790</span>
+        <span style={{color:"var(--muted)"}}> · </span>
         <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}}>EZtoFind.ca</a>
         <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
       </div>
       {reviewedTxt && <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.15rem",fontStyle:"italic"}} data-testid="last-reviewed">🤖 AI-assisted content · Last reviewed by Doug LeMaire, REALTOR® on {reviewedTxt}</div>}
+      {/* Compliance-safe disclaimer — required so the elevated byline is not
+          read by search engines/LLMs as "Doug personally advised on this
+          specific matter". BCFSA Rule 5-4-1 (general information vs advice)
+          + PIPA transparency principle. Keep short so it doesn't compete
+          with the answer content that follows. */}
+      <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.2rem",lineHeight:1.4}} data-testid="content-disclaimer">
+        General information only — not real estate, legal, tax, or financial advice. Verify with a licensed BC professional before acting. <Link to="/privacy" style={{color:"var(--brand-blue)",textDecoration:"none"}}>Privacy (PIPA)</Link>
+      </div>
     </div>
   </div>);
 };
@@ -3442,6 +3460,17 @@ const GlossaryTerm = () => {
     <h1 className="section-title" itemProp="headline">{t.term}</h1>
 
     <AuthorBlock/>
+
+    {/* AEO answer-first pattern — natural-language question heading that
+        matches how users query LLMs ("What is X in BC?"), followed by the
+        definition as the direct answer. The question H2 is rendered as
+        <h2> for semantic weight (crawler/LLM extraction) but styled small
+        so it doesn't visually dominate the term H1. Marked as the
+        FAQPage.mainEntity Question via microdata for redundancy alongside
+        the JSON-LD FAQPage below. */}
+    <h2 style={{fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontWeight:600,marginTop:"0.5rem",marginBottom:"0.75rem",textTransform:"none",letterSpacing:0}} data-testid="glossary-answer-question">
+      What is {t.term} in British Columbia?
+    </h2>
 
     <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",lineHeight:1.75,color:"var(--ink)"}} itemProp="articleBody">{t.definition}</p>
 
