@@ -2971,43 +2971,32 @@ const LuxurySection = ({ intro }) => {
 // equestrian buyers hit the Agricultural Land Reserve issue on their first
 // property tour. Cross-links to glossary terms Doug already publishes.
 const EQUESTRIAN_MIN_PRICE = 2000000;
-const EQUESTRIAN_TABS = [
-  // "equestrian" tab uses the dedicated /listings/equestrian keyword-match
-  // endpoint (description contains any of: equestrian, horse property, horse
-  // friendly, horse farm, barn, stable, arena, riding ring, paddocks, ALR)
-  // AND price_min=$2M. This surfaces the premium tier of horse-friendly BC
-  // inventory that Doug's referral clients typically hunt for.
-  { key: "equestrian", label: `Equestrian Match ($${(EQUESTRIAN_MIN_PRICE/1e6)}M+)`, endpoint: "/listings/equestrian", singular: "equestrian match", plural: "equestrian matches" },
-  { key: "acreage",    label: "All Acreage",          property_type: "Acreage",   singular: "acreage property", plural: "acreage properties" },
-  { key: "detached",   label: "Detached on Land",     property_type: "Detached",  singular: "detached home",    plural: "detached homes" },
-];
+// Simplified per user request: page shows ONLY the dedicated equestrian
+// keyword-match tier ($2M+ with description scan for horse-property terms).
+// The prior "Acreage" and "Detached" fallback tabs were removed because they
+// diluted the page with generic rural properties buyers can already find via
+// the main /listings search.
+const EQUESTRIAN_LABEL_SINGULAR = "equestrian match";
+const EQUESTRIAN_LABEL_PLURAL = "equestrian matches";
 
 const EquestrianSection = ({ intro }) => {
-  const [tabKey, setTabKey] = useState("equestrian");
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const tab = EQUESTRIAN_TABS.find(t => t.key === tabKey) || EQUESTRIAN_TABS[0];
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    const url = tab.endpoint ? `${API}${tab.endpoint}` : `${API}/listings`;
-    const params = tab.endpoint
-      ? { sort: "price_asc", limit: 6, price_min: EQUESTRIAN_MIN_PRICE }
-      : { property_type: tab.property_type, sort: "price_asc", limit: 6 };
-    axios.get(url, { params }).then(r => {
+    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: 6, price_min: EQUESTRIAN_MIN_PRICE } }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
       setTotal(r.data?.total || 0);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [tabKey, tab.endpoint, tab.property_type]);
+  }, []);
 
-  const viewAllHref = tab.endpoint
-    ? `/listings?features=${encodeURIComponent("equestrian,horse property,barn,stable,arena,paddocks")}&sort=price_asc&price_min=${EQUESTRIAN_MIN_PRICE}`
-    : `/listings?property_type=${encodeURIComponent(tab.property_type)}&sort=price_asc`;
+  const viewAllHref = `/listings?features=${encodeURIComponent("equestrian,horse property,barn,stable,arena,paddocks")}&sort=price_asc&price_min=${EQUESTRIAN_MIN_PRICE}`;
 
   return (<section className="section" data-testid="equestrian-section"><div className="container-x">
     <img src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
@@ -3027,40 +3016,21 @@ const EquestrianSection = ({ intro }) => {
       <strong>⚠️ Verify before you buy.</strong> Many BC equestrian properties are inside the <Link to="/glossary/agricultural-land-reserve" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>Agricultural Land Reserve</Link>. Confirm ALR status, municipal zoning permitting stables, water rights under the Water Sustainability Act, septic capacity, and any registered <Link to="/glossary/restrictive-covenant" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>restrictive covenants</Link> or <Link to="/glossary/statutory-building-scheme" style={{color:"#78350F",textDecoration:"underline",fontWeight:600}}>statutory building schemes</Link> BEFORE writing an offer.
     </div>
 
-    {/* Property-type tabs */}
-    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem",borderBottom:"2px solid #E5E7EB",paddingBottom:"0.5rem"}} data-testid="equestrian-tabs">
-      {EQUESTRIAN_TABS.map(t => (
-        <button key={t.key} type="button"
-          onClick={() => setTabKey(t.key)}
-          data-testid={`equestrian-tab-${t.key}`}
-          style={{
-            background: tabKey === t.key ? "var(--brand-navy)" : "transparent",
-            color: tabKey === t.key ? "#F5F0E1" : "var(--brand-navy)",
-            border: `2px solid ${tabKey === t.key ? "var(--brand-navy)" : "#E5E7EB"}`,
-            padding: "0.5rem 1.1rem", borderRadius: 999,
-            fontFamily: "Inter,sans-serif", fontSize: "0.9rem", fontWeight: 600,
-            cursor: "pointer", transition: "all 0.15s"
-          }}>{t.label}</button>
-      ))}
-    </div>
-
-    {/* Region chips removed — CREA DDF stores 'region' as sub-area codes
-        (e.g., 'Eastern Highlands'), not the BC macro-regions we'd want to
-        expose. Buyers can drill into region on the /listings page after
-        clicking through to a specific tab. */}
+    {/* Property-type tabs removed per product decision — page now shows only
+        the dedicated Equestrian Match tier ($2M+ keyword scan). */}
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
-        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? tab.singular : tab.plural} across BC</>}
+        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? EQUESTRIAN_LABEL_SINGULAR : EQUESTRIAN_LABEL_PLURAL} across BC</>}
       </div>
-      <Link to={viewAllHref} className="btn btn-ghost" data-testid="equestrian-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {tab.plural} →</Link>
+      <Link to={viewAllHref} className="btn btn-ghost" data-testid="equestrian-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {EQUESTRIAN_LABEL_PLURAL} →</Link>
     </div>
 
     {loading ? (
       <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading equestrian listings…</div>
     ) : listings.length === 0 ? (
       <div className="paper" style={{padding:"2rem",textAlign:"center"}}>
-        <p>No active {tab.singular} listings currently on the feed for that filter. Try a different tab or region — inventory turns over frequently.</p>
+        <p>No active {EQUESTRIAN_LABEL_SINGULAR} listings currently on the feed at $2,000,000 or above. Inventory turns over frequently — check back soon or contact Doug directly for off-market equestrian opportunities.</p>
       </div>
     ) : (
       <div className="grid-3" data-testid="equestrian-listings">
@@ -3084,7 +3054,7 @@ const EquestrianSection = ({ intro }) => {
     <div style={{marginTop:"2.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
       <Link to="/buyer" className="btn btn-primary" data-testid="equestrian-buyer">Start as an Equestrian Buyer</Link>
       <Link to="/seller" className="btn btn-green" data-testid="equestrian-seller">List Your Horse Property</Link>
-      <Link to={viewAllHref} className="btn btn-ghost">Browse all BC {tab.plural}</Link>
+      <Link to={viewAllHref} className="btn btn-ghost">Browse all BC {EQUESTRIAN_LABEL_PLURAL}</Link>
     </div>
 
     {/* BCFSA compliance strip */}
