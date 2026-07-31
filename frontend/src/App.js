@@ -2131,7 +2131,7 @@ const ListingCard = ({ listing }) => {
 //
 // `lockPropertyType` — if true, hides the Property Type dropdown (used on
 // Detached/Condo/Townhomes pages where the type is inherent to the page).
-const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, excludeTypes = [], title = "Filter Listings" }) => {
+const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, excludeTypes = [], hideFields = [], title = "Filter Listings" }) => {
   const navigate = useNavigate();
   const [state, setState] = useState({
     city: "", property_type: defaults.property_type || "",
@@ -2188,7 +2188,7 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
           </div>
         )}
       </div>
-      {!lockPropertyType && (
+      {!lockPropertyType && !hideFields.includes("property_type") && (
         <div className="field"><label>Property Type</label>
           <select value={state.property_type} onChange={e=>set("property_type", e.target.value)} data-testid="specialty-filter-type">
             <option value="">Any</option>
@@ -2196,18 +2196,24 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
           </select>
         </div>
       )}
+      {!(hideFields.includes("beds_min") && hideFields.includes("baths_min")) && (
       <div className="form-grid" style={{gridTemplateColumns:"1fr 1fr"}}>
+        {!hideFields.includes("beds_min") && (
         <div className="field"><label>Min beds</label>
           <select value={state.beds_min} onChange={e=>set("beds_min", e.target.value)} data-testid="specialty-filter-beds">
             <option value="">Any</option>{[1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}+</option>)}
           </select>
         </div>
+        )}
+        {!hideFields.includes("baths_min") && (
         <div className="field"><label>Min baths</label>
           <select value={state.baths_min} onChange={e=>set("baths_min", e.target.value)} data-testid="specialty-filter-baths">
             <option value="">Any</option>{[1,2,3,4].map(n=><option key={n} value={n}>{n}+</option>)}
           </select>
         </div>
+        )}
       </div>
+      )}
       <div className="field"><label>Maximum price ($)</label>
         <input type="number" placeholder="Any" value={state.price_max} onChange={e=>set("price_max", e.target.value)} data-testid="specialty-filter-price-max"/>
       </div>
@@ -3149,7 +3155,7 @@ const EquestrianSection = ({ intro }) => {
 
     {/* Refine-your-search filter — carries the $2M+ floor through to /listings */}
     <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} excludeTypes={["Duplex", "Manufactured / Mobile", "Condo", "Single Family", "Townhouse"]}/>
+      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} hideFields={["property_type", "beds_min", "baths_min"]}/>
     </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
