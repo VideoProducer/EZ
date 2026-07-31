@@ -794,8 +794,7 @@ const Nav = () => {
           {favCount > 0 && <span data-testid="nav-favorites-badge" style={{background:"#DC2626",color:"#fff",fontSize:"0.68rem",fontWeight:700,padding:"0.1rem 0.45rem",borderRadius:999,minWidth:"1.1rem",textAlign:"center"}}>{favCount}</span>}
         </NavLink>
         <span className="nav-divider" aria-hidden="true"/>
-        <NavLink to="/realtors" onClick={close} data-testid="nav-realtors">BC REALTORS®</NavLink>
-        <NavLink to="/realtors-outofprovince" onClick={close} data-testid="nav-realtors-oop">Out of Province REALTORS®</NavLink>
+        <NavLink to="/realtor-network" onClick={close} data-testid="nav-realtor-network">REALTOR® Network</NavLink>
       </div>
     </div></nav>
   );
@@ -823,8 +822,7 @@ const Footer = () => (
         <li><Link to="/valuation">Home Valuation</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
-        <li><Link to="/realtors">BC REALTORS®</Link></li>
-        <li><Link to="/realtors-outofprovince">Out of Province REALTORS®</Link></li>
+        <li><Link to="/realtor-network">REALTOR® Network</Link></li>
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
@@ -3082,6 +3080,33 @@ const EquestrianSection = ({ intro }) => {
     </p>
   </div></section>);
 };
+
+// --- Combined REALTOR® Network page — BC on top, Out-of-Province below ---
+// Single-page presentation of Doug's referral network for licensed REALTORS®
+// from anywhere. BC applicants land in the BC pipeline; OOP applicants land
+// in the interprovincial pipeline. Same admin queue at /admin/realtors handles
+// both. Kept as one URL (/realtor-network) so a single nav item covers both.
+const RealtorNetwork = () => (
+  <>
+    <div style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.06))",paddingBottom:"2rem"}}>
+      <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
+        <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
+        <h1 className="section-title" style={{marginBottom:"0.5rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
+        <p style={{maxWidth:"46rem",margin:"0 auto",color:"var(--muted)",fontFamily:"Inter,sans-serif",lineHeight:1.65}}>
+          Doug LeMaire, REALTOR® partners with licensed REALTORS® across British Columbia and every other Canadian province, plus international agents, under the standard CREA Inter-Board Referral Agreement. If a client of Doug's is buying or selling in your area, he'll refer directly to you. Standard 25% referral fee paid by the receiving REALTOR® at closing.
+        </p>
+      </div>
+    </div>
+    {/* BC REALTORS® — top */}
+    <RealtorApply/>
+    {/* Visual divider between the two application flows */}
+    <div className="container-x" style={{textAlign:"center",padding:"1rem 0"}}>
+      <div style={{display:"inline-block",padding:"0.5rem 1.5rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:999,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",fontWeight:600,letterSpacing:"0.05em"}}>OR — LICENSED OUTSIDE BC?</div>
+    </div>
+    {/* Out-of-Province REALTORS® — bottom */}
+    <RealtorApplyOutOfProvince/>
+  </>
+);
 
 // --- Glossary ---
 // across high-value scrape targets (glossary, community, home). Each is
@@ -7112,8 +7137,9 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
-      <Route path="/realtors" element={<AppLayout><RealtorApply/></AppLayout>}/>
-      <Route path="/realtors-outofprovince" element={<AppLayout><RealtorApplyOutOfProvince/></AppLayout>}/>
+      <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
+      <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
+      <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
