@@ -623,7 +623,7 @@ const IMG = {
   equestrian: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800&q=80",
   estate: "https://images.unsplash.com/photo-1523217582562-09d0def993a6?w=800&q=80",
   condo: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80",
-  townhomes: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/d8ucxa1f_image.png",
+  townhomes: "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/u5cfho66_townhouse.webp",
   bcHero: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=1600&q=80",
   vancouverIsland: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1200&q=80"
 };
