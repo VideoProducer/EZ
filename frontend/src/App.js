@@ -3038,7 +3038,7 @@ const LuxurySection = ({ intro }) => {
 
     {/* Refine-your-search filter — carries the $3M+ floor through to /listings */}
     <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }} excludeTypes={["Duplex", "Manufactured / Mobile"]}/>
+      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }} hideFields={["property_type"]}/>
     </div>
 
     {/* Property-type tabs */}
