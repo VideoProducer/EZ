@@ -782,7 +782,7 @@ const Nav = () => {
       </button>
       <div className={`nav-links${open?" open":""}`}>
         <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
-        <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury</NavLink>
+        <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
@@ -815,7 +815,7 @@ const Footer = () => (
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Search Listings</Link></li>
-        <li><Link to="/specialties/luxury">Luxury</Link></li>
+        <li><Link to="/specialties/luxury">Luxury Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
