@@ -4945,6 +4945,71 @@ async def _resolve_bc_locality(q: str) -> Optional[dict]:
             return {"region": r}
     return None
 
+# Equestrian keyword canon — user-defined feature-sheet phrases that mark a
+# listing as "horse-friendly" even when CREA didn't tag it property_type=Equestrian.
+# Matched as case-insensitive substring against the listing description. OR
+# semantics: presence of ANY one keyword qualifies the listing.
+EQUESTRIAN_KEYWORDS = [
+    "equestrian", "horse property", "horse friendly", "horse farm",
+    "barn", "stable", "arena", "riding ring", "paddocks", "ALR",
+]
+
+
+@api.get("/listings/equestrian-count")
+@_limiter.limit("60/minute")
+async def equestrian_keyword_count(request: Request, price_min: Optional[int] = None):
+    """Count active BC listings whose description contains any of the
+    user-defined equestrian keywords. Returns the raw count + the keyword
+    list used, so the frontend can quantify 'true' equestrian inventory
+    beyond CREA's property_type=Equestrian facet."""
+    q: dict = {
+        "status": "Active",
+        "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
+        "$or": [{"description": {"$regex": re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
+    }
+    total = await db.listings.count_documents(q)
+    return {"total": total, "keywords": EQUESTRIAN_KEYWORDS, "price_min": price_min}
+
+
+@api.get("/listings/equestrian")
+@_limiter.limit("60/minute")
+async def equestrian_keyword_search(
+    request: Request,
+    sort: Optional[str] = "price_asc",
+    limit: int = 24,
+    offset: int = 0,
+    price_min: Optional[int] = None,
+):
+    """List active BC listings whose description contains any of the
+    user-defined equestrian keywords. Returns the same shape as /listings.
+    Sort options: newest | price_asc | price_desc."""
+    q: dict = {
+        "status": "Active",
+        "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
+        "$or": [{"description": {"$regex": re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
+    }
+    sort_spec = [("list_price", 1)]
+    if sort == "price_desc": sort_spec = [("list_price", -1)]
+    elif sort == "newest":   sort_spec = [("modification_ts", -1)]
+    total = await db.listings.count_documents(q)
+    cursor = db.listings.find(q, {"_id": 0}).sort(sort_spec).skip(offset).limit(min(limit, 100))
+    listings = await cursor.to_list(min(limit, 100))
+    return {
+        "total": total,
+        "count": len(listings),
+        "offset": offset,
+        "limit": limit,
+        "listings": listings,
+        "keywords_matched_on": EQUESTRIAN_KEYWORDS,
+        "compliance": {
+            "source": "CREA DDF®",
+            "note": "Keyword-based match on listing description. Confirm equestrian features (stables, arenas, water rights, ALR) with the listing REALTOR® before making an offer.",
+        },
+    }
+
+
 @api.get("/listings")
 @_limiter.limit("60/minute")
 async def search_listings(

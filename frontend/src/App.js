@@ -2970,10 +2970,16 @@ const LuxurySection = ({ intro }) => {
 // Cariboo, Kootenays), and a yellow ALR-verify banner up top because most
 // equestrian buyers hit the Agricultural Land Reserve issue on their first
 // property tour. Cross-links to glossary terms Doug already publishes.
+const EQUESTRIAN_MIN_PRICE = 2000000;
 const EQUESTRIAN_TABS = [
-  { key: "equestrian", label: "Dedicated Equestrian", property_type: "Equestrian",singular: "equestrian property", plural: "equestrian properties" },
-  { key: "acreage",    label: "All Acreage",          property_type: "Acreage",   singular: "acreage property",    plural: "acreage properties" },
-  { key: "detached",   label: "Detached on Land",     property_type: "Detached",  singular: "detached home",       plural: "detached homes" },
+  // "equestrian" tab uses the dedicated /listings/equestrian keyword-match
+  // endpoint (description contains any of: equestrian, horse property, horse
+  // friendly, horse farm, barn, stable, arena, riding ring, paddocks, ALR)
+  // AND price_min=$2M. This surfaces the premium tier of horse-friendly BC
+  // inventory that Doug's referral clients typically hunt for.
+  { key: "equestrian", label: `Equestrian Match ($${(EQUESTRIAN_MIN_PRICE/1e6)}M+)`, endpoint: "/listings/equestrian", singular: "equestrian match", plural: "equestrian matches" },
+  { key: "acreage",    label: "All Acreage",          property_type: "Acreage",   singular: "acreage property", plural: "acreage properties" },
+  { key: "detached",   label: "Detached on Land",     property_type: "Detached",  singular: "detached home",    plural: "detached homes" },
 ];
 
 const EquestrianSection = ({ intro }) => {
@@ -2986,18 +2992,22 @@ const EquestrianSection = ({ intro }) => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    axios.get(`${API}/listings`, {
-      params: { property_type: tab.property_type, sort: "price_asc", limit: 6 }
-    }).then(r => {
+    const url = tab.endpoint ? `${API}${tab.endpoint}` : `${API}/listings`;
+    const params = tab.endpoint
+      ? { sort: "price_asc", limit: 6, price_min: EQUESTRIAN_MIN_PRICE }
+      : { property_type: tab.property_type, sort: "price_asc", limit: 6 };
+    axios.get(url, { params }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
       setTotal(r.data?.total || 0);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [tabKey, tab.property_type]);
+  }, [tabKey, tab.endpoint, tab.property_type]);
 
-  const viewAllHref = `/listings?property_type=${encodeURIComponent(tab.property_type)}&sort=price_asc`;
+  const viewAllHref = tab.endpoint
+    ? `/listings?features=${encodeURIComponent("equestrian,horse property,barn,stable,arena,paddocks")}&sort=price_asc&price_min=${EQUESTRIAN_MIN_PRICE}`
+    : `/listings?property_type=${encodeURIComponent(tab.property_type)}&sort=price_asc`;
 
   return (<section className="section" data-testid="equestrian-section"><div className="container-x">
     <img src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
@@ -3006,6 +3016,9 @@ const EquestrianSection = ({ intro }) => {
       <h1 className="section-title" data-testid="equestrian-title">Equestrian Properties — British Columbia</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"1rem"}}>
         Live MLS® listings for horse-friendly acreage across all of British Columbia — hobby farms, dedicated equestrian facilities, and rural detached homes with paddock potential. From Langley's ALR corridor and Fraser Valley barn country, to South Okanagan orchards, Vancouver Island fields, Cariboo ranchland, and Kootenay foothill acreage. Every listing is pulled live from the CREA DDF® feed.
+      </p>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem",lineHeight:1.65,marginBottom:"1rem",fontStyle:"italic"}}>
+        <strong>How we define "Equestrian Match":</strong> we scan each listing's feature sheet for any of these terms — <em>equestrian, horse property, horse friendly, horse farm, barn, stable, arena, riding ring, paddocks, ALR</em> — and filter to properties listed at <strong>$2,000,000 or above</strong>. That surfaces the premium tier of horse-friendly BC inventory that Doug's referral clients typically hunt for, including many properties filed as "Detached" or "Acreage" that describe equestrian features in the write-up.
       </p>
     </div>
 
