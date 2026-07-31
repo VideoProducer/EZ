@@ -2847,6 +2847,9 @@ const SpecialtiesIndex = () => (<section className="section"><div className="con
 const SpecialtyPage = () => {
   const {slug} = useParams(); const d = SPECIALTIES[slug];
   if(!d) return <div className="section container-x"><h2>Not found</h2></div>;
+  // Luxury gets a richer experience: live listings preview across the 3
+  // eligible property types (Detached / Townhouse / Condo) at $3M+ BC-wide.
+  if (slug === "luxury") return <LuxurySection intro={d}/>;
   return (<section className="section"><div className="container-x">
     <img src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
@@ -2854,6 +2857,105 @@ const SpecialtyPage = () => {
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.c}</p>
       <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}><Link to="/buyer" className="btn btn-primary">Start as a Buyer</Link><Link to="/seller" className="btn btn-green">Start as a Seller</Link></div>
     </div>
+  </div></section>);
+};
+
+// --- Luxury Section — BC-wide, $3M+ across Detached / Townhouse / Condo ---
+// Editorial hero + property-type tabs pulling live counts and 6-card
+// previews from /api/listings with price_min=3000000 and the selected
+// property_type. BCFSA-safe: no "opinion of value" adjectives on individual
+// properties; describes the *market segment* only. Serves as landing page
+// for langleyluxury.com, langleyluxuryhomes.forsale, vancouverluxuryhomes.forsale
+// once those domain redirects flip on.
+const LUXURY_TABS = [
+  { key: "Detached",  label: "Detached Homes" },
+  { key: "Townhouse", label: "Townhouses" },
+  { key: "Condo",     label: "Condos" },
+];
+const LUXURY_MIN_PRICE = 3000000;
+
+const LuxurySection = ({ intro }) => {
+  const [tab, setTab] = useState("Detached");
+  const [listings, setListings] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    axios.get(`${API}/listings`, {
+      params: { property_type: tab, price_min: LUXURY_MIN_PRICE, sort: "price_desc", limit: 6 }
+    }).then(r => {
+      if (cancelled) return;
+      setListings(r.data?.listings || []);
+      setTotal(r.data?.total || 0);
+      setLoading(false);
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab]);
+
+  const viewAllHref = `/listings?property_type=${encodeURIComponent(tab)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc`;
+
+  return (<section className="section" data-testid="luxury-section"><div className="container-x">
+    <img src={intro.i} alt="Luxury Real Estate BC" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <div style={{maxWidth:"52rem",marginBottom:"2rem"}}>
+      <div className="eyebrow">BC's High-Value Residential Market</div>
+      <h1 className="section-title" data-testid="luxury-title">Luxury Real Estate — British Columbia</h1>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"1rem"}}>
+        Live MLS® listings priced at <strong>$3,000,000 and above</strong> across all of British Columbia — from West Vancouver waterfront estates and Kitsilano heritage homes, to Whistler chalets, Kelowna lakefront properties, and Langley acreages. Every listing below is currently active on the CREA DDF® feed and updated every 4 hours.
+      </p>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.92rem",lineHeight:1.6,marginBottom:"1.5rem",fontStyle:"italic"}}>
+        Discreet, professional representation for high-value buyers and sellers — coordinated with Doug LeMaire, REALTOR® and his BC referral network of specialists in the luxury segment. Contact Doug for a confidential consultation.
+      </p>
+    </div>
+
+    {/* Property-type tabs */}
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1.5rem",borderBottom:"2px solid #E5E7EB",paddingBottom:"0.5rem"}} data-testid="luxury-tabs">
+      {LUXURY_TABS.map(t => (
+        <button key={t.key} type="button"
+          onClick={() => setTab(t.key)}
+          data-testid={`luxury-tab-${t.key.toLowerCase()}`}
+          style={{
+            background: tab === t.key ? "var(--brand-navy)" : "transparent",
+            color: tab === t.key ? "#F5F0E1" : "var(--brand-navy)",
+            border: `2px solid ${tab === t.key ? "var(--brand-navy)" : "#E5E7EB"}`,
+            padding: "0.55rem 1.2rem", borderRadius: 999,
+            fontFamily: "Inter,sans-serif", fontSize: "0.92rem", fontWeight: 600,
+            cursor: "pointer", transition: "all 0.15s"
+          }}>{t.label}</button>
+      ))}
+    </div>
+
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
+      <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="luxury-count">
+        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {tab.toLowerCase()}{total===1?"":"s"} at $3M+ across BC</>}
+      </div>
+      <Link to={viewAllHref} className="btn btn-ghost" data-testid="luxury-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {tab.toLowerCase()}s →</Link>
+    </div>
+
+    {/* Preview grid — 6 cards, sorted price-desc */}
+    {loading ? (
+      <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading luxury listings…</div>
+    ) : listings.length === 0 ? (
+      <div className="paper" style={{padding:"2rem",textAlign:"center"}}>
+        <p>No active {tab.toLowerCase()} listings at $3M+ currently on the feed. Check back — luxury inventory turns over frequently.</p>
+      </div>
+    ) : (
+      <div className="grid-3" data-testid="luxury-listings">
+        {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+      </div>
+    )}
+
+    <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
+      <Link to="/buyer" className="btn btn-primary" data-testid="luxury-buyer">Start as a Luxury Buyer</Link>
+      <Link to="/seller" className="btn btn-green" data-testid="luxury-seller">List Your Luxury Property</Link>
+      <Link to={viewAllHref} className="btn btn-ghost">Browse all $3M+ {tab.toLowerCase()}s</Link>
+    </div>
+
+    {/* BCFSA compliance strip */}
+    <p style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"2.5rem",fontFamily:"Inter,sans-serif",lineHeight:1.6,fontStyle:"italic",borderTop:"1px solid #E5E7EB",paddingTop:"1rem"}}>
+      Listings shown are from the CREA DDF® feed and are current at time of load. All representations regarding specific properties (value, condition, permitted use, etc.) should be verified with the listing REALTOR®, a BC lawyer or notary, and independent inspectors. Doug LeMaire, REALTOR® provides general information and referral services and is licensed under the BC Real Estate Services Act, regulated by BCFSA. Not an opinion of value.
+    </p>
   </div></section>);
 };
 
