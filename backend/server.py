@@ -4949,11 +4949,32 @@ async def _resolve_bc_locality(q: str) -> Optional[dict]:
 
 # Equestrian keyword canon — user-defined feature-sheet phrases that mark a
 # listing as "horse-friendly" even when CREA didn't tag it property_type=Equestrian.
-# Matched as case-insensitive substring against the listing description. OR
-# semantics: presence of ANY one keyword qualifies the listing.
+# Matched with LEFT word boundary (case-insensitive) against the listing
+# description. Left-boundary prevents false positives like "install" matching
+# "stall", or "urbanization" matching "urban". OR semantics: presence of ANY
+# one keyword qualifies the listing.
+#
+# NOTE: Bare "farm" and "ranch" are DELIBERATELY excluded — they match
+# "farmhouse sink" / "ranch-style home" (extremely common non-equestrian
+# real estate lingo). Use the more specific "hobby farm" / "horse ranch"
+# / "cattle ranch" instead.
 EQUESTRIAN_KEYWORDS = [
+    # Original canon
     "equestrian", "horse property", "horse friendly", "horse farm",
-    "barn", "stable", "arena", "riding ring", "paddocks", "ALR",
+    "barn", "stable", "arena", "riding ring", "paddock", "ALR",
+    # New additions (Feb 2026) — expanded feature-sheet vocabulary
+    "horse facility", "horse ranch", "horse barn", "horse stall",
+    "stall",                                # stall, stalls, stalled, stallion
+    "round pen", "pasture", "tack room", "feed room",
+    "hay loft", "hay shed", "hay storage", "hayloft",
+    "wash bay", "wash rack", "grooming area",
+    "cross fenced", "cross-fenced",
+    "in and out stall",
+    "grazing", "outbuilding", "out building", "loafing shed",
+    "agricultural",
+    "hobby farm", "cattle ranch",
+    "dressage",                             # dressage, dressage arena
+    "corral",                               # bonus: common BC ranch term
 ]
 
 
@@ -4968,7 +4989,7 @@ async def equestrian_keyword_count(request: Request, price_min: Optional[int] = 
         "status": "Active",
         "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
-        "$or": [{"description": {"$regex": re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
+        "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
     }
     total = await db.listings.count_documents(q)
     return {"total": total, "keywords": EQUESTRIAN_KEYWORDS, "price_min": price_min}
@@ -4990,7 +5011,7 @@ async def equestrian_keyword_search(
         "status": "Active",
         "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
-        "$or": [{"description": {"$regex": re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
+        "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
     }
     sort_spec = [("list_price", 1)]
     if sort == "price_desc": sort_spec = [("list_price", -1)]
