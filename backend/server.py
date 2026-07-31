@@ -5002,6 +5002,43 @@ async def equestrian_keyword_count(request: Request, price_min: Optional[int] = 
 # Values are regex patterns applied to `description` (left word-boundary, i)
 # UNLESS "property_types" is set (then a strict CREA property_type $in filter
 # is applied). Multiple keys are OR-ed inside one sub-category.
+
+# Public region chip → communities_seed.json key(s). Comma-joined lists let the
+# frontend send a single value like "Lower Mainland" that resolves to two seed
+# keys (Greater Vancouver + Fraser Valley) at query time. Kept server-side so
+# users can't inject arbitrary keys.
+REGION_CHIP_MAP = {
+    "Anywhere":         [],
+    "Lower Mainland":   ["Greater Vancouver", "Fraser Valley"],
+    "Fraser Valley":    ["Fraser Valley"],
+    "Okanagan":         ["Okanagan"],
+    "Vancouver Island": ["Vancouver Island & Gulf Islands"],
+    "Kootenays":        ["Kootenay"],
+    "Northern BC":      ["Northern BC"],
+}
+
+def _resolve_region_chip_to_city_filter(chip: Optional[str]) -> Optional[dict]:
+    """Resolves a public region chip label to a MongoDB city filter clause.
+    Returns None when the chip is falsy or 'Anywhere' (no filter). Silently
+    returns None for unknown chips (fail-open — the caller keeps working)."""
+    if not chip or chip == "Anywhere":
+        return None
+    seed_keys = REGION_CHIP_MAP.get(chip)
+    if not seed_keys:
+        return None
+    try:
+        _seed = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+        cities: list = []
+        for k in seed_keys:
+            cities.extend(_seed.get(k, []))
+        if not cities:
+            return None
+        return {"$in": [re.compile(f"^{re.escape(c)}$", re.I) for c in cities]}
+    except Exception as e:
+        logger.warning(f"region chip resolution failed for {chip!r}: {e}")
+        return None
+
+
 EQUESTRIAN_SUB_CATEGORIES = {
     "acreage":    {"patterns": ["acreage", "acres", "hectares?"]},
     "hobby_farm": {"patterns": ["hobby farm", "gentleman'?s farm", "small farm"]},
@@ -5020,18 +5057,24 @@ async def equestrian_keyword_search(
     offset: int = 0,
     price_min: Optional[int] = None,
     sub_category: Optional[str] = None,
+    region_chip: Optional[str] = None,
 ):
     """List active BC listings whose description contains any of the
     user-defined equestrian keywords. Returns the same shape as /listings.
     Sort options: newest | price_asc | price_desc.
     Optional `sub_category` narrows further to acreage / hobby_farm / estate
-    / ranch / bareland (see EQUESTRIAN_SUB_CATEGORIES)."""
+    / ranch / bareland (see EQUESTRIAN_SUB_CATEGORIES).
+    Optional `region_chip` narrows to a public BC region (see REGION_CHIP_MAP)."""
     q: dict = {
         "status": "Active",
         "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
         "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
     }
+    # Region chip → city $in filter (server-side allowlist to prevent injection).
+    city_filter = _resolve_region_chip_to_city_filter(region_chip)
+    if city_filter is not None:
+        q["city"] = city_filter
     # Apply sub-category constraint (AND-ed with the base equestrian scan).
     if sub_category and sub_category in EQUESTRIAN_SUB_CATEGORIES:
         cfg = EQUESTRIAN_SUB_CATEGORIES[sub_category]
@@ -5077,6 +5120,7 @@ async def search_listings(
     city: Optional[str] = None,
     region: Optional[str] = None,
     region_group: Optional[str] = None,  # Top-level BC area: "Greater Vancouver", "Fraser Valley", "Sea-to-Sky" — resolved to the cities defined in communities_seed.json
+    region_chip: Optional[str] = None,  # Public region chip label (see REGION_CHIP_MAP) — "Lower Mainland" spans multiple regions
     property_type: Optional[str] = None,
     beds_min: Optional[int] = None,
     beds_exact: Optional[int] = None,
@@ -5110,6 +5154,12 @@ async def search_listings(
                 query["city"] = {"$in": [re.compile(f"^{re.escape(c)}$", re.I) for c in group_cities]}
         except Exception as e:
             logger.warning(f"region_group resolution failed for {region_group!r}: {e}")
+    # region_chip: public multi-region alias (e.g. "Lower Mainland"). Applied
+    # after region_group so an explicit city/region_group wins over the chip.
+    if region_chip and not city and "city" not in query:
+        chip_filter = _resolve_region_chip_to_city_filter(region_chip)
+        if chip_filter is not None:
+            query["city"] = chip_filter
     if property_type:
         # Silently drop requests for excluded (commercial) types — residential only.
         if property_type in EXCLUDED_PROPERTY_TYPES:

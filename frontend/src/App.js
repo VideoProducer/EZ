@@ -3000,28 +3000,43 @@ const LUXURY_TABS = [
 ];
 const LUXURY_MIN_PRICE = 3000000;
 
+// Shared region chips used on both Luxury and Equestrian specialty pages.
+// Labels must match server-side REGION_CHIP_MAP keys — the frontend passes the
+// exact label as ?region_chip= and the backend resolves it against the
+// communities_seed.json city allowlist. "Anywhere" sends no filter.
+const REGION_CHIPS = [
+  { key: "Anywhere",         label: "Anywhere in BC" },
+  { key: "Lower Mainland",   label: "Lower Mainland" },
+  { key: "Fraser Valley",    label: "Fraser Valley" },
+  { key: "Okanagan",         label: "Okanagan" },
+  { key: "Vancouver Island", label: "Vancouver Island" },
+  { key: "Kootenays",        label: "Kootenays" },
+  { key: "Northern BC",      label: "Northern BC" },
+];
+
 const LuxurySection = ({ intro }) => {
   const [tabKey, setTabKey] = useState("Detached");
   const tab = LUXURY_TABS.find(t => t.key === tabKey) || LUXURY_TABS[0];
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [region, setRegion] = useState("Anywhere");
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    axios.get(`${API}/listings`, {
-      params: { property_type: tabKey, price_min: LUXURY_MIN_PRICE, sort: "price_desc", limit: 6 }
-    }).then(r => {
+    const params = { property_type: tabKey, price_min: LUXURY_MIN_PRICE, sort: "price_desc", limit: 6 };
+    if (region && region !== "Anywhere") params.region_chip = region;
+    axios.get(`${API}/listings`, { params }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
       setTotal(r.data?.total || 0);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [tabKey]);
+  }, [tabKey, region]);
 
-  const viewAllHref = `/listings?property_type=${encodeURIComponent(tabKey)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc`;
+  const viewAllHref = `/listings?property_type=${encodeURIComponent(tabKey)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc${region !== "Anywhere" ? `&region_chip=${encodeURIComponent(region)}` : ""}`;
 
   return (<section className="section" data-testid="luxury-section"><div className="container-x">
     <img src={intro.i} alt="Luxury Real Estate BC" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
@@ -3034,6 +3049,28 @@ const LuxurySection = ({ intro }) => {
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.92rem",lineHeight:1.6,marginBottom:"1.5rem",fontStyle:"italic"}}>
         Discreet, professional representation for high-value buyers and sellers — coordinated with Doug LeMaire, REALTOR® and his BC referral network of specialists in the luxury segment. Contact Doug for a confidential consultation.
       </p>
+    </div>
+
+    {/* Region chips — narrows all 3 property-type tabs by BC region. */}
+    <div style={{marginBottom:"1.5rem"}}>
+      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginBottom:"0.55rem",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Where are you looking?</div>
+      <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}} data-testid="luxury-region-chips">
+        {REGION_CHIPS.map(r => {
+          const active = region === r.key;
+          return (
+            <button key={r.key} type="button" onClick={() => setRegion(r.key)}
+              data-testid={`luxury-region-${r.key.toLowerCase().replace(/\s+/g,"-")}`}
+              style={{
+                background: active ? "var(--brand-navy)" : "transparent",
+                color: active ? "#F5F0E1" : "var(--brand-navy)",
+                border: `2px solid ${active ? "var(--brand-navy)" : "#E5E7EB"}`,
+                padding: "0.4rem 0.95rem", borderRadius: 999,
+                fontFamily: "Inter,sans-serif", fontSize: "0.85rem", fontWeight: 600,
+                cursor: "pointer", transition: "all 0.15s"
+              }}>{r.label}</button>
+          );
+        })}
+      </div>
     </div>
 
     {/* Property-type tabs */}
@@ -3120,6 +3157,7 @@ const EquestrianSection = ({ intro }) => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [subCat, setSubCat] = useState("");
+  const [region, setRegion] = useState("Anywhere");
   const PAGE_SIZE = 12;
 
   useEffect(() => {
@@ -3127,6 +3165,7 @@ const EquestrianSection = ({ intro }) => {
     setLoading(true);
     const params = { sort: "price_asc", limit: PAGE_SIZE, offset: 0, price_min: EQUESTRIAN_MIN_PRICE };
     if (subCat) params.sub_category = subCat;
+    if (region && region !== "Anywhere") params.region_chip = region;
     axios.get(`${API}/listings/equestrian`, { params }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
@@ -3134,13 +3173,14 @@ const EquestrianSection = ({ intro }) => {
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [subCat]);
+  }, [subCat, region]);
 
   const loadMore = () => {
     if (loadingMore || listings.length >= total) return;
     setLoadingMore(true);
     const params = { sort: "price_asc", limit: PAGE_SIZE, offset: listings.length, price_min: EQUESTRIAN_MIN_PRICE };
     if (subCat) params.sub_category = subCat;
+    if (region && region !== "Anywhere") params.region_chip = region;
     axios.get(`${API}/listings/equestrian`, { params })
       .then(r => setListings(prev => [...prev, ...(r.data?.listings || [])]))
       .catch(() => {})
@@ -3165,9 +3205,31 @@ const EquestrianSection = ({ intro }) => {
     {/* Property-type tabs removed per product decision — page now shows only
         the dedicated Equestrian Match tier ($2M+ keyword scan). */}
 
+    {/* Region chips — narrows equestrian match by BC region. */}
+    <div style={{marginBottom:"1.25rem",marginTop:"1.5rem"}}>
+      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginBottom:"0.55rem",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Where are you looking?</div>
+      <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}} data-testid="equestrian-region-chips">
+        {REGION_CHIPS.map(r => {
+          const active = region === r.key;
+          return (
+            <button key={r.key} type="button" onClick={() => setRegion(r.key)}
+              data-testid={`equestrian-region-${r.key.toLowerCase().replace(/\s+/g,"-")}`}
+              style={{
+                background: active ? "var(--brand-navy)" : "transparent",
+                color: active ? "#F5F0E1" : "var(--brand-navy)",
+                border: `2px solid ${active ? "var(--brand-navy)" : "#E5E7EB"}`,
+                padding: "0.4rem 0.95rem", borderRadius: 999,
+                fontFamily: "Inter,sans-serif", fontSize: "0.85rem", fontWeight: 600,
+                cursor: "pointer", transition: "all 0.15s"
+              }}>{r.label}</button>
+          );
+        })}
+      </div>
+    </div>
+
     {/* Sub-category chips — drill down within the equestrian match by
         lifestyle segment (acreage, hobby farm, estate, ranch, bareland). */}
-    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem",marginTop:"1.5rem"}} data-testid="equestrian-chips">
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem"}} data-testid="equestrian-chips">
       {EQUESTRIAN_CHIPS.map(c => {
         const active = subCat === c.key;
         return (
