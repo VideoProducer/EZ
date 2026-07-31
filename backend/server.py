@@ -3740,7 +3740,9 @@ async def admin_regen_sitemap(_=Depends(verify_admin)):
             "https://eztofind.ca/about",
             "https://eztofind.ca/valuation",
             "https://eztofind.ca/relocating",
-            "https://eztofind.ca/realtors",
+            "https://eztofind.ca/realtor-network",
+            "https://eztofind.ca/specialties/luxury",
+            "https://eztofind.ca/specialties/equestrian",
         ]
         indexnow_result = await notify_indexnow(priority_urls)
         result["indexnow"] = indexnow_result
