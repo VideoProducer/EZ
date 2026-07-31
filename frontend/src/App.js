@@ -3149,7 +3149,7 @@ const EquestrianSection = ({ intro }) => {
 
     {/* Refine-your-search filter — carries the $2M+ floor through to /listings */}
     <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} excludeTypes={["Duplex", "Manufactured / Mobile"]}/>
+      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} excludeTypes={["Duplex", "Manufactured / Mobile", "Condo", "Single Family", "Townhouse"]}/>
     </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
