@@ -2131,7 +2131,7 @@ const ListingCard = ({ listing }) => {
 //
 // `lockPropertyType` — if true, hides the Property Type dropdown (used on
 // Detached/Condo/Townhomes pages where the type is inherent to the page).
-const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, title = "Filter Listings" }) => {
+const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, excludeTypes = [], title = "Filter Listings" }) => {
   const navigate = useNavigate();
   const [state, setState] = useState({
     city: "", property_type: defaults.property_type || "",
@@ -2192,7 +2192,7 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, title =
         <div className="field"><label>Property Type</label>
           <select value={state.property_type} onChange={e=>set("property_type", e.target.value)} data-testid="specialty-filter-type">
             <option value="">Any</option>
-            {(facets.property_types||[]).map(t => <option key={t} value={t}>{t}</option>)}
+            {(facets.property_types||[]).filter(t => !excludeTypes.includes(t)).map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
       )}
@@ -3032,7 +3032,7 @@ const LuxurySection = ({ intro }) => {
 
     {/* Refine-your-search filter — carries the $3M+ floor through to /listings */}
     <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }}/>
+      <SpecialtyFilterPanel defaults={{ price_min: LUXURY_MIN_PRICE, sort: "price_desc" }} excludeTypes={["Duplex", "Manufactured / Mobile"]}/>
     </div>
 
     {/* Property-type tabs */}
@@ -3149,7 +3149,7 @@ const EquestrianSection = ({ intro }) => {
 
     {/* Refine-your-search filter — carries the $2M+ floor through to /listings */}
     <div style={{maxWidth:"36rem",marginBottom:"1.5rem"}}>
-      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }}/>
+      <SpecialtyFilterPanel defaults={{ price_min: EQUESTRIAN_MIN_PRICE, sort: "price_asc" }} excludeTypes={["Duplex", "Manufactured / Mobile"]}/>
     </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
