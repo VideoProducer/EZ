@@ -903,6 +903,23 @@ const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
 // Optionally, users can sync to their email (server-side, CASL double-opt-in)
 // for cross-device access — that flow lives in the <Favorites> page component.
 const FAV_STORAGE_KEY = "ez_favorites";
+
+// GA4 conversion helper — safe no-op wrapper for window.gtag("event", …).
+// Fires only when the user has opted into analytics (GA4Gate loads gtag) AND
+// gtag is actually on window. Wraps every call in try/catch so a broken
+// analytics call NEVER breaks the user-facing flow (form submit, favorite,
+// etc.). PIPA-compliant: consent gate upstream means no fire before opt-in.
+const trackConversion = (event, params = {}) => {
+  try {
+    if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+    window.gtag("event", event, {
+      // Standard GA4 recommended params for lead-gen: give every conversion a
+      // consistent envelope so the funnel + attribution reports work cleanly.
+      send_to: process.env.REACT_APP_GA4_MEASUREMENT_ID,
+      ...params,
+    });
+  } catch { /* swallow — never break UX for an analytics call */ }
+};
 // Track the price we FIRST saw for each favorited listing so the personalized
 // homepage can flag price drops. Purely client-side — server never sees this.
 const FAV_PRICES_KEY = "ez_fav_prices";
@@ -953,6 +970,8 @@ const FavoriteButton = ({ listingKey, currentPrice, size = "md" }) => {
       const prices = _readFavPrices();
       if (!prices[listingKey]) { prices[listingKey] = { first_seen_price: currentPrice, at: new Date().toISOString() }; _writeFavPrices(prices); }
     }
+    // GA4 conversion — only fire on add (not remove) to avoid double-counting
+    if (nextSaved) trackConversion("favorite_added", { listing_key: listingKey, value: currentPrice || 0, currency: "CAD" });
     setSaved(nextSaved);
   };
   const dim = size === "sm" ? 30 : 40;
@@ -1209,6 +1228,13 @@ const DoogieChat = () => {
     e.preventDefault();
     if(!input.trim() || busy) return;
     const q = input; setInput(""); setBusy(true);
+    // GA4 engagement event — count *user* messages sent this session. Fire
+    // once at message #3 to mark this as an engaged conversation (Google's
+    // recommended threshold for "meaningful engagement" is 3+ interactions).
+    const userMsgCountSoFar = msgs.filter(m => m.role === "user").length + 1;
+    if (userMsgCountSoFar === 3) {
+      trackConversion("doogie_conversation", { session_id: sessionId, message_count: userMsgCountSoFar, language: lang });
+    }
 
     // LISTING SEARCH INTENT: skip the conversational chat entirely and only show listing results.
     // This avoids Doogie explaining "how to search" alongside the actual results.
@@ -1443,6 +1469,7 @@ const WhereShouldYouLive = () => {
       const r = await axios.post(`${API}/community-match`, answers);
       setResults(r.data);
       setStep(5);
+      trackConversion("community_match_completed", { region: answers.region || "any", home_type: answers.home_type || "any", lifestyle: answers.lifestyle || "any", match_count: (r.data?.matches || []).length });
     } catch { setResults({matches:[], disclaimer:"Something went wrong. Please try again."}); setStep(5); }
     finally { setLoading(false); }
   };
@@ -2611,6 +2638,7 @@ const SavedSearchModal = ({ open, onClose, currentFilters }) => {
       if (optDormant) campaigns.push("dormant_wakeup");
       if (optNews) campaigns.push("news_tips");
       try { await axios.post(`${API}/campaigns/opt-in`, { email, campaigns, opt_in_text: "Saved-search modal signup — I consent to receive listing-alert emails from EZtoFind.ca (CASL).", source: "saved_search_modal" }); } catch {}
+      trackConversion("saved_search_created", { filter_count: Object.keys(cleanFilters).length, extra_campaigns: campaigns.length - 1 });
       setDone(true);
     } catch (x) {
       setErr(x?.response?.data?.detail || "Something went wrong. Please try again.");
@@ -3521,7 +3549,7 @@ const BuyerForm = () => {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, turnstile_token: getTurnstileToken()}); setDone(true); } catch(x){ setErr(t("common.required")); } };
+  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
@@ -3555,7 +3583,7 @@ const SellerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, turnstile_token: getTurnstileToken()}); setDone(true);}catch(x){setErr(t("common.required"));} };
+  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
@@ -3588,7 +3616,7 @@ const SellerForm = () => {
 // --- REALTOR® network (3 stages) ---
 const RealtorApply = () => {
   const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
+  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply`,f); trackConversion("realtor_application", { application_type: "bc", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
@@ -3617,7 +3645,7 @@ const RealtorApply = () => {
 // --- Out-of-Province REALTOR® network (same shape, different destination + copy) ---
 const RealtorApplyOutOfProvince = () => {
   const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",province:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
-  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); setRes(r.data);}catch(x){setErr("Try again.");} };
+  const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); trackConversion("realtor_application", { application_type: "out_of_province", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
   const PROVINCES = ["Alberta","Saskatchewan","Manitoba","Ontario","Quebec","New Brunswick","Nova Scotia","Prince Edward Island","Newfoundland and Labrador","Yukon","Northwest Territories","Nunavut","Other (International)"];
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
@@ -4822,7 +4850,7 @@ const CommunityPage = () => {
 const Valuation = () => {
   const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, turnstile_token: getTurnstileToken()}); setDone(true);}catch(x){setErr("Please complete required fields and consents.");} };
+  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, turnstile_token: getTurnstileToken()}); trackConversion("home_valuation_request", { timeline: f.timeline, property_type: f.property_type, city: f.city, currently_listed: f.currently_listed, currency: "CAD" }); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", source: "valuation_page", currency: "CAD" }); setDone(true);}catch(x){setErr("Please complete required fields and consents.");} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <img src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
@@ -4866,7 +4894,7 @@ const ReferralRequest = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken()}); setDone(true);}catch(x){setErr(t("common.required"));} };
+  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
@@ -6509,6 +6537,24 @@ function GA4Gate() {
       });
     } catch(_){}
   }, [loc.pathname, loc.search]);
+
+  // Delegated contact-click tracking — catches every mailto: / tel: click
+  // site-wide without needing to touch each link's onClick. Only fires when
+  // the user has opted into analytics (upstream consent gate handles PIPA).
+  useEffect(() => {
+    const handler = (e) => {
+      const a = e.target && e.target.closest && e.target.closest("a[href^='mailto:'], a[href^='tel:']");
+      if (!a) return;
+      const href = a.getAttribute("href") || "";
+      if (href.startsWith("mailto:")) {
+        trackConversion("contact_click_email", { email_address: href.replace("mailto:", ""), link_text: (a.textContent || "").trim().substring(0, 80) });
+      } else if (href.startsWith("tel:")) {
+        trackConversion("contact_click_phone", { phone_number: href.replace("tel:", ""), link_text: (a.textContent || "").trim().substring(0, 80) });
+      }
+    };
+    document.addEventListener("click", handler, { passive: true });
+    return () => document.removeEventListener("click", handler);
+  }, []);
 
   return null;
 }
