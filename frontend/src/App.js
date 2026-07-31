@@ -3102,29 +3102,46 @@ const EQUESTRIAN_MIN_PRICE = 2000000;
 const EQUESTRIAN_LABEL_SINGULAR = "equestrian match";
 const EQUESTRIAN_LABEL_PLURAL = "equestrian matches";
 
+// Sub-category chips — must match server-side EQUESTRIAN_SUB_CATEGORIES keys.
+// "" = All (no sub_category param sent). Each chip AND-narrows the base
+// equestrian keyword scan by additional description patterns or property_type.
+const EQUESTRIAN_CHIPS = [
+  { key: "",           label: "All" },
+  { key: "acreage",    label: "Acreage" },
+  { key: "hobby_farm", label: "Hobby Farm" },
+  { key: "estate",     label: "Estate" },
+  { key: "ranch",      label: "Ranch" },
+  { key: "bareland",   label: "Bareland" },
+];
+
 const EquestrianSection = ({ intro }) => {
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [subCat, setSubCat] = useState("");
   const PAGE_SIZE = 12;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: PAGE_SIZE, offset: 0, price_min: EQUESTRIAN_MIN_PRICE } }).then(r => {
+    const params = { sort: "price_asc", limit: PAGE_SIZE, offset: 0, price_min: EQUESTRIAN_MIN_PRICE };
+    if (subCat) params.sub_category = subCat;
+    axios.get(`${API}/listings/equestrian`, { params }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
       setTotal(r.data?.total || 0);
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [subCat]);
 
   const loadMore = () => {
     if (loadingMore || listings.length >= total) return;
     setLoadingMore(true);
-    axios.get(`${API}/listings/equestrian`, { params: { sort: "price_asc", limit: PAGE_SIZE, offset: listings.length, price_min: EQUESTRIAN_MIN_PRICE } })
+    const params = { sort: "price_asc", limit: PAGE_SIZE, offset: listings.length, price_min: EQUESTRIAN_MIN_PRICE };
+    if (subCat) params.sub_category = subCat;
+    axios.get(`${API}/listings/equestrian`, { params })
       .then(r => setListings(prev => [...prev, ...(r.data?.listings || [])]))
       .catch(() => {})
       .finally(() => setLoadingMore(false));
@@ -3148,7 +3165,28 @@ const EquestrianSection = ({ intro }) => {
     {/* Property-type tabs removed per product decision — page now shows only
         the dedicated Equestrian Match tier ($2M+ keyword scan). */}
 
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem",marginTop:"1.5rem"}}>
+    {/* Sub-category chips — drill down within the equestrian match by
+        lifestyle segment (acreage, hobby farm, estate, ranch, bareland). */}
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem",marginTop:"1.5rem"}} data-testid="equestrian-chips">
+      {EQUESTRIAN_CHIPS.map(c => {
+        const active = subCat === c.key;
+        return (
+          <button key={c.key || "all"} type="button"
+            onClick={() => setSubCat(c.key)}
+            data-testid={`equestrian-chip-${c.key || "all"}`}
+            style={{
+              background: active ? "var(--brand-navy)" : "transparent",
+              color: active ? "#F5F0E1" : "var(--brand-navy)",
+              border: `2px solid ${active ? "var(--brand-navy)" : "#E5E7EB"}`,
+              padding: "0.45rem 1.05rem", borderRadius: 999,
+              fontFamily: "Inter,sans-serif", fontSize: "0.88rem", fontWeight: 600,
+              cursor: "pointer", transition: "all 0.15s"
+            }}>{c.label}</button>
+        );
+      })}
+    </div>
+
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="equestrian-count">
         {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? EQUESTRIAN_LABEL_SINGULAR : EQUESTRIAN_LABEL_PLURAL} across BC · showing {listings.length}</>}
       </div>

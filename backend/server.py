@@ -4995,6 +4995,22 @@ async def equestrian_keyword_count(request: Request, price_min: Optional[int] = 
     return {"total": total, "keywords": EQUESTRIAN_KEYWORDS, "price_min": price_min}
 
 
+# Sub-category filters for the equestrian page. Each key maps to an additional
+# constraint that is AND-ed onto the base equestrian keyword scan. Extends the
+# equestrian match with product-facing chips ("Hobby Farm", "Estate", "Ranch",
+# etc.) so buyers can drill in by lifestyle segment without leaving the page.
+# Values are regex patterns applied to `description` (left word-boundary, i)
+# UNLESS "property_types" is set (then a strict CREA property_type $in filter
+# is applied). Multiple keys are OR-ed inside one sub-category.
+EQUESTRIAN_SUB_CATEGORIES = {
+    "acreage":    {"patterns": ["acreage", "acres", "hectares?"]},
+    "hobby_farm": {"patterns": ["hobby farm", "gentleman'?s farm", "small farm"]},
+    "estate":     {"patterns": ["estate home", "gated estate", "private estate", "country estate", "equestrian estate", "horse estate"]},
+    "ranch":      {"patterns": ["horse ranch", "cattle ranch", "working ranch", "guest ranch", "hobby ranch", "ranch property", "cattle operation"]},
+    "bareland":   {"property_types": ["Land"], "patterns": ["bareland", "bare land", "vacant land", "raw land"]},
+}
+
+
 @api.get("/listings/equestrian")
 @_limiter.limit("60/minute")
 async def equestrian_keyword_search(
@@ -5003,16 +5019,34 @@ async def equestrian_keyword_search(
     limit: int = 24,
     offset: int = 0,
     price_min: Optional[int] = None,
+    sub_category: Optional[str] = None,
 ):
     """List active BC listings whose description contains any of the
     user-defined equestrian keywords. Returns the same shape as /listings.
-    Sort options: newest | price_asc | price_desc."""
+    Sort options: newest | price_asc | price_desc.
+    Optional `sub_category` narrows further to acreage / hobby_farm / estate
+    / ranch / bareland (see EQUESTRIAN_SUB_CATEGORIES)."""
     q: dict = {
         "status": "Active",
         "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
         "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
     }
+    # Apply sub-category constraint (AND-ed with the base equestrian scan).
+    if sub_category and sub_category in EQUESTRIAN_SUB_CATEGORIES:
+        cfg = EQUESTRIAN_SUB_CATEGORIES[sub_category]
+        sub_clauses = []
+        if cfg.get("property_types"):
+            # Overrides the base $nin excluded-types filter for this segment
+            # (e.g., "bareland" MUST match property_type=Land which would
+            # otherwise be excluded). We add a strict $in match.
+            sub_clauses.append({"property_type": {"$in": cfg["property_types"]}})
+        if cfg.get("patterns"):
+            sub_clauses.append({"$or": [{"description": {"$regex": r"\b" + p, "$options": "i"}} for p in cfg["patterns"]]})
+        if sub_clauses:
+            # $or between property-type match and description pattern match
+            # so either qualifies the listing for this sub-category.
+            q["$and"] = [{"$or": sub_clauses}] if len(sub_clauses) > 1 else sub_clauses
     sort_spec = [("list_price", 1)]
     if sort == "price_desc": sort_spec = [("list_price", -1)]
     elif sort == "newest":   sort_spec = [("modification_ts", -1)]
@@ -5025,6 +5059,7 @@ async def equestrian_keyword_search(
         "offset": offset,
         "limit": limit,
         "listings": listings,
+        "sub_category": sub_category,
         "keywords_matched_on": EQUESTRIAN_KEYWORDS,
         "compliance": {
             "source": "CREA DDF®",
