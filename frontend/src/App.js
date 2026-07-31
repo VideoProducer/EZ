@@ -2906,7 +2906,7 @@ const LuxurySection = ({ intro }) => {
       <div className="eyebrow">BC's High-Value Residential Market</div>
       <h1 className="section-title" data-testid="luxury-title">Luxury Real Estate — British Columbia</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"1rem"}}>
-        Live MLS® listings priced at <strong>$3,000,000 and above</strong> across all of British Columbia — from West Vancouver waterfront estates and Kitsilano heritage homes, to Whistler chalets, Kelowna lakefront properties, and Langley acreages. Every listing below is currently active on the CREA DDF® feed and updated every 4 hours.
+        Live MLS® listings priced at <strong>$3,000,000 and above</strong> across all of British Columbia — from West Vancouver waterfront estates and Kitsilano heritage homes, to Whistler chalets, Kelowna lakefront properties, and Langley acreages.
       </p>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.92rem",lineHeight:1.6,marginBottom:"1.5rem",fontStyle:"italic"}}>
         Discreet, professional representation for high-value buyers and sellers — coordinated with Doug LeMaire, REALTOR® and his BC referral network of specialists in the luxury segment. Contact Doug for a confidential consultation.
