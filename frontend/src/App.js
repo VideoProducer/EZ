@@ -2870,14 +2870,15 @@ const SpecialtyPage = () => {
 // for langleyluxury.com, langleyluxuryhomes.forsale, vancouverluxuryhomes.forsale
 // once those domain redirects flip on.
 const LUXURY_TABS = [
-  { key: "Detached",  label: "Detached Homes" },
-  { key: "Townhouse", label: "Townhouses" },
-  { key: "Condo",     label: "Condos" },
+  { key: "Detached",  label: "Detached Homes", singular: "detached home", plural: "detached homes" },
+  { key: "Townhouse", label: "Townhouses",     singular: "townhouse",     plural: "townhouses" },
+  { key: "Condo",     label: "Condos",         singular: "condo",         plural: "condos" },
 ];
 const LUXURY_MIN_PRICE = 3000000;
 
 const LuxurySection = ({ intro }) => {
-  const [tab, setTab] = useState("Detached");
+  const [tabKey, setTabKey] = useState("Detached");
+  const tab = LUXURY_TABS.find(t => t.key === tabKey) || LUXURY_TABS[0];
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -2886,7 +2887,7 @@ const LuxurySection = ({ intro }) => {
     let cancelled = false;
     setLoading(true);
     axios.get(`${API}/listings`, {
-      params: { property_type: tab, price_min: LUXURY_MIN_PRICE, sort: "price_desc", limit: 6 }
+      params: { property_type: tabKey, price_min: LUXURY_MIN_PRICE, sort: "price_desc", limit: 6 }
     }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
@@ -2894,9 +2895,9 @@ const LuxurySection = ({ intro }) => {
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [tab]);
+  }, [tabKey]);
 
-  const viewAllHref = `/listings?property_type=${encodeURIComponent(tab)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc`;
+  const viewAllHref = `/listings?property_type=${encodeURIComponent(tabKey)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc`;
 
   return (<section className="section" data-testid="luxury-section"><div className="container-x">
     <img src={intro.i} alt="Luxury Real Estate BC" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
@@ -2915,12 +2916,12 @@ const LuxurySection = ({ intro }) => {
     <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1.5rem",borderBottom:"2px solid #E5E7EB",paddingBottom:"0.5rem"}} data-testid="luxury-tabs">
       {LUXURY_TABS.map(t => (
         <button key={t.key} type="button"
-          onClick={() => setTab(t.key)}
+          onClick={() => setTabKey(t.key)}
           data-testid={`luxury-tab-${t.key.toLowerCase()}`}
           style={{
-            background: tab === t.key ? "var(--brand-navy)" : "transparent",
-            color: tab === t.key ? "#F5F0E1" : "var(--brand-navy)",
-            border: `2px solid ${tab === t.key ? "var(--brand-navy)" : "#E5E7EB"}`,
+            background: tabKey === t.key ? "var(--brand-navy)" : "transparent",
+            color: tabKey === t.key ? "#F5F0E1" : "var(--brand-navy)",
+            border: `2px solid ${tabKey === t.key ? "var(--brand-navy)" : "#E5E7EB"}`,
             padding: "0.55rem 1.2rem", borderRadius: 999,
             fontFamily: "Inter,sans-serif", fontSize: "0.92rem", fontWeight: 600,
             cursor: "pointer", transition: "all 0.15s"
@@ -2930,9 +2931,9 @@ const LuxurySection = ({ intro }) => {
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>
       <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem"}} data-testid="luxury-count">
-        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {tab.toLowerCase()}{total===1?"":"s"} at $3M+ across BC</>}
+        {loading ? "Loading…" : <><strong style={{color:"var(--brand-navy)"}}>{total.toLocaleString()}</strong> {total === 1 ? tab.singular : tab.plural} at $3M+ across BC</>}
       </div>
-      <Link to={viewAllHref} className="btn btn-ghost" data-testid="luxury-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {tab.toLowerCase()}s →</Link>
+      <Link to={viewAllHref} className="btn btn-ghost" data-testid="luxury-view-all" style={{fontSize:"0.88rem",padding:"0.45rem 1.1rem"}}>View all {tab.plural} →</Link>
     </div>
 
     {/* Preview grid — 6 cards, sorted price-desc */}
@@ -2940,7 +2941,7 @@ const LuxurySection = ({ intro }) => {
       <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading luxury listings…</div>
     ) : listings.length === 0 ? (
       <div className="paper" style={{padding:"2rem",textAlign:"center"}}>
-        <p>No active {tab.toLowerCase()} listings at $3M+ currently on the feed. Check back — luxury inventory turns over frequently.</p>
+        <p>No active {tab.singular} listings at $3M+ currently on the feed. Check back — luxury inventory turns over frequently.</p>
       </div>
     ) : (
       <div className="grid-3" data-testid="luxury-listings">
@@ -2951,7 +2952,7 @@ const LuxurySection = ({ intro }) => {
     <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
       <Link to="/buyer" className="btn btn-primary" data-testid="luxury-buyer">Start as a Luxury Buyer</Link>
       <Link to="/seller" className="btn btn-green" data-testid="luxury-seller">List Your Luxury Property</Link>
-      <Link to={viewAllHref} className="btn btn-ghost">Browse all $3M+ {tab.toLowerCase()}s</Link>
+      <Link to={viewAllHref} className="btn btn-ghost">Browse all $3M+ {tab.plural}</Link>
     </div>
 
     {/* BCFSA compliance strip */}
