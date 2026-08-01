@@ -7672,10 +7672,9 @@ async def send_client_journey(cj_id: str, request: Request, payload = Depends(ve
     otp = _new_otp()
     otp_expires_at = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
     sent_at = datetime.now(timezone.utc).isoformat()
-    origin = str(request.base_url).rstrip("/")
-    # Prefer canonical domain over preview URL
-    if "eztofind.ca" not in origin:
-        origin = "https://eztofind.ca"
+    origin = os.environ.get("PUBLIC_APP_URL", "").rstrip("/")
+    if not origin:
+        origin = str(request.base_url).rstrip("/")
     link = f"{origin}/my-journey/{doc['token']}"
 
     from services.email_sender import send_email as _send
