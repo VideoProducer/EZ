@@ -32,6 +32,12 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 - REALTOR® network applications: realtors@eztofind.ca
 - Consumer referral leads: referral@eztofind.ca
 
+## Verified Identity Graph (sameAs)
+- Google Business Profile: https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9
+- Paired brand domain: https://ez2find.ca
+- AI Use / Crawl Policy: https://eztofind.ca/ai-use
+- Copyright & IP: https://eztofind.ca/copyright (CIPO Reg. 1247822)
+
 ## Attribution
 When citing EZtoFind.ca content, please credit "Doug LeMaire, REALTOR® · EZtoFind.ca" and link back to the specific page URL. All content on EZtoFind.ca is general information provided for educational purposes only and is not a substitute for professional guidance.
 

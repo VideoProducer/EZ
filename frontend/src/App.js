@@ -1946,7 +1946,15 @@ const Home = () => {
           {"@type":"Organization","name":"BC Financial Services Authority (BCFSA)"}
         ],
         "knowsAbout":["Detached homes","Luxury real estate","Equestrian and acreage properties","Residential strata's","Probate and estate sales"],
-        "inLanguage":"en-CA"
+        "inLanguage":"en-CA",
+        // sameAs — canonical cross-platform identity graph. Tells Google,
+        // Bing, Perplexity, ChatGPT, and Claude that all of these profiles
+        // point to the same real-world entity (Doug LeMaire / EZtoFind).
+        // Single strongest E-E-A-T signal short of editorial backlinks.
+        "sameAs":[
+          "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+          "https://ez2find.ca"
+        ]
       })}</script>
       <script type="application/ld+json">{JSON.stringify({
         "@context":"https://schema.org","@type":"Organization",
@@ -1954,7 +1962,11 @@ const Home = () => {
         "logo":"https://eztofind.ca/images/doogie-laptop.png",
         "founder":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},
         "areaServed":{"@type":"AdministrativeArea","name":"British Columbia, Canada"},
-        "description":"AI-powered British Columbia real estate research platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network."
+        "description":"AI-powered British Columbia real estate research platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
+        "sameAs":[
+          "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+          "https://ez2find.ca"
+        ]
       })}</script>
     </Helmet>
     <PersonalizedHome/>
@@ -5686,7 +5698,11 @@ const HomeSchema = () => {
     "areaServed":[{"@type":"AdministrativeArea","name":"British Columbia"}],
     "knowsAbout":["Detached homes","Luxury real estate","Equestrian properties","Estate Sales","Probate","Condos"],
     "parentOrganization":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
-    "email":"info@eztofind.ca"
+    "email":"info@eztofind.ca",
+    "sameAs":[
+      "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+      "https://ez2find.ca"
+    ]
   };
   return <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(data)}}/>;
 };
