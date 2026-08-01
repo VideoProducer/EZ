@@ -7627,6 +7627,7 @@ const AdminClientJourneys = () => {
       {(showNew || editingId) && (
         <ClientJourneyEditor
           editingId={editingId}
+          onCreated={(id)=>setEditingId(id)}
           onClose={()=>{ setShowNew(false); setEditingId(null); load(); }}
         />
       )}
@@ -7680,7 +7681,7 @@ const AdminClientJourneys = () => {
 };
 
 // ---- Editor / creator ----
-const ClientJourneyEditor = ({ editingId, onClose }) => {
+const ClientJourneyEditor = ({ editingId, onCreated, onClose }) => {
   const { headers } = useAdmin();
   const [cj, setCj] = useState({
     client_name:"", client_email:"", client_phone:"",
@@ -7690,6 +7691,7 @@ const ClientJourneyEditor = ({ editingId, onClose }) => {
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
+  const [savedFlash, setSavedFlash] = useState("");
   const [tokenInfo, setTokenInfo] = useState(null); // {token, expires_at} once saved
 
   useEffect(() => {
@@ -7768,6 +7770,11 @@ const ClientJourneyEditor = ({ editingId, onClose }) => {
       }
       setTokenInfo({ token: r.data.token, expires_at: r.data.expires_at });
       setCj(r.data);
+      setSavedFlash(editingId ? "✓ Changes saved" : "✓ Draft created — you can now Send it to the client, or continue editing");
+      if (!editingId && r.data.id && onCreated) onCreated(r.data.id);
+      setTimeout(()=>setSavedFlash(""), 4000);
+      // scroll the token-preview into view
+      setTimeout(()=>{ const el = document.querySelector('[data-testid="admin-cj-preview-link"]'); if (el) el.scrollIntoView({behavior:"smooth", block:"center"}); }, 100);
     } catch (e) {
       setErr(e.response?.data?.detail || e.message);
     } finally { setSaving(false); }
@@ -7894,7 +7901,8 @@ const ClientJourneyEditor = ({ editingId, onClose }) => {
         </div>
       )}
 
-      {err && <div style={{color:"#DC2626",marginTop:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}} data-testid="admin-cj-error">{err}</div>}
+      {err && <div style={{color:"#DC2626",marginTop:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",background:"#FEF2F2",padding:"0.75rem 1rem",borderRadius:6,border:"1px solid #FCA5A5"}} data-testid="admin-cj-error">⚠ {err}</div>}
+      {savedFlash && <div style={{color:"#059669",marginTop:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",background:"#F0FDF4",padding:"0.75rem 1rem",borderRadius:6,border:"1px solid #86EFAC"}} data-testid="admin-cj-saved-flash">{savedFlash}</div>}
 
       <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
         <button className="btn btn-primary" onClick={save} disabled={saving || !cj.client_name || !cj.client_email} data-testid="admin-cj-save">
