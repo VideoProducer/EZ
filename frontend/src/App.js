@@ -6487,7 +6487,19 @@ function ScrollToTop() {
   const loc = useLocation();
   useEffect(() => {
     if (loc.hash) return;
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    // Belt-and-braces: some mobile browsers ignore window.scrollTo, some sites
+    // scroll a scrollable body/html, and async content can push the scroll
+    // position back down. Do it immediately + on next frame + one more after
+    // 60ms to catch layout shifts from lazy-loaded images / async fetches.
+    const scroll = () => {
+      try { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); } catch { window.scrollTo(0, 0); }
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+    scroll();
+    requestAnimationFrame(scroll);
+    const t = setTimeout(scroll, 80);
+    return () => clearTimeout(t);
   }, [loc.pathname, loc.search]);
   return null;
 }
@@ -7670,7 +7682,7 @@ const AdminReferrals = () => {
         <h2 style={{margin:0}} data-testid="admin-referrals-title">💰 Referral Network Tracker</h2>
         <button className="btn btn-primary" onClick={()=>setShowNew(v=>!v)} data-testid="admin-referrals-new-btn">+ New Referral</button>
       </div>
-      <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.5rem"}}>Model A referrals — Doug refers to a partner REALTOR® and earns a fee at closing under the CREA Inter-Board Referral Agreement.</p>
+      <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.5rem"}}>Model A referrals — Doug refers a lead to a REALTOR® in another market and earns a fee at closing under the CREA Inter-Board Referral Agreement.</p>
 
       <div className="grid-4" data-testid="admin-referrals-summary" style={{gap:"0.75rem",marginTop:"1rem"}}>
         <div className="paper" style={{padding:"1rem"}} data-testid="admin-referrals-summary-total">

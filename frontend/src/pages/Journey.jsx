@@ -122,11 +122,6 @@ export const JourneyLanding = () => {
             );
           })}
         </div>
-
-        <div style={{marginTop:"3rem",padding:"1.5rem",background:"var(--paper)",border:"1px solid rgba(15,42,91,0.08)",borderRadius:12}}>
-          <div style={{fontSize:"0.85rem",fontWeight:700,marginBottom:"0.5rem"}}>Have a question along the way?</div>
-          <div style={{fontSize:"0.9rem",color:"var(--muted)",lineHeight:1.6}}>Doogie AI is available on every page to help you understand a term or find related content. Doogie provides general educational information only.</div>
-        </div>
       </div>
     </section>
   );
@@ -276,11 +271,6 @@ export const JourneyDetail = () => {
               </Link>
             ))}
           </div>
-        </div>
-
-        <div className="journey-doogie-cta" style={{marginTop:"2rem",padding:"1.5rem",background:"var(--paper)",border:"1px solid rgba(15,42,91,0.08)",borderRadius:12,textAlign:"center"}}>
-          <div style={{fontSize:"1rem",fontWeight:700,marginBottom:"0.5rem",color:"var(--brand-navy)"}}>Have a question about any topic above?</div>
-          <div style={{fontSize:"0.9rem",color:"var(--muted)",lineHeight:1.6,marginBottom:"0.85rem"}}>Open Doogie AI (bottom-right corner) for a general educational answer. Doogie never provides advice on a specific property or transaction.</div>
         </div>
       </div>
     </section>

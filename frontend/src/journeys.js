@@ -451,15 +451,16 @@ const OWNERSHIP = {
 
 // Ordered list — controls display order on the /journey landing page and
 // the "Begin Your Real Estate Journey" homepage section.
+// Investment Property and New Construction journeys have been removed per
+// Doug's editorial direction (2026-02-01) — those topics remain available
+// via the glossary + community pages but not as dedicated journeys.
 export const JOURNEYS_ORDER = [
   "buying",
   "selling",
   "buying-and-selling",
   "condo-strata",
   "first-time-buyer",
-  "new-construction",
   "acreages",
-  "investment",
   "home-ownership",
 ];
 
@@ -469,9 +470,7 @@ export const JOURNEYS = {
   "buying-and-selling": BUY_AND_SELL,
   "condo-strata": CONDO_STRATA,
   "first-time-buyer": FIRST_TIME,
-  "new-construction": NEW_CONSTRUCTION,
   acreages: ACREAGES,
-  investment: INVESTMENT,
   "home-ownership": OWNERSHIP,
 };
 
