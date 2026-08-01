@@ -2265,6 +2265,23 @@ async def get_term(slug: str):
     t["sources_source"] = "curated+default" if t.get("sources_override") else "default"
     return t
 
+@api.get("/glossary/{slug}/related")
+async def get_related_terms(slug: str, limit: int = 8):
+    """AEO internal-linking helper — return up to N related glossary terms in
+    the same category. Used by the "See also" section on every glossary page."""
+    t = await db.glossary.find_one({"slug": slug}, {"_id": 0, "term": 1, "category": 1})
+    if not t:
+        raise HTTPException(404, "Term not found")
+    category = t.get("category") or ""
+    q = {"slug": {"$ne": slug}}
+    if category:
+        q["category"] = category
+    docs = await db.glossary.find(q, {"_id": 0, "term": 1, "slug": 1, "category": 1}).sort("term", 1).to_list(200)
+    # Randomize order slightly so different visits surface different terms
+    import random as _r
+    _r.shuffle(docs)
+    return {"category": category, "items": docs[:limit]}
+
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
     """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs. Hallucination-hardened
     prompt v2: cites BC statute sections or explicitly refuses; forces "verify with a BC
@@ -7375,6 +7392,126 @@ async def save_journey_progress(body: dict, payload = Depends(verify_admin)):
         upsert=True,
     )
     return {"ok": True, "modules_synced": sum(len(j.get("modules_completed", [])) for j in progress.values() if isinstance(j, dict))}
+
+
+# -------- Referral Network — Model A tracking --------
+# Doug's referral model: Doug refers a consumer lead to a partner REALTOR®
+# (in-BC out-of-area, out-of-province, or international). The receiving
+# REALTOR® pays Doug a 25% referral fee (Model A) via the standard
+# CREA Inter-Board Referral Agreement. This mini-CRM tracks each referral
+# from creation through closing / paid.
+#
+# Referral lifecycle (status):
+#   sent → acknowledged → active → under_contract → closed → paid
+#   (or) sent → declined | expired
+class ReferralRecordIn(BaseModel):
+    lead_email: str
+    lead_name: str = ""
+    lead_phone: str = ""
+    lead_city: str = ""
+    lead_property_type: str = ""
+    lead_budget: str = ""
+    receiving_realtor_name: str = ""
+    receiving_realtor_email: str = ""
+    receiving_realtor_brokerage: str = ""
+    receiving_realtor_board: str = ""
+    referral_fee_pct: float = 25.0
+    estimated_sale_price: Optional[float] = None
+    notes: str = ""
+    source: str = "manual"  # manual | buyer_form | seller_form | doogie_chat
+
+class ReferralStatusUpdate(BaseModel):
+    status: str  # sent | acknowledged | active | under_contract | closed | paid | declined | expired
+    note: str = ""
+    actual_sale_price: Optional[float] = None
+    referral_fee_amount: Optional[float] = None
+    closed_date: Optional[str] = None
+    paid_date: Optional[str] = None
+
+REFERRAL_STATUSES = {"sent","acknowledged","active","under_contract","closed","paid","declined","expired"}
+
+@api.post("/admin/referrals")
+async def create_referral(body: ReferralRecordIn, payload = Depends(verify_admin)):
+    """Create a new referral record — called from /admin/referrals UI."""
+    now = datetime.now(timezone.utc).isoformat()
+    rec = {
+        "id": str(uuid.uuid4()),
+        "created_at": now,
+        "updated_at": now,
+        "status": "sent",
+        "status_history": [{"status": "sent", "at": now, "note": "Referral created", "by": payload.get("email")}],
+        **body.model_dump(),
+    }
+    await db.referrals.insert_one(rec)
+    rec.pop("_id", None)
+    return rec
+
+@api.get("/admin/referrals")
+async def list_referrals(status: Optional[str] = None, _=Depends(verify_admin)):
+    """List all referrals, optionally filtered by status."""
+    q = {}
+    if status and status in REFERRAL_STATUSES:
+        q["status"] = status
+    items = await db.referrals.find(q).sort("created_at", -1).to_list(500)
+    for it in items:
+        it.pop("_id", None)
+    # Summary stats for dashboard
+    all_items = await db.referrals.find({}).to_list(1000)
+    summary = {
+        "total": len(all_items),
+        "by_status": {},
+        "estimated_total_fee": 0.0,
+        "collected_total_fee": 0.0,
+        "pending_total_fee": 0.0,
+    }
+    for it in all_items:
+        s = it.get("status", "sent")
+        summary["by_status"][s] = summary["by_status"].get(s, 0) + 1
+        pct = float(it.get("referral_fee_pct", 25.0)) / 100.0
+        est_price = it.get("estimated_sale_price") or 0
+        actual_price = it.get("actual_sale_price") or 0
+        actual_fee = it.get("referral_fee_amount")
+        if s == "paid":
+            summary["collected_total_fee"] += float(actual_fee or (actual_price * pct))
+        elif s in ("closed",):
+            summary["pending_total_fee"] += float(actual_fee or (actual_price * pct))
+        elif s in ("acknowledged","active","under_contract"):
+            summary["estimated_total_fee"] += float(est_price * pct)
+    return {"items": items, "summary": summary}
+
+@api.patch("/admin/referrals/{referral_id}")
+async def update_referral_status(referral_id: str, body: ReferralStatusUpdate, payload = Depends(verify_admin)):
+    """Advance a referral through its lifecycle. Records an immutable status_history entry."""
+    if body.status not in REFERRAL_STATUSES:
+        raise HTTPException(400, f"Invalid status. Must be one of: {sorted(REFERRAL_STATUSES)}")
+    existing = await db.referrals.find_one({"id": referral_id})
+    if not existing:
+        raise HTTPException(404, "Referral not found")
+    now = datetime.now(timezone.utc).isoformat()
+    update = {"status": body.status, "updated_at": now}
+    if body.actual_sale_price is not None:
+        update["actual_sale_price"] = body.actual_sale_price
+    if body.referral_fee_amount is not None:
+        update["referral_fee_amount"] = body.referral_fee_amount
+    if body.closed_date:
+        update["closed_date"] = body.closed_date
+    if body.paid_date:
+        update["paid_date"] = body.paid_date
+    history_entry = {"status": body.status, "at": now, "note": body.note or "", "by": payload.get("email")}
+    await db.referrals.update_one(
+        {"id": referral_id},
+        {"$set": update, "$push": {"status_history": history_entry}},
+    )
+    doc = await db.referrals.find_one({"id": referral_id})
+    doc.pop("_id", None)
+    return doc
+
+@api.delete("/admin/referrals/{referral_id}")
+async def delete_referral(referral_id: str, _=Depends(verify_admin)):
+    r = await db.referrals.delete_one({"id": referral_id})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Referral not found")
+    return {"ok": True}
 
 
 @api.post("/campaigns/opt-in")

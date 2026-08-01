@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import { JourneyLanding, JourneyDetail } from "./pages/Journey";
+import Editorial from "./pages/Editorial";
 import { getResumeJourney } from "./hooks/useJourneyProgress";
 import { JOURNEYS, JOURNEYS_ORDER } from "./journeys";
 import { Helmet } from "react-helmet-async";
@@ -878,7 +879,7 @@ const Footer = () => (
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
         <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. <strong>Registered with the Canadian Intellectual Property Office — Copyright Registration No. 1247822.</strong> Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/editorial">Editorial Policy</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
     {/* CREA-required trademark attribution — MUST appear on every page displaying MLS® data. Verbatim wording per CREA Trademark Policy 2019 s.4. */}
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"1.5rem",paddingTop:"1.25rem",fontSize:"0.72rem",lineHeight:1.55,opacity:0.7,color:"rgba(255,255,255,0.85)"}} data-testid="crea-trademark-notice">
@@ -3506,7 +3507,8 @@ const GlossaryTerm = () => {
   const {slug} = useParams();
   const [t, setT] = useState(null);
   const [loading, setLoading] = useState(true);
-  useEffect(()=>{ setLoading(true); axios.get(`${API}/glossary/${slug}`).then(r=>{setT(r.data);setLoading(false);}).catch(()=>setLoading(false)); },[slug]);
+  const [related, setRelated] = useState({ category: "", items: [] });
+  useEffect(()=>{ setLoading(true); axios.get(`${API}/glossary/${slug}`).then(r=>{setT(r.data);setLoading(false);}).catch(()=>setLoading(false)); axios.get(`${API}/glossary/${slug}/related`).then(r=>setRelated(r.data||{items:[]})).catch(()=>{}); },[slug]);
   if(loading) return <div className="section container-x"><p>Loading…</p></div>;
   if(!t) return <div className="section container-x"><h2>Term not found</h2><Link to="/glossary">← Back</Link></div>;
 
@@ -3589,6 +3591,18 @@ const GlossaryTerm = () => {
 
     {t.sources && t.sources.length>0 && (
       <SourcesBlock title="Authoritative Sources" intro="Verify the specific statutory language, thresholds, deadlines and current guidance directly with the governing authority:" sources={t.sources} testid="glossary-sources"/>
+    )}
+
+    {related.items && related.items.length > 0 && (
+      <div className="related-terms-block" data-testid="glossary-related-terms">
+        <h3>See also — related {related.category || "terms"}</h3>
+        <div className="related-terms-list">
+          {related.items.map(r => (
+            <Link key={r.slug} to={`/glossary/${r.slug}`} data-testid={`related-term-${r.slug}`}>{r.term}</Link>
+          ))}
+        </div>
+        <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>Explore the full <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>BC real estate glossary</Link> or begin an <Link to="/journey" style={{color:"var(--brand-blue)",fontWeight:600}}>interactive real estate journey</Link>.</div>
+      </div>
     )}
 
     <div className="notice" style={{marginTop:"1.5rem"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
@@ -4270,6 +4284,7 @@ const AdminShell = ({children,active}) => {
       <h3>Doug's Desk</h3>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
@@ -7561,6 +7576,234 @@ const AdminCeaseDesist = () => {
 };
 
 
+// ============ Admin Referrals — Model A tracker ============
+// Doug refers consumer leads out to partner REALTORs and earns a 25% referral
+// fee at closing under the standard CREA Inter-Board Referral Agreement.
+// This mini-CRM tracks the referral lifecycle: sent → acknowledged →
+// active → under_contract → closed → paid (or declined/expired).
+const REFERRAL_STATUSES = ["sent","acknowledged","active","under_contract","closed","paid","declined","expired"];
+const STATUS_LABELS = {
+  sent:"Sent", acknowledged:"Acknowledged", active:"Active", under_contract:"Under Contract",
+  closed:"Closed", paid:"Paid ✓", declined:"Declined", expired:"Expired"
+};
+const STATUS_COLORS = {
+  sent:"#6B7280", acknowledged:"#3B82F6", active:"#8B5CF6",
+  under_contract:"#F59E0B", closed:"#10B981", paid:"#059669",
+  declined:"#DC2626", expired:"#9CA3AF"
+};
+const fmtMoney = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("en-CA", { maximumFractionDigits: 0 });
+
+const AdminReferrals = () => {
+  const { headers } = useAdmin();
+  const [items, setItems] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, by_status: {}, estimated_total_fee: 0, collected_total_fee: 0, pending_total_fee: 0 });
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [newRec, setNewRec] = useState({
+    lead_email:"", lead_name:"", lead_phone:"", lead_city:"", lead_property_type:"", lead_budget:"",
+    receiving_realtor_name:"", receiving_realtor_email:"", receiving_realtor_brokerage:"", receiving_realtor_board:"",
+    referral_fee_pct: 25, estimated_sale_price:"", notes:"", source:"manual"
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [editStatus, setEditStatus] = useState({ status:"", note:"", actual_sale_price:"", referral_fee_amount:"", closed_date:"", paid_date:"" });
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const q = statusFilter ? `?status=${statusFilter}` : "";
+      const r = await axios.get(`${API}/admin/referrals${q}`, { headers });
+      setItems(r.data.items || []);
+      setSummary(r.data.summary || {});
+    } catch (e) { console.error("Failed to load referrals", e); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [statusFilter]);
+
+  const create = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = { ...newRec, estimated_sale_price: newRec.estimated_sale_price ? Number(newRec.estimated_sale_price) : null, referral_fee_pct: Number(newRec.referral_fee_pct) || 25 };
+      await axios.post(`${API}/admin/referrals`, payload, { headers });
+      setShowNew(false);
+      setNewRec({ lead_email:"", lead_name:"", lead_phone:"", lead_city:"", lead_property_type:"", lead_budget:"", receiving_realtor_name:"", receiving_realtor_email:"", receiving_realtor_brokerage:"", receiving_realtor_board:"", referral_fee_pct:25, estimated_sale_price:"", notes:"", source:"manual" });
+      load();
+    } catch (e) { alert("Failed to create referral: " + (e.response?.data?.detail || e.message)); }
+  };
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setEditStatus({
+      status: r.status || "sent", note:"",
+      actual_sale_price: r.actual_sale_price ?? "",
+      referral_fee_amount: r.referral_fee_amount ?? "",
+      closed_date: r.closed_date || "",
+      paid_date: r.paid_date || "",
+    });
+  };
+
+  const submitStatus = async () => {
+    try {
+      const payload = {
+        status: editStatus.status,
+        note: editStatus.note,
+        actual_sale_price: editStatus.actual_sale_price ? Number(editStatus.actual_sale_price) : null,
+        referral_fee_amount: editStatus.referral_fee_amount ? Number(editStatus.referral_fee_amount) : null,
+        closed_date: editStatus.closed_date || null,
+        paid_date: editStatus.paid_date || null,
+      };
+      await axios.patch(`${API}/admin/referrals/${editingId}`, payload, { headers });
+      setEditingId(null);
+      load();
+    } catch (e) { alert("Failed to update: " + (e.response?.data?.detail || e.message)); }
+  };
+
+  const del = async (id) => {
+    if (!window.confirm("Delete this referral record permanently?")) return;
+    try { await axios.delete(`${API}/admin/referrals/${id}`, { headers }); load(); }
+    catch (e) { alert("Delete failed: " + (e.response?.data?.detail || e.message)); }
+  };
+
+  return (
+    <AdminShell active="referrals">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+        <h2 style={{margin:0}} data-testid="admin-referrals-title">💰 Referral Network Tracker</h2>
+        <button className="btn btn-primary" onClick={()=>setShowNew(v=>!v)} data-testid="admin-referrals-new-btn">+ New Referral</button>
+      </div>
+      <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.5rem"}}>Model A referrals — Doug refers to a partner REALTOR® and earns a fee at closing under the CREA Inter-Board Referral Agreement.</p>
+
+      <div className="grid-4" data-testid="admin-referrals-summary" style={{gap:"0.75rem",marginTop:"1rem"}}>
+        <div className="paper" style={{padding:"1rem"}}>
+          <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Total Referrals</div>
+          <div style={{fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="admin-referrals-total">{summary.total}</div>
+        </div>
+        <div className="paper" style={{padding:"1rem"}}>
+          <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Estimated Pipeline Fee</div>
+          <div style={{fontSize:"1.5rem",fontWeight:700,color:"var(--brand-blue)"}} data-testid="admin-referrals-pipeline">{fmtMoney(summary.estimated_total_fee)}</div>
+        </div>
+        <div className="paper" style={{padding:"1rem"}}>
+          <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Pending (Closed, unpaid)</div>
+          <div style={{fontSize:"1.5rem",fontWeight:700,color:"#F59E0B"}} data-testid="admin-referrals-pending">{fmtMoney(summary.pending_total_fee)}</div>
+        </div>
+        <div className="paper" style={{padding:"1rem"}}>
+          <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Collected (Paid)</div>
+          <div style={{fontSize:"1.5rem",fontWeight:700,color:"#059669"}} data-testid="admin-referrals-collected">{fmtMoney(summary.collected_total_fee)}</div>
+        </div>
+      </div>
+
+      <div style={{marginTop:"1.25rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+        <button onClick={()=>setStatusFilter("")} className={statusFilter===""?"btn btn-primary":"btn btn-ghost"} data-testid="admin-referrals-filter-all">All</button>
+        {REFERRAL_STATUSES.map(s => (
+          <button key={s} onClick={()=>setStatusFilter(s)} className={statusFilter===s?"btn btn-primary":"btn btn-ghost"} data-testid={`admin-referrals-filter-${s}`}>
+            {STATUS_LABELS[s]} ({summary.by_status?.[s] || 0})
+          </button>
+        ))}
+      </div>
+
+      {showNew && (
+        <form onSubmit={create} className="paper" style={{padding:"1.25rem",marginTop:"1rem"}} data-testid="admin-referrals-new-form">
+          <h3 style={{marginTop:0}}>Create Referral</h3>
+          <div className="form-grid">
+            <div className="field"><label>Lead name</label><input value={newRec.lead_name} onChange={e=>setNewRec({...newRec, lead_name:e.target.value})} data-testid="admin-referral-lead-name"/></div>
+            <div className="field"><label>Lead email *</label><input required type="email" value={newRec.lead_email} onChange={e=>setNewRec({...newRec, lead_email:e.target.value})} data-testid="admin-referral-lead-email"/></div>
+            <div className="field"><label>Lead phone</label><input value={newRec.lead_phone} onChange={e=>setNewRec({...newRec, lead_phone:e.target.value})}/></div>
+            <div className="field"><label>City / Region</label><input value={newRec.lead_city} onChange={e=>setNewRec({...newRec, lead_city:e.target.value})} data-testid="admin-referral-city"/></div>
+            <div className="field"><label>Property type</label><input value={newRec.lead_property_type} onChange={e=>setNewRec({...newRec, lead_property_type:e.target.value})}/></div>
+            <div className="field"><label>Budget</label><input value={newRec.lead_budget} onChange={e=>setNewRec({...newRec, lead_budget:e.target.value})}/></div>
+            <div className="field"><label>Est. sale price ($)</label><input type="number" value={newRec.estimated_sale_price} onChange={e=>setNewRec({...newRec, estimated_sale_price:e.target.value})} data-testid="admin-referral-est-price"/></div>
+            <div className="field"><label>Referral fee %</label><input type="number" step="0.5" value={newRec.referral_fee_pct} onChange={e=>setNewRec({...newRec, referral_fee_pct:e.target.value})}/></div>
+          </div>
+          <h4 style={{marginTop:"1.25rem",marginBottom:"0.5rem"}}>Receiving REALTOR®</h4>
+          <div className="form-grid">
+            <div className="field"><label>Name</label><input value={newRec.receiving_realtor_name} onChange={e=>setNewRec({...newRec, receiving_realtor_name:e.target.value})} data-testid="admin-referral-realtor-name"/></div>
+            <div className="field"><label>Email</label><input type="email" value={newRec.receiving_realtor_email} onChange={e=>setNewRec({...newRec, receiving_realtor_email:e.target.value})}/></div>
+            <div className="field"><label>Brokerage</label><input value={newRec.receiving_realtor_brokerage} onChange={e=>setNewRec({...newRec, receiving_realtor_brokerage:e.target.value})}/></div>
+            <div className="field"><label>Board</label><input value={newRec.receiving_realtor_board} onChange={e=>setNewRec({...newRec, receiving_realtor_board:e.target.value})} placeholder="e.g. VIREB, Okanagan Mainline, CREA-only"/></div>
+          </div>
+          <div className="field" style={{marginTop:"1rem"}}><label>Notes</label><textarea rows="3" value={newRec.notes} onChange={e=>setNewRec({...newRec, notes:e.target.value})}/></div>
+          <div style={{marginTop:"1rem",display:"flex",gap:"0.5rem"}}>
+            <button type="submit" className="btn btn-primary" data-testid="admin-referral-create-submit">Create Referral</button>
+            <button type="button" className="btn btn-ghost" onClick={()=>setShowNew(false)}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      <div style={{marginTop:"1.25rem"}} data-testid="admin-referrals-list">
+        {loading ? <p>Loading…</p> : items.length === 0 ? <p style={{color:"var(--muted)"}}>No referral records{statusFilter ? ` with status "${STATUS_LABELS[statusFilter]}"` : ""} yet.</p> : (
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.9rem",fontFamily:"Inter,sans-serif"}}>
+              <thead>
+                <tr style={{background:"var(--paper)",textAlign:"left"}}>
+                  <th style={{padding:"0.65rem"}}>Date</th>
+                  <th style={{padding:"0.65rem"}}>Lead</th>
+                  <th style={{padding:"0.65rem"}}>Location</th>
+                  <th style={{padding:"0.65rem"}}>Receiving REALTOR®</th>
+                  <th style={{padding:"0.65rem"}}>Est. Price</th>
+                  <th style={{padding:"0.65rem"}}>Est. Fee</th>
+                  <th style={{padding:"0.65rem"}}>Status</th>
+                  <th style={{padding:"0.65rem"}}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(r => {
+                  const estFee = (r.estimated_sale_price || 0) * (r.referral_fee_pct || 25) / 100;
+                  return (
+                    <tr key={r.id} style={{borderTop:"1px solid rgba(15,42,91,0.08)"}} data-testid={`admin-referral-row-${r.id}`}>
+                      <td style={{padding:"0.65rem",whiteSpace:"nowrap"}}>{new Date(r.created_at).toLocaleDateString("en-CA")}</td>
+                      <td style={{padding:"0.65rem"}}>
+                        <div style={{fontWeight:700}}>{r.lead_name || r.lead_email}</div>
+                        <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{r.lead_email}{r.lead_phone ? " · " + r.lead_phone : ""}</div>
+                      </td>
+                      <td style={{padding:"0.65rem"}}>{r.lead_city || "—"}{r.lead_property_type ? <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{r.lead_property_type}</div> : null}</td>
+                      <td style={{padding:"0.65rem"}}>{r.receiving_realtor_name || "—"}{r.receiving_realtor_brokerage ? <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{r.receiving_realtor_brokerage}</div> : null}</td>
+                      <td style={{padding:"0.65rem"}}>{fmtMoney(r.actual_sale_price || r.estimated_sale_price)}</td>
+                      <td style={{padding:"0.65rem"}}>{fmtMoney(r.referral_fee_amount || estFee)}</td>
+                      <td style={{padding:"0.65rem"}}>
+                        <span style={{display:"inline-block",padding:"0.2rem 0.6rem",borderRadius:99,background:STATUS_COLORS[r.status]+"22",color:STATUS_COLORS[r.status],fontWeight:700,fontSize:"0.75rem"}} data-testid={`admin-referral-status-${r.id}`}>{STATUS_LABELS[r.status] || r.status}</span>
+                      </td>
+                      <td style={{padding:"0.65rem",whiteSpace:"nowrap"}}>
+                        <button className="btn btn-ghost" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} onClick={()=>openEdit(r)} data-testid={`admin-referral-edit-${r.id}`}>Update</button>
+                        <button className="btn btn-ghost" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem",color:"#DC2626"}} onClick={()=>del(r.id)} data-testid={`admin-referral-delete-${r.id}`}>Delete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {editingId && (
+        <div className="paper" style={{padding:"1.25rem",marginTop:"1rem",background:"#FFF8E1",border:"1px solid rgba(253,184,19,0.4)"}} data-testid="admin-referral-edit-panel">
+          <h3 style={{marginTop:0}}>Update referral status</h3>
+          <div className="form-grid">
+            <div className="field"><label>New status</label>
+              <select value={editStatus.status} onChange={e=>setEditStatus({...editStatus, status:e.target.value})} data-testid="admin-referral-status-select">
+                {REFERRAL_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Actual sale price ($)</label><input type="number" value={editStatus.actual_sale_price} onChange={e=>setEditStatus({...editStatus, actual_sale_price:e.target.value})} data-testid="admin-referral-actual-price"/></div>
+            <div className="field"><label>Referral fee received ($)</label><input type="number" value={editStatus.referral_fee_amount} onChange={e=>setEditStatus({...editStatus, referral_fee_amount:e.target.value})} data-testid="admin-referral-fee-amount"/></div>
+            <div className="field"><label>Closed date</label><input type="date" value={editStatus.closed_date} onChange={e=>setEditStatus({...editStatus, closed_date:e.target.value})}/></div>
+            <div className="field"><label>Paid date</label><input type="date" value={editStatus.paid_date} onChange={e=>setEditStatus({...editStatus, paid_date:e.target.value})}/></div>
+          </div>
+          <div className="field" style={{marginTop:"0.75rem"}}><label>Note (added to history)</label><input value={editStatus.note} onChange={e=>setEditStatus({...editStatus, note:e.target.value})} data-testid="admin-referral-note"/></div>
+          <div style={{marginTop:"1rem",display:"flex",gap:"0.5rem"}}>
+            <button className="btn btn-primary" onClick={submitStatus} data-testid="admin-referral-status-save">Save Update</button>
+            <button className="btn btn-ghost" onClick={()=>setEditingId(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="notice" style={{marginTop:"2rem",background:"#F0F4FB",fontFamily:"Inter,sans-serif",fontSize:"0.85rem"}}>
+        <strong>Model A referral notes:</strong> Referrals are typically documented on a CREA Inter-Board Referral Agreement (or equivalent province-to-province agreement). The receiving REALTOR® pays the referral fee to Doug's brokerage at closing. All referral disclosures are made to the consumer at the time of introduction — no undisclosed referral fees are ever accepted.
+      </div>
+    </AdminShell>
+  );
+};
+
+
 
 function App() {
   return (<BrowserRouter>
@@ -7601,6 +7844,7 @@ function App() {
       <Route path="/journey" element={<AppLayout><JourneyLanding/></AppLayout>}/>
       <Route path="/journey/:slug" element={<AppLayout><JourneyDetail/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
+      <Route path="/editorial" element={<AppLayout><Editorial/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
@@ -7619,6 +7863,7 @@ function App() {
       <Route path="/admin/login" element={<AdminLogin/>}/>
       <Route path="/admin" element={<AdminDash/>}/>
       <Route path="/admin/growth" element={<AdminGrowth/>}/>
+      <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>

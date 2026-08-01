@@ -49,6 +49,7 @@ STATIC_URLS = [
     ("/compliance",        "0.5", "yearly"),
     ("/copyright",         "0.5", "yearly"),
     ("/ai-use",            "0.6", "yearly"),
+    ("/editorial",         "0.7", "yearly"),
     # Interactive Real Estate Journey Platform — educational entry points.
     ("/journey",                    "0.9", "weekly"),
     ("/journey/buying",             "0.85","weekly"),

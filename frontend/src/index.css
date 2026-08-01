@@ -598,3 +598,89 @@ textarea:focus-visible,
     font-size: 1.55rem !important;
   }
 }
+
+/* ==========================================================================
+   JOURNEY PLATFORM — Print-friendly styles (Phase 4 polish)
+   Consumers frequently print educational journeys for offline reference. This
+   ensures a clean, ink-friendly print output — no site chrome, no controls.
+   ========================================================================== */
+@media print {
+  header, footer, nav, .site-header, .site-footer,
+  [data-testid="doogie-launcher"], .doogie-fab, .doogie-panel,
+  [data-testid="cookie-banner"],
+  .journey-toolbar, .journey-doogie-cta,
+  [data-testid="journey-related"],
+  [data-testid="journey-share-btn"],
+  [data-testid="journey-print-btn"] {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt !important;
+  }
+  .journey-detail {
+    padding: 0 !important;
+  }
+  .journey-detail .paper, .journey-stage, .journey-banner, .journey-progress {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: avoid;
+  }
+  .journey-stage {
+    page-break-inside: avoid;
+    page-break-before: auto;
+  }
+  .journey-stage h2 {
+    page-break-after: avoid;
+  }
+  a[href^="/"]::after, a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #555;
+  }
+  .journey-module-card {
+    background: white !important;
+  }
+}
+
+/* ==========================================================================
+   GLOSSARY — Related Terms / See Also section (AEO internal linking)
+   ========================================================================== */
+.related-terms-block {
+  margin-top: 2.5rem;
+  padding: 1.25rem 1.5rem;
+  background: #F5F0E1;
+  border: 1px solid rgba(15, 42, 91, 0.08);
+  border-radius: 12px;
+}
+.related-terms-block h3 {
+  font-family: "TeX Gyre Heros Bold", "TeXGyreHeros-Bold", "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.1rem;
+  color: var(--brand-navy);
+  margin: 0 0 0.75rem;
+}
+.related-terms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.related-terms-list a {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  background: white;
+  border: 1px solid rgba(15, 42, 91, 0.15);
+  border-radius: 99px;
+  font-family: Inter, sans-serif;
+  font-size: 0.85rem;
+  color: var(--brand-navy);
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+.related-terms-list a:hover {
+  background: var(--brand-navy);
+  color: #F5F0E1;
+  border-color: var(--brand-navy);
+}
+

@@ -1,0 +1,36 @@
+{
+  "summary": "Phase 2 + Phase 4 Journey Platform + Editorial + Related Terms + Referral Network tested end-to-end. Backend: 14/14 pytest passing (Referral CRUD create/list/filter/patch/paid-summary/invalid-status/delete/delete-404, Journey progress GET empty/POST persist/unauth-401, glossary related terms, sitemap includes /editorial and URL count in expected band). Frontend: /journey landing renders all 9 journey cards + compliance banner. All 9 populated journeys (buying=28, selling=23, buying-and-selling=20, condo-strata=25, first-time-buyer=28, new-construction=23, acreages=25, investment=26, home-ownership=23 modules) each have 7 stages, Share button, Print button, 4 related-journey links, and HowTo JSON-LD in head. Editorial page renders correct H1, title, AboutPage JSON-LD, and footer link works. Glossary /glossary/deposit shows 'See also' block with 8 clickable related-term chips. Admin /admin/referrals loads with correct title, 9 status filter bubbles, 4 summary cards, +New Referral button; create → row appears → Update opens select → change to acknowledged → Save persists status badge as 'Acknowledged'. ONE FUNCTIONAL BUG FOUND: Journey module toggle button never persists modules_completed (see rca).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Journey.jsx module toggle", "issue": "Clicking the check-off toggle button does NOT add the module to modules_completed in localStorage. Progress bar stays at 0/N %. Root cause: click handler calls toggleModule(stage,mod) followed by touchStage(stage) — both closures capture the SAME stale allProgress from render; touchStage's persist() runs second and overwrites toggleModule's persist() with the old (empty) modules_completed. Result: only last_visited_at/current_stage update; checkbox check state resets on re-render because 'done' is derived from completedSet which never grows.", "selector": "[data-testid^='journey-toggle-']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/referrals", "issues": ["4 summary cards are visible and correctly labelled (Total / Est Pipeline / Pending / Collected) but they have no data-testid attributes matching [data-testid^='admin-referrals-summary-'] as the review-request expected. Consider adding admin-referrals-summary-total / -pipeline / -pending / -collected testids for future automation."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_journey_referrals_editorial.py",
+    "/app/test_reports/pytest/journey_referrals.xml"
+  ],
+  "action_items": [
+    "HIGH: Fix Journey module toggle stale-closure bug — merge toggleModule + touchStage into a single functional-update or use setState((prev) => ...) inside useJourneyProgress so consecutive persists in same tick don't clobber each other. Current effect: user can never mark a module 'done', progress bar never advances, resume-CTA on /journey landing never shows a >0 module count.",
+    "LOW: Add data-testid attributes to the 4 summary cards on /admin/referrals (admin-referrals-summary-total / -pipeline / -pending / -collected)."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/hooks/useJourneyProgress.js — toggleModule and touchStage both derive `next` from the `allProgress` closure captured at render. When invoked back-to-back in a single onClick, the second call overwrites the first (classic stale-closure bug). Fix: use functional setState (setAllProgress(prev => ...)) OR ref-based latest read OR merge into a single mutation. This bug silently breaks progress tracking for the entire Journey Platform.",
+    "frontend/src/pages/Journey.jsx L246 — onClick chains two state updaters `toggleModule(...); touchStage(...)`. Either combine into one action or await/queueMicrotask between them. Cleanest fix: have toggleModule always call touchStage internally.",
+    "backend/server.py /api/journey/progress — endpoint is admin-only (verify_admin). Consumer-facing use (per useJourneyProgress hook's `eztoken` check) works only for admin. Consider a lighter authenticated-user token or explicit no-op for non-admins — currently non-admin users silently 401 on every module toggle (swallowed by try/catch, but pollutes logs).",
+    "backend/server.py L7395 — `modules_synced` counts sum of modules_completed lengths, which double-counts if same module appears twice. Minor.",
+    "frontend/src/pages/Journey.jsx L246 — module click also swallows keyboard toggle (button uses onClick only, no aria-pressed state). Accessibility improvement."
+  ],
+  "updated_files": ["/app/backend/tests/test_journey_referrals_editorial.py (new)"],
+  "success_rate": {"backend": "100%", "frontend": "~92% — 1 functional bug (module toggle)"},
+  "test_credentials": "doug@eztofind.ca / EzToFind2026!Admin (from /app/memory/test_credentials.md, worked)",
+  "seed_data_creation": "Created 1 TEST_ referral via UI, deleted post-run via API. Cleared admin journey_progress at end.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression: pytest /app/backend/tests/test_journey_referrals_editorial.py (14 tests, ~2s). Journey toggle bug is in /app/frontend/src/hooks/useJourneyProgress.js — reproduce by clicking any [data-testid^='journey-toggle-'] and checking localStorage.ez_journey_progress.modules_completed → always []. All other Phase 2/4 features verified working: HowTo JSON-LD, Share/Print buttons, related journeys, editorial page + footer link + AboutPage schema, glossary related-terms chips, referral CRUD + admin UI create/update/status flow, sitemap /editorial URL present.",
+  "rca of the issue": "Journey module toggle stale-closure bug. Repro: goto /journey/buying, click any check-toggle button, inspect localStorage['ez_journey_progress']. Expected: modules_completed contains 'learn__deposit'. Actual: modules_completed remains []. Cause: In Journey.jsx L246 the onClick invokes both toggleModule(stage.id, m.id) AND touchStage(stage.id) synchronously. Both callbacks close over `allProgress` from the same React render; toggleModule computes next with modules_completed=[key] and calls persist (which calls setAllProgress asynchronously); touchStage then runs with the SAME stale allProgress, computes next with modules_completed=[] (stale), and calls persist — clobbering the previous write in both writeLocal() and setAllProgress. Fix: refactor useJourneyProgress to use functional updates setAllProgress(prev => ...) or fold touchStage into toggleModule so only one persist fires per click."
+}
