@@ -1,6 +1,9 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
+import { JourneyLanding, JourneyDetail } from "./pages/Journey";
+import { getResumeJourney } from "./hooks/useJourneyProgress";
+import { JOURNEYS, JOURNEYS_ORDER } from "./journeys";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import DOMPurify from "dompurify";
@@ -823,6 +826,7 @@ const Nav = () => {
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
+        <NavLink to="/journey" onClick={close} data-testid="nav-journey">Journey</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <NavLink to="/favorites" onClick={close} data-testid="nav-favorites" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>
@@ -2012,6 +2016,38 @@ const Home = () => {
         <img className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
+
+    {/* Begin Your Real Estate Journey — Interactive educational journey
+        entry point. Placed high on the homepage below the hero. All 9
+        journeys are surfaced. BCFSA/CREA/PIPA/CASL compliant. */}
+    <section className="section" data-testid="home-journey-section" style={{paddingTop:"1rem"}}>
+      <div className="container-x">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"1rem",marginBottom:"1.5rem"}}>
+          <div>
+            <div className="eyebrow" style={{marginBottom:"0.4rem"}}>Interactive Journey Platform</div>
+            <h2 className="section-title" style={{marginBottom:"0.3rem"}}>Begin Your Real Estate Journey</h2>
+            <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.98rem",lineHeight:1.6,maxWidth:"46rem"}}>Explore educational resources for different stages of buying, selling, owning, and researching real estate in British Columbia — at your own pace.</p>
+          </div>
+          <Link to="/journey" className="btn btn-ghost" data-testid="home-journey-view-all">View all journeys →</Link>
+        </div>
+        <div className="grid-3" data-testid="home-journey-cards">
+          {JOURNEYS_ORDER.slice(0,6).map(slug => {
+            const j = JOURNEYS[slug];
+            return (
+              <Link key={slug} to={`/journey/${slug}`} className="paper" data-testid={`home-journey-card-${slug}`}
+                style={{padding:"1.35rem",textDecoration:"none",color:"inherit",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"transform 0.15s"}}
+                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
+                onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                <div style={{fontSize:"2.25rem",lineHeight:1}} aria-hidden>{j.icon}</div>
+                <div style={{fontSize:"1.08rem",fontWeight:700,color:"var(--brand-navy)"}}>{j.title}</div>
+                <div style={{fontSize:"0.86rem",color:"var(--muted)",lineHeight:1.55,flex:1}}>{j.short}</div>
+                <div style={{fontSize:"0.82rem",color:"var(--brand-blue)",fontWeight:600,marginTop:"0.35rem"}}>Continue Journey →</div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
@@ -4192,6 +4228,9 @@ const AdminLogin = () => {
     try{
       const r=await axios.post(`${API}/admin/login`,{...f, turnstile_token: getTurnstileToken()});
       localStorage.setItem("eztoken",r.data.token);
+      // Hydrate any Journey Platform progress from CRM on login (cross-device sync).
+      // Fire-and-forget — never blocks navigation.
+      try { const { hydrateFromCrm } = await import("./hooks/useJourneyProgress"); hydrateFromCrm(); } catch {}
       nav("/admin");
     }catch(x){
       // Show the server-side lockout / bot-check message verbatim when present,
@@ -7559,6 +7598,8 @@ function App() {
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
+      <Route path="/journey" element={<AppLayout><JourneyLanding/></AppLayout>}/>
+      <Route path="/journey/:slug" element={<AppLayout><JourneyDetail/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>

@@ -7350,6 +7350,33 @@ class CampaignSignup(BaseModel):
     source: str = "lead_form"
 
 
+# -------- Journey Platform CRM sync --------
+# Anonymous users track progress in localStorage. Authenticated users
+# (currently admin-token only) sync progress to Mongo so it follows them
+# across devices. Client always sends the full progress blob (idempotent).
+@api.get("/journey/progress")
+async def get_journey_progress(payload = Depends(verify_admin)):
+    """Return the authenticated user's journey progress blob."""
+    email = payload.get("email")
+    doc = await db.journey_progress.find_one({"user_email": email})
+    return {"progress": (doc.get("progress") if doc else {}) or {}, "updated_at": (doc.get("updated_at") if doc else None)}
+
+@api.post("/journey/progress")
+async def save_journey_progress(body: dict, payload = Depends(verify_admin)):
+    """Upsert the user's journey progress. Silently no-ops on bad payload
+    (progress sync must never break the UI)."""
+    email = payload.get("email")
+    progress = body.get("progress") if isinstance(body, dict) else None
+    if not isinstance(progress, dict):
+        return {"ok": False, "reason": "invalid_payload"}
+    await db.journey_progress.update_one(
+        {"user_email": email},
+        {"$set": {"user_email": email, "progress": progress, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True, "modules_synced": sum(len(j.get("modules_completed", [])) for j in progress.values() if isinstance(j, dict))}
+
+
 @api.post("/campaigns/opt-in")
 async def campaigns_opt_in(body: CampaignSignup, request: Request):
     """Public endpoint used by existing signup forms to record per-campaign
