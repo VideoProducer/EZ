@@ -7743,7 +7743,11 @@ const ClientJourneyEditor = ({ editingId, onCreated, onClose }) => {
   };
 
   const save = async () => {
-    setErr(""); setSaving(true);
+    setErr(""); setSavedFlash("");
+    if (!cj.client_name || !cj.client_name.trim()) { setErr("Client name is required."); return; }
+    if (!cj.client_email || !cj.client_email.trim()) { setErr("Client email is required."); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cj.client_email.trim())) { setErr("Please enter a valid email address."); return; }
+    setSaving(true);
     try {
       const payload = {
         client_name: cj.client_name.trim(),
@@ -7905,7 +7909,7 @@ const ClientJourneyEditor = ({ editingId, onCreated, onClose }) => {
       {savedFlash && <div style={{color:"#059669",marginTop:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",background:"#F0FDF4",padding:"0.75rem 1rem",borderRadius:6,border:"1px solid #86EFAC"}} data-testid="admin-cj-saved-flash">{savedFlash}</div>}
 
       <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
-        <button className="btn btn-primary" onClick={save} disabled={saving || !cj.client_name || !cj.client_email} data-testid="admin-cj-save">
+        <button className="btn btn-primary" onClick={save} disabled={saving} data-testid="admin-cj-save" style={{opacity: saving ? 0.6 : 1}}>
           {saving ? "Saving…" : (editingId ? "Save changes" : "Create draft")}
         </button>
         {(editingId || tokenInfo) && (
