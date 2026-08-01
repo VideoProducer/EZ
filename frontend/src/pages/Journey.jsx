@@ -13,9 +13,12 @@ import { useJourneyProgress, getResumeJourney } from "../hooks/useJourneyProgres
 
 // ---- Shared compliance banner ----
 const ComplianceBanner = () => (
-  <div className="paper journey-banner" data-testid="journey-compliance-banner" style={{background:"#FFF8E1",border:"1px solid rgba(253,184,19,0.35)",padding:"0.85rem 1.15rem",marginBottom:"1.5rem"}}>
-    <div style={{fontSize:"0.75rem",textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)",fontWeight:700,marginBottom:"0.25rem"}}>Educational information only</div>
-    <div style={{fontSize:"0.85rem",lineHeight:1.55,color:"var(--ink)"}}>{JOURNEY_COMPLIANCE_NOTICE}</div>
+  <div className="paper journey-banner" data-testid="journey-compliance-banner" style={{background:"#FFF8E1",border:"1px solid rgba(253,184,19,0.35)",padding:"0.95rem 1.15rem",marginBottom:"1.5rem"}}>
+    <div style={{fontSize:"0.75rem",textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)",fontWeight:700,marginBottom:"0.35rem"}}>Educational information only</div>
+    <div style={{fontSize:"0.85rem",lineHeight:1.55,color:"var(--ink)",marginBottom:"0.5rem"}}>{JOURNEY_COMPLIANCE_NOTICE}</div>
+    <div style={{fontSize:"0.8rem",lineHeight:1.55,color:"var(--ink)",paddingTop:"0.5rem",borderTop:"1px dashed rgba(15,42,91,0.15)"}}>
+      <strong>Scope of licence:</strong> Doug LeMaire is a licensed BC REALTOR® regulated by BCFSA. He is not a mortgage broker (regulated separately under the Mortgage Brokers Act), a lawyer or notary, a tax accountant, or a licensed insurance broker. Content on those topics is general educational information — always consult the licensed professional in that domain.
+    </div>
   </div>
 );
 

@@ -61,6 +61,17 @@ export default function Editorial() {
           Managing Editor and the Privacy Officer for the site.
         </p>
 
+        <div className="paper" data-testid="editorial-scope-of-licence" style={{background:"#FFF8E1",border:"1px solid rgba(253,184,19,0.4)",padding:"1rem 1.25rem",margin:"1.25rem 0",borderRadius:12}}>
+          <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--brand-navy)",fontWeight:700,marginBottom:"0.4rem"}}>Scope of licence — please read</div>
+          <div style={{fontSize:"0.92rem",lineHeight:1.65}}>
+            Doug LeMaire is a licensed BC REALTOR® regulated by BCFSA. He is <strong>not</strong> a
+            mortgage broker (regulated separately under the Mortgage Brokers Act), a lawyer or
+            notary, a tax accountant, or a licensed insurance broker. Content on those topics
+            published on EZtoFind.ca is general educational information — always consult the
+            licensed professional in that domain for advice tailored to your situation.
+          </div>
+        </div>
+
         <h2 style={{marginTop:"2rem"}}>2. Content categories &amp; workflow</h2>
 
         <h3 style={{marginTop:"1.25rem"}}>a. Glossary terms (≈398 entries)</h3>

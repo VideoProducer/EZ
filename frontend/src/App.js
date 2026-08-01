@@ -3557,6 +3557,30 @@ const GlossaryTerm = () => {
 
     <AuthorBlock/>
 
+    {/* Category-based scope-of-licence pill — appears on any glossary term
+        whose subject matter falls outside Doug's REALTOR® licence. Repeats
+        the site-level BCFSA disclaimer at the point of consumption in case
+        the term is landed on directly from Google or an LLM citation. */}
+    {(() => {
+      const cat = (t.category || "").toLowerCase();
+      const financing = /financ|mortgage/.test(cat);
+      const taxes     = /tax/.test(cat) || cat.includes("government");
+      const insurance = cat.includes("insurance");
+      const legal     = cat.includes("legal") || cat.includes("title") || cat.includes("conveyanc");
+      let scope = null;
+      if (financing)      scope = { color:"#F59E0B", label:"Not mortgage advice", body:"This is general educational information about a mortgage or financing concept. Doug LeMaire is a REALTOR® — not a mortgage broker. For advice on your specific financing, consult a licensed BC mortgage broker regulated under the Mortgage Brokers Act." };
+      else if (taxes)     scope = { color:"#0EA5E9", label:"Not tax advice",       body:"This is general educational information about a tax concept. Doug LeMaire is a REALTOR® — not a tax accountant. For advice on your specific tax situation, consult a Chartered Professional Accountant (CPA) or the Canada Revenue Agency." };
+      else if (insurance) scope = { color:"#8B5CF6", label:"Not insurance advice", body:"This is general educational information about an insurance concept. Doug LeMaire is a REALTOR® — not a licensed insurance broker. For advice on your specific coverage, consult a licensed BC insurance broker regulated by the Insurance Council of BC." };
+      else if (legal)     scope = { color:"#DC2626", label:"Not legal advice",     body:"This is general educational information about a legal or conveyancing concept. Doug LeMaire is a REALTOR® — not a lawyer or notary. For advice on your specific transaction or dispute, consult a BC lawyer (Law Society of BC) or a BC notary public (Society of Notaries Public of BC)." };
+      if (!scope) return null;
+      return (
+        <div data-testid="glossary-scope-of-licence" style={{margin:"1rem 0 1.25rem",padding:"0.85rem 1rem",background:`${scope.color}0F`,border:`1px solid ${scope.color}55`,borderLeft:`4px solid ${scope.color}`,borderRadius:8,fontFamily:"Inter,sans-serif"}}>
+          <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.08em",color:scope.color,fontWeight:800,marginBottom:"0.25rem"}}>⚠ {scope.label}</div>
+          <div style={{fontSize:"0.85rem",lineHeight:1.55,color:"var(--ink)"}}>{scope.body}</div>
+        </div>
+      );
+    })()}
+
     {/* AEO answer-first pattern — natural-language question heading that
         matches how users query LLMs ("What is X in BC?"), followed by the
         definition as the direct answer. The question H2 is rendered as
