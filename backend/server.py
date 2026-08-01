@@ -3747,28 +3747,41 @@ async def startup():
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
-    from indexnow import notify_indexnow
+    from indexnow import notify_indexnow, HOST
     result = await generate_sitemap(db)
-    # After a manual regen, push the top-level SEO landing pages to IndexNow
-    # so Bing/Yandex/Naver/Seznam refresh their caches immediately (Google is
-    # not on IndexNow yet — we rely on Search Console for that).
+    # SEO push:
+    #   - IndexNow → Bing, Yandex, Naver, Seznam (modern instant-indexing protocol)
+    #   - Google no longer accepts sitemap ping (deprecated June 2023) — the only
+    #     path is Google Search Console. Doug submits manually via
+    #     https://search.google.com/search-console (bookmarked in his tools).
     try:
         priority_urls = [
-            "https://eztofind.ca/",
-            "https://eztofind.ca/communities",
-            "https://eztofind.ca/glossary",
-            "https://eztofind.ca/regions/greater-vancouver",
-            "https://eztofind.ca/regions/fraser-valley",
-            "https://eztofind.ca/regions/sea-to-sky",
-            "https://eztofind.ca/about",
-            "https://eztofind.ca/valuation",
-            "https://eztofind.ca/relocating",
-            "https://eztofind.ca/realtor-network",
-            "https://eztofind.ca/specialties/luxury",
-            "https://eztofind.ca/specialties/equestrian",
+            f"https://{HOST}/",
+            f"https://{HOST}/communities",
+            f"https://{HOST}/glossary",
+            f"https://{HOST}/about",
+            f"https://{HOST}/valuation",
+            f"https://{HOST}/relocating",
+            f"https://{HOST}/realtor-network",
+            f"https://{HOST}/regions/greater-vancouver",
+            f"https://{HOST}/regions/fraser-valley",
+            f"https://{HOST}/regions/sea-to-sky",
+            f"https://{HOST}/regions/vancouver-island",
+            f"https://{HOST}/regions/okanagan",
+            f"https://{HOST}/specialties/luxury",
+            f"https://{HOST}/specialties/equestrian",
+            f"https://{HOST}/specialties/condos",
+            f"https://{HOST}/specialties/townhomes",
+            f"https://{HOST}/specialties/waterfront",
+            f"https://{HOST}/sitemap.xml",
         ]
+        # Also push all glossary terms whose FAQs were recently curated/updated so
+        # LLM answer engines refresh their cached answers.
+        recent_terms = await db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(200).to_list(200)
+        priority_urls += [f"https://{HOST}/glossary/{t['slug']}" for t in recent_terms if t.get("slug")]
         indexnow_result = await notify_indexnow(priority_urls)
         result["indexnow"] = indexnow_result
+        result["google_note"] = "Google removed its sitemap ping endpoint in June 2023. Submit https://eztofind.ca/sitemap.xml via Google Search Console → Sitemaps."
     except Exception as e:
         logger.warning(f"admin sitemap regen: IndexNow push failed (silent-fail): {e}")
         result["indexnow"] = {"ok": False, "error": str(e)}
