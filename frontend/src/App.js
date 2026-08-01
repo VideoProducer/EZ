@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import { JourneyLanding, JourneyDetail } from "./pages/Journey";
-import Editorial from "./pages/Editorial";
 import { getResumeJourney } from "./hooks/useJourneyProgress";
 import { JOURNEYS, JOURNEYS_ORDER } from "./journeys";
 import { Helmet } from "react-helmet-async";
@@ -879,7 +878,7 @@ const Footer = () => (
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
         <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. <strong>Registered with the Canadian Intellectual Property Office — Copyright Registration No. 1247822.</strong> Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/editorial">Editorial Policy</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
     {/* CREA-required trademark attribution — MUST appear on every page displaying MLS® data. Verbatim wording per CREA Trademark Policy 2019 s.4. */}
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"1.5rem",paddingTop:"1.25rem",fontSize:"0.72rem",lineHeight:1.55,opacity:0.7,color:"rgba(255,255,255,0.85)"}} data-testid="crea-trademark-notice">
@@ -7880,7 +7879,6 @@ function App() {
       <Route path="/journey" element={<AppLayout><JourneyLanding/></AppLayout>}/>
       <Route path="/journey/:slug" element={<AppLayout><JourneyDetail/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
-      <Route path="/editorial" element={<AppLayout><Editorial/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
