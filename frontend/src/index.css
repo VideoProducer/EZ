@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Self-hosted TeX Gyre Heros Bold — free/open Helvetica clone from the
+   GUST e-foundry. WOFF2 format (52 KB, brotli-compressed). Used on the
+   home page hero for the "EZ to Find.ca" logotype. font-display: swap
+   avoids blocking render on first paint — visitors briefly see the fallback
+   (Helvetica Neue → Arial) before TeX Gyre Heros streams in. */
+@font-face {
+  font-family: 'TeX Gyre Heros';
+  src: url('./fonts/texgyreheros-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --brand-navy: #0F2A5B;
   --brand-blue: #1E4FCF;
