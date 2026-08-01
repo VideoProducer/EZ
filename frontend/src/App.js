@@ -7781,23 +7781,28 @@ const ClientJourneyEditor = ({ editingId, onClose }) => {
   };
 
   const revoke = async () => {
-    if (!editingId) return;
+    const id = editingId || cj.id;
+    if (!id) return;
     if (!window.confirm("Revoke this journey link? The client will no longer be able to access it.")) return;
-    await axios.patch(`${API}/admin/client-journeys/${editingId}`, { status: "revoked" }, { headers });
+    await axios.patch(`${API}/admin/client-journeys/${id}`, { status: "revoked" }, { headers });
     onClose();
   };
 
   const extend6 = async () => {
+    const id = editingId || cj.id;
+    if (!id) { setErr("Save the draft first, then you can extend the expiry."); return; }
     const newExp = new Date(Date.now() + 6*30*24*60*60*1000).toISOString();
-    await axios.patch(`${API}/admin/client-journeys/${editingId}`, { expires_at: newExp }, { headers });
+    await axios.patch(`${API}/admin/client-journeys/${id}`, { expires_at: newExp }, { headers });
     setCj({ ...cj, expires_at: newExp });
+    setTokenInfo(tokenInfo ? { ...tokenInfo, expires_at: newExp } : tokenInfo);
     alert(`Expiry extended to ${newExp.slice(0,10)}`);
   };
 
   const del = async () => {
-    if (!editingId) return;
+    const id = editingId || cj.id;
+    if (!id) return;
     if (!window.confirm("Delete this journey permanently? This cannot be undone.")) return;
-    await axios.delete(`${API}/admin/client-journeys/${editingId}`, { headers });
+    await axios.delete(`${API}/admin/client-journeys/${id}`, { headers });
     onClose();
   };
 
