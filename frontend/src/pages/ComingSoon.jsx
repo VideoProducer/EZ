@@ -39,12 +39,38 @@ export function ComingSoonHero({ mode = "home", data = null }) {
     const endpoint = mode === "preview"
       ? `${API}/admin/coming-soon`
       : `${API}/coming-soon`;
-    const headers = mode === "preview" ? { Authorization: `Bearer ${localStorage.getItem("admin_token") || ""}` } : {};
-    axios.get(endpoint, { headers }).then(r => setCs(r.data)).catch(() => setCs(null));
+    const token = localStorage.getItem("eztoken") || "";
+    const headers = mode === "preview" && token ? { Authorization: `Bearer ${token}` } : {};
+    axios.get(endpoint, { headers })
+      .then(r => setCs(r.data))
+      .catch(err => setCs({ __error: err.response?.status === 401 ? "unauthorized" : "unavailable" }));
   }, [mode, data]);
 
   if (!cs) return mode === "preview" ? <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading preview…</div> : null;
+  if (cs.__error === "unauthorized") return (
+    <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
+      <h2 style={{color:"var(--brand-navy)"}}>Preview requires admin login</h2>
+      <p style={{color:"var(--muted)"}}>Please <Link to="/admin/login" style={{color:"var(--brand-blue)",fontWeight:600}}>sign in</Link>, then reopen this preview URL.</p>
+    </div>
+  );
+  if (cs.__error === "unavailable") return (
+    <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
+      <h2 style={{color:"var(--brand-navy)"}}>Preview unavailable</h2>
+      <p style={{color:"var(--muted)"}}>The coming-soon draft could not be loaded. Try refreshing.</p>
+    </div>
+  );
   if (mode === "home" && !cs.published) return null;
+
+  // Empty-state guidance — makes "nothing to show yet" obvious in preview mode.
+  const hasAnyContent = cs.title || cs.community || cs.price_teaser || cs.photos?.length || cs.video_url || cs.description;
+  if (mode === "preview" && !hasAnyContent) return (
+    <div style={{padding:"4rem 2rem",textAlign:"center",background:"#0F2A5B",color:"white",minHeight:"60vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",fontFamily:"Inter,sans-serif"}} data-testid="coming-soon-empty-preview">
+      <div style={{fontSize:"3rem",marginBottom:"1rem"}}>🏛️</div>
+      <h2 style={{margin:"0 0 0.75rem",fontFamily:'"TeX Gyre Heros Bold","Helvetica Neue",Arial,sans-serif',fontSize:"1.75rem"}}>Coming-Soon Preview — Empty</h2>
+      <p style={{maxWidth:"32rem",color:"#F5F0E1",fontSize:"0.95rem",lineHeight:1.6,marginBottom:"1.5rem"}}>Head to the admin editor to add photos, video, price teaser, and details. Once you save, refresh this page to see the mockup exactly as it will appear on the homepage.</p>
+      <Link to="/admin/coming-soon" style={{background:"#FDB813",color:"#0F2A5B",padding:"0.85rem 1.85rem",borderRadius:99,fontWeight:700,textDecoration:"none",fontSize:"0.95rem"}} data-testid="coming-soon-empty-goto-admin">Open the editor →</Link>
+    </div>
+  );
 
   const heroPhoto = cs.photos?.find(p => p.id === cs.hero_photo_id) || cs.photos?.[0];
   const otherPhotos = (cs.photos || []).filter(p => p.id !== heroPhoto?.id).slice(0, 4);
