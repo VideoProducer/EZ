@@ -31,7 +31,7 @@ const BUYING = {
       { id:"deposit",         title:"What is a deposit?",             blurb:"Deposits, subject removal, and how funds are held in trust in BC.", href:"/glossary/deposit",                       type:"glossary" },
       { id:"title",           title:"Understanding title",            blurb:"How the BC Land Title & Survey Authority records ownership.",      href:"/glossary/title-search",                  type:"glossary" },
       { id:"mortgage-terms",  title:"Mortgage terminology",           blurb:"Amortization, fixed vs. variable, and the OSFI stress test.",      href:"/glossary/mortgage",                      type:"glossary" },
-      { id:"closing-costs",   title:"Closing costs 101",              blurb:"Property Transfer Tax, legal fees, adjustments — what to plan for.", href:"/glossary/property-transfer-tax",       type:"glossary" },
+      { id:"closing-costs",   title:"Closing costs 101",              blurb:"Property Transfer Tax, legal fees, adjustments — what to plan for.", href:"/glossary/property-transfer-tax-ptt",       type:"glossary" },
       { id:"strata-basics",   title:"Strata basics",                  blurb:"Fees, bylaws, and the depreciation report system in BC.",          href:"/glossary/strata-corporation",            type:"glossary" },
       { id:"gst-new-homes",   title:"GST on new construction",        blurb:"Federal GST rules for newly built homes vs. resale.",              href:"/glossary/gst-new-homes",                 type:"glossary" },
     ]),
@@ -42,7 +42,7 @@ const BUYING = {
     ]),
     S("plan", "Plan", "Understand affordability, monthly ownership costs, and everything you may wish to budget for. All calculators are for educational estimation only.", [
       { id:"affordability",   title:"Affordability estimator",        blurb:"General-information calculator using your income, down payment, and rate assumptions.", href:"/valuation",                type:"calculator" },
-      { id:"ptt-calc",        title:"Property Transfer Tax",          blurb:"How BC's 1% / 2% / 3% / 5% / 20% tiered PTT rates work + exemptions.",   href:"/glossary/property-transfer-tax", type:"calculator" },
+      { id:"ptt-calc",        title:"Property Transfer Tax",          blurb:"How BC's 1% / 2% / 3% / 5% / 20% tiered PTT rates work + exemptions.",   href:"/glossary/property-transfer-tax-ptt", type:"calculator" },
       { id:"insurance",       title:"Home & title insurance",         blurb:"What lenders require, and optional coverages to research.",             href:"/glossary/title-insurance",     type:"glossary" },
       { id:"utilities",       title:"Utility & monthly costs",        blurb:"BC Hydro, FortisBC, municipal water/sewer, strata fees.",                href:"/glossary/utility-costs",       type:"glossary" },
     ]),
@@ -65,8 +65,8 @@ const BUYING = {
     ]),
     S("ownership", "Home Ownership", "Once you own, ownership is an ongoing responsibility. This stage links to general educational content for the years ahead.", [
       { id:"maintenance",     title:"Ongoing maintenance",            blurb:"Seasonal task lists, deferred maintenance, and how it affects future value.", href:"/glossary/deferred-maintenance", type:"glossary" },
-      { id:"property-tax",    title:"Annual property tax",            blurb:"How BC municipalities calculate, the Home Owner Grant, and Speculation Tax.", href:"/glossary/home-owner-grant",  type:"glossary" },
-      { id:"insurance-review",title:"Insurance review",               blurb:"Annual review cadence and what to reassess.",                             href:"/glossary/homeowner-insurance", type:"glossary" },
+      { id:"property-tax",    title:"Annual property tax",            blurb:"How BC municipalities calculate, the Home Owner Grant, and Speculation Tax.", href:"/glossary/homeowner-grant",  type:"glossary" },
+      { id:"insurance-review",title:"Insurance review",               blurb:"Annual review cadence and what to reassess.",                             href:"/glossary/home-insurance", type:"glossary" },
       { id:"selling-later",   title:"When you're ready to sell",      blurb:"Continue to the Selling Journey when the time comes.",                    href:"/journey/selling",             type:"guide" },
     ]),
   ],
@@ -86,22 +86,22 @@ const SELLING = {
     ]),
     S("value", "Understanding Market Value", "General information about how residential value is estimated in BC. Not an appraisal.", [
       { id:"valuation",   title:"Home valuation estimator",   blurb:"General educational estimate using MLS® comparables. Not an opinion of value.", href:"/valuation",                          type:"calculator" },
-      { id:"assessment",  title:"BC Assessment vs. market value", blurb:"Why the July 1 assessed value rarely equals current market value.",           href:"/glossary/bc-assessment",             type:"glossary" },
-      { id:"comparables", title:"Comparable sales",           blurb:"How sold comps are selected and adjusted in a Comparative Market Analysis.",     href:"/glossary/comparative-market-analysis", type:"glossary" },
+      { id:"assessment",  title:"BC Assessment vs. market value", blurb:"Why the July 1 assessed value rarely equals current market value.",           href:"/glossary/bc-assessment-value",             type:"glossary" },
+      { id:"comparables", title:"Comparable sales",           blurb:"How sold comps are selected and adjusted in a Comparative Market Analysis.",     href:"/glossary/comparative-market-analysis-cma", type:"glossary" },
     ]),
     S("photos", "Preparing Your Home", "Staging, decluttering, and photography — general educational context on how listings are presented.", [
-      { id:"staging",     title:"Staging basics",             blurb:"What professional stagers typically do and when sellers consider it.", href:"/glossary/staging",           type:"glossary" },
+      { id:"staging",     title:"Staging basics",             blurb:"What professional stagers typically do and when sellers consider it.", href:"/glossary/home-staging",           type:"glossary" },
       { id:"photography", title:"Professional photography",   blurb:"How MLS® photography sets, twilight shots, and drone imagery are commonly used.", href:"/glossary/mls-photography", type:"glossary" },
       { id:"pre-inspect", title:"Pre-listing inspection (optional)", blurb:"Educational information on why some sellers order an inspection before listing.", href:"/glossary/home-inspection", type:"glossary" },
     ]),
     S("list", "Listing Process", "What happens once your listing goes live on MLS®.", [
       { id:"mls-exposure", title:"MLS® exposure",             blurb:"How the CREA DDF® and REALTOR.ca distribute your listing across BC and Canada.", href:"/glossary/mls",             type:"glossary" },
-      { id:"days-on-mkt",  title:"Days on Market (DOM)",      blurb:"How DOM is calculated and how it affects perception.",                        href:"/glossary/days-on-market",  type:"glossary" },
+      { id:"days-on-mkt",  title:"Days on Market (DOM)",      blurb:"How DOM is calculated and how it affects perception.",                        href:"/glossary/days-on-market-dom",  type:"glossary" },
       { id:"open-houses",  title:"Open houses & showings",    blurb:"How showings are typically scheduled with lockboxes and confirmation apps.",  href:"/glossary/open-house",      type:"glossary" },
     ]),
     S("showings", "Showings & Offers", "General educational information about how offers arrive and are presented.", [
-      { id:"offer-forms",     title:"Contract of Purchase & Sale", blurb:"BCREA-standard offer form — the fields and clauses buyers commonly use.", href:"/glossary/contract-of-purchase-and-sale", type:"glossary" },
-      { id:"multiple-offers", title:"Multiple offer scenarios",    blurb:"General educational overview of how competitive offers are typically handled.", href:"/glossary/multiple-offer", type:"glossary" },
+      { id:"offer-forms",     title:"Contract of Purchase & Sale", blurb:"BCREA-standard offer form — the fields and clauses buyers commonly use.", href:"/glossary/offer-contract-of-purchase-and-sale", type:"glossary" },
+      { id:"multiple-offers", title:"Multiple offer scenarios",    blurb:"General educational overview of how competitive offers are typically handled.", href:"/glossary/multiple-offers", type:"glossary" },
       { id:"deposits-held",   title:"Deposits held in trust",      blurb:"How buyer deposits are typically held by the listing brokerage in trust.",         href:"/glossary/deposit", type:"glossary" },
     ]),
     S("negotiate", "Negotiations & Conditions", "General information about the subject-removal period and common conditions.", [
@@ -137,7 +137,7 @@ const BUY_AND_SELL = {
     S("value", "Understanding Both Values", "Estimating your current home's value while researching what your next purchase may cost.", [
       { id:"valuation",       title:"Home valuation estimator",     blurb:"General educational estimate for your existing home.", href:"/valuation", type:"calculator" },
       { id:"listings",        title:"Search your next home",         blurb:"Browse live MLS® inventory to gauge next-purchase pricing.", href:"/listings", type:"guide" },
-      { id:"ptt-calc",        title:"Property Transfer Tax on next purchase", blurb:"How PTT applies to your next purchase — including any first-time or newly-built exemptions.", href:"/glossary/property-transfer-tax", type:"calculator" },
+      { id:"ptt-calc",        title:"Property Transfer Tax on next purchase", blurb:"How PTT applies to your next purchase — including any first-time or newly-built exemptions.", href:"/glossary/property-transfer-tax-ptt", type:"calculator" },
     ]),
     S("plan", "Plan Overlapping Costs", "General educational overview of the double-cost period and the deposits, taxes, and moving expenses involved.", [
       { id:"double-costs",  title:"Double-cost period", blurb:"Common overlapping costs when both homes are owned briefly.",           href:"/glossary/double-cost-period", type:"glossary" },
@@ -152,7 +152,7 @@ const BUY_AND_SELL = {
     S("closing", "Coordinating Closings", "Common tools and terms for aligning two completion dates.", [
       { id:"interim-occupancy", title:"Interim occupancy",   blurb:"When completion and possession dates don't fully align.",              href:"/glossary/interim-occupancy",   type:"glossary" },
       { id:"escrow",            title:"Escrow & closing funds", blurb:"How lawyers/notaries hold funds across two transactions.",           href:"/glossary/escrow",              type:"glossary" },
-      { id:"insurance-gap",     title:"Insurance overlap",   blurb:"Insurance considerations when both properties are owned briefly.",     href:"/glossary/homeowner-insurance", type:"glossary" },
+      { id:"insurance-gap",     title:"Insurance overlap",   blurb:"Insurance considerations when both properties are owned briefly.",     href:"/glossary/home-insurance", type:"glossary" },
     ]),
     S("ownership", "Settled In", "Educational information on transitioning from moving day to new ownership.", [
       { id:"utility-transfer", title:"Utility & service transfer", blurb:"BC Hydro, FortisBC, ICBC, municipal utilities — cutover checklist.", href:"/glossary/utility-costs", type:"glossary" },
@@ -170,7 +170,7 @@ const CONDO_STRATA = {
     S("learn", "Strata Fundamentals", "How BC's Strata Property Act shapes governance, fees, and rules.", [
       { id:"strata-corp",   title:"Strata Corporation",        blurb:"The governing entity of every BC strata.",             href:"/glossary/strata-corporation",     type:"glossary" },
       { id:"strata-fees",   title:"Strata fees",               blurb:"What monthly fees cover — and don't cover.",           href:"/glossary/strata-fees",            type:"glossary" },
-      { id:"contingency",   title:"Contingency Reserve Fund",  blurb:"How CRF works and why depreciation reports matter.", href:"/glossary/contingency-reserve-fund", type:"glossary" },
+      { id:"contingency",   title:"Contingency Reserve Fund",  blurb:"How CRF works and why depreciation reports matter.", href:"/glossary/contingency-reserve-fund-crf", type:"glossary" },
       { id:"strata-council",title:"Strata council",            blurb:"Who runs the strata and how council decisions are made.", href:"/glossary/strata-council",       type:"glossary" },
       { id:"bylaws",        title:"Bylaws & rules",            blurb:"How bylaws differ from rules and how they're changed.", href:"/glossary/strata-bylaws",           type:"glossary" },
     ]),
@@ -183,7 +183,7 @@ const CONDO_STRATA = {
       { id:"special-levy",       title:"Special levies",           blurb:"When and why councils raise special levies.",          href:"/glossary/special-levy",        type:"glossary" },
       { id:"strata-insurance",   title:"Strata insurance",         blurb:"What the strata's insurance covers vs. what the owner's does.", href:"/glossary/strata-insurance",   type:"glossary" },
       { id:"deductible-coverage",title:"Deductible coverage",      blurb:"Why owners typically carry deductible-coverage insurance.", href:"/glossary/deductible-coverage", type:"glossary" },
-      { id:"ptt-strata",         title:"Property Transfer Tax",    blurb:"How PTT applies to strata purchases.",                href:"/glossary/property-transfer-tax", type:"calculator" },
+      { id:"ptt-strata",         title:"Property Transfer Tax",    blurb:"How PTT applies to strata purchases.",                href:"/glossary/property-transfer-tax-ptt", type:"calculator" },
     ]),
     S("search", "Condo Search", "Browse strata inventory across BC.", [
       { id:"condos",       title:"Condo specialty page",       blurb:"BC-wide condo inventory with filters for age, size, and amenities.", href:"/specialties/condos",   type:"guide" },
@@ -202,7 +202,7 @@ const CONDO_STRATA = {
       { id:"utility-strata", title:"Included vs. metered utilities", blurb:"What's bundled into fees vs. billed separately.",       href:"/glossary/utility-costs",  type:"glossary" },
     ]),
     S("ownership", "Living in a Strata", "Bylaws, rules, AGMs, and getting involved in council if you choose.", [
-      { id:"agm",             title:"Annual General Meeting", blurb:"How AGMs and voting typically work.",                  href:"/glossary/annual-general-meeting", type:"glossary" },
+      { id:"agm",             title:"Annual General Meeting", blurb:"How AGMs and voting typically work.",                  href:"/glossary/annual-general-meeting-agm", type:"glossary" },
       { id:"rentals-strata",  title:"Rental & pet restrictions", blurb:"BC 2022 changes and current rental restrictions.", href:"/glossary/strata-rental-restrictions", type:"glossary" },
       { id:"selling-strata",  title:"Selling your strata unit", blurb:"Continue to the Selling Journey.",                 href:"/journey/selling", type:"guide" },
     ]),
@@ -220,7 +220,7 @@ const FIRST_TIME = {
       { id:"deposit",        title:"Deposits & subjects",         blurb:"How deposits, trust accounts, and subject clauses work.",       href:"/glossary/deposit",                      type:"glossary" },
       { id:"mortgage-101",   title:"Mortgages 101",               blurb:"Amortization, fixed vs. variable, insured vs. conventional.",   href:"/glossary/mortgage",                     type:"glossary" },
       { id:"strata-basics",  title:"Strata basics",               blurb:"If you're considering a condo or townhome, start here.",         href:"/glossary/strata-corporation",           type:"glossary" },
-      { id:"ptt-basics",     title:"Property Transfer Tax basics",blurb:"The tax you pay on closing day.",                                href:"/glossary/property-transfer-tax",         type:"glossary" },
+      { id:"ptt-basics",     title:"Property Transfer Tax basics",blurb:"The tax you pay on closing day.",                                href:"/glossary/property-transfer-tax-ptt",         type:"glossary" },
     ]),
     S("explore", "Communities on a Budget", "Educational context on lower-priced BC regions and neighbourhoods.", [
       { id:"communities", title:"BC communities",            blurb:"Browse 239 community profiles.",                                 href:"/communities", type:"community" },
@@ -229,10 +229,10 @@ const FIRST_TIME = {
       { id:"quiz",        title:"Where should you live? quiz", blurb:"5-question exploration tool.",                                 href:"/where-should-you-live", type:"guide" },
     ]),
     S("plan", "First-Time Buyer Programs", "General information about BC and federal programs first-time buyers often research.", [
-      { id:"ptt-exempt",     title:"PTT first-time exemption",       blurb:"BC Property Transfer Tax exemption — eligibility criteria.",       href:"/glossary/property-transfer-tax",         type:"glossary" },
-      { id:"fhsa",           title:"First Home Savings Account",     blurb:"Federal FHSA program — general educational content.",              href:"/glossary/first-home-savings-account",    type:"glossary" },
-      { id:"hbp",            title:"Home Buyers' Plan (RRSP)",       blurb:"Federal RRSP HBP program — general educational content.",          href:"/glossary/home-buyers-plan",              type:"glossary" },
-      { id:"newly-built",    title:"Newly built home PTT exemption", blurb:"Different exemption for newly-built homes up to a price threshold.", href:"/glossary/property-transfer-tax",       type:"glossary" },
+      { id:"ptt-exempt",     title:"PTT first-time exemption",       blurb:"BC Property Transfer Tax exemption — eligibility criteria.",       href:"/glossary/property-transfer-tax-ptt",         type:"glossary" },
+      { id:"fhsa",           title:"First Home Savings Account",     blurb:"Federal FHSA program — general educational content.",              href:"/glossary/first-home-savings-account-fhsa",    type:"glossary" },
+      { id:"hbp",            title:"Home Buyers' Plan (RRSP)",       blurb:"Federal RRSP HBP program — general educational content.",          href:"/glossary/home-buyers-plan-hbp",              type:"glossary" },
+      { id:"newly-built",    title:"Newly built home PTT exemption", blurb:"Different exemption for newly-built homes up to a price threshold.", href:"/glossary/property-transfer-tax-ptt",       type:"glossary" },
       { id:"affordability",  title:"Affordability estimator",         blurb:"See what monthly payments look like across price points.",         href:"/valuation",                              type:"calculator" },
     ]),
     S("search", "Your First Search", "Browsing tips and how to use saved searches.", [
@@ -241,67 +241,21 @@ const FIRST_TIME = {
       { id:"saved-src",  title:"Save a search",              blurb:"Get educational updates when new listings match your criteria.", href:"/listings", type:"guide" },
     ]),
     S("offer", "First Offer — General Info", "General educational information — a specific offer requires your own licensed REALTOR®.", [
-      { id:"cpps",         title:"Contract of Purchase & Sale",  blurb:"BCREA-standard offer form — the fields and clauses buyers commonly use.", href:"/glossary/contract-of-purchase-and-sale", type:"glossary" },
+      { id:"cpps",         title:"Contract of Purchase & Sale",  blurb:"BCREA-standard offer form — the fields and clauses buyers commonly use.", href:"/glossary/offer-contract-of-purchase-and-sale", type:"glossary" },
       { id:"subjects",     title:"Subject clauses",              blurb:"How subject removal works step-by-step.",                                  href:"/glossary/subject-clauses",     type:"glossary" },
       { id:"inspection",   title:"Home inspection",              blurb:"What a BC-licensed inspector's report typically covers.",                  href:"/glossary/home-inspection",     type:"glossary" },
       { id:"deposit-first",title:"Your first deposit",           blurb:"How the deposit is delivered, held, and applied.",                          href:"/glossary/deposit",             type:"glossary" },
     ]),
     S("closing", "First Closing", "Educational overview of the closing day experience.", [
       { id:"lawyer-notary",  title:"Choosing a lawyer or notary", blurb:"What a BC conveyancing professional typically does.",     href:"/glossary/lawyer-or-notary",  type:"glossary" },
-      { id:"closing-costs",  title:"Closing cost checklist",       blurb:"PTT, legal, title insurance, adjustments — a common budget baseline.", href:"/glossary/property-transfer-tax", type:"glossary" },
+      { id:"closing-costs",  title:"Closing cost checklist",       blurb:"PTT, legal, title insurance, adjustments — a common budget baseline.", href:"/glossary/property-transfer-tax-ptt", type:"glossary" },
       { id:"completion",     title:"Completion & possession",      blurb:"The two dates every buyer tracks in the final week.",     href:"/glossary/completion-date",   type:"glossary" },
     ]),
     S("ownership", "Your First Year", "Common surprises and ongoing responsibilities for new owners.", [
       { id:"first-year-maint", title:"First-year maintenance",   blurb:"Filters, alarms, seasonal tasks — a starter checklist.",  href:"/glossary/deferred-maintenance", type:"glossary" },
-      { id:"home-owner-grant", title:"BC Home Owner Grant",       blurb:"Annual property-tax grant — how to apply.",              href:"/glossary/home-owner-grant",     type:"glossary" },
-      { id:"insurance-first",  title:"Homeowner insurance",       blurb:"Reviewing coverage annually.",                            href:"/glossary/homeowner-insurance",  type:"glossary" },
+      { id:"home-owner-grant", title:"BC Home Owner Grant",       blurb:"Annual property-tax grant — how to apply.",              href:"/glossary/homeowner-grant",     type:"glossary" },
+      { id:"insurance-first",  title:"Homeowner insurance",       blurb:"Reviewing coverage annually.",                            href:"/glossary/home-insurance",  type:"glossary" },
       { id:"next-journey",     title:"Continue to Home Ownership",blurb:"Long-term ownership journey.",                            href:"/journey/home-ownership",         type:"guide" },
-    ]),
-  ],
-};
-
-// --- NEW CONSTRUCTION JOURNEY ---
-const NEW_CONSTRUCTION = {
-  slug: "new-construction", title: "New Construction", icon: "🏗️",
-  short: "Understand the differences between buying new-build (pre-sale or completed) versus resale in BC.",
-  intent: "buyer",
-  stages: [
-    S("learn", "New-Build Fundamentals", "GST, disclosure statements, rescission rights, and 2-5-10 warranty coverage.", [
-      { id:"warranty-210", title:"2-5-10 Home Warranty",   blurb:"BC's mandatory new-home warranty regime.",           href:"/glossary/2-5-10-home-warranty", type:"glossary" },
-      { id:"disclosure",   title:"Disclosure statement",   blurb:"REDMA-required disclosure for new developments.",     href:"/glossary/disclosure-statement",  type:"glossary" },
-      { id:"gst-new",      title:"GST on new homes",       blurb:"How the 5% federal GST applies to new construction.", href:"/glossary/gst-new-homes",        type:"glossary" },
-      { id:"redma",        title:"REDMA — Real Estate Development Marketing Act", blurb:"The BC statute governing pre-sale marketing.", href:"/glossary/redma", type:"glossary" },
-      { id:"rescission",   title:"Rescission period",      blurb:"7-day rescission right on pre-sale purchases in BC.", href:"/glossary/rescission-period",     type:"glossary" },
-    ]),
-    S("explore", "Development Landscape", "Educational information on how developments are marketed and sold.", [
-      { id:"pre-sale-vs-completed", title:"Pre-sale vs. completed",  blurb:"The trade-offs of buying off-plan vs. buying a finished unit.", href:"/glossary/pre-sale",          type:"glossary" },
-      { id:"assignment",            title:"Assignment sales",         blurb:"How pre-sale contracts are sometimes assigned before completion.", href:"/glossary/assignment",      type:"glossary" },
-      { id:"presale-listings",      title:"Browse new-build listings",blurb:"Filter MLS® inventory for new construction.",                    href:"/listings",                     type:"guide" },
-    ]),
-    S("plan", "Deposit Structures", "Staged deposits, deposit protection, and rescission rights.", [
-      { id:"staged-deposits",     title:"Staged deposit schedules",     blurb:"How multi-instalment deposits (5%/5%/5%/5%) commonly work.",  href:"/glossary/staged-deposits",     type:"glossary" },
-      { id:"deposit-protection",  title:"Deposit protection in BC",     blurb:"How pre-sale deposits are typically held under REDMA.",       href:"/glossary/deposit-protection",  type:"glossary" },
-      { id:"ptt-new-homes",       title:"PTT — newly built homes",       blurb:"How the newly-built PTT exemption works and its price threshold.", href:"/glossary/property-transfer-tax", type:"calculator" },
-    ]),
-    S("search", "Find Developments", "Browsing new-construction listings.", [
-      { id:"mls-new",     title:"MLS® new-build listings",       blurb:"Filter for new construction.", href:"/listings",              type:"guide" },
-      { id:"communities", title:"Communities with active development", blurb:"Metro Vancouver, Surrey, Langley, Victoria, Kelowna.", href:"/communities", type:"community" },
-    ]),
-    S("offer", "Contract — Pre-Sale", "General educational overview of pre-sale contract structure.", [
-      { id:"pre-sale-contract", title:"Pre-sale contract of purchase",  blurb:"What a REDMA-compliant pre-sale contract typically contains.", href:"/glossary/pre-sale-contract", type:"glossary" },
-      { id:"disclosure-review", title:"Disclosure statement review",     blurb:"What consumers commonly look for in the disclosure package.",  href:"/glossary/disclosure-statement", type:"glossary" },
-      { id:"amendments",        title:"Material change amendments",       blurb:"How REDMA requires notification of material changes.",         href:"/glossary/material-change",     type:"glossary" },
-    ]),
-    S("closing", "Occupancy & Final Closing", "Occupancy permit, deficiency walk-through, warranty commencement.", [
-      { id:"occupancy",        title:"Occupancy permit",         blurb:"Municipal permit that permits move-in.",                          href:"/glossary/occupancy-permit",   type:"glossary" },
-      { id:"deficiency-walk",  title:"Deficiency walk-through", blurb:"Common pre-possession inspection with the developer.",           href:"/glossary/deficiency-walk-through", type:"glossary" },
-      { id:"interim-occupancy",title:"Interim occupancy period",blurb:"When you move in but haven't yet closed on title.",              href:"/glossary/interim-occupancy",  type:"glossary" },
-    ]),
-    S("ownership", "Warranty Year-1 Deficiencies", "Understanding your rights during the warranty period.", [
-      { id:"year-1",       title:"Year-1 warranty items",     blurb:"Labour and materials coverage — first 12 months.",              href:"/glossary/2-5-10-home-warranty", type:"glossary" },
-      { id:"year-5",       title:"Year-5 building envelope",   blurb:"Building envelope coverage — first 5 years.",                    href:"/glossary/2-5-10-home-warranty", type:"glossary" },
-      { id:"year-10",      title:"Year-10 structural",         blurb:"Structural defects coverage — first 10 years.",                  href:"/glossary/2-5-10-home-warranty", type:"glossary" },
-      { id:"claims-process", title:"Filing a warranty claim",  blurb:"General educational overview of the claim process.",             href:"/glossary/warranty-claim",       type:"glossary" },
     ]),
   ],
 };
@@ -313,7 +267,7 @@ const ACREAGES = {
   intent: "buyer",
   stages: [
     S("learn", "Rural Fundamentals", "ALR, well and septic systems, wildfire and flood considerations.", [
-      { id:"alr",        title:"Agricultural Land Reserve",  blurb:"How the ALR protects farmland and limits use.",       href:"/glossary/agricultural-land-reserve", type:"glossary" },
+      { id:"alr",        title:"Agricultural Land Reserve",  blurb:"How the ALR protects farmland and limits use.",       href:"/glossary/agricultural-land-reserve-alr", type:"glossary" },
       { id:"well-water", title:"Well water & water rights",  blurb:"Groundwater licensing and testing.",                   href:"/glossary/water-rights",              type:"glossary" },
       { id:"septic",     title:"Septic systems",             blurb:"Type 1/2/3 septic and Health Authority approval.",     href:"/glossary/septic-system",             type:"glossary" },
       { id:"zoning",     title:"Rural zoning",               blurb:"How Regional Districts and municipalities zone rural land.", href:"/glossary/zoning",                    type:"glossary" },
@@ -339,7 +293,7 @@ const ACREAGES = {
     S("offer", "Rural Due Diligence", "Well flow tests, septic inspection, ALR verification, easements.", [
       { id:"well-flow",       title:"Well flow test",              blurb:"How buyers typically verify water quantity and quality.", href:"/glossary/well-flow-test",       type:"glossary" },
       { id:"septic-inspect",  title:"Septic inspection",           blurb:"What a Registered Onsite Wastewater Practitioner checks.", href:"/glossary/septic-inspection",   type:"glossary" },
-      { id:"alr-verify",      title:"ALR & farm-status verification",blurb:"How to confirm ALR designation and farm-status tax.",   href:"/glossary/agricultural-land-reserve", type:"glossary" },
+      { id:"alr-verify",      title:"ALR & farm-status verification",blurb:"How to confirm ALR designation and farm-status tax.",   href:"/glossary/agricultural-land-reserve-alr", type:"glossary" },
       { id:"easements",       title:"Easements & right-of-way",     blurb:"Utility, access, and neighbour easements to look for.",   href:"/glossary/easement",             type:"glossary" },
     ]),
     S("closing", "Rural Closing", "Additional steps unique to rural residential closings.", [
@@ -354,55 +308,6 @@ const ACREAGES = {
   ],
 };
 
-// --- INVESTMENT PROPERTY JOURNEY (educational only) ---
-const INVESTMENT = {
-  slug: "investment", title: "Investment Property (Educational)", icon: "📊",
-  short: "General educational content on investment-property concepts. Not investment advice — consult a licensed financial advisor for your situation.",
-  intent: "investor",
-  stages: [
-    S("learn", "Concepts & Terminology", "Cap rate, cash-on-cash, gross rent multiplier — general educational terms only.", [
-      { id:"cap-rate",   title:"Capitalization rate",        blurb:"How cap rate is calculated as a general concept.",       href:"/glossary/capitalization-rate",    type:"glossary" },
-      { id:"gross-rent", title:"Gross Rent Multiplier",      blurb:"A simple valuation ratio taught in real-estate courses.",  href:"/glossary/gross-rent-multiplier",  type:"glossary" },
-      { id:"cash-on-cash",title:"Cash-on-cash return",       blurb:"How annual cash flow relates to invested capital.",       href:"/glossary/cash-on-cash",           type:"glossary" },
-      { id:"rtb",        title:"Residential Tenancy Act",   blurb:"BC Residential Tenancy Act framework overview.",           href:"/glossary/residential-tenancy-act", type:"glossary" },
-    ]),
-    S("explore", "BC Market Context", "Educational overview of BC rental markets by region.", [
-      { id:"metro-van",  title:"Metro Vancouver rental market", blurb:"CMHC and StatsCan rental data overview.",             href:"/regions/greater-vancouver",  type:"community" },
-      { id:"vi-invest",  title:"Vancouver Island rentals",       blurb:"Victoria and Nanaimo rental market context.",         href:"/regions/vancouver-island",   type:"community" },
-      { id:"okanagan-r", title:"Okanagan rental market",         blurb:"Kelowna, Vernon, Penticton rental context.",           href:"/regions/okanagan",           type:"community" },
-      { id:"communities",title:"Explore communities",             blurb:"Population, employment, and demographics context.",   href:"/communities",                 type:"community" },
-    ]),
-    S("plan", "Cost & Return Concepts", "General educational cost / return concepts. Not financial advice.", [
-      { id:"ptt-investor",     title:"PTT for non-primary residences", blurb:"How the 2%/3%/5% tiers apply. Foreign-buyer 20% additional PTT.", href:"/glossary/property-transfer-tax", type:"calculator" },
-      { id:"speculation-tax",  title:"Speculation & Vacancy Tax",       blurb:"BC's annual tax on properties not used as a principal residence.", href:"/glossary/speculation-vacancy-tax", type:"glossary" },
-      { id:"empty-home-tax",   title:"Vancouver Empty Homes Tax",       blurb:"City of Vancouver's separate annual tax.",                       href:"/glossary/empty-homes-tax",      type:"glossary" },
-      { id:"underused-tax",    title:"Federal Underused Housing Tax",   blurb:"The 1% federal UHT — reporting obligations for many owners.",   href:"/glossary/underused-housing-tax", type:"glossary" },
-      { id:"amortization",     title:"Amortization schedules",          blurb:"How principal and interest evolve over a 25 or 30-year mortgage.", href:"/glossary/amortization",       type:"glossary" },
-    ]),
-    S("search", "Investment-Inventory Browsing", "Browse duplex / multi-unit inventory.", [
-      { id:"multi-unit", title:"Multi-unit listings",          blurb:"Filter for duplex, triplex, and small multi-unit inventory.", href:"/listings", type:"guide" },
-      { id:"condos-inv", title:"Condos with rental history",   blurb:"Strata inventory — remember to review rental restrictions.",  href:"/specialties/condos", type:"guide" },
-      { id:"suited",     title:"Suited homes",                 blurb:"Detached homes with legal or unauthorized secondary suites.", href:"/listings", type:"guide" },
-    ]),
-    S("offer", "Investment-Specific Due Diligence", "Rent rolls, RTB tenancies, insurance considerations.", [
-      { id:"rent-roll",    title:"Rent roll review",         blurb:"How to interpret a rent roll and estoppel certificate.",       href:"/glossary/rent-roll",       type:"glossary" },
-      { id:"tenant-rights",title:"Existing tenant rights",   blurb:"How BC's RTA protects tenants when a property changes hands.", href:"/glossary/residential-tenancy-act", type:"glossary" },
-      { id:"suite-legality",title:"Secondary suite legality", blurb:"Legal (licensed) vs. unauthorized suites — insurance and municipal implications.", href:"/glossary/secondary-suite", type:"glossary" },
-      { id:"landlord-ins",  title:"Landlord insurance",      blurb:"Coverage differences vs. owner-occupied insurance.",           href:"/glossary/landlord-insurance", type:"glossary" },
-    ]),
-    S("closing", "Investment Closing", "Educational overview of investment-property closing considerations.", [
-      { id:"assumed-tenancy", title:"Assumed tenancies",   blurb:"When you inherit an existing tenant under the RTA.",   href:"/glossary/assumed-tenancy",  type:"glossary" },
-      { id:"tax-planning",    title:"CRA reporting",       blurb:"General educational context on rental-income reporting to CRA.", href:"/glossary/rental-income", type:"glossary" },
-    ]),
-    S("ownership", "Landlord Considerations", "General educational content on BC's landlord/tenant framework.", [
-      { id:"rent-increases", title:"Annual rent increases",    blurb:"BC's annual allowable increase — how it's calculated.", href:"/glossary/rent-increase-limit", type:"glossary" },
-      { id:"eviction",       title:"Legal grounds for eviction", blurb:"General educational overview of RTA-permitted grounds.", href:"/glossary/eviction",           type:"glossary" },
-      { id:"tenancy-forms",  title:"Standard RTB forms",         blurb:"BC RTB tenancy agreement and notice forms.",             href:"/glossary/rtb-forms",           type:"glossary" },
-      { id:"selling-invest", title:"Selling a tenanted property", blurb:"Continue to the Selling Journey.",                     href:"/journey/selling",              type:"guide" },
-    ]),
-  ],
-};
-
 // --- HOME OWNERSHIP JOURNEY (for existing owners not currently transacting) ---
 const OWNERSHIP = {
   slug: "home-ownership", title: "Home Ownership", icon: "🏡",
@@ -412,7 +317,7 @@ const OWNERSHIP = {
     S("learn", "Ownership Vocabulary", "Terms every BC homeowner encounters over time.", [
       { id:"deferred-maint",  title:"Deferred maintenance",     blurb:"What accumulates over years and how to plan.",       href:"/glossary/deferred-maintenance",  type:"glossary" },
       { id:"depreciation",    title:"Depreciation & wear",       blurb:"How building components typically depreciate over decades.", href:"/glossary/depreciation-report", type:"glossary" },
-      { id:"assessment",      title:"BC Assessment",              blurb:"Annual July-1 assessed value and how it's used.",   href:"/glossary/bc-assessment",         type:"glossary" },
+      { id:"assessment",      title:"BC Assessment",              blurb:"Annual July-1 assessed value and how it's used.",   href:"/glossary/bc-assessment-value",         type:"glossary" },
       { id:"property-tax",    title:"Municipal property tax",    blurb:"How BC municipalities calculate annual tax.",       href:"/glossary/property-tax",           type:"glossary" },
     ]),
     S("explore", "Community Resources", "Local schools, transit, and municipal services.", [
@@ -420,8 +325,8 @@ const OWNERSHIP = {
       { id:"regions",     title:"BC regions",                    blurb:"Regional overview of BC.",                     href:"/regions/greater-vancouver", type:"community" },
     ]),
     S("plan", "Annual Owner Checklist", "Insurance review, property tax, Home Owner Grant, and seasonal tasks.", [
-      { id:"home-owner-grant", title:"BC Home Owner Grant",     blurb:"Annual property-tax grant.",                   href:"/glossary/home-owner-grant",     type:"glossary" },
-      { id:"insurance-annual", title:"Annual insurance review", blurb:"What to reassess each year.",                  href:"/glossary/homeowner-insurance",  type:"glossary" },
+      { id:"home-owner-grant", title:"BC Home Owner Grant",     blurb:"Annual property-tax grant.",                   href:"/glossary/homeowner-grant",     type:"glossary" },
+      { id:"insurance-annual", title:"Annual insurance review", blurb:"What to reassess each year.",                  href:"/glossary/home-insurance",  type:"glossary" },
       { id:"seasonal-checklist",title:"Seasonal maintenance",   blurb:"Spring, summer, fall, winter routine checklists.", href:"/glossary/deferred-maintenance", type:"glossary" },
       { id:"climate-risk",     title:"Climate & weather risk",  blurb:"BC-specific wildfire, flood, and atmospheric-river considerations.", href:"/glossary/wildfire-risk", type:"glossary" },
     ]),
