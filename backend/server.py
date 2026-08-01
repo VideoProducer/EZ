@@ -7954,15 +7954,131 @@ async def campaigns_opt_in(body: CampaignSignup, request: Request):
     return {"success": True, "email": email, "accepted": accepted}
 
 
-app.include_router(api)
-
 # =============== DOOGIE VOICE (Whisper) — scaffold ===============
 # Endpoint accepts audio blob from the frontend mic button. Activates once
 # OPENAI_API_KEY is configured. Until then, returns a graceful "not enabled"
 # response so the UI can show a friendly message instead of crashing.
 import base64
 from fastapi import File, UploadFile, Form
+from fastapi.staticfiles import StaticFiles
 import io as _io
+import shutil, mimetypes
+
+# ---- Static file serving for user uploads (coming-soon listing photos/video) ----
+UPLOADS_ROOT = Path(__file__).parent / "uploads"
+UPLOADS_ROOT.mkdir(exist_ok=True)
+(UPLOADS_ROOT / "coming_soon").mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_ROOT)), name="uploads")
+
+@api.get("/coming-soon")
+async def public_coming_soon():
+    """Public — returns the coming-soon listing config if published."""
+    doc = await db.coming_soon.find_one({"_id": "singleton"}) or {}
+    if not doc.get("published"):
+        return {"published": False}
+    doc.pop("_id", None)
+    return doc
+
+@api.get("/admin/coming-soon")
+async def admin_get_coming_soon(_=Depends(verify_admin)):
+    doc = await db.coming_soon.find_one({"_id": "singleton"}) or {"_id": "singleton"}
+    default = {
+        "published": False, "eyebrow": "Coming Soon", "title": "", "community": "",
+        "price_teaser": "", "beds": None, "baths": None, "sqft": None,
+        "features": [], "description": "",
+        "photos": [], "hero_photo_id": None,
+        "video_url": "", "video_type": "file",
+        "cta_label": "Enquire", "cta_link": "mailto:info@eztofind.ca?subject=Coming%20Soon%20Enquiry",
+    }
+    for k, v in default.items():
+        doc.setdefault(k, v)
+    doc.pop("_id", None)
+    return doc
+
+class ComingSoonUpdate(BaseModel):
+    published: Optional[bool] = None
+    eyebrow: Optional[str] = None
+    title: Optional[str] = None
+    community: Optional[str] = None
+    price_teaser: Optional[str] = None
+    beds: Optional[float] = None
+    baths: Optional[float] = None
+    sqft: Optional[int] = None
+    features: Optional[List[str]] = None
+    description: Optional[str] = None
+    photos: Optional[List[dict]] = None
+    hero_photo_id: Optional[str] = None
+    video_url: Optional[str] = None
+    video_type: Optional[str] = None
+    cta_label: Optional[str] = None
+    cta_link: Optional[str] = None
+
+@api.put("/admin/coming-soon")
+async def admin_update_coming_soon(body: ComingSoonUpdate, _=Depends(verify_admin)):
+    update = {k: v for k, v in body.model_dump().items() if v is not None}
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.coming_soon.update_one({"_id": "singleton"}, {"$set": update}, upsert=True)
+    doc = await db.coming_soon.find_one({"_id": "singleton"})
+    doc.pop("_id", None)
+    return doc
+
+MAX_PHOTO_BYTES = 20 * 1024 * 1024
+MAX_VIDEO_BYTES = 500 * 1024 * 1024
+PHOTO_MIMES = {"image/jpeg","image/png","image/webp","image/heic","image/heif","image/avif"}
+VIDEO_MIMES = {"video/mp4","video/webm","video/quicktime","video/x-matroska"}
+
+@api.post("/admin/coming-soon/upload-photo")
+async def admin_upload_photo(file: UploadFile = File(...), _=Depends(verify_admin)):
+    if file.content_type not in PHOTO_MIMES:
+        raise HTTPException(400, f"Unsupported image type '{file.content_type}'. Please upload JPG, PNG, WEBP, HEIC, or AVIF.")
+    file_id = str(uuid.uuid4())
+    ext = mimetypes.guess_extension(file.content_type) or ".jpg"
+    if ext == ".jpe": ext = ".jpg"
+    dest_dir = UPLOADS_ROOT / "coming_soon"; dest_dir.mkdir(exist_ok=True)
+    dest = dest_dir / f"{file_id}{ext}"
+    size = 0
+    with dest.open("wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_PHOTO_BYTES:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(413, f"Photo exceeds {MAX_PHOTO_BYTES // (1024*1024)} MB.")
+            f.write(chunk)
+    return {"id": file_id, "url": f"/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
+
+@api.post("/admin/coming-soon/upload-video")
+async def admin_upload_video(file: UploadFile = File(...), _=Depends(verify_admin)):
+    if file.content_type not in VIDEO_MIMES:
+        raise HTTPException(400, f"Unsupported video type '{file.content_type}'. Please upload MP4, WEBM, MOV, or MKV.")
+    file_id = str(uuid.uuid4())
+    ext = mimetypes.guess_extension(file.content_type) or ".mp4"
+    dest_dir = UPLOADS_ROOT / "coming_soon"; dest_dir.mkdir(exist_ok=True)
+    dest = dest_dir / f"{file_id}{ext}"
+    size = 0
+    with dest.open("wb") as f:
+        while chunk := await file.read(4 * 1024 * 1024):
+            size += len(chunk)
+            if size > MAX_VIDEO_BYTES:
+                dest.unlink(missing_ok=True)
+                raise HTTPException(413, f"Video exceeds {MAX_VIDEO_BYTES // (1024*1024)} MB.")
+            f.write(chunk)
+    return {"id": file_id, "url": f"/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
+
+@api.delete("/admin/coming-soon/asset")
+async def admin_delete_asset(path: str, _=Depends(verify_admin)):
+    if not path.startswith("/uploads/"):
+        raise HTTPException(400, "Invalid asset path")
+    disk_path = UPLOADS_ROOT.parent / path.lstrip("/")
+    try:
+        if disk_path.resolve().is_relative_to(UPLOADS_ROOT.resolve()) and disk_path.exists():
+            disk_path.unlink()
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+app.include_router(api)
+
 
 @app.post("/api/doogie/transcribe")
 async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("en")):

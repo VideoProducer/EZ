@@ -7,6 +7,7 @@ import axios from "axios";
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
+import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -1972,6 +1973,7 @@ const Home = () => {
       })}</script>
     </Helmet>
     <PersonalizedHome/>
+    <ComingSoonHero mode="home"/>
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
@@ -4273,6 +4275,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/client-journeys")} className={active==="client-journeys"?"active":""} data-testid="admin-nav-client-journeys">🧭 Client Journeys</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/coming-soon")} className={active==="coming-soon"?"active":""} data-testid="admin-nav-coming-soon">🏛️ Coming Soon</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
@@ -7577,6 +7580,12 @@ const AdminCeaseDesist = () => {
 };
 
 
+// Wrapper so AdminComingSoon gets its auth headers from the admin context.
+const AdminComingSoonWrapper = () => {
+  const { headers } = useAdmin();
+  return <AdminComingSoon headers={headers}/>;
+};
+
 // ============ Admin Client Journeys — private curated plans ============
 // Doug creates a personalized real-estate journey for each client from a
 // template (Buying, Selling, Condo/Strata, etc.), curates which modules
@@ -8204,6 +8213,7 @@ function App() {
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/my-journey/:token" element={<MyJourney/>}/>
+      <Route path="/preview/coming-soon" element={<AppLayout><section className="section" style={{padding:0}}><ComingSoonHero mode="preview"/></section></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
@@ -8223,6 +8233,7 @@ function App() {
       <Route path="/admin" element={<AdminDash/>}/>
       <Route path="/admin/growth" element={<AdminGrowth/>}/>
       <Route path="/admin/client-journeys" element={<AdminClientJourneys/>}/>
+      <Route path="/admin/coming-soon" element={<AdminShell active="coming-soon"><AdminComingSoonWrapper/></AdminShell>}/>
       <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
