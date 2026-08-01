@@ -55,6 +55,11 @@ const OtpPrompt = ({ token, meta, onVerified }) => {
       <NoIndex/>
       <div className="container-x" style={{maxWidth:"32rem",padding:"3rem 1.5rem"}}>
         <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+          <div style={{fontSize:"1.4rem",fontWeight:800,color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>EZtoFind.ca</div>
+          <div style={{fontSize:"0.9rem",fontWeight:600,color:"var(--brand-navy)",marginTop:"0.15rem"}}>Doug LeMaire, REALTOR®</div>
+          <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.1rem",fontFamily:"Inter,sans-serif"}}>Fraser Property Management Realty Services Ltd.</div>
+        </div>
+        <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
           <div className="eyebrow" style={{marginBottom:"0.5rem"}}>Your personal journey plan</div>
           <h1 className="section-title" data-testid="cj-otp-title">Hi {meta?.client_first_name || "there"} 👋</h1>
           <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1rem",lineHeight:1.6}}>Enter the 6-digit access code Doug sent you by email to open <strong>{meta?.title || "your journey plan"}</strong>.</p>

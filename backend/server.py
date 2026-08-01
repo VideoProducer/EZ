@@ -7689,7 +7689,8 @@ async def send_client_journey(cj_id: str, request: Request, payload = Depends(ve
 <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#111">
   <div style="text-align:center;margin-bottom:1.5rem">
     <div style="font-size:1.4rem;font-weight:800;color:#0F2A5B">EZtoFind.ca</div>
-    <div style="font-size:0.85rem;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600">Doug LeMaire, REALTOR®</div>
+    <div style="font-size:0.9rem;color:#0F2A5B;font-weight:600;margin-top:0.15rem">Doug LeMaire, REALTOR®</div>
+    <div style="font-size:0.8rem;color:#6b7280;margin-top:0.1rem">Fraser Property Management Realty Services Ltd.</div>
   </div>
   <h2 style="color:#0F2A5B;margin-top:0">Hi {doc['client_name'].split()[0] if doc['client_name'] else 'there'},</h2>
   <p style="line-height:1.6;font-size:0.95rem">I've put together a personalized real estate education journey for you based on what we discussed. This is a private link — please don't share it publicly.</p>
@@ -7821,7 +7822,8 @@ async def _send_client_journey_reminder(cj: dict):
 <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#111">
   <div style="text-align:center;margin-bottom:1.5rem">
     <div style="font-size:1.4rem;font-weight:800;color:#0F2A5B">EZtoFind.ca</div>
-    <div style="font-size:0.85rem;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600">Doug LeMaire, REALTOR®</div>
+    <div style="font-size:0.9rem;color:#0F2A5B;font-weight:600;margin-top:0.15rem">Doug LeMaire, REALTOR®</div>
+    <div style="font-size:0.8rem;color:#6b7280;margin-top:0.1rem">Fraser Property Management Realty Services Ltd.</div>
   </div>
   <h2 style="color:#0F2A5B;margin-top:0">Hi {first_name},</h2>
   <p style="line-height:1.65;font-size:0.98rem">Just a friendly nudge — I noticed you haven't opened the personalized real estate journey plan I sent you last week. No pressure at all, but I wanted to make sure the email didn't get buried.</p>
