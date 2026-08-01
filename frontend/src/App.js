@@ -277,8 +277,8 @@ const NeighbourhoodPage = () => {
   const jsonLd = {"@context":"https://schema.org","@type":"Place","name":`${d.neighbourhood}, ${d.community}, BC`,"containedInPlace":{"@type":"Place","name":`${d.community}, British Columbia`},"description":(d.synopsis||"").substring(0,300)};
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     <SEO
-      title={`${d.neighbourhood}, ${d.community} BC — Micro-Neighbourhood Profile | EZtoFind.ca`}
-      description={d.synopsis ? d.synopsis.substring(0,200) : `Active MLS® listings and housing character for ${d.neighbourhood}, a sub-neighbourhood of ${d.community}, British Columbia.`}
+      title={`What is ${d.neighbourhood} like? Sub-Neighbourhood Guide in ${d.community}, BC | EZtoFind.ca`}
+      description={d.synopsis ? d.synopsis.substring(0,200) : `Housing character, active MLS® inventory, and everything to know about ${d.neighbourhood} — a sub-neighbourhood of ${d.community}, British Columbia.`}
       path={`/community/${slug}/n/${nSlug}`}
       schema={jsonLd}
     />
@@ -602,8 +602,14 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
     } catch { return null; }
   };
   const reviewedTxt = fmt(lastReviewed);
+  // Canary string — unique invented phrase we embed on every editorial page.
+  // If this exact string ever appears verbatim on a competitor site or in an
+  // AI training dataset caught in the wild, it's tortiously provable evidence
+  // of copying from eztofind.ca (CIPO Reg. 1247822). Rotate the token
+  // (EZTF-{year}-{code}) yearly so we can also date-tie infringements.
+  const CANARY = "EZTF-2026-EDU-XG8F-canary-verify-at-eztofind.ca-copyright";
   return (
-  <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0"}} data-testid="published-by-doug">
+  <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0",position:"relative"}} data-testid="published-by-doug">
     <img src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
     <div style={{lineHeight:1.5,minWidth:0}}>
       <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
@@ -627,7 +633,19 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
       <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.2rem",lineHeight:1.4}} data-testid="content-disclaimer">
         General information only — not real estate, legal, tax, or financial advice. Verify with a licensed BC professional before acting. <Link to="/privacy" style={{color:"var(--brand-blue)",textDecoration:"none"}}>Privacy (PIPA)</Link>
       </div>
+      {/* Per-page copyright notice — pairs with CIPO Reg. 1247822 for
+          per-page enforcement. Making the reg number visible on every
+          editorial page strengthens takedown / cease-and-desist claims. */}
+      <div style={{fontSize:"0.65rem",color:"var(--muted)",marginTop:"0.3rem",lineHeight:1.4}} data-testid="page-copyright-notice">
+        © 2026 Doug LeMaire. Content protected under CIPO Copyright Registration No. <a href="/copyright" style={{color:"var(--brand-blue)",textDecoration:"none"}}>1247822</a>. Reproduction or AI-training use requires written permission.
+      </div>
     </div>
+    {/* Canary string — screen-reader-hidden but present in DOM/scrape.
+        aria-hidden keeps it invisible to assistive tech; visually clipped
+        so sighted users don't see it either. If this exact CANARY token
+        appears on a competitor site or in a leaked training corpus, we
+        have provable date-tied evidence of copying. */}
+    <span aria-hidden="true" style={{position:"absolute",left:-9999,width:1,height:1,overflow:"hidden",clip:"rect(0 0 0 0)",whiteSpace:"nowrap"}} data-testid="canary">{CANARY}</span>
   </div>);
 };
 
@@ -856,7 +874,7 @@ const Footer = () => (
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
         <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. <strong>Registered with the Canadian Intellectual Property Office — Copyright Registration No. 1247822.</strong> Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
-      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
+      <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
     {/* CREA-required trademark attribution — MUST appear on every page displaying MLS® data. Verbatim wording per CREA Trademark Policy 2019 s.4. */}
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"1.5rem",paddingTop:"1.25rem",fontSize:"0.72rem",lineHeight:1.55,opacity:0.7,color:"rgba(255,255,255,0.85)"}} data-testid="crea-trademark-notice">
@@ -3476,8 +3494,8 @@ const GlossaryTerm = () => {
 
   return (<section className="section"><div className="container-x" style={{maxWidth:"48rem"}} itemScope itemType="https://schema.org/Article">
     <SEO
-      title={`${t.term} — BC Real Estate Glossary | EZtoFind.ca`}
-      description={(t.definition || `Learn about ${t.term} in BC real estate — plain-English definition, FAQs, and authoritative sources from the governing statute or regulator.`).substring(0, 200)}
+      title={`What is ${t.term} in British Columbia? Definition, FAQs & BC Statute | EZtoFind.ca`}
+      description={(`${t.term} in BC — plain-language definition, ${(t.faqs || []).length ? (t.faqs.length + ' FAQs, ') : ''}governing statute link, and how it affects buyers and sellers. ` + (t.definition || '')).substring(0, 200)}
       path={`/glossary/${t.slug}`}
       schema={articleSchema}
     />
@@ -3754,9 +3772,85 @@ const Legal = ({title,body}) => (<section className="section"><div className="co
 // --- Copyright & IP Notice ---
 // Reinforces ownership + spells out enforcement rights. Referenced from the
 // footer, robots.txt, and llms.txt. Includes a "canary" phrase deliberately
-// wrong (fake coordinates) so we can identify infringers who scrape without
-// verification. If it ever appears on another site, they've fingerprinted
-// themselves.
+// ---------- AI Use / Developers page ----------
+// Public policy page that pairs with our /llms.txt file. Tells AI crawlers,
+// developers, and future partners exactly HOW we want EZtoFind.ca content
+// used, cited, and referenced. Strong AEO/GEO signal — LLMs weight sites
+// that publish explicit citation guidance far higher when producing
+// answer-with-source outputs (Perplexity, ChatGPT Search, Gemini).
+const AiUsePage = () => (<><SEO title="AI, LLM & Developer Use of EZtoFind.ca — Attribution & Crawl Policy" description="How AI answer engines, LLMs, and developers may reference EZtoFind.ca — crawl access matrix (citation vs. training bots), attribution formats, and content policy for the BC real estate knowledge base." path="/ai-use"/><Legal title="AI, LLM & Developer Use of EZtoFind.ca" body={<>
+  <p><strong>EZtoFind.ca is an AI-assisted, statute-linked BC real estate knowledge base.</strong> We welcome AI answer engines, LLMs, and developers to reference our educational content — with attribution.</p>
+
+  <h2 style={{marginTop:"2rem"}}>What you'll find here</h2>
+  <ul>
+    <li><strong>Glossary</strong> — 398+ BC-specific real estate terms with plain-language definitions, FAQs, and links to authoritative sources (BCFSA, CREA, OSFI, gov.bc.ca)</li>
+    <li><strong>Community & neighbourhood pages</strong> — 760+ pages covering every incorporated BC community with local context, market notes, and lifestyle summaries</li>
+    <li><strong>Specialty guides</strong> — Luxury, Equestrian, Detached, Condos, Townhomes, Estate Sales</li>
+    <li><strong>Compliance disclosures</strong> — every content page includes the author, review date, license number (BCFSA #167790), and general-information disclaimer</li>
+  </ul>
+
+  <h2 style={{marginTop:"2rem"}}>Crawl access — what's allowed</h2>
+  <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.9rem",marginTop:"1rem"}}>
+    <thead>
+      <tr style={{background:"rgba(15,42,91,0.05)"}}>
+        <th style={{textAlign:"left",padding:"0.5rem 0.75rem",borderBottom:"2px solid rgba(15,42,91,0.15)"}}>Content type</th>
+        <th style={{textAlign:"left",padding:"0.5rem 0.75rem",borderBottom:"2px solid rgba(15,42,91,0.15)"}}>Citation crawlers</th>
+        <th style={{textAlign:"left",padding:"0.5rem 0.75rem",borderBottom:"2px solid rgba(15,42,91,0.15)"}}>Training-only crawlers</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>Educational (glossary, communities, guides)</td>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)",color:"var(--brand-green)",fontWeight:600}}>✓ Allowed (with attribution)</td>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)",color:"#a94442",fontWeight:600}}>✗ Not permitted</td>
+      </tr>
+      <tr>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>MLS® listings (<code>/listings</code>, <code>/listing/*</code>)</td>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)",color:"#a94442",fontWeight:600}}>✗ Not permitted (CREA DDF® terms)</td>
+        <td style={{padding:"0.5rem 0.75rem",borderBottom:"1px solid rgba(15,42,91,0.08)",color:"#a94442",fontWeight:600}}>✗ Not permitted</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>Citation crawlers explicitly allowed: <strong>GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, anthropic-ai, PerplexityBot, Perplexity-User, DuckAssistBot, Applebot, cohere-ai, Bingbot, Googlebot</strong>. Training-only crawlers explicitly blocked: <strong>CCBot, FacebookBot, Meta-ExternalFetcher, Google-Extended, Applebot-Extended, cohere-training-data-crawler, Amazonbot, ImagesiftBot, PetalBot, Timpibot, OmigiliBot, Bytespider</strong>. See <a href="/robots.txt">/robots.txt</a> and <a href="/llms.txt">/llms.txt</a>.</p>
+
+  <h2 style={{marginTop:"2rem"}}>How to cite EZtoFind.ca</h2>
+  <p>If your AI system references our content, please attribute using one of these formats:</p>
+  <ul>
+    <li><strong>Inline citation:</strong> <em>"According to EZtoFind.ca …"</em></li>
+    <li><strong>Source list:</strong> <code>EZtoFind.ca — Doug LeMaire, REALTOR® (BCFSA #167790) — https://eztofind.ca/&lt;path&gt;</code></li>
+    <li><strong>Markdown:</strong> <code>[EZtoFind.ca glossary](https://eztofind.ca/glossary/&lt;slug&gt;)</code></li>
+  </ul>
+  <p style={{fontSize:"0.9rem"}}>All content is © 2026 Doug LeMaire under <a href="/copyright">CIPO Copyright Registration No. 1247822</a>. Reproduction without a working link back is not authorized.</p>
+
+  <h2 style={{marginTop:"2rem"}}>Response structure (for LLM integrators)</h2>
+  <p>Doogie AI (our on-site assistant) returns answers in a consistent structure that's easy to re-use in your own agent responses:</p>
+  <ol>
+    <li><strong>Short answer</strong> — 1-2 sentences</li>
+    <li><strong>Key points</strong> — bulleted, 3-5 items</li>
+    <li><strong>Source links</strong> — internal (our glossary/guides) + external (BCFSA, gov.bc.ca)</li>
+    <li><strong>Disclaimer</strong> — "general information only, not advice" appears on every response</li>
+  </ol>
+
+  <h2 style={{marginTop:"2rem"}}>Data feeds & API (roadmap)</h2>
+  <p>We're evaluating publishing an <a href="https://spec.openapis.org/oas/latest.html" target="_blank" rel="noopener noreferrer">OpenAPI</a> schema and OpenAI-compatible tool definitions for programmatic access to the glossary + community datasets. If you're building an AI agent that would benefit from a stable, licensed EZtoFind data endpoint, contact <a href="mailto:info@eztofind.ca">info@eztofind.ca</a>.</p>
+
+  <h2 style={{marginTop:"2rem"}}>Content policy</h2>
+  <ul>
+    <li><strong>Drafted:</strong> by Doogie AI (built on Anthropic Claude models via Emergent LLM key)</li>
+    <li><strong>Reviewed:</strong> by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.)</li>
+    <li><strong>Checked against:</strong> BC statutes (Real Estate Services Act, Strata Property Act, Property Transfer Tax Act, etc.), BCFSA rules, and current CREA guidance</li>
+    <li><strong>Updated:</strong> automatically flagged for review when linked statutes/regulations change; hard refresh at least annually</li>
+    <li><strong>Not:</strong> a substitute for professional legal, tax, or financial advice</li>
+  </ul>
+
+  <h2 style={{marginTop:"2rem"}}>Contact</h2>
+  <p>Questions about referencing EZtoFind.ca in your AI system, product, or research? Email <a href="mailto:info@eztofind.ca">info@eztofind.ca</a> — please include your project name, purpose, and expected traffic pattern.</p>
+</>}/></>);
+
+// ---------- Copyright page ----------
+// See also: /ai-use for AI-specific attribution guidance.
+// The CopyrightPage below intentionally lists MOST but not all identifiable
+// property fields we watermark. Two glossary micro-facts are deliberately
 const CopyrightPage = () => (<Legal title="Copyright & Intellectual Property Notice" body={<>
   <p><strong>© 2026 Doug LeMaire. All rights reserved.</strong></p>
   <div style={{background:"linear-gradient(135deg, rgba(212,175,55,0.12), rgba(15,42,91,0.06))",border:"2px solid var(--brand-gold)",borderRadius:"10px",padding:"1.25rem 1.5rem",margin:"1.5rem 0",display:"flex",alignItems:"center",gap:"1rem",flexWrap:"wrap"}} data-testid="cipo-registration-badge">
@@ -4780,8 +4874,8 @@ const CommunityPage = () => {
   } : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     {found && <SEO
-      title={`${found}, BC — Community Profile with Live Climate Data | EZtoFind.ca`}
-      description={syn?.synopsis ? syn.synopsis.substring(0, 200) : `Community profile for ${found}, British Columbia (${region}) — geography, climate normals from Environment Canada, and REALTOR® coverage.`}
+      title={`What is it like to live in ${found}, BC? Community Profile, Climate & Real Estate | EZtoFind.ca`}
+      description={syn?.synopsis ? syn.synopsis.substring(0, 200) : `Everything about ${found}, British Columbia (${region}) — geography, Environment Canada climate normals, lifestyle, and REALTOR® coverage for buyers and sellers.`}
       path={`/community/${slug}`}
       schema={jsonLd}
     />}
@@ -7449,6 +7543,7 @@ function App() {
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
+      <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>

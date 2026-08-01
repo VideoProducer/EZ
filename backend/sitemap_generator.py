@@ -48,6 +48,7 @@ STATIC_URLS = [
     ("/terms",             "0.4", "yearly"),
     ("/compliance",        "0.5", "yearly"),
     ("/copyright",         "0.5", "yearly"),
+    ("/ai-use",            "0.6", "yearly"),
     ("/data-attribution",  "0.4", "yearly"),
     ("/breach-policy",     "0.4", "yearly"),
     ("/dorts",             "0.5", "yearly"),

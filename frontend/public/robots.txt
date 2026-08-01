@@ -38,18 +38,6 @@ User-agent: Applebot
 Allow: /
 Disallow: /listings
 Disallow: /listing/
-User-agent: Applebot-Extended
-Allow: /
-Disallow: /listings
-Disallow: /listing/
-User-agent: Google-Extended
-Allow: /
-Disallow: /listings
-Disallow: /listing/
-User-agent: Amazonbot
-Allow: /
-Disallow: /listings
-Disallow: /listing/
 User-agent: DuckAssistBot
 Allow: /
 Disallow: /listings
@@ -58,20 +46,36 @@ User-agent: cohere-ai
 Allow: /
 Disallow: /listings
 Disallow: /listing/
-User-agent: cohere-training-data-crawler
-Allow: /
-Disallow: /listings
-Disallow: /listing/
 
-# LLM training corpora — EDUCATIONAL only, never listings
+# LLM training corpora — BLOCKED site-wide (moat hardening).
+# These bots exist ONLY to scrape content into training datasets — they do
+# not cite back or drive traffic. Blocking them protects the EZtoFind content
+# investment (CIPO Reg. 1247822) without sacrificing AEO/AI-citation reach,
+# because the citation-capable bots above (GPTBot, ClaudeBot, PerplexityBot,
+# OAI-SearchBot, ChatGPT-User, Perplexity-User, DuckAssistBot) are still
+# fully welcome on educational content.
 User-agent: CCBot
-Allow: /
-Disallow: /listings
-Disallow: /listing/
+Disallow: /
 User-agent: FacebookBot
-Allow: /
-Disallow: /listings
-Disallow: /listing/
+Disallow: /
+User-agent: Meta-ExternalFetcher
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
+User-agent: Applebot-Extended
+Disallow: /
+User-agent: cohere-training-data-crawler
+Disallow: /
+User-agent: Amazonbot
+Disallow: /
+User-agent: ImagesiftBot
+Disallow: /
+User-agent: PetalBot
+Disallow: /
+User-agent: Timpibot
+Disallow: /
+User-agent: OmigiliBot
+Disallow: /
 
 # Block SEO scrapers and data brokers (not search / AI)
 User-agent: Bytespider
