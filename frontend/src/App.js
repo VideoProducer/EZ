@@ -7673,19 +7673,19 @@ const AdminReferrals = () => {
       <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.5rem"}}>Model A referrals — Doug refers to a partner REALTOR® and earns a fee at closing under the CREA Inter-Board Referral Agreement.</p>
 
       <div className="grid-4" data-testid="admin-referrals-summary" style={{gap:"0.75rem",marginTop:"1rem"}}>
-        <div className="paper" style={{padding:"1rem"}}>
+        <div className="paper" style={{padding:"1rem"}} data-testid="admin-referrals-summary-total">
           <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Total Referrals</div>
           <div style={{fontSize:"1.5rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="admin-referrals-total">{summary.total}</div>
         </div>
-        <div className="paper" style={{padding:"1rem"}}>
+        <div className="paper" style={{padding:"1rem"}} data-testid="admin-referrals-summary-pipeline">
           <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Estimated Pipeline Fee</div>
           <div style={{fontSize:"1.5rem",fontWeight:700,color:"var(--brand-blue)"}} data-testid="admin-referrals-pipeline">{fmtMoney(summary.estimated_total_fee)}</div>
         </div>
-        <div className="paper" style={{padding:"1rem"}}>
+        <div className="paper" style={{padding:"1rem"}} data-testid="admin-referrals-summary-pending">
           <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Pending (Closed, unpaid)</div>
           <div style={{fontSize:"1.5rem",fontWeight:700,color:"#F59E0B"}} data-testid="admin-referrals-pending">{fmtMoney(summary.pending_total_fee)}</div>
         </div>
-        <div className="paper" style={{padding:"1rem"}}>
+        <div className="paper" style={{padding:"1rem"}} data-testid="admin-referrals-summary-collected">
           <div style={{fontSize:"0.75rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700}}>Collected (Paid)</div>
           <div style={{fontSize:"1.5rem",fontWeight:700,color:"#059669"}} data-testid="admin-referrals-collected">{fmtMoney(summary.collected_total_fee)}</div>
         </div>

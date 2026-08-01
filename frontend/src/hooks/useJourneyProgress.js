@@ -71,39 +71,58 @@ export const useJourneyProgress = (journeySlug) => {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  // NOTE: Both mutators below use functional setState + a ref-latest read for
+  // `allProgress`. This prevents a stale-closure bug that manifested when two
+  // mutators fired in the same tick (e.g. clicking a module's checkbox called
+  // both toggleModule AND touchStage — the second overwrote the first).
   const persist = useCallback((next) => {
     writeLocal(next);
     setAllProgress(next);
-    // Fire-and-forget CRM sync
     syncToCrm(next);
   }, []);
 
   const journey = allProgress[journeySlug] || null;
 
-  const touchStage = useCallback((stageId) => {
+  const mutateJourney = useCallback((mutator) => {
     if (!journeySlug) return;
+    setAllProgress(prev => {
+      const j = prev[journeySlug];
+      const nextJourney = mutator(j);
+      const next = { ...prev, [journeySlug]: nextJourney };
+      // Persist side-effects OUTSIDE the reducer using microtask so React
+      // batching still holds. localStorage write is synchronous; CRM sync is
+      // async and fire-and-forget.
+      queueMicrotask(() => { writeLocal(next); syncToCrm(next); });
+      return next;
+    });
+  }, [journeySlug]);
+
+  const touchStage = useCallback((stageId) => {
     const now = new Date().toISOString();
-    const next = { ...allProgress };
-    next[journeySlug] = {
-      started_at: next[journeySlug]?.started_at || now,
+    mutateJourney(j => ({
+      started_at: j?.started_at || now,
       last_visited_at: now,
       current_stage: stageId,
-      modules_completed: next[journeySlug]?.modules_completed || [],
-    };
-    persist(next);
-  }, [journeySlug, allProgress, persist]);
+      modules_completed: j?.modules_completed || [],
+    }));
+  }, [mutateJourney]);
 
   const toggleModule = useCallback((stageId, moduleId) => {
-    if (!journeySlug) return;
     const key = `${stageId}__${moduleId}`;
     const now = new Date().toISOString();
-    const next = { ...allProgress };
-    const j = next[journeySlug] || { started_at: now, last_visited_at: now, current_stage: stageId, modules_completed: [] };
-    const set = new Set(j.modules_completed);
-    if (set.has(key)) set.delete(key); else set.add(key);
-    next[journeySlug] = { ...j, last_visited_at: now, current_stage: stageId, modules_completed: [...set] };
-    persist(next);
-  }, [journeySlug, allProgress, persist]);
+    mutateJourney(j => {
+      const base = j || { started_at: now, last_visited_at: now, current_stage: stageId, modules_completed: [] };
+      const set = new Set(base.modules_completed || []);
+      if (set.has(key)) set.delete(key); else set.add(key);
+      return {
+        ...base,
+        started_at: base.started_at || now,
+        last_visited_at: now,
+        current_stage: stageId,
+        modules_completed: [...set],
+      };
+    });
+  }, [mutateJourney]);
 
   return { journey, allProgress, touchStage, toggleModule };
 };

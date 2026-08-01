@@ -243,8 +243,9 @@ export const JourneyDetail = () => {
                   return (
                     <div key={m.id} className="journey-module-card" data-testid={`journey-module-${slug}-${stage.id}-${m.id}`} style={{border:`1px solid ${done ? "var(--brand-green)" : "rgba(15,42,91,0.12)"}`,borderRadius:10,padding:"0.85rem 1rem",background: done ? "rgba(22,163,74,0.05)" : "white",display:"flex",flexDirection:"column",gap:"0.4rem",transition:"border-color 0.2s"}}>
                       <div style={{display:"flex",alignItems:"flex-start",gap:"0.5rem"}}>
-                        <button type="button" onClick={()=>{toggleModule(stage.id,m.id); touchStage(stage.id);}}
+                        <button type="button" onClick={()=>toggleModule(stage.id,m.id)}
                           aria-label={done ? "Mark as not viewed" : "Mark as viewed"}
+                          aria-pressed={done}
                           data-testid={`journey-toggle-${slug}-${stage.id}-${m.id}`}
                           style={{background:"none",border:`2px solid ${done ? "var(--brand-green)" : "rgba(15,42,91,0.25)"}`,cursor:"pointer",padding:0,width:20,height:20,borderRadius:4,flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.75rem",color:"var(--brand-green)",fontWeight:900}}>
                           {done ? "✓" : ""}

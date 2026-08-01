@@ -427,3 +427,70 @@ Don't schedule this sprint if:
 
 Revisit when Model B has 3+ paying customers or before starting Phase 3 multi-tenant refactor.
 
+
+
+---
+
+## 2026-02-01 — Journey Phase 2 + Phase 4, Editorial, Related Terms, Referral Network
+
+### Landed today
+
+**Interactive Real Estate Journey Platform — Phase 2 (all 8 remaining journeys populated)**
+- `/journey/selling` — 7 stages, 23 modules
+- `/journey/buying-and-selling` — 7 stages, 20 modules
+- `/journey/condo-strata` — 7 stages, 25 modules
+- `/journey/first-time-buyer` — 7 stages, 28 modules
+- `/journey/new-construction` — 7 stages, 23 modules
+- `/journey/acreages` — 7 stages, 25 modules
+- `/journey/investment` — 7 stages, 26 modules (educational only — never advice)
+- `/journey/home-ownership` — 7 stages, 23 modules
+- Content is hand-curated, BCFSA-compliant, and links to existing glossary/community/calculator pages (no duplication).
+
+**Journey Platform — Phase 4 polish**
+- `HowTo` JSON-LD schema on every journey (AEO — major LLM/Featured-Snippet win)
+- `BreadcrumbList` JSON-LD schema
+- Native Web Share API `Share` button + clipboard fallback (`[data-testid="journey-share-btn"]`)
+- `Print` button (`[data-testid="journey-print-btn"]`)
+- Print-friendly `@media print` stylesheet (hides chrome, expands links) in `index.css`
+- "Related journeys" internal-linking section at bottom of every journey detail page
+- `aria-pressed` on module toggles (a11y)
+- **Bug fix (found by testing agent):** stale-closure in `useJourneyProgress` — migrated to functional `setState` + `queueMicrotask` writes. Consecutive mutators in same tick now compose correctly. Module completion + progress bar now persist across reloads. Verified 2/28 modules → 7% after reload.
+
+**Editorial Policy page (`/editorial`)**
+- Transparent explanation of AI-drafted + REALTOR®-reviewed content workflow
+- `AboutPage` JSON-LD schema (author = Doug LeMaire, publisher = EZtoFind.ca)
+- Linked from footer next to `/ai-use`
+- Added to `sitemap_generator.py` (total URLs now 1,204)
+
+**Glossary — Related Terms / "See also" section**
+- New backend endpoint `GET /api/glossary/{slug}/related?limit=8` — same-category cross-links
+- Rendered as pill-shaped chips at bottom of every glossary page (`[data-testid="glossary-related-terms"]`)
+- Internal-linking → AEO / topical-authority signal for LLM citations
+
+**Referral Network Backend + Admin UI (Model A)**
+- New MongoDB collection `referrals` — tracks Doug's outbound referrals to partner REALTOR®s
+- Endpoints: `POST/GET/PATCH/DELETE /api/admin/referrals` — full CRUD with status_history
+- Lifecycle: `sent → acknowledged → active → under_contract → closed → paid` (or `declined`/`expired`)
+- Admin UI at `/admin/referrals` with 4 summary metrics (Total, Pipeline, Pending, Collected), 9 status filters, create form, per-row status update panel, delete with confirm
+- Sidebar nav entry added: "💰 Referrals"
+
+### Testing outcome
+Testing agent iteration_11: 14/14 backend pytest passing. All 9 journeys frontend-verified with correct stage/module counts. Editorial + Related Terms + Admin Referrals all render + persist correctly. One HIGH bug (Journey progress stale closure) found and fixed same iteration.
+
+### Files touched
+- `/app/frontend/src/journeys.js` (rewritten — all 9 journeys)
+- `/app/frontend/src/pages/Journey.jsx` (rewritten — HowTo schema, Share, Print, Related, Compliance banner)
+- `/app/frontend/src/pages/Editorial.jsx` (new)
+- `/app/frontend/src/hooks/useJourneyProgress.js` (bug fix — functional setState)
+- `/app/frontend/src/App.js` (routes for `/editorial` + `/admin/referrals`, AdminReferrals component, Related Terms in GlossaryTerm, admin sidebar nav, footer link)
+- `/app/frontend/src/index.css` (print media queries + `.related-terms-block`)
+- `/app/backend/server.py` (Referral Network endpoints + `/api/glossary/{slug}/related`)
+- `/app/backend/sitemap_generator.py` (added `/editorial`)
+
+### Remaining backlog
+- P1: `HowTo` JSON-LD on 3-5 process guides (Journey Platform ✅ delivers this; extend to top /how-to/* pages if any)
+- P2: Journey Platform i18n (currently EN only)
+- P2: Consumer-facing (non-admin) auth so `useJourneyProgress` can sync for regular users instead of only admin
+- P2: OpenAPI/JSON tool schemas for Doogie
+- P3: Monolith refactor sprint — `server.py` (7690+ lines), `App.js` (7900+ lines)
+
