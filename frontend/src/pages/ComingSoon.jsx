@@ -178,6 +178,16 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
     finally { setBusy(false); }
   };
 
+  // Persist arbitrary field(s) directly to backend without going through
+  // full-form save. Used for auto-persist after uploads / hero toggle so the
+  // preview page sees changes immediately.
+  const persistPartial = async (partial) => {
+    try {
+      const r = await axios.put(`${API}/admin/coming-soon`, partial, { headers });
+      setCs(r.data);
+    } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
+  };
+
   const uploadPhotos = async (files) => {
     setBusy(true); setMsg("Uploading photos…");
     try {
@@ -189,8 +199,10 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
       }
       const newPhotos = [...(cs.photos || []), ...uploaded];
       const newHero = cs.hero_photo_id || uploaded[0]?.id;
-      setCs(c => ({ ...c, photos: newPhotos, hero_photo_id: newHero }));
-      setMsg(`✓ Uploaded ${uploaded.length} photo${uploaded.length===1?"":"s"} — click Save to persist`);
+      // Persist to DB immediately so preview sees it without waiting on Save
+      await persistPartial({ photos: newPhotos, hero_photo_id: newHero });
+      setMsg(`✓ Uploaded and saved ${uploaded.length} photo${uploaded.length===1?"":"s"}`);
+      setTimeout(()=>setMsg(""), 3500);
     } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
     finally { setBusy(false); }
   };
@@ -200,8 +212,9 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
     try {
       const fd = new FormData(); fd.append("file", file);
       const r = await axios.post(`${API}/admin/coming-soon/upload-video`, fd, { headers: {...headers, "Content-Type": "multipart/form-data"} });
-      setCs(c => ({ ...c, video_url: r.data.url, video_type: "file" }));
-      setMsg(`✓ Uploaded video — click Save to persist`);
+      await persistPartial({ video_url: r.data.url, video_type: "file" });
+      setMsg(`✓ Uploaded and saved video`);
+      setTimeout(()=>setMsg(""), 3500);
     } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
     finally { setBusy(false); }
   };
@@ -210,14 +223,19 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
     if (!window.confirm("Remove this photo?")) return;
     await axios.delete(`${API}/admin/coming-soon/asset?path=${encodeURIComponent(photo.url)}`, { headers }).catch(()=>{});
     const newPhotos = cs.photos.filter(p => p.id !== photo.id);
-    setCs(c => ({ ...c, photos: newPhotos, hero_photo_id: c.hero_photo_id === photo.id ? (newPhotos[0]?.id || null) : c.hero_photo_id }));
+    const newHero = cs.hero_photo_id === photo.id ? (newPhotos[0]?.id || null) : cs.hero_photo_id;
+    await persistPartial({ photos: newPhotos, hero_photo_id: newHero });
   };
   const removeVideo = async () => {
     if (cs.video_type === "file" && cs.video_url) {
       await axios.delete(`${API}/admin/coming-soon/asset?path=${encodeURIComponent(cs.video_url)}`, { headers }).catch(()=>{});
     }
-    setCs(c => ({ ...c, video_url: "", video_type: "file" }));
+    await persistPartial({ video_url: "", video_type: "file" });
   };
+
+  // Auto-persist when the user changes the ★ Hero star, or flips the Publish toggle.
+  const setHero = (id) => persistPartial({ hero_photo_id: id });
+  const setPublished = (v) => persistPartial({ published: v });
 
   const addFeature = () => {
     const f = featureInput.trim();
@@ -244,7 +262,7 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
 
       <div className="paper" style={{padding:"1.25rem",marginBottom:"1rem"}}>
         <label style={{display:"flex",alignItems:"center",gap:"0.75rem",cursor:"pointer",fontWeight:700}}>
-          <input type="checkbox" checked={!!cs.published} onChange={e=>patch({published:e.target.checked})} data-testid="admin-cs-published"/>
+          <input type="checkbox" checked={!!cs.published} onChange={e=>setPublished(e.target.checked)} data-testid="admin-cs-published"/>
           <span>Show on homepage {cs.published ? <span style={{color:"var(--brand-green)"}}>· LIVE</span> : <span style={{color:"var(--muted)"}}>· parked (preview only)</span>}</span>
         </label>
       </div>
@@ -292,7 +310,7 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
               <div key={p.id} style={{position:"relative",border: p.id === cs.hero_photo_id ? "3px solid #FDB813" : "1px solid rgba(15,42,91,0.15)",borderRadius:8,overflow:"hidden"}}>
                 <img src={abs(p.url)} alt="" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover"}} data-testid={`admin-cs-photo-${p.id}`}/>
                 <div style={{position:"absolute",top:4,right:4,display:"flex",gap:"0.25rem"}}>
-                  <button type="button" onClick={()=>patch({hero_photo_id:p.id})} title="Set as hero" style={{background:"rgba(0,0,0,0.7)",color:"white",border:"none",borderRadius:4,padding:"0.15rem 0.45rem",fontSize:"0.72rem",cursor:"pointer",fontWeight:700}} data-testid={`admin-cs-photo-hero-${p.id}`}>{p.id === cs.hero_photo_id ? "★ Hero" : "☆"}</button>
+                  <button type="button" onClick={()=>setHero(p.id)} title="Set as hero" style={{background:"rgba(0,0,0,0.7)",color:"white",border:"none",borderRadius:4,padding:"0.15rem 0.45rem",fontSize:"0.72rem",cursor:"pointer",fontWeight:700}} data-testid={`admin-cs-photo-hero-${p.id}`}>{p.id === cs.hero_photo_id ? "★ Hero" : "☆"}</button>
                   <button type="button" onClick={()=>removePhoto(p)} style={{background:"rgba(220,38,38,0.9)",color:"white",border:"none",borderRadius:4,padding:"0.15rem 0.45rem",fontSize:"0.72rem",cursor:"pointer"}} data-testid={`admin-cs-photo-remove-${p.id}`}>✕</button>
                 </div>
               </div>
