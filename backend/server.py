@@ -3687,6 +3687,12 @@ async def startup():
             await _a.sleep(24 * 3600)   # once per day
     asyncio.create_task(_campaigns_daily_loop())
 
+    # ---- Client Journey Platform: daily maintenance loop ----
+    # 1. Auto-expire journeys whose expires_at has passed (status → expired)
+    # 2. Auto-purge PII 90 days after expiry (PIPA hygiene)
+    # 3. Send 7-day nudge email to clients who haven't opened their journey
+    asyncio.create_task(_client_journey_maintenance_loop())
+
     # Generate sitemap.xml on startup so search engines get a fresh copy
     try:
         from sitemap_generator import generate_sitemap
@@ -7727,6 +7733,118 @@ async def delete_client_journey(cj_id: str, _=Depends(verify_admin)):
     if r.deleted_count == 0:
         raise HTTPException(404, "Client journey not found")
     return {"ok": True}
+
+
+# ---- Client Journey maintenance (daily background task) ----
+async def _client_journey_maintenance_loop():
+    """Runs on startup + every 24h. Three responsibilities:
+       1. Auto-expire journeys whose expires_at has passed.
+       2. Auto-purge PII 90 days post-expiry (PIPA hygiene).
+       3. Send a 7-day reminder to clients who haven't opened their journey.
+    """
+    # Wait a couple of minutes after startup so other init tasks finish first
+    await asyncio.sleep(120)
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            now_iso = now.isoformat()
+
+            # 1) Expire journeys whose expires_at has passed
+            expired = await db.client_journeys.update_many(
+                {"status": {"$in": ["sent","opened","draft"]}, "expires_at": {"$lt": now_iso}},
+                {"$set": {"status": "expired", "updated_at": now_iso}},
+            )
+            if expired.modified_count:
+                logger.info(f"client_journey_maintenance: expired {expired.modified_count} journeys")
+
+            # 2) Auto-purge PII 90 days after expiry
+            purge_threshold = (now - timedelta(days=90)).isoformat()
+            to_purge = await db.client_journeys.find(
+                {"status": "expired", "expires_at": {"$lt": purge_threshold}, "client_email": {"$ne": None}}
+            ).to_list(500)
+            for cj in to_purge:
+                await db.client_journeys.update_one({"id": cj["id"]}, {"$set": {
+                    "client_name": "[purged]",
+                    "client_email": None,
+                    "client_phone": "",
+                    "intro_message": "",
+                    "otp": None,
+                    "otp_expires_at": None,
+                    "session_key": None,
+                    "purged_at": now_iso,
+                }})
+            if to_purge:
+                logger.info(f"client_journey_maintenance: purged PII on {len(to_purge)} expired journeys")
+
+            # 3) 7-day reminder for sent-but-not-opened journeys
+            reminder_cutoff = (now - timedelta(days=7)).isoformat()
+            candidates = await db.client_journeys.find({
+                "status": "sent",
+                "sent_at": {"$lt": reminder_cutoff, "$ne": None},
+                "opened_at": None,
+                "reminder_sent_at": None,
+            }).to_list(200)
+            for cj in candidates:
+                try:
+                    await _send_client_journey_reminder(cj)
+                    await db.client_journeys.update_one(
+                        {"id": cj["id"]},
+                        {"$set": {"reminder_sent_at": now_iso}},
+                    )
+                except Exception as e:
+                    logger.error(f"client_journey reminder failed for {cj.get('id')}: {e}")
+            if candidates:
+                logger.info(f"client_journey_maintenance: sent {len(candidates)} 7-day reminders")
+
+        except Exception as e:
+            logger.error(f"client_journey_maintenance loop error: {e}")
+        # Sleep 24 hours before next run
+        await asyncio.sleep(24 * 3600)
+
+
+async def _send_client_journey_reminder(cj: dict):
+    """Send a friendly 7-day nudge to a client who hasn't opened their journey.
+       Same CASL basis as the initial send: transactional/existing-client relationship."""
+    if not cj.get("client_email"):
+        return
+    origin = os.environ.get("PUBLIC_APP_URL", "https://eztofind.ca").rstrip("/")
+    link = f"{origin}/my-journey/{cj['token']}"
+    first_name = (cj.get("client_name") or "").split()[0] or "there"
+    otp = cj.get("otp")  # existing OTP still valid if not yet expired
+    otp_status_line = ""
+    if not otp or (cj.get("otp_expires_at") and datetime.fromisoformat(cj["otp_expires_at"].replace("Z","+00:00")) < datetime.now(timezone.utc)):
+        otp_status_line = "<p style='line-height:1.6;font-size:0.9rem'>Your original access code has expired — reply to this email or call and I'll send you a fresh one.</p>"
+    else:
+        otp_status_line = f"<p style='line-height:1.6;font-size:0.9rem'>Your 6-digit access code from the original email is still valid: <strong style='font-family:monospace;font-size:1.05rem;letter-spacing:0.2rem'>{otp}</strong></p>"
+
+    html = f"""
+<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#111">
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <div style="font-size:1.4rem;font-weight:800;color:#0F2A5B">EZtoFind.ca</div>
+    <div style="font-size:0.85rem;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600">Doug LeMaire, REALTOR®</div>
+  </div>
+  <h2 style="color:#0F2A5B;margin-top:0">Hi {first_name},</h2>
+  <p style="line-height:1.65;font-size:0.98rem">Just a friendly nudge — I noticed you haven't opened the personalized real estate journey plan I sent you last week. No pressure at all, but I wanted to make sure the email didn't get buried.</p>
+  {otp_status_line}
+  <p style="text-align:center;margin:1.5rem 0">
+    <a href="{link}" style="display:inline-block;background:#0F2A5B;color:white;padding:0.85rem 1.5rem;border-radius:99px;text-decoration:none;font-weight:600">Open Your Journey Plan →</a>
+  </p>
+  <p style="line-height:1.6;font-size:0.85rem;color:#6b7280">Questions? Reply to this email or call +1-604-466-7021. This plan expires on {(cj.get('expires_at') or '')[:10]}.</p>
+  <p style="line-height:1.6;font-size:0.78rem;color:#6b7280;font-style:italic;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e5e7eb">
+    <strong>Scope of licence:</strong> Doug LeMaire is a licensed BC REALTOR® regulated by BCFSA. Content is general educational information — always consult the licensed professional in each domain (mortgage broker, lawyer/notary, accountant, insurance broker).
+  </p>
+</div>"""
+    text = (
+        f"Hi {first_name},\n\n"
+        f"Just a friendly nudge — I sent you a personalized real estate journey plan last week and wanted to make sure it didn't get buried in your inbox.\n\n"
+        f"Open your plan: {link}\n"
+        + (f"Access code (still valid): {otp}\n" if otp else "Your original access code has expired — reply and I'll send a fresh one.\n")
+        + f"\nThis plan expires {(cj.get('expires_at') or '')[:10]}.\n\n"
+        f"— Doug LeMaire, REALTOR®\n"
+    )
+    from services.email_sender import send_email as _send
+    await _send(db, to=cj["client_email"], subject="Just a nudge — your EZtoFind.ca journey plan is still waiting",
+                html=html, text=text, kind="transactional", related_id=cj["id"])
 
 
 # ---- Client-facing (public, token-based) endpoints ----

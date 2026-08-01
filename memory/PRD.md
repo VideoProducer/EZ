@@ -566,3 +566,40 @@ End-to-end tested via curl:
 - P2: Client Q&A back-channel (small form on client page → Doug's inbox)
 - P3: Auto-purge expired-journey PII after 90 days (TTL index on `expires_at + 90d`)
 
+
+
+---
+
+## 2026-02-01 (session 3) — Client Journey Automation
+
+### Landed
+**(a) 41 hand-authored glossary terms approved** — already flagged `definition_approved:true` + `faqs_approved:true` at seed time (marked as `hand-authored-v1`). Doug can still browse-and-edit any single term via `/admin/glossary/{slug}` if he wants to tweak wording, but the "approve" queue is empty for these because they were never in unapproved-drafts state.
+
+**(b) Daily client-journey maintenance loop** (`_client_journey_maintenance_loop` in server.py):
+- Auto-expire journeys whose `expires_at` has passed (status → `expired`)
+- Auto-purge PII 90 days after expiry: `client_name → [purged]`, email/phone/intro/otp/session all nulled, `purged_at` timestamp recorded
+- Runs 120s post-startup, then every 24h
+
+**(e) 7-day reminder nudge** (also in `_client_journey_maintenance_loop`):
+- Finds journeys where `status: sent` AND `sent_at < 7 days ago` AND `opened_at IS NULL` AND `reminder_sent_at IS NULL`
+- Sends a friendly nudge email via Resend with (still-valid) OTP or note that it expired
+- Same CASL basis as the initial send: transactional/existing-client relationship
+- `reminder_sent_at` stamp prevents double-nudging
+
+**(c) PDF export — declined for now** (backlog if requested later)
+
+### Files touched
+- `/app/backend/server.py` — added `_client_journey_maintenance_loop` + `_send_client_journey_reminder` (~120 lines) + startup registration
+- Client Journey admin editor UX fix — removed silent-disabled Save button, added clear inline validation errors ("Client name is required.", etc.)
+
+### Fix log
+- Fixed the "Create draft button does nothing" bug — button was silently disabled when name/email were blank. Now always clickable, shows clear red error message pinpointing the missing field.
+- Fixed the "extend +6 months" 404 — buttons now use `editingId || cj.id` so they work on freshly-created drafts.
+- Fixed the email link 403 — added `PUBLIC_APP_URL` env var support so links always route to a publicly-reachable domain. Preview .env set to preview URL; production deploys should set it to `https://eztofind.ca`.
+
+### Remaining backlog
+- P2: PDF export of curated journey
+- P2: Client Q&A back-channel (small form → Doug's inbox)
+- P2: Auto-purge testing (manually trigger the loop for verification)
+- P3: Multi-client-per-household linking
+
