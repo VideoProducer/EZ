@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /listings
 Disallow: /listing/
+Disallow: /my-journey/
+Disallow: /admin/
 
 # AI answer engines welcome — for EDUCATIONAL content only
 # CREA DDF® terms prohibit scraping/AI-training against MLS® listing data,

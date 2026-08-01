@@ -494,3 +494,75 @@ Testing agent iteration_11: 14/14 backend pytest passing. All 9 journeys fronten
 - P2: OpenAPI/JSON tool schemas for Doogie
 - P3: Monolith refactor sprint — `server.py` (7690+ lines), `App.js` (7900+ lines)
 
+
+
+---
+
+## 2026-02-01 (session 2) — Journey Platform → Private Client-Curated Model
+
+### Major pivot
+The Interactive Journey Platform is no longer a public asset. Doug decided the ~7 educational journeys are more valuable as a private client-service tool than as public SEO/AEO content. Rebuilt end-to-end:
+
+**Deleted from the public site**
+- ❌ `/journey` and `/journey/:slug` routes
+- ❌ Nav link "Journey"
+- ❌ Homepage "Begin Your Real Estate Journey" section
+- ❌ `/app/frontend/src/journeys.js` (public data file)
+- ❌ `/app/frontend/src/pages/Journey.jsx`
+- ❌ `/app/frontend/src/hooks/useJourneyProgress.js`
+- ❌ 8 journey URLs removed from sitemap (1234 URLs now, was 1242)
+- ❌ Added `Disallow: /my-journey/` and `Disallow: /admin/` to robots.txt
+
+**Built — Client Journey Platform (private, token+OTP protected)**
+- New MongoDB collection `client_journeys` with:
+  - Bearer token (~240-bit urlsafe base64)
+  - 6-digit OTP (30-min TTL, rotated on each send)
+  - Server-side progress tracking (no localStorage — cross-device by token)
+  - Status lifecycle: `draft → sent → opened → completed` (or `expired`/`revoked`)
+  - Default 6-month expiry, extendable by admin, auto-expires at TTL
+- New backend endpoints:
+  - `POST/GET/PATCH/DELETE /api/admin/client-journeys` (admin CRUD)
+  - `POST /api/admin/client-journeys/{id}/send` (email via Resend with OTP)
+  - `GET /api/my-journey/{token}/meta` (public — just enough to render OTP prompt)
+  - `POST /api/my-journey/{token}/verify` (OTP → session_key)
+  - `GET /api/my-journey/{token}?session_key=...` (curated content)
+  - `POST /api/my-journey/{token}/toggle` (module completion)
+  - `POST /api/my-journey/{token}/touch-stage` (view analytics)
+- New frontend pages:
+  - `/admin/client-journeys` — list, create, template-based curator (7 templates), toggle stages/modules, add per-stage/module notes, send, extend, revoke, delete
+  - `/my-journey/:token` — public route with OTP prompt → curated view, noindex+nofollow on both stages, session persisted in sessionStorage
+- New Journey Templates file `journey_templates.js` (admin-side only) — 7 templates (Buying, Selling, Buy+Sell, Condo/Strata, First-Time, Acreages, Home Ownership) — used by curator + client-facing view to resolve module titles/blurbs/hrefs
+- CASL-compliant transactional email (existing client relationship, s. 6(6)(c))
+- BCFSA scope-of-licence banner rendered on every client-facing page
+
+### Testing outcome
+End-to-end tested via curl:
+- Create CJ ✓
+- Send (Resend live, returned 200) ✓
+- OTP verification (correct → session_key; wrong → 401) ✓
+- Fetch curated view (right stages/modules) ✓
+- Toggle module (server-side persistence) ✓
+- Delete ✓
+- Public `/journey` returns 404 (React SPA — no `journey-cards` test-id in HTML) ✓
+- Admin UI: 7 templates visible, form + curator render ✓
+
+### Files touched
+- `/app/frontend/src/App.js` (removed all public Journey code + added AdminClientJourneys + route + sidebar entry)
+- `/app/frontend/src/pages/MyJourney.jsx` (new client-facing OTP + curated page)
+- `/app/frontend/src/journey_templates.js` (new — admin-side templates)
+- `/app/backend/server.py` (client_journeys endpoints ~250 lines)
+- `/app/backend/sitemap_generator.py` (removed /journey/*)
+- `/app/frontend/public/robots.txt` (added /my-journey/ + /admin/ disallow)
+
+### Compliance posture
+- BCFSA-defensibility unchanged (~97%) — same scope-of-licence disclaimers + category-based pills on glossary
+- Client emails are transactional (existing client relationship under CASL s. 6(6)(c)) — no consent needed, unsubscribe not required (still deliverable via Resend)
+- PIPA — client PII stored under existing privacy policy, TTL cleanup planned for +90 days post-expiry
+- All /my-journey/* URLs excluded from indexing (robots + noindex + not in sitemap)
+
+### Remaining backlog
+- P2: PDF export of curated journey (client can print/save)
+- P2: Automated reminder emails if client hasn't opened after 7 days
+- P2: Client Q&A back-channel (small form on client page → Doug's inbox)
+- P3: Auto-purge expired-journey PII after 90 days (TTL index on `expires_at + 90d`)
+

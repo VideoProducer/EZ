@@ -7514,6 +7514,305 @@ async def delete_referral(referral_id: str, _=Depends(verify_admin)):
     return {"ok": True}
 
 
+# ============================================================================
+# CLIENT JOURNEY PLATFORM — Private, curated, token+OTP protected
+# ----------------------------------------------------------------------------
+# Doug creates a personalized real-estate education plan for each client after
+# their buyer/seller intake. The public /journey routes have been removed —
+# clients receive a magic link with a 6-digit OTP. Progress tracking is
+# server-side by token (no localStorage), so it persists across devices.
+#
+# Compliance:
+#  - Transactional email under CASL s. 6(6)(c) — existing-client relationship.
+#  - PIPA: personal info stored under existing privacy policy; auto-purged
+#    90 days after expiry.
+#  - BCFSA "Scope of licence" banner rendered on every client page (frontend).
+#  - No public indexing (robots + noindex + not in sitemap).
+# ============================================================================
+import secrets
+
+CLIENT_JOURNEY_STATUSES = {"draft","sent","opened","expired","revoked","completed"}
+def _new_token() -> str:
+    return secrets.token_urlsafe(30)  # ~240 bits
+def _new_otp() -> str:
+    return f"{secrets.randbelow(1000000):06d}"
+
+class ClientJourneyModule(BaseModel):
+    stage_id: str
+    module_id: str
+    note_override: Optional[str] = None
+    order: int = 0
+
+class ClientJourneyStage(BaseModel):
+    id: str
+    title_override: Optional[str] = None
+    note: Optional[str] = None
+    modules: List[ClientJourneyModule] = []
+
+class ClientJourneyCreate(BaseModel):
+    client_name: str
+    client_email: str
+    client_phone: Optional[str] = ""
+    title: str
+    intro_message: Optional[str] = ""
+    base_journey_slug: Optional[str] = None
+    stages: List[ClientJourneyStage] = []
+    expires_at: Optional[str] = None  # ISO date, default = 6 months from now
+
+class ClientJourneyUpdate(BaseModel):
+    title: Optional[str] = None
+    intro_message: Optional[str] = None
+    stages: Optional[List[ClientJourneyStage]] = None
+    expires_at: Optional[str] = None
+    status: Optional[str] = None
+
+class ClientJourneyOTPVerify(BaseModel):
+    otp: str
+
+class ClientJourneyToggle(BaseModel):
+    session_key: str  # returned after OTP verify
+    stage_id: str
+    module_id: str
+
+class ClientJourneyStageView(BaseModel):
+    session_key: str
+    stage_id: str
+
+def _sanitize_cj(doc: dict, include_token: bool=False) -> dict:
+    doc.pop("_id", None)
+    if not include_token:
+        doc.pop("token", None)
+        doc.pop("otp", None)
+        doc.pop("session_key", None)
+    return doc
+
+@api.post("/admin/client-journeys")
+async def create_client_journey(body: ClientJourneyCreate, payload = Depends(verify_admin)):
+    now = datetime.now(timezone.utc)
+    default_expiry = (now + timedelta(days=182)).isoformat()  # ~6 months
+    rec = {
+        "id": str(uuid.uuid4()),
+        "token": _new_token(),
+        "status": "draft",
+        "client_name": body.client_name.strip(),
+        "client_email": body.client_email.strip().lower(),
+        "client_phone": (body.client_phone or "").strip(),
+        "title": body.title.strip() or f"{body.client_name}'s Real Estate Journey",
+        "intro_message": (body.intro_message or "").strip(),
+        "base_journey_slug": body.base_journey_slug,
+        "stages": [s.model_dump() for s in body.stages],
+        "created_by": payload.get("email"),
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "sent_at": None,
+        "opened_at": None,
+        "last_visited_at": None,
+        "expires_at": body.expires_at or default_expiry,
+        "reminder_sent_at": None,
+        "modules_completed": [],
+        "stage_views": {},
+        "otp": None,             # generated at send time
+        "otp_expires_at": None,
+        "session_key": None,     # rotates on each successful OTP verify
+    }
+    await db.client_journeys.insert_one(rec)
+    return _sanitize_cj(dict(rec), include_token=True)  # admin sees token
+
+@api.get("/admin/client-journeys")
+async def list_client_journeys(status: Optional[str] = None, _=Depends(verify_admin)):
+    q = {}
+    if status and status in CLIENT_JOURNEY_STATUSES:
+        q["status"] = status
+    items = await db.client_journeys.find(q).sort("created_at", -1).to_list(500)
+    total = len(items)
+    by_status = {}
+    for it in items:
+        by_status[it.get("status","draft")] = by_status.get(it.get("status","draft"), 0) + 1
+    return {"items": [_sanitize_cj(dict(it), include_token=True) for it in items],
+            "summary": {"total": total, "by_status": by_status}}
+
+@api.get("/admin/client-journeys/{cj_id}")
+async def get_client_journey(cj_id: str, _=Depends(verify_admin)):
+    doc = await db.client_journeys.find_one({"id": cj_id})
+    if not doc: raise HTTPException(404, "Client journey not found")
+    return _sanitize_cj(dict(doc), include_token=True)
+
+@api.patch("/admin/client-journeys/{cj_id}")
+async def update_client_journey(cj_id: str, body: ClientJourneyUpdate, payload = Depends(verify_admin)):
+    doc = await db.client_journeys.find_one({"id": cj_id})
+    if not doc: raise HTTPException(404, "Client journey not found")
+    update = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if body.title is not None: update["title"] = body.title.strip()
+    if body.intro_message is not None: update["intro_message"] = body.intro_message.strip()
+    if body.stages is not None: update["stages"] = [s.model_dump() for s in body.stages]
+    if body.expires_at is not None: update["expires_at"] = body.expires_at
+    if body.status is not None:
+        if body.status not in CLIENT_JOURNEY_STATUSES:
+            raise HTTPException(400, f"Invalid status; must be one of {sorted(CLIENT_JOURNEY_STATUSES)}")
+        update["status"] = body.status
+    await db.client_journeys.update_one({"id": cj_id}, {"$set": update})
+    doc = await db.client_journeys.find_one({"id": cj_id})
+    return _sanitize_cj(dict(doc), include_token=True)
+
+@api.post("/admin/client-journeys/{cj_id}/send")
+async def send_client_journey(cj_id: str, request: Request, payload = Depends(verify_admin)):
+    """Email the client a magic link + 6-digit OTP.
+    Transactional email under CASL s. 6(6)(c) — existing-client relationship."""
+    doc = await db.client_journeys.find_one({"id": cj_id})
+    if not doc: raise HTTPException(404, "Client journey not found")
+    if doc.get("status") == "revoked":
+        raise HTTPException(400, "This journey has been revoked; unrevoke first")
+
+    otp = _new_otp()
+    otp_expires_at = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+    sent_at = datetime.now(timezone.utc).isoformat()
+    origin = str(request.base_url).rstrip("/")
+    # Prefer canonical domain over preview URL
+    if "eztofind.ca" not in origin:
+        origin = "https://eztofind.ca"
+    link = f"{origin}/my-journey/{doc['token']}"
+
+    from services.email_sender import send_email as _send
+    intro_html = (doc.get("intro_message") or "").replace("\n","<br/>")
+    html = f"""
+<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:1.5rem;color:#111">
+  <div style="text-align:center;margin-bottom:1.5rem">
+    <div style="font-size:1.4rem;font-weight:800;color:#0F2A5B">EZtoFind.ca</div>
+    <div style="font-size:0.85rem;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600">Doug LeMaire, REALTOR®</div>
+  </div>
+  <h2 style="color:#0F2A5B;margin-top:0">Hi {doc['client_name'].split()[0] if doc['client_name'] else 'there'},</h2>
+  <p style="line-height:1.6;font-size:0.95rem">I've put together a personalized real estate education journey for you based on what we discussed. This is a private link — please don't share it publicly.</p>
+  {f'<div style="background:#F5F0E1;padding:1rem;border-radius:8px;margin:1rem 0;line-height:1.6;font-size:0.9rem">{intro_html}</div>' if intro_html else ''}
+  <div style="margin:1.5rem 0;padding:1.25rem;background:#FFF8E1;border:1px solid #F59E0B44;border-radius:10px;text-align:center">
+    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:#0F2A5B;font-weight:700;margin-bottom:0.5rem">Your 6-digit access code</div>
+    <div style="font-size:2rem;font-weight:800;color:#0F2A5B;letter-spacing:0.35rem;font-family:monospace">{otp}</div>
+    <div style="font-size:0.75rem;color:#6b7280;margin-top:0.35rem">Valid for 30 minutes</div>
+  </div>
+  <p style="text-align:center;margin:1.5rem 0">
+    <a href="{link}" style="display:inline-block;background:#0F2A5B;color:white;padding:0.85rem 1.5rem;border-radius:99px;text-decoration:none;font-weight:600">Open Your Journey Plan →</a>
+  </p>
+  <p style="line-height:1.6;font-size:0.9rem">Or paste this link into your browser:<br/><a href="{link}" style="color:#0F2A5B;word-break:break-all">{link}</a></p>
+  <p style="line-height:1.6;font-size:0.85rem;color:#6b7280">This plan expires on {doc.get('expires_at','')[:10]}. Let me know if you'd like me to extend it or add more content — reply to this email or call +1-604-466-7021.</p>
+  <p style="line-height:1.6;font-size:0.8rem;color:#6b7280;font-style:italic;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e5e7eb">
+    <strong>Scope of licence:</strong> Doug LeMaire is a licensed BC REALTOR® regulated by BCFSA. He is not a mortgage broker, lawyer or notary, tax accountant, or licensed insurance broker. Content on those topics is general educational information — always consult the licensed professional in that domain.
+  </p>
+</div>"""
+    from services.email_sender import SENDER_NAME, SENDER_ORG, SENDER_ADDRESS, SENDER_PHONE as _phone, SENDER_EMAIL as _email
+    text = (
+        f"Hi {doc['client_name']},\n\n"
+        f"Your personalized real estate education journey is ready.\n\n"
+        f"Access code: {otp} (valid 30 minutes)\n"
+        f"Link: {link}\n\n"
+        f"This plan expires {doc.get('expires_at','')[:10]}.\n\n"
+        f"— {SENDER_NAME}\n{SENDER_ORG}\n{SENDER_ADDRESS}\n{_phone} · {_email}\n\n"
+        f"Scope of licence: Doug LeMaire is a licensed BC REALTOR® regulated by BCFSA. Not a mortgage broker, lawyer, tax accountant, or insurance broker. Content on those topics is general educational information only."
+    )
+    result = await _send(db, to=doc["client_email"], subject=f"Your EZtoFind.ca journey plan is ready — access code inside",
+                        html=html, text=text, kind="transactional", related_id=cj_id)
+
+    await db.client_journeys.update_one({"id": cj_id}, {"$set": {
+        "otp": otp, "otp_expires_at": otp_expires_at,
+        "status": "sent", "sent_at": sent_at, "updated_at": sent_at,
+    }})
+    return {"ok": True, "sent": not result.get("queued"), "provider_response": result}
+
+@api.delete("/admin/client-journeys/{cj_id}")
+async def delete_client_journey(cj_id: str, _=Depends(verify_admin)):
+    r = await db.client_journeys.delete_one({"id": cj_id})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Client journey not found")
+    return {"ok": True}
+
+
+# ---- Client-facing (public, token-based) endpoints ----
+async def _load_cj_by_token(token: str) -> dict:
+    doc = await db.client_journeys.find_one({"token": token})
+    if not doc: raise HTTPException(404, "Journey not found or link expired")
+    if doc.get("status") == "revoked":
+        raise HTTPException(410, "This journey has been revoked. Please contact Doug for a new link.")
+    now = datetime.now(timezone.utc)
+    exp = doc.get("expires_at")
+    if exp and datetime.fromisoformat(exp.replace("Z","+00:00")) < now:
+        await db.client_journeys.update_one({"id": doc["id"]}, {"$set": {"status": "expired"}})
+        raise HTTPException(410, "This journey has expired. Please contact Doug for a new link.")
+    return doc
+
+@api.get("/my-journey/{token}/meta")
+async def client_journey_meta(token: str):
+    """Public — returns just enough to display the OTP-prompt page (title + first
+    name of client). Does NOT return curated content until OTP is verified."""
+    doc = await _load_cj_by_token(token)
+    first = (doc.get("client_name") or "").split()[0] if doc.get("client_name") else ""
+    return {"title": doc.get("title"), "client_first_name": first, "expires_at": doc.get("expires_at")}
+
+@api.post("/my-journey/{token}/verify")
+async def client_journey_verify(token: str, body: ClientJourneyOTPVerify):
+    doc = await _load_cj_by_token(token)
+    otp = (body.otp or "").strip()
+    if not doc.get("otp") or not doc.get("otp_expires_at"):
+        raise HTTPException(400, "No active access code — please ask Doug to resend the invitation.")
+    if datetime.fromisoformat(doc["otp_expires_at"].replace("Z","+00:00")) < datetime.now(timezone.utc):
+        raise HTTPException(410, "Access code expired. Please ask Doug to resend.")
+    if otp != doc["otp"]:
+        raise HTTPException(401, "Incorrect access code.")
+    # Success — rotate a session_key that the client sends on subsequent calls
+    session_key = _new_token()
+    updates = {"session_key": session_key, "last_visited_at": datetime.now(timezone.utc).isoformat()}
+    if not doc.get("opened_at"):
+        updates["opened_at"] = datetime.now(timezone.utc).isoformat()
+        updates["status"] = "opened"
+    await db.client_journeys.update_one({"id": doc["id"]}, {"$set": updates})
+    return {"ok": True, "session_key": session_key}
+
+async def _require_session(token: str, session_key: str) -> dict:
+    doc = await _load_cj_by_token(token)
+    if not session_key or doc.get("session_key") != session_key:
+        raise HTTPException(401, "Invalid session. Please re-enter your access code.")
+    return doc
+
+@api.get("/my-journey/{token}")
+async def client_journey_view(token: str, session_key: str):
+    doc = await _require_session(token, session_key)
+    return {
+        "title": doc.get("title"),
+        "client_first_name": (doc.get("client_name") or "").split()[0],
+        "intro_message": doc.get("intro_message"),
+        "base_journey_slug": doc.get("base_journey_slug"),
+        "stages": doc.get("stages", []),
+        "modules_completed": doc.get("modules_completed", []),
+        "expires_at": doc.get("expires_at"),
+    }
+
+@api.post("/my-journey/{token}/toggle")
+async def client_journey_toggle(token: str, body: ClientJourneyToggle):
+    doc = await _require_session(token, body.session_key)
+    key = f"{body.stage_id}__{body.module_id}"
+    completed = set(doc.get("modules_completed") or [])
+    if key in completed: completed.discard(key)
+    else: completed.add(key)
+    now = datetime.now(timezone.utc).isoformat()
+    await db.client_journeys.update_one({"id": doc["id"]}, {"$set": {
+        "modules_completed": sorted(completed),
+        "last_visited_at": now,
+    }})
+    return {"ok": True, "modules_completed": sorted(completed)}
+
+@api.post("/my-journey/{token}/touch-stage")
+async def client_journey_touch_stage(token: str, body: ClientJourneyStageView):
+    doc = await _require_session(token, body.session_key)
+    now = datetime.now(timezone.utc).isoformat()
+    stage_views = doc.get("stage_views") or {}
+    sv = stage_views.get(body.stage_id) or {"first_at": now, "count": 0}
+    sv["last_at"] = now
+    sv["count"] = int(sv.get("count", 0)) + 1
+    stage_views[body.stage_id] = sv
+    await db.client_journeys.update_one({"id": doc["id"]}, {"$set": {
+        "stage_views": stage_views,
+        "last_visited_at": now,
+    }})
+    return {"ok": True}
+
+
 @api.post("/campaigns/opt-in")
 async def campaigns_opt_in(body: CampaignSignup, request: Request):
     """Public endpoint used by existing signup forms to record per-campaign

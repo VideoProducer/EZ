@@ -1,14 +1,13 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
 import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
-import { JourneyLanding, JourneyDetail } from "./pages/Journey";
-import { getResumeJourney } from "./hooks/useJourneyProgress";
-import { JOURNEYS, JOURNEYS_ORDER } from "./journeys";
+import "./App.css";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import DOMPurify from "dompurify";
-import "./App.css";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
+import MyJourney from "./pages/MyJourney";
+import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
 // synopses, campaign drafts, C&D letters). All admin-facing previews and the
@@ -826,7 +825,6 @@ const Nav = () => {
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
-        <NavLink to="/journey" onClick={close} data-testid="nav-journey">Journey</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <NavLink to="/favorites" onClick={close} data-testid="nav-favorites" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>
@@ -2016,38 +2014,6 @@ const Home = () => {
         <img className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
-
-    {/* Begin Your Real Estate Journey — Interactive educational journey
-        entry point. Placed high on the homepage below the hero. All 9
-        journeys are surfaced. BCFSA/CREA/PIPA/CASL compliant. */}
-    <section className="section" data-testid="home-journey-section" style={{paddingTop:"1rem"}}>
-      <div className="container-x">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"1rem",marginBottom:"1.5rem"}}>
-          <div>
-            <div className="eyebrow" style={{marginBottom:"0.4rem"}}>Interactive Journey Platform</div>
-            <h2 className="section-title" style={{marginBottom:"0.3rem"}}>Begin Your Real Estate Journey</h2>
-            <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.98rem",lineHeight:1.6,maxWidth:"46rem"}}>Explore educational resources for different stages of buying, selling, owning, and researching real estate in British Columbia — at your own pace.</p>
-          </div>
-          <Link to="/journey" className="btn btn-ghost" data-testid="home-journey-view-all">View all journeys →</Link>
-        </div>
-        <div className="grid-3" data-testid="home-journey-cards">
-          {JOURNEYS_ORDER.slice(0,6).map(slug => {
-            const j = JOURNEYS[slug];
-            return (
-              <Link key={slug} to={`/journey/${slug}`} className="paper" data-testid={`home-journey-card-${slug}`}
-                style={{padding:"1.35rem",textDecoration:"none",color:"inherit",display:"flex",flexDirection:"column",gap:"0.65rem",transition:"transform 0.15s"}}
-                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
-                onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
-                <div style={{fontSize:"2.25rem",lineHeight:1}} aria-hidden>{j.icon}</div>
-                <div style={{fontSize:"1.08rem",fontWeight:700,color:"var(--brand-navy)"}}>{j.title}</div>
-                <div style={{fontSize:"0.86rem",color:"var(--muted)",lineHeight:1.55,flex:1}}>{j.short}</div>
-                <div style={{fontSize:"0.82rem",color:"var(--brand-blue)",fontWeight:600,marginTop:"0.35rem"}}>Continue Journey →</div>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-    </section>
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
@@ -3624,7 +3590,7 @@ const GlossaryTerm = () => {
             <Link key={r.slug} to={`/glossary/${r.slug}`} data-testid={`related-term-${r.slug}`}>{r.term}</Link>
           ))}
         </div>
-        <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>Explore the full <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>BC real estate glossary</Link> or begin an <Link to="/journey" style={{color:"var(--brand-blue)",fontWeight:600}}>interactive real estate journey</Link>.</div>
+        <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>Explore the full <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>BC real estate glossary</Link>.</div>
       </div>
     )}
 
@@ -4265,9 +4231,8 @@ const AdminLogin = () => {
     try{
       const r=await axios.post(`${API}/admin/login`,{...f, turnstile_token: getTurnstileToken()});
       localStorage.setItem("eztoken",r.data.token);
-      // Hydrate any Journey Platform progress from CRM on login (cross-device sync).
+      // Login successful → route to admin dashboard.
       // Fire-and-forget — never blocks navigation.
-      try { const { hydrateFromCrm } = await import("./hooks/useJourneyProgress"); hydrateFromCrm(); } catch {}
       nav("/admin");
     }catch(x){
       // Show the server-side lockout / bot-check message verbatim when present,
@@ -4307,6 +4272,7 @@ const AdminShell = ({children,active}) => {
       <h3>Doug's Desk</h3>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/client-journeys")} className={active==="client-journeys"?"active":""} data-testid="admin-nav-client-journeys">🧭 Client Journeys</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
@@ -7611,6 +7577,342 @@ const AdminCeaseDesist = () => {
 };
 
 
+// ============ Admin Client Journeys — private curated plans ============
+// Doug creates a personalized real-estate journey for each client from a
+// template (Buying, Selling, Condo/Strata, etc.), curates which modules
+// they see + adds notes, then emails a token+OTP link to the client.
+// Client-facing view lives at /my-journey/<token>.
+const CJ_STATUSES = ["draft","sent","opened","expired","revoked","completed"];
+const CJ_STATUS_LABELS = { draft:"Draft", sent:"Sent", opened:"Opened", expired:"Expired", revoked:"Revoked", completed:"Completed" };
+const CJ_STATUS_COLORS = { draft:"#6B7280", sent:"#3B82F6", opened:"#8B5CF6", expired:"#F59E0B", revoked:"#DC2626", completed:"#059669" };
+
+const AdminClientJourneys = () => {
+  const { headers } = useAdmin();
+  const [items, setItems] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, by_status: {} });
+  const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const q = statusFilter ? `?status=${statusFilter}` : "";
+      const r = await axios.get(`${API}/admin/client-journeys${q}`, { headers });
+      setItems(r.data.items || []);
+      setSummary(r.data.summary || {});
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [statusFilter]);
+
+  return (
+    <AdminShell active="client-journeys">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+        <h2 style={{margin:0}} data-testid="admin-cj-title">🧭 Client Journey Plans</h2>
+        <button className="btn btn-primary" onClick={()=>setShowNew(true)} data-testid="admin-cj-new-btn">+ New Client Journey</button>
+      </div>
+      <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.5rem"}}>Private, curated real-estate education plans sent to clients by magic link + 6-digit OTP. Auto-expire after 6 months. Not publicly indexed.</p>
+
+      <div style={{marginTop:"1rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+        <button onClick={()=>setStatusFilter("")} className={statusFilter===""?"btn btn-primary":"btn btn-ghost"} data-testid="admin-cj-filter-all">All ({summary.total || 0})</button>
+        {CJ_STATUSES.map(s => (
+          <button key={s} onClick={()=>setStatusFilter(s)} className={statusFilter===s?"btn btn-primary":"btn btn-ghost"} data-testid={`admin-cj-filter-${s}`}>
+            {CJ_STATUS_LABELS[s]} ({summary.by_status?.[s] || 0})
+          </button>
+        ))}
+      </div>
+
+      {(showNew || editingId) && (
+        <ClientJourneyEditor
+          editingId={editingId}
+          onClose={()=>{ setShowNew(false); setEditingId(null); load(); }}
+        />
+      )}
+
+      <div style={{marginTop:"1.25rem"}} data-testid="admin-cj-list">
+        {loading ? <p>Loading…</p> : items.length === 0 ? <p style={{color:"var(--muted)"}}>No client journeys yet. Click "+ New Client Journey" to create the first one.</p> : (
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.9rem",fontFamily:"Inter,sans-serif"}}>
+              <thead>
+                <tr style={{background:"var(--paper)",textAlign:"left"}}>
+                  <th style={{padding:"0.65rem"}}>Client</th>
+                  <th style={{padding:"0.65rem"}}>Title</th>
+                  <th style={{padding:"0.65rem"}}>Status</th>
+                  <th style={{padding:"0.65rem"}}>Progress</th>
+                  <th style={{padding:"0.65rem"}}>Sent</th>
+                  <th style={{padding:"0.65rem"}}>Expires</th>
+                  <th style={{padding:"0.65rem"}}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(cj => {
+                  const total = (cj.stages || []).reduce((n, s) => n + (s.modules || []).length, 0);
+                  const done = (cj.modules_completed || []).length;
+                  const pct = total ? Math.round(done/total*100) : 0;
+                  return (
+                    <tr key={cj.id} style={{borderTop:"1px solid rgba(15,42,91,0.08)"}} data-testid={`admin-cj-row-${cj.id}`}>
+                      <td style={{padding:"0.65rem"}}>
+                        <div style={{fontWeight:700}}>{cj.client_name}</div>
+                        <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{cj.client_email}</div>
+                      </td>
+                      <td style={{padding:"0.65rem"}}>{cj.title}</td>
+                      <td style={{padding:"0.65rem"}}>
+                        <span style={{display:"inline-block",padding:"0.2rem 0.6rem",borderRadius:99,background:CJ_STATUS_COLORS[cj.status]+"22",color:CJ_STATUS_COLORS[cj.status],fontWeight:700,fontSize:"0.75rem"}} data-testid={`admin-cj-status-${cj.id}`}>{CJ_STATUS_LABELS[cj.status]}</span>
+                      </td>
+                      <td style={{padding:"0.65rem"}}>{done}/{total} · {pct}%</td>
+                      <td style={{padding:"0.65rem",fontSize:"0.82rem"}}>{cj.sent_at ? new Date(cj.sent_at).toLocaleDateString("en-CA") : "—"}</td>
+                      <td style={{padding:"0.65rem",fontSize:"0.82rem"}}>{cj.expires_at ? cj.expires_at.slice(0,10) : "—"}</td>
+                      <td style={{padding:"0.65rem",whiteSpace:"nowrap"}}>
+                        <button className="btn btn-ghost" style={{padding:"0.35rem 0.7rem",fontSize:"0.8rem"}} onClick={()=>setEditingId(cj.id)} data-testid={`admin-cj-edit-${cj.id}`}>Edit</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+};
+
+// ---- Editor / creator ----
+const ClientJourneyEditor = ({ editingId, onClose }) => {
+  const { headers } = useAdmin();
+  const [cj, setCj] = useState({
+    client_name:"", client_email:"", client_phone:"",
+    title:"", intro_message:"", base_journey_slug:"",
+    stages: [],
+    expires_at:"",
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const [tokenInfo, setTokenInfo] = useState(null); // {token, expires_at} once saved
+
+  useEffect(() => {
+    if (!editingId) return;
+    axios.get(`${API}/admin/client-journeys/${editingId}`, { headers }).then(r => {
+      setCj(r.data);
+      setTokenInfo({ token: r.data.token, expires_at: r.data.expires_at });
+    });
+    // eslint-disable-next-line
+  }, [editingId]);
+
+  // Apply template to CJ
+  const applyTemplate = (slug) => {
+    const tpl = JOURNEY_TEMPLATES[slug];
+    if (!tpl) return;
+    const stages = tpl.stages.map(s => ({
+      id: s.id, title_override: null, note: "",
+      modules: (s.modules || []).map((m, i) => ({ stage_id: s.id, module_id: m.id, note_override: "", order: i }))
+    }));
+    setCj({ ...cj, base_journey_slug: slug, title: cj.title || `${cj.client_name || "Client"}'s ${tpl.title} Journey`, stages });
+  };
+
+  const toggleModule = (stageId, moduleId) => {
+    const newStages = [...cj.stages];
+    const s = newStages.find(x => x.id === stageId);
+    if (!s) return;
+    const exists = s.modules.some(m => m.module_id === moduleId);
+    if (exists) {
+      s.modules = s.modules.filter(m => m.module_id !== moduleId);
+    } else {
+      s.modules.push({ stage_id: stageId, module_id: moduleId, note_override: "", order: s.modules.length });
+    }
+    setCj({ ...cj, stages: newStages });
+  };
+
+  const toggleStage = (stageId) => {
+    const exists = cj.stages.some(s => s.id === stageId);
+    if (exists) {
+      setCj({ ...cj, stages: cj.stages.filter(s => s.id !== stageId) });
+    } else {
+      const tplStage = resolveStage(stageId);
+      const modules = (tplStage?.modules || []).map((m, i) => ({ stage_id: stageId, module_id: m.id, note_override: "", order: i }));
+      setCj({ ...cj, stages: [...cj.stages, { id: stageId, title_override: null, note: "", modules }] });
+    }
+  };
+
+  const setStageNote = (stageId, note) => {
+    setCj({ ...cj, stages: cj.stages.map(s => s.id === stageId ? { ...s, note } : s) });
+  };
+
+  const save = async () => {
+    setErr(""); setSaving(true);
+    try {
+      const payload = {
+        client_name: cj.client_name.trim(),
+        client_email: cj.client_email.trim().toLowerCase(),
+        client_phone: cj.client_phone || "",
+        title: cj.title.trim() || `${cj.client_name}'s Journey`,
+        intro_message: cj.intro_message || "",
+        base_journey_slug: cj.base_journey_slug || null,
+        stages: cj.stages,
+        expires_at: cj.expires_at || null,
+      };
+      let r;
+      if (editingId) {
+        r = await axios.patch(`${API}/admin/client-journeys/${editingId}`, payload, { headers });
+      } else {
+        r = await axios.post(`${API}/admin/client-journeys`, payload, { headers });
+      }
+      setTokenInfo({ token: r.data.token, expires_at: r.data.expires_at });
+      setCj(r.data);
+    } catch (e) {
+      setErr(e.response?.data?.detail || e.message);
+    } finally { setSaving(false); }
+  };
+
+  const send = async () => {
+    if (!editingId && !tokenInfo) { setErr("Save first"); return; }
+    if (!window.confirm(`Send this journey to ${cj.client_email}? A 6-digit access code will be emailed to them.`)) return;
+    setSaving(true); setErr("");
+    try {
+      const id = editingId || cj.id;
+      await axios.post(`${API}/admin/client-journeys/${id}/send`, {}, { headers });
+      alert("Sent! The client will receive an email with the access code.");
+      onClose();
+    } catch (e) {
+      setErr(e.response?.data?.detail || e.message);
+    } finally { setSaving(false); }
+  };
+
+  const revoke = async () => {
+    if (!editingId) return;
+    if (!window.confirm("Revoke this journey link? The client will no longer be able to access it.")) return;
+    await axios.patch(`${API}/admin/client-journeys/${editingId}`, { status: "revoked" }, { headers });
+    onClose();
+  };
+
+  const extend6 = async () => {
+    const newExp = new Date(Date.now() + 6*30*24*60*60*1000).toISOString();
+    await axios.patch(`${API}/admin/client-journeys/${editingId}`, { expires_at: newExp }, { headers });
+    setCj({ ...cj, expires_at: newExp });
+    alert(`Expiry extended to ${newExp.slice(0,10)}`);
+  };
+
+  const del = async () => {
+    if (!editingId) return;
+    if (!window.confirm("Delete this journey permanently? This cannot be undone.")) return;
+    await axios.delete(`${API}/admin/client-journeys/${editingId}`, { headers });
+    onClose();
+  };
+
+  const stageIsIncluded = (id) => cj.stages.some(s => s.id === id);
+  const moduleIsIncluded = (stageId, modId) => {
+    const s = cj.stages.find(x => x.id === stageId);
+    return s?.modules.some(m => m.module_id === modId);
+  };
+  const stageObj = (id) => cj.stages.find(s => s.id === id);
+
+  return (
+    <div className="paper" style={{padding:"1.5rem",marginTop:"1rem",background:"#FBFAF5",border:"2px solid rgba(15,42,91,0.15)"}} data-testid="admin-cj-editor">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"1rem"}}>
+        <h3 style={{margin:0}}>{editingId ? "Edit client journey" : "New client journey"}</h3>
+        <button className="btn btn-ghost" onClick={onClose} data-testid="admin-cj-editor-close">✕ Close</button>
+      </div>
+
+      <div className="form-grid">
+        <div className="field"><label>Client name *</label><input value={cj.client_name} onChange={e=>setCj({...cj, client_name:e.target.value})} data-testid="admin-cj-client-name"/></div>
+        <div className="field"><label>Client email *</label><input type="email" value={cj.client_email} onChange={e=>setCj({...cj, client_email:e.target.value})} data-testid="admin-cj-client-email"/></div>
+        <div className="field"><label>Client phone</label><input value={cj.client_phone||""} onChange={e=>setCj({...cj, client_phone:e.target.value})}/></div>
+        <div className="field"><label>Plan title</label><input value={cj.title} onChange={e=>setCj({...cj, title:e.target.value})} placeholder="e.g. Sarah's First-Time Buyer Journey" data-testid="admin-cj-title-input"/></div>
+      </div>
+      <div className="field" style={{marginTop:"0.75rem"}}>
+        <label>Intro message to client (shown at top of the journey)</label>
+        <textarea rows="3" value={cj.intro_message||""} onChange={e=>setCj({...cj, intro_message:e.target.value})} placeholder="Hi Sarah — here's the plan we discussed. Focus on the Learn and Search stages first…" data-testid="admin-cj-intro"/>
+      </div>
+
+      <div style={{marginTop:"1.25rem",padding:"1rem",background:"white",borderRadius:8,border:"1px solid rgba(15,42,91,0.1)"}}>
+        <div style={{fontWeight:700,marginBottom:"0.5rem"}}>Start from template (optional)</div>
+        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+          {JOURNEY_TEMPLATES_ORDER.map(slug => (
+            <button key={slug} type="button" onClick={()=>applyTemplate(slug)}
+              className={cj.base_journey_slug===slug ? "btn btn-primary" : "btn btn-ghost"}
+              data-testid={`admin-cj-template-${slug}`}
+              style={{fontSize:"0.85rem"}}>
+              {JOURNEY_TEMPLATES[slug].icon} {JOURNEY_TEMPLATES[slug].title}
+            </button>
+          ))}
+        </div>
+        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.5rem"}}>Picking a template pre-fills all stages + modules. You can then toggle any off, add notes, or customize before sending.</div>
+      </div>
+
+      {cj.stages.length > 0 && (
+        <div style={{marginTop:"1.5rem"}}>
+          <h4 style={{marginBottom:"0.75rem"}}>Curate stages &amp; modules</h4>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(28rem,1fr))",gap:"1rem"}}>
+            {cj.base_journey_slug && JOURNEY_TEMPLATES[cj.base_journey_slug].stages.map(tplStage => {
+              const included = stageIsIncluded(tplStage.id);
+              return (
+                <div key={tplStage.id} className="paper" style={{padding:"1rem",background: included ? "white" : "#F5F0E1", opacity: included ? 1 : 0.7}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem"}}>
+                    <div style={{fontWeight:700,color:"var(--brand-navy)"}}>Stage: {tplStage.title}</div>
+                    <label style={{fontSize:"0.8rem",display:"flex",alignItems:"center",gap:"0.35rem",cursor:"pointer"}}>
+                      <input type="checkbox" checked={included} onChange={()=>toggleStage(tplStage.id)} data-testid={`admin-cj-stage-toggle-${tplStage.id}`}/>
+                      Include stage
+                    </label>
+                  </div>
+                  {included && (
+                    <>
+                      <textarea rows="2" placeholder="Optional note from Doug for this stage…" value={stageObj(tplStage.id)?.note||""}
+                        onChange={e=>setStageNote(tplStage.id, e.target.value)}
+                        data-testid={`admin-cj-stage-note-${tplStage.id}`}
+                        style={{width:"100%",fontSize:"0.85rem",padding:"0.5rem",fontFamily:"Inter,sans-serif",marginBottom:"0.5rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:6}}/>
+                      <div style={{display:"flex",flexDirection:"column",gap:"0.35rem"}}>
+                        {tplStage.modules.map(m => {
+                          const on = moduleIsIncluded(tplStage.id, m.id);
+                          return (
+                            <label key={m.id} style={{fontSize:"0.85rem",display:"flex",gap:"0.4rem",alignItems:"flex-start",cursor:"pointer",padding:"0.3rem 0.4rem",background: on ? "rgba(22,163,74,0.05)" : "transparent",borderRadius:4}}>
+                              <input type="checkbox" checked={!!on} onChange={()=>toggleModule(tplStage.id, m.id)} data-testid={`admin-cj-mod-toggle-${tplStage.id}-${m.id}`} style={{marginTop:2}}/>
+                              <span><strong>{m.title}</strong> <span style={{color:"var(--muted)",fontSize:"0.78rem"}}>— {m.blurb}</span></span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {err && <div style={{color:"#DC2626",marginTop:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}} data-testid="admin-cj-error">{err}</div>}
+
+      <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+        <button className="btn btn-primary" onClick={save} disabled={saving || !cj.client_name || !cj.client_email} data-testid="admin-cj-save">
+          {saving ? "Saving…" : (editingId ? "Save changes" : "Create draft")}
+        </button>
+        {(editingId || tokenInfo) && (
+          <>
+            <button className="btn btn-primary" onClick={send} disabled={saving} data-testid="admin-cj-send" style={{background:"var(--brand-green)"}}>
+              📧 Send to client
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={extend6} data-testid="admin-cj-extend">+6 months expiry</button>
+            <button type="button" className="btn btn-ghost" onClick={revoke} data-testid="admin-cj-revoke" style={{color:"#F59E0B"}}>Revoke link</button>
+            <button type="button" className="btn btn-ghost" onClick={del} data-testid="admin-cj-delete" style={{color:"#DC2626"}}>Delete</button>
+          </>
+        )}
+      </div>
+
+      {tokenInfo && (
+        <div className="paper" style={{marginTop:"1rem",padding:"0.85rem 1rem",background:"#EDF3FF",fontSize:"0.85rem"}}>
+          <div style={{fontWeight:700,marginBottom:"0.25rem"}}>Client preview link (private)</div>
+          <a href={`/my-journey/${tokenInfo.token}`} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",wordBreak:"break-all"}} data-testid="admin-cj-preview-link">/my-journey/{tokenInfo.token}</a>
+          <div style={{color:"var(--muted)",marginTop:"0.35rem",fontSize:"0.78rem"}}>Expires {tokenInfo.expires_at?.slice(0,10)}. Client will need the 6-digit code sent by email.</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
 // ============ Admin Referrals — Model A tracker ============
 // Doug refers consumer leads out to partner REALTORs and earns a 25% referral
 // fee at closing under the standard CREA Inter-Board Referral Agreement.
@@ -7876,9 +8178,8 @@ function App() {
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
-      <Route path="/journey" element={<AppLayout><JourneyLanding/></AppLayout>}/>
-      <Route path="/journey/:slug" element={<AppLayout><JourneyDetail/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
+      <Route path="/my-journey/:token" element={<MyJourney/>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
       <Route path="/terms" element={<AppLayout><Terms/></AppLayout>}/>
@@ -7897,6 +8198,7 @@ function App() {
       <Route path="/admin/login" element={<AdminLogin/>}/>
       <Route path="/admin" element={<AdminDash/>}/>
       <Route path="/admin/growth" element={<AdminGrowth/>}/>
+      <Route path="/admin/client-journeys" element={<AdminClientJourneys/>}/>
       <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
