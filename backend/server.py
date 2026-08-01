@@ -7560,6 +7560,9 @@ class ClientJourneyCreate(BaseModel):
     expires_at: Optional[str] = None  # ISO date, default = 6 months from now
 
 class ClientJourneyUpdate(BaseModel):
+    client_name: Optional[str] = None
+    client_email: Optional[str] = None
+    client_phone: Optional[str] = None
     title: Optional[str] = None
     intro_message: Optional[str] = None
     stages: Optional[List[ClientJourneyStage]] = None
@@ -7642,6 +7645,9 @@ async def update_client_journey(cj_id: str, body: ClientJourneyUpdate, payload =
     doc = await db.client_journeys.find_one({"id": cj_id})
     if not doc: raise HTTPException(404, "Client journey not found")
     update = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if body.client_name is not None: update["client_name"] = body.client_name.strip()
+    if body.client_email is not None: update["client_email"] = body.client_email.strip().lower()
+    if body.client_phone is not None: update["client_phone"] = body.client_phone.strip()
     if body.title is not None: update["title"] = body.title.strip()
     if body.intro_message is not None: update["intro_message"] = body.intro_message.strip()
     if body.stages is not None: update["stages"] = [s.model_dump() for s in body.stages]

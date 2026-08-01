@@ -7755,7 +7755,14 @@ const ClientJourneyEditor = ({ editingId, onClose }) => {
       };
       let r;
       if (editingId) {
-        r = await axios.patch(`${API}/admin/client-journeys/${editingId}`, payload, { headers });
+        r = await axios.patch(`${API}/admin/client-journeys/${editingId}`, {
+          client_name: payload.client_name,
+          client_email: payload.client_email,
+          client_phone: payload.client_phone,
+          title: payload.title,
+          intro_message: payload.intro_message,
+          stages: payload.stages,
+        }, { headers });
       } else {
         r = await axios.post(`${API}/admin/client-journeys`, payload, { headers });
       }
