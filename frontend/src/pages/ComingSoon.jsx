@@ -13,8 +13,16 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const FILE_ORIGIN = process.env.REACT_APP_BACKEND_URL || ""; // /uploads/... resolved here
-const abs = (u) => (u && u.startsWith("/") ? `${FILE_ORIGIN}${u}` : u);
+const FILE_ORIGIN = process.env.REACT_APP_BACKEND_URL || "";
+// Resolve an uploads path against the backend origin. Also migrate any legacy
+// /uploads/... path to /api/uploads/... on the fly (ingress routes only /api).
+const abs = (u) => {
+  if (!u) return u;
+  if (u.startsWith("http")) return u;
+  if (u.startsWith("/uploads/")) return `${FILE_ORIGIN}/api${u}`;
+  if (u.startsWith("/")) return `${FILE_ORIGIN}${u}`;
+  return u;
+};
 
 // ---- Video renderer ----
 function VideoPlayer({ url, poster, controls = true, autoPlay = false, muted = true, loop = false, className, testid }) {

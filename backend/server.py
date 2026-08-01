@@ -7968,7 +7968,9 @@ import shutil, mimetypes
 UPLOADS_ROOT = Path(__file__).parent / "uploads"
 UPLOADS_ROOT.mkdir(exist_ok=True)
 (UPLOADS_ROOT / "coming_soon").mkdir(exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(UPLOADS_ROOT)), name="uploads")
+# Mounted under /api/uploads so the Kubernetes ingress routes it to the
+# backend. A bare /uploads/ would be swallowed by the frontend SPA fallback.
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_ROOT)), name="uploads")
 
 @api.get("/coming-soon")
 async def public_coming_soon():
@@ -8044,7 +8046,7 @@ async def admin_upload_photo(file: UploadFile = File(...), _=Depends(verify_admi
                 dest.unlink(missing_ok=True)
                 raise HTTPException(413, f"Photo exceeds {MAX_PHOTO_BYTES // (1024*1024)} MB.")
             f.write(chunk)
-    return {"id": file_id, "url": f"/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
+    return {"id": file_id, "url": f"/api/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
 
 @api.post("/admin/coming-soon/upload-video")
 async def admin_upload_video(file: UploadFile = File(...), _=Depends(verify_admin)):
@@ -8062,13 +8064,15 @@ async def admin_upload_video(file: UploadFile = File(...), _=Depends(verify_admi
                 dest.unlink(missing_ok=True)
                 raise HTTPException(413, f"Video exceeds {MAX_VIDEO_BYTES // (1024*1024)} MB.")
             f.write(chunk)
-    return {"id": file_id, "url": f"/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
+    return {"id": file_id, "url": f"/api/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
 
 @api.delete("/admin/coming-soon/asset")
 async def admin_delete_asset(path: str, _=Depends(verify_admin)):
-    if not path.startswith("/uploads/"):
+    if not (path.startswith("/uploads/") or path.startswith("/api/uploads/")):
         raise HTTPException(400, "Invalid asset path")
-    disk_path = UPLOADS_ROOT.parent / path.lstrip("/")
+    # Normalize both /uploads/... and /api/uploads/... to on-disk path
+    rel = path[len("/api"):] if path.startswith("/api/uploads/") else path
+    disk_path = UPLOADS_ROOT.parent / rel.lstrip("/")
     try:
         if disk_path.resolve().is_relative_to(UPLOADS_ROOT.resolve()) and disk_path.exists():
             disk_path.unlink()
