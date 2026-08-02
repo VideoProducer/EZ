@@ -959,11 +959,17 @@ async def _notify_admin_of_lead(
 ):
     """Send an internal admin notification (transactional — no CASL footer needed
     because the recipient is the site owner, not the consumer). Adds info@eztofind.ca
-    as CC unless it's already the primary recipient. Failure is non-fatal so the
-    parent request never crashes because of email trouble."""
+    as CC unless it's already the primary recipient, and always CC's the ADMIN_EMAIL
+    (doug@eztofind.ca) so every lead lands directly in Doug's inbox. Failure is
+    non-fatal so the parent request never crashes because of email trouble."""
     try:
         from services.email_sender import send_email as _send
-        cc = None if to == INFO_MAILBOX else [INFO_MAILBOX]
+        cc_set = set()
+        if to != INFO_MAILBOX:
+            cc_set.add(INFO_MAILBOX)
+        if to != ADMIN_EMAIL:
+            cc_set.add(ADMIN_EMAIL)
+        cc = sorted(cc_set) if cc_set else None
         html = (
             "<div style='font-family:Inter,Arial,sans-serif;max-width:640px;line-height:1.55'>"
             f"<h2 style='color:#0F2A5B;margin:0 0 1rem'>🐾 New {kind}</h2>"
@@ -982,6 +988,168 @@ async def _notify_admin_of_lead(
     except Exception as e:
         logger.exception(f"Lead notification failed for {kind}: {e}")
         return {"queued": True, "error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Lead Auto-Triage — our AI provider reads each new lead, assigns a priority
+# (🔥 hot / ⚡ warm / ❄️ cold) with a short rationale + a concrete "next best
+# action" for Doug, and prepends both to the notification email so the highest-
+# value leads never get missed.
+#
+# The triage output is also persisted on the lead record so /admin/leads can
+# render a priority column (future UI polish).
+# ---------------------------------------------------------------------------
+
+_TRIAGE_SYSTEM = (
+    "You are a British Columbia real estate lead-triage assistant for Doug LeMaire, "
+    "REALTOR®. You do NOT give real estate, legal, tax, or financial advice. Your only "
+    "job is to score how quickly Doug should personally reach out to this lead based "
+    "on their stated timeline, budget clarity, financing status, motivation, and "
+    "specificity — then recommend a concrete next step. You output ONLY a JSON object."
+)
+
+_TRIAGE_RUBRIC = """
+Return exactly this JSON shape — no preamble, no code fences:
+
+{
+  "priority": "hot" | "warm" | "cold",
+  "rationale": "<one sentence, plain English, why this score>",
+  "next_action": "<one concrete next step Doug should take, e.g. 'Call within 2 hrs — 30-day timeline + pre-approved' or 'Send buyer's guide + follow up in a week'>",
+  "signals": ["<up to 3 short tags: 'pre-approved', 'urgent timeline', 'vague', 'first-time', 'high budget', 'out-of-area', ...>"]
+}
+
+Scoring rubric (weight roughly equally):
+  - HOT: timeline ≤ 3 months AND (pre-approved OR clear budget) AND specific about location/type; motivated seller (job move, divorce, downsizing, deceased-estate) counts as motivation
+  - WARM: timeline 3-12 months OR one of budget/financing/location is clear but not both; researching but engaged
+  - COLD: timeline > 12 months OR "just curious" OR no budget/no financing/vague location OR working with another REALTOR® (they cannot be helped anyway)
+
+Do NOT invent facts. If a field is missing, treat it as neutral. Never recommend anything that could be construed as advice.
+"""
+
+
+async def _score_lead(kind: str, lead: dict) -> dict:
+    """Call the AI provider to score a lead. Returns a dict with priority /
+    rationale / next_action / signals, or a neutral 'warm' fallback on failure."""
+    try:
+        # Compact the lead into a plain-English brief so the model has all the
+        # fields it needs without leaking irrelevant PII fields.
+        keys = ("full_name","email","phone","form_lang","areas","property_type",
+                "budget_range","budget","bedrooms","timeline","timeframe",
+                "financing_status","first_time_buyer","working_with_realtor",
+                "preferred_contact","notes","reason","city","property_address",
+                "estimated_value","expected_value","currently_listed")
+        brief_parts = [f"- {k}: {lead[k]}" for k in keys if lead.get(k) not in (None, "", [])]
+        brief = "\n".join(brief_parts) or "(no additional fields)"
+
+        prompt = (
+            f"Score this new {kind} for EZtoFind.ca (British Columbia). Use the rubric strictly.\n\n"
+            f"LEAD BRIEF:\n{brief}\n\n{_TRIAGE_RUBRIC}"
+        )
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"triage-{uuid.uuid4()}",
+            system_message=_TRIAGE_SYSTEM,
+        ).with_model("anthropic", "claude-sonnet-4-6")
+
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        s = full.strip()
+        if s.startswith("```"):
+            s = s.split("```")[1].replace("json", "", 1).strip()
+        start = s.find("{"); end = s.rfind("}")
+        if start >= 0 and end > start:
+            score = json.loads(s[start:end+1])
+            prio = (score.get("priority") or "").lower()
+            if prio not in ("hot", "warm", "cold"):
+                prio = "warm"
+            return {
+                "priority": prio,
+                "rationale": (score.get("rationale") or "").strip()[:400],
+                "next_action": (score.get("next_action") or "").strip()[:400],
+                "signals": [str(x).strip()[:40] for x in (score.get("signals") or [])][:5],
+                "scored_at": now_iso(),
+            }
+    except Exception as e:
+        logger.error(f"Lead triage failed for {kind} {lead.get('id')}: {e}")
+    # Neutral fallback so the notification still goes out with a sane default
+    return {
+        "priority": "warm",
+        "rationale": "Auto-triage unavailable — defaulted to warm; please review manually.",
+        "next_action": "Review the lead details and reply within 1 business day.",
+        "signals": ["triage-fallback"],
+        "scored_at": now_iso(),
+    }
+
+
+_TRIAGE_EMOJI = {"hot": "🔥", "warm": "⚡", "cold": "❄️"}
+_TRIAGE_BG    = {"hot": "#FEE2E2", "warm": "#FEF3C7", "cold": "#DBEAFE"}
+_TRIAGE_FG    = {"hot": "#991B1B", "warm": "#78350F", "cold": "#1E3A8A"}
+
+
+def _render_triage_banner(triage: dict) -> str:
+    prio = (triage.get("priority") or "warm").lower()
+    emoji = _TRIAGE_EMOJI.get(prio, "⚡")
+    bg = _TRIAGE_BG.get(prio, "#FEF3C7")
+    fg = _TRIAGE_FG.get(prio, "#78350F")
+    signals = triage.get("signals") or []
+    signals_html = ""
+    if signals:
+        chips = " ".join(
+            f"<span style='display:inline-block;padding:0.15rem 0.5rem;margin:0.15rem 0.25rem 0 0;background:rgba(0,0,0,0.06);border-radius:999px;font-size:0.72rem;color:{fg}'>{s}</span>"
+            for s in signals
+        )
+        signals_html = f"<div style='margin-top:0.5rem'>{chips}</div>"
+    return (
+        f"<div style='background:{bg};border-left:4px solid {fg};padding:0.9rem 1.1rem;margin:0 0 1.1rem;border-radius:6px'>"
+        f"<div style='font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:{fg};font-weight:800'>Auto-triage · Priority</div>"
+        f"<div style='font-size:1.25rem;font-weight:800;color:{fg};margin:0.15rem 0 0.35rem'>{emoji} {prio.upper()}</div>"
+        f"<div style='color:#1F2937;font-size:0.92rem;line-height:1.55'><strong>Why:</strong> {triage.get('rationale') or '—'}</div>"
+        f"<div style='color:#1F2937;font-size:0.92rem;line-height:1.55;margin-top:0.35rem'><strong>Next action:</strong> {triage.get('next_action') or '—'}</div>"
+        f"{signals_html}"
+        f"<div style='font-size:0.7rem;color:#6b7280;margin-top:0.5rem'>AI-assisted triage using EZtoFind.ca's approved lead-scoring rubric. Doug's judgement always overrides — this is a routing hint, not a decision.</div>"
+        f"</div>"
+    )
+
+
+async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: str,
+                                   to: str, subject: str, body_html: str) -> None:
+    """Background pipeline: pull the lead from Mongo, score it, persist the
+    score, and send Doug the notification email with the priority banner
+    prepended and the priority emoji injected into the subject line."""
+    try:
+        coll = db[collection_name]
+        lead = await coll.find_one({"id": lead_id}, {"_id": 0})
+        if not lead:
+            logger.warning(f"[triage] lead {lead_id} not found in {collection_name}")
+            return
+
+        triage = await _score_lead(kind, lead)
+        prio = triage.get("priority", "warm")
+        emoji = _TRIAGE_EMOJI.get(prio, "⚡")
+
+        # Persist so /admin/leads can render this column later
+        await coll.update_one({"id": lead_id}, {"$set": {"triage": triage}})
+
+        # Prepend banner + inject emoji into subject
+        subject_with = f"{emoji} [{prio.upper()}] {subject}"
+        body_with = _render_triage_banner(triage) + body_html
+
+        await _notify_admin_of_lead(
+            kind=kind, to=to, subject=subject_with,
+            body_html=body_with, related_id=lead_id,
+        )
+    except Exception as e:
+        logger.exception(f"[triage] pipeline failed for {kind} {lead_id}: {e}")
+        # Fire the plain notification so nothing is lost
+        try:
+            await _notify_admin_of_lead(
+                kind=kind, to=to, subject=subject,
+                body_html=body_html, related_id=lead_id,
+            )
+        except Exception:
+            pass
 
 # =============== LEADS ===============
 @api.post("/leads/buyer")
@@ -1029,10 +1197,11 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         f"<p><strong>Notes:</strong><br/>{(lead.notes or '—').replace(chr(10), '<br/>')}</p>"
         f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=buyer'>Buyer Leads → {lead.email}</a></p>"
     )
-    asyncio.create_task(_notify_admin_of_lead(
-        kind=kind, to=to_addr,
+    asyncio.create_task(_triage_and_notify_lead(
+        kind=kind, collection_name="buyer_leads", lead_id=lead.id,
+        to=to_addr,
         subject=f"🐾 New {kind} — {lead.full_name}" + (f" ({', '.join(lead.areas or [])})" if lead.areas else ""),
-        body_html=body, related_id=lead.id,
+        body_html=body,
     ))
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 
@@ -1071,10 +1240,11 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         f"<p><strong>Reason for selling:</strong><br/>{(lead.reason or '—').replace(chr(10), '<br/>')}</p>"
         f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=seller'>Seller Leads → {lead.email}</a></p>"
     )
-    asyncio.create_task(_notify_admin_of_lead(
-        kind="Seller Lead", to=INFO_MAILBOX,
+    asyncio.create_task(_triage_and_notify_lead(
+        kind="Seller Lead", collection_name="seller_leads", lead_id=lead.id,
+        to=INFO_MAILBOX,
         subject=f"🐾 New Seller Lead — {lead.full_name}",
-        body_html=body, related_id=lead.id,
+        body_html=body,
     ))
     return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
 

@@ -1105,3 +1105,30 @@ Doug reviewed the site through a visitor's eyes and flagged two BCFSA risks:
 
 ### Next planned work (per Doug)
 - Fold the Buyer's Guide and Seller's Guide content into the token-gated client Journey stages so a client sees the guide sections in the order that matches where they actually are in the transaction — instead of navigating between three separate surfaces.
+
+---
+
+## 📅 2026-02-02 (later) — Lead Auto-Triage ✅
+
+### What shipped
+Every new buyer + seller lead is now read by our AI provider (using EZtoFind's hallucination-hardened lead-scoring rubric — no advice, only routing), tagged **🔥 HOT / ⚡ WARM / ❄️ COLD**, and delivered to `doug@eztofind.ca` with the priority banner prepended and the priority emoji injected into the subject line so it's visible in the mailbox preview.
+
+### Backend
+- New helper `_score_lead(kind, lead)` — calls the AI provider with a strict rubric (timeline + budget + financing + motivation + specificity → hot/warm/cold + rationale + next-best-action + up-to-3 signal tags). Returns a neutral "warm + review manually" fallback if the AI call fails, so the notification is never lost.
+- New pipeline `_triage_and_notify_lead(...)` — background task that pulls the lead, scores it, persists the `triage` sub-document (`priority`, `rationale`, `next_action`, `signals`, `scored_at`) back onto the lead record, renders the priority banner, and calls the notifier.
+- `_notify_admin_of_lead` extended to always CC **doug@eztofind.ca** (in addition to info@ / referrals@) so Doug always gets the tagged version.
+- Both `POST /leads/buyer` and `POST /leads/seller` now dispatch through `_triage_and_notify_lead` instead of directly through `_notify_admin_of_lead`.
+
+### Sample outputs (verified live)
+- Sarah Chen (UBC relocation, pre-approved $2M, 6-week close, 4-bed North Van) → **HOT** · "Call within 2 hours — sub-6-week closing window"
+- Ravi Kaur (first-time buyer, 6-month timeline, unclear budget) → **WARM** · "Send guide, follow up by phone within 48h"
+- Mike Curious ("just browsing", 2+ years, no financing) → **COLD** · "Long-term nurture drip"
+
+### Compliance
+- Rubric explicitly prohibits advice — the AI only routes.
+- Every email includes: *"AI-assisted triage using EZtoFind.ca's approved lead-scoring rubric. Doug's judgement always overrides — this is a routing hint, not a decision."*
+- Vendor name never surfaced — banner refers to "our AI provider".
+- Triage output is persisted, so it's available for future `/admin/leads` UI enhancement (colored priority chip per row).
+
+### Files touched
+- **Modified**: `backend/server.py` — added ~170 lines: `_score_lead`, `_TRIAGE_SYSTEM`, `_TRIAGE_RUBRIC`, `_render_triage_banner`, `_triage_and_notify_lead`, plus CC-doug wiring in `_notify_admin_of_lead`.
