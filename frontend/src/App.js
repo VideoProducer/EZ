@@ -1078,6 +1078,7 @@ const DOOGIE_TRANSLATION_DISCLAIMER = {
 
 const DoogieChat = () => {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);   // Doogie panel: normal ↔ maximized
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
   const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
   // --- Personalized greeting for returning visitors ---
@@ -1356,7 +1357,7 @@ const DoogieChat = () => {
     <button className="doogie-fab" onClick={()=>setOpen(o=>!o)} data-testid="doogie-fab" aria-label="Chat with Doogie">
       <img src={DOOGIE_THINKING} alt="Doogie"/>
     </button>
-    {open && <div className="doogie-panel" data-testid="doogie-panel">
+    {open && <div className={`doogie-panel${expanded ? " doogie-panel-expanded" : ""}`} data-testid="doogie-panel">
       <header><img src={DOOGIE_THINKING} alt="Doogie"/><div style={{minWidth:0,flexShrink:1,overflow:"hidden"}}><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>AI Helper · General Info Only</div></div>
         <button type="button" onClick={()=>setVoiceOut(v=>!v)} data-testid="doogie-voiceout-toggle"
           aria-label={voiceOut ? "Turn Doogie's voice off" : "Turn Doogie's voice on"}
@@ -1371,6 +1372,11 @@ const DoogieChat = () => {
           style={{marginLeft:"0.35rem",flexShrink:0,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.4rem",fontSize:"0.8rem",cursor:"pointer",fontFamily:"Inter,sans-serif",maxWidth:"85px"}}>
           {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label}</option>)}
         </select>
+        <button onClick={()=>setExpanded(e=>!e)} data-testid="doogie-expand" aria-label={expanded?"Restore chat window":"Expand chat window"} title={expanded?"Restore chat window":"Expand chat window"}
+          aria-pressed={expanded}
+          style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.35rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
+          onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
+          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>{expanded?"⤡":"⤢"}</button>
         <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
           style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1.35rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.5rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
           onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
