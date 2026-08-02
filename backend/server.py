@@ -9896,5 +9896,343 @@ async def doogie_tts(request: Request, body: DoogieTTSIn):
         logger.error(f"TTS generation failed: {e}")
         raise HTTPException(502, "Voice synthesis is temporarily unavailable. Please try again in a moment.")
 
+
+# ============================================================================
+# Doug's Own Tour Library — surfaces active BC listings that carry a
+# virtual tour URL from CREA DDF®. Used by /visual-agent-demo so the Doogie
+# Visual mockup can play real listings instead of public demo tours.
+#
+# Filtering:
+#   • Active-status only
+#   • has_virtual_tour = True (populated by services/ddf_sync.py on next sync)
+#   • Unbranded tours prioritized (RESA-safe — no agent branding leakage)
+# ============================================================================
+
+@app.get("/api/tours/library", tags=["MLS Listings"])
+async def listings_with_virtual_tours(limit: int = 12):
+    """Return up to `limit` active BC listings that have at least one virtual
+    tour URL from the CREA DDF® feed. Each row includes a curated `tour_url`
+    (unbranded first) that the frontend can drop straight into an iframe."""
+    limit = max(1, min(int(limit or 12), 30))
+    cursor = db.listings.find(
+        {"status": "Active", "has_virtual_tour": True},
+        {
+            "_id": 0, "listing_key": 1, "mls_number": 1, "street_address": 1,
+            "city": 1, "list_price": 1, "beds": 1, "baths": 1, "property_type": 1,
+            "photos": {"$slice": 1}, "virtual_tour_urls": 1, "realtor_ca_url": 1,
+        },
+    ).sort("synced_at", -1).limit(limit)
+    rows = []
+    async for l in cursor:
+        tours = l.get("virtual_tour_urls") or []
+        if not tours:
+            continue
+        primary = tours[0]  # already sorted: unbranded first, branded fallback
+        rows.append({
+            "listing_key":    l["listing_key"],
+            "mls_number":     l.get("mls_number") or l["listing_key"],
+            "address":        l.get("street_address") or "",
+            "city":           l.get("city") or "",
+            "list_price":     l.get("list_price"),
+            "beds":           l.get("beds"),
+            "baths":          l.get("baths"),
+            "property_type":  l.get("property_type") or "",
+            "cover_photo":    (l.get("photos") or [None])[0],
+            "tour_url":       primary.get("url"),
+            "tour_category":  primary.get("category") or "",
+            "tour_unbranded": not primary.get("is_branded", False),
+            "eztofind_url":   f"/listing/{l['listing_key']}",
+            "realtor_ca_url": l.get("realtor_ca_url"),
+        })
+    return {
+        "count": len(rows),
+        "listings": rows,
+        "notice": (
+            "MLS® data licensed from CREA DDF®. Virtual tour URLs prioritize unbranded "
+            "sources (RESA-safe). Public demos may show if none are available yet."
+        ),
+    }
+
+
+# ============================================================================
+# Doogie Tools API — public OpenAPI 3.1 tool discovery schema so ChatGPT,
+# Claude, Perplexity, Gemini and any other agent framework can call Doogie
+# as a "BC Residential Real Estate information" retrieval tool.
+#
+# Compliance boundary is baked into the tool descriptions themselves:
+#   - "Educational retrievals only, never advice"
+#   - "Cite BCFSA Consumer Protection line: 1-877-683-9664"
+#   - Rate limits are documented so partners set expectations correctly.
+#
+# Two discovery endpoints:
+#   • /.well-known/ai-plugin.json  — ChatGPT-style plugin manifest
+#   • /api/doogie/tools.json       — OpenAPI 3.1 tool schema (canonical)
+# ============================================================================
+
+_DOOGIE_TOOLS_SPEC = {
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Doogie — BC Residential Real Estate Information",
+        "version": "1.0.0",
+        "summary": "Educational retrieval tool for British Columbia residential real estate.",
+        "description": (
+            "Doogie is an AI-assisted retrieval tool operated by EZtoFind.ca (Doug LeMaire, "
+            "REALTOR®, BCFSA Licence #167790, Fraser Property Management Realty Services Ltd.). "
+            "It surfaces BC-specific real estate context: RESA rules, PTT calculations, "
+            "MLS® listing lookups, neighbourhood facts, and 300+ BC glossary terms.\n\n"
+            "**Compliance boundary (mandatory for any downstream agent):**\n"
+            "• Doogie provides **educational retrievals only — never advice**.\n"
+            "• Every substantive answer must include the BCFSA Consumer Protection Line: "
+            "1-877-683-9664 (or link to https://www.bcfsa.ca).\n"
+            "• Nothing here constitutes a listing, offer, or contract under RESA.\n"
+            "• MLS® data is CREA-licensed; do not scrape, redistribute, or store beyond the "
+            "immediate agent response.\n"
+            "• If the user asks for advice, refer them to a licensed BC REALTOR® via "
+            "https://eztofind.ca/referral-request."
+        ),
+        "termsOfService": "https://eztofind.ca/terms",
+        "contact": {
+            "name": "Doug LeMaire (EZtoFind.ca)",
+            "url": "https://eztofind.ca/contact",
+        },
+        "license": {"name": "Proprietary — CREA DDF® / EZtoFind.ca"},
+    },
+    "servers": [
+        {"url": "https://eztofind.ca/api", "description": "Production"},
+    ],
+    "paths": {
+        "/doogie/chat": {
+            "post": {
+                "operationId": "ask_doogie",
+                "summary": "Ask Doogie a BC real estate question (educational retrieval).",
+                "description": (
+                    "Sends a natural-language BC real estate question to Doogie and receives "
+                    "a compliance-guarded educational answer. Doogie will decline to give "
+                    "advice, price predictions, or legal/tax guidance and will instead point "
+                    "at BCFSA / a licensed REALTOR®. Rate-limited to 30 requests/minute per IP "
+                    "and 300 requests/day."
+                ),
+                "requestBody": {
+                    "required": True,
+                    "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChatIn"}}},
+                },
+                "responses": {
+                    "200": {
+                        "description": "Doogie's educational retrieval response.",
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ChatOut"}}},
+                    },
+                    "429": {"description": "Rate limit exceeded. Back off and retry after 60 seconds."},
+                },
+            }
+        },
+        "/doogie/mls-search": {
+            "post": {
+                "operationId": "search_bc_listings",
+                "summary": "Search live BC MLS® listings via CREA DDF®.",
+                "description": (
+                    "Retrieves active BC residential listings matching the provided filters. "
+                    "Data is licensed from CREA DDF® — cite MLS® / REALTOR® trademarks and do "
+                    "not redistribute beyond the immediate agent response. Only Active-status "
+                    "listings are returned."
+                ),
+                "requestBody": {
+                    "required": True,
+                    "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MLSSearchIn"}}},
+                },
+                "responses": {
+                    "200": {
+                        "description": "Up to 20 matching listings, each with a realtor.ca link.",
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MLSSearchOut"}}},
+                    }
+                },
+            }
+        },
+        "/glossary/{slug}": {
+            "get": {
+                "operationId": "get_bc_term_definition",
+                "summary": "Fetch a BC real estate glossary term with sources.",
+                "description": (
+                    "Returns a plain-language definition of a BC-specific real estate term "
+                    "(e.g. property-transfer-tax-ptt, form-b, subject-clauses, resa). "
+                    "Each definition cites its authoritative source (BCFSA, LTSA, CRA, etc.)."
+                ),
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "string"},
+                        "example": "property-transfer-tax-ptt",
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Term definition + related terms + FAQs.",
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GlossaryTerm"}}},
+                    },
+                    "404": {"description": "Term not found. Try /glossary for the full list."},
+                },
+            }
+        },
+        "/glossary": {
+            "get": {
+                "operationId": "list_bc_terms",
+                "summary": "List all BC real estate glossary term slugs.",
+                "description": "Returns every glossary slug so agents can discover valid inputs for get_bc_term_definition.",
+                "responses": {
+                    "200": {
+                        "description": "Array of glossary term slugs and titles.",
+                        "content": {"application/json": {"schema": {
+                            "type": "array",
+                            "items": {"type": "object", "properties": {
+                                "slug": {"type": "string"}, "title": {"type": "string"},
+                            }},
+                        }}},
+                    }
+                },
+            }
+        },
+    },
+    "components": {
+        "schemas": {
+            "ChatIn": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                    "message":    {"type": "string", "description": "The user's BC real estate question. Max 2000 chars.", "maxLength": 2000},
+                    "session_id": {"type": "string", "description": "Stable session identifier so Doogie can maintain short-term context (recommended: UUID).", "nullable": True},
+                    "language":   {"type": "string", "enum": ["en", "fr", "zh-Hant", "zh-Hans", "pa", "fa", "pt-PT"], "default": "en"},
+                },
+            },
+            "ChatOut": {
+                "type": "object",
+                "properties": {
+                    "reply":              {"type": "string", "description": "Doogie's educational retrieval response. Contains inline citations."},
+                    "session_id":         {"type": "string"},
+                    "citations":          {"type": "array", "items": {"type": "string"}, "description": "Source URLs cited in the reply."},
+                    "compliance_notice":  {"type": "string", "description": "Always present. Reminds the consumer this is not advice.", "default": "Educational retrieval only — not advice. Consult a licensed BC REALTOR® or BCFSA (1-877-683-9664) for guidance."},
+                },
+            },
+            "MLSSearchIn": {
+                "type": "object",
+                "properties": {
+                    "query":         {"type": "string", "description": "Free-text search (e.g. 'Kitsilano 2BR condo'). Doogie parses filters from this string."},
+                    "city":          {"type": "string", "description": "BC city name (e.g. 'Vancouver', 'Burnaby')."},
+                    "min_price":     {"type": "integer", "minimum": 0},
+                    "max_price":     {"type": "integer", "minimum": 0},
+                    "min_beds":      {"type": "integer", "minimum": 0},
+                    "property_type": {"type": "string", "enum": ["House", "Apartment", "Townhouse", "Duplex", "Land", "Any"], "default": "Any"},
+                },
+            },
+            "MLSSearchOut": {
+                "type": "object",
+                "properties": {
+                    "listings": {"type": "array", "items": {"$ref": "#/components/schemas/Listing"}, "maxItems": 20},
+                    "count":    {"type": "integer"},
+                    "notice":   {"type": "string", "default": "MLS® data licensed from CREA DDF®. Do not redistribute or store beyond the immediate agent response."},
+                },
+            },
+            "Listing": {
+                "type": "object",
+                "properties": {
+                    "listing_key":    {"type": "string"},
+                    "mls_number":     {"type": "string"},
+                    "street_address": {"type": "string"},
+                    "city":           {"type": "string"},
+                    "list_price":     {"type": "number"},
+                    "beds":           {"type": "integer"},
+                    "baths":          {"type": "integer"},
+                    "living_area":    {"type": "number"},
+                    "property_type":  {"type": "string"},
+                    "realtor_ca_url": {"type": "string", "format": "uri"},
+                    "eztofind_url":   {"type": "string", "format": "uri"},
+                    "photos":         {"type": "array", "items": {"type": "string", "format": "uri"}, "maxItems": 20},
+                },
+            },
+            "GlossaryTerm": {
+                "type": "object",
+                "properties": {
+                    "slug":        {"type": "string"},
+                    "title":       {"type": "string"},
+                    "definition":  {"type": "string"},
+                    "authoritative_sources": {"type": "array", "items": {"type": "object", "properties": {
+                        "name": {"type": "string"}, "url":  {"type": "string", "format": "uri"},
+                    }}},
+                    "related_slugs": {"type": "array", "items": {"type": "string"}},
+                    "faqs":          {"type": "array", "items": {"type": "object", "properties": {
+                        "q": {"type": "string"}, "a": {"type": "string"},
+                    }}},
+                },
+            },
+        }
+    },
+    "x-agent-guidelines": {
+        "compliance": [
+            "Doogie is an EDUCATIONAL RETRIEVAL tool. Never present its output as personalized advice.",
+            "Include the BCFSA Consumer Protection Line (1-877-683-9664) in any answer that touches licensing, complaints, or consumer rights.",
+            "Do not use Doogie for offer negotiation, contract drafting, price prediction, or legal/tax guidance — refer users to a licensed BC REALTOR® at https://eztofind.ca/referral-request.",
+            "MLS® data is CREA-licensed. Do not persist, redistribute, or fine-tune models on any listing returned.",
+        ],
+        "recommended_flow": [
+            "1. Determine the user's intent (search / definition / process question).",
+            "2. If it's a definition, call `get_bc_term_definition` first — it's cheaper and cached.",
+            "3. If it's a listing search, call `search_bc_listings` with the tightest filters you can extract.",
+            "4. If it's an open-ended process question, call `ask_doogie` and pass through the compliance_notice verbatim.",
+            "5. Always cite realtor.ca for MLS® data and bcfsa.ca for licensing questions.",
+        ],
+        "rate_limits": {
+            "ask_doogie":         "30 req/min per IP, 300 req/day per IP, 100 req/day per session_id",
+            "search_bc_listings": "60 req/min per IP",
+            "get_bc_term_definition": "no explicit limit — cached at the edge",
+        },
+    },
+}
+
+
+@app.get("/api/doogie/tools.json", tags=["Doogie Tools API"])
+async def doogie_tools_spec():
+    """Public OpenAPI 3.1 tool schema — the canonical URL that ChatGPT, Claude,
+    Perplexity, Gemini and any other agent framework can point at to call
+    Doogie as a "BC Residential Real Estate information" retrieval tool.
+    Cache-Control: public, s-maxage=3600 so CDNs can serve it fast."""
+    return Response(
+        content=json.dumps(_DOOGIE_TOOLS_SPEC, indent=2, ensure_ascii=False),
+        media_type="application/json",
+        headers={
+            "Cache-Control": "public, s-maxage=3600, max-age=600",
+            "Access-Control-Allow-Origin": "*",   # public discovery endpoint
+        },
+    )
+
+
+@app.get("/api/.well-known/ai-plugin.json", tags=["Doogie Tools API"])
+async def doogie_ai_plugin_manifest():
+    """ChatGPT-style plugin manifest so ChatGPT can install Doogie as a tool.
+    Points at the canonical OpenAPI spec above."""
+    manifest = {
+        "schema_version": "v1",
+        "name_for_human": "Doogie · BC Real Estate",
+        "name_for_model": "doogie_bc_real_estate",
+        "description_for_human": "Ask about British Columbia residential real estate — rules, terms, listings, neighbourhoods. Educational retrievals only, never advice.",
+        "description_for_model": (
+            "Retrieval tool for British Columbia residential real estate context. Use for BCFSA/RESA "
+            "rules, MLS® listing lookups, glossary term definitions, and neighbourhood facts. "
+            "Educational only — never present output as personalized advice. Refer users to a "
+            "licensed BC REALTOR® at https://eztofind.ca/referral-request for anything "
+            "advisory. MLS® data is CREA-licensed — do not redistribute."
+        ),
+        "auth": {"type": "none"},
+        "api": {"type": "openapi", "url": "https://eztofind.ca/api/doogie/tools.json"},
+        "logo_url": "https://eztofind.ca/doogie-logo.png",
+        "contact_email": "hello@eztofind.ca",
+        "legal_info_url": "https://eztofind.ca/terms",
+    }
+    return Response(
+        content=json.dumps(manifest, indent=2, ensure_ascii=False),
+        media_type="application/json",
+        headers={"Cache-Control": "public, s-maxage=3600, max-age=600", "Access-Control-Allow-Origin": "*"},
+    )
+
+
 @app.on_event("shutdown")
 async def shutdown(): mongo_client.close()

@@ -232,7 +232,7 @@ const PaneSearch = () => (
   </div>
 );
 
-// ── Right pane: Virtual Tour (360° mock with hotspots + real Matterport toggle) ─
+// ── Right pane: Virtual Tour (360° mock with hotspots + real tour library) ───
 const TOUR_PROVIDERS = {
   matterport: {
     label: "Matterport",
@@ -245,20 +245,59 @@ const TOUR_PROVIDERS = {
     caption: "Kuula public demo · illustrative only",
   },
 };
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
 const PaneTour = () => {
   const [hot, setHot] = useState(null);
-  const [mode, setMode] = useState("mock"); // "mock" | "live"
-  const [provider, setProvider] = useState("kuula"); // default to Kuula (cleanest embed)
+  const [mode, setMode] = useState("mock");           // "mock" | "live"
+  // Provider tab: "dougs" (Doug's real MLS listings) | "kuula" | "matterport"
+  const [provider, setProvider] = useState("dougs");
+  const [dougTours, setDougTours] = useState(null);   // null=loading, []=none, [...]=have
+  const [dougPick, setDougPick] = useState(0);        // index within dougTours
+
+  // Fetch Doug's live listings with virtual tours on first mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/tours/library?limit=12`);
+        const data = await res.json();
+        if (!cancelled) setDougTours(Array.isArray(data.listings) ? data.listings : []);
+      } catch {
+        if (!cancelled) setDougTours([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // If Doug has no tours yet, silently fall back so "Live 360°" still works.
+  const dougReady = Array.isArray(dougTours) && dougTours.length > 0;
+  const activeProvider =
+    provider === "dougs" && !dougReady ? "kuula" : provider;
+  const P = TOUR_PROVIDERS[activeProvider] || TOUR_PROVIDERS.kuula;
+  const dougPicked = dougReady ? dougTours[Math.min(dougPick, dougTours.length - 1)] : null;
+
+  const iframeSrc = provider === "dougs" && dougPicked
+    ? dougPicked.tour_url
+    : P.src;
+  const captionText = provider === "dougs" && dougPicked
+    ? `${dougPicked.tour_unbranded ? "Unbranded" : "Branded"} tour · CREA DDF® · ${dougPicked.city}`
+    : P.caption;
+
   const hotspots = [
     { id: "kitchen", x: 22, y: 55, label: "Kitchen · Bosch appliances" },
     { id: "ceiling", x: 55, y: 22, label: "9' over-height ceilings" },
     { id: "view", x: 78, y: 40, label: "SW peek to English Bay" },
   ];
-  const P = TOUR_PROVIDERS[provider];
+
+  const headerAddr = provider === "dougs" && dougPicked
+    ? `${dougPicked.address || dougPicked.mls_number}${dougPicked.city ? " · " + dougPicked.city : ""}`
+    : "2135 W 8th Ave";
+
   return (
     <div data-testid="pane-tour" style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>360° Tour · 2135 W 8th Ave</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>360° Tour · {headerAddr}</strong>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <div style={{
             display: "inline-flex", padding: 3, background: "#EEF2FB",
@@ -288,14 +327,34 @@ const PaneTour = () => {
             ><Radio size={11}/> Live 360°</button>
           </div>
           <Pill tone={mode === "live" ? "green" : "gold"}>
-            {mode === "live" ? <><Radio size={12}/> {P.label}</> : <><Compass size={12}/> Interactive</>}
+            {mode === "live"
+              ? <><Radio size={12}/> {provider === "dougs" && dougReady ? "Doug's MLS" : P.label}</>
+              : <><Compass size={12}/> Interactive</>}
           </Pill>
         </div>
       </div>
 
       {mode === "live" && (
-        <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "#6B7280" }}>
-          <span style={{ fontWeight: 600, color: C.navy }}>Provider:</span>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontSize: 11, color: "#6B7280" }}>
+          <span style={{ fontWeight: 600, color: C.navy }}>Source:</span>
+          <button
+            data-testid="tour-provider-dougs"
+            onClick={() => setProvider("dougs")}
+            disabled={dougTours === null}
+            style={{
+              border: "1px solid " + (provider === "dougs" ? C.green : "#DDE6FA"),
+              background: provider === "dougs" ? "rgba(34,197,94,0.10)" : "#fff",
+              color: provider === "dougs" ? "#15803D" : C.navy,
+              fontWeight: 700, cursor: dougTours === null ? "wait" : "pointer",
+              padding: "3px 10px", borderRadius: 99, fontSize: 11,
+              display: "inline-flex", alignItems: "center", gap: 5,
+            }}
+          >
+            <Building2 size={11}/> Doug's Listings
+            {dougTours === null ? " …"
+              : dougReady ? ` · ${dougTours.length}`
+              : " · 0 (using demo)"}
+          </button>
           {Object.entries(TOUR_PROVIDERS).map(([k, v]) => (
             <button
               key={k}
@@ -310,13 +369,44 @@ const PaneTour = () => {
               }}
             >{v.label}</button>
           ))}
+          {provider === "dougs" && dougReady && (
+            <select
+              data-testid="tour-doug-listing-select"
+              value={dougPick}
+              onChange={(e) => setDougPick(Number(e.target.value))}
+              style={{
+                marginLeft: "auto", padding: "4px 8px", borderRadius: 8,
+                border: "1px solid #DDE6FA", background: "#fff",
+                color: C.navy, fontSize: 11, fontWeight: 600,
+                maxWidth: 320,
+              }}
+            >
+              {dougTours.map((l, i) => (
+                <option key={l.listing_key} value={i}>
+                  {(l.address || l.mls_number)}
+                  {l.city ? ` · ${l.city}` : ""}
+                  {l.list_price ? ` · $${Number(l.list_price).toLocaleString()}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {mode === "live" && provider === "dougs" && !dougReady && dougTours !== null && (
+        <div style={{
+          background: "rgba(245,166,35,0.08)", border: "1px dashed rgba(245,166,35,0.5)",
+          borderRadius: 10, padding: 10, fontSize: 11, color: "#78350F",
+        }}>
+          <strong>No CREA DDF® tours indexed yet.</strong> Doug's live tours will appear here on the next
+          DDF sync (every 4 hours). Falling back to a Kuula public demo for now.
         </div>
       )}
 
       <AnimatePresence mode="wait">
         {mode === "live" ? (
           <motion.div
-            key={`live-${provider}`}
+            key={`live-${provider}-${dougPick}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             data-testid="tour-live-embed-wrap"
             style={{
@@ -325,8 +415,8 @@ const PaneTour = () => {
             }}
           >
             <iframe
-              title={`Live 360° virtual tour (${P.label} demo)`}
-              src={P.src}
+              title={`Live 360° virtual tour (${captionText})`}
+              src={iframeSrc}
               width="100%" height="100%"
               frameBorder="0"
               allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
@@ -339,7 +429,7 @@ const PaneTour = () => {
               color: "#fff", padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
               display: "inline-flex", alignItems: "center", gap: 6, backdropFilter: "blur(6px)",
             }}>
-              <Radio size={12} color={C.green}/> {P.caption}
+              <Radio size={12} color={provider === "dougs" && dougPicked ? C.green : C.gold}/> {captionText}
             </div>
           </motion.div>
         ) : (
@@ -512,9 +602,19 @@ export default function VisualAgentDemo() {
   const [turnIdx, setTurnIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   // Voice prototype state
-  const [voiceState, setVoiceState] = useState("idle"); // idle | listening | transcribing | replying | done
+  const [voiceState, setVoiceState] = useState("idle"); // idle | listening | transcribing | replying | done | error
   const [voiceHeard, setVoiceHeard] = useState("");     // progressively typed user speech
   const [voiceReply, setVoiceReply] = useState(null);   // agent narration once recording completes
+  const [voiceMode, setVoiceMode] = useState("scripted"); // "scripted" | "live"
+  const [voiceError, setVoiceError] = useState("");
+  const recognitionRef = useRef(null);
+  const sessionIdRef = useRef(null);
+  if (!sessionIdRef.current) {
+    // Stable per-tab session for /api/doogie/chat continuity
+    sessionIdRef.current = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? `visual-agent-${crypto.randomUUID()}`
+      : `visual-agent-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
   const transcriptRef = useRef(null);
 
   const scenario = SCENARIOS[scenarioIdx];
@@ -544,6 +644,7 @@ export default function VisualAgentDemo() {
     setVoiceState("idle");
     setVoiceHeard("");
     setVoiceReply(null);
+    setVoiceError("");
   }, [scenarioIdx]);
 
   // Autoscroll transcript on new turn or voice update
@@ -553,13 +654,19 @@ export default function VisualAgentDemo() {
     }
   }, [turnIdx, scenarioIdx, voiceHeard, voiceReply]);
 
-  // Voice prototype: mock recording → transcribing → replying flow
-  const triggerVoice = () => {
-    if (!voiceScript || voiceState === "listening" || voiceState === "transcribing" || voiceState === "replying") return;
+  // Voice prototype: two modes
+  //  • "scripted" — 100% mocked, safe for demo videos, no mic permission needed.
+  //  • "live"     — uses browser SpeechRecognition (webkit or standard) to
+  //                 transcribe real speech, then hits /api/doogie/chat for a
+  //                 real, compliance-guarded Doogie reply. Falls back to
+  //                 scripted if the browser doesn't expose SpeechRecognition
+  //                 or the user denies mic permission.
+  const runScriptedVoice = () => {
+    if (!voiceScript) return;
     setVoiceHeard("");
     setVoiceReply(null);
+    setVoiceError("");
     setVoiceState("listening");
-    // Simulated "recording" window
     setTimeout(() => {
       setVoiceState("transcribing");
       const full = voiceScript.heard;
@@ -579,6 +686,138 @@ export default function VisualAgentDemo() {
         }
       }, 32);
     }, 1400);
+  };
+
+  const runLiveVoice = () => {
+    // Feature-detect browser SpeechRecognition
+    const SR = typeof window !== "undefined" &&
+      (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!SR) {
+      setVoiceError("Live voice requires Chrome, Edge, or Safari 14.1+. Falling back to scripted mode.");
+      setVoiceMode("scripted");
+      setTimeout(runScriptedVoice, 300);
+      return;
+    }
+    setVoiceHeard("");
+    setVoiceReply(null);
+    setVoiceError("");
+    setVoiceState("listening");
+
+    const recognition = new SR();
+    recognition.lang = "en-CA";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    let finalText = "";
+    recognition.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const chunk = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += chunk;
+        else interim += chunk;
+      }
+      const combined = (finalText + interim).trim();
+      if (combined) {
+        setVoiceState(s => (s === "listening" ? "transcribing" : s));
+        setVoiceHeard(combined);
+      }
+    };
+    recognition.onerror = (e) => {
+      const errName = e.error || "unknown";
+      if (errName === "no-speech") {
+        setVoiceError("No speech detected — try again and speak into your mic.");
+      } else if (errName === "not-allowed" || errName === "service-not-allowed") {
+        setVoiceError("Microphone permission was denied. Enable it in your browser to use live voice.");
+        setVoiceMode("scripted");
+      } else {
+        setVoiceError(`Voice error: ${errName}. You can retry or switch to scripted mode.`);
+      }
+      setVoiceState("error");
+      recognitionRef.current = null;
+    };
+    recognition.onend = async () => {
+      recognitionRef.current = null;
+      const spoken = (finalText || voiceHeard || "").trim();
+      if (!spoken) {
+        // Nothing captured — leave any onerror message to explain.
+        if (voiceState === "listening" || voiceState === "transcribing") {
+          setVoiceError("Didn't catch that — try speaking a bit louder.");
+          setVoiceState("error");
+        }
+        return;
+      }
+      // Speech captured — now ask Doogie for a real, compliance-guarded reply.
+      // /api/doogie/chat streams SSE `data: {"delta": "..."}` chunks; we
+      // concatenate them into a single narration bubble as they arrive.
+      setVoiceHeard(spoken);
+      setVoiceState("replying");
+      setVoiceReply(""); // start empty so bubble mounts and can grow
+      try {
+        const res = await fetch(`${API}/doogie/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: spoken,
+            session_id: sessionIdRef.current,
+            language: "en",
+          }),
+        });
+        if (!res.ok || !res.body) throw new Error(`Doogie chat returned ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let accumulated = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // Split into SSE events on double newline; keep the trailing partial
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+          for (const evt of events) {
+            const line = evt.trim();
+            if (!line || !line.startsWith("data:")) continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+              const obj = JSON.parse(payload);
+              const chunk = obj.delta || obj.text || obj.content || "";
+              if (chunk) {
+                accumulated += chunk;
+                setVoiceReply(accumulated);
+              }
+            } catch { /* ignore malformed frame */ }
+          }
+        }
+        if (!accumulated.trim()) throw new Error("Empty reply from Doogie");
+        setVoiceState("done");
+      } catch (err) {
+        setVoiceError("Doogie couldn't respond right now. Try again in a moment.");
+        setVoiceState("error");
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      setVoiceError("Couldn't start the microphone — try clicking again.");
+      setVoiceState("error");
+    }
+  };
+
+  const triggerVoice = () => {
+    if (voiceState === "listening" || voiceState === "transcribing" || voiceState === "replying") {
+      // Second click while live-recording → stop and let onend send the query
+      if (voiceMode === "live" && recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch { /* ignored */ }
+      }
+      return;
+    }
+    if (voiceMode === "live") runLiveVoice();
+    else runScriptedVoice();
   };
 
   const RightPane = useMemo(() => {
@@ -672,26 +911,55 @@ export default function VisualAgentDemo() {
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 200 }}>
             <Waveform active={playing || voiceActive} intense={voiceState === "listening"}/>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+              {/* Scripted ↔ Live voice-mode toggle */}
+              <div style={{
+                display: "inline-flex", padding: 3, background: "rgba(255,255,255,0.10)",
+                borderRadius: 99, border: "1px solid rgba(255,255,255,0.22)",
+              }}>
+                <button
+                  data-testid="voice-mode-scripted"
+                  onClick={() => setVoiceMode("scripted")}
+                  disabled={voiceActive}
+                  style={{
+                    border: "none", cursor: voiceActive ? "default" : "pointer",
+                    padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                    background: voiceMode === "scripted" ? "#fff" : "transparent",
+                    color: voiceMode === "scripted" ? C.navy : "#fff",
+                  }}
+                >Scripted</button>
+                <button
+                  data-testid="voice-mode-live"
+                  onClick={() => setVoiceMode("live")}
+                  disabled={voiceActive}
+                  style={{
+                    border: "none", cursor: voiceActive ? "default" : "pointer",
+                    padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                    background: voiceMode === "live" ? C.green : "transparent",
+                    color: voiceMode === "live" ? "#fff" : "#fff",
+                  }}
+                >Live</button>
+              </div>
               <button
                 data-testid="visual-agent-voice-btn"
                 onClick={triggerVoice}
-                disabled={voiceActive}
+                disabled={voiceState === "transcribing" || voiceState === "replying"}
                 style={{
                   ...btnGhost,
                   background: voiceState === "listening" ? "rgba(245,166,35,0.85)" : (voiceActive ? "rgba(255,255,255,0.06)" : "rgba(245,166,35,0.18)"),
                   border: "1px solid " + (voiceState === "listening" ? "rgba(245,166,35,0.95)" : "rgba(245,166,35,0.55)"),
                   color: voiceState === "listening" ? C.ink : "#fff",
-                  cursor: voiceActive ? "default" : "pointer",
-                  opacity: voiceActive && voiceState !== "listening" ? 0.75 : 1,
+                  cursor: (voiceState === "transcribing" || voiceState === "replying") ? "default" : "pointer",
+                  opacity: (voiceState === "transcribing" || voiceState === "replying") ? 0.75 : 1,
                 }}
                 aria-label="Ask by voice"
               >
                 {voiceState === "listening" ? <MicOff size={14}/> : <Mic size={14}/>}
                 <span>
-                  {voiceState === "listening" ? "Listening…" :
+                  {voiceState === "listening" ? (voiceMode === "live" ? "Stop" : "Listening…") :
                    voiceState === "transcribing" ? "Transcribing…" :
-                   voiceState === "replying" ? "Replying…" : "Ask by voice"}
+                   voiceState === "replying" ? "Replying…" :
+                   voiceMode === "live" ? "Speak to Doogie" : "Ask by voice"}
                 </span>
               </button>
               <button
@@ -707,6 +975,13 @@ export default function VisualAgentDemo() {
                 <RotateCcw size={14}/> Restart
               </button>
             </div>
+            {voiceError && (
+              <div data-testid="voice-error" style={{
+                marginTop: 4, fontSize: 11, color: "#FFD98A",
+                background: "rgba(220,38,38,0.18)", border: "1px solid rgba(255,217,138,0.4)",
+                padding: "5px 10px", borderRadius: 8, maxWidth: 320, textAlign: "left",
+              }}>{voiceError}</div>
+            )}
           </div>
         </div>
       </section>
@@ -842,7 +1117,9 @@ export default function VisualAgentDemo() {
                       }}>
                         <Volume2 size={10}/> Doogie Visual · narration
                       </div>
-                      {voiceState === "replying" ? <VoiceDots light/> : voiceReply}
+                      {voiceState === "replying" && !voiceReply
+                        ? <VoiceDots light/>
+                        : (voiceReply || <VoiceDots light/>)}
                     </div>
                   </motion.div>
                 )}

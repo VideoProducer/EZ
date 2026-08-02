@@ -1237,3 +1237,39 @@ Two enhancements added to `/visual-agent-demo`:
 ### Verification
 - `yarn build` compiles cleanly (~343.7 kB gzipped)
 - Screenshot smoke test verified all 3 voice states (listening / transcribing / done reply) and both providers (Kuula rendered a real 23-frame walkthrough on first paint)
+
+---
+
+## 📅 2026-02-02 (night) — Visual Agent v1.2: Tools API + Live Voice + Real Tours ✅
+
+Three enhancements landed together — one backend milestone (public Doogie Tools API) and two frontend upgrades to the Visual Agent mockup.
+
+### 1. Doogie Tools API — public OpenAPI 3.1 tool discovery
+- **`GET /api/doogie/tools.json`** — canonical OpenAPI 3.1 spec exposing Doogie as a "BC Residential Real Estate information" tool. Four operations: `ask_doogie`, `search_bc_listings`, `get_bc_term_definition`, `list_bc_terms`. Compliance boundary baked into every description ("educational retrievals only, never advice", BCFSA line, MLS® redistribution restrictions). Includes an `x-agent-guidelines` extension with compliance rules, recommended tool-call flow, and rate limits.
+- **`GET /api/.well-known/ai-plugin.json`** — ChatGPT-style plugin manifest pointing at the OpenAPI spec above, so any agent framework (ChatGPT, Claude, Perplexity, Gemini, LangChain, OpenAI Assistants) can auto-install Doogie as a tool.
+- Both endpoints send `Cache-Control: public, s-maxage=3600` + `Access-Control-Allow-Origin: *` for CDN + cross-origin discovery.
+
+### 2. Real Voice Capture (browser SpeechRecognition + Doogie backend)
+- Added **Scripted ↔ Live** toggle pill in the Visual Agent hero next to the mic button.
+- In **Live mode**, clicking the mic starts `SpeechRecognition` (webkit or standard) with `lang="en-CA"`, `interimResults=true`. Interim transcripts populate the amber "You · voice" bubble in real-time.
+- When the user stops speaking, the final transcript is POSTed to `/api/doogie/chat` and Doogie's SSE response is streamed live into the "Doogie Visual · narration" bubble (parsing `data: {"delta": "..."}` frames).
+- Graceful fallback: unsupported browsers, mic permission denied, or no-speech errors all surface a soft red banner and revert to Scripted mode without breaking the page.
+- Stable per-tab `session_id` (uuid-prefixed with `visual-agent-`) so Doogie can maintain short-term context across multiple voice questions.
+
+### 3. Doug's Own Tour Library (CREA DDF® virtual tours)
+- **Backend**: `services/ddf_sync.py` now extracts `virtual_tour_urls` from CREA DDF® Media (both `Virtual Tour` and `Video` categories), sorts unbranded tours first (RESA-safe), and sets a `has_virtual_tour` flag on each listing. New endpoint **`GET /api/tours/library?limit=12`** returns Doug's active listings with usable tour URLs.
+- **Frontend**: The Tour scenario's Source row now defaults to a **"Doug's Listings · N"** button that fetches the library on mount. If N > 0, a dropdown shows real addresses ("2135 W 8th Ave · Vancouver · $1,289,000") and the iframe loads that listing's tour. If N = 0 (which is the current state — DDF sync hasn't captured any tours yet because the extraction is brand-new), a friendly amber notice explains the fallback and Kuula is shown so the demo still looks good.
+- Matterport + Kuula public demos remain available as manual alternatives in the source row.
+
+### Files touched
+- **Modified**: `backend/server.py` — added `_DOOGIE_TOOLS_SPEC`, `@app.get("/api/doogie/tools.json")`, `@app.get("/api/.well-known/ai-plugin.json")`, `@app.get("/api/tours/library")` (~200 new lines total)
+- **Modified**: `backend/services/ddf_sync.py` — new `virtual_tour_urls` + `has_virtual_tour` fields on the normalized listing record
+- **Modified**: `frontend/src/pages/VisualAgentDemo.jsx` — module-scope `const API`, new voice state (`voiceMode`, `voiceError`, `recognitionRef`, `sessionIdRef`), `runScriptedVoice` + `runLiveVoice` + SSE stream parser, Scripted/Live toggle pill + error banner in the hero, new "Doug's Listings" provider tab with dropdown + fallback notice
+
+### Verification
+- `yarn build` clean (~347 kB gzipped)
+- `curl /api/doogie/tools.json` → OpenAPI 3.1 with 4 operations ✓
+- `curl /api/.well-known/ai-plugin.json` → schema_version v1, api_url pointing at tools.json ✓
+- `curl /api/tours/library` → `{"count": 0, ...}` (expected — awaits next DDF sync)
+- `curl /api/doogie/chat` (SSE) → streams `data: {"delta": "..."}` frames as expected
+- Screenshots: Scripted flow, Live-mode UI, Tour scenario with Doug's Listings tab + graceful Kuula fallback + real 23-frame walkthrough — all rendered correctly

@@ -161,6 +161,7 @@ def _map_property(p: dict) -> Optional[dict]:
 
     media = p.get("Media") or []
     photos = []
+    virtual_tour_urls = []
     for m in media:
         if not isinstance(m, dict): continue
         url = m.get("MediaURL")
@@ -168,6 +169,16 @@ def _map_property(p: dict) -> Optional[dict]:
         # CREA DDF categorizes as "Property Photo" (also allow legacy/generic "Photo")
         if url and ("photo" in cat or not cat):
             photos.append(url)
+        # CREA DDF® virtual-tour media categories: "Unbranded Virtual Tour",
+        # "Branded Virtual Tour", "Video", "Virtual Tour". We capture unbranded
+        # URLs first (RESA-safe — no agent branding leaks) then branded as
+        # fallback.
+        if url and ("virtual tour" in cat or "video" in cat):
+            virtual_tour_urls.append({
+                "url": url,
+                "category": m.get("MediaCategory") or "",
+                "is_branded": "branded" in cat and "unbranded" not in cat,
+            })
     # Sort by Order if present so PreferredPhotoYN comes first
     try:
         photos_with_order = [(int(m.get("Order") or 999), m.get("MediaURL")) for m in media
@@ -176,6 +187,8 @@ def _map_property(p: dict) -> Optional[dict]:
         photos = [u for _, u in photos_with_order]
     except Exception:
         pass
+    # Prefer unbranded tours (RESA-safe) at the top of the list
+    virtual_tour_urls.sort(key=lambda v: (v["is_branded"], v["category"]))
 
     street = " ".join(x for x in [
         p.get("StreetNumber"), p.get("StreetDirPrefix"),
@@ -220,6 +233,8 @@ def _map_property(p: dict) -> Optional[dict]:
         "features": _feature_flags(p),
         "photos": photos,
         "photo_count": p.get("PhotosCount") or len(photos),
+        "virtual_tour_urls": virtual_tour_urls,   # [{url, category, is_branded}, ...]
+        "has_virtual_tour": bool(virtual_tour_urls),
         "brokerage_name": None,   # resolved from Office if needed via a follow-up sync
         "list_office_key": p.get("ListOfficeKey") or "",
         "list_agent_key": p.get("ListAgentKey") or "",
