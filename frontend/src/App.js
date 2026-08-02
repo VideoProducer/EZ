@@ -13,6 +13,7 @@ import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
+import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -1136,6 +1137,25 @@ const DoogieChat = () => {
     const handler = () => setOpen(true);
     window.addEventListener("ez-open-doogie", handler);
     return () => window.removeEventListener("ez-open-doogie", handler);
+  }, []);
+
+  // Honor `?ask=<query>` in the URL — search results and external links can
+  // route visitors to `/?ask=how%20much%20are%20strata%20fees` and have Doogie
+  // auto-open with the question pre-filled. Runs once on mount; clears the
+  // param from the URL bar so a refresh doesn't repeat the auto-open.
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const ask = sp.get("ask");
+      if (ask && ask.trim()) {
+        localStorage.setItem("ez_doogie_prefill", ask.trim());
+        setOpen(true);
+        // Strip ?ask from the URL without triggering a nav
+        sp.delete("ask");
+        const newUrl = window.location.pathname + (sp.toString() ? `?${sp}` : "") + window.location.hash;
+        window.history.replaceState({}, "", newUrl);
+      }
+    } catch { /* ignore */ }
   }, []);
 
   const acceptConsent = () => { localStorage.setItem("ez_doogie_consent","1"); setConsented(true); };
@@ -4307,6 +4327,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/relations")} className={active==="relations"?"active":""} data-testid="admin-nav-relations">🕸️ Content Relations</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/search-analytics")} className={active==="search-analytics"?"active":""} data-testid="admin-nav-search-analytics">🔎 Search Analytics</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/snapshots")} className={active==="snapshots"?"active":""} data-testid="admin-nav-snapshots">📸 Evidence Chain</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/campaigns")} className={active==="campaigns"?"active":""} data-testid="admin-nav-campaigns">📧 Campaigns</a>
@@ -7612,6 +7633,11 @@ const AdminContentRelationsWrapper = () => {
   return <AdminContentRelations headers={headers}/>;
 };
 
+const AdminSearchAnalyticsWrapper = () => {
+  const { headers } = useAdmin();
+  return <AdminSearchAnalytics headers={headers}/>;
+};
+
 
 // ============ Admin Client Journeys — private curated plans ============
 // Doug creates a personalized real-estate journey for each client from a
@@ -8265,6 +8291,7 @@ function App() {
       <Route path="/admin/client-journeys" element={<AdminClientJourneys/>}/>
       <Route path="/admin/coming-soon" element={<AdminShell active="coming-soon"><AdminComingSoonWrapper/></AdminShell>}/>
       <Route path="/admin/relations" element={<AdminShell active="relations"><AdminContentRelationsWrapper/></AdminShell>}/>
+      <Route path="/admin/search-analytics" element={<AdminShell active="search-analytics"><AdminSearchAnalyticsWrapper/></AdminShell>}/>
       <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>

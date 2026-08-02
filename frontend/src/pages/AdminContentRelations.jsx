@@ -209,6 +209,14 @@ export default function AdminContentRelations({ headers }) {
                 <td style={{ padding: "0.65rem 0.75rem", borderTop: "1px solid rgba(15,42,91,0.08)" }}>
                   <div style={{ fontWeight: 700, color: "var(--brand-navy)" }}>{r.source_type}</div>
                   <div style={{ fontSize: "0.78rem", color: "var(--muted)", fontFamily: "monospace" }}>{r.source_id}</div>
+                  {(() => {
+                    const surface = r.source_type === "glossary" ? `/glossary/${r.source_id}` :
+                                    (r.source_type === "community" || r.source_type === "region" || r.source_type === "neighbourhood") ? `/community/${r.source_id}` :
+                                    r.source_type === "guide" ? (r.source_id && r.source_id.endsWith("-guide") ? `/${r.source_id}` : "/buying-guide") : null;
+                    return surface ? (
+                      <a href={surface} target="_blank" rel="noopener noreferrer" data-testid={`rel-preview-live-${r.id}`} style={{ fontSize: "0.72rem", color: "var(--brand-blue)", fontWeight: 600, textDecoration: "none", display: "inline-block", marginTop: "0.15rem" }}>🔍 Preview live ↗</a>
+                    ) : null;
+                  })()}
                 </td>
                 <td style={{ padding: "0.65rem 0.75rem", borderTop: "1px solid rgba(15,42,91,0.08)" }}>
                   <div style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--brand-blue)", fontWeight: 700 }}>{r.target_kind_label || r.target_type}</div>

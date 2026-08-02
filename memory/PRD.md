@@ -777,3 +777,52 @@ Three deliverables shipped in one pass to make EZtoFind.ca feel like one seamles
 - **Guide printables**: print-friendly CSS for Buyer/Seller guides
 - **Multi-lingual guides**: translate Buying & Selling guides into zh-Hant, zh-Hans, pa, fa, pt-PT
 - **Doogie ask-URL prefill**: honor `/?ask=<query>` param so Doogie shortcut in search results auto-opens the chat with the question pre-typed
+
+---
+
+## 2026-08-02 — Phase D: Admin Audit + Ask-URL Prefill + Search Analytics
+
+Three deliverables that close the loop on the intelligent related-content platform: Doug now sees exactly which pages surface each relation, visitors can deep-link into Doogie with a pre-typed question, and every unanswered search is logged so the content library grows in the exact direction visitors are asking.
+
+### 1. Search Analytics (`admin/search-analytics`)
+- **Backend**: every hit on `/api/search` now writes a row to `search_queries` — query text, tokens, result count, quick-answer flag, confidence tier (`high`/`medium`/`low`/`none`), and a hashed IP (SHA-256 truncated to 16 chars — PIPA-compliant, never stores raw IP)
+- **New endpoint** `GET /api/admin/search-analytics?days=30&limit=30` returns three aggregations:
+  - **Top queries** — what visitors search most
+  - **No-result queries** — the highest-value gap list; direct pointers for new glossary terms or FAQ answers
+  - **Low-confidence queries** — some hits but no strong quick answer; opportunities to tighten definitions or add synonyms
+- **New admin page** with 4 metric cards + 3 sortable tables + inline "How to close a gap" workflow pointing to the Content Relations editor and AI Content Approvals queue
+- **Search quality fix**: tightened tokenizer to drop 60+ real-estate domain stopwords (`real`, `estate`, `home`, `bc`, `canada`, etc.) plus a title-hits gate on quick_answer promotion — garbage queries like "xyzabc-not-a-real-thing" now correctly return 0 results, "how much home can I afford" correctly registers as low-confidence so Doug can commission an affordability landing page
+
+### 2. Doogie Ask-URL Prefill
+- Homepage now honors `?ask=<query>` on load — auto-opens Doogie's chat panel and pre-fills the input with the URL-decoded question
+- Clean UX: the `?ask=` param is stripped from the URL via `history.replaceState` after handling so a refresh doesn't repeat the auto-open
+- Ties directly to Phase C — the search page's "Ask Doogie: '{query}'" shortcut now delivers on its promise: click it and Doogie opens with your question already typed
+- Reuses the existing `ez_doogie_prefill` localStorage hook already used by listing cards and the affordability calculator handoff — one path, zero duplication
+
+### 3. Content Relations Audit
+- **Frontend**: every row in the admin Content Relations table now shows a "🔍 Preview live ↗" deep-link under the source ID that opens the exact glossary/community/guide page where the pinned card surfaces — one-click validation for every manual relation
+- **Backend** `GET /api/admin/content-relations/{id}/audit` — programmatic access to the full audit context of a single relation (creator, timestamps, reason, notes, visibility, surface URL) for future auto-review tooling
+
+### Files touched
+- **Modified**: `backend/server.py` — added ~150 lines: `search_queries` logging in `/api/search`, `_STOPWORDS` extension (60+ real-estate domain terms), title-hits gate for quick_answer, `admin/search-analytics` aggregation endpoint, `admin/content-relations/{id}/audit` endpoint
+- **New**: `frontend/src/pages/AdminSearchAnalytics.jsx` (~170 lines) — the analytics dashboard with metric cards + 3 tables + gap-closing workflow
+- **Modified**: `frontend/src/pages/AdminContentRelations.jsx` — added "🔍 Preview live" link in the source ID column
+- **Modified**: `frontend/src/App.js` — imported the analytics page, added admin sidebar link, added the wrapper component + route, added the `?ask=` handler useEffect inside `DoogieChat`
+
+### Compliance controls in place
+- **PIPA**: raw IPs never stored — only a SHA-256 truncated hash used to distinguish repeat visitors from unique ones. No search query is tied to a user identity.
+- **BCFSA**: analytics view is admin-only; nothing surfaces on the public site
+- **CASL**: no marketing consent implications — analytics logs are non-marketing operational data
+- **Ask-URL prefill**: dispatches only the raw text the visitor's own link contained; opens the chat panel but does NOT auto-send — user still confirms consent and presses Send
+
+### End-to-end validation
+- Curl-verified: seeded a few queries, confirmed the analytics endpoint aggregates correctly (top queries, unique count, no-result buckets)
+- Playwright-verified: `/?ask=What+are+strata+fees?` auto-opens Doogie AND strips the param from the URL
+- Playwright-verified: admin login → `/admin/search-analytics` renders all 3 tables + metric cards + sidebar nav entry
+- Regression: all 7 core routes (`/`, `/buying-guide`, `/selling-guide`, `/glossary/deposit`, `/community/vancouver`, `/search`, `/admin/relations`) return 200
+
+### Deferred to future phases
+- **Click-through attribution**: log which search result the user actually clicked, so we can compute CTR per query and per group (would need a beacon endpoint + result URL tagging)
+- **Query clustering**: group similar no-result queries (`"strata fees Vancouver"`, `"strata fee Burnaby"`, `"strata monthly fee"`) into single suggestions so Doug commissions one term, not five
+- **Semantic embeddings** (per spec §13 Layer 3): promote from keyword to vector search once the log corpus is large enough to fine-tune relevance
+- **Guide printables + multilingual**: still on the backlog from Phase A

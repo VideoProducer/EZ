@@ -2666,13 +2666,12 @@ def _slug_from_query(q: str) -> str:
 
 
 async def _search_glossary(q: str, q_terms: list, limit: int):
-    """Search glossary terms + definitions. Returns list of (score, item)."""
-    # Mongo $text index isn't guaranteed here — use a regex query then rescore in Python
-    # for accuracy (fine at 439 docs).
+    """Search glossary terms + definitions. Returns list of (score, item).
+    Records `title_hits` separately so callers can gate quick-answer promotion
+    on a real title match rather than pure body noise."""
     pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
     if not pattern:
         return []
-    rx = re.compile(pattern, re.I)
     hits = []
     async for d in db.glossary.find(
         {"$or": [
@@ -2681,13 +2680,16 @@ async def _search_glossary(q: str, q_terms: list, limit: int):
         ]},
         {"_id": 0, "term": 1, "slug": 1, "category": 1, "definition": 1}
     ).limit(200):
-        score = 3 * _score_match(d.get("term", ""), q_terms) + _score_match(d.get("definition", ""), q_terms)
+        title_hits = _score_match(d.get("term", ""), q_terms)
+        body_hits = _score_match(d.get("definition", ""), q_terms)
+        score = 3 * title_hits + body_hits
         hits.append((score, {
             "kind": "Terms",
             "title": d["term"],
             "blurb": (d.get("definition") or "")[:180] + ("…" if len(d.get("definition") or "") > 180 else ""),
             "href": f"/glossary/{d['slug']}",
             "category": d.get("category") or "",
+            "title_hits": title_hits,
         }))
     hits.sort(key=lambda x: -x[0])
     return hits[:limit]
@@ -2778,7 +2780,7 @@ def _search_journey(q: str, q_terms: list, limit: int):
 
 
 @api.get("/search")
-async def grouped_search(q: str = "", limit: int = 6):
+async def grouped_search(q: str = "", limit: int = 6, request: Request = None):
     """Phase C — grouped natural-language educational search.
 
     Layers per Section 13 of the spec:
@@ -2786,7 +2788,12 @@ async def grouped_search(q: str = "", limit: int = 6):
       2. Structured relationships (category, tags)
       3. (Deferred) semantic retrieval
     Every item returned is drawn from EZtoFind.ca's approved content library.
-    Never invents an answer — empty groups are returned when no match exists."""
+    Never invents an answer — empty groups are returned when no match exists.
+
+    Every search hit is logged to `search_queries` (with an IP hash, never the
+    raw IP) so admins can review no-result and low-confidence queries and
+    commission new glossary terms / FAQ answers where visitors already ask.
+    """
     query = (q or "").strip()
     if not query:
         return {"query": "", "quick_answer": None, "groups": []}
@@ -2806,6 +2813,12 @@ async def grouped_search(q: str = "", limit: int = 6):
         "very", "much", "many", "more", "most", "less", "least", "few",
         "own", "off", "out", "up", "down", "on", "in", "at", "to", "of", "as",
         "by", "or", "if", "so", "no", "yes", "an", "be", "is", "am", "it",
+        # Real-estate domain stopwords — these appear in almost every glossary
+        # term, so allowing them as scoring tokens would let garbage queries
+        # like "xyzabc-not-a-real-thing" match "REALTOR®" or "Smart Home".
+        "real", "estate", "home", "homes", "house", "houses", "property",
+        "properties", "bc", "canada", "canadian", "columbia", "british",
+        "thing", "things",
     }
     raw_tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", query) if t]
     q_terms = [t for t in raw_tokens if len(t) >= 3 and t not in _STOPWORDS]
@@ -2824,14 +2837,20 @@ async def grouped_search(q: str = "", limit: int = 6):
     tools_hits = _search_tools(query, q_terms, lim)
     journey_hits = _search_journey(query, q_terms, lim)
 
-    # Build quick answer — prefer strongest glossary hit, then strongest FAQ hit
+    # Build quick answer — require a REAL title match (title_hits >= 1) so
+    # generic definition-only matches (e.g. "real", "home") don't hijack the
+    # top spot. Strip internal `title_hits` before returning to public.
     quick = None
-    if glossary_hits and glossary_hits[0][0] >= 3:
+    if glossary_hits and glossary_hits[0][0] >= 3 and glossary_hits[0][1].get("title_hits", 0) >= 1:
         _, top = glossary_hits[0]
         quick = {"kind": "Terms", "title": top["title"], "url": top["href"], "excerpt": top["blurb"]}
-    elif faq_hits and faq_hits[0][0] >= 3:
+    elif faq_hits and faq_hits[0][0] >= 6:
         _, top = faq_hits[0]
         quick = {"kind": "FAQs", "title": top["title"], "url": top["href"], "excerpt": top["blurb"]}
+
+    # Strip internal scoring fields before returning to public.
+    for _, it in glossary_hits:
+        it.pop("title_hits", None)
 
     # Always append Listings + Doogie shortcuts — they're universal launchpads
     from urllib.parse import quote_plus
@@ -2850,7 +2869,157 @@ async def grouped_search(q: str = "", limit: int = 6):
     # Drop empty groups (except Listings + Doogie which are always populated)
     groups = [g for g in groups if g["items"] or g["kind"] in ("Listings", "Doogie")]
 
+    # Fire-and-forget: log this search so admins can review no-result and
+    # low-confidence queries. IP is hashed to preserve PIPA compliance (we
+    # only need to distinguish repeat visitors, never identify them).
+    try:
+        import hashlib
+        ip = ""
+        if request is not None:
+            ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+                  or (request.client.host if request.client else ""))
+        ip_hash = hashlib.sha256((ip + "|eztofind-salt-v1").encode()).hexdigest()[:16] if ip else ""
+        result_count = sum(len(g["items"]) for g in groups if g["kind"] not in ("Listings", "Doogie"))
+        has_quick = quick is not None
+        confidence = "high" if has_quick else ("medium" if result_count >= 3 else ("low" if result_count > 0 else "none"))
+        await db.search_queries.insert_one({
+            "query": query,
+            "query_lower": query.lower(),
+            "tokens": q_terms,
+            "result_count": result_count,
+            "has_quick_answer": has_quick,
+            "confidence": confidence,
+            "ip_hash": ip_hash,
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.warning(f"search log failed: {e}")
+
     return {"query": query, "quick_answer": quick, "groups": groups}
+
+
+# ---------------------------------------------------------------------------
+# Phase D — Admin analytics (search + relations audit)
+# ---------------------------------------------------------------------------
+
+@api.get("/admin/search-analytics")
+async def admin_search_analytics(_=Depends(verify_admin), days: int = 30, limit: int = 30):
+    """Return aggregated search analytics for the admin dashboard:
+      * top queries by frequency
+      * queries that returned NO results (top opportunities for new content)
+      * low-confidence queries (returned some hits but no quick answer)
+    """
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 365)))).isoformat()
+    lim = max(1, min(limit, 100))
+
+    # Aggregate top queries
+    top_pipeline = [
+        {"$match": {"at": {"$gte": cutoff}}},
+        {"$group": {
+            "_id": "$query_lower",
+            "count": {"$sum": 1},
+            "last_query": {"$last": "$query"},
+            "avg_results": {"$avg": "$result_count"},
+            "any_quick": {"$max": {"$cond": ["$has_quick_answer", 1, 0]}},
+            "last_at": {"$max": "$at"},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": lim},
+    ]
+    top = []
+    async for d in db.search_queries.aggregate(top_pipeline):
+        top.append({
+            "query": d.get("last_query"),
+            "count": d.get("count", 0),
+            "avg_results": round(d.get("avg_results", 0) or 0, 1),
+            "any_quick_answer": bool(d.get("any_quick")),
+            "last_at": d.get("last_at"),
+        })
+
+    # No-result queries — the most valuable list for Doug: these are gaps in the library
+    no_result_pipeline = [
+        {"$match": {"at": {"$gte": cutoff}, "result_count": 0}},
+        {"$group": {
+            "_id": "$query_lower",
+            "count": {"$sum": 1},
+            "last_query": {"$last": "$query"},
+            "last_at": {"$max": "$at"},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": lim},
+    ]
+    no_results = []
+    async for d in db.search_queries.aggregate(no_result_pipeline):
+        no_results.append({
+            "query": d.get("last_query"),
+            "count": d.get("count", 0),
+            "last_at": d.get("last_at"),
+        })
+
+    # Low-confidence queries — some results but no strong quick answer
+    low_conf_pipeline = [
+        {"$match": {"at": {"$gte": cutoff}, "result_count": {"$gt": 0}, "has_quick_answer": False}},
+        {"$group": {
+            "_id": "$query_lower",
+            "count": {"$sum": 1},
+            "last_query": {"$last": "$query"},
+            "avg_results": {"$avg": "$result_count"},
+            "last_at": {"$max": "$at"},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": lim},
+    ]
+    low_confidence = []
+    async for d in db.search_queries.aggregate(low_conf_pipeline):
+        low_confidence.append({
+            "query": d.get("last_query"),
+            "count": d.get("count", 0),
+            "avg_results": round(d.get("avg_results", 0) or 0, 1),
+            "last_at": d.get("last_at"),
+        })
+
+    total = await db.search_queries.count_documents({"at": {"$gte": cutoff}})
+    unique = len({(d.get("query_lower") or "") async for d in db.search_queries.find({"at": {"$gte": cutoff}}, {"query_lower": 1, "_id": 0})})
+
+    return {
+        "period_days": days,
+        "total_searches": total,
+        "unique_queries": unique,
+        "top": top,
+        "no_results": no_results,
+        "low_confidence": low_confidence,
+    }
+
+
+@api.get("/admin/content-relations/{rel_id}/audit")
+async def admin_relation_audit(rel_id: str, _=Depends(verify_admin)):
+    """Return audit context for a single manual relation: creator, timestamps,
+    and the surface page where it appears (so admins can inspect it live)."""
+    rel = await db.content_relations.find_one({"id": rel_id}, {"_id": 0})
+    if not rel:
+        raise HTTPException(404, "Relation not found")
+    # Build the surface page URL so Doug can click and see it live
+    stype = rel.get("source_type", "")
+    sid = rel.get("source_id", "")
+    surface_url = None
+    if stype == "glossary":
+        surface_url = f"/glossary/{sid}"
+    elif stype in ("community", "region", "neighbourhood"):
+        surface_url = f"/community/{sid}"
+    elif stype == "guide":
+        surface_url = f"/{sid}" if sid.endswith("-guide") else f"/buying-guide"
+    return {
+        "relation": rel,
+        "surface_url": surface_url,
+        "created_at": rel.get("created_at"),
+        "updated_at": rel.get("updated_at"),
+        "created_by": rel.get("created_by") or "admin",
+        "reason": rel.get("reason"),
+        "notes": rel.get("notes"),
+        "visibility": rel.get("visibility", "public"),
+        "active": rel.get("active", True),
+    }
 
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
