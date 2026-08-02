@@ -3193,9 +3193,16 @@ async def admin_search_clusters(_=Depends(verify_admin), days: int = 30, kind: s
       * `no_results` (default) — cluster queries that returned zero hits
       * `low_confidence` — cluster queries that returned some hits but no quick answer
       * `all` — cluster every query (higher-noise; kept for completeness)
+
+    Each cluster includes a 30-day `daily_counts` array (oldest → newest) so
+    the admin dashboard can render trend sparklines and prioritize gaps
+    whose search volume is growing.
     """
     from datetime import timedelta
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 365)))).isoformat()
+    window_days = max(1, min(days, 365))
+    now = datetime.now(timezone.utc)
+    cutoff_dt = now - timedelta(days=window_days)
+    cutoff = cutoff_dt.isoformat()
 
     match = {"at": {"$gte": cutoff}}
     if kind == "no_results":
@@ -3203,7 +3210,6 @@ async def admin_search_clusters(_=Depends(verify_admin), days: int = 30, kind: s
     elif kind == "low_confidence":
         match["result_count"] = {"$gt": 0}
         match["has_quick_answer"] = False
-    # else "all" — no extra filter
 
     pipeline = [
         {"$match": match},
@@ -3214,14 +3220,137 @@ async def admin_search_clusters(_=Depends(verify_admin), days: int = 30, kind: s
             "last_at": {"$max": "$at"},
         }},
         {"$sort": {"count": -1}},
-        {"$limit": 400},  # cap raw rows before clustering to keep the endpoint fast
+        {"$limit": 400},
     ]
     rows = []
     async for d in db.search_queries.aggregate(pipeline):
         rows.append({"query": d.get("last_query"), "count": d.get("count", 0), "last_at": d.get("last_at")})
 
-    clusters = _cluster_queries(rows)
-    return {"period_days": days, "kind": kind, "raw_query_count": len(rows), "clusters": clusters[:limit]}
+    clusters = _cluster_queries(rows)[:limit]
+
+    # Attach a per-day count vector for each cluster (30-day sparkline).
+    # We compute this AFTER clustering so a cluster that spans multiple
+    # variants correctly sums the daily volume across all of them.
+    if clusters:
+        # Bucket boundaries — one bucket per full UTC day, oldest first.
+        bucket_days = min(window_days, 30)
+        buckets = []
+        for i in range(bucket_days):
+            day_start = (now - timedelta(days=bucket_days - 1 - i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            buckets.append((day_start.isoformat(), day_end.isoformat()))
+
+        # For each cluster, look up all variant queries and count per day.
+        for c in clusters:
+            variant_queries = [v.get("query", "").lower() for v in c.get("variants", [])]
+            if not variant_queries:
+                c["daily_counts"] = [0] * bucket_days
+                continue
+            daily = [0] * bucket_days
+            async for d in db.search_queries.find(
+                {"query_lower": {"$in": variant_queries}, "at": {"$gte": buckets[0][0]}},
+                {"at": 1, "_id": 0}
+            ):
+                at = d.get("at", "")
+                for i, (s, e) in enumerate(buckets):
+                    if s <= at < e:
+                        daily[i] += 1
+                        break
+            c["daily_counts"] = daily
+
+            # Detect an upward trend: compare last-7-day sum vs previous-7 sum.
+            if bucket_days >= 14:
+                recent = sum(daily[-7:])
+                prior = sum(daily[-14:-7])
+                c["trend"] = "up" if recent > prior * 1.3 else ("down" if prior > recent * 1.3 else "flat")
+                c["trend_recent_7d"] = recent
+                c["trend_prior_7d"] = prior
+            else:
+                c["trend"] = "flat"
+
+    return {"period_days": days, "kind": kind, "raw_query_count": len(rows), "clusters": clusters}
+
+
+# ---------------------------------------------------------------------------
+# Content Commissions — the "backlog" of new glossary terms/FAQs Doug wants
+# to commission from the AI content pipeline. Populated by clicking the
+# "Commission this term →" button on any dashboard gap card, then reviewed
+# via /admin/approvals.
+# ---------------------------------------------------------------------------
+
+class ContentCommission(BaseModel):
+    id: Optional[str] = None
+    term: str
+    slug: Optional[str] = None
+    notes: Optional[str] = None
+    source: Optional[str] = "manual"       # "search-gap" | "manual" | "cluster"
+    representative_query: Optional[str] = None
+    variant_queries: Optional[List[str]] = None
+    total_search_count: Optional[int] = None
+    status: str = "backlog"                # "backlog" | "in-progress" | "shipped" | "declined"
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+@api.get("/admin/content-commissions")
+async def admin_list_commissions(_=Depends(verify_admin), status: Optional[str] = None):
+    q = {}
+    if status:
+        q["status"] = status
+    items = []
+    async for r in db.content_commissions.find(q, {"_id": 0}).sort([("status", 1), ("created_at", -1)]):
+        items.append(r)
+    return {"items": items, "count": len(items)}
+
+
+@api.post("/admin/content-commissions")
+async def admin_create_commission(c: ContentCommission, _=Depends(verify_admin)):
+    from uuid import uuid4
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # De-dupe by (term + slug) — if an active backlog item already exists for
+    # this term, return the existing id rather than creating a duplicate.
+    slug_norm = (c.slug or "").lower().strip()
+    term_norm = (c.term or "").strip()
+    if not term_norm:
+        raise HTTPException(400, "term is required")
+    existing = await db.content_commissions.find_one(
+        {"term": {"$regex": f"^{re.escape(term_norm)}$", "$options": "i"},
+         "status": {"$in": ["backlog", "in-progress"]}},
+        {"_id": 0}
+    )
+    if existing:
+        return {"ok": True, "id": existing["id"], "duplicate": True}
+    rec = c.model_dump()
+    rec["id"] = rec.get("id") or str(uuid4())
+    rec["term"] = term_norm
+    rec["slug"] = slug_norm or None
+    rec["created_at"] = now_iso
+    rec["updated_at"] = now_iso
+    await db.content_commissions.insert_one(dict(rec))
+    return {"ok": True, "id": rec["id"], "duplicate": False}
+
+
+@api.put("/admin/content-commissions/{cid}")
+async def admin_update_commission(cid: str, payload: dict, _=Depends(verify_admin)):
+    """Partial update — only mutable fields (status, notes, slug, term) are
+    accepted; anything else in the payload is ignored."""
+    allowed = {"status", "notes", "slug", "term"}
+    upd = {k: v for k, v in (payload or {}).items() if k in allowed and v is not None}
+    if not upd:
+        return {"ok": True, "no_op": True}
+    upd["updated_at"] = datetime.now(timezone.utc).isoformat()
+    r = await db.content_commissions.update_one({"id": cid}, {"$set": upd})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Commission not found")
+    return {"ok": True}
+
+
+@api.delete("/admin/content-commissions/{cid}")
+async def admin_delete_commission(cid: str, _=Depends(verify_admin)):
+    r = await db.content_commissions.delete_one({"id": cid})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Commission not found")
+    return {"ok": True}
 
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:

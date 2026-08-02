@@ -14,6 +14,7 @@ import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
+import Sparkline from "./components/Sparkline";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -4426,12 +4427,23 @@ const AdminDash = () => {
                     Also: {c.variants.slice(1, 3).map(v => `"${v.query}"`).join(", ")}{c.variants.length > 3 ? `, +${c.variants.length - 3} more` : ""}
                   </div>
                 )}
+                {c.daily_counts && c.daily_counts.length > 0 && (
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.7rem",gap:"0.5rem"}}>
+                    <div style={{fontSize:"0.7rem",color:"var(--muted)",fontFamily:"Inter,sans-serif",lineHeight:1.3}}>
+                      {c.trend === "up" && <span style={{color:"#DC2626",fontWeight:700}}>↗ Growing</span>}
+                      {c.trend === "down" && <span style={{color:"#059669",fontWeight:700}}>↘ Fading</span>}
+                      {c.trend === "flat" && <span style={{color:"var(--muted)"}}>→ Steady</span>}
+                      <span style={{marginLeft:"0.35rem",opacity:0.85}}>30d</span>
+                    </div>
+                    <Sparkline values={c.daily_counts} trend={c.trend} width={130} height={24} testId={`gap-sparkline-${i}`}/>
+                  </div>
+                )}
                 <div style={{fontSize:"0.72rem",color:"var(--muted)",fontFamily:"monospace",marginBottom:"0.85rem"}}>
                   Suggested slug: <span style={{color:"var(--brand-navy)"}}>{suggestedSlug || "—"}</span>
                 </div>
                 <div style={{display:"flex",gap:"0.4rem",flexWrap:"wrap"}}>
                   <Link
-                    to={`/admin/approvals?commission=${encodeURIComponent(suggestedTerm)}&slug=${encodeURIComponent(suggestedSlug)}&source=search-gap`}
+                    to={`/admin/approvals?commission=${encodeURIComponent(suggestedTerm)}&slug=${encodeURIComponent(suggestedSlug)}&source=search-gap&q=${encodeURIComponent(c.representative_query)}`}
                     data-testid={`gap-commission-${i}`}
                     className="btn btn-primary"
                     style={{fontSize:"0.82rem",padding:"0.45rem 0.85rem",flex:"1 1 auto",textAlign:"center"}}
@@ -6104,8 +6116,144 @@ const AdminApprovals = () => {
     await loadSummary(); if(tab==="glossary") await loadItems("glossary");
   };
 
+  // ----- Phase D+ Commission backlog (from gap cards on /admin) -----
+  const [commissionForm, setCommissionForm] = useState(null);   // {term, slug, notes, source} | null
+  const [commissions, setCommissions] = useState([]);
+  const [commMsg, setCommMsg] = useState("");
+
+  const loadCommissions = async () => {
+    const r = await axios.get(`${API}/admin/content-commissions`, {headers}).catch(()=>({data:{items:[]}}));
+    setCommissions(r.data?.items || []);
+  };
+  useEffect(() => { loadCommissions(); }, []);
+
+  // Read URL params on mount — if a gap card sent us here with ?commission=,
+  // prefill the form and scroll it into view. Params are stripped after read
+  // so a refresh doesn't repeat the prefill.
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const term = sp.get("commission");
+      if (term) {
+        setCommissionForm({
+          term: term,
+          slug: sp.get("slug") || "",
+          notes: "",
+          source: sp.get("source") || "search-gap",
+          representative_query: sp.get("q") || term,
+        });
+        sp.delete("commission"); sp.delete("slug"); sp.delete("source"); sp.delete("q");
+        const newUrl = window.location.pathname + (sp.toString() ? `?${sp}` : "") + window.location.hash;
+        window.history.replaceState({}, "", newUrl);
+        setTimeout(() => {
+          document.getElementById("commission-banner")?.scrollIntoView({block: "start", behavior: "smooth"});
+        }, 150);
+      }
+    } catch {}
+  }, []);
+
+  const submitCommission = async () => {
+    if (!commissionForm?.term?.trim()) { setCommMsg("⚠ Term is required."); return; }
+    setCommMsg("");
+    try {
+      const r = await axios.post(`${API}/admin/content-commissions`, commissionForm, {headers});
+      setCommMsg(r.data?.duplicate ? "ℹ Already in backlog — no duplicate created." : "✅ Added to Content Backlog.");
+      setCommissionForm(null);
+      loadCommissions();
+      setTimeout(() => setCommMsg(""), 4000);
+    } catch (e) {
+      setCommMsg("⚠ " + (e.response?.data?.detail || e.message));
+    }
+  };
+
+  const updateCommissionStatus = async (id, status) => {
+    await axios.put(`${API}/admin/content-commissions/${id}`, {status}, {headers});
+    loadCommissions();
+  };
+  const deleteCommission = async (id) => {
+    if (!window.confirm("Remove this from the content backlog?")) return;
+    await axios.delete(`${API}/admin/content-commissions/${id}`, {headers});
+    loadCommissions();
+  };
+
   return <AdminShell active="approvals">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>AI Content Approvals</h1>
+
+    {/* Commission prefill banner + backlog — populated by ?commission= URL
+        params from dashboard gap cards, plus a persistent backlog list. */}
+    {commissionForm && (
+      <div id="commission-banner" className="paper" data-testid="commission-banner" style={{padding:"1.35rem 1.5rem",marginBottom:"1.25rem",border:"2px solid #DC2626",background:"#FEF2F2"}}>
+        <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:800,color:"#DC2626",marginBottom:"0.4rem"}}>🎯 Content gap → commission new term</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",color:"var(--brand-navy)",lineHeight:1.55,marginBottom:"0.85rem"}}>
+          Visitors searched for <strong>"{commissionForm.representative_query}"</strong> and got no results. Add it to your Content Backlog and we'll queue an AI-drafted definition + FAQs for your review.
+        </div>
+        <div className="form-grid" style={{marginBottom:"0.75rem"}}>
+          <div className="field">
+            <label>Term name *</label>
+            <input value={commissionForm.term} onChange={e=>setCommissionForm(f=>({...f, term: e.target.value}))} data-testid="commission-term"/>
+          </div>
+          <div className="field">
+            <label>Slug (URL fragment)</label>
+            <input value={commissionForm.slug} onChange={e=>setCommissionForm(f=>({...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-|-$/g,"")}))} data-testid="commission-slug"/>
+          </div>
+        </div>
+        <div className="field" style={{marginBottom:"0.85rem"}}>
+          <label>Notes for the drafter (optional)</label>
+          <textarea rows="2" value={commissionForm.notes||""} onChange={e=>setCommissionForm(f=>({...f, notes: e.target.value}))} placeholder="Any BC-specific angle, regulatory reference, or examples the drafter should include." data-testid="commission-notes"/>
+        </div>
+        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+          <button className="btn btn-primary" onClick={submitCommission} data-testid="commission-submit">📥 Add to Content Backlog</button>
+          <button className="btn btn-ghost" onClick={()=>setCommissionForm(null)} data-testid="commission-cancel">Cancel</button>
+        </div>
+      </div>
+    )}
+    {commMsg && (
+      <div data-testid="commission-msg" style={{padding:"0.6rem 1rem",borderRadius:6,background:commMsg.startsWith("⚠") ? "#FEF2F2" : (commMsg.startsWith("ℹ") ? "#F0F4FB" : "#F0FDF4"),color:commMsg.startsWith("⚠") ? "#DC2626" : (commMsg.startsWith("ℹ") ? "var(--brand-navy)" : "#059669"),border:"1px solid rgba(0,0,0,0.08)",marginBottom:"1rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>{commMsg}</div>
+    )}
+
+    {commissions && commissions.length > 0 && (
+      <div className="paper" data-testid="commissions-backlog" style={{padding:"1.15rem 1.35rem",marginBottom:"1.5rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
+          <h3 style={{margin:0,fontSize:"1.05rem",color:"var(--brand-navy)"}}>📋 Content Backlog ({commissions.filter(c=>c.status!=="shipped"&&c.status!=="declined").length} open)</h3>
+          <div style={{fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>Terms visitors asked for that aren't in the glossary yet.</div>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Inter,sans-serif",fontSize:"0.88rem"}}>
+            <thead>
+              <tr>
+                <th style={{textAlign:"left",padding:"0.5rem 0.6rem",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",fontWeight:700,borderBottom:"2px solid var(--brand-navy)"}}>Term</th>
+                <th style={{textAlign:"left",padding:"0.5rem 0.6rem",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",fontWeight:700,borderBottom:"2px solid var(--brand-navy)"}}>Source</th>
+                <th style={{textAlign:"left",padding:"0.5rem 0.6rem",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.06em",color:"var(--muted)",fontWeight:700,borderBottom:"2px solid var(--brand-navy)"}}>Status</th>
+                <th style={{borderBottom:"2px solid var(--brand-navy)"}}/>
+              </tr>
+            </thead>
+            <tbody>
+              {commissions.map(c => (
+                <tr key={c.id} data-testid={`commission-row-${c.id}`}>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+                    <div style={{fontWeight:700,color:"var(--brand-navy)"}}>{c.term}</div>
+                    {c.slug && <div style={{fontSize:"0.75rem",color:"var(--muted)",fontFamily:"monospace"}}>{c.slug}</div>}
+                    {c.notes && <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.2rem",fontStyle:"italic"}}>{c.notes}</div>}
+                  </td>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"monospace"}}>{c.source||"manual"}</td>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+                    <select value={c.status} onChange={e=>updateCommissionStatus(c.id, e.target.value)} data-testid={`commission-status-${c.id}`} style={{padding:"0.25rem 0.4rem",fontSize:"0.82rem",fontFamily:"Inter,sans-serif"}}>
+                      <option value="backlog">Backlog</option>
+                      <option value="in-progress">In progress</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="declined">Declined</option>
+                    </select>
+                  </td>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)",whiteSpace:"nowrap"}}>
+                    <button className="btn btn-ghost" style={{padding:"0.25rem 0.55rem",fontSize:"0.78rem",color:"#DC2626"}} onClick={()=>deleteCommission(c.id)} data-testid={`commission-delete-${c.id}`}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
     <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem"}}>BCFSA compliance: as the licensed REALTOR®, you are responsible for all AI-generated content. Review, edit if needed, then approve before publication. Unapproved content stays hidden from the public site.</p>
 
     <div className="paper" style={{marginTop:"1rem",background:"#F5F0E1"}}>

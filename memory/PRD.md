@@ -918,3 +918,55 @@ Closes the loop on the search-analytics story: the top-3 no-result clusters now 
 - **Multilingual guides** (P2) — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
 - **Semantic embeddings** — Phase C.2 layer 3
 - **Approvals form prefill support** — the deep-link params (`commission`, `slug`, `source`) are sent but the AdminApprovals page doesn't yet read them; a small change would auto-fill the form and complete the "three-click gap-closing" experience end-to-end
+
+---
+
+## 2026-08-02 — Approvals Prefill + Cluster Trend Sparklines
+
+Closes the "three-click gap-closing" loop end-to-end AND adds trend visualization so Doug prioritizes content investment on rising demand.
+
+### 1. Approvals Prefill Support
+- `/admin/approvals` now honors URL params `?commission=<Term>&slug=<slug>&source=<...>&q=<visitor_query>`:
+  - On mount, reads params → shows a highlighted commission banner with the term + slug + representative visitor query prefilled
+  - Banner has editable term/slug/notes fields and a **📥 Add to Content Backlog** button
+  - URL params are stripped via `history.replaceState` so refresh doesn't repeat the prefill
+- **New backend collection** `content_commissions` with full CRUD (`GET/POST/PUT/DELETE /api/admin/content-commissions`):
+  - Fields: `id`, `term`, `slug`, `notes`, `source`, `representative_query`, `variant_queries`, `total_search_count`, `status` (backlog/in-progress/shipped/declined), `created_at`, `updated_at`
+  - POST is de-duped by term (case-insensitive) so clicking the same gap card twice doesn't create duplicates — returns existing id + `duplicate: true`
+  - PUT accepts partial updates (only `status`/`notes`/`slug`/`term` mutable) so the inline status dropdown works safely
+- **Content Backlog table** on `/admin/approvals`:
+  - Lists every open commission with term/slug/notes/source/status
+  - Inline status dropdown (backlog → in-progress → shipped / declined)
+  - Delete button
+  - Silent-hides when empty so the approvals page stays clean until Doug commissions something
+- **Success/duplicate/error messages** shown inline; 4-second auto-dismiss
+
+### 2. Cluster Trend Sparklines
+- **Backend** `/api/admin/search-analytics/clusters` now returns per-cluster `daily_counts` array (30-day vector, oldest → newest) plus a `trend` flag (`up` / `down` / `flat`) computed as last-7-day sum vs prior-7-day sum with a 1.3× threshold
+- **New reusable component** `frontend/src/components/Sparkline.jsx` — zero-dependency SVG bar sparkline (130×24px default), tint follows the trend (red for up = priority signal, green for down = fading interest)
+- **Dashboard gap cards** now render:
+  - "↗ Growing" / "↘ Fading" / "→ Steady" label with color coding
+  - Inline 30-day SVG sparkline showing raw daily volume
+  - Aria label describing the data for screen readers
+- **Enhanced gap-card CTA URL**: now includes `&q=<representative_query>` so the approvals banner can quote the visitor's actual search back to Doug
+
+### End-to-end validation
+- Seeded 80 rows across 3 realistic clusters (passive house = growing, assignment ban = older-heavy, laneway = steady). All three sparklines render with proper trend detection
+- Playwright: click "Commission this term" on a gap card → prefill banner appears → click "Add to Content Backlog" → success message → new row appears in the backlog table
+- 10/10 core routes 200 OK; seeded demo data cleared post-verification
+
+### Files touched
+- **Modified**: `backend/server.py` — added ~110 lines: `daily_counts` + `trend` computation on cluster endpoint, `ContentCommission` model, 4 CRUD endpoints (`content-commissions` GET/POST/PUT/DELETE) with dedup + partial-update guards
+- **New**: `frontend/src/components/Sparkline.jsx` — reusable SVG bar sparkline (~50 lines)
+- **Modified**: `frontend/src/App.js` — imported Sparkline; extended `AdminDash` gap cards with trend label + sparkline; extended `AdminApprovals` with URL-param reader, commission form banner, backlog table, and 4 CRUD helpers (~120 lines added, no new file)
+
+### Compliance controls preserved
+- **PIPA**: commissions store only term/slug/notes/source — no visitor PII
+- **BCFSA**: prefill banner still routes through the licensee (Doug) for review before the AI drafts the actual term — the commission is an intent record, not a published definition
+- **CASL**: analytics loop is operational, not marketing
+
+### Backlog still open
+- **Guide printables** — print CSS on Buyer/Seller Guides
+- **Guide email capture** — email → PDF download with CASL-split consent
+- **Multilingual guides** — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
+- **Auto-draft on commission approval** — when Doug flips a commission to "in-progress", automatically kick off the AI drafter to produce the definition + 10 FAQs for review
