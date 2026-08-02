@@ -15,7 +15,7 @@ import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
   Bus, Trees, Waves, CheckCircle2, ArrowRight, Home as HomeIcon,
-  Compass, Radio, Volume2, Maximize2, X
+  Compass, Radio, Volume2, Maximize2, X, ClipboardList
 } from "lucide-react";
 
 // ── Palette (matches /app/frontend/src/index.css) ────────────────────────────
@@ -104,13 +104,13 @@ const SCENARIOS = [
   },
   {
     id: "qualify",
-    label: "Talk to Doug",
-    icon: MessageCircle,
+    label: "Consultation Request",
+    icon: ClipboardList,
     turns: [
-      { who: "agent", text: "Whenever you're ready, I can pass a note to Doug. Nothing is sent until you tap consent." },
+      { who: "agent", text: "Ready when you are — this is a short, consent-first questionnaire that goes straight to Doug LeMaire, REALTOR®. Nothing is sent until you tick consent." },
       { who: "user", text: "Sure — I want to sell my Burnaby townhouse in the spring." },
-      { who: "agent", pose: "thinking", text: "Noted. Capturing timeline, property type, and preferred contact channel. Doug will personally review and reach out within 1 business day." },
-      { who: "agent", pose: "celebrating", text: "Thanks! Your note is on Doug's desk. ✓" },
+      { who: "agent", pose: "thinking", text: "Capturing timeline, property type, and preferred contact channel. Doug (BCFSA #167790) will personally review your request and reach out within 1 business day." },
+      { who: "agent", pose: "celebrating", text: "Thanks! Your consultation request is on Doug's desk. ✓" },
     ],
   },
 ];
@@ -122,7 +122,7 @@ const CHIPS = {
   neighbourhood: ["Schools nearby", "Transit score", "Parks & rec"],
   buyerinsights: ["Days on market", "Inventory now", "90-day trend"],
   sellerlookup: ["Comparable actives", "Days on market", "Recent sold prices"],
-  qualify: ["Talk to Doug", "Book a call", "Market Estimate"],
+  qualify: ["Start questionnaire", "Book a consultation", "Market Estimate"],
 };
 
 // ── Scripted "voice-input" pairs (per scenario) ──────────────────────────────
@@ -151,7 +151,7 @@ const VOICE_SCRIPT = {
   },
   qualify: {
     heard: "Book me a Thursday morning call, please.",
-    reply: "Noted — Thursday morning window, CASL consent captured. Doug will personally confirm within one business day. Nothing sent yet.",
+    reply: "Noted — Thursday morning window, CASL consent captured. Doug (BCFSA #167790) will personally confirm within one business day. Nothing sent yet.",
   },
 };
 
@@ -909,9 +909,14 @@ const PaneQualify = () => {
   }, []);
   return (
     <div data-testid="pane-qualify" style={{ display: "grid", gap: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Send a note to Doug</strong>
-        <Pill tone="green"><ShieldCheck size={12}/> Consent-first</Pill>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <strong style={{ color: C.navy, fontSize: 14 }}>Consultation Request Form</strong>
+          <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
+            Short questionnaire · goes directly to Doug LeMaire, REALTOR® (BCFSA #167790)
+          </div>
+        </div>
+        <Pill tone="green"><ShieldCheck size={12}/> Consent-first · CASL</Pill>
       </div>
       <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
         <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>Intake progress</div>
@@ -942,7 +947,7 @@ const PaneQualify = () => {
         background: "linear-gradient(135deg, rgba(30,79,207,0.06), rgba(34,197,94,0.06))",
         border: "1px solid #DDE6FA", borderRadius: 12, padding: 12, fontSize: 12, color: C.navy,
       }}>
-        <strong>What happens next:</strong> Doug personally reads every note. No automated outreach — you'll hear from a real person within 1 business day. Doogie shares information, not advice.
+        <strong>What happens next:</strong> Your responses go straight to Doug LeMaire, REALTOR® (BCFSA #167790). He personally reads every consultation request — no automated outreach. You'll hear from a real person within 1 business day. Doogie shares general information, not advice.
       </div>
     </div>
   );
