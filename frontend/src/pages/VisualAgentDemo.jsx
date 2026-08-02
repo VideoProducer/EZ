@@ -96,15 +96,15 @@ const CHIPS = {
 const VOICE_SCRIPT = {
   search: {
     heard: "Any of those with parking and in-suite laundry?",
-    reply: "Three of the four match. 2135 W 8th Ave has secured underground and full-size laundry. Playing on speaker.",
+    reply: "Three of the four match. 2135 W 8th Ave has secured underground and full-size laundry. Educational retrieval only — not advice.",
   },
   tour: {
     heard: "How tall are the ceilings in the living room?",
-    reply: "Nine feet over-height across the living space, with a soffit drop of four inches at the kitchen edge. Narrating as you move.",
+    reply: "Nine feet over-height across the living space, with a soffit drop of four inches at the kitchen edge. Retrieved from the strata plan — not advice.",
   },
   neighbourhood: {
     heard: "How's the summer walk to the beach with a stroller?",
-    reply: "Six-minute stroller-friendly walk to Kits Beach via Cornwall — curb-cut sidewalks the entire way. Sourced from CoV Open Data.",
+    reply: "Six-minute stroller-friendly walk to Kits Beach via Cornwall — curb-cut sidewalks the entire way. Sourced from CoV Open Data. Educational retrieval only.",
   },
   qualify: {
     heard: "Book me a Thursday morning call, please.",
@@ -461,6 +461,7 @@ const PaneTour = () => {
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Narrating</div>
                 <div style={{ fontSize: 11, opacity: 0.85 }}>Ask about ceilings, strata, or nearby amenities</div>
+                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, fontStyle: "italic" }}>Educational retrieval only — not advice</div>
               </div>
             </motion.div>
           </motion.div>
@@ -526,7 +527,10 @@ const PaneTour = () => {
                 }}
                 onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
-              <div style={{ fontSize: 11, fontWeight: 600 }}>Doogie is your guide</div>
+              <div style={{ display: "grid", lineHeight: 1.2 }}>
+                <span style={{ fontSize: 11, fontWeight: 600 }}>Doogie is your guide</span>
+                <span style={{ fontSize: 9, opacity: 0.65, fontStyle: "italic" }}>Educational only — not advice</span>
+              </div>
             </motion.div>
             <AnimatePresence>
               {hot && (
@@ -663,6 +667,13 @@ export default function VisualAgentDemo() {
   const [voiceReply, setVoiceReply] = useState(null);   // agent narration once recording completes
   const [voiceMode, setVoiceMode] = useState("scripted"); // "scripted" | "live"
   const [voiceError, setVoiceError] = useState("");
+  // PIPA §7/§14 — Live voice sends audio to the browser's speech-recognition
+  // provider (Google in Chrome/Edge, Apple in Safari), then the transcript hits
+  // /api/doogie/chat where PII is redacted before storage. We show a one-time
+  // disclosure + consent gate before the first Live recording so the user
+  // knows the data flow BEFORE their voice leaves the device.
+  const [voicePipaAck, setVoicePipaAck] = useState(false);
+  const [showPipaGate, setShowPipaGate] = useState(false);
   const recognitionRef = useRef(null);
   const sessionIdRef = useRef(null);
   if (!sessionIdRef.current) {
@@ -745,6 +756,12 @@ export default function VisualAgentDemo() {
   };
 
   const runLiveVoice = () => {
+    // PIPA gate — before we hit the browser's SpeechRecognition (which streams
+    // audio to Google/Apple servers), the user must acknowledge the disclosure.
+    if (!voicePipaAck) {
+      setShowPipaGate(true);
+      return;
+    }
     // Feature-detect browser SpeechRecognition
     const SR = typeof window !== "undefined" &&
       (window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -1002,8 +1019,10 @@ export default function VisualAgentDemo() {
                     padding: "4px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
                     background: voiceMode === "live" ? C.green : "transparent",
                     color: voiceMode === "live" ? "#fff" : "#fff",
+                    display: "inline-flex", alignItems: "center", gap: 4,
                   }}
-                >Live</button>
+                  title="Live voice uses your browser's speech recognition — you'll see a PIPA disclosure before your first recording"
+                >Live{voiceMode === "live" && !voicePipaAck ? <ShieldCheck size={10}/> : ""}</button>
               </div>
               <button
                 data-testid="visual-agent-voice-btn"
@@ -1268,11 +1287,109 @@ export default function VisualAgentDemo() {
         </div>
       </section>
 
-      {/* ── Footer note ───────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1000, margin: "26px auto 0", padding: "0 20px", color: "#6B7280", fontSize: 11, textAlign: "center" }}>
-        <ArrowRight size={11} style={{ verticalAlign: "-1px" }}/> Internal mockup at <code style={{ background: "#F1F5F9", padding: "1px 6px", borderRadius: 4 }}>/visual-agent-demo</code>.
-        Not linked from public navigation. All data shown is illustrative.
+      {/* ── Compliance footer — BCFSA / CASL / PIPA reference on this page ─── */}
+      <div style={{ maxWidth: 1000, margin: "26px auto 0", padding: "20px", color: "#4B5563", fontSize: 11 }}>
+        <div style={{
+          background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+          padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase", marginBottom: 4 }}>
+              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> BCFSA
+            </div>
+            <div>Doug LeMaire, REALTOR® · <strong>Licence #167790</strong> · Fraser Property Management Realty Services Ltd. Doogie is a hallucination-hardened <strong>educational retrieval tool</strong> — not advice. For personalized guidance, request a <a href="/referral-request" style={{ color: C.blue, fontWeight: 600 }}>licensed BC REALTOR®</a>. BCFSA Consumer Line: <strong>1-877-683-9664</strong>.</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.green, textTransform: "uppercase", marginBottom: 4 }}>
+              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> CASL
+            </div>
+            <div>No commercial outreach is triggered by this demo. The Qualification scenario shows a <strong>consent-first intake</strong> — Doug never contacts a lead without ticked consent, express or implied, and every send carries an unsubscribe link.</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>
+              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> PIPA (BC)
+            </div>
+            <div>Scripted mode captures <strong>no audio</strong>. Live mode uses your browser's speech recognition (Google/Apple) — the disclosure gate appears before your first recording. Transcripts hit <code style={{ background: "#F1F5F9", padding: "1px 4px", borderRadius: 3 }}>/api/doogie/chat</code>, are PII-redacted, kept 30 days, then purged. Request your data or deletion at <a href="/privacy/data-request" style={{ color: C.blue, fontWeight: 600 }}>/privacy/data-request</a>.</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 12, textAlign: "center", opacity: 0.7 }}>
+          <ArrowRight size={11} style={{ verticalAlign: "-1px" }}/> Internal mockup at <code style={{ background: "#F1F5F9", padding: "1px 6px", borderRadius: 4 }}>/visual-agent-demo</code>.
+          Not linked from public navigation. All conversation content on this page is illustrative — no listings, offers, or contracts are formed here (RESA).
+        </div>
       </div>
+
+      {/* ── PIPA §7/§14 disclosure gate — shown only on first Live voice attempt ─ */}
+      <AnimatePresence>
+        {showPipaGate && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            data-testid="voice-pipa-gate"
+            style={{
+              position: "fixed", inset: 0, zIndex: 100,
+              background: "rgba(11,25,48,0.72)", backdropFilter: "blur(4px)",
+              display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            }}
+            onClick={() => setShowPipaGate(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.94, y: 20 }} animate={{ scale: 1, y: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff", borderRadius: 16, maxWidth: 520, width: "100%",
+                padding: 24, boxShadow: "0 30px 60px rgba(0,0,0,0.35)",
+                border: `2px solid ${C.gold}`,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <ShieldCheck size={28} color={C.blue}/>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>PIPA §7 / §14 disclosure</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, fontFamily: "'Playfair Display', serif" }}>Before you turn on live voice</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.55, color: "#374151", display: "grid", gap: 8 }}>
+                <p style={{ margin: 0 }}>
+                  <strong>What happens when you speak:</strong>
+                </p>
+                <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 4 }}>
+                  <li>Your browser streams your audio to its speech-recognition provider (<strong>Google</strong> in Chrome/Edge, <strong>Apple</strong> in Safari) to convert it to text. This is a <strong>cross-border transfer</strong> outside Canada.</li>
+                  <li>Only the resulting <strong>text</strong> is sent to Doogie at <code style={{ background: "#F1F5F9", padding: "1px 4px", borderRadius: 3 }}>/api/doogie/chat</code>. PII (phone, email, address, SIN) is redacted <em>before</em> storage. Retained 30 days, then purged.</li>
+                  <li>Doogie's reply is <strong>educational retrieval only — never advice</strong>, per BCFSA. For personalized guidance, use <a href="/referral-request" style={{ color: C.blue, fontWeight: 600 }}>a licensed BC REALTOR®</a>.</li>
+                  <li>Audio is <strong>never stored</strong> by EZtoFind. You can revoke mic permission any time in your browser settings.</li>
+                </ol>
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6B7280" }}>
+                  Prefer to keep your voice on-device? Stay in <strong>Scripted</strong> mode — no mic is opened and no audio ever leaves your browser.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
+                <button
+                  data-testid="voice-pipa-decline"
+                  onClick={() => { setShowPipaGate(false); setVoiceMode("scripted"); }}
+                  style={{
+                    flex: "1 1 auto", padding: "10px 14px", borderRadius: 10,
+                    border: "1px solid #D1D5DB", background: "#fff", color: C.navy,
+                    fontWeight: 700, cursor: "pointer", fontSize: 13,
+                  }}
+                >Keep Scripted mode</button>
+                <button
+                  data-testid="voice-pipa-accept"
+                  onClick={() => {
+                    setVoicePipaAck(true); setShowPipaGate(false);
+                    // Give React a tick to persist the ack before starting recognition
+                    setTimeout(() => runLiveVoice(), 60);
+                  }}
+                  style={{
+                    flex: "1 1 auto", padding: "10px 14px", borderRadius: 10,
+                    border: "none", background: C.green, color: "#fff",
+                    fontWeight: 700, cursor: "pointer", fontSize: 13,
+                    boxShadow: "0 6px 16px rgba(34,197,94,0.35)",
+                  }}
+                >I understand — enable live voice</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mobile stacking */}
       <style>{`
