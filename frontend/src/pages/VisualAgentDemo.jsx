@@ -1527,8 +1527,17 @@ export default function VisualAgentDemo() {
   // /api/doogie/chat where PII is redacted before storage. We show a one-time
   // disclosure + consent gate before the first Live recording so the user
   // knows the data flow BEFORE their voice leaves the device.
-  const [voicePipaAck, setVoicePipaAck] = useState(false);
+  const [voicePipaAck, setVoicePipaAck] = useState(() => {
+    // Persist ack across sessions so the disclosure only asks once ever
+    try { return typeof localStorage !== "undefined" && localStorage.getItem("ez_voice_pipa_ack") === "1"; }
+    catch { return false; }
+  });
   const [showPipaGate, setShowPipaGate] = useState(false);
+  // Ref mirrors `voicePipaAck` so setTimeout callbacks and event handlers
+  // fired inside the same tick as the state update see the latest value
+  // (React state closures were re-triggering the PIPA gate instead of starting the mic).
+  const voicePipaAckRef = useRef(false);
+  useEffect(() => { voicePipaAckRef.current = voicePipaAck; }, [voicePipaAck]);
   const [kioskMode, setKioskMode] = useState(false);   // fullscreen voice-only
   // Kiosk audio — Doogie speaks answers aloud in Kiosk mode via /api/doogie/tts.
   // Speaker defaults ON; user can mute via the speaker toggle in the kiosk overlay.
@@ -1701,7 +1710,9 @@ export default function VisualAgentDemo() {
   const runLiveVoice = () => {
     // PIPA gate — before we hit the browser's SpeechRecognition (which streams
     // audio to Google/Apple servers), the user must acknowledge the disclosure.
-    if (!voicePipaAck) {
+    // Read from the ref so a same-tick ack (setTimeout after accept) doesn't
+    // re-trigger the gate from a stale closure.
+    if (!voicePipaAckRef.current) {
       setShowPipaGate(true);
       return;
     }
@@ -2552,8 +2563,12 @@ export default function VisualAgentDemo() {
                 <button
                   data-testid="voice-pipa-accept"
                   onClick={() => {
-                    setVoicePipaAck(true); setShowPipaGate(false);
-                    // Give React a tick to persist the ack before starting recognition
+                    // Sync ref FIRST so runLiveVoice's next check passes,
+                    // then persist + close the gate + start the mic.
+                    voicePipaAckRef.current = true;
+                    try { localStorage.setItem("ez_voice_pipa_ack", "1"); } catch { /* ignore */ }
+                    setVoicePipaAck(true);
+                    setShowPipaGate(false);
                     setTimeout(() => runLiveVoice(), 60);
                   }}
                   style={{
