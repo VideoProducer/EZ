@@ -15,7 +15,7 @@ import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
   Bus, Trees, Waves, CheckCircle2, ArrowRight, Home as HomeIcon,
-  Compass, Radio, Volume2
+  Compass, Radio, Volume2, Maximize2, X
 } from "lucide-react";
 
 // ── Palette (matches /app/frontend/src/index.css) ────────────────────────────
@@ -30,11 +30,22 @@ const C = {
   glass: "rgba(15,42,91,0.06)",
 };
 
-// Doogie mascot headshot — served from Emergent customer assets CDN.
-// Used in the hero avatar and inline next to Doogie narration bubbles.
-const DOOGIE_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/dj2wy1tx_Doogie%20Headshot.jpeg";
+// Doogie mascot poses — served from Emergent customer assets CDN.
+// The "reaction" logic in the transcript / narrator chips picks the pose
+// that best matches Doogie's current state so he feels alive.
+const DOOGIE = {
+  headshot:    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/dj2wy1tx_Doogie%20Headshot.jpeg",
+  thinking:    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rxgxv6ec_transparent_Doogie%20Thinking.png",
+  pointing:    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ws3q9zcp_transparent_Doogie%20Pointing%20Left.png",
+  celebrating: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/4g6serdu_Doogie%20Celebrating.png",
+};
+// Backwards-compat: the hero avatar still uses the plain headshot.
+const DOOGIE_HEADSHOT = DOOGIE.headshot;
 
 // ── Scripted scenarios ───────────────────────────────────────────────────────
+// Each `agent` turn can carry an optional `pose` that swaps the transcript
+// chip: "thinking" (during retrieval), "pointing" (highlighting something),
+// "celebrating" (win state). Undefined = headshot (default).
 const SCENARIOS = [
   {
     id: "search",
@@ -42,9 +53,9 @@ const SCENARIOS = [
     icon: Search,
     turns: [
       { who: "user", text: "Show me 2-bedroom condos in Kitsilano under $1.5M." },
-      { who: "agent", text: "Retrieving 12 active listings from CREA DDF®. Sorting by price and days-on-market. Educational retrieval only — not advice." },
+      { who: "agent", pose: "thinking", text: "Retrieving 12 active listings from CREA DDF®. Sorting by price and days-on-market. Educational retrieval only — not advice." },
       { who: "user", text: "Which ones are steps from the beach?" },
-      { who: "agent", text: "Highlighting 4 listings within 400m of Kits Beach. Tap a card for full details or a virtual walkthrough." },
+      { who: "agent", pose: "pointing", text: "Highlighting 4 listings within 400m of Kits Beach. Tap a card for full details or a virtual walkthrough." },
     ],
   },
   {
@@ -53,9 +64,9 @@ const SCENARIOS = [
     icon: Video,
     turns: [
       { who: "user", text: "Can I walk through 2135 W 8th Ave?" },
-      { who: "agent", text: "Loading 360° tour. I'll narrate the layout as you move — ask about ceiling heights, appliances, or strata rules." },
+      { who: "agent", pose: "pointing", text: "Loading 360° tour. I'll narrate the layout as you move — ask about ceiling heights, appliances, or strata rules." },
       { who: "user", text: "What's the strata age & rental policy?" },
-      { who: "agent", text: "Building built 2018. Rentals allowed with no minimum term. Full strata docs are gated behind your Client Journey." },
+      { who: "agent", pose: "thinking", text: "Building built 2018. Rentals allowed with no minimum term. Full strata docs are gated behind your Client Journey." },
     ],
   },
   {
@@ -64,9 +75,9 @@ const SCENARIOS = [
     icon: MapPin,
     turns: [
       { who: "user", text: "How is Kitsilano for a young family?" },
-      { who: "agent", text: "Retrieving BC public data: schools, transit, walkability, parks. All figures cite source and last-updated date." },
+      { who: "agent", pose: "thinking", text: "Retrieving BC public data: schools, transit, walkability, parks. All figures cite source and last-updated date." },
       { who: "user", text: "Nearest school with French immersion?" },
-      { who: "agent", text: "École Bilingue Elementary — 0.8 km walk. Catchment map available in your saved journey." },
+      { who: "agent", pose: "pointing", text: "École Bilingue Elementary — 0.8 km walk. Catchment map available in your saved journey." },
     ],
   },
   {
@@ -76,8 +87,8 @@ const SCENARIOS = [
     turns: [
       { who: "agent", text: "I can start a CASL-compliant intake. Nothing is shared until you tick consent." },
       { who: "user", text: "Sure — I want to sell my Burnaby townhouse in the spring." },
-      { who: "agent", text: "Noted. Capturing timeline, property type, and preferred contact channel. Doug will review and reach out within 1 business day." },
-      { who: "agent", text: "Consent confirmed. Draft brief queued for Doug. ✓" },
+      { who: "agent", pose: "thinking", text: "Noted. Capturing timeline, property type, and preferred contact channel. Doug will review and reach out within 1 business day." },
+      { who: "agent", pose: "celebrating", text: "Consent confirmed. Draft brief queued for Doug. ✓" },
     ],
   },
 ];
@@ -449,15 +460,18 @@ const PaneTour = () => {
                 border: `1px solid ${C.gold}`,
               }}
             >
-              <img
-                src={DOOGIE_HEADSHOT} alt="Doogie narrator"
-                style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  objectFit: "cover", objectPosition: "center 42%",
-                  border: `2px solid ${C.gold}`, flexShrink: 0,
-                }}
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
+              <div style={{
+                width: 42, height: 42, borderRadius: "50%",
+                background: "#FFF4D9",
+                border: `2px solid ${C.gold}`, flexShrink: 0,
+                overflow: "hidden",
+              }}>
+                <img
+                  src={DOOGIE.pointing} alt="Doogie pointing"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              </div>
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Narrating</div>
                 <div style={{ fontSize: 11, opacity: 0.85 }}>Ask about ceilings, strata, or nearby amenities</div>
@@ -674,6 +688,7 @@ export default function VisualAgentDemo() {
   // knows the data flow BEFORE their voice leaves the device.
   const [voicePipaAck, setVoicePipaAck] = useState(false);
   const [showPipaGate, setShowPipaGate] = useState(false);
+  const [kioskMode, setKioskMode] = useState(false);   // fullscreen voice-only
   const recognitionRef = useRef(null);
   const sessionIdRef = useRef(null);
   if (!sessionIdRef.current) {
@@ -1058,6 +1073,14 @@ export default function VisualAgentDemo() {
               <button data-testid="visual-agent-restart" onClick={restart} style={btnGhost} aria-label="Restart demo">
                 <RotateCcw size={14}/> Restart
               </button>
+              <button
+                data-testid="visual-agent-kiosk"
+                onClick={() => setKioskMode(true)}
+                style={{ ...btnGhost, background: "rgba(30,79,207,0.25)", border: `1px solid ${C.blue}` }}
+                aria-label="Enter voice-only kiosk mode"
+              >
+                <Maximize2 size={14}/> Kiosk
+              </button>
             </div>
             {voiceError && (
               <div data-testid="voice-error" style={{
@@ -1125,7 +1148,12 @@ export default function VisualAgentDemo() {
             </div>
             <div ref={transcriptRef} data-testid="visual-agent-transcript" style={{ padding: 14, overflowY: "auto", flex: 1, maxHeight: 460 }}>
               <AnimatePresence initial={false}>
-                {visibleTurns.map((t, i) => (
+                {visibleTurns.map((t, i) => {
+                  const doogieSrc = t.pose && DOOGIE[t.pose] ? DOOGIE[t.pose] : DOOGIE.headshot;
+                  // Transparent poses look better on a soft-cream circle so
+                  // the JPEG headshot and PNG cutouts read consistently.
+                  const isCutout = t.pose === "thinking" || t.pose === "pointing" || t.pose === "celebrating";
+                  return (
                   <motion.div
                     key={`${scenarioIdx}-${i}`}
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -1135,33 +1163,59 @@ export default function VisualAgentDemo() {
                     }}
                   >
                     {t.who === "agent" && (
-                      <img
-                        src={DOOGIE_HEADSHOT} alt=""
-                        data-testid={`doogie-chip-${i}`}
+                      <motion.div
+                        key={doogieSrc}
+                        initial={{ scale: 0.6, rotate: -10, opacity: 0 }}
+                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 18 }}
                         style={{
-                          width: 28, height: 28, borderRadius: "50%",
-                          objectFit: "cover", objectPosition: "center 42%",
-                          border: `2px solid ${C.gold}`, flexShrink: 0,
-                          boxShadow: "0 2px 6px rgba(15,42,91,0.15)",
+                          width: 32, height: 32, borderRadius: "50%",
+                          background: isCutout ? "#FFF4D9" : "transparent",
+                          border: `2px solid ${t.pose === "celebrating" ? C.green : C.gold}`,
+                          overflow: "hidden", flexShrink: 0,
+                          boxShadow: t.pose === "celebrating"
+                            ? "0 0 0 4px rgba(34,197,94,0.25)"
+                            : "0 2px 6px rgba(15,42,91,0.15)",
                         }}
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
+                      >
+                        <img
+                          src={doogieSrc}
+                          alt={`Doogie ${t.pose || "headshot"}`}
+                          data-testid={`doogie-chip-${i}-${t.pose || "headshot"}`}
+                          style={{
+                            width: "100%", height: "100%",
+                            objectFit: "cover",
+                            objectPosition: isCutout ? "center 30%" : "center 42%",
+                          }}
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      </motion.div>
                     )}
                     <div style={{
                       maxWidth: "85%",
                       padding: "9px 13px", borderRadius: 14,
-                      background: t.who === "user" ? C.mist : `linear-gradient(135deg, ${C.navy}, ${C.blue})`,
+                      background: t.who === "user" ? C.mist :
+                        (t.pose === "celebrating"
+                          ? `linear-gradient(135deg, ${C.green}, #15803D)`
+                          : `linear-gradient(135deg, ${C.navy}, ${C.blue})`),
                       color: t.who === "user" ? C.navy : "#fff",
                       fontSize: 13, lineHeight: 1.45,
                       boxShadow: "0 1px 2px rgba(15,42,91,0.05)",
                     }}>
                       <div style={{
                         fontSize: 10, opacity: 0.7, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
-                      }}>{t.who === "user" ? "You" : "Doogie Visual"}</div>
+                      }}>
+                        {t.who === "user" ? "You" : (
+                          t.pose === "celebrating" ? "Doogie · celebrating"
+                          : t.pose === "thinking" ? "Doogie · thinking"
+                          : t.pose === "pointing" ? "Doogie · pointing"
+                          : "Doogie Visual"
+                        )}
+                      </div>
                       {t.text}
                     </div>
                   </motion.div>
-                ))}
+                );})}
 
                 {/* Voice interaction — user "spoken" bubble */}
                 {voiceState !== "idle" && (
@@ -1202,16 +1256,25 @@ export default function VisualAgentDemo() {
                     data-testid="voice-agent-bubble"
                     style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10, gap: 8, alignItems: "flex-end" }}
                   >
-                    <img
-                      src={DOOGIE_HEADSHOT} alt=""
+                    <motion.div
+                      key={voiceState}
+                      initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 18 }}
                       style={{
-                        width: 28, height: 28, borderRadius: "50%",
-                        objectFit: "cover", objectPosition: "center 42%",
-                        border: `2px solid ${C.gold}`, flexShrink: 0,
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: "#FFF4D9",
+                        border: `2px solid ${C.gold}`,
+                        overflow: "hidden", flexShrink: 0,
                         boxShadow: "0 2px 6px rgba(15,42,91,0.15)",
                       }}
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
+                    >
+                      <img
+                        src={voiceState === "replying" ? DOOGIE.thinking : DOOGIE.pointing}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    </motion.div>
                     <div style={{
                       maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
                       background: `linear-gradient(135deg, ${C.navy}, ${C.blue})`,
@@ -1317,6 +1380,196 @@ export default function VisualAgentDemo() {
           Not linked from public navigation. All conversation content on this page is illustrative — no listings, offers, or contracts are formed here (RESA).
         </div>
       </div>
+
+      {/* ── Kiosk Mode — fullscreen voice-only view for open-house tablets ─── */}
+      <AnimatePresence>
+        {kioskMode && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            data-testid="visual-agent-kiosk-overlay"
+            style={{
+              position: "fixed", inset: 0, zIndex: 90,
+              background: `radial-gradient(1600px 700px at 30% 0%, #1B3D8F 0%, ${C.navy} 45%, ${C.ink} 100%)`,
+              color: "#fff",
+              display: "flex", flexDirection: "column",
+              padding: "40px 24px",
+            }}
+          >
+            {/* grain overlay */}
+            <div aria-hidden style={{
+              position: "absolute", inset: 0, opacity: 0.4, pointerEvents: "none",
+              backgroundImage:
+                "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), radial-gradient(rgba(245,166,35,0.05) 1px, transparent 1px)",
+              backgroundSize: "3px 3px, 5px 5px",
+            }}/>
+
+            {/* Top strip: compliance banner + exit */}
+            <div style={{
+              position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between",
+              gap: 12, flexWrap: "wrap",
+            }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(0,0,0,0.35)", padding: "8px 14px", borderRadius: 99,
+                fontSize: 12, letterSpacing: 0.3, border: "1px solid rgba(255,255,255,0.15)",
+              }}>
+                <ShieldCheck size={14} color={C.gold}/>
+                <strong>Kiosk mode</strong> · BCFSA / CASL / PIPA compliant · Educational retrievals only — never advice
+              </div>
+              <button
+                data-testid="visual-agent-kiosk-exit"
+                onClick={() => setKioskMode(false)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "10px 16px", borderRadius: 99,
+                  background: "rgba(255,255,255,0.12)", color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.28)",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  backdropFilter: "blur(6px)",
+                }}
+                aria-label="Exit kiosk mode"
+              >
+                <X size={16}/> Exit kiosk
+              </button>
+            </div>
+
+            {/* Center stage — big Doogie + waveform */}
+            <div style={{
+              position: "relative", flex: 1,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 32, textAlign: "center",
+            }}>
+              {(() => {
+                const kioskPose = voiceState === "listening" ? DOOGIE.headshot
+                  : voiceState === "transcribing" ? DOOGIE.thinking
+                  : voiceState === "replying" ? DOOGIE.thinking
+                  : voiceState === "done" ? DOOGIE.celebrating
+                  : voiceState === "error" ? DOOGIE.headshot
+                  : DOOGIE.headshot;
+                const isCutout = kioskPose !== DOOGIE.headshot;
+                return (
+                  <motion.div
+                    animate={{ boxShadow: voiceState === "listening" ? [
+                      "0 0 0 0 rgba(245,166,35,0.65)",
+                      "0 0 0 60px rgba(245,166,35,0.0)",
+                    ] : [
+                      "0 0 0 0 rgba(30,79,207,0.35)",
+                      "0 0 0 40px rgba(30,79,207,0.0)",
+                    ]}}
+                    transition={{ duration: voiceState === "listening" ? 1.4 : 2.6, repeat: Infinity, ease: "easeOut" }}
+                    style={{
+                      width: 260, height: 260, borderRadius: "50%",
+                      padding: 6,
+                      background: voiceState === "done"
+                        ? `conic-gradient(from 90deg, ${C.green}, ${C.gold}, ${C.blue}, ${C.green})`
+                        : `conic-gradient(from 90deg, ${C.gold}, ${C.blue}, #6C8CFF, ${C.green}, ${C.gold})`,
+                      border: "4px solid rgba(255,255,255,0.35)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    <div style={{
+                      width: "100%", height: "100%", borderRadius: "50%",
+                      background: isCutout ? "#FFF4D9" : "#FAF7F0",
+                      overflow: "hidden",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      boxShadow: "inset 0 4px 12px rgba(15,42,91,0.15)",
+                    }}>
+                      <motion.img
+                        key={kioskPose}
+                        src={kioskPose}
+                        alt={`Doogie · ${voiceState}`}
+                        data-testid="kiosk-doogie-face"
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                        style={{
+                          width: "108%", height: "108%",
+                          objectFit: "cover",
+                          objectPosition: isCutout ? "center 30%" : "center 42%",
+                        }}
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })()}
+
+              {/* Status text */}
+              <div style={{ minHeight: 88, maxWidth: 720 }}>
+                <div style={{
+                  fontSize: 11, letterSpacing: 0.5, fontWeight: 700,
+                  color: C.gold, textTransform: "uppercase", marginBottom: 6,
+                }}>
+                  {voiceState === "listening" ? "Listening" :
+                   voiceState === "transcribing" ? "Understanding" :
+                   voiceState === "replying" ? "Retrieving" :
+                   voiceState === "done" ? "Ready" :
+                   voiceState === "error" ? "Something went wrong" :
+                   "Ready when you are"}
+                </div>
+                <div style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: "clamp(22px, 3.4vw, 34px)", lineHeight: 1.25, fontWeight: 700,
+                }}>
+                  {voiceState === "listening" ? "I'm listening — ask about BC real estate" :
+                   voiceState === "transcribing" && voiceHeard ? `"${voiceHeard}"` :
+                   voiceState === "replying" && voiceReply ? voiceReply :
+                   voiceState === "replying" ? "One moment while I check the sources…" :
+                   voiceState === "done" && voiceReply ? voiceReply :
+                   voiceState === "error" ? (voiceError || "Try again in a moment.") :
+                   "Tap the mic and ask me anything about BC real estate."}
+                </div>
+              </div>
+
+              {/* Waveform + big Speak button */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+                <div style={{ transform: "scale(2.2)" }}>
+                  <Waveform active={voiceActive || voiceState === "done"} intense={voiceState === "listening"}/>
+                </div>
+                <button
+                  data-testid="kiosk-mic-btn"
+                  onClick={triggerVoice}
+                  disabled={voiceState === "transcribing" || voiceState === "replying"}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 10,
+                    padding: "16px 28px", borderRadius: 99,
+                    background: voiceState === "listening" ? C.gold : C.green,
+                    border: "none", color: voiceState === "listening" ? C.ink : "#fff",
+                    fontSize: 16, fontWeight: 800, letterSpacing: 0.3, cursor: "pointer",
+                    boxShadow: "0 12px 30px rgba(0,0,0,0.35)",
+                    opacity: (voiceState === "transcribing" || voiceState === "replying") ? 0.75 : 1,
+                  }}
+                >
+                  {voiceState === "listening" ? <MicOff size={20}/> : <Mic size={20}/>}
+                  {voiceState === "listening" ? "Stop" :
+                   voiceState === "transcribing" ? "Transcribing…" :
+                   voiceState === "replying" ? "Thinking…" :
+                   voiceMode === "live" ? "Speak to Doogie" : "Ask by voice"}
+                </button>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                  {voiceMode === "live"
+                    ? "Live voice · your browser transcribes then Doogie replies via /api/doogie/chat"
+                    : "Scripted demo · tap to play a sample voice interaction"}
+                  {" · "}
+                  <button
+                    onClick={() => setVoiceMode(m => m === "live" ? "scripted" : "live")}
+                    style={{
+                      background: "transparent", border: "none", color: C.gold,
+                      textDecoration: "underline", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                    }}
+                  >Switch to {voiceMode === "live" ? "scripted" : "live"}</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer compliance line */}
+            <div style={{ position: "relative", textAlign: "center", fontSize: 11, opacity: 0.75, letterSpacing: 0.3 }}>
+              Doug LeMaire, REALTOR® · BCFSA #167790 · Doogie is an educational retrieval tool — <strong>not advice</strong>.
+              For personalized guidance, request a <a href="/referral-request" style={{ color: C.gold }}>licensed BC REALTOR®</a>.
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── PIPA §7/§14 disclosure gate — shown only on first Live voice attempt ─ */}
       <AnimatePresence>
