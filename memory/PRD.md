@@ -603,3 +603,59 @@ End-to-end tested via curl:
 - P2: Auto-purge testing (manually trigger the loop for verification)
 - P3: Multi-client-per-household linking
 
+
+---
+
+## 2026-08-02 — Public BC Buyer's & Seller's Guides (Phase A of Related Content Engine)
+
+### What shipped
+Public educational guides at **`/buying-guide`** and **`/selling-guide`**, faithful adaptations of Doug LeMaire's 2026 Buyer's Guide and 2026 Seller's Guide PDFs. Approved for public publication by Doug (the licensee) himself.
+
+Each guide contains:
+- **9-step "Your Journey at a Glance"** overview table with anchor jumps
+- **9 detailed step cards** (Getting Started → After You Move In / After the Sale) with plain-English "your steps" checklists + "Good to know" callouts
+- **BC 2026 cost breakdown table** (PTT tiers, deposit, inspection, legal, first-time/new-build exemptions, non-resident 20% ATT for buyers; commission, mortgage payout, capital gains, adjustments for sellers)
+- **"Your Protections & Key Terms" / "Your Obligations & Protections"** section (3-day HBRP rescission with 0.25% fee example, deposit-in-trust, PDS, material latent defect)
+- **"A few terms you will hear"** quick-reference block
+- **"You may also be looking for"** related-resources grid — 6 cards each, links to the flip-side guide, listings, communities, glossary, valuation, and compliance page (starter version of Phase B relationship engine)
+- **Neutral footer CTA** (Ask a general question / Browse the glossary) — no marketing consent bundling
+
+### Compliance controls in place (BCFSA / CREA / CASL / PIPA / GVR)
+- **BCFSA**: Brokerage identification block at top AND bottom of every guide — "Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · Serving Greater Vancouver · the Fraser Valley · Sea-to-Sky to Whistler · (604) 787-0851". General-information disclaimer at top AND bottom explicitly stating "not legal, tax, financial, or mortgage advice". No "you should" / "guarantees" / "best for you" language. Licensee's first-person voice preserved because Doug authored the source content.
+- **CREA**: REALTOR® / REALTORS® / MLS® trademarks preserved throughout with correct capitalization and ® symbol. No MLS® data reproduced; no listing claims made.
+- **GVR**: No IDX data touched by these pages; guides link to `/listings` (existing GVR-compliant iframe/DDF feed).
+- **CASL**: Neutral CTAs. No marketing-consent bundling. "Ask a question" routes to `/contact` which separates required and optional consent boxes (existing behaviour). No email opt-in on these pages.
+- **PIPA**: Zero personal information collected on these pages. No browser storage. No analytics events on sensitive content.
+- **FINTRAC**: Identity-verification requirement referenced accurately in Steps 2 (buyer) and 2 (seller).
+
+### AEO / GEO / LLM citation surface
+- Full **HowTo schema** for the 9 steps (buyer + seller) — feeds Google/Bing rich results and LLM answer engines a canonical, cited source.
+- Full **FAQPage schema** for the Protections & Terms sections.
+- **BreadcrumbList schema** for site hierarchy.
+- Per-page `<title>`, `<meta description>`, canonical URL — all keyword-optimized for "buy a home in BC 2026", "sell a home in BC 2026".
+
+### Anti-duplication (per the spec)
+- **Zero glossary content duplicated**. Every term (deposit, PTT, escrow, PDS, subject-clauses, mortgage-discharge, etc.) is linked in-line to `/glossary/<slug>`. The 439-term master library remains single source of truth.
+- All 32 slug references verified against the DB before ship — no dead links.
+- Related-resources grid links to existing pages (`/listings`, `/communities`, `/valuation`, `/compliance`, flip-side guide) — no orphan destinations.
+
+### Navigation integration
+- Added top-nav links: **Buying Guide** and **Selling Guide** (mobile hamburger + desktop nav)
+- Added footer "Explore" links: **Buying Guide (BC 2026)** and **Selling Guide (BC 2026)**
+
+### Files touched
+- **New**: `/app/frontend/src/pages/BuyerSellerGuide.jsx` (~600 lines) — exports `BuyingGuide` and `SellingGuide` React components, plus shared step/cost/terms/related helpers
+- **Modified**: `/app/frontend/src/App.js` — added import + 2 routes + 2 nav links + 2 footer links
+
+### Not shipped (deferred to Phase B / C / D)
+- **Phase B**: Formal "You May Also Be Looking For" component wired onto glossary pages, community pages, and Doogie answers (via a new `content_relations` collection + admin editor). The starter version renders on the two new guide pages only.
+- **Phase C**: Grouped semantic search (definitions / FAQs / tools / communities / journey / listings / Doogie).
+- **Phase D**: Admin relationship editor + audit trail.
+
+### Remaining backlog priorities (post-Phase A)
+- **P0**: Confirm Doug wants to proceed to Phase B next (or shift priority).
+- **P1**: Auto-generate PDF exports of both public guides so leads can download/print them.
+- **P1**: Add a "Print this guide" CSS media query so the browser Print flow yields a clean handout.
+- **P2**: Multi-language variants for the guides (zh-Hant, zh-Hans, pa, fa, pt-PT) — currently English only, but the SEO scaffolding already includes hreflang alternates.
+- **P2**: Content-relations collection + admin editor for Phase B.
+- **P3**: Tech debt sprint — break `server.py` and `App.js` monoliths into modules.

@@ -8,6 +8,7 @@ import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
+import { BuyingGuide, SellingGuide } from "./pages/BuyerSellerGuide";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -824,6 +825,8 @@ const Nav = () => {
         <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
         <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
+        <NavLink to="/buying-guide" onClick={close} data-testid="nav-buying-guide">Buying Guide</NavLink>
+        <NavLink to="/selling-guide" onClick={close} data-testid="nav-selling-guide">Selling Guide</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
@@ -857,6 +860,8 @@ const Footer = () => (
         <li><Link to="/specialties/luxury">Luxury Listings</Link></li>
         <li><Link to="/specialties/equestrian">Equestrian Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
+        <li><Link to="/buying-guide">Buying Guide (BC 2026)</Link></li>
+        <li><Link to="/selling-guide">Selling Guide (BC 2026)</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Home Valuation</Link></li>
       </ul></div>
@@ -8201,6 +8206,8 @@ function App() {
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
       <Route path="/buyer" element={<AppLayout><BuyerForm/></AppLayout>}/>
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
+      <Route path="/buying-guide" element={<AppLayout><BuyingGuide/></AppLayout>}/>
+      <Route path="/selling-guide" element={<AppLayout><SellingGuide/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
