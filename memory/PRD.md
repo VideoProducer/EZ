@@ -714,3 +714,66 @@ An intelligent cross-type "You may also be looking for" system that connects glo
 - **Phase C — Doogie integration**: append related-content chips after each Doogie answer using the same endpoint
 - **Phase D — Rich admin audit trail**: show which pages surface each relation, low-confidence query review, exclusion editor
 - **Backlog — Bulk-import seed relations**: a one-shot script that populates high-value pins for the 30–40 most-visited glossary terms (strata cluster, financing cluster, closing cluster)
+
+---
+
+## 2026-08-02 — Phase C: Grouped Search + Doogie Chips + Bulk Seed Relations
+
+Three deliverables shipped in one pass to make EZtoFind.ca feel like one seamless knowledge platform per Sections 2, 3, 7, 8, and 13 of the spec.
+
+### 1. Bulk-seed content relations (`backend/seed_content_relations.py`)
+- Idempotent script that pins ~106 high-value manual relations across three clusters:
+  - **Strata cluster** (12 slugs): strata-fees, form-b, depreciation-report, special-levy, operating-fund, agm-minutes, etc. → pin to Buying Guide step-7, Form B, Depreciation Report
+  - **Financing cluster** (12 slugs): mortgage-pre-approval, down-payment-requirements, FHSA, HBP, stress-test, amortization-period, etc. → pin to Buying Guide step-3, Valuation, FHSA glossary
+  - **Closing cluster** (20 slugs): PTT, foreign-buyer PTT, GST, first-time exemption, lawyer/notary, completion/possession dates, HBRP, PDS, subject clauses, etc. → pin to Buying Guide step-8 and Selling Guide step-8
+- 106 pins inserted; re-run is a no-op (deduped by composite key)
+- Confirmed via curl that every seeded slug now surfaces its cluster's pinned cards ABOVE the rule-based auto-suggestions, with readable reason codes (`strata-cluster:subject-removal`, `financing-cluster:planning-step`, `closing-cluster:buyer-side` etc.)
+
+### 2. Phase C — Grouped semantic search
+- **Backend** `GET /api/search?q=<query>&limit=6`:
+  - Tokenizes query (stopword-filtered, length ≥3)
+  - Searches **glossary terms + definitions** with weighted title/body scoring
+  - Searches **embedded FAQs** on every glossary term
+  - Searches **communities** from `communities_seed.json` (239 entries)
+  - Searches **static tool catalog** + **18 guide anchors** (9 buyer + 9 seller)
+  - Adds universal **Listings shortcut** (deep-links to `/listings?q=...`) and **Doogie shortcut**
+  - Returns a "Quick Answer" card when top glossary/FAQ hit has score ≥3
+  - Never invents content — returns empty groups if nothing matches (spec §7)
+- **Frontend** `/search?q=` page (`SearchPage.jsx`):
+  - Quick Answer highlight card (navy accent border, brand blue eyebrow)
+  - Grouped result sections with color-coded kind dots (📖 Terms / ❓ FAQs / 🧮 Tools / 📍 Communities / 🧭 Journey / Listings / Doogie)
+  - Search input box at top for refinement
+  - Neutral "no approved answer found" state with 3 exploration chips (spec §7)
+  - `noindex, follow` meta so the search page doesn't dilute site SEO
+- **Nav integration**: added "🔍 Search" link to top nav (mobile + desktop)
+- Curl-verified queries: "strata fees" → Strata Fees term is quick answer; "property transfer tax" → PTT cluster surfaces; "condo Vancouver" → Empty Homes Tax term + North Vancouver community
+
+### 3. Doogie related chips (`DoogieRelatedChips.jsx`)
+- Compact horizontal pill row rendered after every Doogie assistant reply
+- Fetches `/api/search?q=<preceding-user-message>&limit=2` and surfaces the top hit from Terms / Journey / Tools / Communities / FAQs (skipping self-referential Listings + Doogie groups)
+- Kind-colored pills with icons (📖 term / 🧭 journey step / 🧮 calculator / 📍 community / ❓ FAQ)
+- Silent-hides on empty/error — never leaks admin diagnostics to public visitors
+- Compliance controls in place: no personal information sent to the endpoint (just raw question text the user typed); no analytics events beyond target `kind`
+- End-to-end verified in Playwright: chips appeared after Doogie's first response with "Building Envelope" / "Closing & Moving In" / "Property Transfer Tax — BC rates" / "Ainsworth Hot Springs"
+
+### Files touched
+- **New**: `backend/seed_content_relations.py` (~150 lines) — idempotent bulk seeder
+- **Modified**: `backend/server.py` — added ~250 lines for `/api/search` + helpers, stopword-filtered tokenization, 5 async search functions, static journey anchors + tools catalog
+- **New**: `frontend/src/pages/SearchPage.jsx` (~220 lines) — grouped results page
+- **New**: `frontend/src/components/DoogieRelatedChips.jsx` (~100 lines) — chat chip renderer
+- **Modified**: `frontend/src/App.js` — 2 new imports + 1 route + 1 nav link + inline chip injection in the assistant-message renderer
+
+### Compliance controls in place (all three deliverables)
+- **BCFSA**: search results and chips draw ONLY from pre-approved EZtoFind.ca content — no external claims, no advice framing
+- **CREA**: REALTOR® / MLS® trademarks preserved everywhere
+- **CASL**: chips + search results are pure navigation — no consent bundling; the "Ask a general question" and "Contact" routes keep required + optional consent separated
+- **PIPA**: no personal info in the search index; Doogie chips don't ship user-identifying content to the search endpoint (only the raw question text the user typed)
+- **Spec §7 "no invented answers"**: search returns empty groups when nothing matches; explicit "no approved answer found" fallback with neutral exploration chips
+- **Spec §22 client gating**: content_relations records with `visibility: "client-only"` are excluded from the public endpoint at query time (already in place from Phase B)
+
+### Deferred to future phases
+- **Phase C.2 — Embeddings-based semantic retrieval** (per spec §13 layer 3): add vector search once the keyword layer proves valuable enough at scale
+- **Phase D — Admin audit trail**: dashboard showing which pages surface each relation, low-confidence query review, exclusion editor
+- **Guide printables**: print-friendly CSS for Buyer/Seller guides
+- **Multi-lingual guides**: translate Buying & Selling guides into zh-Hant, zh-Hans, pa, fa, pt-PT
+- **Doogie ask-URL prefill**: honor `/?ask=<query>` param so Doogie shortcut in search results auto-opens the chat with the question pre-typed

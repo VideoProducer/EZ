@@ -2597,6 +2597,262 @@ async def admin_delete_content_relation(rel_id: str, _=Depends(verify_admin)):
         raise HTTPException(404, "Relation not found")
     return {"ok": True}
 
+
+# ---------------------------------------------------------------------------
+# Phase C — Grouped semantic search
+# ---------------------------------------------------------------------------
+# GET /api/search?q=<query>&limit=8
+# Returns a grouped payload:
+#   {
+#     "query": str,
+#     "quick_answer": {kind, title, url, excerpt} | None,
+#     "groups": [
+#        {"kind": "Terms",       "items": [...]},
+#        {"kind": "FAQs",        "items": [...]},
+#        {"kind": "Tools",       "items": [...]},
+#        {"kind": "Communities", "items": [...]},
+#        {"kind": "Journey",     "items": [...]},
+#        {"kind": "Listings",    "items": [...]},
+#        {"kind": "Doogie",      "items": [...]}
+#     ]
+#   }
+#
+# Compliance: all results are drawn from EZtoFind.ca's own approved content
+# library (glossary, community pages, guides, listings shortcut, Doogie
+# shortcut). No client-only records are exposed. When no approved answer
+# exists, the endpoint returns empty groups — never invents a definition.
+# This matches Section 7 & 13 of the intelligent-related-content spec.
+
+# Static journey anchors — the 9 buyer + 9 seller guide steps.
+_JOURNEY_ANCHORS = [
+    ("buyer",  1, "Getting Started",           "Connect with a REALTOR® and confirm your goals."),
+    ("buyer",  2, "Making It Official",        "Representation disclosure and buyer's agreement."),
+    ("buyer",  3, "Money & Must-Haves",        "Pre-approval, budget ceiling, FHSA / HBP."),
+    ("buyer",  4, "The Search",                "Reviewing listings, showings, and market pace."),
+    ("buyer",  5, "Making an Offer",           "Price, deposit, subjects, dates."),
+    ("buyer",  6, "Negotiation & Acceptance",  "Counter-offers, deposit in trust, rescission window."),
+    ("buyer",  7, "Removing Subjects",         "Inspection, financing, strata document review."),
+    ("buyer",  8, "Closing & Moving In",       "Property Transfer Tax, notary, final walkthrough."),
+    ("buyer",  9, "After You Move In",         "File handover and long-term relationship."),
+    ("seller", 1, "Getting Started",           "Connect with a REALTOR® about your home and timeline."),
+    ("seller", 2, "The Listing Appointment",   "Representation disclosure and listing agreement."),
+    ("seller", 3, "Pricing & Preparing",       "CMA, PDS, decluttering, staging, go-live date."),
+    ("seller", 4, "Going to Market",           "Photography, MLS®, marketing rollout."),
+    ("seller", 5, "Showings & Feedback",       "Tracking buyer response, adjusting strategy."),
+    ("seller", 6, "Offers & Negotiation",      "Reviewing, countering, multiple-offer situations."),
+    ("seller", 7, "Acceptance & Subject Removal", "Deposit in trust, buyer diligence, rescission window."),
+    ("seller", 8, "Closing & Possession",      "Mortgage payout, disbursements, handover."),
+    ("seller", 9, "After the Sale",            "File handover and long-term relationship."),
+]
+
+_TOOLS_CATALOG = [
+    {"kind": "Tools", "title": "Home valuation estimator",           "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",           "href": "/valuation",                                "keywords": ["valuation","estimate","worth","value","price","appraisal","home value","how much"]},
+    {"kind": "Tools", "title": "Property Transfer Tax — BC rates",    "blurb": "BC's tiered 1% / 2% / 3% / 5% provincial transfer tax explained.",                 "href": "/glossary/property-transfer-tax-ptt",       "keywords": ["ptt","property transfer tax","transfer tax","closing cost"]},
+    {"kind": "Tools", "title": "Live MLS® listings search",           "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                       "href": "/listings",                                 "keywords": ["listings","mls","search homes","for sale"]},
+    {"kind": "Tools", "title": "Neighbourhood Vibe Score™",           "blurb": "6-factor community livability index — walkability, transit, air, wildfire risk.",   "href": "/communities",                              "keywords": ["vibe","score","walkability","transit","community score","livability"]},
+]
+
+
+def _score_match(text: str, q_terms: list) -> int:
+    """Simple tf-like scorer: 3 points for term-in-title, 1 per body match."""
+    if not text:
+        return 0
+    t = text.lower()
+    return sum(t.count(qt) for qt in q_terms)
+
+
+def _slug_from_query(q: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")
+
+
+async def _search_glossary(q: str, q_terms: list, limit: int):
+    """Search glossary terms + definitions. Returns list of (score, item)."""
+    # Mongo $text index isn't guaranteed here — use a regex query then rescore in Python
+    # for accuracy (fine at 439 docs).
+    pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
+    if not pattern:
+        return []
+    rx = re.compile(pattern, re.I)
+    hits = []
+    async for d in db.glossary.find(
+        {"$or": [
+            {"term": {"$regex": pattern, "$options": "i"}},
+            {"definition": {"$regex": pattern, "$options": "i"}},
+        ]},
+        {"_id": 0, "term": 1, "slug": 1, "category": 1, "definition": 1}
+    ).limit(200):
+        score = 3 * _score_match(d.get("term", ""), q_terms) + _score_match(d.get("definition", ""), q_terms)
+        hits.append((score, {
+            "kind": "Terms",
+            "title": d["term"],
+            "blurb": (d.get("definition") or "")[:180] + ("…" if len(d.get("definition") or "") > 180 else ""),
+            "href": f"/glossary/{d['slug']}",
+            "category": d.get("category") or "",
+        }))
+    hits.sort(key=lambda x: -x[0])
+    return hits[:limit]
+
+
+async def _search_faqs(q: str, q_terms: list, limit: int):
+    """Search FAQs embedded on glossary terms. Returns list of (score, item)."""
+    pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
+    if not pattern:
+        return []
+    hits = []
+    async for d in db.glossary.find(
+        {"faqs": {"$elemMatch": {"$or": [
+            {"q": {"$regex": pattern, "$options": "i"}},
+            {"a": {"$regex": pattern, "$options": "i"}},
+        ]}}},
+        {"_id": 0, "term": 1, "slug": 1, "faqs": 1}
+    ).limit(80):
+        for faq in (d.get("faqs") or []):
+            score = 3 * _score_match(faq.get("q", ""), q_terms) + _score_match(faq.get("a", ""), q_terms)
+            if score <= 0:
+                continue
+            hits.append((score, {
+                "kind": "FAQs",
+                "title": faq.get("q") or "",
+                "blurb": ((faq.get("a") or "")[:180] + ("…" if len(faq.get("a") or "") > 180 else "")),
+                "href": f"/glossary/{d['slug']}",
+                "source_term": d.get("term"),
+            }))
+    hits.sort(key=lambda x: -x[0])
+    return hits[:limit]
+
+
+def _search_communities(q: str, q_terms: list, limit: int):
+    """Search community names from the seed JSON file."""
+    try:
+        all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    except Exception:
+        return []
+    hits = []
+    for region, communities in all_comm.items():
+        for name in communities:
+            score = _score_match(name, q_terms)
+            if score <= 0:
+                continue
+            slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+            hits.append((score, {
+                "kind": "Communities",
+                "title": name,
+                "blurb": f"BC community in {region}. Neighbourhood profile, climate, and vibe score.",
+                "href": f"/community/{slug}",
+                "region": region,
+            }))
+    hits.sort(key=lambda x: -x[0])
+    return hits[:limit]
+
+
+def _search_tools(q: str, q_terms: list, limit: int):
+    """Static tools catalog — score by keyword + title match."""
+    hits = []
+    for tool in _TOOLS_CATALOG:
+        score = _score_match(tool["title"], q_terms) * 3
+        for kw in tool.get("keywords", []):
+            score += _score_match(kw, q_terms)
+        if score <= 0:
+            continue
+        hits.append((score, {"kind": "Tools", "title": tool["title"], "blurb": tool["blurb"], "href": tool["href"]}))
+    hits.sort(key=lambda x: -x[0])
+    return hits[:limit]
+
+
+def _search_journey(q: str, q_terms: list, limit: int):
+    """Static journey anchors — score by title + blurb."""
+    hits = []
+    for role, num, title, blurb in _JOURNEY_ANCHORS:
+        score = 3 * _score_match(title, q_terms) + _score_match(blurb, q_terms)
+        if score <= 0:
+            continue
+        hits.append((score, {
+            "kind": "Journey",
+            "title": f"{title}",
+            "blurb": f"{('Buying' if role=='buyer' else 'Selling')} Guide — Step {num} of 9. {blurb}",
+            "href": f"/{'buying' if role=='buyer' else 'selling'}-guide#step-{num}",
+            "role": role,
+        }))
+    hits.sort(key=lambda x: -x[0])
+    return hits[:limit]
+
+
+@api.get("/search")
+async def grouped_search(q: str = "", limit: int = 6):
+    """Phase C — grouped natural-language educational search.
+
+    Layers per Section 13 of the spec:
+      1. Approved exact matches (title / synonym)
+      2. Structured relationships (category, tags)
+      3. (Deferred) semantic retrieval
+    Every item returned is drawn from EZtoFind.ca's approved content library.
+    Never invents an answer — empty groups are returned when no match exists."""
+    query = (q or "").strip()
+    if not query:
+        return {"query": "", "quick_answer": None, "groups": []}
+
+    lim = max(1, min(limit, 12))
+    # Tokenize — split on non-alphanumeric, keep terms of length >= 3, drop stopwords.
+    # This avoids "bc", "the", "of", "in", "is", "are", "what" polluting scores.
+    _STOPWORDS = {
+        "the", "and", "for", "with", "from", "that", "this", "what", "when",
+        "where", "which", "who", "why", "how", "are", "was", "were", "does",
+        "did", "not", "you", "your", "yours", "our", "ours", "they", "them",
+        "their", "his", "her", "hers", "its", "any", "some", "all", "one",
+        "two", "into", "onto", "than", "then", "there", "here", "over", "under",
+        "about", "also", "just", "have", "has", "had", "been", "being", "will",
+        "can", "could", "would", "should", "may", "might", "must", "shall",
+        "get", "got", "make", "made", "take", "took", "use", "used", "using",
+        "very", "much", "many", "more", "most", "less", "least", "few",
+        "own", "off", "out", "up", "down", "on", "in", "at", "to", "of", "as",
+        "by", "or", "if", "so", "no", "yes", "an", "be", "is", "am", "it",
+    }
+    raw_tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", query) if t]
+    q_terms = [t for t in raw_tokens if len(t) >= 3 and t not in _STOPWORDS]
+    if not q_terms:
+        # Fall back to raw meaningful tokens (>=2) so short queries like "PTT" still work
+        q_terms = [t for t in raw_tokens if len(t) >= 2]
+    if not q_terms:
+        return {"query": query, "quick_answer": None, "groups": []}
+
+    # Run all searches concurrently
+    glossary_hits, faq_hits = await asyncio.gather(
+        _search_glossary(query, q_terms, lim),
+        _search_faqs(query, q_terms, lim),
+    )
+    community_hits = _search_communities(query, q_terms, lim)
+    tools_hits = _search_tools(query, q_terms, lim)
+    journey_hits = _search_journey(query, q_terms, lim)
+
+    # Build quick answer — prefer strongest glossary hit, then strongest FAQ hit
+    quick = None
+    if glossary_hits and glossary_hits[0][0] >= 3:
+        _, top = glossary_hits[0]
+        quick = {"kind": "Terms", "title": top["title"], "url": top["href"], "excerpt": top["blurb"]}
+    elif faq_hits and faq_hits[0][0] >= 3:
+        _, top = faq_hits[0]
+        quick = {"kind": "FAQs", "title": top["title"], "url": top["href"], "excerpt": top["blurb"]}
+
+    # Always append Listings + Doogie shortcuts — they're universal launchpads
+    from urllib.parse import quote_plus
+    listings_shortcut = [{"kind": "Listings", "title": f'Live listings — "{query}"', "blurb": "Search the live CREA DDF® feed for this term.", "href": f"/listings?q={quote_plus(query)}"}]
+    doogie_shortcut = [{"kind": "Doogie", "title": f'Ask Doogie: "{query}"', "blurb": "Get a plain-language explanation from Doogie, EZtoFind.ca's compliance-guarded AI assistant.", "href": f"/?ask={quote_plus(query)}"}]
+
+    groups = [
+        {"kind": "Terms",       "items": [it for _, it in glossary_hits]},
+        {"kind": "FAQs",        "items": [it for _, it in faq_hits]},
+        {"kind": "Tools",       "items": [it for _, it in tools_hits]},
+        {"kind": "Communities", "items": [it for _, it in community_hits]},
+        {"kind": "Journey",     "items": [it for _, it in journey_hits]},
+        {"kind": "Listings",    "items": listings_shortcut},
+        {"kind": "Doogie",      "items": doogie_shortcut},
+    ]
+    # Drop empty groups (except Listings + Doogie which are always populated)
+    groups = [g for g in groups if g["items"] or g["kind"] in ("Listings", "Doogie")]
+
+    return {"query": query, "quick_answer": quick, "groups": groups}
+
+
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
     """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs. Hallucination-hardened
     prompt v2: cites BC statute sections or explicitly refuses; forces "verify with a BC

@@ -11,6 +11,8 @@ import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import { BuyingGuide, SellingGuide } from "./pages/BuyerSellerGuide";
 import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
+import SearchPage from "./pages/SearchPage";
+import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -824,6 +826,7 @@ const Nav = () => {
       </button>
       <div className={`nav-links${open?" open":""}`}>
         <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
+        <NavLink to="/search" onClick={close} data-testid="nav-search" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>🔍 Search</NavLink>
         <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
         <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
@@ -1388,7 +1391,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}{m.role==="assistant" && i > 0 && (() => { const prev = msgs.slice(0, i).reverse().find(x => x.role === "user"); return prev && prev.content ? <DoogieRelatedChips query={prev.content} testIdPrefix={`doogie-chip-${i}`}/> : null; })()}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -8227,6 +8230,7 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/buying-guide" element={<AppLayout><BuyingGuide/></AppLayout>}/>
       <Route path="/selling-guide" element={<AppLayout><SellingGuide/></AppLayout>}/>
+      <Route path="/search" element={<AppLayout><SearchPage/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
