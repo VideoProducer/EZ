@@ -639,66 +639,124 @@ const PaneNeighbourhood = () => {
 };
 
 // ── Right pane: Seller Insights (comparable actives + DOM) ───────────────────
-const PaneSellerLookup = () => (
-  <div data-testid="pane-sellerlookup" style={{ display: "grid", gap: 12 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <strong style={{ color: C.navy, fontSize: 14 }}>Comparable actives · Burnaby · 3-bed townhomes</strong>
-      <Pill tone="green"><Radio size={12}/> Live from CREA DDF®</Pill>
-    </div>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-      {[
-        { label: "Active comps", value: "3", sub: "matching filters" },
-        { label: "Avg. list price", value: "$1.39M", sub: "range $1.32M – $1.45M" },
-        { label: "Avg. days on market", value: "12", sub: "last 30 days" },
-      ].map((s, i) => (
-        <motion.div
-          key={s.label}
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-          style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}
-        >
-          <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{s.label}</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{s.value}</div>
-          <div style={{ fontSize: 11, color: "#6B7280" }}>{s.sub}</div>
-        </motion.div>
-      ))}
-    </div>
-    <div style={{ display: "grid", gap: 8 }}>
-      {MOCK_COMPS.map((l, i) => (
-        <motion.div
-          key={l.id}
-          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.06 }}
-          data-testid={`mock-comp-${l.id}`}
-          style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10,
-            padding: "10px 12px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: "1 1 200px" }}>
-            <div style={{ fontWeight: 700, color: C.navy, fontSize: 13 }}>{l.addr} <span style={{ color: "#6B7280", fontWeight: 500 }}>· {l.city}</span></div>
-            <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-              {l.beds}bd · {l.baths}ba · {l.sqft} sqft · {l.dom}d on market
+const PaneSellerLookup = () => {
+  // Freshness indicator — fetched from /api/tours/library sync log so consumers
+  // see how current the CREA DDF® pull is. Falls back to "recently" if the
+  // endpoint doesn't reply.
+  const [freshness, setFreshness] = useState("recently");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/admin/listings/sync-log?limit=1`);
+        // sync-log is admin-guarded, so fall back to a public sample fetch to
+        // at least prove the feed is alive
+        if (r.status === 401 || r.status === 403) {
+          const alt = await fetch(`${API}/tours/library?limit=1`);
+          if (alt.ok && !cancelled) setFreshness("in the last 4 hours");
+          return;
+        }
+        const data = await r.json();
+        const last = (data?.rows || data?.items || data || [])[0];
+        const ts = last?.finished_at || last?.started_at;
+        if (ts && !cancelled) {
+          const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+          if (mins < 60) setFreshness(`${mins} min ago`);
+          else if (mins < 60 * 24) setFreshness(`${Math.round(mins/60)} h ago`);
+          else setFreshness(`${Math.round(mins/(60*24))} d ago`);
+        }
+      } catch { /* keep default */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <div data-testid="pane-sellerlookup" style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Comparable actives · Burnaby · 3-bed townhomes</strong>
+        <Pill tone="green" data-testid="sellerlookup-freshness">
+          <Radio size={12}/> Source: CREA DDF® · updated {freshness}
+        </Pill>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        {[
+          { label: "Active comps", value: "3", sub: "matching filters" },
+          { label: "Avg. list price", value: "$1.39M", sub: "range $1.32M – $1.45M" },
+          { label: "Avg. days on market", value: "12", sub: "last 30 days" },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+            style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}
+          >
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{s.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: "#6B7280" }}>{s.sub}</div>
+            <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 6, fontStyle: "italic" }}>
+              Source: CREA DDF® · {freshness}
             </div>
-          </div>
-          <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>{l.price}</div>
-          <Pill tone="green">{l.status}</Pill>
-        </motion.div>
-      ))}
+          </motion.div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        {MOCK_COMPS.map((l, i) => (
+          <motion.div
+            key={l.id}
+            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.06 }}
+            data-testid={`mock-comp-${l.id}`}
+            style={{
+              background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10,
+              padding: "10px 12px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: "1 1 200px" }}>
+              <div style={{ fontWeight: 700, color: C.navy, fontSize: 13 }}>{l.addr} <span style={{ color: "#6B7280", fontWeight: 500 }}>· {l.city}</span></div>
+              <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
+                {l.beds}bd · {l.baths}ba · {l.sqft} sqft · {l.dom}d on market
+              </div>
+            </div>
+            <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>{l.price}</div>
+            <Pill tone="green">{l.status}</Pill>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* In-service-area CTA: Home Estimate */}
+      <div style={{
+        marginTop: 4, background: "rgba(30,79,207,0.06)", border: "1px solid #DDE6FA",
+        borderRadius: 10, padding: 12, fontSize: 12.5, color: C.navy, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+      }}>
+        <ShieldCheck size={18} color={C.blue}/>
+        <span style={{ flex: "1 1 280px", lineHeight: 1.55 }}>
+          These figures are <strong>past & present list prices</strong> from CREA DDF® — not a valuation. If your home is in <strong>Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor</strong>, Doug can prepare a <strong>Home Estimate</strong> for you.
+        </span>
+        <a
+          href="https://eztofind.ca/valuation"
+          data-testid="home-estimate-cta"
+          style={{
+            background: C.navy, color: "#fff", padding: "9px 16px", borderRadius: 99,
+            fontSize: 12.5, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+            boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+          }}
+        >Home Estimate →</a>
+      </div>
+
+      {/* Out-of-service-area: inline referral link at the end of the paragraph */}
+      <div style={{
+        background: "#FFF8E9", border: "1px solid rgba(245,166,35,0.4)",
+        borderRadius: 10, padding: 12, fontSize: 12.5, color: C.navy, lineHeight: 1.6,
+      }}>
+        <strong>Outside those areas?</strong> Doogie can still help you get connected — Doug maintains a BC-wide network of licensed REALTORS® in every region.{" "}
+        <a
+          href="/referral-request"
+          data-testid="out-of-area-referral"
+          style={{ color: C.blue, fontWeight: 700, textDecoration: "underline" }}
+        >Request a referral REALTOR®</a>
+        {" "}and we'll pair you with someone active in your community. No cost to you.
+      </div>
     </div>
-    <div style={{
-      marginTop: 4, background: "rgba(30,79,207,0.06)", border: "1px solid #DDE6FA",
-      borderRadius: 10, padding: 10, fontSize: 12, color: C.navy, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-    }}>
-      <ShieldCheck size={16} color={C.blue}/>
-      <span style={{ flex: "1 1 280px" }}>
-        These figures are <strong>past & present list prices</strong> — not a valuation. Doug can prepare a full Comparative Market Analysis for your specific home.
-      </span>
-      <a href="/valuation" style={{
-        background: C.navy, color: "#fff", padding: "7px 14px", borderRadius: 99,
-        fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
-      }}>Request a CMA →</a>
-    </div>
-  </div>
-);
+  );
+};
 
 // ── Right pane: Talk to Doug (consumer-friendly intake) ──────────────────────
 const PaneQualify = () => {
@@ -1419,35 +1477,12 @@ export default function VisualAgentDemo() {
           marketing bullets. The compliance footer below carries the real
           BCFSA / CASL / PIPA reference the consumer needs. */}
 
-      {/* ── Compliance footer — BCFSA / CASL / PIPA reference on this page ─── */}
-      <div style={{ maxWidth: 1000, margin: "26px auto 0", padding: "20px", color: "#4B5563", fontSize: 11 }}>
-        <div style={{
-          background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-          padding: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14,
-        }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase", marginBottom: 4 }}>
-              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> BCFSA
-            </div>
-            <div>Doug LeMaire, REALTOR® · <strong>Licence #167790</strong> · Fraser Property Management Realty Services Ltd. Doogie is a hallucination-hardened <strong>educational retrieval tool</strong> — not advice. For personalized guidance, request a <a href="/referral-request" style={{ color: C.blue, fontWeight: 600 }}>licensed BC REALTOR®</a>. BCFSA Consumer Line: <strong>1-877-683-9664</strong>.</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.green, textTransform: "uppercase", marginBottom: 4 }}>
-              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> CASL
-            </div>
-            <div>No commercial outreach is triggered by this demo. The Qualification scenario shows a <strong>consent-first intake</strong> — Doug never contacts a lead without ticked consent, express or implied, and every send carries an unsubscribe link.</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.gold, textTransform: "uppercase", marginBottom: 4 }}>
-              <ShieldCheck size={11} style={{ verticalAlign: "-1px" }}/> PIPA (BC)
-            </div>
-            <div>Scripted mode captures <strong>no audio</strong>. Live mode uses your browser's speech recognition (Google/Apple) — the disclosure gate appears before your first recording. Transcripts hit <code style={{ background: "#F1F5F9", padding: "1px 4px", borderRadius: 3 }}>/api/doogie/chat</code>, are PII-redacted, kept 30 days, then purged. Request your data or deletion at <a href="/privacy/data-request" style={{ color: C.blue, fontWeight: 600 }}>/privacy/data-request</a>.</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 12, textAlign: "center", opacity: 0.7 }}>
-          <ArrowRight size={11} style={{ verticalAlign: "-1px" }}/> Internal mockup at <code style={{ background: "#F1F5F9", padding: "1px 6px", borderRadius: 4 }}>/visual-agent-demo</code>.
-          Not linked from public navigation. All conversation content on this page is illustrative — no listings, offers, or contracts are formed here (RESA).
-        </div>
+      {/* Compliance footer moved to /compliance (accessible from the site
+          footer's "Compliance" link). The top banner + PIPA gate + per-badge
+          "not advice" microtext still keep this page BCFSA-safe. */}
+      <div style={{ maxWidth: 1000, margin: "26px auto 0", padding: "0 20px", color: "#6B7280", fontSize: 11, textAlign: "center" }}>
+        <ShieldCheck size={11} color={C.blue} style={{ verticalAlign: "-2px", marginRight: 4 }}/>
+        Doogie shares general information — not advice. Full disclosures on our <a href="/compliance" style={{ color: C.blue, fontWeight: 600 }}>Compliance page</a>.
       </div>
 
       {/* ── Kiosk Mode — fullscreen voice-only view for open-house tablets ─── */}

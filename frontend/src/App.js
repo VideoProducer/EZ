@@ -115,22 +115,25 @@ const renderChatContent = (raw, lang) => {
     '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
   // 4. Internal paths — /path or /path/subpath — link to same-origin route.
   //    Negative lookbehind excludes: word chars, quotes, slashes, and < (to skip HTML closing tags like </strong>).
-  s = s.replace(/(?<![a-zA-Z0-9="'/<])(\/[a-z][a-z0-9\-/]*[a-z0-9])(?![a-zA-Z0-9>])/gi,
+  //    We EXCLUDE /referral-request here on purpose — that link is handled by
+  //    the phrase rule (4b) below so consumers only see ONE inline hyperlink,
+  //    not two stacked pill buttons ("Referral REALTOR® link" AND "/referral-request").
+  s = s.replace(/(?<![a-zA-Z0-9="'/<])(\/(?!referral-request(?![a-z0-9\-]))[a-z][a-z0-9\-/]*[a-z0-9])(?![a-zA-Z0-9>])/gi,
     '<a href="$1" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
-  // 4b. Auto-link the phrase "Referral REALTOR® link" (and common variants) to /referral-request.
-  //     Doogie's system prompt uses this phrase; make it clickable regardless of exact model output.
+  // 4b. Auto-link the phrase "Referral REALTOR® link" (and common variants)
+  //     inline to /referral-request. Also strip any bare "/referral-request"
+  //     mentions elsewhere in the same message that survived rule 4's negative
+  //     lookahead — this prevents the double-CTA the user flagged.
   s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link)/gi,
     '<a href="/referral-request" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
+  s = s.replace(/(?<![>a-zA-Z0-9])\/referral-request(?![a-z0-9\-])/g, "");
   // 4c. If a non-English chat language is active, append ?lang=xx to lead conversion routes.
   s = _appendLangToHref(s, lang);
-  // 4d. Promote any /referral-request anchor to the pill/bubble button style used
-  //     across the site. This turns Doogie's closing referral CTA into a visually
-  //     distinct navy pill so multilingual visitors immediately recognize it as an
-  //     action button (not just another link).
-  s = s.replace(
-    /<a\s+href="(\/referral-request[^"]*)"[^>]*>([^<]+)<\/a>/gi,
-    '<a href="$1" class="doogie-referral-pill" style="display:inline-block;background:var(--brand-navy);color:#fff;font-family:Inter,sans-serif;font-weight:600;font-size:0.9rem;padding:0.7rem 1.15rem;border-radius:999px;text-decoration:none;margin:0.5rem 0;box-shadow:0 6px 14px rgba(15,42,91,0.28);text-align:center">$2</a>'
-  );
+  // 4d. Referral CTAs render INLINE (underlined hyperlink) rather than as a
+  //     large navy pill button, so consumers see one clean link instead of a
+  //     stacked pill stack. If ever we want the pill back, restore this block:
+  //     s = s.replace(/<a\s+href="(\/referral-request[^"]*)"[^>]*>([^<]+)<\/a>/gi,
+  //       '<a href="$1" class="doogie-referral-pill">...</a>');
   // 5. Line breaks
   s = s.replace(/\n/g, "<br/>");
   return s;
@@ -4305,7 +4308,7 @@ const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
   <h3 style={{marginTop:"1.5rem"}}>Concerns about a REALTOR®?</h3>
   <p>Ethics complaints against a REALTOR® in the Greater Vancouver area may be filed with <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Greater Vancouver REALTORS® (GVR)</a>. Complaints about a licensee's conduct as a real estate licensee may be filed with <a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA</a>. See our <Link to="/complaints" style={{color:"var(--brand-blue)"}}>Complaints & Concerns</Link> page.</p>
 </>}/>;
-const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · <strong>BCFSA License #167790</strong> · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p></>}/>;
+const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · <strong>BCFSA License #167790</strong> · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept at <Link to="/visual-agent-demo" style={{color:"var(--brand-blue)"}}>/visual-agent-demo</Link>) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
 
 // --- Admin ---
 const AdminLogin = () => {
