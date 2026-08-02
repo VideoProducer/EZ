@@ -15,6 +15,7 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import { resolveStage, resolveModule, CLIENT_JOURNEY_COMPLIANCE_NOTICE } from "../journey_templates";
+import { BuyingGuide, SellingGuide } from "./BuyerSellerGuide";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -193,6 +194,26 @@ const CuratedView = ({ token, sessionKey, data, onReload, onLogout }) => {
             Questions along the way? Reply to Doug's email or call +1-604-466-7021. This plan is private to you — please don't share the link.
           </div>
         </div>
+
+        {/* --------------------------------------------------------------
+            Playbook — the full BC Buyer's or Seller's Guide, rendered
+            inline under the client's curated journey. This is what used
+            to live at /buying-guide and /selling-guide. It now lives ONLY
+            inside the token-gated Client Journey so only authenticated
+            clients can read it.
+            -------------------------------------------------------------- */}
+        {(journey.base_journey_slug === "buying" || journey.base_journey_slug === "selling") && (
+          <div id="playbook" data-testid="cj-playbook" style={{marginTop:"3rem",paddingTop:"2.5rem",borderTop:"3px solid rgba(15,42,91,0.12)"}}>
+            <div className="eyebrow" style={{textAlign:"center"}}>The Playbook — private to you</div>
+            <h2 className="section-title" style={{textAlign:"center",marginBottom:"0.5rem"}}>
+              {journey.base_journey_slug === "buying" ? "The BC Buyer's Guide" : "The BC Seller's Guide"}
+            </h2>
+            <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.95rem",maxWidth:"38rem",margin:"0 auto 2rem",lineHeight:1.65}}>
+              The complete step-by-step playbook for your side of the transaction. Read it end-to-end, or dip into the section that matches where you are today.
+            </p>
+            {journey.base_journey_slug === "buying" ? <BuyingGuide/> : <SellingGuide/>}
+          </div>
+        )}
       </div>
     </section>
   );

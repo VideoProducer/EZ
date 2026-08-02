@@ -2665,44 +2665,44 @@ async def get_related_terms(slug: str, limit: int = 8):
 _CATEGORY_RULES = {
     # Financing / mortgage terms → planning phase + FHSA/HBP + valuation
     "financ": [
-        {"kind": "Guide",     "title": "The Buying Guide — Money & Must-Haves", "blurb": "Step 3: pre-approval, budget ceiling, and closing-cost planning.",           "href": "/buying-guide#step-3",                   "reason": "same-topic:financing"},
+        {"kind": "Term",      "title": "Mortgage pre-approval",                 "blurb": "How BC pre-approval works, and what it does and doesn't guarantee.",                             "href": "/glossary/mortgage-pre-approval",       "reason": "same-topic:financing"},
         {"kind": "Estimator", "title": "Home valuation estimator",              "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",                             "reason": "financial-planning"},
         {"kind": "Glossary",  "title": "First Home Savings Account (FHSA)",     "blurb": "Federal tax-free savings account designed for first-time buyers.",           "href": "/glossary/first-home-savings-account-fhsa","reason": "related-program"},
     ],
     "mortgage": [
-        {"kind": "Guide",     "title": "The Buying Guide — Money & Must-Haves", "blurb": "Step 3: pre-approval, budget ceiling, and closing-cost planning.",           "href": "/buying-guide#step-3",                   "reason": "same-topic:financing"},
+        {"kind": "Term",      "title": "Mortgage pre-approval",                 "blurb": "How BC pre-approval works, and what it does and doesn't guarantee.",                             "href": "/glossary/mortgage-pre-approval",       "reason": "same-topic:financing"},
         {"kind": "Estimator", "title": "Home valuation estimator",              "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",                             "reason": "financial-planning"},
     ],
     # Tax terms → closing step + PTT + first-time / new-build exemptions
     "tax": [
-        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: Property Transfer Tax, legal fees, and other closing costs.",         "href": "/buying-guide#step-8",                   "reason": "same-topic:taxes"},
+        {"kind": "Term",      "title": "Property Transfer Tax (PTT)",           "blurb": "BC's tiered PTT rates + first-time / newly built exemptions.",                                    "href": "/glossary/property-transfer-tax-ptt",   "reason": "same-topic:taxes"},
         {"kind": "Glossary",  "title": "Property Transfer Tax (PTT)",            "blurb": "BC's tiered 1% / 2% / 3% / 5% provincial transfer tax.",                     "href": "/glossary/property-transfer-tax-ptt",    "reason": "core-concept"},
         {"kind": "Glossary",  "title": "First Time Home Buyers' Program (PTT)", "blurb": "The full first-time PTT exemption for BC purchases up to $835,000.",         "href": "/glossary/first-time-home-buyers-program-ptt","reason": "exemption"},
     ],
     # Strata terms → removing-subjects step + strata core docs
     "strata": [
-        {"kind": "Guide",     "title": "The Buying Guide — Removing Subjects",  "blurb": "Step 7: how strata document review works during due diligence.",             "href": "/buying-guide#step-7",                   "reason": "same-topic:strata"},
+        {"kind": "Term",      "title": "Form B — strata information certificate","blurb": "How BC strata document review works during due diligence.",                                    "href": "/glossary/form-b",                       "reason": "same-topic:strata"},
         {"kind": "Glossary",  "title": "Form B — Strata Information Certificate","blurb": "The core strata document reviewed before a purchase becomes firm.",          "href": "/glossary/form-b",                       "reason": "core-document"},
         {"kind": "Glossary",  "title": "Depreciation Report",                    "blurb": "The 30-year physical-condition & funding-strategy report for BC stratas.",   "href": "/glossary/depreciation-report",          "reason": "core-document"},
     ],
     # Legal / title / conveyancing terms → closing step + lawyer/notary
     "legal": [
-        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: what your notary or lawyer does at completion.",                     "href": "/buying-guide#step-8",                   "reason": "same-topic:legal"},
+        {"kind": "Term",      "title": "Lawyer or notary — what they do at closing","blurb": "The role of a BC conveyancing professional on completion day.",                                "href": "/glossary/lawyer-or-notary",             "reason": "same-topic:legal"},
         {"kind": "Glossary",  "title": "Lawyer or Notary",                      "blurb": "How BC conveyancing professionals handle a residential closing.",             "href": "/glossary/lawyer-or-notary",              "reason": "next-step"},
     ],
     "title": [
-        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: title transfer, mortgage discharge, and disbursement of funds.",     "href": "/buying-guide#step-8",                   "reason": "same-topic:title"},
+        {"kind": "Term",      "title": "Title search & charges",                "blurb": "How title transfer, mortgage discharge, and disbursement of funds work at completion.",           "href": "/glossary/title-search",                 "reason": "same-topic:title"},
     ],
     "conveyanc": [
-        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: what your notary or lawyer does at completion.",                     "href": "/buying-guide#step-8",                   "reason": "same-topic:legal"},
+        {"kind": "Term",      "title": "Lawyer or notary — what they do at closing","blurb": "The role of a BC conveyancing professional on completion day.",                                "href": "/glossary/lawyer-or-notary",             "reason": "same-topic:legal"},
     ],
     # Contract / offer terms → offer step (buyer + seller)
     "contract": [
-        {"kind": "Guide",     "title": "The Buying Guide — Making an Offer",    "blurb": "Step 5: price, deposit, subjects, dates — how offers are structured.",       "href": "/buying-guide#step-5",                   "reason": "same-topic:offers"},
-        {"kind": "Guide",     "title": "The Selling Guide — Offers & Negotiation","blurb": "Step 6: reviewing, countering, and weighing multiple-offer situations.",     "href": "/selling-guide#step-6",                   "reason": "same-topic:offers"},
+        {"kind": "Term",      "title": "Subject clauses",                       "blurb": "How BC offers are structured — price, deposit, subjects, and dates.",                              "href": "/glossary/subject-clauses",              "reason": "same-topic:offers"},
+        {"kind": "Term",      "title": "Counter-offer",                          "blurb": "Reviewing, countering, and weighing multiple-offer situations in BC.",                          "href": "/glossary/counter-offer",                "reason": "same-topic:offers"},
     ],
     "offer": [
-        {"kind": "Guide",     "title": "The Buying Guide — Making an Offer",    "blurb": "Step 5: price, deposit, subjects, dates — how offers are structured.",       "href": "/buying-guide#step-5",                   "reason": "same-topic:offers"},
+        {"kind": "Term",      "title": "Subject clauses",                       "blurb": "How BC offers are structured — price, deposit, subjects, and dates.",                              "href": "/glossary/subject-clauses",              "reason": "same-topic:offers"},
     ],
     # Property-type / community-context terms → community browser + listings
     "property type": [
@@ -2849,7 +2849,7 @@ async def _related_content_for_community(slug: str, limit: int = 6) -> dict:
 
     # Universal community cross-links
     defaults = [
-        {"kind": "Guide",     "title": "The Buying Guide — 9 steps for BC",   "blurb": "Understand how a residential purchase works from search to closing.",         "href": "/buying-guide",         "reason": "next-step"},
+        {"kind": "Term",      "title": "How a residential purchase works",     "blurb": "The 9 steps in a BC residential purchase from search to closing — explained by term.",         "href": "/glossary/completion-date", "reason": "next-step"},
         {"kind": "Estimator", "title": "Home valuation estimator",           "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",            "reason": "financial-planning"},
         {"kind": "Listings",  "title": "Live MLS® listings",                  "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",             "reason": "next-step"},
         {"kind": "Community", "title": "All BC community profiles",           "blurb": "Explore 239 community pages across the province.",                            "href": "/communities",          "reason": "geographic-context"},
@@ -3396,7 +3396,9 @@ async def admin_relation_audit(rel_id: str, _=Depends(verify_admin)):
     elif stype in ("community", "region", "neighbourhood"):
         surface_url = f"/community/{sid}"
     elif stype == "guide":
-        surface_url = f"/{sid}" if sid.endswith("-guide") else f"/buying-guide"
+        # Public guides were removed — anything of type "guide" now falls back
+        # to the glossary index so visitors land on live, indexable content.
+        surface_url = f"/glossary"
     return {
         "relation": rel,
         "surface_url": surface_url,

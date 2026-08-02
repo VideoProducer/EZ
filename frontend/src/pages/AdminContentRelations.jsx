@@ -151,7 +151,7 @@ export default function AdminContentRelations({ headers }) {
           </div>
           <div className="field" style={{ marginTop: "1rem" }}>
             <label>Target href (URL path) *</label>
-            <input value={editing.target_href} onChange={e => patch({ target_href: e.target.value })} placeholder="e.g. /buying-guide#step-3" data-testid="rel-target-href"/>
+            <input value={editing.target_href} onChange={e => patch({ target_href: e.target.value })} placeholder="e.g. /glossary/mortgage-pre-approval" data-testid="rel-target-href"/>
           </div>
           <div className="form-grid" style={{ marginTop: "1rem" }}>
             <div className="field">
@@ -212,7 +212,7 @@ export default function AdminContentRelations({ headers }) {
                   {(() => {
                     const surface = r.source_type === "glossary" ? `/glossary/${r.source_id}` :
                                     (r.source_type === "community" || r.source_type === "region" || r.source_type === "neighbourhood") ? `/community/${r.source_id}` :
-                                    r.source_type === "guide" ? (r.source_id && r.source_id.endsWith("-guide") ? `/${r.source_id}` : "/buying-guide") : null;
+                                    r.source_type === "guide" ? "/glossary" : null;
                     return surface ? (
                       <a href={surface} target="_blank" rel="noopener noreferrer" data-testid={`rel-preview-live-${r.id}`} style={{ fontSize: "0.72rem", color: "var(--brand-blue)", fontWeight: 600, textDecoration: "none", display: "inline-block", marginTop: "0.15rem" }}>🔍 Preview live ↗</a>
                     ) : null;

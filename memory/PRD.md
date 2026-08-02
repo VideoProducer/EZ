@@ -1164,3 +1164,25 @@ Doug's inbox stops getting warm/cold pings — only 🔥 HOT leads still email `
 - **New**: `frontend/src/pages/AdminLeadTriage.jsx` (~330 lines)
 - **Modified**: `backend/server.py` — `_triage_and_notify_lead` (HOT-only), new `GET /admin/lead-triage`, new `PUT /admin/leads/{kind}/{id}/followup`
 - **Modified**: `frontend/src/App.js` — import, nav link, route registration
+
+---
+
+## 📅 2026-02-02 (later) — Guides folded into Client Journey ✅
+
+### What changed (per Doug: 1a + 2b)
+- **Public `/buying-guide` and `/selling-guide` deleted**. Both URLs now silently redirect to the corresponding intake form (`/buyer` and `/seller`) via `<Navigate>`. No "moved" landing page, no explanation — visitors go straight to intake.
+- **Guide content moved inside `/my-journey/:token`**. `MyJourney.jsx` now imports `BuyingGuide` / `SellingGuide` from `pages/BuyerSellerGuide.jsx` and renders whichever one matches the journey's `base_journey_slug` in a dedicated "The Playbook — private to you" section below the client's curated stages.
+- **Nav links removed** from header and footer.
+- **Backend related-content cross-refs updated** — 10 `/buying-guide#step-N` and `/selling-guide#step-N` hard-coded hrefs in `_related_for_glossary` and related helpers rewritten to point to the underlying glossary slug that each step was really about (mortgage-pre-approval, property-transfer-tax-ptt, form-b, lawyer-or-notary, title-search, subject-clauses, counter-offer, completion-date). Result: no dead links anywhere on the public site, and the "You may also be looking for" surfaces on glossary pages keep working exactly as before.
+- **`content_relations` fallback** for `source_type=guide` now resolves to `/glossary` (index) instead of the removed guide URL.
+
+### Files touched
+- **Modified**: `frontend/src/App.js` — removed 2 nav links, removed 2 footer links, replaced 2 routes with `<Navigate>` redirects, deleted the `GuideRelocatedGate` component (dead code cleanup)
+- **Modified**: `frontend/src/pages/MyJourney.jsx` — imports `BuyingGuide`/`SellingGuide`, renders the appropriate one inline for buyer/seller journeys
+- **Modified**: `backend/server.py` — 10 related-content cross-references rewritten to glossary slugs, `content_relations` guide fallback → `/glossary`
+- **Modified**: `frontend/src/pages/AdminContentRelations.jsx` — placeholder + display logic updated to reflect the new reality (no more `/buying-guide` references in admin UI)
+
+### Behaviour verification
+- `/buying-guide` in a browser → instantly renders the Buyer Intake form (verified via screenshot)
+- `/my-journey/:token` for a journey with `base_journey_slug="buying"` → renders the stages + a "The Playbook — private to you" section with the full 9-step BC Buyer's Guide inline
+- No dead links: `grep '/buying-guide\|/selling-guide' /app/backend/server.py` returns zero runtime matches
