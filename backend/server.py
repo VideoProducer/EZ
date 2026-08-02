@@ -2982,10 +2982,41 @@ async def admin_search_analytics(_=Depends(verify_admin), days: int = 30, limit:
     total = await db.search_queries.count_documents({"at": {"$gte": cutoff}})
     unique = len({(d.get("query_lower") or "") async for d in db.search_queries.find({"at": {"$gte": cutoff}}, {"query_lower": 1, "_id": 0})})
 
+    # Click-through aggregation — join clicks to queries by lower-cased query text
+    clicks_by_query = {}
+    async for d in db.search_clicks.aggregate([
+        {"$match": {"at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$query_lower", "clicks": {"$sum": 1}}},
+    ]):
+        clicks_by_query[d["_id"] or ""] = d.get("clicks", 0)
+
+    # Per-kind CTR aggregation across the whole window
+    kind_counts = {}
+    async for d in db.search_clicks.aggregate([
+        {"$match": {"at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$kind", "clicks": {"$sum": 1}}},
+    ]):
+        kind_counts[d.get("_id") or "Unknown"] = d.get("clicks", 0)
+    total_clicks = sum(kind_counts.values())
+    ctr_by_kind = [
+        {"kind": k, "clicks": c, "share": round(100.0 * c / total_clicks, 1) if total_clicks else 0.0}
+        for k, c in sorted(kind_counts.items(), key=lambda kv: -kv[1])
+    ]
+
+    # Enrich the "top" query list with click and CTR data
+    for r in top:
+        q_lower = (r.get("query") or "").lower()
+        clicks = clicks_by_query.get(q_lower, 0)
+        r["clicks"] = clicks
+        r["ctr"] = round(100.0 * clicks / r["count"], 1) if r.get("count") else 0.0
+
     return {
         "period_days": days,
         "total_searches": total,
         "unique_queries": unique,
+        "total_clicks": total_clicks,
+        "site_ctr": round(100.0 * total_clicks / total, 1) if total else 0.0,
+        "ctr_by_kind": ctr_by_kind,
         "top": top,
         "no_results": no_results,
         "low_confidence": low_confidence,
@@ -3020,6 +3051,175 @@ async def admin_relation_audit(rel_id: str, _=Depends(verify_admin)):
         "visibility": rel.get("visibility", "public"),
         "active": rel.get("active", True),
     }
+
+
+# ---------------------------------------------------------------------------
+# Search click-through attribution (fire-and-forget beacon)
+# ---------------------------------------------------------------------------
+
+class SearchClickBeacon(BaseModel):
+    query: str
+    kind: str                    # "Terms" / "FAQs" / "Tools" / "Communities" / "Journey" / "Listings" / "Doogie" / "QuickAnswer"
+    href: str
+    position: Optional[int] = 0  # 0-indexed position within the group
+    source: Optional[str] = "search"  # "search" | "doogie-chip"
+
+
+@api.post("/search/click")
+async def log_search_click(beacon: SearchClickBeacon, request: Request):
+    """Log a search result click so we can compute CTR per query and per group.
+    Fire-and-forget: never raises to the caller. IP is hashed for PIPA."""
+    try:
+        import hashlib
+        ip = ""
+        if request is not None:
+            ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+                  or (request.client.host if request.client else ""))
+        ip_hash = hashlib.sha256((ip + "|eztofind-salt-v1").encode()).hexdigest()[:16] if ip else ""
+        await db.search_clicks.insert_one({
+            "query": beacon.query,
+            "query_lower": (beacon.query or "").lower(),
+            "kind": beacon.kind,
+            "href": beacon.href,
+            "position": int(beacon.position or 0),
+            "source": beacon.source or "search",
+            "ip_hash": ip_hash,
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.warning(f"search click log failed: {e}")
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Query clustering — group near-identical no-result queries so a single
+# content commission covers a whole family of variants ("strata fees
+# Vancouver" + "strata fee Burnaby" + "monthly strata fee" → one cluster).
+# ---------------------------------------------------------------------------
+
+# Reused inside the clustering helper — same list drives search tokenization.
+_CLUSTER_STOPWORDS = {
+    "the","and","for","with","from","that","this","what","when","where","which",
+    "who","why","how","are","was","were","does","did","not","you","your","yours",
+    "our","ours","they","them","their","his","her","hers","its","any","some",
+    "all","one","two","into","onto","than","then","there","here","over","under",
+    "about","also","just","have","has","had","been","being","will","can","could",
+    "would","should","may","might","must","shall","get","got","make","made",
+    "take","took","use","used","using","very","much","many","more","most","less",
+    "least","few","own","off","out","up","down","on","in","at","to","of","as",
+    "by","or","if","so","no","yes","an","be","is","am","it",
+    "real","estate","home","homes","house","houses","property","properties",
+    "bc","canada","canadian","columbia","british","thing","things",
+}
+
+
+def _cluster_normalize(q: str) -> set:
+    """Return a frozenset of stemmed, stopword-free tokens for clustering."""
+    tokens = re.split(r"[^a-zA-Z0-9]+", (q or "").lower())
+    out = set()
+    for t in tokens:
+        if len(t) < 3 or t in _CLUSTER_STOPWORDS:
+            continue
+        # Very light stemming: strip trailing 's' or 'es' for simple plurals
+        if len(t) > 4 and t.endswith("es") and not t.endswith("ses"):
+            t = t[:-2]
+        elif len(t) > 3 and t.endswith("s") and not t.endswith("ss"):
+            t = t[:-1]
+        out.add(t)
+    return out
+
+
+def _cluster_queries(rows: list, jaccard_threshold: float = 0.5, min_shared_tokens: int = 2) -> list:
+    """Greedy single-pass clusterer. Each `row` must have {query, count}.
+    Two rows cluster together when their token sets share Jaccard >= threshold
+    AND at least `min_shared_tokens` tokens overlap. Returns a list of
+    clusters sorted by total_count desc, each with:
+      representative_query, total_count, variant_count, variants[]
+
+    Threshold rationale: Jaccard 0.5 with min-2-shared-tokens catches "strata
+    fees Vancouver" + "strata fee Burnaby" + "monthly strata fee" as one
+    cluster, while requiring 2 shared tokens prevents false pairings on
+    single-token overlaps like {"real"} which is already stopword-filtered
+    but this belts-and-braces the guard."""
+    # Pre-tokenize
+    enriched = []
+    for r in rows:
+        toks = _cluster_normalize(r.get("query") or "")
+        if toks:
+            enriched.append({"query": r["query"], "count": r["count"], "tokens": toks, "last_at": r.get("last_at")})
+
+    # Sort by count desc so the highest-volume query becomes cluster representative
+    enriched.sort(key=lambda x: -x["count"])
+
+    clusters = []
+    for item in enriched:
+        placed = False
+        for cluster in clusters:
+            rep_tokens = cluster["_rep_tokens"]
+            shared = rep_tokens & item["tokens"]
+            union = rep_tokens | item["tokens"]
+            if not union:
+                continue
+            j = len(shared) / len(union)
+            if j >= jaccard_threshold and len(shared) >= min_shared_tokens:
+                cluster["variants"].append({"query": item["query"], "count": item["count"], "last_at": item.get("last_at")})
+                cluster["total_count"] += item["count"]
+                cluster["variant_count"] += 1
+                placed = True
+                break
+        if not placed:
+            clusters.append({
+                "representative_query": item["query"],
+                "_rep_tokens": item["tokens"],
+                "total_count": item["count"],
+                "variant_count": 1,
+                "variants": [{"query": item["query"], "count": item["count"], "last_at": item.get("last_at")}],
+                "shared_tokens": sorted(item["tokens"]),
+            })
+
+    # Strip internal fields before returning
+    for c in clusters:
+        c.pop("_rep_tokens", None)
+    clusters.sort(key=lambda x: -x["total_count"])
+    return clusters
+
+
+@api.get("/admin/search-analytics/clusters")
+async def admin_search_clusters(_=Depends(verify_admin), days: int = 30, kind: str = "no_results", limit: int = 20):
+    """Return query clusters for the admin analytics page.
+    `kind` selects the source list:
+      * `no_results` (default) — cluster queries that returned zero hits
+      * `low_confidence` — cluster queries that returned some hits but no quick answer
+      * `all` — cluster every query (higher-noise; kept for completeness)
+    """
+    from datetime import timedelta
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 365)))).isoformat()
+
+    match = {"at": {"$gte": cutoff}}
+    if kind == "no_results":
+        match["result_count"] = 0
+    elif kind == "low_confidence":
+        match["result_count"] = {"$gt": 0}
+        match["has_quick_answer"] = False
+    # else "all" — no extra filter
+
+    pipeline = [
+        {"$match": match},
+        {"$group": {
+            "_id": "$query_lower",
+            "count": {"$sum": 1},
+            "last_query": {"$last": "$query"},
+            "last_at": {"$max": "$at"},
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 400},  # cap raw rows before clustering to keep the endpoint fast
+    ]
+    rows = []
+    async for d in db.search_queries.aggregate(pipeline):
+        rows.append({"query": d.get("last_query"), "count": d.get("count", 0), "last_at": d.get("last_at")})
+
+    clusters = _cluster_queries(rows)
+    return {"period_days": days, "kind": kind, "raw_query_count": len(rows), "clusters": clusters[:limit]}
 
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:

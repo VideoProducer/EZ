@@ -826,3 +826,58 @@ Three deliverables that close the loop on the intelligent related-content platfo
 - **Query clustering**: group similar no-result queries (`"strata fees Vancouver"`, `"strata fee Burnaby"`, `"strata monthly fee"`) into single suggestions so Doug commissions one term, not five
 - **Semantic embeddings** (per spec §13 Layer 3): promote from keyword to vector search once the log corpus is large enough to fine-tune relevance
 - **Guide printables + multilingual**: still on the backlog from Phase A
+
+---
+
+## 2026-08-02 — Click-Through Attribution + Query Clustering
+
+Two Phase D+ upgrades that close the loop on search analytics: Doug now sees which results visitors actually click AND has near-identical no-result queries pre-grouped into single content commissions.
+
+### 1. Click-Through Attribution
+- **New collection** `search_clicks` — logs every click on a search result or Doogie chip. Fields: `query`, `query_lower`, `kind`, `href`, `position`, `source` (`"search"` | `"doogie-chip"`), hashed IP, timestamp
+- **New endpoint** `POST /api/search/click` — fire-and-forget beacon endpoint. Never raises to the caller; PIPA-safe (only SHA-256 truncated hash of IP, never raw)
+- **Frontend beacon**: `fetch(..., {keepalive: true})` — modern equivalent of `navigator.sendBeacon` that survives page navigation. Attached to:
+  - QuickAnswer link on `/search`
+  - Every result card on `/search` (with position index within its group)
+  - Every Doogie related chip in the chat panel (source flagged as `"doogie-chip"`)
+- **Analytics upgrade**: existing `/api/admin/search-analytics` now returns:
+  - `total_clicks`
+  - `site_ctr` (percentage across the window)
+  - `ctr_by_kind` (pill row on the admin dashboard: QuickAnswer 50% · Terms 30% · Journey 15% …)
+  - Per-query `clicks` + `ctr` columns in the top-queries table
+
+### 2. Query Clustering
+- **New endpoint** `GET /api/admin/search-analytics/clusters?days=30&kind=no_results|low_confidence|all&limit=20`
+- **Algorithm**: greedy single-pass Jaccard clusterer over normalized token sets
+  - Normalization = lowercase → drop 60+ real-estate domain stopwords → light singularization (`fees`→`fee`, `properties`→`property`)
+  - Threshold = Jaccard ≥ 0.5 AND ≥ 2 shared tokens (belt-and-braces guard)
+  - Higher-volume query becomes cluster representative
+- **Frontend cluster panel** on `/admin/search-analytics`:
+  - Kind selector (No-result / Low-confidence / All queries)
+  - Cluster rows show representative query + variant count + total volume + shared tokens + Preview link
+  - Expand/collapse to see the individual variants nested under each cluster
+  - High-volume clusters (total ≥ 5) render volume in red so the eye jumps straight to the biggest gaps
+- **Real-world validation**: seeded test log with "strata fees Vancouver" + "strata fees" + "strata fee Burnaby" + "monthly strata fee" — clustered into ONE row (representative: "monthly strata fee"; variants: 4; total: 4; shared tokens: `fee · monthly · strata`). Also correctly clusters "capital gains condo" + "capital gains on rental property" into a single row — a real BC-specific gap Doug could commission a single landing page for.
+
+### Files touched
+- **Modified**: `backend/server.py` — added ~185 lines: `search_clicks` model + `POST /api/search/click` endpoint, `_CLUSTER_STOPWORDS` + `_cluster_normalize` + `_cluster_queries` helpers, `admin/search-analytics/clusters` endpoint, click-through enrichment inside `admin/search-analytics`
+- **Modified**: `frontend/src/pages/SearchPage.jsx` — added `emitSearchClickBeacon` helper, attached to QuickAnswer link + every ResultsGroup card with position/group kind/query
+- **Modified**: `frontend/src/components/DoogieRelatedChips.jsx` — added `emitChipBeacon` helper, attached to every chip with `source: "doogie-chip"`
+- **Modified**: `frontend/src/pages/AdminSearchAnalytics.jsx` — added Total-clicks metric card + "Where clicks land" panel + Clicks/CTR columns on top-queries table + full Query-clusters section with kind selector + expandable variant rows
+
+### Compliance controls
+- **PIPA**: raw IPs never stored on click log — SHA-256 truncated hash only, same convention as query log
+- **CASL**: beacon endpoint is operational-analytics-only, not marketing
+- **User navigation**: beacon uses `keepalive:true` so it fires even as the user is navigating away; failure is silent so a broken beacon never blocks a click
+- **Test log clean-up**: seed queries and click beacons cleared post-verification so Doug's first real analytics window shows genuine visitor data only
+
+### End-to-end validation
+- Curl-verified: POST /api/search/click stores rows; GET /api/admin/search-analytics returns `total_clicks`, `site_ctr`, `ctr_by_kind`, and per-query CTR
+- Playwright-verified: admin dashboard renders all new UI blocks; strata cluster expands correctly showing 3 variants nested under "monthly strata fee"
+- Regression: 8/8 core routes return 200
+
+### Backlog still open
+- **Guide printables** (P1) — print-friendly CSS on Buyer/Seller Guides
+- **Multilingual guides** (P2) — translate to zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
+- **Guide email capture** — visitor email → PDF download, CASL-separated
+- **Semantic embeddings** (Phase C.2) — layer 3 of spec §13; promote from keyword-only once corpus is large enough

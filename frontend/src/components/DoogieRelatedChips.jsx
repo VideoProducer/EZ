@@ -16,6 +16,19 @@ import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Fire-and-forget beacon for chip clicks (source="doogie-chip" so admin CTR
+// aggregation can slice by origin). Never blocks navigation.
+const emitChipBeacon = (payload) => {
+  try {
+    fetch(`${API}/search/click`, {
+      method: "POST",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  } catch { /* ignore */ }
+};
+
 const CHIP_KIND_STYLES = {
   Terms:       { bg: "#EFF6FF", border: "#BFDBFE", color: "#1D4ED8", icon: "📖" },
   FAQs:        { bg: "#F0FDF4", border: "#BBF7D0", color: "#047857", icon: "❓" },
@@ -86,6 +99,7 @@ export default function DoogieRelatedChips({ query, testIdPrefix = "doogie-chip"
             data-testid={`${testIdPrefix}-${i}`}
             data-chip-kind={c.kind}
             title={c.title}
+            onClick={() => emitChipBeacon({ query: query || "", kind: c.kind, href: c.href, position: i, source: "doogie-chip" })}
             style={{
               display: "inline-flex",
               alignItems: "center",

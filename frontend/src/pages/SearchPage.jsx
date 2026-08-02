@@ -16,6 +16,22 @@ import { Helmet } from "react-helmet-async";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Fire-and-forget beacon so click-through data reaches the backend even when
+// the browser is already navigating away. `fetch` with `keepalive:true` is
+// the modern equivalent of navigator.sendBeacon and works with JSON bodies.
+const emitSearchClickBeacon = (payload) => {
+  try {
+    fetch(`${API}/search/click`, {
+      method: "POST",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  } catch {
+    /* ignore — analytics must never break user navigation */
+  }
+};
+
 const BRAND = {
   navy: "#0F2A5B",
   blue: "#2563EB",
@@ -70,7 +86,7 @@ const SearchBox = ({ initial = "", size = "large", onSubmit }) => {
   );
 };
 
-const QuickAnswer = ({ answer }) => {
+const QuickAnswer = ({ answer, query }) => {
   if (!answer) return null;
   return (
     <div className="paper" data-testid="quick-answer" style={{
@@ -100,17 +116,22 @@ const QuickAnswer = ({ answer }) => {
         lineHeight: 1.65,
         marginBottom: "0.85rem",
       }}>{answer.excerpt}</p>
-      <Link to={answer.url} data-testid="quick-answer-link" style={{
-        color: BRAND.blue,
-        fontWeight: 700,
-        fontFamily: "Inter,sans-serif",
-        textDecoration: "none",
-      }}>Read the full explanation →</Link>
+      <Link
+        to={answer.url}
+        data-testid="quick-answer-link"
+        onClick={() => emitSearchClickBeacon({ query: query || "", kind: "QuickAnswer", href: answer.url, position: 0, source: "search" })}
+        style={{
+          color: BRAND.blue,
+          fontWeight: 700,
+          fontFamily: "Inter,sans-serif",
+          textDecoration: "none",
+        }}
+      >Read the full explanation →</Link>
     </div>
   );
 };
 
-const ResultsGroup = ({ group }) => {
+const ResultsGroup = ({ group, query }) => {
   const accent = KIND_ACCENTS[group.kind] || { dot: BRAND.blue, label: group.kind };
   if (!group.items || group.items.length === 0) return null;
   return (
@@ -133,6 +154,7 @@ const ResultsGroup = ({ group }) => {
             key={`${group.kind}-${i}-${it.href}`}
             to={it.href}
             data-testid={`result-${group.kind.toLowerCase()}-${i}`}
+            onClick={() => emitSearchClickBeacon({ query: query || "", kind: group.kind, href: it.href, position: i, source: "search" })}
             style={{
               padding: "1rem",
               border: "1px solid rgba(15,42,91,0.12)",
@@ -226,13 +248,13 @@ export default function SearchPage() {
 
         {data && (
           <>
-            <QuickAnswer answer={data.quick_answer}/>
+            <QuickAnswer answer={data.quick_answer} query={q}/>
 
             {(!data.groups || data.groups.every((g) => !g.items || g.items.length === 0)) && !data.quick_answer && (
               <NoResults query={q}/>
             )}
 
-            {data.groups && data.groups.map((g, i) => <ResultsGroup key={i} group={g}/>)}
+            {data.groups && data.groups.map((g, i) => <ResultsGroup key={i} group={g} query={q}/>)}
           </>
         )}
       </div>
