@@ -45,6 +45,36 @@ body {
   background: #FDFCF8;
   -webkit-font-smoothing: antialiased;
   font-optical-sizing: auto;
+  /* Explicit base so Android system-font-scaling can't blow paragraph text
+     up to headline-size. Users can still zoom (pinch or browser zoom) — this
+     only sets a sane starting point. */
+  font-size: 16px;
+  line-height: 1.55;
+}
+/* Standalone `.lead` (outside hero) — used on About, gate pages, and section
+   intros. Was previously unstyled (browser default) which combined with the
+   serif display font rendered ~28-32px on Android. */
+.lead {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink);
+  max-width: 42rem;
+  margin: 0 0 1.5rem;
+}
+/* Bare <p> across the site — pin them to a readable body size so Android
+   text-scaling can't push them past headline sizes. */
+p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+@media (max-width: 700px) {
+  body { font-size: 15px; }
+  .lead { font-size: 0.98rem; line-height: 1.6; }
+  p { font-size: 0.95rem; }
+  /* Give heading text a proper mobile cap so H2/H3 never go past the h1 */
+  h2 { font-size: clamp(1.5rem, 5.5vw, 2rem); }
+  h3 { font-size: clamp(1.2rem, 4.5vw, 1.5rem); }
 }
 
 .font-display { font-family: 'Fraunces', 'Playfair Display', Georgia, serif; font-weight: 700; letter-spacing: -0.02em; }
