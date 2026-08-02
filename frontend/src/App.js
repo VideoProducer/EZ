@@ -830,7 +830,6 @@ const Nav = () => {
       </button>
       <div className={`nav-links${open?" open":""}`}>
         <NavLink to="/listings" onClick={close} data-testid="nav-listings">Property Search</NavLink>
-        <NavLink to="/search" onClick={close} data-testid="nav-search" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>🔍 Info & FAQs</NavLink>
         <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
         <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
