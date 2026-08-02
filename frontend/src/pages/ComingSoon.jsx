@@ -55,18 +55,23 @@ export function ComingSoonHero({ mode = "home", data = null }) {
   }, [mode, data]);
 
   if (!cs) return mode === "preview" ? <div style={{padding:"3rem",textAlign:"center",color:"var(--muted)"}}>Loading preview…</div> : null;
-  if (cs.__error === "unauthorized") return (
-    <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
-      <h2 style={{color:"var(--brand-navy)"}}>Preview requires admin login</h2>
-      <p style={{color:"var(--muted)"}}>Please <Link to="/admin/login" style={{color:"var(--brand-blue)",fontWeight:600}}>sign in</Link>, then reopen this preview URL.</p>
-    </div>
-  );
-  if (cs.__error === "unavailable") return (
-    <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
-      <h2 style={{color:"var(--brand-navy)"}}>Preview unavailable</h2>
-      <p style={{color:"var(--muted)"}}>The coming-soon draft could not be loaded. Try refreshing.</p>
-    </div>
-  );
+  // On the public homepage, never surface load/auth errors — hide silently so
+  // visitors don't see admin diagnostics while the backend is spinning up.
+  if (cs.__error) {
+    if (mode !== "preview") return null;
+    if (cs.__error === "unauthorized") return (
+      <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
+        <h2 style={{color:"var(--brand-navy)"}}>Preview requires admin login</h2>
+        <p style={{color:"var(--muted)"}}>Please <Link to="/admin/login" style={{color:"var(--brand-blue)",fontWeight:600}}>sign in</Link>, then reopen this preview URL.</p>
+      </div>
+    );
+    return (
+      <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif"}}>
+        <h2 style={{color:"var(--brand-navy)"}}>Preview unavailable</h2>
+        <p style={{color:"var(--muted)"}}>The coming-soon draft could not be loaded. Try refreshing.</p>
+      </div>
+    );
+  }
   if (mode === "home" && !cs.published) return null;
 
   // Empty-state guidance — makes "nothing to show yet" obvious in preview mode.
