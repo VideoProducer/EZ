@@ -9,6 +9,8 @@ import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import { BuyingGuide, SellingGuide } from "./pages/BuyerSellerGuide";
+import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
+import AdminContentRelations from "./pages/AdminContentRelations";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -3601,6 +3603,12 @@ const GlossaryTerm = () => {
       </div>
     )}
 
+    {/* Phase B — cross-type "You may also be looking for" cards (guides,
+        calculators, communities). Fetches from /api/related-content and hides
+        silently if empty or if the fetch errors — never leaks admin diagnostics
+        to public visitors. */}
+    <YouMayAlsoBeLookingFor sourceType="glossary" sourceId={t.slug} limit={6} testId="glossary-you-may-also"/>
+
     <div className="notice" style={{marginTop:"1.5rem"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
 
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleSchema)}}/>
@@ -4295,6 +4303,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/definition-audit")} className={active==="def-audit"?"active":""} data-testid="admin-nav-def-audit">📖 Definition Audit</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/relations")} className={active==="relations"?"active":""} data-testid="admin-nav-relations">🕸️ Content Relations</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/policies")} className={active==="policies"?"active":""} data-testid="admin-nav-policies">📄 Broker Policies</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/snapshots")} className={active==="snapshots"?"active":""} data-testid="admin-nav-snapshots">📸 Evidence Chain</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/campaigns")} className={active==="campaigns"?"active":""} data-testid="admin-nav-campaigns">📧 Campaigns</a>
@@ -5000,6 +5009,10 @@ const CommunityPage = () => {
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
     </> : <><h1 className="section-title">Loading…</h1></>}
+
+    {/* Phase B — cross-type "You may also be looking for" cards for community
+        pages. Silent-hide if empty or on fetch error. */}
+    {slug && <YouMayAlsoBeLookingFor sourceType="community" sourceId={slug} limit={6} testId="community-you-may-also"/>}
   </div></section>);
 };
 
@@ -7591,6 +7604,12 @@ const AdminComingSoonWrapper = () => {
   return <AdminComingSoon headers={headers}/>;
 };
 
+const AdminContentRelationsWrapper = () => {
+  const { headers } = useAdmin();
+  return <AdminContentRelations headers={headers}/>;
+};
+
+
 // ============ Admin Client Journeys — private curated plans ============
 // Doug creates a personalized real-estate journey for each client from a
 // template (Buying, Selling, Condo/Strata, etc.), curates which modules
@@ -8241,6 +8260,7 @@ function App() {
       <Route path="/admin/growth" element={<AdminGrowth/>}/>
       <Route path="/admin/client-journeys" element={<AdminClientJourneys/>}/>
       <Route path="/admin/coming-soon" element={<AdminShell active="coming-soon"><AdminComingSoonWrapper/></AdminShell>}/>
+      <Route path="/admin/relations" element={<AdminShell active="relations"><AdminContentRelationsWrapper/></AdminShell>}/>
       <Route path="/admin/referrals" element={<AdminReferrals/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>

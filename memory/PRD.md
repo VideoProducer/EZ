@@ -659,3 +659,58 @@ Each guide contains:
 - **P2**: Multi-language variants for the guides (zh-Hant, zh-Hans, pa, fa, pt-PT) — currently English only, but the SEO scaffolding already includes hreflang alternates.
 - **P2**: Content-relations collection + admin editor for Phase B.
 - **P3**: Tech debt sprint — break `server.py` and `App.js` monoliths into modules.
+
+---
+
+## 2026-08-02 — Phase B: Intelligent Related-Content Engine
+
+### What shipped
+An intelligent cross-type "You may also be looking for" system that connects glossary terms, guides, calculators, communities, and listings into one seamless knowledge platform — with admin-controlled manual overrides.
+
+**Backend (`server.py`):**
+- New MongoDB collection: `content_relations` (with fields per Section 5 of the spec)
+- New public endpoint: `GET /api/related-content/{source_type}/{source_id}?limit=6`
+  - Priority 1 — manual `content_relations` (admin-pinned, priority=0)
+  - Priority 2 — rule-based cross-type derivation via `_CATEGORY_RULES` (financing → planning step + valuation + FHSA; taxes → closing step + PTT + first-time exemption; strata → subject-removal step + Form B + depreciation report; legal/title/conveyancing → closing step + lawyer-or-notary; contracts/offers → offer steps in buying+selling guides; property-type/acreage → communities + specialty pages)
+  - Priority 3 — same-category glossary siblings (max 3)
+  - Priority 4 — universal tail (full glossary + compliance page)
+- Every card includes a machine-readable `reason` code for admin inspection
+- Client-only records are excluded from the public endpoint
+- Admin CRUD: `GET/POST/PUT/DELETE /api/admin/content-relations` for manual overrides
+
+**Frontend components:**
+- **New**: `/app/frontend/src/components/YouMayAlsoBeLookingFor.jsx` — reusable card grid with kind-taxonomy colored dots, silent-hides on empty/error, exposes `data-reason` on each card for admin audit
+- **New**: `/app/frontend/src/pages/AdminContentRelations.jsx` — admin CRUD editor with filter (by source_type/source_id), full-featured form (source, target, reason, priority, visibility, notes, active toggle), and inline docs explaining priority order
+
+**Wired into:**
+- **Glossary detail pages** (all 439 term pages) — appears below the existing "See also — related terms" pill block
+- **Community pages** (all 240 community pages) — appears below the "Published by" author block
+- Top nav bar (Buying Guide + Selling Guide links, added in the previous ship, still active)
+- Admin sidebar (new "🕸️ Content Relations" nav entry between "Definition Audit" and "Broker Policies")
+
+### Compliance controls in place
+- **PIPA**: no personal information in the collection or the endpoint; no analytics events emitted from the card component
+- **BCFSA**: cards link only to pre-approved content on eztofind.ca — never external claims; every rule-based blurb was written in neutral educational voice (no "you should" / no advice); disclaimer pills on glossary pages remain in force above the cards
+- **CREA**: REALTOR® / MLS® trademarks preserved in blurbs; no MLS data touched
+- **CASL**: no marketing consent bundled — the cards are pure navigation
+- **Client gating (Section 22 of the spec)**: relations flagged `visibility: "client-only"` are excluded from the public endpoint at query time — enforced at the data layer per spec Section 22
+
+### End-to-end validation
+- Public endpoint tested with real glossary slug (`property-transfer-tax-ptt`) — returned Buying Guide anchor + First-Time PTT exemption + 3 same-category siblings + universal tail (6 cards)
+- Public endpoint with manual override tested (`glossary/deposit`) — manual pin appeared FIRST, above auto-derived cards
+- Admin login reset + curl-verified: LIST/POST/PUT/DELETE all pass with 200/OK
+- Community page (`/community/vancouver`) — component renders 6 cards
+- Glossary detail (`/glossary/property-transfer-tax-ptt`) — component renders 6 cards
+- Homepage + all 5 core routes still return 200 (no regressions)
+
+### Files touched
+- **New**: `backend/server.py` — added ~230 lines for the engine, admin CRUD, and Pydantic model
+- **New**: `frontend/src/components/YouMayAlsoBeLookingFor.jsx` (~145 lines)
+- **New**: `frontend/src/pages/AdminContentRelations.jsx` (~215 lines)
+- **Modified**: `frontend/src/App.js` — added imports + 2 wire-ins (glossary detail + community page) + 1 admin nav entry + 1 route + 1 wrapper component
+
+### Deferred (Phase C / D)
+- **Phase C — Grouped semantic search** (definitions / FAQs / tools / communities / journey / listings / Doogie)
+- **Phase C — Doogie integration**: append related-content chips after each Doogie answer using the same endpoint
+- **Phase D — Rich admin audit trail**: show which pages surface each relation, low-confidence query review, exclusion editor
+- **Backlog — Bulk-import seed relations**: a one-shot script that populates high-value pins for the 30–40 most-visited glossary terms (strata cluster, financing cluster, closing cluster)

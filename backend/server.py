@@ -2282,6 +2282,321 @@ async def get_related_terms(slug: str, limit: int = 8):
     _r.shuffle(docs)
     return {"category": category, "items": docs[:limit]}
 
+
+# ---------------------------------------------------------------------------
+# Phase B — Intelligent Related Content Engine
+# ---------------------------------------------------------------------------
+# Endpoint: GET /api/related-content/{source_type}/{source_id}
+# Returns a mixed list of related cards (glossary + community + guide +
+# calculator + region) that help visitors move through the platform as one
+# connected knowledge experience.
+#
+# Priority order (matches Section 6 of the intelligent-related-content spec):
+#   1. Manual approved relationships (content_relations collection, priority=0)
+#   2. Rule-based cross-type suggestions (category → guide-anchor / calculator)
+#   3. Automated same-category glossary siblings
+#
+# Compliance: every card carries a `reason` code that admins can inspect.
+# Client-only records are excluded from the public endpoint.
+# ---------------------------------------------------------------------------
+
+# Rule-based cross-type mapping. Keys are lowercase substrings that match
+# glossary categories (case-insensitive); values are the cards that should
+# always appear when a term falls into that category. This is the code path
+# that turns "Strata Fee" into links to the Buying Guide's "Removing Subjects"
+# step, the Form B term, and the depreciation report term.
+_CATEGORY_RULES = {
+    # Financing / mortgage terms → planning phase + FHSA/HBP + valuation
+    "financ": [
+        {"kind": "Guide",     "title": "The Buying Guide — Money & Must-Haves", "blurb": "Step 3: pre-approval, budget ceiling, and closing-cost planning.",           "href": "/buying-guide#step-3",                   "reason": "same-topic:financing"},
+        {"kind": "Estimator", "title": "Home valuation estimator",              "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",                             "reason": "financial-planning"},
+        {"kind": "Glossary",  "title": "First Home Savings Account (FHSA)",     "blurb": "Federal tax-free savings account designed for first-time buyers.",           "href": "/glossary/first-home-savings-account-fhsa","reason": "related-program"},
+    ],
+    "mortgage": [
+        {"kind": "Guide",     "title": "The Buying Guide — Money & Must-Haves", "blurb": "Step 3: pre-approval, budget ceiling, and closing-cost planning.",           "href": "/buying-guide#step-3",                   "reason": "same-topic:financing"},
+        {"kind": "Estimator", "title": "Home valuation estimator",              "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",                             "reason": "financial-planning"},
+    ],
+    # Tax terms → closing step + PTT + first-time / new-build exemptions
+    "tax": [
+        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: Property Transfer Tax, legal fees, and other closing costs.",         "href": "/buying-guide#step-8",                   "reason": "same-topic:taxes"},
+        {"kind": "Glossary",  "title": "Property Transfer Tax (PTT)",            "blurb": "BC's tiered 1% / 2% / 3% / 5% provincial transfer tax.",                     "href": "/glossary/property-transfer-tax-ptt",    "reason": "core-concept"},
+        {"kind": "Glossary",  "title": "First Time Home Buyers' Program (PTT)", "blurb": "The full first-time PTT exemption for BC purchases up to $835,000.",         "href": "/glossary/first-time-home-buyers-program-ptt","reason": "exemption"},
+    ],
+    # Strata terms → removing-subjects step + strata core docs
+    "strata": [
+        {"kind": "Guide",     "title": "The Buying Guide — Removing Subjects",  "blurb": "Step 7: how strata document review works during due diligence.",             "href": "/buying-guide#step-7",                   "reason": "same-topic:strata"},
+        {"kind": "Glossary",  "title": "Form B — Strata Information Certificate","blurb": "The core strata document reviewed before a purchase becomes firm.",          "href": "/glossary/form-b",                       "reason": "core-document"},
+        {"kind": "Glossary",  "title": "Depreciation Report",                    "blurb": "The 30-year physical-condition & funding-strategy report for BC stratas.",   "href": "/glossary/depreciation-report",          "reason": "core-document"},
+    ],
+    # Legal / title / conveyancing terms → closing step + lawyer/notary
+    "legal": [
+        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: what your notary or lawyer does at completion.",                     "href": "/buying-guide#step-8",                   "reason": "same-topic:legal"},
+        {"kind": "Glossary",  "title": "Lawyer or Notary",                      "blurb": "How BC conveyancing professionals handle a residential closing.",             "href": "/glossary/lawyer-or-notary",              "reason": "next-step"},
+    ],
+    "title": [
+        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: title transfer, mortgage discharge, and disbursement of funds.",     "href": "/buying-guide#step-8",                   "reason": "same-topic:title"},
+    ],
+    "conveyanc": [
+        {"kind": "Guide",     "title": "The Buying Guide — Closing & Moving In","blurb": "Step 8: what your notary or lawyer does at completion.",                     "href": "/buying-guide#step-8",                   "reason": "same-topic:legal"},
+    ],
+    # Contract / offer terms → offer step (buyer + seller)
+    "contract": [
+        {"kind": "Guide",     "title": "The Buying Guide — Making an Offer",    "blurb": "Step 5: price, deposit, subjects, dates — how offers are structured.",       "href": "/buying-guide#step-5",                   "reason": "same-topic:offers"},
+        {"kind": "Guide",     "title": "The Selling Guide — Offers & Negotiation","blurb": "Step 6: reviewing, countering, and weighing multiple-offer situations.",     "href": "/selling-guide#step-6",                   "reason": "same-topic:offers"},
+    ],
+    "offer": [
+        {"kind": "Guide",     "title": "The Buying Guide — Making an Offer",    "blurb": "Step 5: price, deposit, subjects, dates — how offers are structured.",       "href": "/buying-guide#step-5",                   "reason": "same-topic:offers"},
+    ],
+    # Property-type / community-context terms → community browser + listings
+    "property type": [
+        {"kind": "Community", "title": "Browse BC community profiles",          "blurb": "239 community pages covering geography, climate, and lifestyle context.",    "href": "/communities",                             "reason": "geographic-context"},
+        {"kind": "Listings",  "title": "Live MLS® listings",                     "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",                               "reason": "next-step"},
+    ],
+    "acreage": [
+        {"kind": "Guide",     "title": "Equestrian & acreage specialty page",   "blurb": "Horse-friendly and rural properties with barn/stable/arena features.",       "href": "/specialties/equestrian",                 "reason": "specialty-page"},
+    ],
+}
+
+# Static defaults that are always appended if we still have room.
+_UNIVERSAL_TAIL = [
+    {"kind": "Glossary",  "title": "Full BC real estate glossary",          "blurb": "439 plain-language terms explaining every concept in BC real estate.",           "href": "/glossary",       "reason": "always-available"},
+    {"kind": "Compliance","title": "How EZtoFind.ca is regulated",           "blurb": "BCFSA scope-of-licence, CREA REALTOR® Code, and consumer protections.",           "href": "/compliance",     "reason": "trust-signal"},
+]
+
+
+def _derive_glossary_related(term: dict, limit: int) -> list:
+    """Rule-based derivation for a glossary term. Returns cards derived from
+    category rules + same-category siblings + universal tail, all with a
+    `reason` code so admins can audit."""
+    out = []
+    seen_hrefs = set()
+
+    def _add(card):
+        if len(out) >= limit:
+            return
+        h = card.get("href")
+        if not h or h in seen_hrefs:
+            return
+        seen_hrefs.add(h)
+        out.append(card)
+
+    cat = (term.get("category") or "").lower()
+    slug = term.get("slug")
+
+    # Apply category rules
+    for key, cards in _CATEGORY_RULES.items():
+        if key in cat:
+            for c in cards:
+                # Skip if the rule points back at the same term
+                if c.get("href") == f"/glossary/{slug}":
+                    continue
+                _add(dict(c))
+    return out
+
+
+async def _related_content_for_glossary(slug: str, limit: int = 6) -> dict:
+    """Build the related-content payload for a glossary term."""
+    t = await db.glossary.find_one({"slug": slug}, {"_id": 0, "term": 1, "slug": 1, "category": 1})
+    if not t:
+        raise HTTPException(404, "Term not found")
+
+    items = []
+    seen_hrefs = set()
+
+    def _dedup_add(card):
+        h = card.get("href")
+        if not h or h in seen_hrefs:
+            return False
+        seen_hrefs.add(h)
+        items.append(card)
+        return True
+
+    # Priority 1 — manual approved relationships
+    async for rel in db.content_relations.find(
+        {"source_type": "glossary", "source_id": slug, "active": True, "visibility": {"$ne": "client-only"}},
+        {"_id": 0}
+    ).sort("priority", 1):
+        _dedup_add({
+            "kind": rel.get("target_kind_label") or (rel.get("target_type") or "").title() or "Related",
+            "title": rel.get("target_title") or "",
+            "blurb": rel.get("target_blurb") or "",
+            "href": rel.get("target_href") or "",
+            "reason": rel.get("reason") or "manual",
+        })
+
+    # Priority 2 — rule-based cross-type derivation
+    for c in _derive_glossary_related(t, limit=limit):
+        if len(items) >= limit:
+            break
+        _dedup_add(c)
+
+    # Priority 3 — same-category glossary siblings (up to 3)
+    if len(items) < limit and t.get("category"):
+        docs = await db.glossary.find(
+            {"category": t["category"], "slug": {"$ne": slug}},
+            {"_id": 0, "term": 1, "slug": 1}
+        ).sort("term", 1).to_list(50)
+        import random as _r
+        _r.shuffle(docs)
+        for d in docs[:3]:
+            if len(items) >= limit:
+                break
+            _dedup_add({
+                "kind": "Glossary",
+                "title": d.get("term"),
+                "blurb": f"Related BC glossary term in the {t['category']} category.",
+                "href": f"/glossary/{d['slug']}",
+                "reason": "same-category",
+            })
+
+    # Priority 4 — universal tail
+    for c in _UNIVERSAL_TAIL:
+        if len(items) >= limit:
+            break
+        _dedup_add(dict(c))
+
+    return {
+        "source_type": "glossary",
+        "source_id": slug,
+        "source_title": t.get("term"),
+        "items": items[:limit],
+    }
+
+
+async def _related_content_for_community(slug: str, limit: int = 6) -> dict:
+    """Build related-content for a community/region page. Manual overrides
+    first, then a universal community-context set."""
+    items = []
+    seen_hrefs = set()
+
+    def _dedup_add(card):
+        h = card.get("href")
+        if not h or h in seen_hrefs:
+            return False
+        seen_hrefs.add(h)
+        items.append(card)
+        return True
+
+    # Manual overrides
+    async for rel in db.content_relations.find(
+        {"source_type": "community", "source_id": slug, "active": True, "visibility": {"$ne": "client-only"}},
+        {"_id": 0}
+    ).sort("priority", 1):
+        _dedup_add({
+            "kind": rel.get("target_kind_label") or (rel.get("target_type") or "").title() or "Related",
+            "title": rel.get("target_title") or "",
+            "blurb": rel.get("target_blurb") or "",
+            "href": rel.get("target_href") or "",
+            "reason": rel.get("reason") or "manual",
+        })
+
+    # Universal community cross-links
+    defaults = [
+        {"kind": "Guide",     "title": "The Buying Guide — 9 steps for BC",   "blurb": "Understand how a residential purchase works from search to closing.",         "href": "/buying-guide",         "reason": "next-step"},
+        {"kind": "Estimator", "title": "Home valuation estimator",           "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",            "reason": "financial-planning"},
+        {"kind": "Listings",  "title": "Live MLS® listings",                  "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",             "reason": "next-step"},
+        {"kind": "Community", "title": "All BC community profiles",           "blurb": "Explore 239 community pages across the province.",                            "href": "/communities",          "reason": "geographic-context"},
+        {"kind": "Glossary",  "title": "BC real estate glossary",             "blurb": "439 plain-language terms explaining every concept in BC real estate.",         "href": "/glossary",             "reason": "always-available"},
+        {"kind": "Compliance","title": "How EZtoFind.ca is regulated",         "blurb": "BCFSA scope-of-licence, CREA REALTOR® Code, and consumer protections.",         "href": "/compliance",           "reason": "trust-signal"},
+    ]
+    for c in defaults:
+        if len(items) >= limit:
+            break
+        _dedup_add(dict(c))
+
+    return {"source_type": "community", "source_id": slug, "items": items[:limit]}
+
+
+@api.get("/related-content/{source_type}/{source_id}")
+async def get_related_content(source_type: str, source_id: str, limit: int = 6):
+    """Phase B — public related-content endpoint. Returns a mixed list of
+    cross-type cards (glossary, guides, calculators, communities, listings)
+    combining manual admin overrides with rule-based auto-suggestions.
+
+    Every card includes a `reason` code so admins can inspect why a link is
+    surfaced. Client-only records are excluded from this public endpoint."""
+    lim = max(1, min(limit, 12))
+    st = source_type.lower().strip()
+    if st == "glossary":
+        return await _related_content_for_glossary(source_id, limit=lim)
+    if st in ("community", "region", "neighbourhood"):
+        return await _related_content_for_community(source_id, limit=lim)
+    # Unknown source type — return manual overrides only
+    items = []
+    async for rel in db.content_relations.find(
+        {"source_type": st, "source_id": source_id, "active": True, "visibility": {"$ne": "client-only"}},
+        {"_id": 0}
+    ).sort("priority", 1).limit(lim):
+        items.append({
+            "kind": rel.get("target_kind_label") or (rel.get("target_type") or "").title() or "Related",
+            "title": rel.get("target_title") or "",
+            "blurb": rel.get("target_blurb") or "",
+            "href": rel.get("target_href") or "",
+            "reason": rel.get("reason") or "manual",
+        })
+    return {"source_type": st, "source_id": source_id, "items": items}
+
+
+# ---------------------------------------------------------------------------
+# Admin CRUD for content_relations — manual override management
+# ---------------------------------------------------------------------------
+class ContentRelation(BaseModel):
+    id: Optional[str] = None
+    source_type: str          # e.g. "glossary", "community", "region"
+    source_id: str            # slug or page id
+    target_type: str          # e.g. "glossary", "community", "guide", "calculator", "listings"
+    target_id: Optional[str] = None    # optional slug/id for the target
+    target_title: str
+    target_blurb: str
+    target_href: str
+    target_kind_label: Optional[str] = None  # display label ("Guide", "Community", etc.)
+    reason: str = "manual"
+    priority: int = 0         # 0 = highest, admins pin the most important
+    active: bool = True
+    visibility: str = "public"  # or "client-only"
+    notes: Optional[str] = None
+
+
+@api.get("/admin/content-relations")
+async def admin_list_content_relations(_=Depends(verify_admin), source_type: Optional[str] = None, source_id: Optional[str] = None, limit: int = 500):
+    q = {}
+    if source_type:
+        q["source_type"] = source_type
+    if source_id:
+        q["source_id"] = source_id
+    items = []
+    async for rel in db.content_relations.find(q, {"_id": 0}).sort([("source_type", 1), ("source_id", 1), ("priority", 1)]).limit(max(1, min(limit, 2000))):
+        items.append(rel)
+    return {"items": items, "count": len(items)}
+
+
+@api.post("/admin/content-relations")
+async def admin_create_content_relation(rel: ContentRelation, _=Depends(verify_admin)):
+    from uuid import uuid4
+    rec = rel.model_dump()
+    rec["id"] = rec.get("id") or str(uuid4())
+    rec["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.content_relations.insert_one(dict(rec))
+    return {"ok": True, "id": rec["id"]}
+
+
+@api.put("/admin/content-relations/{rel_id}")
+async def admin_update_content_relation(rel_id: str, rel: ContentRelation, _=Depends(verify_admin)):
+    upd = rel.model_dump(exclude_none=True)
+    upd["updated_at"] = datetime.now(timezone.utc).isoformat()
+    r = await db.content_relations.update_one({"id": rel_id}, {"$set": upd})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Relation not found")
+    return {"ok": True}
+
+
+@api.delete("/admin/content-relations/{rel_id}")
+async def admin_delete_content_relation(rel_id: str, _=Depends(verify_admin)):
+    r = await db.content_relations.delete_one({"id": rel_id})
+    if r.deleted_count == 0:
+        raise HTTPException(404, "Relation not found")
+    return {"ok": True}
+
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
     """Use Claude Sonnet 4.6 to generate 10 BC real estate FAQs. Hallucination-hardened
     prompt v2: cites BC statute sections or explicitly refuses; forces "verify with a BC
