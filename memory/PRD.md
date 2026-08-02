@@ -1186,3 +1186,28 @@ Doug's inbox stops getting warm/cold pings — only 🔥 HOT leads still email `
 - `/buying-guide` in a browser → instantly renders the Buyer Intake form (verified via screenshot)
 - `/my-journey/:token` for a journey with `base_journey_slug="buying"` → renders the stages + a "The Playbook — private to you" section with the full 9-step BC Buyer's Guide inline
 - No dead links: `grep '/buying-guide\|/selling-guide' /app/backend/server.py` returns zero runtime matches
+
+---
+
+## 📅 2026-02-02 (evening) — Interactive Visual Agent Mockup ✅
+
+### What changed (per Doug: single-page hidden prototype, all 4 scenarios, hybrid style)
+- **New hidden route**: `/visual-agent-demo` — direct URL only, NOT linked from public nav or footer. `<meta name="robots" content="noindex,nofollow"/>` added to keep it out of search engines.
+- **Scripted interactive prototype** (frontend-only, zero backend calls, zero LLM calls) that cycles through 4 scenarios:
+  1. **Buyer Search** — mock MLS listing carousel (Kitsilano · 2BR · <$1.5M) using existing brand palette
+  2. **Virtual Tour** — 360° gradient mock with 3 animated pulsing hotspots + hover captions ("Kitchen · Bosch appliances", "9' over-height ceilings", "SW peek to English Bay")
+  3. **Neighbourhood** — sourced stat cards (school, transit, parks, walkability) + mock grid map
+  4. **24/7 Qualification** — CASL-first intake progress bar animating through Intent → Timeline → Contact → Consent
+- **Compliance-safe UI**: navy banner at top reads `Concept mockup · BCFSA / CASL / PIPA compliant boundary · Educational retrievals only — never advice`. Every agent transcript line stays within the "retrieval / educational helper" boundary — no advice language.
+- **Doogie Visual hero** — animated conic-gradient avatar (gold/blue/green) with pulsing halo, live waveform of 14 bars, glass pills for "Live prototype", "24/7 · BCFSA-safe", "Text · Voice · Video". Pause/Restart controls.
+- **Scenario tabs** with active-state pill, auto-advance every ~2.2s per turn, then rotates to next scenario after ~3.2s pause. Chip prompts under transcript let you skip forward manually.
+- **Mobile responsive** — split-screen collapses to single column at ≤820px via media query.
+
+### Files touched
+- **New**: `frontend/src/pages/VisualAgentDemo.jsx` (~530 lines, uses framer-motion + lucide-react + inline styles matching site palette)
+- **Modified**: `frontend/src/App.js` — added import + `<Route path="/visual-agent-demo" element={<VisualAgentDemo/>}/>`
+
+### Verification
+- Production build compiled successfully (yarn build → 343.26 kB gzipped, no new errors)
+- Desktop + mobile screenshots taken at 1920×800 and 390×800 — all 4 scenarios render correctly, animations play, transcript autoscrolls, tabs switch, mobile stacks
+- No public link exists — visitors cannot discover the URL from nav, footer, sitemap, or search engines

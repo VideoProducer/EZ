@@ -13,6 +13,7 @@ import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
+import VisualAgentDemo from "./pages/VisualAgentDemo";
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
@@ -8741,6 +8742,7 @@ function App() {
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/my-journey/:token" element={<MyJourney/>}/>
+      <Route path="/visual-agent-demo" element={<VisualAgentDemo/>}/>
       <Route path="/preview/coming-soon" element={<AppLayout><section className="section" style={{padding:0}}><ComingSoonHero mode="preview"/></section></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>
       <Route path="/favorites" element={<AppLayout><Favorites/></AppLayout>}/>
