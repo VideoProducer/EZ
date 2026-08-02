@@ -81,6 +81,17 @@ const SCENARIOS = [
     ],
   },
   {
+    id: "buyerinsights",
+    label: "Buyer Insights",
+    icon: Building2,
+    turns: [
+      { who: "user", text: "How's the West Side condo market right now?" },
+      { who: "agent", pose: "thinking", text: "Retrieving BC MLS® stats for Vancouver West condos — inventory, days-on-market, and 90-day list-price trend. Sourced from CREA DDF®, not a forecast." },
+      { who: "user", text: "Are prices going up or down?" },
+      { who: "agent", pose: "pointing", text: "List prices are trending slightly higher over the last 90 days on lower supply. These are past & current list prices only — nothing here predicts what any home will sell for." },
+    ],
+  },
+  {
     id: "sellerlookup",
     label: "Seller Insights",
     icon: HomeIcon,
@@ -109,8 +120,9 @@ const CHIPS = {
   search: ["2BR Kitsilano <$1.5M", "West Side condos", "Ocean view homes"],
   tour: ["360° walkthrough", "Strata rules?", "Storage & parking"],
   neighbourhood: ["Schools nearby", "Transit score", "Parks & rec"],
+  buyerinsights: ["Days on market", "Inventory now", "90-day trend"],
   sellerlookup: ["Comparable actives", "Days on market", "Recent sold prices"],
-  qualify: ["Talk to Doug", "Book a call", "Get a valuation"],
+  qualify: ["Talk to Doug", "Book a call", "Market Estimate"],
 };
 
 // ── Scripted "voice-input" pairs (per scenario) ──────────────────────────────
@@ -128,6 +140,10 @@ const VOICE_SCRIPT = {
   neighbourhood: {
     heard: "How's the summer walk to the beach with a stroller?",
     reply: "Six-minute stroller-friendly walk to Kits Beach via Cornwall — curb-cut sidewalks the entire way. Sourced from CoV Open Data. Educational retrieval only.",
+  },
+  buyerinsights: {
+    heard: "How competitive is Vancouver West for condos this month?",
+    reply: "Right now: 82 active 2-bed condos, median list $1.28M, average 14 days on market. List prices are trending slightly higher over the last 90 days. Sourced from CREA DDF® — not a forecast.",
   },
   sellerlookup: {
     heard: "Any recent solds on my street I can compare?",
@@ -638,6 +654,125 @@ const PaneNeighbourhood = () => {
   );
 };
 
+// ── Right pane: Buyer Insights (inventory + DOM + 90-day trend) ──────────────
+const PaneBuyerInsights = () => {
+  const [freshness, setFreshness] = useState("recently");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/tours/library?limit=1`);
+        if (r.ok && !cancelled) setFreshness("in the last 4 hours");
+      } catch { /* keep default */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Mock 12-week list-price trend (illustrative — real endpoint would populate)
+  const trend = [1.19, 1.20, 1.19, 1.21, 1.22, 1.24, 1.25, 1.26, 1.26, 1.27, 1.27, 1.28]; // in $M
+  const minV = Math.min(...trend), maxV = Math.max(...trend);
+  const trendW = 260, trendH = 60;
+  const pts = trend.map((v, i) => {
+    const x = (i / (trend.length - 1)) * trendW;
+    const y = trendH - ((v - minV) / (maxV - minV || 1)) * trendH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+
+  return (
+    <div data-testid="pane-buyerinsights" style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · Vancouver West · 2-bed condos</strong>
+        <Pill tone="green" data-testid="buyerinsights-freshness">
+          <Radio size={12}/> Source: CREA DDF® · updated {freshness}
+        </Pill>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        {[
+          { label: "Active inventory", value: "82", sub: "2-bed condos, all price bands" },
+          { label: "Median list price", value: "$1.28M", sub: "range $780K – $2.6M" },
+          { label: "Avg. days on market", value: "14", sub: "last 30 days" },
+        ].map((s, i) => (
+          <motion.div
+            key={s.label}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+            style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}
+          >
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{s.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: "#6B7280" }}>{s.sub}</div>
+            <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 6, fontStyle: "italic" }}>
+              Source: CREA DDF® · {freshness}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* 90-day list-price trend sparkline */}
+      <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>90-day median list price · trend</div>
+          <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Past & present list prices — not a forecast</div>
+        </div>
+        <svg viewBox={`0 0 ${trendW} ${trendH}`} width="100%" height={trendH + 6} style={{ overflow: "visible" }}>
+          <defs>
+            <linearGradient id="ba-grad" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor={C.blue} stopOpacity="0.35"/>
+              <stop offset="100%" stopColor={C.blue} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          <polyline
+            points={`0,${trendH} ${pts} ${trendW},${trendH}`}
+            fill="url(#ba-grad)" stroke="none"
+          />
+          <polyline
+            points={pts}
+            fill="none" stroke={C.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          />
+          <circle cx={trendW} cy={trendH - ((trend[trend.length-1] - minV)/(maxV-minV||1))*trendH} r="4" fill={C.gold}/>
+        </svg>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#6B7280", marginTop: 2 }}>
+          <span>12 weeks ago · ${minV.toFixed(2)}M</span>
+          <span>Now · ${trend[trend.length-1].toFixed(2)}M ▲</span>
+        </div>
+      </div>
+
+      {/* In-service-area CTA: browse live listings */}
+      <div style={{
+        background: "rgba(30,79,207,0.06)", border: "1px solid #DDE6FA",
+        borderRadius: 10, padding: 12, fontSize: 12.5, color: C.navy, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+      }}>
+        <ShieldCheck size={18} color={C.blue}/>
+        <span style={{ flex: "1 1 280px", lineHeight: 1.55 }}>
+          These figures are <strong>list-price statistics from CREA DDF®</strong> — not a prediction of what any home will sell for. Ready to see what's active right now?
+        </span>
+        <a
+          href="/listings"
+          data-testid="buyer-browse-cta"
+          style={{
+            background: C.navy, color: "#fff", padding: "9px 16px", borderRadius: 99,
+            fontSize: 12.5, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+            boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+          }}
+        >Browse live listings →</a>
+      </div>
+
+      {/* Out-of-service-area inline referral */}
+      <div style={{
+        background: "#FFF8E9", border: "1px solid rgba(245,166,35,0.4)",
+        borderRadius: 10, padding: 12, fontSize: 12.5, color: C.navy, lineHeight: 1.6,
+      }}>
+        <strong>Looking outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor?</strong> Doogie retrieves BC-wide MLS® data, and Doug can connect you with a licensed REALTOR® active in your target community.{" "}
+        <a
+          href="/referral-request"
+          data-testid="buyer-out-of-area-referral"
+          style={{ color: C.blue, fontWeight: 700, textDecoration: "underline" }}
+        >Request a referral REALTOR®</a>
+        {" "}— no cost to you.
+      </div>
+    </div>
+  );
+};
+
 // ── Right pane: Seller Insights (comparable actives + DOM) ───────────────────
 const PaneSellerLookup = () => {
   // Freshness indicator — fetched from /api/tours/library sync log so consumers
@@ -721,24 +856,24 @@ const PaneSellerLookup = () => {
         ))}
       </div>
 
-      {/* In-service-area CTA: Home Estimate */}
+      {/* In-service-area CTA: Market Estimate */}
       <div style={{
         marginTop: 4, background: "rgba(30,79,207,0.06)", border: "1px solid #DDE6FA",
         borderRadius: 10, padding: 12, fontSize: 12.5, color: C.navy, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
       }}>
         <ShieldCheck size={18} color={C.blue}/>
         <span style={{ flex: "1 1 280px", lineHeight: 1.55 }}>
-          These figures are <strong>past & present list prices</strong> from CREA DDF® — not a valuation. If your home is in <strong>Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor</strong>, Doug can prepare a <strong>Home Estimate</strong> for you.
+          These figures are <strong>past & present list prices</strong> from CREA DDF® — not a valuation. If your home is in <strong>Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor</strong>, Doug can prepare a <strong>Market Estimate</strong> for you.
         </span>
         <a
           href="https://eztofind.ca/valuation"
-          data-testid="home-estimate-cta"
+          data-testid="market-estimate-cta"
           style={{
             background: C.navy, color: "#fff", padding: "9px 16px", borderRadius: 99,
             fontSize: 12.5, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
             boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
           }}
-        >Home Estimate →</a>
+        >Market Estimate →</a>
       </div>
 
       {/* Out-of-service-area: inline referral link at the end of the paragraph */}
@@ -1056,6 +1191,7 @@ export default function VisualAgentDemo() {
       case "search": return <PaneSearch/>;
       case "tour": return <PaneTour/>;
       case "neighbourhood": return <PaneNeighbourhood/>;
+      case "buyerinsights": return <PaneBuyerInsights/>;
       case "sellerlookup": return <PaneSellerLookup/>;
       case "qualify": return <PaneQualify/>;
       default: return null;

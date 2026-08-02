@@ -838,7 +838,7 @@ const Nav = () => {
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
-        <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Home Estimate</NavLink>
+        <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Market Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
         <NavLink to="/favorites" onClick={close} data-testid="nav-favorites" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>
           ❤️ Favorites
@@ -870,7 +870,7 @@ const Footer = () => (
         <li><Link to="/specialties/equestrian">Equestrian Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
-        <li><Link to="/valuation">Home Valuation</Link></li>
+        <li><Link to="/valuation">Market Estimate</Link></li>
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
         <li><Link to="/realtor-network">REALTOR® Network</Link></li>
@@ -4237,7 +4237,7 @@ const Relocating = () => {
           </Link>
           <Link to="/valuation" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
             <div style={{fontSize:"1.5rem"}}>🏠</div>
-            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Home Estimate</div>
+            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Market Estimate</div>
             <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Selling your current home to fund the move? Get a REALTOR®-reviewed BC-side valuation.</div>
           </Link>
           <button
@@ -5186,7 +5186,7 @@ const CommunityPage = () => {
   </div></section>);
 };
 
-// --- Home Valuation ---
+// --- Market Estimate ---
 const Valuation = () => {
   const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
@@ -5212,7 +5212,7 @@ const Valuation = () => {
       <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
-      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="valuation-submit">Get My Valuation</button>
+      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="valuation-submit">Get My Market Estimate</button>
     </form>
   </div></section>);
 };
@@ -6931,7 +6931,7 @@ const BetaWelcome = () => {
           <li><strong>Natural-language search</strong> — from Doogie, try phrases like “4 bedroom home in Prince George under $1.5M” or “vacant land in Osoyoos”. Do the beds/prices match exactly?</li>
           <li><strong>Communities</strong> — visit <Link to="/communities">Communities</Link> and open one you know well. Does the synopsis, weather, and vibe score read fairly?</li>
           <li><strong>Glossary</strong> — open <Link to="/glossary">the Glossary</Link>, pick a BC-specific term (Property Transfer Tax, PIPA, Dual Agency…). Are the FAQs accurate?</li>
-          <li><strong>Home valuation</strong> — try <Link to="/valuation">the Home Estimate</Link> tool with an address you know. Is the range reasonable?</li>
+          <li><strong>Market Estimate</strong> — try <Link to="/valuation">the Market Estimate</Link> tool with an address you know. Is the range reasonable?</li>
           <li><strong>Referral flow</strong> — if you live in BC but outside Doug's core service area (Ridge Meadows / Langley / Squamish / Whistler), try a search there and watch what Doogie offers.</li>
           <li><strong>Mobile</strong> — please open the site on your phone at least once. Layout, spacing, and the Doogie button on small screens all matter.</li>
         </ol>
