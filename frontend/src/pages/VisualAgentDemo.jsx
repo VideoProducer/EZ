@@ -376,49 +376,95 @@ const Cursor = ({ active }) => (
   />
 );
 
-// ── Right pane: Search scenario (listing carousel) ───────────────────────────
-const PaneSearch = () => (
-  <div data-testid="pane-search" style={{ display: "grid", gap: 12 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <strong style={{ color: C.navy, fontSize: 14 }}>Live from CREA DDF® · Kitsilano · 2BR · &lt;$1.5M</strong>
-      <Pill tone="green"><Radio size={12}/> 12 active</Pill>
-    </div>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-      {MOCK_LISTINGS.map((l, i) => (
-        <motion.div
-          key={l.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.06 }}
-          data-testid={`mock-listing-${l.id}`}
+// ── Right pane: Search scenario (listing carousel + real area input) ─────────
+const PaneSearch = () => {
+  const [q, setQ] = useState("");
+  const [committed, setCommitted] = useState("Kitsilano");
+  const submit = (e) => {
+    e && e.preventDefault && e.preventDefault();
+    const clean = q.trim();
+    if (clean.length >= 2) setCommitted(clean);
+  };
+  return (
+    <div data-testid="pane-search" style={{ display: "grid", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Live from CREA DDF® · {committed} · 2BR · &lt;$1.5M</strong>
+        <Pill tone="green"><Radio size={12}/> {MOCK_LISTINGS.length}+ active</Pill>
+      </div>
+
+      {/* Real search input — type any BC area or ask by voice */}
+      <form onSubmit={submit} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div style={{
+          flex: "1 1 260px", position: "relative",
+        }}>
+          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#6B7280" }}/>
+          <input
+            data-testid="search-area-input"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Type a BC area — e.g. Kitsilano, Whistler, Kelowna, Nanaimo, Cranbrook"
+            style={{
+              width: "100%", padding: "9px 12px 9px 32px",
+              borderRadius: 10, border: "1px solid #D1D5DB",
+              fontSize: 13, fontFamily: "inherit", background: "#fff",
+            }}
+          />
+        </div>
+        <button
+          type="submit"
+          data-testid="search-area-submit"
           style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-            overflow: "hidden", boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+            padding: "9px 16px", borderRadius: 10, border: "none",
+            background: C.navy, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+            whiteSpace: "nowrap",
           }}
-        >
-          <div style={{
-            height: 96,
-            background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
-            position: "relative",
-          }}>
-            <span style={{
-              position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.9)",
-              color: C.navy, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
-            }}>{l.tag}</span>
-            <Building2 size={44} style={{ position: "absolute", right: 10, bottom: 10, color: "rgba(255,255,255,0.55)" }}/>
-          </div>
-          <div style={{ padding: 10 }}>
-            <div style={{ fontWeight: 700, color: C.navy, fontSize: 14 }}>{l.price}</div>
-            <div style={{ fontSize: 12, color: "#4B5563", marginTop: 2 }}>{l.addr}</div>
-            <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, display: "flex", gap: 8 }}>
-              <span>{l.beds}bd</span><span>·</span><span>{l.baths}ba</span><span>·</span><span>{l.sqft} sqft</span><span>·</span><span>{l.dom}d</span>
+        >Search</button>
+      </form>
+      <div style={{ fontSize: 11, color: "#6B7280", marginTop: -2 }}>
+        Prefer voice? Tap <strong>Ask by voice</strong> at the top-right and just say where you're looking.
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+        {MOCK_LISTINGS.map((l, i) => (
+          <motion.div
+            key={l.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            data-testid={`mock-listing-${l.id}`}
+            style={{
+              background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+              overflow: "hidden", boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+            }}
+          >
+            <div style={{
+              height: 96,
+              background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
+              position: "relative",
+            }}>
+              <span style={{
+                position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.9)",
+                color: C.navy, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
+              }}>{l.tag}</span>
+              <Building2 size={44} style={{ position: "absolute", right: 10, bottom: 10, color: "rgba(255,255,255,0.55)" }}/>
             </div>
-          </div>
-        </motion.div>
-      ))}
+            <div style={{ padding: 10 }}>
+              <div style={{ fontWeight: 700, color: C.navy, fontSize: 14 }}>{l.price}</div>
+              <div style={{ fontSize: 12, color: "#4B5563", marginTop: 2 }}>{l.addr} · {committed !== "Kitsilano" ? committed : l.city}</div>
+              <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, display: "flex", gap: 8 }}>
+                <span>{l.beds}bd</span><span>·</span><span>{l.baths}ba</span><span>·</span><span>{l.sqft} sqft</span><span>·</span><span>{l.dom}d</span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>
+        Illustrative sample · every real search hits <a href="/listings" style={{ color: C.blue, fontWeight: 600 }}>/listings</a> with full BC MLS® coverage.
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── Right pane: Virtual Tour (360° mock with hotspots + real tour library) ───
 const TOUR_PROVIDERS = {
@@ -1021,9 +1067,10 @@ const PaneSellerLookup = () => {
 // /api/leads/seller depending on the visitor's stated intent. Fields match
 // the backend Pydantic schemas exactly (see server.py: BuyerLead / SellerLead).
 const PaneQualify = () => {
-  // Step: 1=intent, 2=contact, 3=buyer OR seller specifics, 4=consent+submit
+  // Step: 1=intent, 2=REALTOR ethics qualifier, 3=contact, 4=buyer/seller specifics, 5=consent+submit
   const [step, setStep] = useState(1);
   const [intent, setIntent] = useState("");   // "buyer" | "seller"
+  const [alreadyRepresented, setAlreadyRepresented] = useState(null); // null | true | false
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -1041,16 +1088,18 @@ const PaneQualify = () => {
     notes: "",
     preferred_contact: "email",
     casl_consent: false, pipa_ack: false,
+    // REALTOR® ethics — final belt-and-braces confirmation on the consent step
+    not_represented_confirm: false,
   });
   const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const progress = step === 1 ? 0 : step === 2 ? 33 : step === 3 ? 66 : 100;
+  const progress = step === 1 ? 0 : step === 2 ? 20 : step === 3 ? 40 : step === 4 ? 70 : 100;
 
-  const validStep2 = form.full_name.trim().length >= 2
+  const validStep3 = form.full_name.trim().length >= 2
     && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())
     && form.phone.trim().length >= 7;
-  const validStep3Buyer  = form.areas.trim().length >= 2;
-  const validStep3Seller = form.property_address.trim().length >= 3 && form.city.trim().length >= 2;
-  const validStep4 = form.casl_consent && form.pipa_ack;
+  const validStep4Buyer  = form.areas.trim().length >= 2;
+  const validStep4Seller = form.property_address.trim().length >= 3 && form.city.trim().length >= 2;
+  const validStep5 = form.casl_consent && form.pipa_ack;
 
   const submit = async () => {
     setError(""); setSubmitting(true);
@@ -1141,7 +1190,7 @@ const PaneQualify = () => {
       {/* Progress bar */}
       <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}>
         <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
-          <span>Step {step} of 4{intent ? ` · ${intent === "buyer" ? "Buyer" : "Seller"} intake` : ""}</span>
+          <span>Step {step} of 5{intent ? ` · ${intent === "buyer" ? "Buyer" : "Seller"} intake` : ""}</span>
           <span>{progress}%</span>
         </div>
         <div style={{ height: 8, background: "#EEF2FB", borderRadius: 99, overflow: "hidden" }}>
@@ -1187,9 +1236,98 @@ const PaneQualify = () => {
         </div>
       )}
 
-      {/* ── STEP 2 · Contact info (shared) ─────────────────────────────────── */}
+      {/* ── STEP 2 · REALTOR® ethics qualifier ────────────────────────────── */}
+      {/* Under the REALTOR® Code of Ethics (Article 16) and RESA duties, a
+          licensee may not solicit a client already under written contract
+          with another REALTOR®. We ask up front so we don't waste anyone's
+          time — and so we honour that existing relationship. */}
       {step === 2 && (
         <div data-testid="qualify-step-2" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>
+            One quick question first
+          </div>
+          <div style={{ fontSize: 12.5, color: "#4B5563", lineHeight: 1.55 }}>
+            {intent === "buyer"
+              ? "Are you currently working with another BC REALTOR® — for example, do you have a signed Buyer's Agency Agreement in place?"
+              : "Is your home currently listed with another BC REALTOR®, or do you have a signed listing agreement in place?"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button
+              data-testid="q-realtor-yes"
+              onClick={() => setAlreadyRepresented(true)}
+              style={{
+                padding: "14px 12px", borderRadius: 12, cursor: "pointer",
+                background: alreadyRepresented === true ? "#DC2626" : "#FEF2F2",
+                color: alreadyRepresented === true ? "#fff" : "#7F1D1D",
+                border: `1px solid ${alreadyRepresented === true ? "#DC2626" : "#FCA5A5"}`,
+                fontWeight: 700, fontSize: 13,
+              }}
+            >Yes — I already have a REALTOR®</button>
+            <button
+              data-testid="q-realtor-no"
+              onClick={() => { setAlreadyRepresented(false); setStep(3); }}
+              style={{
+                padding: "14px 12px", borderRadius: 12, cursor: "pointer",
+                background: alreadyRepresented === false ? C.green : "#ECFDF5",
+                color: alreadyRepresented === false ? "#fff" : "#065F46",
+                border: `1px solid ${alreadyRepresented === false ? C.green : "#6EE7B7"}`,
+                fontWeight: 700, fontSize: 13,
+              }}
+            >No — I'm free to work with Doug</button>
+          </div>
+
+          {/* Polite decline — inline instead of blocking modal */}
+          {alreadyRepresented === true && (
+            <div data-testid="q-polite-decline" style={{
+              background: "#FFF8E9", border: "1px solid rgba(245,166,35,0.4)",
+              borderRadius: 10, padding: 14, marginTop: 4, lineHeight: 1.6, color: C.navy, fontSize: 13,
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: "#78350F" }}>Thank you for being upfront.</div>
+              Under the REALTOR® Code of Ethics, Doug can't take on a client who's already
+              represented by another BC REALTOR®. That's a rule that protects <em>you</em>{" "}
+              — it means every REALTOR® honours the relationship you've already built.
+              <br/><br/>
+              Please continue working with your current REALTOR® — they know your file best.
+              If your relationship has ended or the agreement has expired, we'd be glad to
+              welcome you back.
+              <br/><br/>
+              <strong>In the meantime, Doogie can still help</strong> with general BC real
+              estate questions, glossary lookups, and neighbourhood facts on the other tabs
+              — no consultation request needed.
+              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => { setAlreadyRepresented(null); setStep(1); }}
+                  data-testid="q-decline-restart"
+                  style={{
+                    padding: "8px 14px", borderRadius: 8, border: "1px solid #D1D5DB",
+                    background: "#fff", color: C.navy, fontWeight: 700, fontSize: 12, cursor: "pointer",
+                  }}
+                >← Start over</button>
+                <a
+                  href="/glossary"
+                  style={{
+                    padding: "8px 14px", borderRadius: 8, background: C.navy, color: "#fff",
+                    fontWeight: 700, fontSize: 12, textDecoration: "none",
+                  }}
+                >Browse Doogie's BC glossary →</a>
+              </div>
+            </div>
+          )}
+
+          {alreadyRepresented !== true && (
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+              <button
+                onClick={() => setStep(1)}
+                style={{ padding: "9px 14px", borderRadius: 10, border: "1px solid #D1D5DB", background: "#fff", color: C.navy, fontWeight: 700, cursor: "pointer", fontSize: 13 }}
+              >← Back</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 3 · Contact info (shared) ─────────────────────────────────── */}
+      {step === 3 && (
+        <div data-testid="qualify-step-3" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>How can Doug reach you?</div>
           <TextField label="Full name *" value={form.full_name} onChange={v => upd("full_name", v)} testId="q-full-name"/>
           <TextField label="Email *" type="email" value={form.email} onChange={v => upd("email", v)} testId="q-email"/>
@@ -1199,17 +1337,17 @@ const PaneQualify = () => {
             options={["email", "phone", "text"]}
           />
           <FormNav
-            onBack={() => setStep(1)}
-            onNext={() => setStep(3)}
-            nextDisabled={!validStep2}
+            onBack={() => setStep(2)}
+            onNext={() => setStep(4)}
+            nextDisabled={!validStep3}
             nextLabel="Next →"
           />
         </div>
       )}
 
-      {/* ── STEP 3a · BUYER branch ─────────────────────────────────────────── */}
-      {step === 3 && intent === "buyer" && (
-        <div data-testid="qualify-step-3-buyer" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+      {/* ── STEP 4a · BUYER branch ─────────────────────────────────────────── */}
+      {step === 4 && intent === "buyer" && (
+        <div data-testid="qualify-step-4-buyer" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your search</div>
           <TextField label="Target areas or cities in BC *" value={form.areas} onChange={v => upd("areas", v)} testId="q-areas" placeholder="e.g. Kitsilano, North Vancouver, Squamish" hint="Comma-separated list is fine"/>
           <SelectField label="Budget range" value={form.budget_range} onChange={v => upd("budget_range", v)} testId="q-budget"
@@ -1220,18 +1358,15 @@ const PaneQualify = () => {
             options={["ASAP","1-3 months","3-6 months","6-12 months","Just looking"]}/>
           <SelectField label="Financing status" value={form.financing_status} onChange={v => upd("financing_status", v)} testId="q-financing"
             options={["Not yet pre-approved","Pre-approved","All cash","Refinancing to buy","Need a mortgage broker referral"]}/>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 2 }}>
-            <CheckboxField label="First-time buyer" checked={form.first_time_buyer} onChange={v => upd("first_time_buyer", v)} testId="q-first-time"/>
-            <CheckboxField label="Currently working with another REALTOR®" checked={form.working_with_realtor} onChange={v => upd("working_with_realtor", v)} testId="q-current-realtor"/>
-          </div>
+          <CheckboxField label="First-time buyer" checked={form.first_time_buyer} onChange={v => upd("first_time_buyer", v)} testId="q-first-time"/>
           <TextField label="Anything else Doug should know?" value={form.notes} onChange={v => upd("notes", v)} testId="q-notes" placeholder="Optional" multiline/>
-          <FormNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!validStep3Buyer} nextLabel="Next →"/>
+          <FormNav onBack={() => setStep(3)} onNext={() => setStep(5)} nextDisabled={!validStep4Buyer} nextLabel="Next →"/>
         </div>
       )}
 
-      {/* ── STEP 3b · SELLER branch ────────────────────────────────────────── */}
-      {step === 3 && intent === "seller" && (
-        <div data-testid="qualify-step-3-seller" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+      {/* ── STEP 4b · SELLER branch ────────────────────────────────────────── */}
+      {step === 4 && intent === "seller" && (
+        <div data-testid="qualify-step-4-seller" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your home</div>
           <TextField label="Property address *" value={form.property_address} onChange={v => upd("property_address", v)} testId="q-address"/>
           <TextField label="City (BC) *" value={form.city} onChange={v => upd("city", v)} testId="q-city"/>
@@ -1241,15 +1376,14 @@ const PaneQualify = () => {
             options={["ASAP","1-3 months","3-6 months","6-12 months","Just curious"]}/>
           <SelectField label="Your estimated value" value={form.estimated_value} onChange={v => upd("estimated_value", v)} testId="q-est-value"
             options={["Not sure","Under $700K","$700K – $1M","$1M – $1.5M","$1.5M – $2.5M","$2.5M – $4M","Over $4M"]}/>
-          <CheckboxField label="This home is currently listed with another REALTOR®" checked={form.currently_listed} onChange={v => upd("currently_listed", v)} testId="q-currently-listed"/>
           <TextField label="Reason for selling / notes (optional)" value={form.notes} onChange={v => upd("notes", v)} testId="q-notes" multiline/>
-          <FormNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!validStep3Seller} nextLabel="Next →"/>
+          <FormNav onBack={() => setStep(3)} onNext={() => setStep(5)} nextDisabled={!validStep4Seller} nextLabel="Next →"/>
         </div>
       )}
 
-      {/* ── STEP 4 · Consent + Submit ──────────────────────────────────────── */}
-      {step === 4 && (
-        <div data-testid="qualify-step-4" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+      {/* ── STEP 5 · Consent + Submit ──────────────────────────────────────── */}
+      {step === 5 && (
+        <div data-testid="qualify-step-5" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>One last thing — your consent</div>
           <div style={{
             background: "#F8FAFF", border: "1px solid #DDE6FA", borderRadius: 10, padding: 12, fontSize: 12, color: "#374151", lineHeight: 1.55,
@@ -1264,6 +1398,10 @@ const PaneQualify = () => {
             label={<>I acknowledge the <a href="/privacy" target="_blank" rel="noopener" style={{ color: C.blue, fontWeight: 600 }}>Privacy Policy (PIPA)</a>.</>}
             checked={form.pipa_ack} onChange={v => upd("pipa_ack", v)} testId="q-pipa"
           />
+          <CheckboxField
+            label={<>I confirm I am <strong>not currently under contract</strong> with another BC REALTOR®.</>}
+            checked={form.not_represented_confirm} onChange={v => upd("not_represented_confirm", v)} testId="q-not-represented"
+          />
           <TurnstileWidget/>
           {error && (
             <div data-testid="q-submit-error" style={{ background: "#FEE2E2", border: "1px solid #DC2626", color: "#7F1D1D", padding: 10, borderRadius: 8, fontSize: 12 }}>
@@ -1273,7 +1411,7 @@ const PaneQualify = () => {
           <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
             <button
               data-testid="q-back"
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               disabled={submitting}
               style={{
                 padding: "10px 14px", borderRadius: 10, border: "1px solid #D1D5DB", background: "#fff",
@@ -1283,14 +1421,14 @@ const PaneQualify = () => {
             <button
               data-testid="q-submit"
               onClick={submit}
-              disabled={!validStep4 || submitting}
+              disabled={!validStep5 || !form.not_represented_confirm || submitting}
               style={{
                 flex: 1, minWidth: 200,
                 padding: "10px 14px", borderRadius: 10, border: "none",
-                background: (!validStep4 || submitting) ? "#94A3B8" : C.green,
-                color: "#fff", fontWeight: 800, cursor: (!validStep4 || submitting) ? "default" : "pointer",
+                background: (!validStep5 || !form.not_represented_confirm || submitting) ? "#94A3B8" : C.green,
+                color: "#fff", fontWeight: 800, cursor: (!validStep5 || !form.not_represented_confirm || submitting) ? "default" : "pointer",
                 fontSize: 13, letterSpacing: 0.2,
-                boxShadow: !validStep4 ? "none" : "0 6px 16px rgba(34,197,94,0.35)",
+                boxShadow: (!validStep5 || !form.not_represented_confirm) ? "none" : "0 6px 16px rgba(34,197,94,0.35)",
               }}
             >{submitting ? "Sending…" : "Send to Doug ✓"}</button>
           </div>
@@ -1713,8 +1851,7 @@ export default function VisualAgentDemo() {
             </h1>
             <p style={{ margin: "10px 0 0", opacity: 0.88, maxWidth: 620, fontSize: 14 }}>
               Ask about active BC listings, neighbourhoods, or real estate terms. Doogie looks things up
-              from CREA DDF® and BC public data — general information only, never advice. When you're
-              ready to talk to a person, Doug LeMaire, REALTOR® takes it from there.
+              from CREA DDF® and BC public data — general information only, never advice.
             </p>
           </div>
 
