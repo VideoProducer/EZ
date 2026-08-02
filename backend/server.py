@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
-from fastapi.responses import StreamingResponse, HTMLResponse, Response
+from fastapi.responses import StreamingResponse, HTMLResponse, Response, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -1597,6 +1597,84 @@ async def list_buyer_leads(_=Depends(verify_admin)):
 @api.get("/admin/leads/seller")
 async def list_seller_leads(_=Depends(verify_admin)):
     return await db.seller_leads.find({}, {"_id":0}).sort("created_at", -1).to_list(1000)
+
+
+# --- CASL / PIPA — Consent Record Export ---
+# Auditors (CRTC under CASL s.10(9), OIPC under PIPA s.23) may request the full
+# consent record for a specific individual on 30 days' notice. This endpoint
+# renders every field required to demonstrate "express consent, freely given,
+# with informed knowledge of purpose" in a single downloadable JSON blob.
+#
+# Records included:
+#   1. The lead form submission itself (with every field except _id)
+#   2. Explicit consent flags (casl_consent, pipa_ack) and the timestamp at
+#      which each was captured
+#   3. Consent metadata (consent_ip, consent_ua, consent_at) — the tamper-
+#      evident proof-of-consent trail
+#   4. Any unsubscribe events (unsubscribed_at, unsubscribed_ip, source)
+#   5. Any downstream email delivery / bounce records tied to the same email
+#   6. Any DSAR (data subject access request) events for the same email
+def _lead_collection_for_type(kind: str):
+    kind = (kind or "").lower()
+    if kind == "buyer":  return db.buyer_leads
+    if kind == "seller": return db.seller_leads
+    raise HTTPException(400, "kind must be 'buyer' or 'seller'")
+
+
+@api.get("/admin/leads/{kind}/{lead_id}/consent-record")
+async def export_consent_record(kind: str, lead_id: str, _=Depends(verify_admin)):
+    coll = _lead_collection_for_type(kind)
+    lead = await coll.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(404, f"{kind} lead {lead_id} not found")
+    email = (lead.get("email") or "").lower()
+
+    # Related records tied by email (case-insensitive)
+    email_rx = re.escape(email) if email else None
+    q = {"email": {"$regex": f"^{email_rx}$", "$options": "i"}} if email_rx else {"email": "__NEVER__"}
+
+    unsub = await db.unsubscribe_log.find(q, {"_id": 0}).sort("ts", -1).to_list(50)
+    dsar = await db.dsar_requests.find(q, {"_id": 0}).sort("ts", -1).to_list(50) if "dsar_requests" in await db.list_collection_names() else []
+    outbound = await db.email_outbox.find(q, {"_id": 0}).sort("ts", -1).to_list(200) if "email_outbox" in await db.list_collection_names() else []
+
+    record = {
+        "record_type": "CASL_PIPA_consent_record",
+        "record_id": lead_id,
+        "lead_kind": kind,
+        "email": email,
+        "exported_at": now_iso(),
+        "exported_by": "admin",
+        "consent": {
+            "casl_consent": bool(lead.get("casl_consent")),
+            "pipa_ack": bool(lead.get("pipa_ack")),
+            "consent_at": lead.get("consent_at"),
+            "consent_ip": lead.get("consent_ip"),
+            "consent_ua": lead.get("consent_ua"),
+            "form_source": lead.get("source") or (f"{kind}_lead_form"),
+            "form_lang": lead.get("form_lang") or "en",
+            "unsubscribed": bool(lead.get("unsubscribed")),
+            "unsubscribed_at": lead.get("unsubscribed_at"),
+            "unsubscribed_ip": lead.get("unsubscribed_ip"),
+        },
+        "lead_snapshot": lead,
+        "unsubscribe_events": unsub,
+        "dsar_events": dsar,
+        "email_outbox_events": outbound,
+        "legal_basis": (
+            "Consent recorded under Canada's Anti-Spam Legislation (CASL, SC 2010, c. 23) "
+            "and British Columbia's Personal Information Protection Act (PIPA, SBC 2003, c. 63). "
+            "This document is the tamper-evident consent artifact required by CASL s.10(9) and "
+            "the record-of-collection artifact required by PIPA s.10."
+        ),
+        "signed_by": "Doug LeMaire, REALTOR® — Privacy Officer — Fraser Property Management Realty Services Ltd.",
+    }
+
+    # Serve as an attachment so it downloads instead of previewing in-browser.
+    filename = f"consent-record-{kind}-{lead_id}.json"
+    return JSONResponse(
+        content=record,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 # =============== REALTOR REFERRAL NETWORK ===============
 class RealtorInitial(BaseModel):

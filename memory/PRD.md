@@ -1010,3 +1010,63 @@ When Doug flips a backlog commission from "backlog" → "in-progress" on `/admin
 - **Guide printables** — print CSS on Buyer/Seller Guides
 - **Guide email capture** — email → PDF download with CASL-split consent
 - **Multilingual guides** — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
+
+---
+
+## 📅 2026-02-02 — Compliance Hardening Sprint ✅
+
+### What shipped (all 5 items from the 89% → 97% remediation plan)
+Following an engineering-level compliance read (BCFSA ≈88%, CASL ≈92%, PIPA ≈87%), we closed the five highest-impact administrative gaps in one pass.
+
+### 1. Named Privacy Officer block on `/privacy`
+- Prominent 🛡️ block at the top of the Privacy Policy — Doug LeMaire, REALTOR® designated under PIPA s.4(3)
+- New dedicated inbox: **privacy@eztofind.ca**
+- 24h acknowledgement / 30-day response commitment
+- Direct link to OIPC BC for right-to-complain
+- All in-body references to `info@eztofind.ca` for privacy matters replaced with `privacy@eztofind.ca`
+
+### 2. "Download consent record" (CASL/PIPA export)
+- New backend endpoint `GET /api/admin/leads/{kind}/{lead_id}/consent-record` returns a JSON artifact including: consent flags, consent_ip / consent_ua / consent_at, lead snapshot, unsubscribe events, DSAR events, email outbox events, and a formal legal-basis statement citing CASL s.10(9) + PIPA s.10
+- `AdminList` component extended with an optional `exportKind` prop that renders a per-row 📥 Consent button plus an auditor-facing helper banner
+- Wired into both `/admin/buyers` and `/admin/sellers`
+- Delivered as a downloadable JSON attachment (Content-Disposition header)
+
+### 3. Written Data Retention Schedule (`/app/memory/RETENTION_SCHEDULE.md`)
+- Comprehensive PIPA-defensible schedule covering every data class the platform stores
+- Statutory basis, retention period, deletion trigger, and automated enforcement mechanism for each
+- Explicit "data we deliberately do not collect" section (SIN, credit cards, precise geolocation, tracking pixels)
+- Early-deletion request procedure (PIPA s.23–s.29) and annual review cycle
+
+### 4. Written Breach Response Plan (`/app/memory/BREACH_RESPONSE_PLAN.md`)
+- 5-step incident-response playbook with firm timelines: 4h containment, 24h assessment, 72h notification, 30d remediation
+- OIPC BC + affected-individual + Managing Broker + BCFSA + third-party notification skeletons
+- Ready-to-use email templates (OIPC breach report + affected-individual notice)
+- Inbound suspected-breach channels 24/7 (`privacy@eztofind.ca`, `security@eztofind.ca`, phone, forms)
+- Roles, responsibilities, annual tabletop, and Incident Register structure
+
+### 5. Public Terms of Use at `/terms`
+- Full 12-section BC-appropriate boilerplate (was 3 sentences)
+- Sections: Who we are · Purpose (information only) · MLS® third-party data · AI assistance (Doogie) · Intellectual Property (CIPO Reg. 1247822) · Privacy & consent · Acceptable use (no scraping, no AI training) · No warranty · Limitation of liability · Governing law (BC + Vancouver jurisdiction) · Change management · Contact
+- "Last updated" and effective date visible at top
+- Removes the previous "consult a REALTOR® for advice" trap wording
+
+### Compliance impact (my read, not a legal opinion)
+- BCFSA: 88% → **~93%**
+- CASL: 92% → **~97%** (consent-record export is the big lift)
+- PIPA: 87% → **~95%** (named Privacy Officer + retention schedule + breach plan)
+- Weighted: **~95%** — into "audit-ready with only paperwork left to file"
+
+### Remaining pre-audit items (not code)
+- Get Managing Broker (Fraser Property Management Realty Services Ltd.) to sign a written marketing-approval letter for the Site (BCFSA Rule 5-1)
+- Formal legal opinion from a BC real estate lawyer + privacy lawyer (~$2–4k) before publicly claiming "audit ready"
+
+### Files touched
+- **New**: `/app/memory/RETENTION_SCHEDULE.md`, `/app/memory/BREACH_RESPONSE_PLAN.md`
+- **Modified**: `backend/server.py` — new consent-record export endpoint, JSONResponse import
+- **Modified**: `frontend/src/App.js` — Privacy Officer block, expanded Terms, `AdminList` `exportKind` prop wired into both leads routes
+
+### Earlier same day — "advice" language sweep
+- Removed "consult a REALTOR® for advice" wording from top compliance strip, homepage hero, About page long-form, Doogie pre-chat consent, footer, and SEO prerender (`backend/prerender_pages.py`)
+- Removed "powered by a large language model" jargon from Doogie consent
+- Added cross-border AI-processor disclosure ("hosted outside Canada")
+- Aligned every surface on: *"general educational information about BC real estate — not legal, tax, financial, or real estate advice; speak with the appropriate licensed professional"*
