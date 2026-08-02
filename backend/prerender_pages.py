@@ -115,7 +115,7 @@ h3{{color:#0F2A5B;font-size:1.15rem;margin:1.5rem 0 0.5rem}}
 </style>
 </head>
 <body>
-<div class="compliance">Doogie is an AI-assisted chatbot and EZtoFind.ca is an AI Assisted platform that provides general information only. Not financial, legal, real estate or investment advice. For advice, consult a licensed REALTOR®, lawyer, or accountant or mortgage broker.</div>
+<div class="compliance">EZtoFind.ca provides general educational information about BC real estate — not legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.</div>
 <nav class="nav"><a href="/">← Back to EZtoFind.ca</a></nav>
 <div class="brand">EZtoFind.ca</div>
 """
