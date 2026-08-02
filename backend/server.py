@@ -1116,8 +1116,11 @@ def _render_triage_banner(triage: dict) -> str:
 async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: str,
                                    to: str, subject: str, body_html: str) -> None:
     """Background pipeline: pull the lead from Mongo, score it, persist the
-    score, and send Doug the notification email with the priority banner
-    prepended and the priority emoji injected into the subject line."""
+    score, and — only for HOT leads — email Doug with the priority banner
+    prepended and the priority emoji injected into the subject line.
+    Warm/cold leads are still scored and appear in the /admin/lead-triage
+    dashboard, but Doug's inbox stays quiet unless action is required.
+    """
     try:
         coll = db[collection_name]
         lead = await coll.find_one({"id": lead_id}, {"_id": 0})
@@ -1127,13 +1130,30 @@ async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: s
 
         triage = await _score_lead(kind, lead)
         prio = triage.get("priority", "warm")
-        emoji = _TRIAGE_EMOJI.get(prio, "⚡")
 
-        # Persist so /admin/leads can render this column later
+        # Seed the follow-up checklist on first insert. Existing values are
+        # preserved by only setting default fields when the sub-document
+        # doesn't already exist.
+        default_followup = {
+            "contacted": False,
+            "meeting_scheduled": False,
+            "meeting_held": False,
+            "proposal_sent": False,
+            "status": "open",     # open | won | lost | nurture
+            "notes": "",
+            "last_updated_at": None,
+            "last_updated_by": None,
+        }
         await coll.update_one({"id": lead_id}, {"$set": {"triage": triage}})
+        if not (lead.get("followup")):
+            await coll.update_one({"id": lead_id}, {"$set": {"followup": default_followup}})
 
-        # Prepend banner + inject emoji into subject
-        subject_with = f"{emoji} [{prio.upper()}] {subject}"
+        if prio != "hot":
+            logger.info(f"[triage] {kind} {lead_id} scored {prio.upper()} — skipping Doug notification (visible in /admin/lead-triage)")
+            return
+
+        emoji = _TRIAGE_EMOJI.get(prio, "🔥")
+        subject_with = f"{emoji} [HOT] {subject}"
         body_with = _render_triage_banner(triage) + body_html
 
         await _notify_admin_of_lead(
@@ -1142,14 +1162,6 @@ async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: s
         )
     except Exception as e:
         logger.exception(f"[triage] pipeline failed for {kind} {lead_id}: {e}")
-        # Fire the plain notification so nothing is lost
-        try:
-            await _notify_admin_of_lead(
-                kind=kind, to=to, subject=subject,
-                body_html=body_html, related_id=lead_id,
-            )
-        except Exception:
-            pass
 
 # =============== LEADS ===============
 @api.post("/leads/buyer")
@@ -1767,6 +1779,91 @@ async def list_buyer_leads(_=Depends(verify_admin)):
 @api.get("/admin/leads/seller")
 async def list_seller_leads(_=Depends(verify_admin)):
     return await db.seller_leads.find({}, {"_id":0}).sort("created_at", -1).to_list(1000)
+
+
+# --- Lead Triage Dashboard — combined buyer + seller leads with triage scores
+# and follow-up checklists. Used by /admin/lead-triage to give Doug a single
+# priority-sorted view of every open lead across the platform.
+@api.get("/admin/lead-triage")
+async def lead_triage_dashboard(status: Optional[str] = None, _=Depends(verify_admin)):
+    """Returns every buyer + seller lead with its triage + follow-up state,
+    sorted hot → warm → cold, newest first within each tier.
+
+    Query params:
+      status=open     → only leads whose follow-up.status is 'open' (default)
+      status=all      → every lead including won/lost/nurture
+      status=won      → closed-won only
+      status=lost     → closed-lost only
+      status=nurture  → in nurture only
+    """
+    status = (status or "open").lower()
+    q_extra = {}
+    if status == "open":
+        q_extra = {"$or": [
+            {"followup.status": {"$in": ["open", None]}},
+            {"followup": {"$exists": False}},
+        ]}
+    elif status in ("won", "lost", "nurture"):
+        q_extra = {"followup.status": status}
+
+    buyers = await db.buyer_leads.find(q_extra, {"_id": 0}).to_list(2000)
+    sellers = await db.seller_leads.find(q_extra, {"_id": 0}).to_list(2000)
+    for r in buyers:  r["_kind"] = "buyer"
+    for r in sellers: r["_kind"] = "seller"
+
+    rank = {"hot": 0, "warm": 1, "cold": 2}
+    def sort_key(r):
+        prio = (r.get("triage") or {}).get("priority") or "warm"
+        return (rank.get(prio, 3), -1 * hash(r.get("created_at") or ""))
+    combined = sorted(buyers + sellers, key=sort_key)
+
+    # Bucket into priority tiers for the UI
+    tiers = {"hot": [], "warm": [], "cold": [], "unscored": []}
+    for r in combined:
+        prio = ((r.get("triage") or {}).get("priority") or "").lower()
+        if prio in tiers:
+            tiers[prio].append(r)
+        else:
+            tiers["unscored"].append(r)
+
+    # Sort each tier newest first
+    for t in tiers.values():
+        t.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+
+    return {
+        "status_filter": status,
+        "counts": {k: len(v) for k, v in tiers.items()},
+        "tiers": tiers,
+        "total": sum(len(v) for v in tiers.values()),
+    }
+
+
+class LeadFollowupUpdate(BaseModel):
+    contacted: Optional[bool] = None
+    meeting_scheduled: Optional[bool] = None
+    meeting_held: Optional[bool] = None
+    proposal_sent: Optional[bool] = None
+    status: Optional[str] = None      # open | won | lost | nurture
+    notes: Optional[str] = None
+
+
+@api.put("/admin/leads/{kind}/{lead_id}/followup")
+async def update_lead_followup(kind: str, lead_id: str, body: LeadFollowupUpdate, _=Depends(verify_admin)):
+    """Update the follow-up checklist / status / notes on a single lead."""
+    coll = _lead_collection_for_type(kind)
+    lead = await coll.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(404, f"{kind} lead {lead_id} not found")
+
+    valid_status = {"open", "won", "lost", "nurture"}
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "status" in payload and payload["status"] not in valid_status:
+        raise HTTPException(400, f"status must be one of {sorted(valid_status)}")
+
+    existing = lead.get("followup") or {}
+    merged = {**existing, **payload, "last_updated_at": now_iso(), "last_updated_by": "admin"}
+    await coll.update_one({"id": lead_id}, {"$set": {"followup": merged}})
+    return {"ok": True, "followup": merged}
 
 
 # --- CASL / PIPA — Consent Record Export ---

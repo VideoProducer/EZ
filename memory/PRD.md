@@ -1132,3 +1132,35 @@ Every new buyer + seller lead is now read by our AI provider (using EZtoFind's h
 
 ### Files touched
 - **Modified**: `backend/server.py` — added ~170 lines: `_score_lead`, `_TRIAGE_SYSTEM`, `_TRIAGE_RUBRIC`, `_render_triage_banner`, `_triage_and_notify_lead`, plus CC-doug wiring in `_notify_admin_of_lead`.
+
+---
+
+## 📅 2026-02-02 (later) — Lead Triage Dashboard + HOT-only email routing ✅
+
+### What shipped
+Doug's inbox stops getting warm/cold pings — only 🔥 HOT leads still email `doug@eztofind.ca`. Every lead (any priority) now lands in a new **`/admin/lead-triage`** dashboard with a follow-up checklist so Doug can see at a glance where each conversation stands.
+
+### Backend
+- `_triage_and_notify_lead` now only sends the email notification when `priority=hot`. Warm/cold leads are scored, persisted, and appear in the dashboard silently.
+- On first classification, the follow-up sub-document is seeded (`contacted`, `meeting_scheduled`, `meeting_held`, `proposal_sent`, `status`, `notes`).
+- New `GET /api/admin/lead-triage?status=<open|won|lost|nurture|all>` — returns combined buyer + seller leads bucketed into hot/warm/cold/unscored tiers, sorted newest-first within tier.
+- New `PUT /api/admin/leads/{kind}/{lead_id}/followup` — updates checklist / status / notes with server-side timestamp + editor tracking.
+
+### Frontend
+- New page **`/app/frontend/src/pages/AdminLeadTriage.jsx`** — priority-color-coded cards, expandable per lead, with:
+  - Header row: priority pill + kind badge + "N days ago" age indicator (green ≤1d, amber ≤3d, red beyond)
+  - Progress bar (X/4 checklist steps done)
+  - "Why" + "Next action" from the AI scorer (always visible so the page reads as a scannable priority list)
+  - Follow-up checklist (4 checkboxes) with instant server persistence
+  - Status dropdown (Open / Closed–won / Closed–lost / In nurture)
+  - Free-text follow-up notes with auto-save on blur
+  - Full lead detail (areas / type / budget / timeline / financing) + AI signal chips
+  - Compliance line on every card: *"AI-assisted triage using EZtoFind.ca's approved lead-scoring rubric. Doug's judgement always overrides — this is a routing hint, not a decision."*
+- Summary chart at the top with count + % per priority tier
+- Filter chips: Open · Won · Lost · Nurture · All
+- New nav entry: 🎯 **Lead Triage** (placed above Buyer Leads in the sidebar so it's the default landing after Dashboard)
+
+### Files touched
+- **New**: `frontend/src/pages/AdminLeadTriage.jsx` (~330 lines)
+- **Modified**: `backend/server.py` — `_triage_and_notify_lead` (HOT-only), new `GET /admin/lead-triage`, new `PUT /admin/leads/{kind}/{id}/followup`
+- **Modified**: `frontend/src/App.js` — import, nav link, route registration
