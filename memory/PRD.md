@@ -1211,3 +1211,29 @@ Doug's inbox stops getting warm/cold pings — only 🔥 HOT leads still email `
 - Production build compiled successfully (yarn build → 343.26 kB gzipped, no new errors)
 - Desktop + mobile screenshots taken at 1920×800 and 390×800 — all 4 scenarios render correctly, animations play, transcript autoscrolls, tabs switch, mobile stacks
 - No public link exists — visitors cannot discover the URL from nav, footer, sitemap, or search engines
+
+---
+
+## 📅 2026-02-02 (later still) — Visual Agent v1.1: Voice + Live 360° ✅
+
+### What changed
+Two enhancements added to `/visual-agent-demo`:
+
+**1. Voice Prototype**
+- New "Ask by voice" mic button in the hero (next to Pause/Restart) with amber-highlighted active state.
+- On click, the flow runs: **Listening** (1.4s, waveform switches to `intense` amber pulse) → **Transcribing** (letter-by-letter typing of a scenario-specific spoken question in an amber user-bubble with a `Mic` icon and blinking cursor) → **Replying** (0.7s three-dot indicator) → **Done** (Doogie narration bubble with a `Volume2` speaker glyph and "narration" label).
+- Auto-cycle pauses automatically while a voice interaction is in progress, then resumes.
+- Each of the 4 scenarios has a unique `VOICE_SCRIPT` entry (heard + reply) so the voice content matches the current context (search → parking/laundry follow-up, tour → ceiling heights, neighbourhood → stroller walk to Kits Beach, qualify → book Thursday morning call).
+
+**2. Real 360° Tour Embed**
+- Tour scenario now has a **Mock ↔ Live 360°** pill toggle in the pane header.
+- In Live mode, a `<iframe>` embeds a genuine public 360° walkthrough. Provider is user-switchable via a secondary "Provider: Matterport | Kuula" chip row — Kuula is the default because it loads cleanly on the first paint without any bot-check screen; Matterport is offered as an alternative and works fine for human visitors.
+- Overlay caption ("Kuula/Matterport public demo · illustrative only") makes clear this is a placeholder tour, not a real listing.
+- `allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"` on the iframe so mobile VR / gyro works.
+
+### Files touched
+- **Modified**: `frontend/src/pages/VisualAgentDemo.jsx` — added `VOICE_SCRIPT`, voice state machine (idle → listening → transcribing → replying → done), `VoiceDots`/`Cursor` helper components, `intense` prop on `Waveform`, `Ask by voice` button, voice-user + voice-agent bubbles inside the transcript, `TOUR_PROVIDERS` map, Mock/Live pill + provider chip row, real iframe embed for Kuula and Matterport public demo tours.
+
+### Verification
+- `yarn build` compiles cleanly (~343.7 kB gzipped)
+- Screenshot smoke test verified all 3 voice states (listening / transcribing / done reply) and both providers (Kuula rendered a real 23-frame walkthrough on first paint)

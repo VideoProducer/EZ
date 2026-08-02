@@ -12,10 +12,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mic, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
+  Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
   Bus, Trees, Waves, CheckCircle2, ArrowRight, Home as HomeIcon,
-  Compass, Radio
+  Compass, Radio, Volume2
 } from "lucide-react";
 
 // ── Palette (matches /app/frontend/src/index.css) ────────────────────────────
@@ -86,6 +86,28 @@ const CHIPS = {
   qualify: ["Start seller intake", "Book a call", "Get valuation"],
 };
 
+// ── Scripted "voice-input" pairs (per scenario) ──────────────────────────────
+// Each entry is what the user "says" via voice and what Doogie narrates back.
+// Voice bubbles carry a `voice: true` flag so they render with a speaker glyph.
+const VOICE_SCRIPT = {
+  search: {
+    heard: "Any of those with parking and in-suite laundry?",
+    reply: "Three of the four match. 2135 W 8th Ave has secured underground and full-size laundry. Playing on speaker.",
+  },
+  tour: {
+    heard: "How tall are the ceilings in the living room?",
+    reply: "Nine feet over-height across the living space, with a soffit drop of four inches at the kitchen edge. Narrating as you move.",
+  },
+  neighbourhood: {
+    heard: "How's the summer walk to the beach with a stroller?",
+    reply: "Six-minute stroller-friendly walk to Kits Beach via Cornwall — curb-cut sidewalks the entire way. Sourced from CoV Open Data.",
+  },
+  qualify: {
+    heard: "Book me a Thursday morning call, please.",
+    reply: "Noted — Thursday morning window, CASL consent captured. Doug will confirm within one business day. Nothing sent yet.",
+  },
+};
+
 // ── Mock MLS listings (visual only) ──────────────────────────────────────────
 const MOCK_LISTINGS = [
   { id: "L1", addr: "2135 W 8th Ave", city: "Kitsilano", price: "$1,289,000", beds: 2, baths: 2, sqft: 872, dom: 4, tag: "Beach 400m" },
@@ -121,18 +143,18 @@ const Pill = ({ children, tone = "navy", size = "sm", ...rest }) => (
 );
 
 // ── Animated waveform (mock mic activity) ────────────────────────────────────
-const Waveform = ({ active }) => {
+const Waveform = ({ active, intense = false }) => {
   const bars = 14;
   return (
     <div data-testid="visual-agent-waveform" style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
       {Array.from({ length: bars }).map((_, i) => (
         <motion.span
           key={i}
-          animate={{ scaleY: active ? [0.3, 1, 0.4, 0.9, 0.2] : 0.3 }}
-          transition={{ duration: 1.1 + (i % 4) * 0.15, repeat: Infinity, ease: "easeInOut", delay: i * 0.05 }}
+          animate={{ scaleY: active ? (intense ? [0.5, 1.4, 0.7, 1.2, 0.4] : [0.3, 1, 0.4, 0.9, 0.2]) : 0.3 }}
+          transition={{ duration: (intense ? 0.6 : 1.1) + (i % 4) * 0.15, repeat: Infinity, ease: "easeInOut", delay: i * 0.05 }}
           style={{
             display: "inline-block", width: 3, height: "100%",
-            background: active ? C.gold : "rgba(255,255,255,0.35)",
+            background: active ? (intense ? "#FFD98A" : C.gold) : "rgba(255,255,255,0.35)",
             borderRadius: 2, transformOrigin: "center",
           }}
         />
@@ -140,6 +162,31 @@ const Waveform = ({ active }) => {
     </div>
   );
 };
+
+// ── Voice UI helpers ─────────────────────────────────────────────────────────
+const VoiceDots = ({ light = false }) => (
+  <span data-testid="voice-dots" style={{ display: "inline-flex", gap: 3, verticalAlign: "middle" }}>
+    {[0, 1, 2].map(i => (
+      <motion.span
+        key={i}
+        animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+        transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.15 }}
+        style={{
+          display: "inline-block", width: 5, height: 5, borderRadius: "50%",
+          background: light ? "#FFD98A" : C.gold,
+        }}
+      />
+    ))}
+  </span>
+);
+
+const Cursor = ({ active }) => (
+  <motion.span
+    animate={{ opacity: active ? [1, 0, 1] : 0 }}
+    transition={{ duration: 0.9, repeat: Infinity }}
+    style={{ display: "inline-block", width: 1, height: 14, background: C.navy, marginLeft: 2, verticalAlign: "middle" }}
+  />
+);
 
 // ── Right pane: Search scenario (listing carousel) ───────────────────────────
 const PaneSearch = () => (
@@ -185,68 +232,172 @@ const PaneSearch = () => (
   </div>
 );
 
-// ── Right pane: Virtual Tour (360° mock with hotspots) ───────────────────────
+// ── Right pane: Virtual Tour (360° mock with hotspots + real Matterport toggle) ─
+const TOUR_PROVIDERS = {
+  matterport: {
+    label: "Matterport",
+    src: "https://my.matterport.com/show/?m=SxQL3iX8xSJ&play=1&qs=1",
+    caption: "Matterport public demo · illustrative only",
+  },
+  kuula: {
+    label: "Kuula",
+    src: "https://kuula.co/share/collection/7YlBd?fs=1&vr=0&sd=1&thumbs=1&info=0&logo=1&inst=0",
+    caption: "Kuula public demo · illustrative only",
+  },
+};
 const PaneTour = () => {
   const [hot, setHot] = useState(null);
+  const [mode, setMode] = useState("mock"); // "mock" | "live"
+  const [provider, setProvider] = useState("kuula"); // default to Kuula (cleanest embed)
   const hotspots = [
     { id: "kitchen", x: 22, y: 55, label: "Kitchen · Bosch appliances" },
     { id: "ceiling", x: 55, y: 22, label: "9' over-height ceilings" },
     { id: "view", x: 78, y: 40, label: "SW peek to English Bay" },
   ];
+  const P = TOUR_PROVIDERS[provider];
   return (
     <div data-testid="pane-tour" style={{ display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <strong style={{ color: C.navy, fontSize: 14 }}>360° Tour · 2135 W 8th Ave</strong>
-        <Pill tone="gold"><Compass size={12}/> Interactive</Pill>
-      </div>
-      <div style={{
-        position: "relative", height: 280, borderRadius: 12, overflow: "hidden",
-        background: `radial-gradient(1200px 400px at 30% 40%, #4C74E8 0%, ${C.navy} 60%, ${C.ink} 100%)`,
-        border: "1px solid #E5E7EB",
-      }}>
-        {/* mock horizon */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage:
-          "repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 40px), radial-gradient(300px 100px at 50% 62%, rgba(245,166,35,0.25), transparent 70%)"
-        }}/>
-        <div style={{
-          position: "absolute", left: 0, right: 0, bottom: 0, height: "38%",
-          background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.35))",
-        }}/>
-        {hotspots.map(h => (
-          <motion.button
-            key={h.id}
-            data-testid={`tour-hotspot-${h.id}`}
-            onMouseEnter={() => setHot(h)}
-            onFocus={() => setHot(h)}
-            onMouseLeave={() => setHot(null)}
-            onBlur={() => setHot(null)}
-            animate={{ scale: [1, 1.15, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, delay: (h.x % 5) * 0.2 }}
-            style={{
-              position: "absolute", left: `${h.x}%`, top: `${h.y}%`,
-              width: 22, height: 22, borderRadius: "50%",
-              background: "rgba(245,166,35,0.95)", border: "2px solid #fff",
-              boxShadow: "0 0 0 6px rgba(245,166,35,0.25)", cursor: "pointer",
-            }}
-            aria-label={h.label}
-          />
-        ))}
-        <div style={{ position: "absolute", left: 12, bottom: 10, color: "#fff", fontSize: 12, opacity: 0.85 }}>
-          Drag to look around · Tap dots for narration
-        </div>
-        <AnimatePresence>
-          {hot && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{
+            display: "inline-flex", padding: 3, background: "#EEF2FB",
+            borderRadius: 99, border: "1px solid #DDE6FA",
+          }}>
+            <button
+              data-testid="tour-mode-mock"
+              onClick={() => setMode("mock")}
               style={{
-                position: "absolute", right: 12, top: 12, maxWidth: 220,
-                background: "rgba(255,255,255,0.95)", color: C.navy, padding: "8px 12px",
-                borderRadius: 10, fontSize: 12, fontWeight: 600, boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                border: "none", cursor: "pointer",
+                padding: "5px 12px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                background: mode === "mock" ? C.navy : "transparent",
+                color: mode === "mock" ? "#fff" : C.navy,
+                display: "inline-flex", alignItems: "center", gap: 5,
               }}
-            >{hot.label}</motion.div>
-          )}
-        </AnimatePresence>
+            ><Compass size={11}/> Mock</button>
+            <button
+              data-testid="tour-mode-live"
+              onClick={() => setMode("live")}
+              style={{
+                border: "none", cursor: "pointer",
+                padding: "5px 12px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                background: mode === "live" ? C.green : "transparent",
+                color: mode === "live" ? "#fff" : C.navy,
+                display: "inline-flex", alignItems: "center", gap: 5,
+              }}
+            ><Radio size={11}/> Live 360°</button>
+          </div>
+          <Pill tone={mode === "live" ? "green" : "gold"}>
+            {mode === "live" ? <><Radio size={12}/> {P.label}</> : <><Compass size={12}/> Interactive</>}
+          </Pill>
+        </div>
       </div>
+
+      {mode === "live" && (
+        <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "#6B7280" }}>
+          <span style={{ fontWeight: 600, color: C.navy }}>Provider:</span>
+          {Object.entries(TOUR_PROVIDERS).map(([k, v]) => (
+            <button
+              key={k}
+              data-testid={`tour-provider-${k}`}
+              onClick={() => setProvider(k)}
+              style={{
+                border: "1px solid " + (provider === k ? C.blue : "#DDE6FA"),
+                background: provider === k ? "rgba(30,79,207,0.08)" : "#fff",
+                color: provider === k ? C.blue : C.navy,
+                fontWeight: 700, cursor: "pointer",
+                padding: "3px 10px", borderRadius: 99, fontSize: 11,
+              }}
+            >{v.label}</button>
+          ))}
+        </div>
+      )}
+
+      <AnimatePresence mode="wait">
+        {mode === "live" ? (
+          <motion.div
+            key={`live-${provider}`}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            data-testid="tour-live-embed-wrap"
+            style={{
+              position: "relative", height: 340, borderRadius: 12, overflow: "hidden",
+              border: "1px solid #E5E7EB", background: C.ink,
+            }}
+          >
+            <iframe
+              title={`Live 360° virtual tour (${P.label} demo)`}
+              src={P.src}
+              width="100%" height="100%"
+              frameBorder="0"
+              allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
+              allowFullScreen
+              style={{ border: 0, display: "block" }}
+              data-testid="tour-live-iframe"
+            />
+            <div style={{
+              position: "absolute", left: 10, top: 10, background: "rgba(15,42,91,0.85)",
+              color: "#fff", padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
+              display: "inline-flex", alignItems: "center", gap: 6, backdropFilter: "blur(6px)",
+            }}>
+              <Radio size={12} color={C.green}/> {P.caption}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="mock"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              position: "relative", height: 280, borderRadius: 12, overflow: "hidden",
+              background: `radial-gradient(1200px 400px at 30% 40%, #4C74E8 0%, ${C.navy} 60%, ${C.ink} 100%)`,
+              border: "1px solid #E5E7EB",
+            }}
+          >
+            {/* mock horizon */}
+            <div style={{ position: "absolute", inset: 0, backgroundImage:
+              "repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 40px), radial-gradient(300px 100px at 50% 62%, rgba(245,166,35,0.25), transparent 70%)"
+            }}/>
+            <div style={{
+              position: "absolute", left: 0, right: 0, bottom: 0, height: "38%",
+              background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.35))",
+            }}/>
+            {hotspots.map(h => (
+              <motion.button
+                key={h.id}
+                data-testid={`tour-hotspot-${h.id}`}
+                onMouseEnter={() => setHot(h)}
+                onFocus={() => setHot(h)}
+                onMouseLeave={() => setHot(null)}
+                onBlur={() => setHot(null)}
+                animate={{ scale: [1, 1.15, 1] }}
+                transition={{ duration: 1.8, repeat: Infinity, delay: (h.x % 5) * 0.2 }}
+                style={{
+                  position: "absolute", left: `${h.x}%`, top: `${h.y}%`,
+                  width: 22, height: 22, borderRadius: "50%",
+                  background: "rgba(245,166,35,0.95)", border: "2px solid #fff",
+                  boxShadow: "0 0 0 6px rgba(245,166,35,0.25)", cursor: "pointer",
+                }}
+                aria-label={h.label}
+              />
+            ))}
+            <div style={{ position: "absolute", left: 12, bottom: 10, color: "#fff", fontSize: 12, opacity: 0.85 }}>
+              Drag to look around · Tap dots for narration
+            </div>
+            <AnimatePresence>
+              {hot && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{
+                    position: "absolute", right: 12, top: 12, maxWidth: 220,
+                    background: "rgba(255,255,255,0.95)", color: C.navy, padding: "8px 12px",
+                    borderRadius: 10, fontSize: 12, fontWeight: 600, boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                  }}
+                >{hot.label}</motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12, color: "#4B5563" }}>
         <span>Built 2018</span><span>·</span><span>Rentals OK</span><span>·</span><span>Pets w/ restrictions</span><span>·</span><span>Strata $412/mo</span>
       </div>
@@ -360,14 +511,21 @@ export default function VisualAgentDemo() {
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [turnIdx, setTurnIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
+  // Voice prototype state
+  const [voiceState, setVoiceState] = useState("idle"); // idle | listening | transcribing | replying | done
+  const [voiceHeard, setVoiceHeard] = useState("");     // progressively typed user speech
+  const [voiceReply, setVoiceReply] = useState(null);   // agent narration once recording completes
   const transcriptRef = useRef(null);
 
   const scenario = SCENARIOS[scenarioIdx];
   const visibleTurns = scenario.turns.slice(0, turnIdx + 1);
+  const voiceScript = VOICE_SCRIPT[scenario.id];
 
   // Auto-advance turns; when done, switch to next scenario after a pause.
+  // Paused while a voice interaction is active so the demo doesn't jump away.
   useEffect(() => {
     if (!playing) return;
+    if (voiceState !== "idle" && voiceState !== "done") return;
     const isLastTurn = turnIdx >= scenario.turns.length - 1;
     const delay = isLastTurn ? 3200 : 2200;
     const t = setTimeout(() => {
@@ -379,14 +537,49 @@ export default function VisualAgentDemo() {
       }
     }, delay);
     return () => clearTimeout(t);
-  }, [turnIdx, scenarioIdx, playing, scenario.turns.length]);
+  }, [turnIdx, scenarioIdx, playing, voiceState, scenario.turns.length]);
 
-  // Autoscroll transcript
+  // Reset any voice state when scenario changes.
+  useEffect(() => {
+    setVoiceState("idle");
+    setVoiceHeard("");
+    setVoiceReply(null);
+  }, [scenarioIdx]);
+
+  // Autoscroll transcript on new turn or voice update
   useEffect(() => {
     if (transcriptRef.current) {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
-  }, [turnIdx, scenarioIdx]);
+  }, [turnIdx, scenarioIdx, voiceHeard, voiceReply]);
+
+  // Voice prototype: mock recording → transcribing → replying flow
+  const triggerVoice = () => {
+    if (!voiceScript || voiceState === "listening" || voiceState === "transcribing" || voiceState === "replying") return;
+    setVoiceHeard("");
+    setVoiceReply(null);
+    setVoiceState("listening");
+    // Simulated "recording" window
+    setTimeout(() => {
+      setVoiceState("transcribing");
+      const full = voiceScript.heard;
+      let i = 0;
+      const iv = setInterval(() => {
+        i += 1;
+        setVoiceHeard(full.slice(0, i));
+        if (i >= full.length) {
+          clearInterval(iv);
+          setTimeout(() => {
+            setVoiceState("replying");
+            setTimeout(() => {
+              setVoiceReply(voiceScript.reply);
+              setVoiceState("done");
+            }, 700);
+          }, 400);
+        }
+      }, 32);
+    }, 1400);
+  };
 
   const RightPane = useMemo(() => {
     switch (scenario.id) {
@@ -400,6 +593,7 @@ export default function VisualAgentDemo() {
 
   const jumpTo = (i) => { setScenarioIdx(i); setTurnIdx(0); setPlaying(true); };
   const restart = () => { setScenarioIdx(0); setTurnIdx(0); setPlaying(true); };
+  const voiceActive = voiceState === "listening" || voiceState === "transcribing" || voiceState === "replying";
 
   return (
     <div data-testid="visual-agent-demo-page" style={{ background: C.cream, minHeight: "100vh", paddingBottom: 60 }}>
@@ -477,8 +671,29 @@ export default function VisualAgentDemo() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, minWidth: 200 }}>
-            <Waveform active={playing}/>
-            <div style={{ display: "flex", gap: 8 }}>
+            <Waveform active={playing || voiceActive} intense={voiceState === "listening"}/>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button
+                data-testid="visual-agent-voice-btn"
+                onClick={triggerVoice}
+                disabled={voiceActive}
+                style={{
+                  ...btnGhost,
+                  background: voiceState === "listening" ? "rgba(245,166,35,0.85)" : (voiceActive ? "rgba(255,255,255,0.06)" : "rgba(245,166,35,0.18)"),
+                  border: "1px solid " + (voiceState === "listening" ? "rgba(245,166,35,0.95)" : "rgba(245,166,35,0.55)"),
+                  color: voiceState === "listening" ? C.ink : "#fff",
+                  cursor: voiceActive ? "default" : "pointer",
+                  opacity: voiceActive && voiceState !== "listening" ? 0.75 : 1,
+                }}
+                aria-label="Ask by voice"
+              >
+                {voiceState === "listening" ? <MicOff size={14}/> : <Mic size={14}/>}
+                <span>
+                  {voiceState === "listening" ? "Listening…" :
+                   voiceState === "transcribing" ? "Transcribing…" :
+                   voiceState === "replying" ? "Replying…" : "Ask by voice"}
+                </span>
+              </button>
               <button
                 data-testid="visual-agent-toggle-play"
                 onClick={() => setPlaying(p => !p)}
@@ -575,6 +790,62 @@ export default function VisualAgentDemo() {
                     </div>
                   </motion.div>
                 ))}
+
+                {/* Voice interaction — user "spoken" bubble */}
+                {voiceState !== "idle" && (
+                  <motion.div
+                    key={`voice-user-${scenarioIdx}`}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    data-testid="voice-user-bubble"
+                    style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}
+                  >
+                    <div style={{
+                      maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
+                      background: "linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05))",
+                      color: C.navy, border: "1px solid rgba(245,166,35,0.45)",
+                      fontSize: 13, lineHeight: 1.45,
+                    }}>
+                      <div style={{
+                        fontSize: 10, opacity: 0.8, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                      }}>
+                        <Mic size={10}/> You · voice
+                      </div>
+                      {voiceState === "listening" ? (
+                        <span style={{ opacity: 0.6, fontStyle: "italic" }}>
+                          <VoiceDots/> listening…
+                        </span>
+                      ) : (
+                        <>{voiceHeard}<Cursor active={voiceState === "transcribing"}/></>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Voice interaction — agent "narrated" reply */}
+                {(voiceState === "replying" || voiceState === "done") && (
+                  <motion.div
+                    key={`voice-agent-${scenarioIdx}`}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    data-testid="voice-agent-bubble"
+                    style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}
+                  >
+                    <div style={{
+                      maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
+                      background: `linear-gradient(135deg, ${C.navy}, ${C.blue})`,
+                      color: "#fff", fontSize: 13, lineHeight: 1.45,
+                      boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+                    }}>
+                      <div style={{
+                        fontSize: 10, opacity: 0.85, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                      }}>
+                        <Volume2 size={10}/> Doogie Visual · narration
+                      </div>
+                      {voiceState === "replying" ? <VoiceDots light/> : voiceReply}
+                    </div>
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
             {/* chip suggestions */}
