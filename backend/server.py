@@ -2717,7 +2717,6 @@ _CATEGORY_RULES = {
 # Static defaults that are always appended if we still have room.
 _UNIVERSAL_TAIL = [
     {"kind": "Glossary",  "title": "Full BC real estate glossary",          "blurb": "439 plain-language terms explaining every concept in BC real estate.",           "href": "/glossary",       "reason": "always-available"},
-    {"kind": "Compliance","title": "How EZtoFind.ca is regulated",           "blurb": "BCFSA scope-of-licence, CREA REALTOR® Code, and consumer protections.",           "href": "/compliance",     "reason": "trust-signal"},
 ]
 
 
@@ -2854,7 +2853,6 @@ async def _related_content_for_community(slug: str, limit: int = 6) -> dict:
         {"kind": "Listings",  "title": "Live MLS® listings",                  "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",             "reason": "next-step"},
         {"kind": "Community", "title": "All BC community profiles",           "blurb": "Explore 239 community pages across the province.",                            "href": "/communities",          "reason": "geographic-context"},
         {"kind": "Glossary",  "title": "BC real estate glossary",             "blurb": "439 plain-language terms explaining every concept in BC real estate.",         "href": "/glossary",             "reason": "always-available"},
-        {"kind": "Compliance","title": "How EZtoFind.ca is regulated",         "blurb": "BCFSA scope-of-licence, CREA REALTOR® Code, and consumer protections.",         "href": "/compliance",           "reason": "trust-signal"},
     ]
     for c in defaults:
         if len(items) >= limit:

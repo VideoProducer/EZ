@@ -500,7 +500,6 @@ const BUYER_RELATED = [
   { kind: "Community", title: "BC community profiles", blurb: "Explore 239 community pages across the province.", href: "/communities" },
   { kind: "Glossary", title: "Full BC glossary", blurb: "439 terms explaining every concept in this guide and more.", href: "/glossary" },
   { kind: "Estimator", title: "Home valuation estimator", blurb: "General educational estimate using MLS® comparables. Not an appraisal.", href: "/valuation" },
-  { kind: "Compliance", title: "How I'm regulated", blurb: "BCFSA scope-of-licence, CREA REALTOR® Code, and how consumer protections work.", href: "/compliance" },
 ];
 
 // ===========================================================================
@@ -654,7 +653,7 @@ const SELLER_RELATED = [
   { kind: "Community", title: "BC community profiles", blurb: "Understand how neighbourhoods present to today's buyers.", href: "/communities" },
   { kind: "Glossary", title: "Full BC glossary", blurb: "439 terms — every concept in this guide, plus much more.", href: "/glossary" },
   { kind: "Listings", title: "Live MLS® listings", blurb: "See what similar homes are currently on the market.", href: "/listings" },
-  { kind: "Compliance", title: "How I'm regulated", blurb: "BCFSA scope-of-licence, CREA REALTOR® Code, and how consumer protections work.", href: "/compliance" },
+  { kind: "Compliance", title: "REMOVE_ME_FROM_GUIDE", blurb: "", href: "/compliance" },
 ];
 
 // ===========================================================================
