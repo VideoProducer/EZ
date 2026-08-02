@@ -30,6 +30,10 @@ const C = {
   glass: "rgba(15,42,91,0.06)",
 };
 
+// Doogie mascot headshot — served from Emergent customer assets CDN.
+// Used in the hero avatar and inline next to Doogie narration bubbles.
+const DOOGIE_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/dj2wy1tx_Doogie%20Headshot.jpeg";
+
 // ── Scripted scenarios ───────────────────────────────────────────────────────
 const SCENARIOS = [
   {
@@ -431,6 +435,34 @@ const PaneTour = () => {
             }}>
               <Radio size={12} color={provider === "dougs" && dougPicked ? C.green : C.gold}/> {captionText}
             </div>
+            {/* Floating Doogie narrator badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              data-testid="tour-doogie-narrator"
+              style={{
+                position: "absolute", right: 12, bottom: 12,
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(255,255,255,0.94)", color: C.navy,
+                padding: "6px 12px 6px 6px", borderRadius: 999,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+                border: `1px solid ${C.gold}`,
+              }}
+            >
+              <img
+                src={DOOGIE_HEADSHOT} alt="Doogie narrator"
+                style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  objectFit: "cover", objectPosition: "center 42%",
+                  border: `2px solid ${C.gold}`, flexShrink: 0,
+                }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Narrating</div>
+                <div style={{ fontSize: 11, opacity: 0.85 }}>Ask about ceilings, strata, or nearby amenities</div>
+              </div>
+            </motion.div>
           </motion.div>
         ) : (
           <motion.div
@@ -472,6 +504,30 @@ const PaneTour = () => {
             <div style={{ position: "absolute", left: 12, bottom: 10, color: "#fff", fontSize: 12, opacity: 0.85 }}>
               Drag to look around · Tap dots for narration
             </div>
+            {/* Floating Doogie narrator badge (mock mode) */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              style={{
+                position: "absolute", right: 12, bottom: 12,
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(255,255,255,0.94)", color: C.navy,
+                padding: "6px 12px 6px 6px", borderRadius: 999,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                border: `1px solid ${C.gold}`,
+              }}
+            >
+              <img
+                src={DOOGIE_HEADSHOT} alt="Doogie narrator"
+                style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  objectFit: "cover", objectPosition: "center 42%",
+                  border: `2px solid ${C.gold}`, flexShrink: 0,
+                }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+              <div style={{ fontSize: 11, fontWeight: 600 }}>Doogie is your guide</div>
+            </motion.div>
             <AnimatePresence>
               {hot && (
                 <motion.div
@@ -874,20 +930,29 @@ export default function VisualAgentDemo() {
             transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
             data-testid="visual-agent-avatar"
             style={{
-              width: 88, height: 88, borderRadius: "50%",
+              width: 96, height: 96, borderRadius: "50%",
+              padding: 4,
               background: `conic-gradient(from 90deg, ${C.gold}, ${C.blue}, #6C8CFF, ${C.green}, ${C.gold})`,
               display: "flex", alignItems: "center", justifyContent: "center",
               border: "3px solid rgba(255,255,255,0.35)",
-              backdropFilter: "blur(10px)",
             }}
           >
             <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              background: "rgba(15,42,91,0.7)", backdropFilter: "blur(6px)",
+              width: "100%", height: "100%", borderRadius: "50%",
+              background: "#FAF7F0", overflow: "hidden",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#fff", fontWeight: 800, fontSize: 22, letterSpacing: 0.5,
+              boxShadow: "inset 0 2px 8px rgba(15,42,91,0.15)",
             }}>
-              <Sparkles size={26} color={C.gold}/>
+              <img
+                src={DOOGIE_HEADSHOT}
+                alt="Doogie — EZtoFind AI helper"
+                data-testid="doogie-headshot-hero"
+                style={{
+                  width: "108%", height: "108%", objectFit: "cover",
+                  objectPosition: "center 42%", display: "block",
+                }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
             </div>
           </motion.div>
 
@@ -1047,9 +1112,22 @@ export default function VisualAgentDemo() {
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     style={{
                       display: "flex", justifyContent: t.who === "user" ? "flex-end" : "flex-start",
-                      marginBottom: 10,
+                      marginBottom: 10, gap: 8, alignItems: "flex-end",
                     }}
                   >
+                    {t.who === "agent" && (
+                      <img
+                        src={DOOGIE_HEADSHOT} alt=""
+                        data-testid={`doogie-chip-${i}`}
+                        style={{
+                          width: 28, height: 28, borderRadius: "50%",
+                          objectFit: "cover", objectPosition: "center 42%",
+                          border: `2px solid ${C.gold}`, flexShrink: 0,
+                          boxShadow: "0 2px 6px rgba(15,42,91,0.15)",
+                        }}
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    )}
                     <div style={{
                       maxWidth: "85%",
                       padding: "9px 13px", borderRadius: 14,
@@ -1103,8 +1181,18 @@ export default function VisualAgentDemo() {
                     key={`voice-agent-${scenarioIdx}`}
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     data-testid="voice-agent-bubble"
-                    style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}
+                    style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10, gap: 8, alignItems: "flex-end" }}
                   >
+                    <img
+                      src={DOOGIE_HEADSHOT} alt=""
+                      style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        objectFit: "cover", objectPosition: "center 42%",
+                        border: `2px solid ${C.gold}`, flexShrink: 0,
+                        boxShadow: "0 2px 6px rgba(15,42,91,0.15)",
+                      }}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
                     <div style={{
                       maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
                       background: `linear-gradient(135deg, ${C.navy}, ${C.blue})`,
