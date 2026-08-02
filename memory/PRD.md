@@ -881,3 +881,40 @@ Two Phase D+ upgrades that close the loop on search analytics: Doug now sees whi
 - **Multilingual guides** (P2) — translate to zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
 - **Guide email capture** — visitor email → PDF download, CASL-separated
 - **Semantic embeddings** (Phase C.2) — layer 3 of spec §13; promote from keyword-only once corpus is large enough
+
+---
+
+## 2026-08-02 — Featured Cluster Cards on Admin Dashboard
+
+Closes the loop on the search-analytics story: the top-3 no-result clusters now surface as prominent "commission this glossary term" cards on Doug's Desk (main `/admin` page), so any content gap can be turned into a new glossary term in three clicks.
+
+### What shipped
+- **Featured Cluster Cards** on `/admin` (Doug's Desk):
+  - Positioned right after the Buyer/Seller/REALTOR® stats grid
+  - Fetches `/api/admin/search-analytics/clusters?days=30&kind=no_results&limit=3` on mount
+  - Silent-hides when there's nothing to show (fresh install, empty log, or endpoint error) — never shows a broken/empty section
+  - Each card displays: gap ranking (🔥 High priority when total ≥ 5), representative query, variant count + total volume, "Also: '...'" variant preview, suggested slug + term derived from shared tokens
+  - Primary CTA "Commission this term →" deep-links to `/admin/approvals?commission=<Term>&slug=<slug>&source=search-gap` so the approvals form can prefill with the visitor's actual query
+  - Secondary 🔍 button opens `/search?q=<representative>` in a new tab so Doug can see exactly what visitors saw
+  - "View all →" link routes to the full `/admin/search-analytics` clusters section
+- **Cluster algorithm upgrade** (`_cluster_queries` in `server.py`):
+  - Added **overlap coefficient** clustering path alongside Jaccard (`overlap = |A∩B| / min(|A|,|B|) ≥ 0.6`)
+  - Handles short-query variants ("passive house BC" vs "passive house rebate BC") that Jaccard alone under-clusters
+  - `min_shared_tokens` floor still enforced so single-token junk overlaps don't false-merge
+- Regression: 9/9 core routes return 200
+
+### Files touched
+- **Modified**: `backend/server.py` — `_cluster_queries` signature adds `overlap_threshold=0.6`, uses `Jaccard≥0.5 OR overlap≥0.6` with `min_shared_tokens=1` floor
+- **Modified**: `frontend/src/App.js` — `AdminDash` now fetches clusters + renders the Featured Cluster Cards grid (55 lines added, no new file)
+
+### Compliance controls preserved
+- **PIPA**: analytics fetch uses admin auth headers; no visitor PII surfaces on the cards
+- **BCFSA**: cards are admin-only; nothing appears publicly
+- **CASL**: no marketing implications; the analytics loop is operational
+
+### Backlog still open
+- **Guide printables** (P1) — print CSS on Buyer/Seller Guides
+- **Guide email capture** (P2) — email → PDF download with CASL-split consent
+- **Multilingual guides** (P2) — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
+- **Semantic embeddings** — Phase C.2 layer 3
+- **Approvals form prefill support** — the deep-link params (`commission`, `slug`, `source`) are sent but the AdminApprovals page doesn't yet read them; a small change would auto-fill the form and complete the "three-click gap-closing" experience end-to-end

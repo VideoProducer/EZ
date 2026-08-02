@@ -4344,9 +4344,16 @@ const AdminShell = ({children,active}) => {
 const AdminDash = () => {
   const {headers} = useAdmin();
   const [rem, setRem] = useState([]); const [stats, setStats] = useState({buyers:0,sellers:0,realtors:0});
+  const [gapClusters, setGapClusters] = useState([]);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
+    // Featured Cluster Cards — surface the top-3 no-result query clusters so
+    // Doug can commission new glossary terms in 3 clicks. Silent-hides if
+    // there's nothing to show (fresh install, empty log, or endpoint error).
+    axios.get(`${API}/admin/search-analytics/clusters?days=30&kind=no_results&limit=3`, {headers})
+      .then(r => setGapClusters(r.data?.clusters || []))
+      .catch(() => setGapClusters([]));
   },[]);
   return <AdminShell active="dash">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
@@ -4383,6 +4390,67 @@ const AdminDash = () => {
     <div className="grid-3" style={{marginTop:"1.5rem"}}>
       {[["Buyer Leads",stats.buyers],["Seller Leads",stats.sellers],["REALTORS® Applied",stats.realtors]].map(([l,n])=><div key={l} className="paper" style={{textAlign:"center"}}><div style={{fontSize:"3rem",fontWeight:700,color:"var(--brand-blue)"}}>{n}</div><div style={{color:"var(--muted)"}}>{l}</div></div>)}
     </div>
+
+    {gapClusters && gapClusters.length > 0 && (
+      <div data-testid="dash-gap-cards" style={{marginTop:"2.5rem"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"1rem",marginBottom:"0.85rem"}}>
+          <div>
+            <h2 style={{margin:0,fontSize:"1.4rem"}}>🎯 Content Gaps — Visitors Searched, Got Nothing</h2>
+            <div style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",marginTop:"0.3rem",maxWidth:"48rem",lineHeight:1.55}}>
+              The top {gapClusters.length} clusters of no-result queries from the last 30 days. Each card is a candidate for one new glossary term or FAQ answer. Click "Commission this term" to add it via the AI Content Approvals queue.
+            </div>
+          </div>
+          <Link to="/admin/search-analytics" className="btn btn-ghost" style={{fontSize:"0.85rem",padding:"0.4rem 0.9rem"}} data-testid="dash-view-all-clusters">View all →</Link>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(19rem,1fr))",gap:"0.85rem"}}>
+          {gapClusters.map((c, i) => {
+            // Suggest a slug candidate from the shared tokens so Doug can paste it into the approvals form
+            const suggestedSlug = (c.shared_tokens || []).slice(0, 4).join("-");
+            const suggestedTerm = (c.shared_tokens || []).slice(0, 4).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(" ");
+            const isHot = c.total_count >= 5;
+            return (
+              <div key={i} className="paper" data-testid={`gap-card-${i}`} style={{padding:"1.15rem 1.25rem",borderTop: isHot ? "3px solid #DC2626" : "3px solid var(--brand-blue)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.6rem"}}>
+                  <div style={{fontSize:"0.68rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:800,color: isHot ? "#DC2626" : "var(--brand-blue)"}}>
+                    {isHot ? "🔥 High priority" : `Gap #${i+1}`}
+                  </div>
+                  <div style={{fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>
+                    {c.total_count} search{c.total_count === 1 ? "" : "es"}{c.variant_count > 1 ? ` · ${c.variant_count} variants` : ""}
+                  </div>
+                </div>
+                <div style={{fontFamily:'"TeX Gyre Heros Bold","Helvetica Neue",Arial,sans-serif',color:"var(--brand-navy)",fontSize:"1.05rem",lineHeight:1.3,marginBottom:"0.45rem"}}>
+                  "{c.representative_query}"
+                </div>
+                {c.variant_count > 1 && c.variants && c.variants.length > 1 && (
+                  <div style={{fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"0.6rem",fontStyle:"italic"}}>
+                    Also: {c.variants.slice(1, 3).map(v => `"${v.query}"`).join(", ")}{c.variants.length > 3 ? `, +${c.variants.length - 3} more` : ""}
+                  </div>
+                )}
+                <div style={{fontSize:"0.72rem",color:"var(--muted)",fontFamily:"monospace",marginBottom:"0.85rem"}}>
+                  Suggested slug: <span style={{color:"var(--brand-navy)"}}>{suggestedSlug || "—"}</span>
+                </div>
+                <div style={{display:"flex",gap:"0.4rem",flexWrap:"wrap"}}>
+                  <Link
+                    to={`/admin/approvals?commission=${encodeURIComponent(suggestedTerm)}&slug=${encodeURIComponent(suggestedSlug)}&source=search-gap`}
+                    data-testid={`gap-commission-${i}`}
+                    className="btn btn-primary"
+                    style={{fontSize:"0.82rem",padding:"0.45rem 0.85rem",flex:"1 1 auto",textAlign:"center"}}
+                  >Commission this term →</Link>
+                  <a
+                    href={`/search?q=${encodeURIComponent(c.representative_query)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="btn btn-ghost"
+                    style={{fontSize:"0.82rem",padding:"0.45rem 0.7rem"}}
+                    data-testid={`gap-preview-${i}`}
+                    title="See what visitors saw"
+                  >🔍</a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    )}
     <h2 style={{marginTop:"3rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}><span>Upcoming Reminders (next 30 days)</span><Link to="/admin/reminders" className="btn btn-ghost" style={{fontSize:"0.85rem",padding:"0.4rem 0.9rem"}} data-testid="dash-view-all-reminders">View & send →</Link></h2>
     <table className="admin-table" data-testid="admin-reminders">
       <thead><tr><th>Client</th><th>Type</th><th>Date</th><th>Days</th><th>Consent</th></tr></thead>

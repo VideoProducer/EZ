@@ -3129,18 +3129,19 @@ def _cluster_normalize(q: str) -> set:
     return out
 
 
-def _cluster_queries(rows: list, jaccard_threshold: float = 0.5, min_shared_tokens: int = 2) -> list:
+def _cluster_queries(rows: list, jaccard_threshold: float = 0.5, overlap_threshold: float = 0.6, min_shared_tokens: int = 1) -> list:
     """Greedy single-pass clusterer. Each `row` must have {query, count}.
-    Two rows cluster together when their token sets share Jaccard >= threshold
-    AND at least `min_shared_tokens` tokens overlap. Returns a list of
-    clusters sorted by total_count desc, each with:
-      representative_query, total_count, variant_count, variants[]
 
-    Threshold rationale: Jaccard 0.5 with min-2-shared-tokens catches "strata
-    fees Vancouver" + "strata fee Burnaby" + "monthly strata fee" as one
-    cluster, while requiring 2 shared tokens prevents false pairings on
-    single-token overlaps like {"real"} which is already stopword-filtered
-    but this belts-and-braces the guard."""
+    Two rows cluster when EITHER:
+      * Jaccard(A, B) >= jaccard_threshold (handles long queries with
+        different filler words like "strata fees Vancouver" vs "strata fee
+        Burnaby")
+      * Overlap coefficient |A ∩ B| / min(|A|, |B|) >= overlap_threshold
+        (handles short-query variants like "passive house BC" vs "passive
+        house certification" — Jaccard would be 0.5 but overlap is 1.0)
+
+    Requires `min_shared_tokens` overlap (default 1) as a floor guard, since
+    Jaccard 1.0 on two single-token sets is meaningless."""
     # Pre-tokenize
     enriched = []
     for r in rows:
@@ -3158,10 +3159,11 @@ def _cluster_queries(rows: list, jaccard_threshold: float = 0.5, min_shared_toke
             rep_tokens = cluster["_rep_tokens"]
             shared = rep_tokens & item["tokens"]
             union = rep_tokens | item["tokens"]
-            if not union:
+            if not union or len(shared) < min_shared_tokens:
                 continue
             j = len(shared) / len(union)
-            if j >= jaccard_threshold and len(shared) >= min_shared_tokens:
+            overlap = len(shared) / min(len(rep_tokens), len(item["tokens"]))
+            if j >= jaccard_threshold or overlap >= overlap_threshold:
                 cluster["variants"].append({"query": item["query"], "count": item["count"], "last_at": item.get("last_at")})
                 cluster["total_count"] += item["count"]
                 cluster["variant_count"] += 1
