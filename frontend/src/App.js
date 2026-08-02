@@ -827,8 +827,8 @@ const Nav = () => {
         <span/><span/><span/>
       </button>
       <div className={`nav-links${open?" open":""}`}>
-        <NavLink to="/listings" onClick={close} data-testid="nav-listings">Search Listings</NavLink>
-        <NavLink to="/search" onClick={close} data-testid="nav-search" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>🔍 Search</NavLink>
+        <NavLink to="/listings" onClick={close} data-testid="nav-listings">Property Search</NavLink>
+        <NavLink to="/search" onClick={close} data-testid="nav-search" style={{display:"inline-flex",alignItems:"center",gap:"0.35rem"}}>🔍 Info & FAQs</NavLink>
         <NavLink to="/specialties/luxury" onClick={close} data-testid="nav-luxury">Luxury Listings</NavLink>
         <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
@@ -863,7 +863,7 @@ const Footer = () => (
         <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong> · BCFSA License #167790<br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5<br/><a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}}>(604) 466-7021</a></p>
       </div>
       <div><h4>Explore</h4><ul>
-        <li><Link to="/listings">Search Listings</Link></li>
+        <li><Link to="/listings">Property Search</Link></li>
         <li><Link to="/specialties/luxury">Luxury Listings</Link></li>
         <li><Link to="/specialties/equestrian">Equestrian Listings</Link></li>
         <li><Link to="/communities">Communities</Link></li>
@@ -1413,7 +1413,7 @@ const DoogieChat = () => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-generated response · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}{m.role==="assistant" && i > 0 && (() => { const prev = msgs.slice(0, i).reverse().find(x => x.role === "user"); return prev && prev.content ? <DoogieRelatedChips query={prev.content} testIdPrefix={`doogie-chip-${i}`}/> : null; })()}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-assisted retrieval from EZtoFind.ca's approved content · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}{m.role==="assistant" && i > 0 && (() => { const prev = msgs.slice(0, i).reverse().find(x => x.role === "user"); return prev && prev.content ? <DoogieRelatedChips query={prev.content} testIdPrefix={`doogie-chip-${i}`}/> : null; })()}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -1423,7 +1423,7 @@ const DoogieChat = () => {
           style={{width:44,height:44,borderRadius:"50%",border:"1px solid rgba(15,42,91,0.15)",background:listening?"#DC2626":transcribing?"#F5A623":"#F5F0E1",color:(listening||transcribing)?"#fff":"var(--brand-navy)",cursor:transcribing?"wait":"pointer",fontSize:"1.15rem",flexShrink:0,opacity:transcribing?0.85:1}}>
           {listening ? "⏺" : transcribing ? "⏳" : "🎤"}
         </button>
-        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "🔴 Listening — speak now" : transcribing ? "Transcribing your voice…" : "Ask Doogie…"} data-testid="doogie-input" style={{flex:1}}/>
+        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "🔴 Listening — speak now" : transcribing ? "Transcribing your voice…" : "Ask about a BC real estate term or topic…"} data-testid="doogie-input" style={{flex:1}}/>
         <button type="submit" disabled={busy} data-testid="doogie-send">Send</button>
       </form>
       </>}
@@ -3927,7 +3927,7 @@ const AiUsePage = () => (<><SEO title="AI, LLM & Developer Use of EZtoFind.ca �
 
   <h2 style={{marginTop:"2rem"}}>Content policy</h2>
   <ul>
-    <li><strong>Drafted:</strong> by Doogie AI (built on Anthropic Claude models via Emergent LLM key)</li>
+    <li><strong>Drafted:</strong> by our AI provider under Doug's editorial direction, using EZtoFind.ca's approved BC content library and hallucination-hardened prompts</li>
     <li><strong>Reviewed:</strong> by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.)</li>
     <li><strong>Checked against:</strong> BC statutes (Real Estate Services Act, Strata Property Act, Property Transfer Tax Act, etc.), BCFSA rules, and current CREA guidance</li>
     <li><strong>Updated:</strong> automatically flagged for review when linked statutes/regulations change; hard refresh at least annually</li>
@@ -6427,7 +6427,7 @@ const AdminApprovals = () => {
                     <td colSpan={4} style={{padding:"1rem 1.2rem",borderBottom:"1px solid rgba(15,42,91,0.06)",background:"#FAF7EE"}}>
                       {isDrafting && (
                         <div style={{fontSize:"0.9rem",color:"var(--brand-navy)",fontStyle:"italic"}}>
-                          Claude Sonnet 4.6 is drafting a BC-compliant definition + 10 FAQs. This page auto-refreshes when the draft is ready.
+                          Our AI provider is drafting a BC-compliant definition + 10 FAQs. This page auto-refreshes when the draft is ready.
                         </div>
                       )}
                       {!isDrafting && (hasDraft || isError) && (
@@ -6480,7 +6480,7 @@ const AdminApprovals = () => {
                               {busy==="regenerating" ? "Regenerating…" : "🔄 Regenerate draft"}
                             </button>
                             {c.draft_generated_at && (
-                              <span style={{fontSize:"0.72rem",color:"var(--muted)",marginLeft:"0.5rem"}}>Generated {new Date(c.draft_generated_at).toLocaleString()} · {c.draft_model || "claude-sonnet-4-6"}</span>
+                              <span style={{fontSize:"0.72rem",color:"var(--muted)",marginLeft:"0.5rem"}}>Generated {new Date(c.draft_generated_at).toLocaleString()}</span>
                             )}
                           </div>
                           {msg && (

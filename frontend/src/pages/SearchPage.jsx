@@ -47,7 +47,7 @@ const KIND_ACCENTS = {
   Communities: { dot: "#0EA5E9", label: "Communities" },
   Journey:     { dot: "#178A3E", label: "Journey Information" },
   Listings:    { dot: "#8B5CF6", label: "Listings" },
-  Doogie:      { dot: "#DC2626", label: "Ask Doogie" },
+  Doogie:      { dot: "#DC2626", label: "Explore with Doogie" },
 };
 
 const SearchBox = ({ initial = "", size = "large", onSubmit }) => {
@@ -102,7 +102,7 @@ const QuickAnswer = ({ answer, query }) => {
         color: BRAND.blue,
         fontWeight: 800,
         marginBottom: "0.4rem",
-      }}>Quick answer</div>
+      }}>Top match</div>
       <h2 style={{
         margin: "0 0 0.6rem",
         fontFamily: '"TeX Gyre Heros Bold","Helvetica Neue",Arial,sans-serif',
@@ -230,16 +230,18 @@ export default function SearchPage() {
         <meta name="robots" content="noindex, follow"/>
       </Helmet>
       <div className="container-x" style={{ maxWidth: "58rem" }}>
-        <div className="eyebrow">Search EZtoFind.ca</div>
+        <div className="eyebrow">Info & FAQs — EZtoFind.ca knowledge library</div>
         <h1 className="section-title" style={{ marginBottom: "1.25rem" }}>
-          {q ? <>Results for <em>"{q}"</em></> : "What are you looking to learn?"}
+          {q ? <>Matches for <em>"{q}"</em></> : "What are you looking to learn about BC real estate?"}
         </h1>
 
         <div className="paper" style={{ padding: "1.25rem", marginBottom: "1.5rem" }}>
           <SearchBox initial={q} onSubmit={handleSubmit}/>
           <div style={{ marginTop: "0.85rem", fontSize: "0.82rem", color: BRAND.muted, fontFamily: "Inter,sans-serif", lineHeight: 1.55 }}>
-            Search across our <Link to="/glossary" style={{ color: BRAND.blue, fontWeight: 600 }}>439 BC glossary terms</Link>, thousands of FAQs, 239 community profiles, the Buyer's & Seller's Guides, tools, and live listings.
-            Results come from EZtoFind.ca's approved content library — no invented answers.
+            Look up definitions, frequently asked questions, community pages, tools, and guide sections from EZtoFind.ca's <Link to="/glossary" style={{ color: BRAND.blue, fontWeight: 600 }}>439 BC glossary terms</Link>, thousands of FAQs, 239 community profiles, and the Buyer's &amp; Seller's Guides.
+          </div>
+          <div style={{ marginTop: "0.6rem", padding: "0.6rem 0.85rem", background: "#FFF8E8", borderLeft: `3px solid ${BRAND.amber}`, fontSize: "0.78rem", color: "#1F2937", fontFamily: "Inter,sans-serif", lineHeight: 1.55, borderRadius: 4 }}>
+            <strong>Educational retrieval only.</strong> This is an information look-up across EZtoFind.ca's approved content library — nothing here is legal, tax, financial, or property-specific advice. For your own situation, speak with the appropriate licensed professional.
           </div>
         </div>
 

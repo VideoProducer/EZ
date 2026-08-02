@@ -1070,3 +1070,38 @@ Following an engineering-level compliance read (BCFSA ≈88%, CASL ≈92%, PIPA 
 - Removed "powered by a large language model" jargon from Doogie consent
 - Added cross-border AI-processor disclosure ("hosted outside Canada")
 - Aligned every surface on: *"general educational information about BC real estate — not legal, tax, financial, or real estate advice; speak with the appropriate licensed professional"*
+
+---
+
+## 📅 2026-02-02 (later) — Search rebrand + vendor-name scrub
+
+### What changed
+Doug reviewed the site through a visitor's eyes and flagged two BCFSA risks:
+1. Nav had two "Search" links side-by-side (`Search Listings` + `🔍 Search`) — ambiguous, and the second one implied "search AI for answers"
+2. The AI vendor name (Claude / Anthropic) was leaking into three surfaces — implying a specific AI provider is answering, which conflicts with the strict retrieval-only, "our approved content" framing
+
+### Nav & search relabelling (BCFSA education-only framing)
+- `Search Listings` → **`Property Search`** (top nav + footer)
+- `🔍 Search` → **`🔍 Info & FAQs`** (top nav — now clearly signals knowledge/glossary/FAQ retrieval, not AI Q&A)
+- `/search` page eyebrow: `Search EZtoFind.ca` → `Info & FAQs — EZtoFind.ca knowledge library`
+- `/search` page H1: `What are you looking to learn?` → `What are you looking to learn about BC real estate?`
+- `/search` page "Quick answer" pill → `Top match` (removes the word "answer")
+- `/search` results group "Ask Doogie" → `Explore with Doogie`
+- `/search` added compliance banner: *"Educational retrieval only. This is an information look-up across EZtoFind.ca's approved content library — nothing here is legal, tax, financial, or property-specific advice."*
+- Doogie response footer: `🤖 AI-generated response` → `🤖 AI-assisted retrieval from EZtoFind.ca's approved content`
+- Doogie chat input placeholder: `Ask Doogie…` → `Ask about a BC real estate term or topic…`
+
+### Vendor-name scrub
+- `/ai-use` page content policy: "Drafted by Doogie AI (built on Anthropic Claude models via Emergent LLM key)" → "Drafted by our AI provider under Doug's editorial direction, using EZtoFind.ca's approved BC content library and hallucination-hardened prompts"
+- Admin Approvals auto-draft panel: "Claude Sonnet 4.6 is drafting…" → "Our AI provider is drafting…"
+- Admin Approvals auto-draft footer: removed the `claude-sonnet-4-6` model-name fallback
+- Kept factual crawler-list references to `ClaudeBot`, `anthropic-ai` etc. in the AI Use robots.txt disclosure — those are technically-accurate crawler identifiers, not vendor endorsements
+- Kept `sourceLabel.claude` in the internal admin LLM Citation Tracker — that tracker records when EZtoFind is *cited by* external AIs; the label is required for accurate analytics and is not visitor-facing
+
+### Corrections logged from Doug
+- ❌ **Managing Broker sign-off (BCFSA Rule 5-1)** — removed from the compliance backlog. Doug confirmed his brokerage arrangement does not require pre-approval for the Site.
+- ❌ **Do not name Claude/Anthropic** in any visitor- or admin-facing UI. Refer to "our AI provider" generically.
+- 🎯 **Buyer's / Seller's Guides should live inside the client Journey**, not as standalone `/buying-guide` and `/selling-guide` silos — Doug wants a seamless "one platform" experience.
+
+### Next planned work (per Doug)
+- Fold the Buyer's Guide and Seller's Guide content into the token-gated client Journey stages so a client sees the guide sections in the order that matches where they actually are in the transaction — instead of navigating between three separate surfaces.
