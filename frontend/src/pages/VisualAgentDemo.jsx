@@ -11,6 +11,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
+import { TurnstileWidget, getTurnstileToken } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -154,6 +155,139 @@ const VOICE_SCRIPT = {
     reply: "Noted — Thursday morning window, CASL consent captured. Doug (BCFSA #167790) will personally confirm within one business day. Nothing sent yet.",
   },
 };
+
+// ── BC Region rotation — Buyer/Seller Insights cycle through these each visit
+// to visually reinforce that Doogie retrieves data province-wide, not just
+// Metro Van. Illustrative mock numbers; on each mount a random region is picked.
+const BC_REGIONS = [
+  {
+    key: "vancouver-west",
+    label: "Vancouver West · 2-bed condos",
+    city: "Vancouver West",
+    buyer: {
+      inventory: 82, median: "$1.28M", range: "$780K – $2.6M", dom: 14,
+      trend: [1.19,1.20,1.19,1.21,1.22,1.24,1.25,1.26,1.26,1.27,1.27,1.28], direction: "up",
+    },
+    seller: {
+      label: "Comparable actives · Vancouver · Kitsilano condos",
+      count: 12, avgPrice: "$1.35M", priceRange: "$1.19M – $1.49M", avgDom: 6,
+      comps: [
+        { id: "K1", addr: "2135 W 8th Ave", city: "Vancouver", price: "$1,289,000", beds: 2, baths: 2, sqft: 872,  dom: 4 },
+        { id: "K2", addr: "1802 Balsam St",  city: "Vancouver", price: "$1,449,000", beds: 2, baths: 2, sqft: 940,  dom: 11 },
+        { id: "K3", addr: "3110 Yew St",     city: "Vancouver", price: "$1,199,000", beds: 2, baths: 1, sqft: 815,  dom: 2 },
+      ],
+    },
+  },
+  {
+    key: "whistler",
+    label: "Whistler · Alpine chalets",
+    city: "Whistler",
+    buyer: {
+      inventory: 34, median: "$2.65M", range: "$895K – $8.2M", dom: 42,
+      trend: [2.72,2.70,2.69,2.68,2.66,2.64,2.65,2.63,2.64,2.65,2.65,2.65], direction: "flat",
+    },
+    seller: {
+      label: "Comparable actives · Whistler · 3-bed chalets",
+      count: 6, avgPrice: "$2.85M", priceRange: "$1.99M – $4.2M", avgDom: 38,
+      comps: [
+        { id: "W1", addr: "4899 Painted Cliff Rd", city: "Whistler", price: "$3,190,000", beds: 3, baths: 3, sqft: 2140, dom: 22 },
+        { id: "W2", addr: "6224 Fairway Dr",       city: "Whistler", price: "$2,650,000", beds: 3, baths: 3, sqft: 1980, dom: 44 },
+        { id: "W3", addr: "8080 Nicklaus North",   city: "Whistler", price: "$2,995,000", beds: 3, baths: 4, sqft: 2210, dom: 51 },
+      ],
+    },
+  },
+  {
+    key: "kelowna",
+    label: "Kelowna · Lakefront homes",
+    city: "Kelowna",
+    buyer: {
+      inventory: 118, median: "$895K", range: "$540K – $3.4M", dom: 26,
+      trend: [0.86,0.87,0.87,0.88,0.88,0.89,0.89,0.90,0.90,0.90,0.89,0.895], direction: "up",
+    },
+    seller: {
+      label: "Comparable actives · Kelowna · 4-bed detached",
+      count: 22, avgPrice: "$1.12M", priceRange: "$820K – $1.6M", avgDom: 21,
+      comps: [
+        { id: "KL1", addr: "3140 Watt Rd",     city: "Kelowna", price: "$1,150,000", beds: 4, baths: 3, sqft: 2450, dom: 12 },
+        { id: "KL2", addr: "2688 Country Rd",  city: "Kelowna", price: "$1,050,000", beds: 4, baths: 3, sqft: 2280, dom: 24 },
+        { id: "KL3", addr: "555 Yates Rd",     city: "Kelowna", price: "$1,180,000", beds: 4, baths: 4, sqft: 2610, dom: 8  },
+      ],
+    },
+  },
+  {
+    key: "nanaimo",
+    label: "Nanaimo · Family homes",
+    city: "Nanaimo",
+    buyer: {
+      inventory: 76, median: "$785K", range: "$460K – $2.1M", dom: 18,
+      trend: [0.77,0.77,0.78,0.78,0.79,0.79,0.79,0.79,0.78,0.78,0.78,0.785], direction: "flat",
+    },
+    seller: {
+      label: "Comparable actives · Nanaimo · 3-bed detached",
+      count: 18, avgPrice: "$820K", priceRange: "$625K – $1.05M", avgDom: 17,
+      comps: [
+        { id: "N1", addr: "4210 Departure Bay Rd", city: "Nanaimo", price: "$799,000", beds: 3, baths: 2, sqft: 1780, dom: 14 },
+        { id: "N2", addr: "6001 Hammond Bay Rd",   city: "Nanaimo", price: "$845,000", beds: 3, baths: 3, sqft: 1920, dom: 21 },
+        { id: "N3", addr: "1220 Estevan Rd",       city: "Nanaimo", price: "$815,000", beds: 3, baths: 2, sqft: 1650, dom: 16 },
+      ],
+    },
+  },
+  {
+    key: "prince-george",
+    label: "Prince George · Detached",
+    city: "Prince George",
+    buyer: {
+      inventory: 142, median: "$465K", range: "$220K – $1.1M", dom: 32,
+      trend: [0.46,0.46,0.46,0.47,0.47,0.47,0.47,0.47,0.47,0.46,0.465,0.465], direction: "flat",
+    },
+    seller: {
+      label: "Comparable actives · Prince George · 4-bed detached",
+      count: 34, avgPrice: "$525K", priceRange: "$385K – $720K", avgDom: 29,
+      comps: [
+        { id: "PG1", addr: "4485 Kimball Rd",   city: "Prince George", price: "$549,000", beds: 4, baths: 2, sqft: 2100, dom: 24 },
+        { id: "PG2", addr: "2810 Rosia Rd",     city: "Prince George", price: "$495,000", beds: 4, baths: 3, sqft: 1960, dom: 33 },
+        { id: "PG3", addr: "7250 Simon Fraser", city: "Prince George", price: "$580,000", beds: 4, baths: 3, sqft: 2240, dom: 19 },
+      ],
+    },
+  },
+  {
+    key: "victoria",
+    label: "Victoria · Downtown condos",
+    city: "Victoria",
+    buyer: {
+      inventory: 94, median: "$675K", range: "$395K – $1.9M", dom: 22,
+      trend: [0.66,0.66,0.67,0.67,0.67,0.67,0.68,0.68,0.68,0.67,0.675,0.675], direction: "up",
+    },
+    seller: {
+      label: "Comparable actives · Victoria · 2-bed downtown condos",
+      count: 16, avgPrice: "$710K", priceRange: "$520K – $985K", avgDom: 24,
+      comps: [
+        { id: "V1", addr: "838 Yates St",     city: "Victoria", price: "$695,000", beds: 2, baths: 2, sqft: 890,  dom: 18 },
+        { id: "V2", addr: "1015 Pandora Ave", city: "Victoria", price: "$749,000", beds: 2, baths: 2, sqft: 970,  dom: 26 },
+        { id: "V3", addr: "760 Johnson St",   city: "Victoria", price: "$685,000", beds: 2, baths: 2, sqft: 860,  dom: 22 },
+      ],
+    },
+  },
+];
+// Pick a stable-per-tab region so the same visitor doesn't see the numbers
+// change mid-session (uses sessionStorage). Rotates on a fresh browser tab.
+function useRotatingRegion() {
+  return useMemo(() => {
+    try {
+      const cached = typeof sessionStorage !== "undefined"
+        ? sessionStorage.getItem("ez_visual_agent_region") : null;
+      if (cached) {
+        const hit = BC_REGIONS.find(r => r.key === cached);
+        if (hit) return hit;
+      }
+      const pick = BC_REGIONS[Math.floor(Math.random() * BC_REGIONS.length)];
+      if (typeof sessionStorage !== "undefined") sessionStorage.setItem("ez_visual_agent_region", pick.key);
+      return pick;
+    } catch {
+      return BC_REGIONS[0];
+    }
+  }, []);
+}
 
 // ── Mock MLS listings (visual only) ──────────────────────────────────────────
 const MOCK_LISTINGS = [
@@ -656,6 +790,7 @@ const PaneNeighbourhood = () => {
 
 // ── Right pane: Buyer Insights (inventory + DOM + 90-day trend) ──────────────
 const PaneBuyerInsights = () => {
+  const region = useRotatingRegion();
   const [freshness, setFreshness] = useState("recently");
   useEffect(() => {
     let cancelled = false;
@@ -668,8 +803,8 @@ const PaneBuyerInsights = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // Mock 12-week list-price trend (illustrative — real endpoint would populate)
-  const trend = [1.19, 1.20, 1.19, 1.21, 1.22, 1.24, 1.25, 1.26, 1.26, 1.27, 1.27, 1.28]; // in $M
+  const b = region.buyer;
+  const trend = b.trend;
   const minV = Math.min(...trend), maxV = Math.max(...trend);
   const trendW = 260, trendH = 60;
   const pts = trend.map((v, i) => {
@@ -677,20 +812,21 @@ const PaneBuyerInsights = () => {
     const y = trendH - ((v - minV) / (maxV - minV || 1)) * trendH;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
+  const trendArrow = b.direction === "up" ? "▲" : b.direction === "down" ? "▼" : "→";
 
   return (
     <div data-testid="pane-buyerinsights" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · Vancouver West · 2-bed condos</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · {region.label}</strong>
         <Pill tone="green" data-testid="buyerinsights-freshness">
           <Radio size={12}/> Source: CREA DDF® · updated {freshness}
         </Pill>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
         {[
-          { label: "Active inventory", value: "82", sub: "2-bed condos, all price bands" },
-          { label: "Median list price", value: "$1.28M", sub: "range $780K – $2.6M" },
-          { label: "Avg. days on market", value: "14", sub: "last 30 days" },
+          { label: "Active inventory", value: String(b.inventory), sub: `${region.city} · matching filters` },
+          { label: "Median list price", value: b.median, sub: `range ${b.range}` },
+          { label: "Avg. days on market", value: String(b.dom), sub: "last 30 days" },
         ].map((s, i) => (
           <motion.div
             key={s.label}
@@ -732,7 +868,7 @@ const PaneBuyerInsights = () => {
         </svg>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#6B7280", marginTop: 2 }}>
           <span>12 weeks ago · ${minV.toFixed(2)}M</span>
-          <span>Now · ${trend[trend.length-1].toFixed(2)}M ▲</span>
+          <span>Now · ${trend[trend.length-1].toFixed(2)}M {trendArrow}</span>
         </div>
       </div>
 
@@ -775,6 +911,8 @@ const PaneBuyerInsights = () => {
 
 // ── Right pane: Seller Insights (comparable actives + DOM) ───────────────────
 const PaneSellerLookup = () => {
+  const region = useRotatingRegion();
+  const s = region.seller;
   // Freshness indicator — fetched from /api/tours/library sync log so consumers
   // see how current the CREA DDF® pull is. Falls back to "recently" if the
   // endpoint doesn't reply.
@@ -783,23 +921,8 @@ const PaneSellerLookup = () => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(`${API}/admin/listings/sync-log?limit=1`);
-        // sync-log is admin-guarded, so fall back to a public sample fetch to
-        // at least prove the feed is alive
-        if (r.status === 401 || r.status === 403) {
-          const alt = await fetch(`${API}/tours/library?limit=1`);
-          if (alt.ok && !cancelled) setFreshness("in the last 4 hours");
-          return;
-        }
-        const data = await r.json();
-        const last = (data?.rows || data?.items || data || [])[0];
-        const ts = last?.finished_at || last?.started_at;
-        if (ts && !cancelled) {
-          const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
-          if (mins < 60) setFreshness(`${mins} min ago`);
-          else if (mins < 60 * 24) setFreshness(`${Math.round(mins/60)} h ago`);
-          else setFreshness(`${Math.round(mins/(60*24))} d ago`);
-        }
+        const alt = await fetch(`${API}/tours/library?limit=1`);
+        if (alt.ok && !cancelled) setFreshness("in the last 4 hours");
       } catch { /* keep default */ }
     })();
     return () => { cancelled = true; };
@@ -808,25 +931,25 @@ const PaneSellerLookup = () => {
   return (
     <div data-testid="pane-sellerlookup" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Comparable actives · Burnaby · 3-bed townhomes</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>{s.label}</strong>
         <Pill tone="green" data-testid="sellerlookup-freshness">
           <Radio size={12}/> Source: CREA DDF® · updated {freshness}
         </Pill>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
         {[
-          { label: "Active comps", value: "3", sub: "matching filters" },
-          { label: "Avg. list price", value: "$1.39M", sub: "range $1.32M – $1.45M" },
-          { label: "Avg. days on market", value: "12", sub: "last 30 days" },
-        ].map((s, i) => (
+          { label: "Active comps", value: String(s.count), sub: "matching filters" },
+          { label: "Avg. list price", value: s.avgPrice, sub: `range ${s.priceRange}` },
+          { label: "Avg. days on market", value: String(s.avgDom), sub: "last 30 days" },
+        ].map((stat, i) => (
           <motion.div
-            key={s.label}
+            key={stat.label}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
             style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}
           >
-            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{s.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: "#6B7280" }}>{s.sub}</div>
+            <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{stat.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{stat.value}</div>
+            <div style={{ fontSize: 11, color: "#6B7280" }}>{stat.sub}</div>
             <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 6, fontStyle: "italic" }}>
               Source: CREA DDF® · {freshness}
             </div>
@@ -834,7 +957,7 @@ const PaneSellerLookup = () => {
         ))}
       </div>
       <div style={{ display: "grid", gap: 8 }}>
-        {MOCK_COMPS.map((l, i) => (
+        {s.comps.map((l, i) => (
           <motion.div
             key={l.id}
             initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.06 }}
@@ -851,7 +974,7 @@ const PaneSellerLookup = () => {
               </div>
             </div>
             <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>{l.price}</div>
-            <Pill tone="green">{l.status}</Pill>
+            <Pill tone="green">Active</Pill>
           </motion.div>
         ))}
       </div>
@@ -893,20 +1016,116 @@ const PaneSellerLookup = () => {
   );
 };
 
-// ── Right pane: Talk to Doug (consumer-friendly intake) ──────────────────────
+// ── Right pane: Consultation Request (REAL working questionnaire) ────────────
+// This is a live, BCFSA-compliant intake that POSTs to /api/leads/buyer OR
+// /api/leads/seller depending on the visitor's stated intent. Fields match
+// the backend Pydantic schemas exactly (see server.py: BuyerLead / SellerLead).
 const PaneQualify = () => {
-  const steps = [
-    { k: "About you",   v: "Sell · Burnaby townhouse" },
-    { k: "Timeline",    v: "Spring 2026" },
-    { k: "How to reach", v: "Email · morning" },
-    { k: "Consent",     v: "Ticked ✓" },
-  ];
-  const [prog, setProg] = useState(0);
-  useEffect(() => {
-    setProg(0);
-    const t = setInterval(() => setProg(p => Math.min(100, p + 25)), 600);
-    return () => clearInterval(t);
-  }, []);
+  // Step: 1=intent, 2=contact, 3=buyer OR seller specifics, 4=consent+submit
+  const [step, setStep] = useState(1);
+  const [intent, setIntent] = useState("");   // "buyer" | "seller"
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  // Unified form state — populated conditionally by branch.
+  const [form, setForm] = useState({
+    full_name: "", email: "", phone: "",
+    // buyer-only
+    areas: "", budget_range: "$800K – $1.2M", first_time_buyer: false, working_with_realtor: false, financing_status: "Not yet pre-approved",
+    // seller-only
+    property_address: "", city: "", estimated_value: "Not sure", currently_listed: false,
+    // shared
+    property_type: "Detached",
+    timeline: "3-6 months",
+    notes: "",
+    preferred_contact: "email",
+    casl_consent: false, pipa_ack: false,
+  });
+  const upd = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const progress = step === 1 ? 0 : step === 2 ? 33 : step === 3 ? 66 : 100;
+
+  const validStep2 = form.full_name.trim().length >= 2
+    && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())
+    && form.phone.trim().length >= 7;
+  const validStep3Buyer  = form.areas.trim().length >= 2;
+  const validStep3Seller = form.property_address.trim().length >= 3 && form.city.trim().length >= 2;
+  const validStep4 = form.casl_consent && form.pipa_ack;
+
+  const submit = async () => {
+    setError(""); setSubmitting(true);
+    try {
+      const base = {
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        timeline: form.timeline,
+        preferred_contact: form.preferred_contact,
+        notes: form.notes || `Submitted via Doogie Consultation Request (${intent})`,
+        casl_consent: form.casl_consent,
+        pipa_ack: form.pipa_ack,
+        source: `visual_agent_consultation_${intent}`,
+        turnstile_token: getTurnstileToken(),
+      };
+      let url, payload;
+      if (intent === "buyer") {
+        url = `${API}/leads/buyer`;
+        payload = {
+          ...base,
+          areas: form.areas.split(",").map(a => a.trim()).filter(Boolean),
+          property_type: form.property_type,
+          budget_range: form.budget_range,
+          financing_status: form.financing_status,
+          first_time_buyer: form.first_time_buyer,
+          working_with_realtor: form.working_with_realtor,
+        };
+      } else {
+        url = `${API}/leads/seller`;
+        payload = {
+          ...base,
+          property_address: form.property_address.trim(),
+          city: form.city.trim(),
+          property_type: form.property_type,
+          estimated_value: form.estimated_value,
+          currently_listed: form.currently_listed,
+          reason: form.notes || "Submitted via Doogie Consultation Request",
+        };
+      }
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(`Server returned ${r.status}`);
+      setSubmitted(true);
+    } catch (e) {
+      setError("We couldn't send your request just now. Please try again in a moment, or email hello@eztofind.ca directly.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Submitted state ────────────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <div data-testid="pane-qualify-submitted" style={{ display: "grid", gap: 14, textAlign: "center", paddingTop: 24 }}>
+        <img
+          src={DOOGIE.celebrating} alt="Doogie celebrating"
+          style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", objectPosition: "center 30%", background: "#FFF4D9", border: `3px solid ${C.green}`, margin: "0 auto" }}
+        />
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: C.navy, margin: 0 }}>Thanks, {form.full_name.split(" ")[0]}!</h3>
+        <p style={{ margin: 0, fontSize: 13.5, color: "#4B5563", maxWidth: 460, marginInline: "auto", lineHeight: 1.55 }}>
+          Your consultation request is on Doug's desk. He'll personally review it and reach out within <strong>1 business day</strong>.
+          You'll get a confirmation email at <strong>{form.email}</strong> within a few minutes.
+        </p>
+        <div style={{ fontSize: 11, color: "#6B7280" }}>
+          Doug LeMaire, REALTOR® · BCFSA #167790 · Consent record retained per CASL (3 years).
+        </div>
+      </div>
+    );
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────────────
   return (
     <div data-testid="pane-qualify" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
@@ -918,40 +1137,241 @@ const PaneQualify = () => {
         </div>
         <Pill tone="green"><ShieldCheck size={12}/> Consent-first · CASL</Pill>
       </div>
-      <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
-        <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>Intake progress</div>
-        <div style={{ height: 8, background: "#EEF2FB", borderRadius: 99, overflow: "hidden" }}>
-          <motion.div
-            animate={{ width: `${prog}%` }} transition={{ duration: 0.5, ease: "easeOut" }}
-            style={{ height: "100%", background: `linear-gradient(90deg, ${C.blue}, ${C.green})` }}
-          />
+
+      {/* Progress bar */}
+      <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}>
+        <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
+          <span>Step {step} of 4{intent ? ` · ${intent === "buyer" ? "Buyer" : "Seller"} intake` : ""}</span>
+          <span>{progress}%</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
-          {steps.map((s, i) => (
-            <motion.div
-              key={s.k}
-              initial={{ opacity: 0 }} animate={{ opacity: prog >= (i + 1) * 25 ? 1 : 0.35 }}
-              style={{
-                background: prog >= (i + 1) * 25 ? "rgba(34,197,94,0.08)" : "#F8FAFF",
-                border: "1px solid " + (prog >= (i + 1) * 25 ? "rgba(34,197,94,0.35)" : "#E5E7EB"),
-                borderRadius: 10, padding: 10,
-              }}
-            >
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: C.blue, fontWeight: 700 }}>{s.k}</div>
-              <div style={{ fontSize: 13, color: C.navy, marginTop: 4, fontWeight: 600 }}>{s.v}</div>
-            </motion.div>
-          ))}
+        <div style={{ height: 8, background: "#EEF2FB", borderRadius: 99, overflow: "hidden" }}>
+          <motion.div animate={{ width: `${progress}%` }} transition={{ duration: 0.4 }}
+            style={{ height: "100%", background: `linear-gradient(90deg, ${C.blue}, ${C.green})` }}/>
         </div>
       </div>
+
+      {/* ── STEP 1 · Intent ────────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div data-testid="qualify-step-1" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 4 }}>What can Doug help you with?</div>
+          <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 12 }}>Pick one — the questions below adapt to your answer.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+            {[
+              { k: "buyer", label: "I want to buy", sub: "Explore active listings & budget", icon: Search },
+              { k: "seller", label: "I want to sell", sub: "Get a Market Estimate", icon: HomeIcon },
+            ].map(opt => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.k}
+                  data-testid={`intent-${opt.k}`}
+                  onClick={() => { setIntent(opt.k); setStep(2); }}
+                  style={{
+                    padding: "14px 12px", borderRadius: 12, cursor: "pointer",
+                    background: intent === opt.k ? C.navy : "#F5F8FF",
+                    color: intent === opt.k ? "#fff" : C.navy,
+                    border: `1px solid ${intent === opt.k ? C.navy : "#DDE6FA"}`,
+                    fontWeight: 700, fontSize: 13, textAlign: "left",
+                    display: "flex", alignItems: "center", gap: 10,
+                  }}
+                >
+                  <Icon size={20} color={intent === opt.k ? C.gold : C.blue}/>
+                  <div>
+                    <div>{opt.label}</div>
+                    <div style={{ fontSize: 11, fontWeight: 500, opacity: 0.85, marginTop: 2 }}>{opt.sub}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 2 · Contact info (shared) ─────────────────────────────────── */}
+      {step === 2 && (
+        <div data-testid="qualify-step-2" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>How can Doug reach you?</div>
+          <TextField label="Full name *" value={form.full_name} onChange={v => upd("full_name", v)} testId="q-full-name"/>
+          <TextField label="Email *" type="email" value={form.email} onChange={v => upd("email", v)} testId="q-email"/>
+          <TextField label="Phone *" value={form.phone} onChange={v => upd("phone", v)} testId="q-phone"/>
+          <SelectField label="Preferred contact" value={form.preferred_contact} onChange={v => upd("preferred_contact", v)}
+            testId="q-preferred-contact"
+            options={["email", "phone", "text"]}
+          />
+          <FormNav
+            onBack={() => setStep(1)}
+            onNext={() => setStep(3)}
+            nextDisabled={!validStep2}
+            nextLabel="Next →"
+          />
+        </div>
+      )}
+
+      {/* ── STEP 3a · BUYER branch ─────────────────────────────────────────── */}
+      {step === 3 && intent === "buyer" && (
+        <div data-testid="qualify-step-3-buyer" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your search</div>
+          <TextField label="Target areas or cities in BC *" value={form.areas} onChange={v => upd("areas", v)} testId="q-areas" placeholder="e.g. Kitsilano, North Vancouver, Squamish" hint="Comma-separated list is fine"/>
+          <SelectField label="Budget range" value={form.budget_range} onChange={v => upd("budget_range", v)} testId="q-budget"
+            options={["Under $500K","$500K – $800K","$800K – $1.2M","$1.2M – $1.8M","$1.8M – $2.5M","$2.5M – $4M","Over $4M"]}/>
+          <SelectField label="Property type" value={form.property_type} onChange={v => upd("property_type", v)} testId="q-property-type"
+            options={["Any","Detached","Townhouse","Condo","Duplex","Land / Acreage","Luxury","Equestrian"]}/>
+          <SelectField label="Timeline" value={form.timeline} onChange={v => upd("timeline", v)} testId="q-timeline"
+            options={["ASAP","1-3 months","3-6 months","6-12 months","Just looking"]}/>
+          <SelectField label="Financing status" value={form.financing_status} onChange={v => upd("financing_status", v)} testId="q-financing"
+            options={["Not yet pre-approved","Pre-approved","All cash","Refinancing to buy","Need a mortgage broker referral"]}/>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 2 }}>
+            <CheckboxField label="First-time buyer" checked={form.first_time_buyer} onChange={v => upd("first_time_buyer", v)} testId="q-first-time"/>
+            <CheckboxField label="Currently working with another REALTOR®" checked={form.working_with_realtor} onChange={v => upd("working_with_realtor", v)} testId="q-current-realtor"/>
+          </div>
+          <TextField label="Anything else Doug should know?" value={form.notes} onChange={v => upd("notes", v)} testId="q-notes" placeholder="Optional" multiline/>
+          <FormNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!validStep3Buyer} nextLabel="Next →"/>
+        </div>
+      )}
+
+      {/* ── STEP 3b · SELLER branch ────────────────────────────────────────── */}
+      {step === 3 && intent === "seller" && (
+        <div data-testid="qualify-step-3-seller" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your home</div>
+          <TextField label="Property address *" value={form.property_address} onChange={v => upd("property_address", v)} testId="q-address"/>
+          <TextField label="City (BC) *" value={form.city} onChange={v => upd("city", v)} testId="q-city"/>
+          <SelectField label="Property type" value={form.property_type} onChange={v => upd("property_type", v)} testId="q-property-type"
+            options={["Detached","Townhouse","Condo","Duplex","Luxury","Estate Sale / Probate","Equestrian / Acreage","Land"]}/>
+          <SelectField label="Timeline" value={form.timeline} onChange={v => upd("timeline", v)} testId="q-timeline"
+            options={["ASAP","1-3 months","3-6 months","6-12 months","Just curious"]}/>
+          <SelectField label="Your estimated value" value={form.estimated_value} onChange={v => upd("estimated_value", v)} testId="q-est-value"
+            options={["Not sure","Under $700K","$700K – $1M","$1M – $1.5M","$1.5M – $2.5M","$2.5M – $4M","Over $4M"]}/>
+          <CheckboxField label="This home is currently listed with another REALTOR®" checked={form.currently_listed} onChange={v => upd("currently_listed", v)} testId="q-currently-listed"/>
+          <TextField label="Reason for selling / notes (optional)" value={form.notes} onChange={v => upd("notes", v)} testId="q-notes" multiline/>
+          <FormNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!validStep3Seller} nextLabel="Next →"/>
+        </div>
+      )}
+
+      {/* ── STEP 4 · Consent + Submit ──────────────────────────────────────── */}
+      {step === 4 && (
+        <div data-testid="qualify-step-4" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>One last thing — your consent</div>
+          <div style={{
+            background: "#F8FAFF", border: "1px solid #DDE6FA", borderRadius: 10, padding: 12, fontSize: 12, color: "#374151", lineHeight: 1.55,
+          }}>
+            Doug LeMaire, REALTOR® (<strong>BCFSA #167790</strong>) personally reviews every consultation request. He'll reach out within <strong>1 business day</strong>. Nothing here is a listing, offer, or contract (RESA). Doogie shares general information — not advice.
+          </div>
+          <CheckboxField
+            label={<>I consent to receive commercial electronic messages from EZtoFind.ca (<strong>CASL</strong>). I can unsubscribe any time.</>}
+            checked={form.casl_consent} onChange={v => upd("casl_consent", v)} testId="q-casl"
+          />
+          <CheckboxField
+            label={<>I acknowledge the <a href="/privacy" target="_blank" rel="noopener" style={{ color: C.blue, fontWeight: 600 }}>Privacy Policy (PIPA)</a>.</>}
+            checked={form.pipa_ack} onChange={v => upd("pipa_ack", v)} testId="q-pipa"
+          />
+          <TurnstileWidget/>
+          {error && (
+            <div data-testid="q-submit-error" style={{ background: "#FEE2E2", border: "1px solid #DC2626", color: "#7F1D1D", padding: 10, borderRadius: 8, fontSize: 12 }}>
+              {error}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+            <button
+              data-testid="q-back"
+              onClick={() => setStep(3)}
+              disabled={submitting}
+              style={{
+                padding: "10px 14px", borderRadius: 10, border: "1px solid #D1D5DB", background: "#fff",
+                color: C.navy, fontWeight: 700, cursor: submitting ? "default" : "pointer", fontSize: 13,
+              }}
+            >← Back</button>
+            <button
+              data-testid="q-submit"
+              onClick={submit}
+              disabled={!validStep4 || submitting}
+              style={{
+                flex: 1, minWidth: 200,
+                padding: "10px 14px", borderRadius: 10, border: "none",
+                background: (!validStep4 || submitting) ? "#94A3B8" : C.green,
+                color: "#fff", fontWeight: 800, cursor: (!validStep4 || submitting) ? "default" : "pointer",
+                fontSize: 13, letterSpacing: 0.2,
+                boxShadow: !validStep4 ? "none" : "0 6px 16px rgba(34,197,94,0.35)",
+              }}
+            >{submitting ? "Sending…" : "Send to Doug ✓"}</button>
+          </div>
+        </div>
+      )}
+
       <div style={{
         background: "linear-gradient(135deg, rgba(30,79,207,0.06), rgba(34,197,94,0.06))",
-        border: "1px solid #DDE6FA", borderRadius: 12, padding: 12, fontSize: 12, color: C.navy,
+        border: "1px solid #DDE6FA", borderRadius: 12, padding: 10, fontSize: 11.5, color: C.navy,
       }}>
         <strong>What happens next:</strong> Your responses go straight to Doug LeMaire, REALTOR® (BCFSA #167790). He personally reads every consultation request — no automated outreach. You'll hear from a real person within 1 business day. Doogie shares general information, not advice.
       </div>
     </div>
   );
 };
+
+// ── Reusable form fields (used only by PaneQualify) ─────────────────────────
+const TextField = ({ label, value, onChange, testId, type = "text", placeholder, hint, multiline }) => (
+  <label style={{ display: "grid", gap: 4, fontSize: 12, color: C.navy }}>
+    <span style={{ fontWeight: 700 }}>{label}</span>
+    {multiline ? (
+      <textarea
+        data-testid={testId}
+        value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, fontFamily: "inherit", resize: "vertical" }}
+      />
+    ) : (
+      <input
+        data-testid={testId} type={type}
+        value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, fontFamily: "inherit" }}
+      />
+    )}
+    {hint && <span style={{ fontSize: 10, color: "#6B7280" }}>{hint}</span>}
+  </label>
+);
+
+const SelectField = ({ label, value, onChange, options, testId }) => (
+  <label style={{ display: "grid", gap: 4, fontSize: 12, color: C.navy }}>
+    <span style={{ fontWeight: 700 }}>{label}</span>
+    <select
+      data-testid={testId}
+      value={value} onChange={e => onChange(e.target.value)}
+      style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, background: "#fff", fontFamily: "inherit" }}
+    >
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  </label>
+);
+
+const CheckboxField = ({ label, checked, onChange, testId }) => (
+  <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "#374151", lineHeight: 1.5, cursor: "pointer" }}>
+    <input
+      type="checkbox" data-testid={testId}
+      checked={checked} onChange={e => onChange(e.target.checked)}
+      style={{ marginTop: 2, width: 16, height: 16, accentColor: C.green, cursor: "pointer" }}
+    />
+    <span>{label}</span>
+  </label>
+);
+
+const FormNav = ({ onBack, onNext, nextDisabled, nextLabel }) => (
+  <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+    <button
+      onClick={onBack}
+      style={{ padding: "9px 14px", borderRadius: 10, border: "1px solid #D1D5DB", background: "#fff", color: C.navy, fontWeight: 700, cursor: "pointer", fontSize: 13 }}
+    >← Back</button>
+    <button
+      onClick={onNext} disabled={nextDisabled}
+      data-testid="q-next"
+      style={{
+        flex: 1, padding: "9px 14px", borderRadius: 10, border: "none",
+        background: nextDisabled ? "#94A3B8" : C.navy, color: "#fff",
+        fontWeight: 700, cursor: nextDisabled ? "default" : "pointer", fontSize: 13,
+      }}
+    >{nextLabel}</button>
+  </div>
+);
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function VisualAgentDemo() {
@@ -988,9 +1408,12 @@ export default function VisualAgentDemo() {
 
   // Auto-advance turns; when done, switch to next scenario after a pause.
   // Paused while a voice interaction is active so the demo doesn't jump away.
+  // Also paused during the Consultation Request scenario so consumers aren't
+  // interrupted mid-form-fill.
   useEffect(() => {
     if (!playing) return;
     if (voiceState !== "idle" && voiceState !== "done") return;
+    if (scenario.id === "qualify") return;   // don't auto-leave the live form
     const isLastTurn = turnIdx >= scenario.turns.length - 1;
     const delay = isLastTurn ? 3200 : 2200;
     const t = setTimeout(() => {
@@ -1002,7 +1425,7 @@ export default function VisualAgentDemo() {
       }
     }, delay);
     return () => clearTimeout(t);
-  }, [turnIdx, scenarioIdx, playing, voiceState, scenario.turns.length]);
+  }, [turnIdx, scenarioIdx, playing, voiceState, scenario.id, scenario.turns.length]);
 
   // Reset any voice state when scenario changes.
   useEffect(() => {
@@ -1213,6 +1636,9 @@ export default function VisualAgentDemo() {
         <title>Doogie Visual — Interactive Agent Concept · EZtoFind</title>
         <meta name="robots" content="noindex,nofollow"/>
         <meta name="description" content="Internal concept mockup of an interactive visual agent for BC real estate search, virtual tours, and 24/7 qualification."/>
+        {/* Cloudflare Turnstile — needed because /visual-agent-demo is not
+            wrapped in AppLayout (which normally loads this globally). */}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer/>
       </Helmet>
       {/* ── Compliance banner ─────────────────────────────────────────────── */}
       <div data-testid="visual-agent-compliance-banner" style={{

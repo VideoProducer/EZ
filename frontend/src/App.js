@@ -7021,7 +7021,7 @@ function TurnstileScriptLoader() {
   }, []);
   return null;
 }
-function TurnstileWidget({ onToken }) {
+export function TurnstileWidget({ onToken }) {
   const ref = useRef(null);
   const widgetId = useRef(null);
   useEffect(() => {
@@ -7055,7 +7055,7 @@ function TurnstileWidget({ onToken }) {
   return <div ref={ref} data-testid="turnstile-widget" style={{margin:"0.75rem 0"}}/>;
 }
 // Read Turnstile token at submit time. Empty string when not configured.
-const getTurnstileToken = () => (typeof window !== "undefined" ? (window.__ttoken || "") : "");
+export const getTurnstileToken = () => (typeof window !== "undefined" ? (window.__ttoken || "") : "");
 
 // Anonymous page-view beacon — sends one event per route change to /api/track/page.
 // Skips /admin/* pages so Doug's own browsing doesn't pollute the growth dashboard.
