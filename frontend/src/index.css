@@ -135,6 +135,7 @@ footer ul li { padding: 0.35rem 0; font-size: 0.9rem; }
 /* Doogie chat widget */
 .doogie-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60; width: 72px; height: 72px; border-radius: 50%; background: white; border: 3px solid var(--brand-gold); cursor: pointer; box-shadow: 0 12px 28px rgba(15,42,91,0.35); display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0; animation: bob 3s ease-in-out infinite; }
 @keyframes bob { 0%,100% {transform: translateY(0)} 50% {transform: translateY(-6px)} }
+@keyframes spin { to { transform: rotate(360deg); } }
 .doogie-fab img { width: 100%; height: 100%; object-fit: cover; }
 
 .doogie-panel { position: fixed; bottom: 6.5rem; right: 1.5rem; width: 380px; max-width: calc(100vw - 2rem); height: 540px; max-height: calc(100vh - 8rem); z-index: 61; background: white; border-radius: 20px; box-shadow: 0 30px 60px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; }

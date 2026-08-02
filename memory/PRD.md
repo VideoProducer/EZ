@@ -969,4 +969,44 @@ Closes the "three-click gap-closing" loop end-to-end AND adds trend visualizatio
 - **Guide printables** — print CSS on Buyer/Seller Guides
 - **Guide email capture** — email → PDF download with CASL-split consent
 - **Multilingual guides** — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)
-- **Auto-draft on commission approval** — when Doug flips a commission to "in-progress", automatically kick off the AI drafter to produce the definition + 10 FAQs for review
+
+---
+
+## 📅 2026-08-02 — Phase E: Auto-Draft on Commission ✅
+
+### What shipped
+When Doug flips a backlog commission from "backlog" → "in-progress" on `/admin/approvals`, the backend now automatically fires Claude Sonnet 4.6 (via Emergent LLM Key) to draft a BC-compliant definition + 10 FAQs. Draft appears inline in an expandable panel with editable definition textarea + FAQ inputs, plus "Regenerate draft" and "Approve & publish to glossary" buttons.
+
+### Backend
+- **New helper** `_generate_definition_from_scratch(term, notes)` — first-draft definition for a brand-new commission using hallucination-hardened v2 rules (no seed).
+- **New background worker** `_auto_draft_commission(cid)` — runs `_generate_definition_from_scratch` + `generate_faqs_for_term`, persists `draft_definition`, `draft_faqs`, `draft_status` (`drafting` → `drafted` / `error`), `draft_generated_at`, `draft_model`.
+- **PUT `/api/admin/content-commissions/{cid}`** — when the update transitions status to `in-progress` and no draft yet exists, `asyncio.create_task(_auto_draft_commission(cid))` is fired immediately after the DB write. Returns `{ok: true, auto_draft_started: bool}`.
+- **New GET `/api/admin/content-commissions/{cid}`** — single-record fetch for UI polling.
+- **New POST `/api/admin/content-commissions/{cid}/auto-draft`** — manual "Regenerate draft" trigger.
+- **New POST `/api/admin/content-commissions/{cid}/publish`** — approves & publishes to `db.glossary` with `faqs_approved=True`, marks commission `shipped`, pings IndexNow.
+
+### Frontend (`App.js` / AdminApprovals)
+- Poll loop (every 4s) while any commission has `draft_status === "drafting"`.
+- Draft-status pill: 🔄 "AI drafting… (~30s)" · 📝 "AI draft ready — N FAQs" · ⚠ "Draft failed".
+- Expandable draft panel with editable definition textarea (char counter, 400–700 target) and editable FAQ list (per-FAQ remove button).
+- Actions: "✅ Approve & publish to glossary" (calls publish endpoint with edited buffer) + "🔄 Regenerate draft" + timestamp/model footer.
+- `@keyframes spin` added to `index.css` for the drafting spinner.
+
+### Compliance
+- Prompts reuse the hallucination-hardened v2 rules: cite-or-refuse, whitelist-only citations (RESA, SPA, PTTA, BCFSA, CASL, PIPA, etc.), `(as of YYYY-MM-DD — verify current)` tags on every dollar amount / percentage / date, no advice.
+- **Nothing publishes automatically** — every draft requires Doug to click "Approve & publish". Compliance boundary preserved.
+
+### Verified via curl
+1. Create commission → flip to in-progress → poll shows `draft_status=drafting` → after ~30s `draft_status=drafted` with 10 FAQs + ~500-1200 char definition citing BC statutes.
+2. Publish → creates glossary entry with `faqs_approved=True`, commission → `shipped`, IndexNow ping.
+3. Refusal path: when Claude cannot verify the term against the whitelist, it explicitly refuses to invent a definition and forces "verify with a BC lawyer/notary/tax professional" language.
+
+### Files touched
+- **Modified**: `backend/server.py` — added ~200 lines: `_generate_definition_from_scratch`, `_auto_draft_commission`, extended PUT with auto-draft trigger, new GET single, new POST auto-draft, new POST publish.
+- **Modified**: `frontend/src/App.js` — added ~180 lines in AdminApprovals: polling loop, draft edit buffers, regenerate/publish helpers, expandable draft panel row.
+- **Modified**: `frontend/src/index.css` — added `@keyframes spin`.
+
+### Backlog still open
+- **Guide printables** — print CSS on Buyer/Seller Guides
+- **Guide email capture** — email → PDF download with CASL-split consent
+- **Multilingual guides** — zh-Hant/zh-Hans/pa/fa/pt-PT (hreflang scaffolding already in place)

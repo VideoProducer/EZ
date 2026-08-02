@@ -6176,6 +6176,90 @@ const AdminApprovals = () => {
     loadCommissions();
   };
 
+  // ---- Auto-Draft on Commission (Phase E) ----
+  // When a commission flips to "in-progress" the backend kicks off an AI
+  // drafter. This UI polls for the result, shows an editable preview, and
+  // lets Doug regenerate or approve+publish to the glossary.
+  const [expandedDraft, setExpandedDraft] = useState({}); // { [cid]: true }
+  const [draftEdits, setDraftEdits] = useState({});       // { [cid]: {definition, faqs} }
+  const [draftBusy, setDraftBusy] = useState({});         // { [cid]: "regenerating" | "publishing" }
+  const [draftMsg, setDraftMsg] = useState({});           // { [cid]: string }
+
+  // Poll for in-flight drafts every 4s while at least one is "drafting".
+  useEffect(() => {
+    const anyDrafting = (commissions || []).some(c => c.draft_status === "drafting");
+    if (!anyDrafting) return;
+    const t = setInterval(() => { loadCommissions(); }, 4000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commissions.map(c => c.id + ":" + c.draft_status).join("|")]);
+
+  // Seed edit buffer whenever the backend delivers a fresh draft.
+  useEffect(() => {
+    setDraftEdits(prev => {
+      const next = {...prev};
+      for (const c of (commissions || [])) {
+        if (c.draft_status === "drafted" && next[c.id] === undefined) {
+          next[c.id] = {
+            definition: c.draft_definition || "",
+            faqs: JSON.parse(JSON.stringify(c.draft_faqs || [])),
+          };
+        }
+      }
+      return next;
+    });
+  }, [commissions]);
+
+  const regenerateDraft = async (cid) => {
+    setDraftBusy(b => ({...b, [cid]: "regenerating"}));
+    setDraftMsg(m => ({...m, [cid]: ""}));
+    try {
+      await axios.post(`${API}/admin/content-commissions/${cid}/auto-draft`, {}, {headers});
+      // Clear stale edits so the fresh draft repopulates the buffer.
+      setDraftEdits(e => { const n={...e}; delete n[cid]; return n; });
+      loadCommissions();
+    } catch (e) {
+      setDraftMsg(m => ({...m, [cid]: "⚠ " + (e.response?.data?.detail || e.message)}));
+    } finally {
+      setDraftBusy(b => { const n={...b}; delete n[cid]; return n; });
+    }
+  };
+
+  const publishDraft = async (cid) => {
+    const c = commissions.find(x => x.id === cid);
+    const buf = draftEdits[cid] || {definition: c?.draft_definition || "", faqs: c?.draft_faqs || []};
+    if (!buf.definition?.trim()) { setDraftMsg(m => ({...m, [cid]: "⚠ Definition is empty."})); return; }
+    if (!window.confirm(`Publish "${c.term}" to the public glossary with ${buf.faqs.length} FAQs? This marks the term approved and pings IndexNow.`)) return;
+    setDraftBusy(b => ({...b, [cid]: "publishing"}));
+    setDraftMsg(m => ({...m, [cid]: ""}));
+    try {
+      const r = await axios.post(`${API}/admin/content-commissions/${cid}/publish`,
+        {definition: buf.definition, faqs: buf.faqs, category: "General"}, {headers});
+      setDraftMsg(m => ({...m, [cid]: `✅ Published to /glossary/${r.data.slug}`}));
+      loadCommissions();
+    } catch (e) {
+      setDraftMsg(m => ({...m, [cid]: "⚠ " + (e.response?.data?.detail || e.message)}));
+    } finally {
+      setDraftBusy(b => { const n={...b}; delete n[cid]; return n; });
+    }
+  };
+
+  const updateDraftFaq = (cid, idx, field, val) => {
+    setDraftEdits(e => {
+      const cur = e[cid] || {definition:"", faqs:[]};
+      const faqs = [...cur.faqs];
+      faqs[idx] = {...faqs[idx], [field]: val};
+      return {...e, [cid]: {...cur, faqs}};
+    });
+  };
+  const removeDraftFaq = (cid, idx) => {
+    setDraftEdits(e => {
+      const cur = e[cid] || {definition:"", faqs:[]};
+      const faqs = cur.faqs.filter((_,i) => i!==idx);
+      return {...e, [cid]: {...cur, faqs}};
+    });
+  };
+
   return <AdminShell active="approvals">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>AI Content Approvals</h1>
 
@@ -6228,15 +6312,41 @@ const AdminApprovals = () => {
               </tr>
             </thead>
             <tbody>
-              {commissions.map(c => (
-                <tr key={c.id} data-testid={`commission-row-${c.id}`}>
-                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+              {commissions.map(c => {
+                const ds = c.draft_status || "";
+                const isDrafting = ds === "drafting";
+                const hasDraft = ds === "drafted" || ds === "published" || (c.draft_definition && ds !== "drafting");
+                const isError = ds === "error";
+                const isExpanded = !!expandedDraft[c.id];
+                const buf = draftEdits[c.id] || {definition: c.draft_definition || "", faqs: c.draft_faqs || []};
+                const busy = draftBusy[c.id];
+                const msg = draftMsg[c.id];
+                return (
+                <React.Fragment key={c.id}>
+                <tr data-testid={`commission-row-${c.id}`}>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:isExpanded?"none":"1px solid rgba(15,42,91,0.06)"}}>
                     <div style={{fontWeight:700,color:"var(--brand-navy)"}}>{c.term}</div>
                     {c.slug && <div style={{fontSize:"0.75rem",color:"var(--muted)",fontFamily:"monospace"}}>{c.slug}</div>}
                     {c.notes && <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.2rem",fontStyle:"italic"}}>{c.notes}</div>}
+                    {/* Draft-status pill */}
+                    {isDrafting && (
+                      <div data-testid={`commission-draft-status-${c.id}`} style={{marginTop:"0.35rem",display:"inline-flex",alignItems:"center",gap:"0.4rem",padding:"0.15rem 0.55rem",fontSize:"0.72rem",fontWeight:700,color:"#7C2D12",background:"#FEF3C7",border:"1px solid #F59E0B",borderRadius:999}}>
+                        <span className="spinner" style={{width:10,height:10,border:"2px solid #F59E0B",borderTopColor:"transparent",borderRadius:"50%",display:"inline-block",animation:"spin 0.8s linear infinite"}}/> AI drafting… (~30s)
+                      </div>
+                    )}
+                    {hasDraft && !isDrafting && (
+                      <div data-testid={`commission-draft-status-${c.id}`} style={{marginTop:"0.35rem",display:"inline-flex",alignItems:"center",gap:"0.35rem",padding:"0.15rem 0.55rem",fontSize:"0.72rem",fontWeight:700,color:"#065F46",background:"#D1FAE5",border:"1px solid #10B981",borderRadius:999}}>
+                        {ds === "published" ? "✅ Published" : "📝 AI draft ready"} — {(c.draft_faqs||[]).length} FAQ{(c.draft_faqs||[]).length===1?"":"s"}
+                      </div>
+                    )}
+                    {isError && (
+                      <div data-testid={`commission-draft-status-${c.id}`} style={{marginTop:"0.35rem",display:"inline-flex",alignItems:"center",gap:"0.35rem",padding:"0.15rem 0.55rem",fontSize:"0.72rem",fontWeight:700,color:"#991B1B",background:"#FEE2E2",border:"1px solid #DC2626",borderRadius:999}}>
+                        ⚠ Draft failed{c.draft_error ? ` — ${c.draft_error}` : ""}
+                      </div>
+                    )}
                   </td>
-                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"monospace"}}>{c.source||"manual"}</td>
-                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:isExpanded?"none":"1px solid rgba(15,42,91,0.06)",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"monospace"}}>{c.source||"manual"}</td>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:isExpanded?"none":"1px solid rgba(15,42,91,0.06)"}}>
                     <select value={c.status} onChange={e=>updateCommissionStatus(c.id, e.target.value)} data-testid={`commission-status-${c.id}`} style={{padding:"0.25rem 0.4rem",fontSize:"0.82rem",fontFamily:"Inter,sans-serif"}}>
                       <option value="backlog">Backlog</option>
                       <option value="in-progress">In progress</option>
@@ -6244,11 +6354,87 @@ const AdminApprovals = () => {
                       <option value="declined">Declined</option>
                     </select>
                   </td>
-                  <td style={{padding:"0.5rem 0.6rem",borderBottom:"1px solid rgba(15,42,91,0.06)",whiteSpace:"nowrap"}}>
+                  <td style={{padding:"0.5rem 0.6rem",borderBottom:isExpanded?"none":"1px solid rgba(15,42,91,0.06)",whiteSpace:"nowrap"}}>
+                    {(hasDraft || isDrafting || isError) && (
+                      <button className="btn btn-ghost" style={{padding:"0.25rem 0.55rem",fontSize:"0.78rem",marginRight:"0.35rem"}} onClick={()=>setExpandedDraft(x=>({...x,[c.id]:!x[c.id]}))} data-testid={`commission-toggle-draft-${c.id}`}>
+                        {isExpanded ? "Hide draft ▲" : "View draft ▼"}
+                      </button>
+                    )}
                     <button className="btn btn-ghost" style={{padding:"0.25rem 0.55rem",fontSize:"0.78rem",color:"#DC2626"}} onClick={()=>deleteCommission(c.id)} data-testid={`commission-delete-${c.id}`}>Delete</button>
                   </td>
                 </tr>
-              ))}
+                {isExpanded && (
+                  <tr data-testid={`commission-draft-panel-${c.id}`}>
+                    <td colSpan={4} style={{padding:"1rem 1.2rem",borderBottom:"1px solid rgba(15,42,91,0.06)",background:"#FAF7EE"}}>
+                      {isDrafting && (
+                        <div style={{fontSize:"0.9rem",color:"var(--brand-navy)",fontStyle:"italic"}}>
+                          Claude Sonnet 4.6 is drafting a BC-compliant definition + 10 FAQs. This page auto-refreshes when the draft is ready.
+                        </div>
+                      )}
+                      {!isDrafting && (hasDraft || isError) && (
+                        <>
+                          <div style={{marginBottom:"1rem"}}>
+                            <label style={{display:"block",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:800,color:"var(--brand-navy)",marginBottom:"0.35rem"}}>Definition (editable)</label>
+                            <textarea
+                              data-testid={`commission-draft-definition-${c.id}`}
+                              rows={5}
+                              value={buf.definition}
+                              onChange={e=>setDraftEdits(x=>({...x,[c.id]:{...(x[c.id]||{faqs:[]}), definition:e.target.value}}))}
+                              style={{width:"100%",padding:"0.6rem 0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",lineHeight:1.55,border:"1px solid rgba(15,42,91,0.2)",borderRadius:6,background:"#fff"}}
+                            />
+                            <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.25rem"}}>{(buf.definition||"").length} chars · target 400–700</div>
+                          </div>
+                          <div style={{marginBottom:"0.8rem"}}>
+                            <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:800,color:"var(--brand-navy)",marginBottom:"0.35rem"}}>FAQs ({(buf.faqs||[]).length}) (editable)</div>
+                            {(buf.faqs||[]).map((f, idx) => (
+                              <div key={idx} data-testid={`commission-draft-faq-${c.id}-${idx}`} style={{border:"1px solid rgba(15,42,91,0.1)",borderRadius:6,padding:"0.6rem 0.75rem",marginBottom:"0.5rem",background:"#fff"}}>
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:"0.5rem",marginBottom:"0.3rem"}}>
+                                  <div style={{fontSize:"0.7rem",fontWeight:800,color:"var(--muted)"}}>FAQ #{idx+1}</div>
+                                  <button className="btn btn-ghost" style={{padding:"0.15rem 0.4rem",fontSize:"0.7rem",color:"#DC2626"}} onClick={()=>removeDraftFaq(c.id, idx)} data-testid={`commission-draft-faq-remove-${c.id}-${idx}`}>Remove</button>
+                                </div>
+                                <input
+                                  value={f.q || ""}
+                                  onChange={e=>updateDraftFaq(c.id, idx, "q", e.target.value)}
+                                  placeholder="Question"
+                                  data-testid={`commission-draft-faq-q-${c.id}-${idx}`}
+                                  style={{width:"100%",padding:"0.4rem 0.5rem",fontSize:"0.88rem",fontFamily:"Inter,sans-serif",fontWeight:600,border:"1px solid rgba(15,42,91,0.15)",borderRadius:4,marginBottom:"0.35rem"}}
+                                />
+                                <textarea
+                                  value={f.a || ""}
+                                  onChange={e=>updateDraftFaq(c.id, idx, "a", e.target.value)}
+                                  placeholder="Answer"
+                                  rows={3}
+                                  data-testid={`commission-draft-faq-a-${c.id}-${idx}`}
+                                  style={{width:"100%",padding:"0.4rem 0.5rem",fontSize:"0.85rem",fontFamily:"Inter,sans-serif",lineHeight:1.5,border:"1px solid rgba(15,42,91,0.15)",borderRadius:4}}
+                                />
+                              </div>
+                            ))}
+                            {(!buf.faqs || buf.faqs.length===0) && (
+                              <div style={{fontSize:"0.85rem",color:"var(--muted)",fontStyle:"italic",padding:"0.5rem 0"}}>No FAQs yet — click Regenerate.</div>
+                            )}
+                          </div>
+                          <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",alignItems:"center"}}>
+                            <button className="btn btn-primary" style={{padding:"0.5rem 1rem",fontSize:"0.88rem"}} disabled={!!busy || ds==="published"} onClick={()=>publishDraft(c.id)} data-testid={`commission-publish-${c.id}`}>
+                              {busy==="publishing" ? "Publishing…" : (ds==="published" ? "✅ Published" : "✅ Approve & publish to glossary")}
+                            </button>
+                            <button className="btn btn-ghost" style={{padding:"0.5rem 1rem",fontSize:"0.88rem"}} disabled={!!busy} onClick={()=>regenerateDraft(c.id)} data-testid={`commission-regenerate-${c.id}`}>
+                              {busy==="regenerating" ? "Regenerating…" : "🔄 Regenerate draft"}
+                            </button>
+                            {c.draft_generated_at && (
+                              <span style={{fontSize:"0.72rem",color:"var(--muted)",marginLeft:"0.5rem"}}>Generated {new Date(c.draft_generated_at).toLocaleString()} · {c.draft_model || "claude-sonnet-4-6"}</span>
+                            )}
+                          </div>
+                          {msg && (
+                            <div data-testid={`commission-draft-msg-${c.id}`} style={{marginTop:"0.6rem",padding:"0.5rem 0.75rem",borderRadius:4,fontSize:"0.85rem",background:msg.startsWith("⚠")?"#FEF2F2":"#F0FDF4",color:msg.startsWith("⚠")?"#DC2626":"#059669",border:"1px solid rgba(0,0,0,0.08)"}}>{msg}</div>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

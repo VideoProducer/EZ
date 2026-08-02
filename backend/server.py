@@ -3332,17 +3332,46 @@ async def admin_create_commission(c: ContentCommission, _=Depends(verify_admin))
 
 @api.put("/admin/content-commissions/{cid}")
 async def admin_update_commission(cid: str, payload: dict, _=Depends(verify_admin)):
-    """Partial update — only mutable fields (status, notes, slug, term) are
-    accepted; anything else in the payload is ignored."""
-    allowed = {"status", "notes", "slug", "term"}
+    """Partial update — only mutable fields (status, notes, slug, term,
+    draft_definition, draft_faqs) are accepted; anything else in the payload
+    is ignored.
+
+    Side-effect: when status transitions to ``in-progress`` and no draft yet
+    exists (draft_status is falsy or "error"), an AI drafter is kicked off
+    in the background to produce a BC-compliant definition + 10 FAQs for
+    Doug's review. This is the "Auto-Draft on Commission" workflow.
+    """
+    allowed = {"status", "notes", "slug", "term", "draft_definition", "draft_faqs"}
     upd = {k: v for k, v in (payload or {}).items() if k in allowed and v is not None}
     if not upd:
         return {"ok": True, "no_op": True}
     upd["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    # Peek at the pre-existing record so we can decide whether to auto-draft.
+    existing = await db.content_commissions.find_one({"id": cid}, {"_id": 0})
+    if not existing:
+        raise HTTPException(404, "Commission not found")
+
+    should_auto_draft = False
+    if (
+        upd.get("status") == "in-progress"
+        and existing.get("status") != "in-progress"
+        and (existing.get("draft_status") in (None, "", "error"))
+        and not existing.get("draft_definition")
+    ):
+        should_auto_draft = True
+        upd["draft_status"] = "drafting"
+        upd["draft_started_at"] = upd["updated_at"]
+        upd["draft_error"] = None
+
     r = await db.content_commissions.update_one({"id": cid}, {"$set": upd})
     if r.matched_count == 0:
         raise HTTPException(404, "Commission not found")
-    return {"ok": True}
+
+    if should_auto_draft:
+        asyncio.create_task(_auto_draft_commission(cid))
+
+    return {"ok": True, "auto_draft_started": should_auto_draft}
 
 
 @api.delete("/admin/content-commissions/{cid}")
@@ -3351,6 +3380,222 @@ async def admin_delete_commission(cid: str, _=Depends(verify_admin)):
     if r.deleted_count == 0:
         raise HTTPException(404, "Commission not found")
     return {"ok": True}
+
+
+@api.get("/admin/content-commissions/{cid}")
+async def admin_get_commission(cid: str, _=Depends(verify_admin)):
+    """Single-commission fetch — used by the Approvals UI to poll for the
+    result of an in-flight auto-draft without re-loading the whole backlog."""
+    doc = await db.content_commissions.find_one({"id": cid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Commission not found")
+    return doc
+
+
+@api.post("/admin/content-commissions/{cid}/auto-draft")
+async def admin_trigger_auto_draft(cid: str, _=Depends(verify_admin)):
+    """Manual (re)generate button. Fires the AI drafter regardless of status."""
+    doc = await db.content_commissions.find_one({"id": cid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Commission not found")
+    now_iso_s = datetime.now(timezone.utc).isoformat()
+    await db.content_commissions.update_one(
+        {"id": cid},
+        {"$set": {
+            "draft_status": "drafting",
+            "draft_started_at": now_iso_s,
+            "draft_error": None,
+            "updated_at": now_iso_s,
+        }},
+    )
+    asyncio.create_task(_auto_draft_commission(cid))
+    return {"ok": True, "draft_status": "drafting"}
+
+
+class PublishCommissionBody(BaseModel):
+    definition: Optional[str] = None
+    faqs: Optional[List[dict]] = None
+    category: Optional[str] = "General"
+
+
+@api.post("/admin/content-commissions/{cid}/publish")
+async def admin_publish_commission(cid: str, body: PublishCommissionBody, request: Request, _=Depends(verify_admin)):
+    """Approve the drafted content and publish it to the public glossary. The
+    admin may pass an edited ``definition`` / ``faqs`` in the request body —
+    those values are used verbatim, otherwise the stored draft is used.
+
+    Result: creates or updates ``db.glossary`` with faqs_approved=True and
+    marks the commission ``status=shipped``.
+    """
+    doc = await db.content_commissions.find_one({"id": cid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Commission not found")
+
+    term = (doc.get("term") or "").strip()
+    slug = (doc.get("slug") or _slugify(term)).strip()
+    if not term or not slug:
+        raise HTTPException(400, "Commission must have a term and slug to publish.")
+
+    definition = (body.definition if body.definition is not None else doc.get("draft_definition")) or ""
+    faqs = body.faqs if body.faqs is not None else (doc.get("draft_faqs") or [])
+    if not definition.strip():
+        raise HTTPException(400, "Definition is empty — generate a draft or provide one before publishing.")
+
+    upsert = GlossaryUpsert(
+        term=term,
+        slug=slug,
+        category=body.category or "General",
+        definition=definition,
+        faqs=faqs,
+        faqs_approved=True,
+    )
+    ip = request.client.host if request.client else "admin-publish"
+    result = await _apply_upsert(upsert, ip)
+
+    # Persist approved timestamp on the glossary row (matches approve_glossary).
+    await db.glossary.update_one({"slug": slug}, {"$set": {"faqs_approved_at": now_iso()}})
+
+    # Mark commission shipped.
+    await db.content_commissions.update_one(
+        {"id": cid},
+        {"$set": {
+            "status": "shipped",
+            "shipped_at": now_iso(),
+            "updated_at": now_iso(),
+            "draft_status": "published",
+        }},
+    )
+
+    # Best-effort sitemap / IndexNow ping (never blocks the response).
+    try:
+        from sitemap_generator import generate_sitemap
+        from indexnow import notify_indexnow
+        await generate_sitemap(db)
+        await notify_indexnow([f"https://eztofind.ca/glossary/{slug}"])
+    except Exception as e:
+        logger.warning(f"post-publish SEO push failed (silent-fail): {e}")
+
+    return {"ok": True, "slug": slug, "glossary_action": result.get("status")}
+
+
+async def _generate_definition_from_scratch(term: str, notes: Optional[str] = None) -> Optional[str]:
+    """First-draft definition for a brand-new commission (no seed exists).
+    Uses the same hallucination-hardened rules as ``generate_definition_v2``
+    but omits the accuracy-anchor block and folds in the admin's optional
+    notes."""
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    notes_block = ""
+    if notes and notes.strip():
+        notes_block = f'\nADMIN NOTES (BC angle / examples / statute the drafter should include):\n"""\n{notes.strip()}\n"""\n'
+    prompt = f"""Draft a British Columbia real estate glossary definition for the term below. This is a NEW definition — there is no seed text. Use the hallucination-hardened rules verbatim.
+
+TERM: "{term}"
+{notes_block}
+═══════════════════════════════════════════════════════════════
+HALLUCINATION-HARDENED RULES (v2-new-term, {today})
+═══════════════════════════════════════════════════════════════
+
+RULE 1 — CITE OR REFUSE: Every substantive claim cites a whitelist source or explicitly says "verify current details with a BC lawyer, notary, or licensed tax professional."
+
+RULE 2 — NEVER INVENT statute section numbers, dollar amounts, percentages, effective dates, or program names. If unsure, use general phrasing ("the current BCFSA Rules", "the current BC Ministry of Finance thresholds") and refer the reader to verify.
+
+RULE 3 — TAG NUMBERS: Every specific dollar figure, percentage, or effective date must be followed by "(as of {today} — verify current)". Every single number.
+
+RULE 4 — WHITELIST OF ACCEPTABLE BC CITATIONS:
+  • BCFSA · Real Estate Services Act (RESA), SBC 2004, c. 42 · Strata Property Act (SPA), SBC 1998, c. 43 · Property Transfer Tax Act (PTTA), RSBC 1996, c. 378 · Speculation and Vacancy Tax Act, SBC 2018, c. 46 · Residential Tenancy Act, SBC 2002, c. 78 · Wills, Estates and Succession Act (WESA), SBC 2009, c. 13 · Land Title Act, RSBC 1996, c. 250 · PIPA, SBC 2003, c. 63 · CASL, SC 2010, c. 23 · Prohibition on Purchase of Residential Property by Non-Canadians Act, SC 2022, c. 10 (extended through Jan 1, 2027 — verify current) · Agricultural Land Commission Act, SBC 2002, c. 36 · Local Government Act, RSBC 2015, c. 1 · Housing Statutes (Residential Development) Amendment Act, 2023 (BC Bill 44) · Home Flipping Tax Act, SBC 2024 · BC Home Owner Grant Act · BC Ministry of Finance / gov.bc.ca · CMHC · FCAC · Bank of Canada
+
+RULE 5 — NO ADVICE: Neutral, educational, factual only. Never recommend a specific mortgage, lender, brokerage, lawyer, or REALTOR®.
+
+RULE 6 — FORMAT:
+- One paragraph, 4–8 sentences, 400–700 characters.
+- Plain-language but precise; BC-specific.
+- End with the "verify current" tag on any specific numbers.
+- Return the definition text ONLY. No preamble, no markdown, no code fences, no heading."""
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY, session_id=f"defnew-{uuid.uuid4()}",
+            system_message="You are a British Columbia real estate compliance drafter. Every fact you state must be verifiable against a BC statute or federal Act from the whitelist. When uncertain, you refuse to make the claim and refer the reader to verify with a BC lawyer, notary, or licensed tax professional. You never invent section numbers, dollar amounts, percentages, or dates. Every specific number gets an 'as of YYYY-MM-DD — verify current' tag. You output the definition text ONLY.",
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        text = full.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1].replace("json", "", 1).strip()
+        return text or None
+    except Exception as e:
+        logger.error(f"New-term definition gen failed for {term}: {e}")
+        return None
+
+
+async def _auto_draft_commission(cid: str) -> None:
+    """Background worker: generate definition + 10 FAQs for a commission and
+    persist both onto the commission record. Fire-and-forget — the admin UI
+    polls ``GET /admin/content-commissions/{cid}`` until ``draft_status`` is
+    ``drafted`` or ``error``."""
+    try:
+        doc = await db.content_commissions.find_one({"id": cid}, {"_id": 0})
+        if not doc:
+            return
+        term = (doc.get("term") or "").strip()
+        notes = doc.get("notes")
+        if not term:
+            await db.content_commissions.update_one(
+                {"id": cid},
+                {"$set": {"draft_status": "error", "draft_error": "Missing term",
+                          "updated_at": now_iso()}})
+            return
+
+        definition = await _generate_definition_from_scratch(term, notes)
+        if not definition:
+            await db.content_commissions.update_one(
+                {"id": cid},
+                {"$set": {"draft_status": "error",
+                          "draft_error": "Definition generation failed",
+                          "updated_at": now_iso()}})
+            return
+
+        faqs = await generate_faqs_for_term(term, definition)
+        if not faqs:
+            # Definition succeeded but FAQs failed — persist the definition
+            # and mark the FAQ portion as an error so Doug can retry.
+            await db.content_commissions.update_one(
+                {"id": cid},
+                {"$set": {
+                    "draft_definition": definition,
+                    "draft_faqs": [],
+                    "draft_status": "error",
+                    "draft_error": "FAQ generation failed (definition saved)",
+                    "draft_generated_at": now_iso(),
+                    "draft_model": "anthropic/claude-sonnet-4-6",
+                    "updated_at": now_iso(),
+                }})
+            return
+
+        await db.content_commissions.update_one(
+            {"id": cid},
+            {"$set": {
+                "draft_definition": definition,
+                "draft_faqs": faqs,
+                "draft_status": "drafted",
+                "draft_generated_at": now_iso(),
+                "draft_model": "anthropic/claude-sonnet-4-6",
+                "draft_error": None,
+                "updated_at": now_iso(),
+            }},
+        )
+    except Exception as e:
+        logger.error(f"Auto-draft failed for commission {cid}: {e}")
+        try:
+            await db.content_commissions.update_one(
+                {"id": cid},
+                {"$set": {"draft_status": "error",
+                          "draft_error": str(e)[:400],
+                          "updated_at": now_iso()}})
+        except Exception:
+            pass
 
 
 async def generate_faqs_for_term(term: str, definition: str) -> List[dict]:
