@@ -16,7 +16,7 @@ import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
   Bus, Trees, Waves, CheckCircle2, ArrowRight, Home as HomeIcon,
-  Compass, Radio, Volume2, Maximize2, X, ClipboardList
+  Compass, Radio, Volume2, VolumeX, Maximize2, X, ClipboardList
 } from "lucide-react";
 
 // ── Palette (matches /app/frontend/src/index.css) ────────────────────────────
@@ -1273,7 +1273,7 @@ const PaneQualify = () => {
                 border: `1px solid ${alreadyRepresented === false ? C.green : "#6EE7B7"}`,
                 fontWeight: 700, fontSize: 13,
               }}
-            >No — I'm free to work with Doug</button>
+            >No — I am free to work with a REALTOR®</button>
           </div>
 
           {/* Polite decline — inline instead of blocking modal */}
@@ -1530,6 +1530,14 @@ export default function VisualAgentDemo() {
   const [voicePipaAck, setVoicePipaAck] = useState(false);
   const [showPipaGate, setShowPipaGate] = useState(false);
   const [kioskMode, setKioskMode] = useState(false);   // fullscreen voice-only
+  // Kiosk audio — Doogie speaks answers aloud in Kiosk mode via /api/doogie/tts.
+  // Speaker defaults ON; user can mute via the speaker toggle in the kiosk overlay.
+  // Autoplay policy: the mic tap is a user gesture, so subsequent audio playback
+  // in the same session is permitted by Chrome/Safari.
+  const [speakerOn, setSpeakerOn] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef(null);
+  const ttsAbortRef = useRef(null);
   const recognitionRef = useRef(null);
   const sessionIdRef = useRef(null);
   if (!sessionIdRef.current) {
@@ -1579,6 +1587,82 @@ export default function VisualAgentDemo() {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [turnIdx, scenarioIdx, voiceHeard, voiceReply]);
+
+  // ── Doogie TTS playback (Kiosk mode) ──────────────────────────────────────
+  // Fetches an MP3 blob from /api/doogie/tts (cached by SHA256(text+voice) on
+  // the backend for 30 days) and plays it through a single shared <Audio>
+  // element. Any prior playback / in-flight fetch is aborted first so a rapid
+  // question sequence doesn't stack audio on top of itself.
+  const speakDoogie = async (text) => {
+    if (!text || typeof text !== "string") return;
+    const trimmed = text.trim();
+    if (trimmed.length < 3) return;
+    // Cancel any current playback / pending fetch
+    try {
+      if (ttsAbortRef.current) ttsAbortRef.current.abort();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    } catch { /* ignore */ }
+    const controller = new AbortController();
+    ttsAbortRef.current = controller;
+    try {
+      setSpeaking(true);
+      const res = await fetch(`${API}/doogie/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: trimmed.slice(0, 3800), voice: "ash" }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`tts ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setSpeaking(false);
+        try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+      };
+      await audio.play();
+    } catch (e) {
+      // Autoplay block or fetch abort — silently stop the animation
+      setSpeaking(false);
+    }
+  };
+
+  const stopSpeaking = () => {
+    try {
+      if (ttsAbortRef.current) ttsAbortRef.current.abort();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    } catch { /* ignore */ }
+    setSpeaking(false);
+  };
+
+  // Clean up any playing audio when the component unmounts OR the user exits
+  // Kiosk mode (audio should never continue in the background).
+  useEffect(() => {
+    if (!kioskMode) stopSpeaking();
+  }, [kioskMode]);
+  useEffect(() => () => stopSpeaking(), []);
+
+  // Auto-speak Doogie's final reply once voice interaction lands on "done",
+  // but only while Kiosk mode is active AND the speaker toggle is on.
+  useEffect(() => {
+    if (!kioskMode || !speakerOn) return;
+    if (voiceState !== "done") return;
+    const reply = (voiceReply || "").trim();
+    if (!reply) return;
+    speakDoogie(reply);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceState, voiceReply, kioskMode, speakerOn]);
 
   // Voice prototype: two modes
   //  • "scripted" — 100% mocked, safe for demo videos, no mic permission needed.
@@ -2224,22 +2308,55 @@ export default function VisualAgentDemo() {
                 <ShieldCheck size={14} color={C.gold}/>
                 Doogie shares <strong>general information only — not advice</strong>. BCFSA · CASL · PIPA compliant.
               </div>
-              <button
-                data-testid="visual-agent-kiosk-exit"
-                onClick={() => setKioskMode(false)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "10px 16px", borderRadius: 99,
-                  background: "rgba(255,255,255,0.12)", color: "#fff",
-                  border: "1px solid rgba(255,255,255,0.28)",
-                  fontSize: 13, fontWeight: 700, cursor: "pointer",
-                  backdropFilter: "blur(6px)",
-                }}
-                aria-label="Exit kiosk mode"
-              >
-                <X size={16}/> Exit kiosk
-              </button>
-            </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <button
+                  data-testid="visual-agent-kiosk-speaker-toggle"
+                  onClick={() => {
+                    if (speakerOn) {
+                      // Turning OFF — also stop any currently-playing audio.
+                      stopSpeaking();
+                      setSpeakerOn(false);
+                    } else {
+                      setSpeakerOn(true);
+                      // Turning ON mid-reply — speak whatever Doogie last said.
+                      if (voiceReply && voiceState === "done") {
+                        speakDoogie(voiceReply);
+                      }
+                    }
+                  }}
+                  aria-label={speakerOn ? "Mute Doogie voice" : "Unmute Doogie voice"}
+                  aria-pressed={speakerOn}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "10px 16px", borderRadius: 99,
+                    background: speakerOn
+                      ? (speaking ? "rgba(245,166,35,0.85)" : "rgba(34,197,94,0.85)")
+                      : "rgba(255,255,255,0.10)",
+                    color: speakerOn ? (speaking ? C.ink : "#fff") : "#fff",
+                    border: "1px solid " + (speakerOn ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.25)"),
+                    fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  {speakerOn ? <Volume2 size={16}/> : <VolumeX size={16}/>}
+                  {speakerOn ? (speaking ? "Speaking…" : "Voice on") : "Muted"}
+                </button>
+                <button
+                  data-testid="visual-agent-kiosk-exit"
+                  onClick={() => setKioskMode(false)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    padding: "10px 16px", borderRadius: 99,
+                    background: "rgba(255,255,255,0.12)", color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.28)",
+                    fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    backdropFilter: "blur(6px)",
+                  }}
+                  aria-label="Exit kiosk mode"
+                >
+                  <X size={16}/> Exit kiosk
+                </button>
+              </div>            </div>
 
             {/* Center stage — big Doogie + waveform */}
             <div style={{

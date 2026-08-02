@@ -1273,3 +1273,24 @@ Three enhancements landed together — one backend milestone (public Doogie Tool
 - `curl /api/tours/library` → `{"count": 0, ...}` (expected — awaits next DDF sync)
 - `curl /api/doogie/chat` (SSE) → streams `data: {"delta": "..."}` frames as expected
 - Screenshots: Scripted flow, Live-mode UI, Tour scenario with Doug's Listings tab + graceful Kuula fallback + real 23-frame walkthrough — all rendered correctly
+
+
+## Feb 2, 2026 — Kiosk TTS (Doogie speaks aloud)
+
+### What was added
+- **`speakDoogie(text)` helper** in `VisualAgentDemo.jsx` — POSTs the final SSE-accumulated reply to `/api/doogie/tts` (voice=ash) and plays the returned MP3 blob via a single shared `<Audio>` element. Aborts any prior fetch/playback so rapid questions never stack audio.
+- **Auto-speak trigger** — `useEffect` watches `voiceState === "done"` and fires TTS only when `kioskMode && speakerOn` (silent everywhere else per privacy default).
+- **Speaker toggle** — new pill (`data-testid="visual-agent-kiosk-speaker-toggle"`) beside "Exit kiosk". Green = "Voice on", amber pulse = "Speaking…", ghost = "Muted". Toggling off aborts current playback; toggling back on mid-reply re-speaks the last answer.
+- **Cleanup** — audio stops on kiosk exit and component unmount.
+- **Backend cache hit confirmed** — 2nd identical TTS request returns `X-EZ-TTS-Cache: HIT` (30-day TTL blob stored in `doogie_tts_cache`).
+
+### Compliance copy fix
+- The Consultation Request decline option now reads **"No — I am free to work with a REALTOR®"** (was "No — I’m free to work with Doug") per user's explicit request.
+
+### Verification
+- `curl /api/doogie/tts` → 200, `audio/mpeg`, 102 kB MP3 on first call, cache HIT on repeat ✓
+- Kiosk end-to-end (Playwright): tap mic → scripted reply → TTS fetched → button flips to "Speaking…" ✓
+- Screenshot captured: `/tmp/kiosk_speaking.png`
+
+### Files touched
+- **Modified**: `frontend/src/pages/VisualAgentDemo.jsx` — added `VolumeX` import, `speakerOn`/`speaking`/`audioRef`/`ttsAbortRef` state, `speakDoogie`/`stopSpeaking` helpers, TTS `useEffect`, speaker toggle button, REALTOR® copy fix
