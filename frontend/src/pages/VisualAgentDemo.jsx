@@ -81,14 +81,25 @@ const SCENARIOS = [
     ],
   },
   {
-    id: "qualify",
-    label: "24/7 Qualification",
-    icon: ShieldCheck,
+    id: "sellerlookup",
+    label: "Seller Insights",
+    icon: HomeIcon,
     turns: [
-      { who: "agent", text: "I can start a CASL-compliant intake. Nothing is shared until you tick consent." },
+      { who: "user", text: "I'm thinking of selling my Burnaby townhouse — what are similar ones going for?" },
+      { who: "agent", pose: "thinking", text: "Pulling active BC MLS® comparables in your postal code. Retrieving days-on-market and recent solds — sourced, not a valuation." },
+      { who: "user", text: "How long are they taking to sell?" },
+      { who: "agent", pose: "pointing", text: "3 active 3-bed townhomes right now — average 12 days on market at $1.39–$1.45M. For a formal Comparative Market Analysis, Doug can prepare one — nothing here is an appraisal." },
+    ],
+  },
+  {
+    id: "qualify",
+    label: "Talk to Doug",
+    icon: MessageCircle,
+    turns: [
+      { who: "agent", text: "Whenever you're ready, I can pass a note to Doug. Nothing is sent until you tap consent." },
       { who: "user", text: "Sure — I want to sell my Burnaby townhouse in the spring." },
-      { who: "agent", pose: "thinking", text: "Noted. Capturing timeline, property type, and preferred contact channel. Doug will review and reach out within 1 business day." },
-      { who: "agent", pose: "celebrating", text: "Consent confirmed. Draft brief queued for Doug. ✓" },
+      { who: "agent", pose: "thinking", text: "Noted. Capturing timeline, property type, and preferred contact channel. Doug will personally review and reach out within 1 business day." },
+      { who: "agent", pose: "celebrating", text: "Thanks! Your note is on Doug's desk. ✓" },
     ],
   },
 ];
@@ -98,11 +109,12 @@ const CHIPS = {
   search: ["2BR Kitsilano <$1.5M", "West Side condos", "Ocean view homes"],
   tour: ["360° walkthrough", "Strata rules?", "Storage & parking"],
   neighbourhood: ["Schools nearby", "Transit score", "Parks & rec"],
-  qualify: ["Start seller intake", "Book a call", "Get valuation"],
+  sellerlookup: ["Comparable actives", "Days on market", "Recent sold prices"],
+  qualify: ["Talk to Doug", "Book a call", "Get a valuation"],
 };
 
 // ── Scripted "voice-input" pairs (per scenario) ──────────────────────────────
-// Each entry is what the user "says" via voice and what Doogie narrates back.
+// Each entry is what the user "says" via voice and what Doogie retrieves back.
 // Voice bubbles carry a `voice: true` flag so they render with a speaker glyph.
 const VOICE_SCRIPT = {
   search: {
@@ -117,9 +129,13 @@ const VOICE_SCRIPT = {
     heard: "How's the summer walk to the beach with a stroller?",
     reply: "Six-minute stroller-friendly walk to Kits Beach via Cornwall — curb-cut sidewalks the entire way. Sourced from CoV Open Data. Educational retrieval only.",
   },
+  sellerlookup: {
+    heard: "Any recent solds on my street I can compare?",
+    reply: "Two solds on your block in the last 90 days — $1.36M and $1.42M. These are past sale prices, not a valuation. Doug can prepare a proper Comparative Market Analysis when you're ready.",
+  },
   qualify: {
     heard: "Book me a Thursday morning call, please.",
-    reply: "Noted — Thursday morning window, CASL consent captured. Doug will confirm within one business day. Nothing sent yet.",
+    reply: "Noted — Thursday morning window, CASL consent captured. Doug will personally confirm within one business day. Nothing sent yet.",
   },
 };
 
@@ -129,6 +145,13 @@ const MOCK_LISTINGS = [
   { id: "L2", addr: "1802 Balsam St",  city: "Kitsilano", price: "$1,449,000", beds: 2, baths: 2, sqft: 940, dom: 11, tag: "Corner unit" },
   { id: "L3", addr: "3110 Yew St",     city: "Kitsilano", price: "$1,199,000", beds: 2, baths: 1, sqft: 815, dom: 2, tag: "New listing" },
   { id: "L4", addr: "2455 Cornwall Ave",city: "Kitsilano", price: "$1,495,000", beds: 2, baths: 2, sqft: 1010, dom: 7, tag: "Ocean peek" },
+];
+
+// ── Mock comparable actives (Seller Insights scenario) ───────────────────────
+const MOCK_COMPS = [
+  { id: "C1", addr: "5148 Sardis St",   city: "Burnaby", price: "$1,398,000", beds: 3, baths: 3, sqft: 1560, dom: 6,  status: "Active" },
+  { id: "C2", addr: "5203 Neville St",  city: "Burnaby", price: "$1,449,000", beds: 3, baths: 3, sqft: 1620, dom: 12, status: "Active" },
+  { id: "C3", addr: "4972 Union St",    city: "Burnaby", price: "$1,325,000", beds: 3, baths: 2, sqft: 1490, dom: 18, status: "Active" },
 ];
 
 // ── Reusable pill/tag ────────────────────────────────────────────────────────
@@ -473,9 +496,9 @@ const PaneTour = () => {
                 />
               </div>
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Narrating</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Your Guide</div>
                 <div style={{ fontSize: 11, opacity: 0.85 }}>Ask about ceilings, strata, or nearby amenities</div>
-                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, fontStyle: "italic" }}>Educational retrieval only — not advice</div>
+                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, fontStyle: "italic" }}>General information only — not advice</div>
               </div>
             </motion.div>
           </motion.div>
@@ -543,7 +566,7 @@ const PaneTour = () => {
               />
               <div style={{ display: "grid", lineHeight: 1.2 }}>
                 <span style={{ fontSize: 11, fontWeight: 600 }}>Doogie is your guide</span>
-                <span style={{ fontSize: 9, opacity: 0.65, fontStyle: "italic" }}>Educational only — not advice</span>
+                <span style={{ fontSize: 9, opacity: 0.65, fontStyle: "italic" }}>General information only — not advice</span>
               </div>
             </motion.div>
             <AnimatePresence>
@@ -615,13 +638,75 @@ const PaneNeighbourhood = () => {
   );
 };
 
-// ── Right pane: 24/7 Qualification flow ──────────────────────────────────────
+// ── Right pane: Seller Insights (comparable actives + DOM) ───────────────────
+const PaneSellerLookup = () => (
+  <div data-testid="pane-sellerlookup" style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <strong style={{ color: C.navy, fontSize: 14 }}>Comparable actives · Burnaby · 3-bed townhomes</strong>
+      <Pill tone="green"><Radio size={12}/> Live from CREA DDF®</Pill>
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+      {[
+        { label: "Active comps", value: "3", sub: "matching filters" },
+        { label: "Avg. list price", value: "$1.39M", sub: "range $1.32M – $1.45M" },
+        { label: "Avg. days on market", value: "12", sub: "last 30 days" },
+      ].map((s, i) => (
+        <motion.div
+          key={s.label}
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+          style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 12 }}
+        >
+          <div style={{ fontSize: 10, letterSpacing: 0.5, fontWeight: 700, color: C.blue, textTransform: "uppercase" }}>{s.label}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.navy, marginTop: 4 }}>{s.value}</div>
+          <div style={{ fontSize: 11, color: "#6B7280" }}>{s.sub}</div>
+        </motion.div>
+      ))}
+    </div>
+    <div style={{ display: "grid", gap: 8 }}>
+      {MOCK_COMPS.map((l, i) => (
+        <motion.div
+          key={l.id}
+          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.06 }}
+          data-testid={`mock-comp-${l.id}`}
+          style={{
+            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10,
+            padding: "10px 12px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 200px" }}>
+            <div style={{ fontWeight: 700, color: C.navy, fontSize: 13 }}>{l.addr} <span style={{ color: "#6B7280", fontWeight: 500 }}>· {l.city}</span></div>
+            <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
+              {l.beds}bd · {l.baths}ba · {l.sqft} sqft · {l.dom}d on market
+            </div>
+          </div>
+          <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>{l.price}</div>
+          <Pill tone="green">{l.status}</Pill>
+        </motion.div>
+      ))}
+    </div>
+    <div style={{
+      marginTop: 4, background: "rgba(30,79,207,0.06)", border: "1px solid #DDE6FA",
+      borderRadius: 10, padding: 10, fontSize: 12, color: C.navy, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+    }}>
+      <ShieldCheck size={16} color={C.blue}/>
+      <span style={{ flex: "1 1 280px" }}>
+        These figures are <strong>past & present list prices</strong> — not a valuation. Doug can prepare a full Comparative Market Analysis for your specific home.
+      </span>
+      <a href="/valuation" style={{
+        background: C.navy, color: "#fff", padding: "7px 14px", borderRadius: 99,
+        fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+      }}>Request a CMA →</a>
+    </div>
+  </div>
+);
+
+// ── Right pane: Talk to Doug (consumer-friendly intake) ──────────────────────
 const PaneQualify = () => {
   const steps = [
-    { k: "Intent",     v: "Sell · Burnaby townhouse" },
-    { k: "Timeline",   v: "Spring 2026" },
-    { k: "Contact",    v: "Email · morning" },
-    { k: "CASL",       v: "Consent captured ✓" },
+    { k: "About you",   v: "Sell · Burnaby townhouse" },
+    { k: "Timeline",    v: "Spring 2026" },
+    { k: "How to reach", v: "Email · morning" },
+    { k: "Consent",     v: "Ticked ✓" },
   ];
   const [prog, setProg] = useState(0);
   useEffect(() => {
@@ -632,7 +717,7 @@ const PaneQualify = () => {
   return (
     <div data-testid="pane-qualify" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Seller Qualification · CASL-compliant</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Send a note to Doug</strong>
         <Pill tone="green"><ShieldCheck size={12}/> Consent-first</Pill>
       </div>
       <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
@@ -664,7 +749,7 @@ const PaneQualify = () => {
         background: "linear-gradient(135deg, rgba(30,79,207,0.06), rgba(34,197,94,0.06))",
         border: "1px solid #DDE6FA", borderRadius: 12, padding: 12, fontSize: 12, color: C.navy,
       }}>
-        <strong>Next:</strong> Draft brief queued for Doug's review — no automated outreach without human sign-off. Educational retrieval only, not advice.
+        <strong>What happens next:</strong> Doug personally reads every note. No automated outreach — you'll hear from a real person within 1 business day. Doogie shares information, not advice.
       </div>
     </div>
   );
@@ -913,6 +998,7 @@ export default function VisualAgentDemo() {
       case "search": return <PaneSearch/>;
       case "tour": return <PaneTour/>;
       case "neighbourhood": return <PaneNeighbourhood/>;
+      case "sellerlookup": return <PaneSellerLookup/>;
       case "qualify": return <PaneQualify/>;
       default: return null;
     }
@@ -935,7 +1021,7 @@ export default function VisualAgentDemo() {
         padding: "8px 16px", fontSize: 12, letterSpacing: 0.3,
       }}>
         <ShieldCheck size={12} style={{ verticalAlign: "-2px", marginRight: 6, color: C.gold }}/>
-        <strong>Concept mockup</strong> · BCFSA / CASL / PIPA compliant boundary · Educational retrievals only — never advice
+        Doogie provides <strong>general information only — not advice</strong>. BCFSA · CASL · PIPA compliant. For personalized guidance, ask a <a href="/referral-request" style={{ color: C.gold }}>licensed BC REALTOR®</a>.
       </div>
 
       {/* ── Hero: agent avatar + waveform ─────────────────────────────────── */}
@@ -990,19 +1076,20 @@ export default function VisualAgentDemo() {
 
           <div style={{ minWidth: 260 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              <Pill tone="glass"><Radio size={12}/> Live prototype</Pill>
-              <Pill tone="glass"><ShieldCheck size={12}/> 24/7 · BCFSA-safe</Pill>
+              <Pill tone="glass"><ShieldCheck size={12}/> BCFSA-safe · educational</Pill>
               <Pill tone="glass"><MessageCircle size={12}/> Text · Voice · Video</Pill>
+              <Pill tone="glass"><HomeIcon size={12}/> Buying · Selling</Pill>
             </div>
             <h1 style={{
               fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px, 4vw, 46px)",
               lineHeight: 1.1, margin: 0, fontWeight: 700,
             }}>
-              Doogie <span style={{ color: C.gold, fontStyle: "italic" }}>Visual</span> — the next EZtoFind interface
+              Meet <span style={{ color: C.gold, fontStyle: "italic" }}>Doogie</span> — your BC real estate helper
             </h1>
-            <p style={{ margin: "10px 0 0", opacity: 0.85, maxWidth: 620, fontSize: 14 }}>
-              An interactive concept for search, virtual tours, neighbourhood retrievals, and 24/7 qualification —
-              all inside the compliance boundary. This page is a scripted mockup for internal review.
+            <p style={{ margin: "10px 0 0", opacity: 0.88, maxWidth: 620, fontSize: 14 }}>
+              Ask about active BC listings, neighbourhoods, or real estate terms. Doogie looks things up
+              from CREA DDF® and BC public data — general information only, never advice. When you're
+              ready to talk to a person, Doug LeMaire, REALTOR® takes it from there.
             </p>
           </div>
 
@@ -1328,27 +1415,9 @@ export default function VisualAgentDemo() {
         </div>
       </section>
 
-      {/* ── Concept notes strip ───────────────────────────────────────────── */}
-      <section style={{ maxWidth: 1200, margin: "22px auto 0", padding: "0 20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          {[
-            { icon: Search,     h: "Retrieval-first search",  b: "Cites CREA DDF® and BC public data every turn." },
-            { icon: Video,      h: "Guided virtual tours",    b: "360° walkthroughs with narrated hotspots." },
-            { icon: MapPin,     h: "Neighbourhood context",   b: "Schools, transit, walkability, parks — sourced." },
-            { icon: ShieldCheck,h: "24/7 qualification",      b: "CASL-first intake. Doug reviews before outreach." },
-          ].map(c => (
-            <div key={c.h} style={{
-              background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.blue, marginBottom: 6 }}>
-                <c.icon size={16}/>
-                <strong style={{ color: C.navy, fontSize: 13 }}>{c.h}</strong>
-              </div>
-              <div style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5 }}>{c.b}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Concept-notes strip removed for consumer view — those were internal
+          marketing bullets. The compliance footer below carries the real
+          BCFSA / CASL / PIPA reference the consumer needs. */}
 
       {/* ── Compliance footer — BCFSA / CASL / PIPA reference on this page ─── */}
       <div style={{ maxWidth: 1000, margin: "26px auto 0", padding: "20px", color: "#4B5563", fontSize: 11 }}>
@@ -1414,7 +1483,7 @@ export default function VisualAgentDemo() {
                 fontSize: 12, letterSpacing: 0.3, border: "1px solid rgba(255,255,255,0.15)",
               }}>
                 <ShieldCheck size={14} color={C.gold}/>
-                <strong>Kiosk mode</strong> · BCFSA / CASL / PIPA compliant · Educational retrievals only — never advice
+                Doogie shares <strong>general information only — not advice</strong>. BCFSA · CASL · PIPA compliant.
               </div>
               <button
                 data-testid="visual-agent-kiosk-exit"
@@ -1511,13 +1580,13 @@ export default function VisualAgentDemo() {
                   fontFamily: "'Playfair Display', serif",
                   fontSize: "clamp(22px, 3.4vw, 34px)", lineHeight: 1.25, fontWeight: 700,
                 }}>
-                  {voiceState === "listening" ? "I'm listening — ask about BC real estate" :
+                  {voiceState === "listening" ? "I'm listening — ask about a BC listing, neighbourhood, or term" :
                    voiceState === "transcribing" && voiceHeard ? `"${voiceHeard}"` :
                    voiceState === "replying" && voiceReply ? voiceReply :
                    voiceState === "replying" ? "One moment while I check the sources…" :
                    voiceState === "done" && voiceReply ? voiceReply :
                    voiceState === "error" ? (voiceError || "Try again in a moment.") :
-                   "Tap the mic and ask me anything about BC real estate."}
+                   "Ask about a BC listing, a neighbourhood, or a real estate term. I retrieve general information — not advice."}
                 </div>
               </div>
 
