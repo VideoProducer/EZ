@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const DOOGIE_LAPTOP_URL = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/vo8679bv_Doogie%20Laptop.png";
+const SAVED_HOMES_KEY = "ez_saved_homes";
 
 // Doug's primary service area (BCFSA licensing) — anything outside triggers
 // the referral flow instead of direct-representation intake.
@@ -47,6 +49,42 @@ const SECTIONS = [
   { key: "consult",   label: "Consultation",   icon: CalendarClock },
   { key: "ask",       label: "Ask Doogie",     icon: MessageCircle },
 ];
+
+// ── Hero (introduces Doogie + BCFSA context) ──────────────────────────────
+const HeroIntro = () => (
+  <section data-testid="dash-hero" style={{
+    background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)",
+    border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14,
+    padding: "22px 24px", marginBottom: 22, display: "grid",
+    gridTemplateColumns: "220px 1fr", gap: 22, alignItems: "center",
+  }}>
+    <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
+      data-testid="dash-hero-doogie"
+      style={{
+        width: "100%", maxWidth: 220, height: "auto", filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+      }}
+      onError={e => { e.currentTarget.style.display = "none"; }}
+    />
+    <div>
+      <h1 style={{
+        fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,
+        fontSize: "clamp(28px, 3.4vw, 40px)", fontWeight: 800,
+      }}>
+        <span style={{ color: C.green }}>Real estate,</span><br/>
+        <span style={{ color: C.navy }}>made </span><span style={{ color: C.blue }}>EZ to </span><span style={{ color: C.gold }}>Find.ca</span>
+      </h1>
+      <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
+        EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
+      </p>
+      <p style={{ color: C.ink, marginTop: 6, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
+        <strong style={{ color: C.navy }}>Meet <em style={{ color: C.gold, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>Doogie</em> — your BC real estate helper.</strong> Ask about active BC listings, neighbourhoods, or real estate terms. Doogie provides <strong>general information only, never advice</strong>.
+      </p>
+      <p style={{ color: C.muted, marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.5, maxWidth: 720 }}>
+        Real Estate services are provided by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. — a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential stratas. Primary practice areas: <strong>Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC</strong>.
+      </p>
+    </div>
+  </section>
+);
 
 export default function DashboardMockup() {
   const [section, setSection] = useState("search");
@@ -202,7 +240,9 @@ const SearchPanel = () => {
   };
   useEffect(() => { run(); /* first-load, no filters */ /* eslint-disable-next-line */ }, []);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
+    <>
+      <HeroIntro/>
+      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
       {/* Filters */}
       <form onSubmit={run} data-testid="dash-search-form" style={{ background: "#fff", padding: 18, borderRadius: 12, border: "1px solid #E5E7EB", height: "fit-content" }}>
         <h3 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: 0.5, color: C.muted }}>Filters</h3>
@@ -246,6 +286,7 @@ const SearchPanel = () => {
         <ResultsGrid results={results} loading={loading}/>
       </div>
     </div>
+    </>
   );
 };
 
@@ -270,10 +311,39 @@ const ListingCard = ({ l }) => {
   const price = l.list_price ? `$${Number(l.list_price).toLocaleString()}` : "—";
   const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
   const cover = (l.photos && l.photos[0]) || (l.Media && l.Media[0]?.MediaURL);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]");
+      setSaved(list.some(h => h.listing_key === l.listing_key));
+    } catch {}
+  }, [l.listing_key]);
+  const toggleSave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]");
+      const idx = list.findIndex(h => h.listing_key === l.listing_key);
+      if (idx >= 0) {
+        list.splice(idx, 1);
+        setSaved(false);
+      } else {
+        list.unshift({
+          listing_key: l.listing_key,
+          address: addr, city: l.city,
+          list_price: l.list_price, beds: l.beds, baths: l.baths,
+          property_type: l.property_type, cover, saved_at: new Date().toISOString(),
+        });
+        setSaved(true);
+      }
+      localStorage.setItem(SAVED_HOMES_KEY, JSON.stringify(list.slice(0, 100)));
+    } catch {}
+  };
   return (
     <Link to={`/listings/${l.listing_key}`} data-testid={`dash-listing-${l.listing_key}`} style={{
       background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", overflow: "hidden",
       textDecoration: "none", color: C.navy, display: "block", transition: "transform 0.15s",
+      position: "relative",
     }}
       onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
       onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
@@ -288,6 +358,22 @@ const ListingCard = ({ l }) => {
             color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999,
           }}><Video size={9} style={{verticalAlign:"-1px"}}/> Virtual tour</div>
         )}
+        <button
+          type="button"
+          onClick={toggleSave}
+          data-testid={`dash-listing-save-${l.listing_key}`}
+          aria-label={saved ? "Remove from saved homes" : "Save this home"}
+          title={saved ? "Saved · click to unsave" : "Save to your dashboard"}
+          style={{
+            position: "absolute", right: 8, top: 8, width: 32, height: 32,
+            borderRadius: "50%", border: "none", cursor: "pointer",
+            background: saved ? "#DC2626" : "rgba(255,255,255,0.95)",
+            display: "grid", placeItems: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}
+        >
+          <Heart size={16} color={saved ? "#fff" : C.navy} fill={saved ? "#fff" : "transparent"}/>
+        </button>
       </div>
       <div style={{ padding: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 15 }}>{price}</div>
@@ -399,23 +485,65 @@ const ForYouPanel = () => {
 };
 
 const SavedPanel = () => {
-  const [saved, setSaved] = useState([]);
-  useEffect(() => {
-    try { setSaved(JSON.parse(localStorage.getItem("ez_saved_searches") || "[]")); } catch { setSaved([]); }
-  }, []);
+  const [homes, setHomes] = useState([]);
+  const [searches, setSearches] = useState([]);
+  const reload = () => {
+    try { setHomes(JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]")); } catch { setHomes([]); }
+    try { setSearches(JSON.parse(localStorage.getItem("ez_saved_searches") || "[]")); } catch { setSearches([]); }
+  };
+  useEffect(() => { reload(); }, []);
+  const remove = (key) => {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]").filter(h => h.listing_key !== key);
+      localStorage.setItem(SAVED_HOMES_KEY, JSON.stringify(list));
+      setHomes(list);
+    } catch {}
+  };
   return (
     <div>
-      <PanelIntro title="Saved Homes & Searches" blurb="Everything you've starred on the Visual Agent, one click away."/>
-      {saved.length === 0
+      <PanelIntro title="Saved Homes & Searches" blurb="Tap the ❤ on any listing card to save it here. Search chips you starred on the Visual Agent also live in this dashboard."/>
+
+      <h3 style={{ color: C.navy, marginTop: 24, marginBottom: 10 }}>Saved homes ({homes.length})</h3>
+      {homes.length === 0
+        ? <EmptyBox>Nothing saved yet — tap the ❤ on any listing card to add it here.</EmptyBox>
+        : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
+            {homes.map(h => (
+              <div key={h.listing_key} data-testid={`dash-saved-home-${h.listing_key}`} style={{
+                background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", overflow: "hidden", position: "relative",
+              }}>
+                <div style={{ height: 140, background: h.cover ? `url(${h.cover}) center/cover` : C.mist }}/>
+                <button onClick={() => remove(h.listing_key)} title="Remove"
+                  style={{ position: "absolute", right: 8, top: 8, width: 30, height: 30, borderRadius: "50%",
+                    background: "#DC2626", color: "#fff", border: "none", cursor: "pointer",
+                    display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
+                  data-testid={`dash-saved-remove-${h.listing_key}`}>
+                  <X size={14}/>
+                </button>
+                <div style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>{h.list_price ? `$${Number(h.list_price).toLocaleString()}` : "—"}</div>
+                  <div style={{ fontSize: 12, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.address}</div>
+                  <div style={{ fontSize: 11, color: C.navy, marginTop: 6 }}>
+                    {h.beds != null && `${h.beds}bd`}{h.baths != null && ` · ${h.baths}ba`}{h.property_type && ` · ${h.property_type}`}{h.city && ` · ${h.city}`}
+                  </div>
+                  <Link to={`/listings/${h.listing_key}`} style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 12, marginTop: 6, display: "inline-block" }}>View full listing →</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+      }
+
+      <h3 style={{ color: C.navy, marginTop: 32, marginBottom: 10 }}>Saved searches ({searches.length})</h3>
+      {searches.length === 0
         ? <EmptyBox>Star any search from the home page to see it here.</EmptyBox>
         : <ul style={{ padding: 0, margin: 0, listStyle: "none", display: "grid", gap: 10 }}>
-            {saved.map(s => (
+            {searches.map(s => (
               <li key={s} style={{ background: "#fff", padding: 12, borderRadius: 10, border: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontWeight: 600 }}>{s}</span>
                 <Link to={`/?ask=${encodeURIComponent(s)}`} style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 12 }}>Run again →</Link>
               </li>
             ))}
-          </ul>}
+          </ul>
+      }
     </div>
   );
 };
@@ -587,13 +715,16 @@ const ConsultPanel = () => {
     if (!casl || !pipa) { alert("Please agree to CASL & PIPA consents before submitting."); return; }
     try {
       const body = {
-        role, name, email, phone, preferred_contact: pref, preferred_time: time,
+        role: role || "buyer", name, email, phone,
+        preferred_contact: pref, preferred_time: time,
         city, casl_consent: casl, pipa_ack: pipa,
+        is_referral: outsideArea,
       };
       const r = await fetch(`${API}/consultation/request`, {
         method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body),
       });
-      setSubmitted(r.ok ? "sent" : "queued");
+      const data = await r.json();
+      setSubmitted(r.ok && data.success ? "sent" : (data?.detail || "queued"));
     } catch { setSubmitted("queued"); }
   };
 

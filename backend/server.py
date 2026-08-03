@@ -10302,6 +10302,120 @@ async def doogie_tools_spec():
     )
 
 
+# ── Dashboard mockup: Consultation Request ────────────────────────────────
+# CASL+PIPA-compliant intake endpoint used by /dashboard-mockup and any future
+# consultation flow. Persists to `consultation_requests` collection, fires a
+# CASL-safe notification to Doug via Resend, and returns a confirmation ID
+# that the frontend can display alongside the "we'll be in touch" success card.
+
+class ConsultationRequest(BaseModel):
+    role: Optional[str] = None              # "buyer" | "seller"
+    name: str
+    email: EmailStr
+    phone: Optional[str] = ""
+    preferred_contact: Optional[str] = "Email"
+    preferred_time: Optional[str] = "Any"
+    city: Optional[str] = ""
+    working_with_realtor: Optional[bool] = False  # Yes-answer never reaches this endpoint
+    is_referral: Optional[bool] = False           # true → outside Doug's service area
+    casl_consent: bool
+    pipa_ack: bool
+
+
+@app.post("/api/consultation/request", tags=["Consultations"])
+async def consultation_request(body: ConsultationRequest, request: Request):
+    """Consultation intake for the /dashboard-mockup flow. Enforces CREA (no
+    interference), PIPA (explicit ack + minimal data), and CASL (explicit
+    consent + unsubscribe link in the confirmation email). Refuses the record
+    if either consent checkbox is false."""
+    if not body.casl_consent or not body.pipa_ack:
+        raise HTTPException(status_code=400, detail="CASL consent and PIPA acknowledgement are both required.")
+    now = datetime.now(timezone.utc)
+    doc = {
+        "id":                  str(uuid.uuid4()),
+        "role":                (body.role or "buyer"),
+        "name":                body.name.strip(),
+        "email":               body.email.lower().strip(),
+        "phone":               (body.phone or "").strip(),
+        "preferred_contact":   body.preferred_contact or "Email",
+        "preferred_time":      body.preferred_time or "Any",
+        "city":                (body.city or "").strip(),
+        "is_referral":         bool(body.is_referral),
+        "working_with_realtor": bool(body.working_with_realtor),
+        "casl_consent":        True,
+        "pipa_ack":            True,
+        "casl_consent_at":     now.isoformat(),
+        "pipa_ack_at":         now.isoformat(),
+        "ip":                  (request.client.host if request.client else None),
+        "user_agent":          request.headers.get("user-agent", ""),
+        "status":              "new",
+        "created_at":          now,
+    }
+    await db.consultation_requests.insert_one(doc)
+
+    # CASL/PIPA-compliant confirmation email to the consumer.
+    from urllib.parse import quote_plus
+    public_base = os.environ.get("PUBLIC_BASE_URL", "https://eztofind.ca").rstrip("/")
+    unsub_url = f"{public_base}/unsubscribe?e={quote_plus(doc['email'])}&list=consultations"
+    subject = "We received your EZtoFind.ca consultation request 🐾"
+    kind = "consultation_referral" if doc["is_referral"] else f"consultation_{doc['role']}"
+    body_text = (
+        f"Hi {doc['name']},\n\n"
+        f"Thanks for reaching out — Doug will personally follow up within one business day via {doc['preferred_contact'].lower()}.\n\n"
+        + (
+            f"Because {doc['city'] or 'your area'} is outside Doug's primary service area (Greater Vancouver, Fraser Valley, Sea-to-Sky), "
+            f"he'll connect you with a trusted, licensed local REALTOR® in that community.\n\n"
+            if doc["is_referral"]
+            else "Doug will bring some initial market notes tailored to what you shared.\n\n"
+        )
+        + "Reminder: EZtoFind.ca provides general information only, never advice. Real estate services are provided exclusively by Doug LeMaire, REALTOR®, BCFSA-licensed, of Fraser Property Management Realty Services Ltd.\n\n"
+        f"To manage or unsubscribe from EZtoFind.ca consultation follow-ups, click here: {unsub_url}\n\n"
+        "— The EZtoFind.ca team"
+    )
+    try:
+        from services.email_sender import send_email as _send_email
+        await _send_email(db,
+            to=doc["email"], subject=subject, text=body_text,
+            unsubscribe_url=unsub_url, kind=kind, related_id=doc["id"],
+        )
+    except Exception as exc:
+        logger.warning("consultation confirmation email failed: %s", exc)
+
+    # Doug internal notification.
+    try:
+        admin_body = (
+            f"New consultation request received.\n\n"
+            f"Role:              {doc['role']}\n"
+            f"Referral (outside area)? {doc['is_referral']}\n"
+            f"Name:              {doc['name']}\n"
+            f"Email:             {doc['email']}\n"
+            f"Phone:             {doc['phone'] or '—'}\n"
+            f"City:              {doc['city'] or '—'}\n"
+            f"Preferred contact: {doc['preferred_contact']}\n"
+            f"Preferred time:    {doc['preferred_time']}\n"
+            f"Received:          {now.isoformat()}\n"
+        )
+        from services.email_sender import send_email as _send_email
+        await _send_email(db,
+            to=os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca"),
+            subject=f"[EZtoFind.ca] New {doc['role']}{' referral' if doc['is_referral'] else ''} request — {doc['name']}",
+            text=admin_body,
+            kind="consultation_admin_notice",
+            related_id=doc["id"],
+        )
+    except Exception as exc:
+        logger.warning("consultation admin notice failed: %s", exc)
+
+    return {
+        "success": True,
+        "id": doc["id"],
+        "status": "received",
+        "message": "Doug will personally follow up within one business day. A confirmation email is on its way.",
+    }
+
+
+
+
 @app.get("/api/.well-known/ai-plugin.json", tags=["Doogie Tools API"])
 async def doogie_ai_plugin_manifest():
     """ChatGPT-style plugin manifest so ChatGPT can install Doogie as a tool.
