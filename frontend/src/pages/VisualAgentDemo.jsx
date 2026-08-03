@@ -9,6 +9,7 @@
 // investor-ready demo playback.
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { TurnstileWidget, getTurnstileToken, DoogieChat } from "../App";
@@ -382,11 +383,39 @@ const PaneSearch = ({ query, setQuery, committed, onCommit }) => {
     e && e.preventDefault && e.preventDefault();
     onCommit(query);
   };
+  // Fetch real active CREA DDF listings for the committed city. If the API
+  // returns nothing (rare city or DDF hiccup) we fall back to the illustrative
+  // sample so the pane never renders empty.
+  const [liveListings, setLiveListings] = React.useState(null); // null=loading, []=none, [...]=have
+  const [liveCount, setLiveCount] = React.useState(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    setLiveListings(null);
+    (async () => {
+      try {
+        const url = `${API}/listings?city=${encodeURIComponent(committed)}&limit=8&sort=newest`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("listings failed");
+        const data = await r.json();
+        if (cancelled) return;
+        setLiveListings(Array.isArray(data.listings) ? data.listings : []);
+        setLiveCount(typeof data.total === "number" ? data.total : null);
+      } catch {
+        if (!cancelled) setLiveListings([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [committed]);
+  const usingLive = Array.isArray(liveListings) && liveListings.length > 0;
   return (
     <div data-testid="pane-search" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Live from CREA DDF® · {committed} · 2BR · &lt;$1.5M</strong>
-        <Pill tone="green"><Radio size={12}/> {MOCK_LISTINGS.length}+ active</Pill>
+        <strong style={{ color: C.navy, fontSize: 14 }}>
+          {usingLive ? <>Live from CREA DDF® · <span style={{ color: C.blue }}>{committed}</span></> : <>Live from CREA DDF® · {committed} · 2BR · &lt;$1.5M</>}
+        </strong>
+        <Pill tone="green">
+          <Radio size={12}/> {usingLive ? `${liveCount ?? liveListings.length}+ active` : `${MOCK_LISTINGS.length}+ active`}
+        </Pill>
       </div>
 
       {/* Real search input — type any BC area or ask by voice */}
@@ -422,42 +451,118 @@ const PaneSearch = ({ query, setQuery, committed, onCommit }) => {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-        {MOCK_LISTINGS.map((l, i) => (
-          <motion.div
+        {liveListings === null && (
+          <div style={{ fontSize: 12, color: "#6B7280", padding: 20 }}>Loading real BC listings…</div>
+        )}
+        {usingLive && liveListings.map((l, i) => {
+          const key = l.listing_key || l.id || i;
+          const priceNum = typeof l.list_price === "number" ? l.list_price : parseFloat(l.list_price || 0);
+          const priceStr = priceNum ? `$${priceNum.toLocaleString("en-CA")}` : "—";
+          const beds = l.beds ?? l.bedrooms ?? "—";
+          const baths = l.baths ?? l.bathrooms ?? "—";
+          const sqft = l.living_area || l.sqft || null;
+          const dom = l.days_on_market ?? l.dom ?? null;
+          const media = (Array.isArray(l.photos) && l.photos[0])
+            || (Array.isArray(l.Media) && l.Media[0] && l.Media[0].MediaURL)
+            || l.image
+            || null;
+          const tag = dom != null && dom <= 3 ? "New listing" : (l.property_type || "");
+          const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
+          const city = l.city || committed;
+          return (
+            <Link
+              key={key}
+              to={`/listings/${l.listing_key}`}
+              data-testid={`live-listing-${l.listing_key}`}
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ y: -3, boxShadow: "0 12px 28px rgba(15,42,91,0.15)" }}
+                style={{
+                  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+                  overflow: "hidden", boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{
+                  height: 96,
+                  background: media
+                    ? `url(${media}) center/cover, linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`
+                    : `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
+                  position: "relative",
+                }}>
+                  {tag && (
+                    <span style={{
+                      position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.9)",
+                      color: C.navy, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
+                    }}>{tag}</span>
+                  )}
+                  {!media && <Building2 size={44} style={{ position: "absolute", right: 10, bottom: 10, color: "rgba(255,255,255,0.55)" }}/>}
+                </div>
+                <div style={{ padding: 10 }}>
+                  <div style={{ fontWeight: 700, color: C.navy, fontSize: 14 }}>{priceStr}</div>
+                  <div style={{ fontSize: 12, color: "#4B5563", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {addr}{city ? ` · ${city}` : ""}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <span>{beds}bd</span><span>·</span><span>{baths}ba</span>
+                    {sqft ? <><span>·</span><span>{sqft} sqft</span></> : null}
+                    {dom != null ? <><span>·</span><span>{dom}d</span></> : null}
+                  </div>
+                </div>
+              </motion.div>
+            </Link>
+          );
+        })}
+        {liveListings !== null && !usingLive && MOCK_LISTINGS.map((l, i) => (
+          <Link
             key={l.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06 }}
+            to={`/listings?q=${encodeURIComponent(committed)}`}
             data-testid={`mock-listing-${l.id}`}
-            style={{
-              background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-              overflow: "hidden", boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
-            }}
+            style={{ textDecoration: "none", color: "inherit" }}
           >
-            <div style={{
-              height: 96,
-              background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
-              position: "relative",
-            }}>
-              <span style={{
-                position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.9)",
-                color: C.navy, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
-              }}>{l.tag}</span>
-              <Building2 size={44} style={{ position: "absolute", right: 10, bottom: 10, color: "rgba(255,255,255,0.55)" }}/>
-            </div>
-            <div style={{ padding: 10 }}>
-              <div style={{ fontWeight: 700, color: C.navy, fontSize: 14 }}>{l.price}</div>
-              <div style={{ fontSize: 12, color: "#4B5563", marginTop: 2 }}>{l.addr} · {committed !== "Kitsilano" ? committed : l.city}</div>
-              <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, display: "flex", gap: 8 }}>
-                <span>{l.beds}bd</span><span>·</span><span>{l.baths}ba</span><span>·</span><span>{l.sqft} sqft</span><span>·</span><span>{l.dom}d</span>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              whileHover={{ y: -3, boxShadow: "0 12px 28px rgba(15,42,91,0.15)" }}
+              style={{
+                background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+                overflow: "hidden", boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{
+                height: 96,
+                background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
+                position: "relative",
+              }}>
+                <span style={{
+                  position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,0.9)",
+                  color: C.navy, fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
+                }}>{l.tag}</span>
+                <Building2 size={44} style={{ position: "absolute", right: 10, bottom: 10, color: "rgba(255,255,255,0.55)" }}/>
               </div>
-            </div>
-          </motion.div>
+              <div style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, color: C.navy, fontSize: 14 }}>{l.price}</div>
+                <div style={{ fontSize: 12, color: "#4B5563", marginTop: 2 }}>{l.addr} · {committed !== "Kitsilano" ? committed : l.city}</div>
+                <div style={{ fontSize: 11, color: "#6B7280", marginTop: 6, display: "flex", gap: 8 }}>
+                  <span>{l.beds}bd</span><span>·</span><span>{l.baths}ba</span><span>·</span><span>{l.sqft} sqft</span><span>·</span><span>{l.dom}d</span>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
         ))}
       </div>
 
       <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>
-        Illustrative sample · every real search hits <a href="/listings" style={{ color: C.blue, fontWeight: 600 }}>/listings</a> with full BC MLS® coverage.
+        {usingLive
+          ? <>Live CREA DDF® · <Link to={`/listings?city=${encodeURIComponent(committed)}`} style={{ color: C.blue, fontWeight: 600 }}>See all {liveCount ?? liveListings.length} {committed} matches →</Link></>
+          : <>No live matches for <strong>{committed}</strong>. <Link to={`/listings?q=${encodeURIComponent(committed)}`} style={{ color: C.blue, fontWeight: 600 }}>Try /listings with full BC MLS® coverage →</Link></>
+        }
       </div>
     </div>
   );
@@ -835,6 +940,10 @@ const PaneNeighbourhood = () => {
 const PaneBuyerInsights = () => {
   const region = useRotatingRegion();
   const [freshness, setFreshness] = useState("recently");
+  // Real market insights for the currently-rotating region. Falls back to the
+  // illustrative rotating figures if the aggregate query returns 0 (e.g. a
+  // hyper-local community name that isn't a DDF city).
+  const [live, setLive] = useState(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -845,6 +954,19 @@ const PaneBuyerInsights = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setLive(null);
+    (async () => {
+      try {
+        const r = await fetch(`${API}/insights?city=${encodeURIComponent(region.city)}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled && data && (data.active_count || 0) > 0) setLive(data);
+      } catch { /* fallback keeps illustrative */ }
+    })();
+    return () => { cancelled = true; };
+  }, [region.city]);
 
   const b = region.buyer;
   const trend = b.trend;
@@ -857,20 +979,32 @@ const PaneBuyerInsights = () => {
   }).join(" ");
   const trendArrow = b.direction === "up" ? "▲" : b.direction === "down" ? "▼" : "→";
 
+  const fmtM = (n) => {
+    if (!n) return "—";
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${Math.round(n).toLocaleString("en-CA")}`;
+  };
+  const stats = live ? [
+    { label: "Active inventory", value: String(live.active_count), sub: `${region.city} · CREA DDF®` },
+    { label: "Median list price", value: fmtM(live.median_list_price), sub: `avg ${fmtM(live.avg_list_price)}` },
+    { label: "Avg. beds / baths", value: `${live.avg_beds ?? "—"} / ${live.avg_baths ?? "—"}`, sub: "across active listings" },
+  ] : [
+    { label: "Active inventory", value: String(b.inventory), sub: `${region.city} · matching filters` },
+    { label: "Median list price", value: b.median, sub: `range ${b.range}` },
+    { label: "Avg. days on market", value: String(b.dom), sub: "last 30 days" },
+  ];
+
   return (
     <div data-testid="pane-buyerinsights" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · {region.label}</strong>
         <Pill tone="green" data-testid="buyerinsights-freshness">
-          <Radio size={12}/> Source: CREA DDF® · updated {freshness}
+          <Radio size={12}/> Source: CREA DDF® · {live ? "live" : "illustrative"} · updated {freshness}
         </Pill>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-        {[
-          { label: "Active inventory", value: String(b.inventory), sub: `${region.city} · matching filters` },
-          { label: "Median list price", value: b.median, sub: `range ${b.range}` },
-          { label: "Avg. days on market", value: String(b.dom), sub: "last 30 days" },
-        ].map((s, i) => (
+        {stats.map((s, i) => (
           <motion.div
             key={s.label}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -960,6 +1094,8 @@ const PaneSellerLookup = () => {
   // see how current the CREA DDF® pull is. Falls back to "recently" if the
   // endpoint doesn't reply.
   const [freshness, setFreshness] = useState("recently");
+  // Real market insights for the currently-rotating region.
+  const [live, setLive] = useState(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -970,21 +1106,46 @@ const PaneSellerLookup = () => {
     })();
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setLive(null);
+    (async () => {
+      try {
+        const r = await fetch(`${API}/insights?city=${encodeURIComponent(region.city)}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled && data && (data.active_count || 0) > 0) setLive(data);
+      } catch { /* fallback keeps illustrative */ }
+    })();
+    return () => { cancelled = true; };
+  }, [region.city]);
+
+  const fmtM = (n) => {
+    if (!n) return "—";
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${Math.round(n).toLocaleString("en-CA")}`;
+  };
+  const stats = live ? [
+    { label: "Active comps", value: String(live.active_count), sub: `${region.city} · CREA DDF®` },
+    { label: "Avg. list price", value: fmtM(live.avg_list_price), sub: `median ${fmtM(live.median_list_price)}` },
+    { label: "Price range", value: `${fmtM(live.min_price)} — ${fmtM(live.max_price)}`, sub: "across active listings" },
+  ] : [
+    { label: "Active comps", value: String(s.count), sub: "matching filters" },
+    { label: "Avg. list price", value: s.avgPrice, sub: `range ${s.priceRange}` },
+    { label: "Avg. days on market", value: String(s.avgDom), sub: "last 30 days" },
+  ];
 
   return (
     <div data-testid="pane-sellerlookup" style={{ display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <strong style={{ color: C.navy, fontSize: 14 }}>{s.label}</strong>
         <Pill tone="green" data-testid="sellerlookup-freshness">
-          <Radio size={12}/> Source: CREA DDF® · updated {freshness}
+          <Radio size={12}/> Source: CREA DDF® · {live ? "live" : "illustrative"} · updated {freshness}
         </Pill>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-        {[
-          { label: "Active comps", value: String(s.count), sub: "matching filters" },
-          { label: "Avg. list price", value: s.avgPrice, sub: `range ${s.priceRange}` },
-          { label: "Avg. days on market", value: String(s.avgDom), sub: "last 30 days" },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -1805,7 +1966,96 @@ export default function VisualAgentDemo() {
   // ── Persistent BC search (lifted so a top-level always-visible bar can drive
   //     the PaneSearch results and jump the demo straight to Buyer Search).
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchCommitted, setSearchCommitted] = useState("Kitsilano");
+  const [searchCommitted, setSearchCommitted] = useState("Vancouver");
+  // ── Smart search state ────────────────────────────────────────────────────
+  // /api/search returns a grouped payload (Communities, Terms, Tools, Listings,
+  // Doogie, etc.). We flatten it into a single suggestions list for the
+  // dropdown, with arrow-key nav + Enter to select. If nothing matches or the
+  // user hits Enter with no selection, we treat the input as an "Ask Doogie"
+  // and prefill the embedded chat panel via the existing ez_doogie_prefill
+  // localStorage + ez-open-doogie event contract.
+  const [searchSug, setSearchSug] = useState([]);
+  const [searchHi, setSearchHi] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchAbortRef = useRef(null);
+  const nav = useNavigate();
+  useEffect(() => {
+    const q = (searchQuery || "").trim();
+    if (q.length < 2) { setSearchSug([]); setSearchOpen(false); return; }
+    const t = window.setTimeout(async () => {
+      try {
+        if (searchAbortRef.current) searchAbortRef.current.abort();
+        const controller = new AbortController();
+        searchAbortRef.current = controller;
+        setSearchLoading(true);
+        const r = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=6`, { signal: controller.signal });
+        if (!r.ok) throw new Error("search failed");
+        const data = await r.json();
+        const flat = [];
+        for (const g of (data.groups || [])) {
+          for (const it of (g.items || [])) {
+            flat.push({ ...it, group: g.kind });
+          }
+        }
+        // Guarantee an Ask Doogie fallback item is always present
+        if (!flat.some(x => x.group === "Doogie")) {
+          flat.push({
+            group: "Doogie",
+            kind: "Doogie",
+            title: `Ask Doogie: "${q}"`,
+            blurb: "Get a plain-language answer from Doogie.",
+            href: `/?ask=${encodeURIComponent(q)}`,
+          });
+        }
+        setSearchSug(flat);
+        setSearchHi(0);
+        setSearchOpen(true);
+      } catch (e) {
+        if (e && e.name !== "AbortError") { setSearchSug([]); setSearchOpen(false); }
+      } finally { setSearchLoading(false); }
+    }, 220);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
+
+  const askDoogie = (q) => {
+    // Prefill + open the embedded chat, then scroll it into view
+    try { localStorage.setItem("ez_doogie_prefill", (q || "").trim()); } catch { /* ignore */ }
+    try { window.dispatchEvent(new CustomEvent("ez-open-doogie")); } catch { /* ignore */ }
+    const el = document.querySelector('[data-testid="visual-agent-doogie-embed"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Also focus the chat input so the user can just hit Send
+    window.setTimeout(() => {
+      const inp = document.querySelector('[data-testid="doogie-input"]');
+      if (inp) { try { inp.focus(); } catch { /* ignore */ } }
+    }, 400);
+  };
+  const openSug = (item) => {
+    setSearchOpen(false);
+    if (!item) return;
+    if (item.group === "Doogie") {
+      askDoogie(searchQuery);
+      return;
+    }
+    if (item.href) {
+      if (/^https?:/i.test(item.href)) window.location.href = item.href;
+      else nav(item.href);
+    }
+  };
+  const onSearchKey = (e) => {
+    if (!searchOpen || searchSug.length === 0) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // Nothing matched — treat as "Ask Doogie"
+        if ((searchQuery || "").trim().length >= 2) askDoogie(searchQuery);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setSearchHi(i => Math.min(i + 1, searchSug.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setSearchHi(i => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter") { e.preventDefault(); openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]); }
+    else if (e.key === "Escape") { setSearchOpen(false); }
+  };
   const commitSearch = (raw) => {
     const clean = (raw || "").trim();
     if (clean.length < 2) return;
@@ -2299,18 +2549,28 @@ export default function VisualAgentDemo() {
         </div>
       </section>
 
-      {/* ── Persistent BC search bar — always visible, mobile-first ────────
-          A single, prominent search input under the hero. Submitting jumps
-          the demo to "Buyer Search" and stops the auto-advance so consumers
-          have all the time they need to read/type. */}
+      {/* ── Smart persistent BC search bar — always visible, mobile-first ───
+          Merges the retired hero search bar (autocomplete: communities,
+          glossary, listings) AND the retired DoogieChat entry point (Ask
+          Doogie fallback) into a single input. If a query matches known
+          content we surface it grouped; if not, Enter routes to Doogie via
+          the embedded chat. */}
       <div style={{ maxWidth: 1200, margin: "-28px auto 0", padding: "0 20px", position: "relative", zIndex: 3 }}>
         <form
-          onSubmit={(e) => { e.preventDefault(); commitSearch(searchQuery); }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchOpen && searchSug.length > 0) {
+              openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]);
+            } else if ((searchQuery || "").trim().length >= 2) {
+              askDoogie(searchQuery);
+            }
+          }}
           data-testid="visual-agent-persistent-search"
           style={{
             background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
             padding: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
             boxShadow: "0 14px 34px rgba(15,42,91,0.10)",
+            position: "relative",
           }}
         >
           <div style={{ position: "relative", flex: "1 1 220px", minWidth: 0 }}>
@@ -2320,10 +2580,16 @@ export default function VisualAgentDemo() {
             <input
               data-testid="visual-agent-persistent-search-input"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={stopAutoplay}
-              placeholder="Search anywhere in BC — Kitsilano, Whistler, Kelowna, Nanaimo, Cranbrook…"
-              aria-label="Search anywhere in British Columbia"
+              onChange={(e) => { setSearchQuery(e.target.value); }}
+              onFocus={() => { stopAutoplay(); if (searchSug.length) setSearchOpen(true); }}
+              onBlur={() => window.setTimeout(() => setSearchOpen(false), 180)}
+              onKeyDown={onSearchKey}
+              placeholder='Search BC listings, communities, terms — or ask Doogie anything'
+              aria-label="Search BC listings, communities, terms or ask Doogie"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={searchOpen}
+              aria-controls="va-search-dropdown"
               style={{
                 width: "100%", padding: "12px 14px 12px 36px",
                 borderRadius: 10, border: "1px solid #DDE6FA",
@@ -2344,8 +2610,70 @@ export default function VisualAgentDemo() {
               boxShadow: "0 8px 18px rgba(15,42,91,0.25)",
             }}
           >
-            <Search size={14}/> Search BC
+            <Search size={14}/> Search
           </button>
+
+          {/* Suggestions dropdown */}
+          {searchOpen && searchSug.length > 0 && (
+            <div
+              id="va-search-dropdown"
+              data-testid="visual-agent-search-suggestions"
+              role="listbox"
+              style={{
+                position: "absolute", top: "calc(100% + 4px)", left: 10, right: 10, zIndex: 30,
+                background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+                boxShadow: "0 20px 40px rgba(15,42,91,0.18)",
+                maxHeight: 380, overflowY: "auto",
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              {searchSug.map((it, i) => {
+                const active = i === searchHi;
+                const isDoogie = it.group === "Doogie";
+                return (
+                  <button
+                    key={`${it.group}-${it.title}-${i}`}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    data-testid={`va-search-sug-${i}`}
+                    onMouseEnter={() => setSearchHi(i)}
+                    onClick={() => openSug(it)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      gap: 12, padding: "10px 12px",
+                      background: active ? "#F5F0E1" : "transparent",
+                      border: "none", cursor: "pointer", textAlign: "left",
+                      borderBottom: i < searchSug.length - 1 ? "1px solid #F1F5F9" : "none",
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, color: C.navy, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {isDoogie
+                          ? <><span aria-hidden style={{marginRight:6}}>🐾</span>{it.title}</>
+                          : it.title}
+                      </div>
+                      {it.blurb && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.blurb}</div>}
+                    </div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
+                      color: isDoogie ? "#7C4A03" : (it.group === "Communities" ? "#166534" : (it.group === "Listings" ? "#0369A1" : C.blue)),
+                      background: isDoogie ? "rgba(245,166,35,0.18)"
+                        : (it.group === "Communities" ? "rgba(22,163,74,0.10)"
+                        : (it.group === "Listings" ? "rgba(3,105,161,0.10)" : "rgba(14,165,233,0.10)")),
+                      padding: "3px 8px", borderRadius: 999, flexShrink: 0,
+                    }}>
+                      {it.group === "Doogie" ? "Ask Doogie" : (it.group || "").toUpperCase()}
+                    </span>
+                  </button>
+                );
+              })}
+              {searchLoading && (
+                <div style={{ padding: "6px 12px", fontSize: 11, color: "#9CA3AF" }}>Searching…</div>
+              )}
+            </div>
+          )}
+
           <div style={{
             flexBasis: "100%", fontSize: 11, color: "#6B7280", paddingLeft: 4,
             display: "grid", gap: 4,
@@ -2353,7 +2681,7 @@ export default function VisualAgentDemo() {
             <div>
               {userInteracted
                 ? "Auto-play paused — take your time. Tap Play at the top to resume the demo."
-                : "Type a BC area to search real listings. Or explore the scenarios below."}
+                : "Type a BC area, listing, term, or question. Doogie catches anything the site doesn't have a page for."}
             </div>
             <div>
               Prefer voice? Tap <strong style={{ color: C.navy }}>Ask by voice</strong> at the top-right and just say where you're looking.

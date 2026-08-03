@@ -10239,110 +10239,225 @@ async def shutdown(): mongo_client.close()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Canada Post AddressComplete — backend proxy
+# Market Insights — real aggregates from the CREA DDF listings collection
 # ═════════════════════════════════════════════════════════════════════════════
-# The AddressComplete key MUST stay server-side. If it leaks into the browser
-# anyone can burn through Doug's paid credits. We proxy the two documented
-# endpoints (Find + Retrieve) here and only return the display-safe fields to
-# the client. Rate limit + BC-only enforcement live here too.
-#
-# Docs: https://www.canadapost-postescanada.ca/ac/support/api/
+# GET /api/insights?city=Vancouver[&property_type=Apartment]
+#   → { city, property_type, active_count, avg_list_price, median_list_price,
+#       avg_days_on_market, min_price, max_price, avg_beds, avg_baths,
+#       last_updated }
+# Powers the Buyer + Seller Insights panes in the Visual Agent so they render
+# factual figures instead of illustrative ones. Cached lightly via response
+# header so repeated pane visits don't hammer Mongo.
 # ═════════════════════════════════════════════════════════════════════════════
 
-_ADDRESSCOMPLETE_BASE = "https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive"
+@app.get("/api/insights", tags=["Market Insights"])
+async def market_insights(city: str, property_type: str | None = None):
+    city = (city or "").strip()
+    if len(city) < 2 or len(city) > 60:
+        raise HTTPException(status_code=400, detail="Invalid city")
+    match: dict = {
+        "status": "Active",
+        "list_price": {"$gt": 0},
+        "city": {"$regex": f"^{re.escape(city)}$", "$options": "i"},
+    }
+    if property_type:
+        match["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+    pipeline = [
+        {"$match": match},
+        {"$group": {
+            "_id": None,
+            "active_count": {"$sum": 1},
+            "avg_list_price": {"$avg": "$list_price"},
+            "min_price": {"$min": "$list_price"},
+            "max_price": {"$max": "$list_price"},
+            "avg_days_on_market": {"$avg": {"$ifNull": ["$days_on_market", None]}},
+            "avg_beds": {"$avg": {"$ifNull": ["$beds", "$bedrooms"]}},
+            "avg_baths": {"$avg": {"$ifNull": ["$baths", "$bathrooms"]}},
+            "prices": {"$push": "$list_price"},
+        }},
+    ]
+    doc = None
+    try:
+        cursor = db.listings.aggregate(pipeline, allowDiskUse=False)
+        async for d in cursor:
+            doc = d
+            break
+    except Exception as e:
+        logger.warning(f"insights aggregate failed for {city!r}: {e}")
+        raise HTTPException(status_code=502, detail="Insights temporarily unavailable")
+    if not doc or (doc.get("active_count") or 0) == 0:
+        return {
+            "city": city, "property_type": property_type,
+            "active_count": 0, "avg_list_price": None, "median_list_price": None,
+            "avg_days_on_market": None, "min_price": None, "max_price": None,
+            "avg_beds": None, "avg_baths": None,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "source": "CREA DDF®",
+        }
+    prices = sorted(p for p in (doc.get("prices") or []) if isinstance(p, (int, float)) and p > 0)
+    median = None
+    if prices:
+        n = len(prices)
+        median = prices[n // 2] if n % 2 == 1 else (prices[n // 2 - 1] + prices[n // 2]) / 2
+    def _round(v, d=0):
+        if v is None: return None
+        try: return round(float(v), d)
+        except Exception: return None
+    return {
+        "city": city,
+        "property_type": property_type,
+        "active_count": int(doc.get("active_count") or 0),
+        "avg_list_price": _round(doc.get("avg_list_price")),
+        "median_list_price": _round(median),
+        "avg_days_on_market": _round(doc.get("avg_days_on_market"), 1),
+        "min_price": _round(doc.get("min_price")),
+        "max_price": _round(doc.get("max_price")),
+        "avg_beds": _round(doc.get("avg_beds"), 1),
+        "avg_baths": _round(doc.get("avg_baths"), 1),
+        "last_updated": datetime.now(timezone.utc).isoformat(),
+        "source": "CREA DDF®",
+        "compliance": "General information only — not advice. Not intended as a market valuation.",
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Address autocomplete — OpenStreetMap Nominatim (free, no API key)
+# ═════════════════════════════════════════════════════════════════════════════
+
+_NOMINATIM_UA = "EZtoFind.ca AddressAutocomplete (contact: doug@eztofind.ca)"
+_NOMINATIM_BASE = "https://nominatim.openstreetmap.org"
 
 
 @app.get("/api/address/suggest", tags=["Address"])
 async def address_suggest(q: str, lastId: str | None = None):
-    """Debounced Find call. Returns [{id, text, description, next}] up to 7.
-    Adds ", BC" as a BC hint but does NOT enforce province at this stage —
-    province is enforced only after Retrieve (per Canada Post docs)."""
-    key = os.environ.get("ADDRESS_COMPLETE_KEY")
-    if not key:
-        raise HTTPException(status_code=503, detail="Address service not configured")
+    """Nominatim /search — country-restricted to Canada, limit 7. Returns a
+    lightweight item list the frontend can render as a dropdown. `lastId` is
+    accepted for backwards compat but ignored (Nominatim has no drill-down)."""
     q = (q or "").strip()
     if len(q) < 3 or len(q) > 120:
         return {"items": []}
-    search_term = q if lastId else f"{q}, BC"
     params = {
-        "Key": key,
-        "SearchTerm": search_term,
-        "Country": "CAN",
-        "LanguagePreference": "en",
-        "MaxSuggestions": 7,
+        "q": q,
+        "format": "jsonv2",
+        "countrycodes": "ca",
+        "addressdetails": "1",
+        "limit": "7",
+        "accept-language": "en-CA,en",
     }
-    if lastId:
-        params["LastId"] = lastId
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            r = await client.get(f"{_ADDRESSCOMPLETE_BASE}/Find/v2.10/json3.ws", params=params)
+        async with httpx.AsyncClient(timeout=5.0, headers={"User-Agent": _NOMINATIM_UA}) as client:
+            r = await client.get(f"{_NOMINATIM_BASE}/search", params=params)
             r.raise_for_status()
             data = r.json()
     except Exception:
         raise HTTPException(status_code=502, detail="Address service unavailable")
-    items = data.get("Items", []) if isinstance(data, dict) else []
-    # Upstream returns an error item when the key is invalid — surface as 502
-    if items and items[0].get("Error"):
-        raise HTTPException(status_code=502, detail="Address service error")
-    return {"items": [
-        {
-            "id": x.get("Id"),
-            "text": x.get("Text"),
-            "description": x.get("Description"),
-            "next": x.get("Next"),
-        }
-        for x in items if x.get("Id") and x.get("Text")
-    ]}
+    items = []
+    for it in (data or []):
+        addr = it.get("address") or {}
+        # Build a friendly street-level label
+        text_parts = []
+        if addr.get("house_number") and (addr.get("road") or addr.get("street")):
+            text_parts.append(f"{addr['house_number']} {addr.get('road') or addr.get('street')}")
+        elif addr.get("road") or addr.get("street"):
+            text_parts.append(addr.get("road") or addr.get("street"))
+        elif it.get("name"):
+            text_parts.append(it["name"])
+        text = ", ".join(text_parts) or (it.get("display_name") or "").split(",")[0]
+        city = (
+            addr.get("city") or addr.get("town") or addr.get("village")
+            or addr.get("municipality") or addr.get("hamlet") or ""
+        )
+        province = addr.get("state") or ""
+        postcode = addr.get("postcode") or ""
+        desc_bits = [b for b in (city, province, postcode) if b]
+        description = ", ".join(desc_bits)
+        # id encodes osm_type:osm_id so /validate can refetch authoritatively
+        osm_type = it.get("osm_type")  # node|way|relation
+        osm_id = it.get("osm_id")
+        if not osm_type or osm_id is None:
+            continue
+        items.append({
+            "id": f"{osm_type}:{osm_id}",
+            "text": text.strip(",").strip(),
+            "description": description,
+            "next": "Retrieve",
+        })
+    return {"items": items}
 
 
 @app.get("/api/address/validate", tags=["Address"])
 async def address_validate(id: str):
-    """Retrieve the full validated address and enforce BC + Canada.
-    Returns 422 for out-of-province or out-of-country addresses so the
-    frontend can prompt the user with the referral bump."""
-    key = os.environ.get("ADDRESS_COMPLETE_KEY")
-    if not key:
-        raise HTTPException(status_code=503, detail="Address service not configured")
-    if not id or len(id) > 300:
+    """Nominatim /lookup by osm_type:osm_id. Enforces province == BC and
+    country == CA. Returns 422 with structured detail for out-of-BC results."""
+    if not id or len(id) > 100 or ":" not in id:
         raise HTTPException(status_code=400, detail="Invalid address id")
+    osm_type, _, osm_id = id.partition(":")
+    if osm_type not in ("node", "way", "relation") or not osm_id.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid address id")
+    # Nominatim's osm_ids param takes N|W|R prefix
+    prefix = {"node": "N", "way": "W", "relation": "R"}[osm_type]
+    params = {
+        "osm_ids": f"{prefix}{osm_id}",
+        "format": "jsonv2",
+        "addressdetails": "1",
+        "accept-language": "en-CA,en",
+    }
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            r = await client.get(
-                f"{_ADDRESSCOMPLETE_BASE}/Retrieve/v2.11/json3.ws",
-                params={"Key": key, "Id": id},
-            )
+        async with httpx.AsyncClient(timeout=5.0, headers={"User-Agent": _NOMINATIM_UA}) as client:
+            r = await client.get(f"{_NOMINATIM_BASE}/lookup", params=params)
             r.raise_for_status()
             data = r.json()
     except Exception:
         raise HTTPException(status_code=502, detail="Address service unavailable")
-    items = data.get("Items", []) if isinstance(data, dict) else []
-    if not items or items[0].get("Error"):
+    if not data:
         raise HTTPException(status_code=422, detail="Address was not validated")
-    a = items[0]
-    if a.get("CountryIso2") != "CA":
+    it = data[0]
+    addr = it.get("address") or {}
+    country_code = (addr.get("country_code") or "").lower()
+    province_full = addr.get("state") or ""
+    # Province code lookup — Nominatim only returns full names, so map them.
+    _CA_PROVINCE_CODES = {
+        "British Columbia": "BC", "Alberta": "AB", "Saskatchewan": "SK", "Manitoba": "MB",
+        "Ontario": "ON", "Quebec": "QC", "Québec": "QC", "New Brunswick": "NB", "Nova Scotia": "NS",
+        "Prince Edward Island": "PE", "Newfoundland and Labrador": "NL", "Yukon": "YT",
+        "Northwest Territories": "NT", "Nunavut": "NU",
+    }
+    province_code = _CA_PROVINCE_CODES.get(province_full, "")
+    city = (
+        addr.get("city") or addr.get("town") or addr.get("village")
+        or addr.get("municipality") or addr.get("hamlet") or ""
+    )
+    if country_code != "ca":
         raise HTTPException(
             status_code=422,
             detail={"code": "out_of_country", "message": "Only Canadian addresses are accepted"},
         )
-    province = a.get("ProvinceCode")
-    if province != "BC":
-        # 422 with structured detail so the client can show the referral bump
+    if province_code != "BC":
         raise HTTPException(
             status_code=422,
             detail={
                 "code": "out_of_focus",
-                "message": f"That address is in {a.get('ProvinceName') or province} — outside Doug's licensed BC focus area.",
-                "province": province,
-                "city": a.get("City"),
+                "message": f"That address is in {province_full or province_code or 'another province'} — outside Doug's licensed BC focus area.",
+                "province": province_code,
+                "city": city,
             },
         )
+    # Assemble line1 in "house# street" order
+    line1 = ""
+    if addr.get("house_number") and (addr.get("road") or addr.get("street")):
+        line1 = f"{addr['house_number']} {addr.get('road') or addr.get('street')}"
+    elif addr.get("road") or addr.get("street"):
+        line1 = addr.get("road") or addr.get("street")
+    label_bits = [b for b in (line1, city, f"{province_code} {addr.get('postcode') or ''}".strip(), "Canada") if b]
+    label = ", ".join(label_bits)
     return {"address": {
-        "label": a.get("Label"),
-        "line1": a.get("Line1"),
-        "line2": a.get("Line2"),
-        "city": a.get("City"),
-        "province": province,
-        "postal_code": a.get("PostalCode"),
-        "country": a.get("CountryIso2"),
-        "data_level": a.get("DataLevel"),
+        "label": label,
+        "line1": line1,
+        "line2": "",
+        "city": city,
+        "province": province_code,
+        "postal_code": addr.get("postcode") or "",
+        "country": "CA",
+        "data_level": "Premise" if addr.get("house_number") else "Street",
+        "attribution": "© OpenStreetMap contributors",
     }}

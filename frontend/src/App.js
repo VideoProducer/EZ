@@ -2060,6 +2060,14 @@ const Home = () => {
       </div>
     </div></section>
 
+    {/* ── Visual Agent embedded on the homepage ──────────────────────────────
+        Below the licensing paragraph. Gives visitors the full unified Doogie
+        experience (search, chat, voice, tours, insights, consultation) without
+        having to click through to /visual-agent-demo. */}
+    <section data-testid="home-visual-agent-embed" style={{background:"#F5F8FF",padding:"0 0 2rem"}}>
+      <VisualAgentDemo/>
+    </section>
+
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
         <p className="section-sub">Doug LeMaire serves clients across three of British Columbia's most desirable real estate corridors.</p>

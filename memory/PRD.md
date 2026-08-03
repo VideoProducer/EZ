@@ -1371,3 +1371,45 @@ Three enhancements landed together — one backend milestone (public Doogie Tool
 - Modified backend/.env (added ADDRESS_COMPLETE_KEY)
 - Modified backend/server.py (added Find/Retrieve proxy endpoints before shutdown hook)
 - Modified frontend/src/pages/VisualAgentDemo.jsx (new AddressAutocompleteField + integration into seller step)
+
+
+## Feb 3, 2026 — Smart search bar + live insights + free address validation
+
+### 1. Persistent search bar is now the ONLY search on the site
+Merged everything the retired Doogie chatbot and Doogie hero search bar could do into the visual agent's persistent BC search bar:
+- Debounced fetch to /api/search returns grouped suggestions (Communities, Terms, Tools, Listings, FAQs, Journey, Doogie fallback)
+- Dropdown with arrow-key + Enter navigation, colored group badges, mobile-friendly
+- Clicking a Community/Term/Listing/Tool navigates to the internal route
+- Clicking "Ask Doogie" (always appended when no confident match) prefills the embedded chat via ez_doogie_prefill localStorage + ez-open-doogie event, scrolls the chat into view, and focuses the input
+- Enter with no highlighted match falls through to "Ask Doogie"
+- data-testids: visual-agent-search-suggestions, va-search-sug-{i}
+
+### 2. Live MLS Search Hookup (COMPLETE)
+- PaneSearch now fetches real active CREA DDF listings from /api/listings?city=X&limit=8 on every commit
+- Each card is a <Link to="/listings/{listing_key}"> — clicking opens the exact listing detail page
+- Card renders real DDF fields: photos[0], list_price (formatted CAD), beds/baths, living_area, days_on_market, property_type
+- Fallback: if 0 live results the pane shows the mock cards linking to /listings?q=... so the layout never renders empty
+- Default committed city changed from "Kitsilano" to "Vancouver" so first-load shows real inventory (4,714 active)
+- data-testids: live-listing-{listing_key}, mock-listing-{id}
+
+### 3. Real Live Comps API (COMPLETE)
+New endpoint: GET /api/insights?city=X[&property_type=Y] aggregates the listings collection and returns:
+- active_count, avg_list_price, median_list_price, min_price, max_price
+- avg_days_on_market, avg_beds, avg_baths
+- source ("CREA DDF"), compliance disclaimer, last_updated
+Wired into PaneBuyerInsights and PaneSellerLookup. Illustrative rotating figures kept as fallback if the aggregate returns 0 (rare city case). Freshness pill switches to "live" vs "illustrative" so consumers know which they're seeing.
+
+### 4. Address validation now free (Nominatim / OpenStreetMap)
+Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
+- No API key needed, unlimited free use (with 1 req/sec policy, respected via debounce)
+- Same endpoint contract (/api/address/suggest + /api/address/validate) so no frontend changes
+- Enforces country_code == "ca" and mapped ProvinceCode == "BC" (mapping table for all provinces)
+- Returns 422 with structured {code: "out_of_focus", province, city, message} outside BC
+- Removed ADDRESS_COMPLETE_KEY from backend/.env
+- Attribution: "© OpenStreetMap contributors" included in every /validate response
+- Verified: BC address returns 200 with clean {label, line1, city, province, postal_code}; Toronto returns 422 with province="ON"
+
+### 5. Files touched
+- Modified backend/server.py: replaced Canada Post proxy with Nominatim; added /api/insights aggregation
+- Modified frontend/src/pages/VisualAgentDemo.jsx: smart-search dropdown + keyboard nav + Ask Doogie hand-off; live listings fetch in PaneSearch; live insights fetch in PaneBuyerInsights and PaneSellerLookup; default city Vancouver
+- Modified backend/.env: removed ADDRESS_COMPLETE_KEY (no longer needed)
