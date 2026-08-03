@@ -1920,7 +1920,13 @@ const PersonalizedHome = () => {
   );
 };
 
-const DOOGIE_ONBOARDING_SCRIPT = "Hi, I'm Doogie — your BC real estate helper. Search anywhere in British Columbia, ask me about listings, terms, or neighbourhoods, take a virtual tour, or book a free consultation with Doug LeMaire, REALTOR®. Everything I share is general information only — not advice.";
+const DOOGIE_ONBOARDING_SCRIPTS = {
+  all: "Hi, I'm Doogie — your BC real estate helper. Search anywhere in British Columbia, ask me about listings, terms, or neighbourhoods, take a virtual tour, or book a free consultation with Doug LeMaire, REALTOR®. Everything I share is general information only — not advice.",
+  buyer: "Hi, I'm Doogie — your BC real estate helper. Looking to buy? Try searching a neighbourhood like Kitsilano or Whistler, take a virtual tour of active listings, ask me about mortgages, closing costs, or the Property Transfer Tax, or book a free consultation with Doug. General information only — not advice.",
+  seller: "Hi, I'm Doogie — your BC real estate helper. Thinking of selling? Ask me for a market snapshot on your neighbourhood, get a general home valuation range, understand the seller journey step-by-step, or book a free consultation with Doug LeMaire, REALTOR®. General information only — not advice.",
+};
+// Backwards-compat pointer used by any older imports:
+const DOOGIE_ONBOARDING_SCRIPT = DOOGIE_ONBOARDING_SCRIPTS.all;
 
 // Shared TTS helper used by both the hero greeting card and the onboarding
 // modal. Fetches the MP3 blob from /api/doogie/tts and plays it. Returns the
@@ -1945,8 +1951,18 @@ const _playDoogieTTS = async (text, onEnded) => {
 // ── Hero greeting card — small, friendly, invites first-time visitors ──
 const DoogieHeroGreeting = () => {
   const [speaking, setSpeaking] = useState(false);
+  // Remember the user's mode choice (buyer / seller / all) across mounts so
+  // the hero and onboarding stay in sync and later revisits use the same script.
+  const [mode, setMode] = useState(() => {
+    try { return (localStorage.getItem("ez_doogie_mode") || "all"); }
+    catch { return "all"; }
+  });
   const audioRef = useRef(null);
   useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
+  const pickMode = (m) => {
+    setMode(m);
+    try { localStorage.setItem("ez_doogie_mode", m); } catch { /* ignore */ }
+  };
   const toggle = async () => {
     if (speaking && audioRef.current) {
       try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ }
@@ -1955,9 +1971,17 @@ const DoogieHeroGreeting = () => {
       return;
     }
     setSpeaking(true);
-    audioRef.current = await _playDoogieTTS(DOOGIE_ONBOARDING_SCRIPT, () => setSpeaking(false));
+    const script = DOOGIE_ONBOARDING_SCRIPTS[mode] || DOOGIE_ONBOARDING_SCRIPTS.all;
+    audioRef.current = await _playDoogieTTS(script, () => setSpeaking(false));
     if (!audioRef.current) setSpeaking(false);
   };
+  const pillStyle = (m) => ({
+    padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
+    border: mode === m ? "1.5px solid var(--brand-navy)" : "1.5px solid rgba(15,42,91,0.15)",
+    background: mode === m ? "var(--brand-navy)" : "#fff",
+    color: mode === m ? "#fff" : "var(--brand-navy)",
+    cursor: "pointer", letterSpacing: 0.3,
+  });
   return (
     <div
       data-testid="home-doogie-hero-greeting"
@@ -1967,18 +1991,24 @@ const DoogieHeroGreeting = () => {
         border: "1.5px solid #F5D28A", borderRadius: 14,
         padding: "0.75rem 0.9rem", marginBottom: "1.25rem",
         boxShadow: "0 6px 18px rgba(15,42,91,0.08)",
+        flexWrap: "wrap",
       }}
     >
       <img
         src={DOOGIE_THINKING} alt="Doogie the AI helper"
         style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid #FDB813", background: "#fff", flexShrink: 0 }}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 180 }}>
         <div style={{ fontWeight: 700, color: "var(--brand-navy)", fontSize: "1rem", lineHeight: 1.25 }}>
           Hi, I'm Doogie <span aria-hidden>🐾</span>
         </div>
         <div style={{ fontSize: "0.85rem", color: "var(--ink)", marginTop: 2, lineHeight: 1.4 }}>
           Ask me anything about BC real estate, or search for a listing below.
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }} role="radiogroup" aria-label="I'm here to">
+          <button type="button" role="radio" aria-checked={mode === "all"} onClick={() => pickMode("all")} style={pillStyle("all")} data-testid="hero-mode-all">Just exploring</button>
+          <button type="button" role="radio" aria-checked={mode === "buyer"} onClick={() => pickMode("buyer")} style={pillStyle("buyer")} data-testid="hero-mode-buyer">Buying</button>
+          <button type="button" role="radio" aria-checked={mode === "seller"} onClick={() => pickMode("seller")} style={pillStyle("seller")} data-testid="hero-mode-seller">Selling</button>
         </div>
       </div>
       <button
@@ -2011,9 +2041,23 @@ const DoogieOnboarding = () => {
     catch { return false; }
   });
   const [speaking, setSpeaking] = useState(false);
+  const [mode, setMode] = useState(() => {
+    try { return localStorage.getItem("ez_doogie_mode") || "all"; }
+    catch { return "all"; }
+  });
   const audioRef = useRef(null);
   const nav = useNavigate();
   useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
+  const pickMode = (m) => {
+    setMode(m);
+    try { localStorage.setItem("ez_doogie_mode", m); } catch { /* ignore */ }
+    // If currently speaking, restart with the newly selected script
+    if (audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ }
+      audioRef.current = null;
+      setSpeaking(false);
+    }
+  };
   const dismiss = () => {
     try { localStorage.setItem("ez_onboarding_done", "1"); } catch { /* ignore */ }
     if (audioRef.current) { try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ } audioRef.current = null; }
@@ -2021,13 +2065,21 @@ const DoogieOnboarding = () => {
   };
   const play = async () => {
     setSpeaking(true);
-    audioRef.current = await _playDoogieTTS(DOOGIE_ONBOARDING_SCRIPT, () => setSpeaking(false));
+    const script = DOOGIE_ONBOARDING_SCRIPTS[mode] || DOOGIE_ONBOARDING_SCRIPTS.all;
+    audioRef.current = await _playDoogieTTS(script, () => setSpeaking(false));
     if (!audioRef.current) setSpeaking(false);
   };
   const startTour = () => {
     dismiss();
-    nav("/visual-agent-demo?kiosk=1");
+    nav(`/visual-agent-demo?kiosk=1&mode=${encodeURIComponent(mode)}`);
   };
+  const pillStyle = (m) => ({
+    padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+    border: mode === m ? "1.5px solid var(--brand-navy)" : "1.5px solid rgba(15,42,91,0.15)",
+    background: mode === m ? "var(--brand-navy)" : "#fff",
+    color: mode === m ? "#fff" : "var(--brand-navy)",
+    cursor: "pointer", letterSpacing: 0.3,
+  });
   if (!visible) return null;
   return (
     <div
@@ -2043,7 +2095,7 @@ const DoogieOnboarding = () => {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#fff", borderRadius: 20, maxWidth: 460, width: "100%",
+          background: "#fff", borderRadius: 20, maxWidth: 480, width: "100%",
           padding: "2rem 1.75rem 1.5rem", textAlign: "center", position: "relative",
           boxShadow: "0 30px 80px rgba(0,0,0,0.35)",
         }}
@@ -2065,9 +2117,18 @@ const DoogieOnboarding = () => {
           fontSize: "1.35rem", fontWeight: 700, color: "var(--brand-navy)",
           margin: "0 0 0.4rem", fontFamily: "'Playfair Display', serif",
         }}>Welcome — I'm Doogie <span aria-hidden>🐾</span></h2>
-        <p style={{ fontSize: "0.92rem", color: "var(--ink)", lineHeight: 1.55, margin: "0 0 1.15rem" }}>
-          Your BC real-estate helper. Tap play for a 15-second intro, or jump straight in.
+        <p style={{ fontSize: "0.9rem", color: "var(--ink)", lineHeight: 1.5, margin: "0 0 0.8rem" }}>
+          Are you buying or selling? I'll tailor a 15-second tour just for you.
         </p>
+        <div
+          data-testid="home-onboarding-mode-picker"
+          style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: "1rem" }}
+          role="radiogroup" aria-label="I'm here to"
+        >
+          <button type="button" role="radio" aria-checked={mode === "buyer"} onClick={() => pickMode("buyer")} style={pillStyle("buyer")} data-testid="onboarding-mode-buyer">I'm buying</button>
+          <button type="button" role="radio" aria-checked={mode === "seller"} onClick={() => pickMode("seller")} style={pillStyle("seller")} data-testid="onboarding-mode-seller">I'm selling</button>
+          <button type="button" role="radio" aria-checked={mode === "all"} onClick={() => pickMode("all")} style={pillStyle("all")} data-testid="onboarding-mode-all">Just exploring</button>
+        </div>
         <div style={{ display: "grid", gap: 8 }}>
           <button
             type="button"
@@ -2081,7 +2142,7 @@ const DoogieOnboarding = () => {
               display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}
           >
-            {speaking ? "◼ Stop intro" : "▶ Hear Doogie's 15-second intro"}
+            {speaking ? "◼ Stop intro" : `▶ Hear Doogie's 15-second ${mode === "all" ? "" : mode + " "}intro`}
           </button>
           <button
             type="button"

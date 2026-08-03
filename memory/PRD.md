@@ -1441,3 +1441,29 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 ### Files touched
 - Modified frontend/src/App.js: added DoogieHeroGreeting + DoogieOnboarding components + hero + AppShell mount
 - Modified frontend/src/pages/VisualAgentDemo.jsx: kioskMode reads ?kiosk=1 URL param; new useEffect speaks greeting on auto-open + strips param
+
+
+## Feb 3, 2026 — Onboarding A/B + Voice-Answer Everywhere
+
+### Onboarding A/B (buyer vs seller intro)
+- Three scripts in `DOOGIE_ONBOARDING_SCRIPTS` (all / buyer / seller). Each ~15 seconds.
+- Onboarding modal now has a **"I'm buying"** / **"I'm selling"** / **"Just exploring"** pill selector. Play button label updates in real-time to show which intro will play.
+- Hero greeting card mirrors the same three pills. Choice persists in `localStorage.ez_doogie_mode` so modal and hero stay in sync + returning visitors get the same tailored greeting.
+- "Start hands-free kiosk tour" button passes the mode via `?kiosk=1&mode=buyer|seller|all`, and VisualAgentDemo reads it to speak the correct tailored greeting on kiosk mount. Falls back to localStorage mode if the query param is missing.
+- data-testids: `home-onboarding-mode-picker`, `onboarding-mode-{buyer,seller,all}`, `hero-mode-{all,buyer,seller}`.
+
+### Voice-Answer Everywhere (mic in smart search)
+- New circular mic button inside the persistent search input. Tap → capture voice → transcribe → the transcript flows through the existing debounced /api/search fetch so the dropdown populates instantly.
+- Auto-fallback: **Web Speech API** first (Chrome/Edge/Safari 14.1+, instant, no upload), falls back to **MediaRecorder + backend Whisper** (`/api/doogie/transcribe`) for Firefox and unsupported cases.
+- Recording visuals: red mic icon + pulsing red halo (`va-mic-pulse` keyframe). Placeholder swaps to "🎤 Listening — speak your question…" then "Transcribing…" during the Whisper fallback.
+- Auto-stop after 8s so the recorder never runs forever. Cleanup on unmount.
+- data-testid: `visual-agent-persistent-search-mic`.
+
+### Verified
+- Onboarding modal shows the three pills; Play button label reads "Hear Doogie's 15-second buyer intro" when Buyer is selected ✓
+- Hero card shows the same pills below the greeting line; choice syncs from modal via localStorage ✓
+- Mic button visible inside the search input right side, positioned inside the input padding ✓
+
+### Files touched
+- Modified frontend/src/App.js: DOOGIE_ONBOARDING_SCRIPTS map; mode pills + mode-aware Play in DoogieHeroGreeting and DoogieOnboarding; startTour passes ?mode=… query param
+- Modified frontend/src/pages/VisualAgentDemo.jsx: kioskMode greeting effect reads ?mode + localStorage; new voice-search state + startVoiceSearch/stopVoiceSearch handlers; mic button in the input; va-mic-pulse keyframe added to inline style block

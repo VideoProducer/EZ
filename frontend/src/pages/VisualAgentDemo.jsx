@@ -2064,6 +2064,94 @@ export default function VisualAgentDemo() {
     else if (e.key === "Enter") { e.preventDefault(); openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]); }
     else if (e.key === "Escape") { setSearchOpen(false); }
   };
+
+  // ── Voice-Answer Everywhere ────────────────────────────────────────────────
+  // One-tap mic inside the smart search bar. Uses Web Speech API when
+  // available (Chrome/Edge/Safari 14.1+) — falls back to backend Whisper via
+  // MediaRecorder + /api/doogie/transcribe otherwise. Once we have a
+  // transcript we drop it into the search input; the existing debounced
+  // /api/search fetch then populates the dropdown so the user can pick a
+  // result or press Enter to hand off to Doogie chat.
+  const [voiceSearchOn, setVoiceSearchOn] = useState(false);
+  const [voiceSearchStatus, setVoiceSearchStatus] = useState(""); // "listening" | "transcribing" | ""
+  const voiceRecogRef = useRef(null);
+  const voiceRecorderRef = useRef(null);
+  const voiceChunksRef = useRef([]);
+  const stopVoiceSearch = () => {
+    try { if (voiceRecogRef.current) voiceRecogRef.current.stop(); } catch { /* ignore */ }
+    try {
+      if (voiceRecorderRef.current && voiceRecorderRef.current.state !== "inactive") {
+        voiceRecorderRef.current.stop();
+      }
+    } catch { /* ignore */ }
+    setVoiceSearchOn(false);
+  };
+  const startVoiceSearch = async () => {
+    if (voiceSearchOn) { stopVoiceSearch(); return; }
+    stopAutoplay();
+    // Prefer Web Speech API for instant local transcription
+    const SR = (typeof window !== "undefined") && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (SR) {
+      try {
+        const rec = new SR();
+        rec.lang = "en-CA";
+        rec.interimResults = true;
+        rec.continuous = false;
+        rec.maxAlternatives = 1;
+        rec.onstart = () => { setVoiceSearchOn(true); setVoiceSearchStatus("listening"); };
+        rec.onerror = () => { setVoiceSearchOn(false); setVoiceSearchStatus(""); };
+        rec.onend = () => { setVoiceSearchOn(false); setVoiceSearchStatus(""); };
+        rec.onresult = (evt) => {
+          let interim = "", final = "";
+          for (let i = evt.resultIndex; i < evt.results.length; i++) {
+            const t = evt.results[i][0].transcript || "";
+            if (evt.results[i].isFinal) final += t; else interim += t;
+          }
+          const text = (final || interim).trim();
+          if (text) setSearchQuery(text);
+        };
+        voiceRecogRef.current = rec;
+        rec.start();
+        return;
+      } catch { /* fall through to Whisper */ }
+    }
+    // Fallback: MediaRecorder + backend Whisper
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      voiceChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data && e.data.size) voiceChunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        setVoiceSearchStatus("transcribing");
+        try {
+          const blob = new Blob(voiceChunksRef.current, { type: "audio/webm" });
+          const fd = new FormData();
+          fd.append("audio", blob, "voice.webm");
+          fd.append("language", "en");
+          const r = await fetch(`${API}/doogie/transcribe`, { method: "POST", body: fd });
+          if (r.ok) {
+            const data = await r.json();
+            const text = (data.text || data.transcript || "").trim();
+            if (text) setSearchQuery(text);
+          }
+        } catch { /* ignore */ }
+        finally {
+          setVoiceSearchStatus("");
+          try { stream.getTracks().forEach(t => t.stop()); } catch { /* ignore */ }
+        }
+      };
+      voiceRecorderRef.current = mr;
+      mr.start();
+      setVoiceSearchOn(true);
+      setVoiceSearchStatus("listening");
+      // Auto-stop after 8s so it doesn't record forever
+      window.setTimeout(() => { try { if (mr.state !== "inactive") mr.stop(); } catch { /* ignore */ } setVoiceSearchOn(false); }, 8000);
+    } catch (e) {
+      setVoiceSearchOn(false);
+      setVoiceSearchStatus("");
+    }
+  };
+  useEffect(() => () => stopVoiceSearch(), []);
   const commitSearch = (raw) => {
     const clean = (raw || "").trim();
     if (clean.length < 2) return;
@@ -2192,10 +2280,10 @@ export default function VisualAgentDemo() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceState, voiceReply, kioskMode, speakerOn]);
 
-  // First-visit onboarding hand-off: /visual-agent-demo?kiosk=1 → auto-start
-  // kiosk (already handled in the kioskMode initializer) + play the 15-second
-  // Doogie greeting aloud. Then strip the query param so a page refresh
-  // doesn't repeat the greeting. Runs exactly once per navigation.
+  // First-visit onboarding hand-off: /visual-agent-demo?kiosk=1[&mode=buyer|seller|all]
+  // → auto-start kiosk (already handled in the kioskMode initializer) + play a
+  // 15-second Doogie greeting tailored to the visitor's mode. Strip the query
+  // params so a page refresh doesn't repeat. Runs exactly once per navigation.
   const greetedRef = useRef(false);
   useEffect(() => {
     if (greetedRef.current) return;
@@ -2204,11 +2292,20 @@ export default function VisualAgentDemo() {
       const sp = new URLSearchParams(window.location.search);
       if (sp.get("kiosk") !== "1") return;
       greetedRef.current = true;
-      const greeting = "Hi, I'm Doogie — your BC real estate helper. Try searching for a listing in Whistler, ask me about strata fees, take a virtual tour, or book a free consultation with Doug. General information only — not advice.";
+      let mode = (sp.get("mode") || "").trim();
+      if (!mode) {
+        try { mode = localStorage.getItem("ez_doogie_mode") || "all"; } catch { mode = "all"; }
+      }
+      const scripts = {
+        all: "Hi, I'm Doogie — your BC real estate helper. Try searching for a listing in Whistler, ask me about strata fees, take a virtual tour, or book a free consultation with Doug. General information only — not advice.",
+        buyer: "Hi, I'm Doogie — your BC real estate helper. Looking to buy? Try a search like four bedroom homes in Whistler, ask about mortgage pre-approval or the Property Transfer Tax, or book a free consultation with Doug. General information only — not advice.",
+        seller: "Hi, I'm Doogie — your BC real estate helper. Thinking of selling? Ask me for a market snapshot on your neighbourhood, get a general home valuation range, or book a free consultation with Doug LeMaire, REALTOR®. General information only — not advice.",
+      };
+      const greeting = scripts[mode] || scripts.all;
       // Small delay so the kiosk overlay is fully mounted before audio starts
       window.setTimeout(() => { speakDoogie(greeting); }, 600);
-      // Strip ?kiosk from the URL without triggering navigation
-      sp.delete("kiosk");
+      // Strip ?kiosk / ?mode from the URL without triggering navigation
+      sp.delete("kiosk"); sp.delete("mode");
       const newUrl = window.location.pathname + (sp.toString() ? `?${sp}` : "") + window.location.hash;
       window.history.replaceState({}, "", newUrl);
     } catch { /* ignore */ }
@@ -2615,20 +2712,40 @@ export default function VisualAgentDemo() {
               onFocus={() => { stopAutoplay(); if (searchSug.length) setSearchOpen(true); }}
               onBlur={() => window.setTimeout(() => setSearchOpen(false), 180)}
               onKeyDown={onSearchKey}
-              placeholder='Search BC listings, communities, terms — or ask Doogie anything'
+              placeholder={voiceSearchStatus === "listening" ? "🎤 Listening — speak your question…" : voiceSearchStatus === "transcribing" ? "Transcribing…" : "Search BC listings, communities, terms — or ask Doogie anything"}
               aria-label="Search BC listings, communities, terms or ask Doogie"
               autoComplete="off"
               role="combobox"
               aria-expanded={searchOpen}
               aria-controls="va-search-dropdown"
               style={{
-                width: "100%", padding: "12px 14px 12px 36px",
+                width: "100%", padding: "12px 44px 12px 36px",
                 borderRadius: 10, border: "1px solid #DDE6FA",
                 fontSize: 14, fontFamily: "inherit", background: "#F7FAFF",
                 color: C.navy, fontWeight: 600,
                 outline: "none",
               }}
             />
+            {/* Voice-Answer mic — one-tap voice queries without opening Kiosk */}
+            <button
+              type="button"
+              onClick={startVoiceSearch}
+              data-testid="visual-agent-persistent-search-mic"
+              aria-label={voiceSearchOn ? "Stop voice search" : "Ask by voice"}
+              title={voiceSearchOn ? "Recording — tap to stop" : "Ask by voice"}
+              aria-pressed={voiceSearchOn}
+              style={{
+                position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+                width: 32, height: 32, borderRadius: "50%",
+                border: "1px solid " + (voiceSearchOn ? "#DC2626" : "rgba(15,42,91,0.15)"),
+                background: voiceSearchOn ? "#DC2626" : "#fff",
+                color: voiceSearchOn ? "#fff" : C.navy,
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                animation: voiceSearchOn ? "va-mic-pulse 1.2s ease-in-out infinite" : "none",
+              }}
+            >
+              {voiceSearchOn ? <MicOff size={14}/> : <Mic size={14}/>}
+            </button>
           </div>
           <button
             type="submit"
@@ -3103,6 +3220,10 @@ export default function VisualAgentDemo() {
       <style>{`
         @media (max-width: 820px) {
           .visual-agent-split { grid-template-columns: 1fr !important; }
+        }
+        @keyframes va-mic-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.55); }
+          50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
         }
       `}</style>
     </div>
