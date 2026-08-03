@@ -127,48 +127,44 @@ export default function DashboardMockup() {
         <ComplianceFooter/>
       </div>
       <AskDoogieDrawer open={askOpen} onClose={() => setAskOpen(false)}/>
-      {showToast && <FirstVisitToast onDismiss={dismissToast}/>}
-      <button
-        onClick={() => setAskOpen(true)}
-        data-testid="dash-ask-doogie-fab"
-        style={{
-          position: "fixed", right: 24, bottom: 24, background: C.gold,
-          color: C.navy, border: "none", borderRadius: 999, padding: "12px 22px",
-          fontWeight: 800, cursor: "pointer", boxShadow: "0 10px 30px rgba(15,42,91,0.25)",
-          display: "flex", alignItems: "center", gap: 8, zIndex: 40,
-        }}
-      >🐾 Ask Doogie</button>
+      {showToast && <FirstVisitToast onDismiss={dismissToast} setSection={setSection}/>}
     </div>
   );
 }
 
 // ── First-visit sidebar toast — one-time onboarding hint ──────────────────
-const FirstVisitToast = ({ onDismiss }) => (
+const FirstVisitToast = ({ onDismiss, setSection }) => (
   <div
     data-testid="dash-first-visit-toast"
     style={{
       position: "fixed", left: 274, bottom: 24, zIndex: 60,
       background: "#fff", border: "2px solid " + C.gold, borderRadius: 14,
-      padding: "14px 16px 14px 14px", maxWidth: 340,
+      padding: "14px 16px 14px 14px", maxWidth: 360,
       boxShadow: "0 12px 32px rgba(15,42,91,0.28)",
-      display: "flex", gap: 12, alignItems: "flex-start",
+      display: "flex", gap: 14, alignItems: "flex-start",
       animation: "toast-slide 0.35s cubic-bezier(0.16,1,0.3,1)",
     }}
   >
     <img src={DOOGIE.head} alt="Doogie welcomes you"
       data-testid="dash-first-visit-doogie"
-      style={{ width: 64, height: 64, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))" }}/>
+      style={{
+        width: 72, height: 72, flexShrink: 0, objectFit: "contain",
+        filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))",
+      }}/>
     <div style={{ minWidth: 0 }}>
       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 800, color: C.navy, marginBottom: 4 }}>
         Woof! I'm Doogie 🐾
       </div>
       <div style={{ fontSize: 12, lineHeight: 1.5, color: C.ink }}>
-        Tap any of the <strong>10 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the bubble in the bottom-right.
+        Tap any of the <strong>10 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the chat bubble in the sidebar.
       </div>
-      <button onClick={onDismiss} data-testid="dash-first-visit-dismiss" style={{
-        marginTop: 10, background: C.blue, color: "#fff", border: "none",
-        padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-      }}>Got it — let's explore</button>
+      <button
+        onClick={() => { onDismiss(); if (setSection) setSection("community"); }}
+        data-testid="dash-first-visit-dismiss"
+        style={{
+          marginTop: 10, background: C.blue, color: "#fff", border: "none",
+          padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+        }}>Got it — let's explore</button>
     </div>
     <style>{`@keyframes toast-slide { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }`}</style>
   </div>
@@ -320,11 +316,23 @@ const SearchPanel = () => {
           </div>
           <iframe
             title="BC listings map"
-            src={`https://www.google.com/maps?q=${encodeURIComponent((city || "British Columbia") + ", Canada real estate")}&z=10&output=embed`}
+            src={`https://www.google.com/maps?q=${encodeURIComponent(
+              city
+                ? `${city}, British Columbia real estate`
+                : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC"
+            )}&z=${city ? 11 : 14}&output=embed`}
             style={{ width: "100%", height: 260, border: 0, borderRadius: 8 }}
             loading="lazy"
             data-testid="dash-search-map"
           />
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
+            <a
+              href="https://www.google.com/maps?q=Doug+LeMaire+REALTOR,+22374+Lougheed+Hwy,+Maple+Ridge+BC"
+              target="_blank" rel="noopener noreferrer"
+              style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
+              data-testid="dash-search-map-open"
+            >Open in Maps ↗</a>
+          </div>
         </div>
         <ResultsGrid results={results} loading={loading}/>
       </div>
@@ -450,6 +458,67 @@ const useInsights = (city) => {
   return data;
 };
 
+// 90-day median-list-price history (real daily snapshots)
+const useInsightsHistory = (city, propType) => {
+  const [series, setSeries] = useState(null);
+  useEffect(() => {
+    if (!city) return;
+    let cancelled = false;
+    setSeries(null);
+    (async () => {
+      try {
+        const p = new URLSearchParams({ city, weeks: "12" });
+        if (propType) p.set("property_type", propType);
+        const r = await fetch(`${API}/insights/history?${p}`);
+        if (r.ok && !cancelled) {
+          const d = await r.json();
+          setSeries(Array.isArray(d.series) ? d.series : []);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [city, propType]);
+  return series;
+};
+
+// Simple SVG sparkline that gracefully explains itself when there's <2 points
+const Sparkline = ({ series }) => {
+  if (!series) return <div style={{ height: 60, background: C.mist, borderRadius: 8 }}/>;
+  if (series.length < 2) {
+    return (
+      <div style={{
+        height: 60, background: C.mist, borderRadius: 8, display: "flex",
+        alignItems: "center", justifyContent: "center", color: C.muted,
+        fontSize: 11, fontStyle: "italic", padding: "0 16px", textAlign: "center",
+      }}>
+        Trend chart populates as new daily snapshots land ({series.length}/12 weeks captured so far).
+      </div>
+    );
+  }
+  const vals = series.map(s => s.median_list_price);
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const range = Math.max(hi - lo, 1);
+  const W = 320, H = 60;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * W;
+    const y = H - ((v - lo) / range) * H;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const area = `0,${H} ${pts} ${W},${H}`;
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="spg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={C.blue} stopOpacity="0.4"/>
+          <stop offset="100%" stopColor={C.blue} stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill="url(#spg)"/>
+      <polyline points={pts} fill="none" stroke={C.blue} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+};
+
 const BuyerInsightsPanel = () => <InsightsPanel role="buyer"/>;
 const SellerInsightsPanel = () => <InsightsPanel role="seller"/>;
 
@@ -457,6 +526,7 @@ const InsightsPanel = ({ role }) => {
   const [city, setCity] = useState("Vancouver");
   const [propType, setPropType] = useState("");
   const data = useInsights(city);
+  const history = useInsightsHistory(city, propType);
   const [comps, setComps] = useState(null);
   useEffect(() => {
     if (role !== "seller" || !city) return;
@@ -555,6 +625,18 @@ const InsightsPanel = ({ role }) => {
                   <div style={{ fontSize: 10, color: C.muted, marginTop: 6, fontStyle: "italic" }}>Source: CREA DDF® · in the last 4 hours</div>
                 </div>
               ))}
+            </div>
+            {/* 90-day median list price sparkline — real weekly snapshots */}
+            <div style={{ marginTop: 20 }} data-testid="dash-insights-sparkline">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.blue }}>
+                  90-day median list price trend
+                </div>
+                <div style={{ fontSize: 10, color: C.muted, fontStyle: "italic" }}>
+                  Real daily snapshots · never a forecast
+                </div>
+              </div>
+              <Sparkline series={history}/>
             </div>
           </section>
 

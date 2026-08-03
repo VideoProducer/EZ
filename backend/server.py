@@ -5334,6 +5334,33 @@ async def startup():
     # First run 24 h after boot so redeploy-storms don't spam the mailbox
     asyncio.create_task(asyncio.sleep(24 * 3600)).add_done_callback(lambda _: asyncio.create_task(_evidence_chain_loop()))
 
+    # ── Insights history snapshot ─────────────────────────────────────────
+    # Every 24 h, take a real median-list-price snapshot per (city, property_type)
+    # and append to `insights_history`. The `/api/insights/history` endpoint
+    # reads back the last 12 weeks so Buyer Insights can render a real sparkline
+    # instead of a fabricated trend. Only touches an ~80-row list of BC cities
+    # (light query load).
+    async def _insights_history_loop():
+        import asyncio as _a
+        # Wait for DDF sync to finish before first run
+        await _a.sleep(30 * 60)
+        # Ensure a helpful index for range reads
+        try:
+            await db.insights_history.create_index([
+                ("city", 1), ("property_type", 1), ("snapshot_at", -1),
+            ])
+        except Exception:
+            pass
+        while True:
+            try:
+                await _snapshot_insights_history()
+            except Exception as e:
+                logger.error(f"insights_history snapshot failed: {e}")
+            await _a.sleep(24 * 3600)  # daily
+    asyncio.create_task(_insights_history_loop())
+
+
+
     # =============== DRIP CAMPAIGN SCHEDULERS ===============
     # buyer_digest      → Sundays (weekly)
     # welcome_series    → Daily scan (users hit Day 0/3/7 stages)
@@ -10306,54 +10333,97 @@ async def doogie_tools_spec():
 
 # ── Insights trend endpoint ────────────────────────────────────────────────
 # Powers the 90-day median-list-price sparkline in Buyer/Seller Insights cards.
-# Buckets active CREA DDF® listings for a given city into 12 weekly slots by
-# `list_date`, returning the median list price per week. Real numbers, no
-# fabrication.
+# Backed by the daily `_snapshot_insights_history` cron that writes one row per
+# (city, property_type) per day into `insights_history`. Real numbers, no fabrication.
 
-@app.get("/api/insights/trend", tags=["Insights"])
-async def insights_trend(city: str, weeks: int = 12, property_type: str | None = None):
+BC_INSIGHTS_CITIES = [
+    "Vancouver", "Burnaby", "Richmond", "Surrey", "Delta", "New Westminster",
+    "Coquitlam", "Port Coquitlam", "Port Moody", "North Vancouver", "West Vancouver",
+    "Maple Ridge", "Pitt Meadows", "Langley", "White Rock", "Abbotsford",
+    "Chilliwack", "Mission", "Squamish", "Whistler", "Kelowna", "Vernon",
+    "Penticton", "Kamloops", "Nanaimo", "Victoria", "Prince George",
+    "Osoyoos", "Sechelt", "Salt Spring Island",
+]
+
+INSIGHTS_PROPERTY_TYPES = ["", "House", "Apartment", "Townhouse"]
+
+
+async def _snapshot_insights_history():
+    """Iterates BC cities × property types and inserts one snapshot row per
+    (city, property_type) into `insights_history` with today's UTC midnight
+    as the snapshot key. Idempotent: an existing row for today is upserted."""
+    from statistics import median as _median
+    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    wrote = 0
+    for city in BC_INSIGHTS_CITIES:
+        for ptype in INSIGHTS_PROPERTY_TYPES:
+            q = {"status": "Active", "city": {"$regex": f"^{re.escape(city)}$", "$options": "i"}, "list_price": {"$gt": 0}}
+            if ptype:
+                q["property_type"] = {"$regex": f"^{re.escape(ptype)}$", "$options": "i"}
+            prices = []
+            async for l in db.listings.find(q, {"list_price": 1, "_id": 0}):
+                p = l.get("list_price")
+                if p and p > 0:
+                    prices.append(p)
+            if not prices:
+                continue
+            row = {
+                "city": city,
+                "property_type": ptype or None,
+                "snapshot_at": now,
+                "week_key": now.isocalendar()[1],
+                "active_count": len(prices),
+                "median_list_price": _median(prices),
+                "avg_list_price": sum(prices) / len(prices),
+                "min_price": min(prices),
+                "max_price": max(prices),
+            }
+            await db.insights_history.update_one(
+                {"city": row["city"], "property_type": row["property_type"], "snapshot_at": now},
+                {"$set": row},
+                upsert=True,
+            )
+            wrote += 1
+    logger.info(f"insights_history snapshot: wrote {wrote} rows for {now.isoformat()}")
+    return wrote
+
+
+@app.get("/api/insights/history", tags=["Insights"])
+async def insights_history(city: str, weeks: int = 12, property_type: str | None = None):
     if not city or len(city.strip()) < 2:
         raise HTTPException(status_code=400, detail="city is required")
     weeks = max(4, min(int(weeks or 12), 26))
-    now = datetime.now(timezone.utc)
-    since = now - timedelta(weeks=weeks)
-    match = {
-        "status": "Active",
+    since = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    query = {
         "city": {"$regex": f"^{re.escape(city.strip())}$", "$options": "i"},
-        "list_price": {"$gt": 0},
-        "list_date": {"$gte": since},
+        "property_type": property_type if property_type else None,
+        "snapshot_at": {"$gte": since},
     }
-    if property_type:
-        match["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
-    pipeline = [
-        {"$match": match},
-        {"$group": {
-            "_id": {"$dateTrunc": {"date": "$list_date", "unit": "week", "startOfWeek": "monday"}},
-            "prices": {"$push": "$list_price"},
-            "count":  {"$sum": 1},
-        }},
-        {"$sort": {"_id": 1}},
-    ]
-    buckets = []
-    async for row in db.listings.aggregate(pipeline):
-        prices = sorted(row.get("prices") or [])
-        if not prices:
-            continue
-        mid = len(prices) // 2
-        median = prices[mid] if len(prices) % 2 == 1 else (prices[mid - 1] + prices[mid]) / 2
-        buckets.append({
-            "week_of": row["_id"].isoformat() if row.get("_id") else None,
-            "median_list_price": median,
-            "count": row.get("count", 0),
+    series = []
+    async for row in db.insights_history.find(query, {"_id": 0}).sort("snapshot_at", 1):
+        series.append({
+            "at": row.get("snapshot_at").isoformat() if row.get("snapshot_at") else None,
+            "median_list_price": row.get("median_list_price"),
+            "avg_list_price": row.get("avg_list_price"),
+            "active_count": row.get("active_count"),
         })
     return {
         "city": city,
         "property_type": property_type,
         "weeks": weeks,
-        "series": buckets,
-        "source": "CREA DDF®",
+        "count": len(series),
+        "series": series,
+        "source": "CREA DDF® · EZtoFind.ca daily snapshot",
         "compliance": "Historical median list prices only — never a forecast or opinion of value.",
     }
+
+
+@app.post("/api/admin/insights/snapshot", tags=["Insights"])
+async def admin_insights_snapshot(_=Depends(verify_admin)):
+    """Admin one-shot: fires the same snapshot the daily cron does. Handy for
+    priming the collection right after deploy so the sparkline has a data point."""
+    n = await _snapshot_insights_history()
+    return {"success": True, "rows_written": n}
 
 
 
