@@ -669,7 +669,7 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
 };
 
 // Real BC imagery (Unsplash, free-to-use)
-const IMG = {
+export const IMG = {
   vancouver: "https://images.unsplash.com/photo-1559511260-66a654ae982a?w=1200&q=80",
   fraserValley: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/gs9v7w9f_EZ%20Fraser%20Valley.webp",
   seaToSky: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/kdomoatd_EZ%20Sea%20to%20Sky.webp",
@@ -1476,7 +1476,7 @@ const WSYL_QUESTIONS = [
   ]},
 ];
 
-const WhereShouldYouLive = () => {
+export const WhereShouldYouLive = () => {
   const [step, setStep] = useState(-1); // -1 = intro, 0..4 = questions, 5 = results
   const [answers, setAnswers] = useState({lifestyle:null, home_type:null, budget:null, matters:[], region:null});
   const [loading, setLoading] = useState(false);
@@ -6185,7 +6185,7 @@ const PTTCalculator = () => {
   );
 };
 
-const Calculators = () => (
+export const Calculators = () => (
   <section className="section"><div className="container-x" style={{maxWidth:"52rem"}}>
     <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
       <h2 style={{fontFamily:"'Source Sans 3', 'Inter', sans-serif",fontWeight:700,fontSize:"clamp(2rem, 3.5vw, 3rem)",lineHeight:1.1,margin:"0 0 1rem",color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>

@@ -13,6 +13,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { IMG, WhereShouldYouLive, Calculators } from "../App";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
@@ -123,9 +124,11 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     }}>
       <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)}/>
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        <HomeComplianceBanner/>
         <TopBar section={section} homeVariant={homeVariant}/>
         <main style={{ padding: "24px 32px", flex: 1, overflowX: "hidden" }}>
           <Panel section={section} setSection={setSection} homeVariant={homeVariant} onAsk={() => setAskOpen(true)}/>
+          {section === "search" && <HomeExtras/>}
         </main>
         <ComplianceFooter/>
       </div>
@@ -1608,6 +1611,146 @@ const AskDoogieDrawer = ({ open, onClose }) => {
 };
 
 // ── Compliance footer ──────────────────────────────────────────────────────
+
+// ── HomeComplianceBanner — thin cream banner sticky at the very top of the
+//   homepage. Matches the classic-home compliance strip and keeps the BCFSA
+//   "not-advice" educational disclaimer front-and-centre before the user
+//   engages with any card. Same wording as the production /classic-home.
+const HomeComplianceBanner = () => (
+  <div data-testid="dash-home-compliance-banner" style={{
+    background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
+    padding: "10px 32px", fontFamily: "'Inter', system-ui, sans-serif",
+    color: C.ink, fontSize: 12.5, lineHeight: 1.5, textAlign: "center",
+  }}>
+    <strong style={{ color: C.navy }}>EZtoFind.ca</strong> provides general educational information about BC real estate — <em>not</em> legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.
+  </div>
+);
+
+// ── HomeExtras — the five classic-home cards Doug wants preserved on the
+//   dashboard homepage in their original order and card layout:
+//   (1) Focus regions   (2) Community Finder quiz   (3) Affordability
+//   calculator   (4) Testimonials + credentials strip.
+//   The compliance banner is rendered separately as a sticky strip above
+//   the top bar (HomeComplianceBanner) so it doesn't scroll away.
+const HomeExtras = () => {
+  const wrap = { marginTop: 32 };
+  const cardShell = {
+    background: "#fff", borderRadius: 16, border: "1px solid #E5E7EB",
+    padding: "36px 32px", marginBottom: 22,
+    boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+  };
+  const sectionEyebrow = {
+    display: "block", textAlign: "center", color: C.brandGold,
+    fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 2,
+    marginBottom: 10,
+  };
+  const sectionTitle = {
+    textAlign: "center", fontFamily: "'Playfair Display', serif",
+    fontSize: "clamp(24px, 3vw, 34px)", color: C.navy, margin: "0 0 12px",
+    fontWeight: 800, lineHeight: 1.15,
+  };
+  const sectionSub = {
+    textAlign: "center", color: C.muted, fontSize: 14, lineHeight: 1.6,
+    margin: "0 auto 28px", maxWidth: 620,
+  };
+  const regions = [
+    { slug: "greater-vancouver", title: "Greater Vancouver",   img: IMG.vancouver,     desc: "From downtown highrises to West Van estates — 22 communities covered." },
+    { slug: "fraser-valley",     title: "Fraser Valley",       img: IMG.fraserValley,  desc: "Langley, Abbotsford, Chilliwack and beyond — where space meets city convenience." },
+    { slug: "sea-to-sky",        title: "Sea-to-Sky",          img: IMG.seaToSky,      desc: "Squamish, Whistler, Pemberton — mountain lifestyle real estate." },
+  ];
+  const testimonials = [
+    {
+      stars: 5, initials: "JM", name: "J&M", role: "Buyers",
+      quote: "Doug was an absolute pleasure to work with! As a buyer, we truly appreciated his patience, professionalism, and thorough approach throughout the entire process. Doug took the time to understand our needs, provided valuable insights, and guided us every step of the way with clear communication and expert advice. Doug's attention to detail and dedication made the experience smooth and stress-free. We couldn't have asked for a better realtor and highly recommend Doug to anyone looking to buy or sell a home!",
+    },
+    {
+      stars: 5, initials: "MC", name: "M.C.", role: "Seller",
+      quote: "As a home seller, deciding which agent to work with can seem daunting. There are so many agents that sound great on paper, but will they truly understand YOUR needs and work to fulfill YOUR goals. Doug LeMaire is a real estate agent of an elite caliber who truly cares about his clients and will not stop until YOU are satisfied. Doug sold my home as an off sale listing, demonstrating to me that he never stopped working on my behalf, even when the home was not actually listed for sale. He did so by establishing strong connections with buyer agents and got the sale done. We are now looking to buy a home and will be using Doug for our next move. Thank you Doug for all your help.",
+    },
+  ];
+  const credentialStrip = [
+    { icon: "🛡️", label: "Licensed REALTOR®",  sub: "BCFSA License #167790" },
+    { icon: "📍", label: "Local Expert",       sub: "Greater Vancouver, Fraser Valley, Sea to Sky Corridor" },
+    { icon: "⏱️", label: "13 Years",           sub: "BC Real Estate Experience" },
+  ];
+  return (
+    <div style={wrap} data-testid="dash-home-extras">
+      {/* 1. Focus regions */}
+      <section style={cardShell} data-testid="dash-home-regions">
+        <p style={sectionSub}>
+          Doug LeMaire serves clients across three of British Columbia's most desirable real estate corridors.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+          {regions.map(r => (
+            <Link key={r.slug} to={`/regions/${r.slug}`} data-testid={`dash-home-region-${r.slug}`}
+              style={{
+                background: "#FBFAF5", border: "1px solid #E5E7EB", borderRadius: 14,
+                overflow: "hidden", textDecoration: "none", color: C.navy,
+                display: "flex", flexDirection: "column",
+              }}>
+              <div style={{
+                height: 200, background: `url(${r.img}) center/cover`, borderRadius: "14px 14px 0 0",
+              }}/>
+              <div style={{ padding: "18px 20px 22px" }}>
+                <h3 style={{ margin: "0 0 8px", fontFamily: "'Playfair Display', serif", fontSize: 22, color: C.navy, fontWeight: 800 }}>{r.title}</h3>
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: C.muted }}>{r.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 2. Community Finder quiz — reused verbatim from classic home */}
+      <section style={{ ...cardShell, padding: "8px 8px 20px", overflow: "hidden" }} data-testid="dash-home-community-finder">
+        <WhereShouldYouLive/>
+      </section>
+
+      {/* 3. Affordability calculator — reused verbatim from classic home */}
+      <section style={{ ...cardShell, padding: "36px 24px" }} data-testid="dash-home-afford">
+        <Calculators/>
+      </section>
+
+      {/* 4. Testimonials + credentials strip */}
+      <section style={cardShell} data-testid="dash-home-testimonials">
+        <span style={sectionEyebrow}>What Our Clients Say</span>
+        <h2 style={sectionTitle}>Real People. Real Results.<br/>Real BC Real Estate.</h2>
+        <p style={sectionSub}>
+          Doug LeMaire, REALTOR® helps buyers and sellers in BC achieve their real estate goals. Here is what they say.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 22, maxWidth: 1000, margin: "0 auto" }}>
+          {testimonials.map((t, i) => (
+            <div key={i} data-testid={`dash-home-testimonial-${i}`} style={{
+              background: "#E8EEF9", borderRadius: 20, padding: "26px 26px 22px",
+              position: "relative",
+            }}>
+              <div style={{ color: C.brandGold, letterSpacing: 3, fontSize: 15, marginBottom: 10 }}>{"★".repeat(t.stars)}</div>
+              <div style={{ fontSize: 42, fontFamily: "'Playfair Display', serif", color: C.brandBlue, lineHeight: 0.6, marginBottom: 4 }}>&ldquo;</div>
+              <p style={{ margin: "0 0 22px", fontSize: 13.5, fontStyle: "italic", lineHeight: 1.6, color: C.ink }}>{t.quote}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.navy, color: "#fff", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 13 }}>{t.initials}</div>
+                <div>
+                  <div style={{ fontWeight: 700, color: C.ink }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{t.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 40, flexWrap: "wrap", textAlign: "center" }}>
+          {credentialStrip.map((c, i) => (
+            <div key={i} data-testid={`dash-home-cred-${i}`} style={{ minWidth: 200 }}>
+              <div style={{ fontSize: 22, marginBottom: 4 }}>{c.icon}</div>
+              <div style={{ fontWeight: 800, color: C.navy, fontSize: 15, marginBottom: 4 }}>{c.label}</div>
+              <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.4, maxWidth: 220, margin: "0 auto" }}>{c.sub}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+
 const ComplianceFooter = () => (
   <footer data-testid="dash-compliance-footer" style={{
     background: C.navy, color: "#fff", padding: "18px 32px", fontSize: 11, lineHeight: 1.6,
