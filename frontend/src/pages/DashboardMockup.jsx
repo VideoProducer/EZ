@@ -546,22 +546,46 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
       {/* Doug's Specialties — Luxury / Equestrian */}
       <div style={tile} data-testid="dash-home-specialties">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
-          {[
-            { slug: "luxury",     title: "Luxury Real Estate",   sub: "Waterfront estates, mountain chalets, custom acreages", emoji: "💎" },
-            { slug: "equestrian", title: "Equestrian & Acreage", sub: "Horse properties, hobby farms, ALR-aware rep",          emoji: "🐴" },
-          ].map(s => (
-            <Link key={s.slug} to={`/specialties/${s.slug}`}
-              data-testid={`dash-home-specialty-${s.slug}`}
-              style={{
-                background: "#FBFAF5", border: "1px solid #E5E7EB", borderRadius: 10,
-                padding: "14px 14px", textDecoration: "none", color: C.navy,
-                display: "flex", flexDirection: "column", gap: 6,
-              }}>
-              <div style={{ fontSize: 22 }}>{s.emoji}</div>
-              <div style={{ fontWeight: 800, fontSize: 13, color: C.navy }}>{s.title}</div>
-              <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>{s.sub}</div>
-            </Link>
-          ))}
+          <Link to="/specialties/luxury"
+            data-testid="dash-home-specialty-luxury"
+            style={{
+              position: "relative", borderRadius: 10, overflow: "hidden",
+              minHeight: 190, textDecoration: "none", color: "#fff",
+              backgroundImage: "url(/specialties/luxury.png)",
+              backgroundSize: "cover", backgroundPosition: "center",
+              display: "flex", flexDirection: "column", justifyContent: "flex-end",
+              padding: 0,
+            }}>
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.75) 75%, rgba(15,42,91,0.90) 100%)",
+            }}/>
+            <div style={{ position: "relative", padding: "16px 18px 18px" }}>
+              <div style={{ fontSize: 22 }}>💎</div>
+              <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>Luxury Real Estate</div>
+              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4, lineHeight: 1.4 }}>Waterfront estates, mountain chalets, custom acreages</div>
+            </div>
+          </Link>
+          <Link to="/specialties/equestrian"
+            data-testid="dash-home-specialty-equestrian"
+            style={{
+              position: "relative", borderRadius: 10, overflow: "hidden",
+              minHeight: 190, textDecoration: "none", color: "#fff",
+              backgroundImage: "url(/specialties/equestrian.png)",
+              backgroundSize: "cover", backgroundPosition: "center",
+              display: "flex", flexDirection: "column", justifyContent: "flex-end",
+              padding: 0,
+            }}>
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.75) 75%, rgba(15,42,91,0.90) 100%)",
+            }}/>
+            <div style={{ position: "relative", padding: "16px 18px 18px" }}>
+              <div style={{ fontSize: 22 }}>🐴</div>
+              <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>Equestrian & Acreage</div>
+              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4, lineHeight: 1.4 }}>Horse properties, hobby farms</div>
+            </div>
+          </Link>
         </div>
       </div>
 
