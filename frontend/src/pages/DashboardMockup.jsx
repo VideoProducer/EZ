@@ -391,6 +391,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
   const [city, setCity] = useState("Vancouver");
   const [propType, setPropType] = useState("");
   const insights = useInsights(city, propType);
+  const history = useInsightsHistory(city, propType);
   const [latest, setLatest] = useState(null);
   const [savedCount, setSavedCount] = useState(0);
   const [regions, setRegions] = useState(null);
@@ -497,6 +498,14 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
               </>
             ) : <SkeletonGrid/>}
           </div>
+          {/* 90-day median list price sparkline (same source as Buyer Insights) */}
+          <div style={{ marginTop: 14 }} data-testid="dash-home-buyer-sparkline">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: C.blue }}>90-day median list price trend</span>
+              <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>Real daily snapshots</span>
+            </div>
+            <Sparkline series={history}/>
+          </div>
         </div>
         <div style={tile} data-testid="dash-home-seller-tile">
           <div style={tileHeader}>
@@ -511,6 +520,13 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
                 {kpi("Price range", `${fmtM(insights.min_price)}–${fmtM(insights.max_price)}`, "actives")}
               </>
             ) : <SkeletonGrid/>}
+          </div>
+          <div style={{ marginTop: 14 }} data-testid="dash-home-seller-sparkline">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: C.blue }}>90-day median list price trend</span>
+              <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>Real daily snapshots</span>
+            </div>
+            <Sparkline series={history}/>
           </div>
         </div>
       </div>
