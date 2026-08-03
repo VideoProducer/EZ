@@ -187,19 +187,27 @@ const Sidebar = ({ section, setSection, onAsk }) => (
       padding: "0 0 20px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 14,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 12, padding: "10px 14px",
+        background: "#fff", borderRadius: 12, padding: "10px 12px",
         display: "flex", alignItems: "center", gap: 10,
         boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
       }}>
-        <div style={{
-          width: 34, height: 34, background: C.brandGold, borderRadius: "50%",
-          display: "grid", placeItems: "center", fontSize: 18, color: C.brandBlue, fontWeight: 900, flexShrink: 0,
-        }}>🐾</div>
-        <div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
+        <img
+          src="/doug-headshot.jpg"
+          alt="Doug LeMaire — REALTOR®"
+          data-testid="dash-brand-headshot"
+          style={{
+            width: 46, height: 46, borderRadius: "50%", objectFit: "cover",
+            objectPosition: "center top", flexShrink: 0,
+            border: `2px solid ${C.brandGold}`,
+          }}
+          onError={e => { e.currentTarget.style.display = "none"; }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>
             <span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
           </div>
-          <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>Real estate, made EZ to Find.ca</div>
+          <div style={{ fontSize: 10, color: C.navy, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>Doug LeMaire · REALTOR®</div>
+          <div style={{ fontSize: 9, color: C.muted, marginTop: 2, lineHeight: 1.2 }}>Fraser Property Management Realty Services Ltd</div>
         </div>
       </div>
     </Link>
