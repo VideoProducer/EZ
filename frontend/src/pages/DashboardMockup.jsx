@@ -2138,6 +2138,13 @@ const DashboardBackHomeBar = () => {
         padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
         textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
       }}>🏠 Home</Link>
+      <Link to="/realtor-network" data-testid="dash-btn-realtor-network" style={{
+        marginLeft: "auto",
+        color: C.gold, background: C.navy,
+        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 800,
+        textDecoration: "none", display: "inline-flex", alignItems: "center",
+        letterSpacing: 0.3,
+      }}>REALTOR® Network</Link>
     </div>
   );
 };
