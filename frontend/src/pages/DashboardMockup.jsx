@@ -95,7 +95,7 @@ const HeroIntro = () => (
   </section>
 );
 
-export default function DashboardMockup() {
+export default function DashboardMockup({ homeVariant = "search" }) {
   const [section, setSection] = useState("search");
   const [askOpen, setAskOpen] = useState(false);
   // First-visit sidebar toast — appears once, dismissible, remembers via localStorage
@@ -120,9 +120,9 @@ export default function DashboardMockup() {
     }}>
       <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)}/>
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-        <TopBar section={section}/>
+        <TopBar section={section} homeVariant={homeVariant}/>
         <main style={{ padding: "24px 32px", flex: 1, overflowX: "hidden" }}>
-          <Panel section={section} setSection={setSection}/>
+          <Panel section={section} setSection={setSection} homeVariant={homeVariant} onAsk={() => setAskOpen(true)}/>
         </main>
         <ComplianceFooter/>
       </div>
@@ -214,8 +214,13 @@ const Sidebar = ({ section, setSection, onAsk }) => (
 );
 
 // ── Top bar ────────────────────────────────────────────────────────────────
-const TopBar = ({ section }) => {
+const TopBar = ({ section, homeVariant }) => {
   const meta = SECTIONS.find(s => s.key === section) || { label: "Dashboard" };
+  const isDashHome = section === "search" && homeVariant === "dashboard";
+  const title = isDashHome ? "Dashboard" : meta.label;
+  const sub = isDashHome
+    ? "Your BC market at a glance — live CREA DDF® signals · updated every 4 hours."
+    : "Data sourced from CREA DDF® · Doogie provides general information only, never advice.";
   return (
     <header style={{
       background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "16px 32px",
@@ -224,10 +229,8 @@ const TopBar = ({ section }) => {
       <div>
         <h1 style={{
           fontFamily: "'Playfair Display', serif", fontSize: 24, margin: 0, color: C.navy,
-        }} data-testid="dash-section-title">{meta.label}</h1>
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-          Data sourced from CREA DDF® · Doogie provides general information only, never advice.
-        </div>
+        }} data-testid="dash-section-title">{title}</h1>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <div style={{
@@ -241,9 +244,11 @@ const TopBar = ({ section }) => {
 const CheckDot = () => <span style={{ display: "inline-block", width: 7, height: 7, background: "#22C55E", borderRadius: "50%", marginRight: 6 }}/>;
 
 // ── Panel Router ───────────────────────────────────────────────────────────
-const Panel = ({ section, setSection }) => {
+const Panel = ({ section, setSection, homeVariant, onAsk }) => {
   switch (section) {
-    case "search":    return <SearchPanel/>;
+    case "search":    return homeVariant === "dashboard"
+                            ? <DashboardHomeTiles setSection={setSection} onAsk={onAsk}/>
+                            : <SearchPanel/>;
     case "foryou":    return <ForYouPanel/>;
     case "saved":     return <SavedPanel/>;
     case "buyer":     return <BuyerInsightsPanel/>;
@@ -257,6 +262,267 @@ const Panel = ({ section, setSection }) => {
 };
 
 // ── Search Panel ───────────────────────────────────────────────────────────
+// ── Dashboard Home Tiles (preview variant) ─────────────────────────────────
+// Alternate landing view that swaps the yellow Doogie hero + massive listings
+// grid for a SaaS-style tile dashboard: live buyer/seller KPIs for Vancouver,
+// a Communities pulse strip, a compact Doogie prompt card, the 6 newest CREA
+// DDF® listings, and quick tiles to Saved Homes / Virtual Tours. Available
+// at `/preview-dashboard` for side-by-side review with the current homepage.
+const DashboardHomeTiles = ({ setSection, onAsk }) => {
+  const nav = useNavigate();
+  const [city, setCity] = useState("Vancouver");
+  const insights = useInsights(city);
+  const [latest, setLatest] = useState(null);
+  const [savedCount, setSavedCount] = useState(0);
+  const [regions, setRegions] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/listings?limit=6&sort=newest`);
+        if (r.ok && !cancelled) setLatest(await r.json());
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${API}/communities`);
+        const d = await r.json();
+        setRegions(d && typeof d === "object" ? d : {});
+      } catch { setRegions({}); }
+    })();
+  }, []);
+  useEffect(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]");
+      setSavedCount(list.length);
+    } catch {}
+  }, []);
+
+  const fmtM = (n) => !n ? "—" : (n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : (n >= 1e3 ? `$${(n/1e3).toFixed(0)}K` : `$${Math.round(n).toLocaleString()}`));
+
+  const featuredCommunities = useMemo(() => {
+    if (!regions) return [];
+    const focus = ["Vancouver","Burnaby","Richmond","Surrey","Coquitlam","Maple Ridge","Squamish","Whistler"];
+    const all = Object.entries(regions).flatMap(([region, names]) =>
+      (names || []).map(n => ({ name: n, region })));
+    const picks = focus
+      .map(n => all.find(c => c.name.toLowerCase() === n.toLowerCase()))
+      .filter(Boolean);
+    return picks.length ? picks : all.slice(0, 8);
+  }, [regions]);
+
+  const slugify = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const tile = {
+    background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
+    padding: 18, boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+  };
+  const tileHeader = {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    marginBottom: 14, gap: 10,
+  };
+  const tileTitle = {
+    fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 800, color: C.navy, margin: 0,
+  };
+  const linkAction = {
+    color: C.blue, fontWeight: 700, fontSize: 12, textDecoration: "none",
+    display: "inline-flex", alignItems: "center", gap: 4, cursor: "pointer", background: "none", border: "none", padding: 0,
+  };
+
+  const kpi = (label, value, sub) => (
+    <div style={{ background: C.mist, borderRadius: 10, padding: 12, flex: 1, minWidth: 120 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color: C.navy, marginTop: 4 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+
+  const rows = latest?.listings || [];
+
+  return (
+    <div data-testid="dash-home-tiles" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Welcome strip */}
+      <div style={{ ...tile, display: "grid", gridTemplateColumns: "88px 1fr auto", gap: 18, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
+        <img src={DOOGIE.head} alt="Doogie" style={{ width: 88, height: 88, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
+        <div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: C.navy, lineHeight: 1.1 }}>
+            <span style={{ color: C.green }}>Real estate,</span> made <span style={{ color: C.blue }}>EZ</span> <span style={{ color: C.gold }}>to Find</span>
+          </div>
+          <div style={{ fontSize: 13, color: C.ink, marginTop: 6, lineHeight: 1.5, maxWidth: 640 }}>
+            Live BC market signals from CREA DDF® — refreshed every 4 hours. General information only, never advice.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button data-testid="dash-home-cta-listings" onClick={() => nav("/listings")} style={{ ...btnPrimary, marginTop: 0 }}><Search size={14}/> Browse listings</button>
+          <button data-testid="dash-home-cta-ask" onClick={onAsk} style={{ ...btnGhost, marginTop: 0 }}><MessageCircle size={14}/> Ask Doogie</button>
+        </div>
+      </div>
+
+      {/* Buyer + Seller side-by-side */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={tile} data-testid="dash-home-buyer-tile">
+          <div style={tileHeader}>
+            <h3 style={tileTitle}>Buyer snapshot · {city}</h3>
+            <button style={linkAction} onClick={() => setSection("buyer")}>Full insights →</button>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {insights ? (
+              <>
+                {kpi("Active inventory", (insights.active_count || 0).toLocaleString(), "CREA DDF®")}
+                {kpi("Median list", fmtM(insights.median_list_price), `avg ${fmtM(insights.avg_list_price)}`)}
+                {kpi("Beds / baths", `${insights.avg_beds ?? "—"} / ${insights.avg_baths ?? "—"}`, "avg. across actives")}
+              </>
+            ) : <SkeletonGrid/>}
+          </div>
+        </div>
+        <div style={tile} data-testid="dash-home-seller-tile">
+          <div style={tileHeader}>
+            <h3 style={tileTitle}>Seller snapshot · {city}</h3>
+            <button style={linkAction} onClick={() => setSection("seller")}>Full insights →</button>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {insights ? (
+              <>
+                {kpi("Active comps", (insights.active_count || 0).toLocaleString(), "CREA DDF®")}
+                {kpi("Avg list", fmtM(insights.avg_list_price), `median ${fmtM(insights.median_list_price)}`)}
+                {kpi("Price range", `${fmtM(insights.min_price)}–${fmtM(insights.max_price)}`, "actives")}
+              </>
+            ) : <SkeletonGrid/>}
+          </div>
+        </div>
+      </div>
+
+      {/* City picker + Communities pulse */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={tile} data-testid="dash-home-city-picker">
+          <div style={tileHeader}>
+            <h3 style={tileTitle}>Change city</h3>
+            <span style={{ fontSize: 11, color: C.muted }}>Powers both snapshots ↑</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {["Vancouver","Burnaby","Surrey","Richmond","Coquitlam","Maple Ridge","Squamish","Whistler","Kelowna"].map(c => (
+              <button
+                key={c}
+                data-testid={`dash-home-city-${slugify(c)}`}
+                onClick={() => setCity(c)}
+                style={{
+                  padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  cursor: "pointer",
+                  background: city === c ? C.blue : "#fff",
+                  color: city === c ? "#fff" : C.navy,
+                  border: `1px solid ${city === c ? C.blue : "#DDE6FA"}`,
+                }}
+              >{c}</button>
+            ))}
+          </div>
+          <div style={{ marginTop: 14, fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
+            Or use the <button style={{ ...linkAction, display: "inline" }} onClick={() => setSection("community")}>Communities</button> section to explore all 240 BC communities.
+          </div>
+        </div>
+
+        <div style={tile} data-testid="dash-home-communities-tile">
+          <div style={tileHeader}>
+            <h3 style={tileTitle}>Featured BC communities</h3>
+            <button style={linkAction} onClick={() => setSection("community")}>See all 240 →</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+            {featuredCommunities.slice(0, 8).map(c => (
+              <Link key={c.name} to={`/community/${slugify(c.name)}`}
+                data-testid={`dash-home-community-${slugify(c.name)}`}
+                style={{
+                  background: C.mist, padding: "10px 12px", borderRadius: 10,
+                  textDecoration: "none", color: C.navy, display: "flex",
+                  justifyContent: "space-between", alignItems: "center",
+                  border: "1px solid #DDE6FA",
+                }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{c.name}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{c.region}</div>
+                </div>
+                <ChevronRight size={14} color={C.blue}/>
+              </Link>
+            ))}
+            {!featuredCommunities.length && <SkeletonGrid/>}
+          </div>
+        </div>
+      </div>
+
+      {/* Latest listings */}
+      <div style={tile} data-testid="dash-home-latest-tile">
+        <div style={tileHeader}>
+          <h3 style={tileTitle}>Newest on CREA DDF®</h3>
+          <Link to="/listings" style={linkAction}>Browse all {latest?.total?.toLocaleString?.() || ""} listings →</Link>
+        </div>
+        {!latest ? <SkeletonGrid/> : rows.length === 0 ? (
+          <EmptyBox>No new listings this hour — refresh in a bit.</EmptyBox>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+            {rows.slice(0, 6).map(l => <ListingCard key={l.listing_key} l={l}/>)}
+          </div>
+        )}
+      </div>
+
+      {/* Quick tiles row */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+        {[
+          { key: "saved",    label: "Saved Homes",    value: savedCount || "—", sub: "on this device", section: "saved",    icon: Heart },
+          { key: "foryou",   label: "For You",        value: "Personal picks",  sub: "based on saves",  section: "foryou",   icon: Sparkles },
+          { key: "tours",    label: "Virtual Tours",  value: "3D · Video",      sub: "Matterport / YT", section: "tours",    icon: Video },
+          { key: "consult",  label: "Book Doug",       value: "Free intro",      sub: "REALTOR® · BCFSA", section: "consult",  icon: CalendarClock },
+        ].map(q => {
+          const Ic = q.icon;
+          return (
+            <button
+              key={q.key}
+              onClick={() => setSection(q.section)}
+              data-testid={`dash-home-quick-${q.key}`}
+              style={{
+                ...tile, textAlign: "left", cursor: "pointer",
+                background: "#fff", display: "flex", flexDirection: "column", gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.blue }}>
+                <Ic size={16}/>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.muted }}>{q.label}</span>
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: C.navy }}>{q.value}</div>
+              <div style={{ fontSize: 11, color: C.muted }}>{q.sub}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Doogie prompt bar */}
+      <div style={{ ...tile, background: "linear-gradient(135deg, rgba(30,79,207,0.06), rgba(34,197,94,0.06))", borderColor: "rgba(30,79,207,0.25)" }} data-testid="dash-home-doogie-tile">
+        <div style={tileHeader}>
+          <h3 style={tileTitle}>Ask Doogie</h3>
+          <span style={{ fontSize: 11, color: C.muted }}>General info only · never advice</span>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {["What's the PTT on a $1.2M home?","Explain subject removal","Compare Vancouver vs Burnaby","How does the ALR work?"].map(prompt => (
+            <button
+              key={prompt}
+              onClick={onAsk}
+              data-testid={`dash-home-prompt-${slugify(prompt)}`}
+              style={{
+                background: "#fff", border: "1px solid #DDE6FA", padding: "8px 14px",
+                borderRadius: 999, fontSize: 12, fontWeight: 600, color: C.navy, cursor: "pointer",
+              }}
+            >{prompt}</button>
+          ))}
+          <button onClick={onAsk} style={{ ...btnPrimary, marginTop: 0, marginLeft: "auto" }} data-testid="dash-home-doogie-open">
+            <MessageCircle size={14}/> Open Ask Doogie
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SearchPanel = () => {
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
