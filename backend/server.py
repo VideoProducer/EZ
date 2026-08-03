@@ -82,6 +82,70 @@ else:
         return LlmChat(api_key=api_key, session_id=session_id, system_message=system_message)
     print(f"[LLM] Using Emergent Universal Key")
 
+
+# ── Doogie intent classifier ─────────────────────────────────────────────
+# Fast Haiku call that decides which knowledge base a user question maps to.
+# Returns a small dict: {intent: 'listings'|'glossary'|'communities'|
+# 'general'|'clarify', confidence: 0..1}. On any failure returns None so the
+# main chat endpoint can proceed unaffected.
+_CLASSIFIER_SYSTEM = (
+    "You are the routing classifier for a British Columbia real estate assistant "
+    "named Doogie. Read the user's single message and classify it into ONE intent "
+    "so the main assistant can pull from the right knowledge base.\n\n"
+    "Intents (choose exactly one):\n"
+    "  - 'listings'    : the user is looking for or asking about specific homes, "
+    "addresses, prices, beds/baths, MLS numbers, or search filters.\n"
+    "  - 'glossary'    : the user is asking what a BC real estate term or "
+    "acronym means (RESA, BCFSA, PTT, HBRP, strata, subject-free offer, etc.).\n"
+    "  - 'communities' : the user is asking about a specific BC city, neighbourhood, "
+    "region, schools, transit, walkability, or lifestyle in an area.\n"
+    "  - 'clarify'     : the message is too vague or too short to route confidently. "
+    "Use this when the message is 1-3 words with no clear noun.\n"
+    "  - 'general'     : the user is chatting, greeting, asking about Doug, asking "
+    "compliance/legal/tax questions, or anything else that doesn't fit above.\n\n"
+    "Confidence: a float 0..1 for how sure you are of the intent. Below 0.55 means "
+    "the main assistant will ask a clarifying question.\n\n"
+    "Output STRICT JSON on a single line, no prose, no code fences:\n"
+    "  {\"intent\": \"...\", \"confidence\": 0.0}\n"
+)
+
+
+async def _classify_doogie_intent(user_message: str, session_id: str) -> dict | None:
+    """Fast Haiku classifier. Non-fatal on failure — returns None."""
+    msg = (user_message or "").strip()
+    if not msg:
+        return None
+    try:
+        clf = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"clf-{session_id}",
+            system_message=_CLASSIFIER_SYSTEM,
+        ).with_model("anthropic", "claude-haiku-4-5-20251001")
+        buf = ""
+        async for ev in clf.stream_message(UserMessage(text=msg[:800])):
+            if isinstance(ev, TextDelta):
+                buf += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        # Extract the first JSON object even if the model wrapped it in prose.
+        m = re.search(r"\{[^{}]*\"intent\"[^{}]*\}", buf, re.DOTALL)
+        if not m:
+            return None
+        parsed = json.loads(m.group(0))
+        intent = str(parsed.get("intent") or "").strip().lower()
+        if intent not in ("listings", "glossary", "communities", "clarify", "general"):
+            return None
+        try:
+            conf = float(parsed.get("confidence") or 0.0)
+        except Exception:
+            conf = 0.0
+        conf = max(0.0, min(1.0, conf))
+        return {"intent": intent, "confidence": conf}
+    except Exception as e:
+        logger.warning(f"Haiku classifier error: {e}")
+        return None
+
+
 app = FastAPI(title="EZtoFind.ca API")
 api = APIRouter(prefix="/api")
 
@@ -726,6 +790,38 @@ async def doogie_chat(request: Request, body: ChatIn):
             )
     system_prompt = DOOGIE_SYSTEM + ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon if lang_addon else "")
 
+    # ── Doogie Routing v2 — fast Haiku intent classifier ─────────────────
+    # Before we hit the main model, ask Haiku 4.5 which knowledge base the
+    # question is really about (listings / glossary / communities / general
+    # / clarify). We use this to (a) emit an SSE `routing` event so the
+    # frontend can show a debug badge, and (b) append a soft routing hint to
+    # the system prompt so Sonnet stays anchored to the right KB. Classifier
+    # runs in ~200-400ms and is bypassed on cache hits.
+    routing_hint = ""
+    routing_meta = None
+    try:
+        routing_meta = await _classify_doogie_intent(body.message, session_id)
+        if routing_meta:
+            intent = routing_meta.get("intent") or "general"
+            confidence = float(routing_meta.get("confidence") or 0.0)
+            _hints = {
+                "listings":    "\n\nROUTING HINT: the user is asking about specific listings, addresses, prices, beds/baths, or search filters. Anchor your response to the CREA DDF® listing search flow — never invent a listing. If the question is about a listing's suitability or price fairness, refer them to Doug LeMaire, REALTOR® for advice.",
+                "glossary":    "\n\nROUTING HINT: the user is asking about a BC real estate term or concept. Anchor your response to the glossary knowledge (RESA, BCFSA, PTT, HBRP, strata, contingencies, etc.) and answer as general information only — no advice.",
+                "communities": "\n\nROUTING HINT: the user is asking about a BC community, neighbourhood, or region. Anchor your response to community-level facts (schools, transit, walkability) and route to the /community/:slug page if a specific city is named.",
+                "clarify":     "\n\nROUTING HINT: the user's question is ambiguous. Ask ONE clarifying question before answering, and keep it under 12 words.",
+                "general":     "",
+            }
+            routing_hint = _hints.get(intent, "")
+            if confidence < 0.55 and intent not in ("clarify", "general"):
+                # Low confidence — bias toward clarification instead of guessing.
+                routing_hint = _hints["clarify"]
+                routing_meta["intent"] = "clarify"
+                routing_meta["low_confidence_original"] = intent
+    except Exception as e:
+        logger.warning(f"Doogie intent classifier failed for {session_id}: {e}")
+
+    system_prompt = system_prompt + routing_hint
+
     await db.chat_messages.insert_one({
         "session_id": session_id, "role": "user",
         "content": redacted_msg,  # only redacted stored
@@ -782,6 +878,10 @@ async def doogie_chat(request: Request, body: ChatIn):
     async def gen():
         full = ""
         try:
+            # Emit routing metadata FIRST so the frontend can show a small
+            # badge (behind ?debug=1) while the main response streams in.
+            if routing_meta:
+                yield f"data: {json.dumps({'routing': routing_meta})}\n\n"
             # Send ORIGINAL (unredacted) to Claude so the AI can respond naturally
             async for ev in chat.stream_message(UserMessage(text=body.message)):
                 if isinstance(ev, TextDelta):

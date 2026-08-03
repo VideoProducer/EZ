@@ -52,6 +52,7 @@ const C = {
 };
 
 const SECTIONS = [
+  { key: "home",      label: "Home",           icon: HomeIcon, hideWhen: "search" },
   { key: "search",    label: "Search",         icon: Search },
   { key: "foryou",    label: "For You",        icon: Sparkles },
   { key: "saved",     label: "Saved Homes",    icon: Heart },
@@ -107,7 +108,10 @@ const HeroIntro = () => (
 const SearchFiltersContext = createContext(null);
 
 export default function DashboardMockup({ homeVariant = "search" }) {
-  const [section, setSection] = useState("search");
+  // Landing section depends on the variant: the tile view (`home`) is the
+  // default on the /-mounted "dashboard" variant, while the map+listings
+  // search view is the default on any legacy /-search mounts.
+  const [section, setSection] = useState(homeVariant === "dashboard" ? "home" : "search");
   const [askOpen, setAskOpen] = useState(false);
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
@@ -149,14 +153,14 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       gridTemplateColumns: "260px 1fr", background: C.cream, color: C.navy,
       fontFamily: "'Inter', system-ui, sans-serif",
     }}>
-      <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)}/>
+      <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)} homeVariant={homeVariant}/>
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <HomeComplianceBanner/>
         <DashboardBackHomeBar/>
         <TopBar section={section} homeVariant={homeVariant}/>
         <main style={{ padding: "24px 32px", flex: 1, overflowX: "hidden" }}>
           <Panel section={section} setSection={setSection} homeVariant={homeVariant} onAsk={() => setAskOpen(true)}/>
-          {section === "search" && <HomeExtras/>}
+          {(section === "search" || section === "home") && <HomeExtras/>}
         </main>
         <ComplianceFooter/>
       </div>
@@ -206,8 +210,12 @@ const FirstVisitToast = ({ onDismiss, setSection }) => (
 );
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
-const Sidebar = ({ section, setSection, onAsk }) => {
+const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
   const navHook = useNavigate();
+  // Hide any nav item whose `hideWhen` matches the active homeVariant. The
+  // "Home" tile-dashboard section is only relevant when homeVariant="dashboard";
+  // on the search variant the SearchPanel already IS the landing view.
+  const items = SECTIONS.filter(s => s.hideWhen !== homeVariant);
   return (
   <aside style={{
     background: C.navy, color: "#fff", padding: "20px 14px", position: "sticky", top: 0,
@@ -243,7 +251,7 @@ const Sidebar = ({ section, setSection, onAsk }) => {
       </div>
     </Link>
     <nav style={{ display: "grid", gap: 4 }}>
-      {SECTIONS.map(s => {
+      {items.map(s => {
         const Icon = s.icon;
         const active = section === s.key;
         return (
@@ -401,9 +409,8 @@ const CheckDot = () => <span style={{ display: "inline-block", width: 7, height:
 // ── Panel Router ───────────────────────────────────────────────────────────
 const Panel = ({ section, setSection, homeVariant, onAsk }) => {
   switch (section) {
-    case "search":    return homeVariant === "dashboard"
-                            ? <DashboardHomeTiles setSection={setSection} onAsk={onAsk}/>
-                            : <SearchPanel/>;
+    case "home":      return <DashboardHomeTiles setSection={setSection} onAsk={onAsk}/>;
+    case "search":    return <SearchPanel/>;
     case "foryou":    return <ForYouPanel/>;
     case "saved":     return <SavedPanel/>;
     case "buyer":     return <BuyerInsightsPanel/>;
@@ -884,7 +891,7 @@ const ensureLeafletCss = () => {
   _leafletCssInjected.current = true;
 };
 
-const ListingsMap = ({ city, listings, hoveredKey, onHoverKey }) => {
+const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
@@ -1012,6 +1019,33 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey }) => {
     })();
   }, [hoveredKey]);
 
+  // Click-to-Focus — when a card's "focus on map" button is tapped, fly to
+  // that listing's pin and open its popup. Also scroll the map into view so
+  // the user actually sees the animation. The prop is encoded as "key#seq"
+  // so tapping the same card twice still re-fires the effect.
+  useEffect(() => {
+    if (!focusKey) return;
+    const raw = String(focusKey).split("#")[0];
+    if (!raw) return;
+    const map = mapRef.current;
+    const marker = markerByKeyRef.current[raw];
+    if (!map || !marker) return;
+    try {
+      const container = mapContainerRef.current;
+      if (container && typeof container.scrollIntoView === "function") {
+        container.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } catch {}
+    // Slight delay so the scroll finishes before flyTo animates.
+    setTimeout(() => {
+      try {
+        const ll = marker.getLatLng();
+        map.flyTo(ll, Math.max(13, map.getZoom()), { animate: true, duration: 0.8 });
+        marker.openPopup();
+      } catch {}
+    }, 300);
+  }, [focusKey]);
+
   return (
     <div ref={mapContainerRef} data-testid="dash-search-map"
       style={{ width: "100%", height: 320, borderRadius: 8, overflow: "hidden", border: "1px solid #E5E7EB" }}/>
@@ -1033,6 +1067,11 @@ const SearchPanel = () => {
   // Shared "hovered listing_key" — when you hover a listing card the
   // corresponding map pin pops; hovering a pin highlights the card.
   const [hoveredKey, setHoveredKey] = useState(null);
+  // Click-to-Focus — tapping the map-pin button on a card sets this key,
+  // which causes ListingsMap to fly to the matching pin and open its popup.
+  // A tiny counter forces the effect to re-fire when the same key is tapped twice.
+  const [focus, setFocus] = useState({ key: null, seq: 0 });
+  const focusOn = (key) => setFocus(prev => ({ key, seq: prev.seq + 1 }));
   return (
     <>
       <HeroIntro/>
@@ -1043,7 +1082,7 @@ const SearchPanel = () => {
           <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
           <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
         </div>
-        <ListingsMap city={city} listings={results?.listings || []} hoveredKey={hoveredKey} onHoverKey={setHoveredKey}/>
+        <ListingsMap city={city} listings={results?.listings || []} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} focusKey={`${focus.key || ""}#${focus.seq}`}/>
         <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
           <a
             href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
@@ -1053,12 +1092,12 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey}/>
+      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
     </>
   );
 };
 
-const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey }) => {
+const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) => {
   if (loading && !results) return <SkeletonGrid/>;
   const rows = (results?.listings || []);
   if (!rows.length) return <EmptyBox>No exact matches in CREA DDF® right now — try widening a filter.</EmptyBox>;
@@ -1075,6 +1114,7 @@ const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey }) => {
             l={l}
             isHovered={hoveredKey === l.listing_key}
             onHoverKey={onHoverKey}
+            onFocusMap={onFocusMap}
           />
         ))}
       </div>
@@ -1082,10 +1122,11 @@ const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey }) => {
   );
 };
 
-const ListingCard = ({ l, isHovered, onHoverKey }) => {
+const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
   const price = l.list_price ? `$${Number(l.list_price).toLocaleString()}` : "—";
   const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
   const cover = (l.photos && l.photos[0]) || (l.Media && l.Media[0]?.MediaURL);
+  const hasPin = l.lat != null && l.lon != null;
   const [saved, setSaved] = useState(false);
   useEffect(() => {
     try {
@@ -1113,6 +1154,11 @@ const ListingCard = ({ l, isHovered, onHoverKey }) => {
       }
       localStorage.setItem(SAVED_HOMES_KEY, JSON.stringify(list.slice(0, 100)));
     } catch {}
+  };
+  const focusOnMap = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onFocusMap) onFocusMap(l.listing_key);
   };
   const notify = (key) => { if (onHoverKey) onHoverKey(key); };
   return (
@@ -1156,6 +1202,24 @@ const ListingCard = ({ l, isHovered, onHoverKey }) => {
         >
           <Heart size={16} color={saved ? "#fff" : C.navy} fill={saved ? "#fff" : "transparent"}/>
         </button>
+        {hasPin && onFocusMap && (
+          <button
+            type="button"
+            onClick={focusOnMap}
+            data-testid={`dash-listing-focus-${l.listing_key}`}
+            aria-label="Show this listing on the map"
+            title="Show on map"
+            style={{
+              position: "absolute", right: 48, top: 8, width: 32, height: 32,
+              borderRadius: "50%", border: "none", cursor: "pointer",
+              background: "rgba(255,255,255,0.95)",
+              display: "grid", placeItems: "center",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            <MapPin size={16} color={C.navy}/>
+          </button>
+        )}
       </div>
       <div style={{ padding: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 15 }}>{price}</div>
@@ -1306,9 +1370,19 @@ const SellerInsightsPanel = () => <InsightsPanel role="seller"/>;
 const InsightsPanel = ({ role }) => {
   const [city, setCity] = useState("Vancouver");
   const [propType, setPropType] = useState("");
+  const [regions, setRegions] = useState(null);
   const data = useInsights(city, propType);
   const history = useInsightsHistory(city, propType);
   const [comps, setComps] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${API}/communities`);
+        const d = await r.json();
+        setRegions(d && typeof d === "object" ? d : {});
+      } catch { setRegions({}); }
+    })();
+  }, []);
   useEffect(() => {
     if (role !== "seller" || !city) return;
     let cancelled = false;
@@ -1355,7 +1429,7 @@ const InsightsPanel = ({ role }) => {
           ? "Live buyer-side market signals from CREA DDF® — inventory, price, and avg. bed/bath counts. Refreshes every 4 hours."
           : "Live comparable actives from CREA DDF® — perfect for a seller planning their list price. General information only, not an opinion of value."
         }
-        cityInput={{ city, setCity }}
+        cityAutocomplete={{ city, setCity, regions }}
       />
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Property type</label>
@@ -2232,6 +2306,11 @@ const AskDoogieDrawer = ({ open, onClose }) => {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
+  // Debug badge — show Doogie's routing intent when ?debug=1 is in the URL.
+  const debug = useMemo(() => {
+    try { return new URLSearchParams(window.location.search).get("debug") === "1"; }
+    catch { return false; }
+  }, []);
   // Persistent session id so Doogie can carry context across turns
   const [sessionId] = useState(() => {
     try {
@@ -2245,7 +2324,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
   const send = async () => {
     if (!q.trim() || busy) return;
     const question = q.trim();
-    setHistory(h => [...h, { role: "user", text: question }, { role: "doogie", text: "" }]);
+    setHistory(h => [...h, { role: "user", text: question }, { role: "doogie", text: "", routing: null }]);
     setQ(""); setBusy(true);
     try {
       const res = await fetch(`${API}/doogie/chat`, {
@@ -2257,6 +2336,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
       const decoder = new TextDecoder();
       let buffer = "";
       let acc = "";
+      let routing = null;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { value, done } = await reader.read();
@@ -2271,18 +2351,25 @@ const AskDoogieDrawer = ({ open, onClose }) => {
           if (!payload || payload === "[DONE]") continue;
           try {
             const j = JSON.parse(payload);
-            if (typeof j.delta === "string") {
+            if (j.routing) {
+              routing = j.routing;
+              setHistory(h => {
+                const copy = [...h];
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
+                return copy;
+              });
+            } else if (typeof j.delta === "string") {
               acc += j.delta;
               setHistory(h => {
                 const copy = [...h];
-                copy[copy.length - 1] = { role: "doogie", text: acc };
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
                 return copy;
               });
             } else if (typeof j.error === "string") {
               acc += `\n\n⚠️ ${j.error}`;
               setHistory(h => {
                 const copy = [...h];
-                copy[copy.length - 1] = { role: "doogie", text: acc };
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
                 return copy;
               });
             }
@@ -2292,7 +2379,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
       if (!acc) {
         setHistory(h => {
           const copy = [...h];
-          copy[copy.length - 1] = { role: "doogie", text: "I couldn't reach my brain just now — try again in a moment." };
+          copy[copy.length - 1] = { role: "doogie", text: "I couldn't reach my brain just now — try again in a moment.", routing };
           return copy;
         });
       }
@@ -2347,6 +2434,18 @@ const AskDoogieDrawer = ({ open, onClose }) => {
               fontSize: 13, lineHeight: 1.45,
               whiteSpace: m.role === "user" ? "pre-wrap" : "normal",
             }}>
+              {debug && m.role === "doogie" && m.routing && (
+                <div data-testid={`dash-ask-routing-${i}`} style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "#EEF2FF", border: "1px solid #C7D2FE",
+                  color: "#3730A3", fontSize: 10, fontWeight: 700,
+                  padding: "2px 8px", borderRadius: 999, marginBottom: 6,
+                  textTransform: "uppercase", letterSpacing: 0.5,
+                }} title="Doogie's Haiku intent classification">
+                  <span>🧭 route: {m.routing.intent}</span>
+                  <span style={{ opacity: 0.7 }}>· {(m.routing.confidence * 100).toFixed(0)}%</span>
+                </div>
+              )}
               {m.role === "user" ? m.text : <DoogieMessage text={m.text}/>}
             </div>
           ))}
@@ -2566,13 +2665,19 @@ const ComplianceFooter = () => (
 );
 
 // ── Small helpers ──────────────────────────────────────────────────────────
-const PanelIntro = ({ title, blurb, cityInput }) => (
+const PanelIntro = ({ title, blurb, cityInput, cityAutocomplete }) => (
   <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
     <div style={{ maxWidth: 640 }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, margin: "0 0 4px", color: C.navy }}>{title}</h2>
       <p style={{ color: C.muted, margin: 0, fontSize: 13, lineHeight: 1.5 }}>{blurb}</p>
     </div>
-    {cityInput && (
+    {cityAutocomplete && (
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 260 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: C.muted, letterSpacing: 0.5 }}>City <span style={{ opacity: 0.6, fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>· any BC community</span></label>
+        <CityAutocomplete regions={cityAutocomplete.regions} value={cityAutocomplete.city} onPick={cityAutocomplete.setCity}/>
+      </div>
+    )}
+    {cityInput && !cityAutocomplete && (
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <label style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: C.muted, letterSpacing: 0.5 }}>City</label>
         <input value={cityInput.city} onChange={e => cityInput.setCity(e.target.value)}

@@ -9389,7 +9389,7 @@ function App() {
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home
           for reference or quick rollback via a single-line route swap. */}
-      <Route path="/" element={<DashboardMockup/>}/>
+      <Route path="/" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>

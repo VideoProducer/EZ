@@ -1727,3 +1727,36 @@ Removed the global Virtual Tours hub (sidebar entry + dashboard quick tile + Pan
 - Dashboard quick-tile row now shows Saved Homes / For You / Communities / Consultation (no Tours).
 - `/listing/29152426` (Matterport-tour listing) renders the Virtual Tour block with "Matterport 3D tour · unbranded" caption (screenshot ✓).
 - `GET /api/listings/29152426` returns `virtual_tour_embed.host = "matterport"` (curl ✓).
+
+---
+
+## Feb 03, 2026 — Four action items shipped
+
+### 1. Homepage Swap
+- `/` now lands on the **tile dashboard** (Doogie hero + Buyer/Seller snapshots + specialties tiles) via `homeVariant="dashboard"`.
+- Added a new **Home** sidebar nav item (only visible in the dashboard variant); it's the default active section on `/`.
+- **Search** (map + listings + hover coupling + focus button) is now a distinct sidebar section and remains fully accessible.
+- Introduced `hideWhen` on `SECTIONS` so the same array powers both variants.
+
+### 2. Insights Autocomplete (Buyer + Seller)
+- `PanelIntro` now accepts a `cityAutocomplete` slot alongside the legacy `cityInput` prop.
+- `InsightsPanel` fetches `/api/communities` and feeds regions into the shared `CityAutocomplete` component — same free-text UX as the dashboard tiles.
+- Verified: typing "Kelowna" auto-picks "West Kelowna" and Buyer Insights re-populates instantly (661 actives, $735K median, 3.3/2.8 avg beds/baths).
+
+### 3. Click-to-Focus (map ↔ card)
+- Added a small **map-pin button** on every listing card (next to the heart). Clicking it fires `onFocusMap(listing_key)`.
+- `SearchPanel` holds a `{key, seq}` focus state; ListingsMap watches `focusKey` (encoded `key#seq` so a repeat tap re-fires) and calls `map.flyTo(...)` + `marker.openPopup()`.
+- Scrolls the map into view first (300ms delay), then flies to the pin.
+
+### 4. Doogie Routing v2 (Haiku classifier + SSE routing event)
+- New helper `_classify_doogie_intent(msg, session_id)` in `backend/server.py` calls `claude-haiku-4-5-20251001` with a strict JSON-out classifier system prompt. Returns `{intent: "listings"|"glossary"|"communities"|"clarify"|"general", confidence: 0..1}` or `None` on failure (non-fatal).
+- `/api/doogie/chat` now emits `data: {"routing": {...}}` as the FIRST SSE event, before any deltas, then appends a soft **ROUTING HINT** to the Sonnet system prompt so the main answer stays anchored to the right KB.
+- **Low-confidence guard**: if `confidence < 0.55` and intent isn't already `clarify/general`, we downgrade to `clarify` so Doogie asks ONE clarifying question instead of guessing.
+- Frontend: Ask Doogie drawer parses the `routing` event into `m.routing` and renders a small 🧭 badge above the reply — visible **only when `?debug=1`** is in the URL.
+- Verified via curl: 4/4 test queries classified correctly at ≥0.95 confidence (glossary/listings/clarify/communities).
+
+### Files touched
+- `backend/server.py`: added `_CLASSIFIER_SYSTEM`, `_classify_doogie_intent`, routing hint injection in `/doogie/chat`, and the initial `routing` SSE event.
+- `frontend/src/pages/DashboardMockup.jsx`: `SECTIONS` +Home, `Sidebar` filters items by `hideWhen`, `Panel` splits `home` vs `search`, `SearchFiltersContext`, `SidebarFilters` bubble, `SearchPanel` uses context + hover/focus state, `ListingsMap` accepts `hoveredKey`/`focusKey` + wires marker mouseover, `ResultsGrid` + `ListingCard` new props/pin button, `InsightsPanel` fetches regions + uses `CityAutocomplete`, `PanelIntro` adds `cityAutocomplete` slot, `AskDoogieDrawer` parses `routing` event + debug badge.
+- `frontend/src/App.js`: `/` route now passes `homeVariant="dashboard"`.
+
