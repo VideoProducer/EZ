@@ -1983,20 +1983,14 @@ const ComplianceFooter = () => (
   <footer data-testid="dash-compliance-footer" style={{
     background: C.navy, color: "#fff", padding: "18px 32px", fontSize: 11, lineHeight: 1.6,
   }}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 24, opacity: 0.9 }}>
-      <div>
-        <strong style={{ color: C.gold }}>BCFSA Licensing</strong><br/>
-        Doug LeMaire, REALTOR®<br/>
-        Fraser Property Management Realty Services Ltd.
-      </div>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, opacity: 0.9 }}>
       <div>
         <strong style={{ color: C.gold }}>CREA Compliance</strong><br/>
-        MLS® data licensed from CREA DDF®.<br/>
-        Exact matches only — never substitutions.
+        MLS® data licensed from CREA DDF®.
       </div>
       <div>
         <strong style={{ color: C.gold }}>CASL Compliance</strong><br/>
-        Consent-gated. One-click unsubscribe.<br/>
+        <Link to="/unsubscribe" data-testid="footer-unsubscribe-link" style={{ color: "#fff", textDecoration: "underline" }}>One-click unsubscribe.</Link><br/>
         <Link to="/privacy" style={{ color: "#fff", textDecoration: "underline" }}>Privacy policy</Link>
       </div>
       <div>
@@ -2006,7 +2000,7 @@ const ComplianceFooter = () => (
       </div>
     </div>
     <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)", opacity: 0.85 }}>
-      Doogie provides general information only — never advice. Real estate services are provided exclusively by Doug LeMaire, REALTOR®, BCFSA-licensed.
+      Doogie provides general information only — never advice. Real estate services are provided by Doug LeMaire, REALTOR®.
     </div>
   </footer>
 );
