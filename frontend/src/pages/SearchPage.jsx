@@ -256,7 +256,7 @@ export default function SearchPage() {
               <NoResults query={q}/>
             )}
 
-            {data.groups && data.groups.map((g, i) => <ResultsGroup key={i} group={g} query={q}/>)}
+            {data.groups && data.groups.map((g, i) => <ResultsGroup key={g.title || g.type || `group-${i}`} group={g} query={q}/>)}
           </>
         )}
       </div>

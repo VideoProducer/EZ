@@ -4,6 +4,11 @@ import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, us
 import "./App.css";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
+// SEC-009: send the HttpOnly admin cookie on every same-origin XHR/API call.
+// Default is `false` (no cookies on cross-origin) — flipping to `true` is
+// safe because our CORS allowlist is explicit (not "*") whenever cookies
+// would matter, and browsers refuse to send credentials to `*` origins.
+axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
@@ -4720,15 +4725,26 @@ const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
 const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · <strong>BCFSA License #167790</strong> · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept at <Link to="/visual-agent-demo" style={{color:"var(--brand-blue)"}}>/visual-agent-demo</Link>) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
 
 // --- Admin ---
+// SEC-009: The JWT used to live in localStorage where any JS on the page
+// could read it (XSS exfil risk).  It now flows via an HttpOnly cookie set
+// by /api/admin/login and read back by verify_admin on every call.  The
+// frontend only stores a NON-sensitive session marker so `useAdmin` can
+// gate rendering without a server round-trip on every page.
+const _ADMIN_MARKER_KEY = "ez_admin_session";
+
 const AdminLogin = () => {
   const [f,setF] = useState({email:"",password:""}); const [err,setErr]=useState(""); const nav=useNavigate();
   const submit=async e=>{
     e.preventDefault(); setErr("");
     try{
-      const r=await axios.post(`${API}/admin/login`,{...f, turnstile_token: getTurnstileToken()});
-      localStorage.setItem("eztoken",r.data.token);
+      // withCredentials so the browser accepts the Set-Cookie from the API.
+      const r=await axios.post(`${API}/admin/login`,{...f, turnstile_token: getTurnstileToken()}, { withCredentials: true });
+      // Store ONLY a non-sensitive marker — the JWT itself lives in the
+      // HttpOnly cookie the server just set and is unreachable from JS.
+      localStorage.setItem(_ADMIN_MARKER_KEY, r?.data?.email || "1");
+      // Legacy cleanup — remove any raw token left over from prior sessions.
+      localStorage.removeItem("eztoken");
       // Login successful → route to admin dashboard.
-      // Fire-and-forget — never blocks navigation.
       nav("/admin");
     }catch(x){
       // Show the server-side lockout / bot-check message verbatim when present,
@@ -4756,9 +4772,22 @@ const AdminLogin = () => {
 
 const useAdmin = () => {
   const nav = useNavigate();
-  const token = localStorage.getItem("eztoken");
-  useEffect(()=>{ if(!token) nav("/admin/login"); },[token,nav]);
-  return {headers: {Authorization: `Bearer ${token}`}};
+  // Presence of the session marker means we *believe* we're logged in;
+  // the server still enforces auth via the HttpOnly cookie on every call.
+  // On 401 the caller should clear the marker and redirect to /login.
+  const marker = localStorage.getItem(_ADMIN_MARKER_KEY);
+  useEffect(()=>{ if(!marker) nav("/admin/login"); },[marker,nav]);
+  // Empty headers — auth is carried by the HttpOnly cookie, which the
+  // browser attaches automatically on same-origin requests.  We keep the
+  // return shape ({headers}) so 137 existing callers keep working.
+  return { headers: {} };
+};
+
+// Fire-and-forget logout: server clears the cookie, client clears the marker.
+const _adminSignOut = async (nav) => {
+  try { await axios.post(`${API}/admin/logout`, {}, { withCredentials: true }); } catch {}
+  try { localStorage.removeItem(_ADMIN_MARKER_KEY); localStorage.removeItem("eztoken"); } catch {}
+  if (nav) nav("/");
 };
 
 const AdminShell = ({children,active}) => {
@@ -4797,7 +4826,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/cease-desist")} className={active==="cease-desist"?"active":""} data-testid="admin-nav-cease-desist">⚡ Cease & Desist</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
-      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>{localStorage.removeItem("eztoken");nav("/");}} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>_adminSignOut(nav)} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
     <main className="admin-main">{children}</main>
   </div>);
@@ -6640,13 +6669,16 @@ const ComplianceStrip = () => (
 // --- Admin AI Content Approvals ---
 const AdminGrowth = () => {
   const nav = useNavigate();
-  const token = localStorage.getItem("eztoken");
-  const headers = { Authorization: `Bearer ${token}` };
+  // SEC-009: auth via HttpOnly cookie — no token in JS.  We still gate the
+  // component render on the non-sensitive session marker so an unlogged
+  // visitor bounces to /admin/login instantly.
+  const marker = localStorage.getItem(_ADMIN_MARKER_KEY);
+  const headers = {};
   const [d, setD] = useState(null);
   const [citations, setCitations] = useState([]);
   const [form, setForm] = useState({ source: "perplexity", query: "", result_url: "", result_excerpt: "", notes: "" });
   const [saving, setSaving] = useState(false);
-  useEffect(() => { if(!token) nav("/admin/login"); }, [token, nav]);
+  useEffect(() => { if(!marker) nav("/admin/login"); }, [marker, nav]);
   const load = async () => {
     const [dash, cits] = await Promise.all([
       axios.get(`${API}/admin/growth/dashboard`, {headers}).catch(()=>({data:null})),
@@ -7388,10 +7420,11 @@ const AdminChats = () => {
 const AdminPolicies = () => {
   const {headers} = useAdmin();
   const [items, setItems] = useState([]);
-  useEffect(() => { axios.get(`${API}/admin/policies`, {headers}).then(r => setItems(r.data)).catch(()=>{}); /* eslint-disable-next-line */ }, []);
-  const token = localStorage.getItem("eztoken");
+  useEffect(() => { axios.get(`${API}/admin/policies`, {headers, withCredentials: true}).then(r => setItems(r.data)).catch(()=>{}); /* eslint-disable-next-line */ }, []);
   const openPolicy = (slug) => {
-    window.open(`${API}/admin/policies/${slug}?token=${encodeURIComponent(token)}`, "_blank");
+    // SEC-009: auth flows via the HttpOnly cookie the browser attaches on
+    // same-origin navigation (including window.open).  No token in the URL.
+    window.open(`${API}/admin/policies/${slug}`, "_blank");
   };
   return <AdminShell active="policies">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Managing Broker Policy Documents</h1>

@@ -47,9 +47,8 @@ export function ComingSoonHero({ mode = "home", data = null }) {
     const endpoint = mode === "preview"
       ? `${API}/admin/coming-soon`
       : `${API}/coming-soon`;
-    const token = localStorage.getItem("eztoken") || "";
-    const headers = mode === "preview" && token ? { Authorization: `Bearer ${token}` } : {};
-    axios.get(endpoint, { headers })
+    // SEC-009: auth via HttpOnly cookie (axios.defaults.withCredentials=true).
+    axios.get(endpoint)
       .then(r => setCs(r.data))
       .catch(err => setCs({ __error: err.response?.status === 401 ? "unauthorized" : "unavailable" }));
   }, [mode, data]);

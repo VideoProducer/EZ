@@ -450,11 +450,35 @@ async def _set_admin_hash(new_hash: str) -> None:
 def create_token(email: str) -> str:
     return jwt.encode({"email": email, "exp": datetime.now(timezone.utc) + timedelta(days=7)}, JWT_SECRET, algorithm="HS256")
 
-def verify_admin(authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
+# ── Admin auth: httpOnly cookie primary, Bearer token fallback ─────────────
+# The JWT used to live in localStorage (readable by any JS on the page → XSS
+# exfil risk).  It now flows via a Secure, HttpOnly, SameSite=Lax cookie set
+# on `/api/admin/login` and read back by `verify_admin` on every admin call.
+# Bearer-header auth is still accepted as a fallback so existing scripts,
+# curl-based tests, and the /policies?token= print-preview path keep working.
+_ADMIN_COOKIE_NAME = "eztoken"
+_ADMIN_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # matches JWT expiry (7 days)
+
+def _extract_admin_token(authorization: Optional[str], cookie_header: Optional[str]) -> Optional[str]:
+    """Return the raw JWT from the Cookie header first, then Authorization
+    Bearer.  Cookie wins because HttpOnly cookies are never touched by JS
+    and therefore can't be swapped by a compromised script."""
+    if cookie_header:
+        # Parse `k=v; k=v` — httpx / uvicorn already normalise to one line.
+        for part in cookie_header.split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == _ADMIN_COOKIE_NAME and v:
+                return v
+    if authorization and authorization.startswith("Bearer "):
+        return authorization.split(" ", 1)[1]
+    return None
+
+def verify_admin(authorization: Optional[str] = Header(None), cookie: Optional[str] = Header(None)):
+    token = _extract_admin_token(authorization, cookie)
+    if not token:
         raise HTTPException(401, "Not authenticated")
     try:
-        payload = jwt.decode(authorization.split(" ",1)[1], JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
         if payload.get("email") != ADMIN_EMAIL: raise HTTPException(403, "Forbidden")
         return payload
     except jwt.InvalidTokenError:
@@ -533,7 +557,43 @@ async def admin_login(body: AdminLogin, request: Request):
         await _set_admin_hash(hash_password(body.password))
     # Success — clear the lockout counter for this IP.
     await db.admin_login_attempts.delete_one({"ip": ip})
-    return {"token": create_token(ADMIN_EMAIL), "email": ADMIN_EMAIL}
+    token = create_token(ADMIN_EMAIL)
+    # Set the JWT as an HttpOnly cookie so JavaScript on the admin dashboard
+    # can never read it (blocks XSS exfil).  Secure=True forces HTTPS-only.
+    # SameSite=Lax stops CSRF POSTs from arbitrary sites while still allowing
+    # normal same-site navigation and XHRs.  We keep returning the token in
+    # the body for backwards compatibility with any tooling that reads it —
+    # but the frontend no longer stores it.
+    from fastapi.responses import JSONResponse
+    resp = JSONResponse({"token": token, "email": ADMIN_EMAIL})
+    resp.set_cookie(
+        key=_ADMIN_COOKIE_NAME,
+        value=token,
+        max_age=_ADMIN_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+    return resp
+
+
+@api.post("/admin/logout")
+async def admin_logout():
+    """Clear the HttpOnly admin cookie.  Fire this on the client instead of
+    just wiping the localStorage marker so the cookie doesn't linger 7 days."""
+    from fastapi.responses import JSONResponse
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(key=_ADMIN_COOKIE_NAME, path="/")
+    return resp
+
+
+@api.get("/admin/whoami")
+async def admin_whoami(payload=Depends(verify_admin)):
+    """Cheap round-trip the frontend can use to validate the HttpOnly cookie
+    on page-load without re-issuing an admin-only request.  Returns 401 when
+    the cookie is missing or expired so the client can redirect to /login."""
+    return {"email": payload.get("email"), "authenticated": True}
 
 
 class ChangePassword(BaseModel):
@@ -3093,7 +3153,7 @@ async def _related_content_for_glossary(slug: str, limit: int = 6) -> dict:
         docs = await db.glossary.find(
             {"category": t["category"], "slug": {"$ne": slug}},
             {"_id": 0, "term": 1, "slug": 1}
-        ).sort("term", 1).to_list(50)
+        ).sort("term", 1).limit(50).to_list(50)
         import random as _r
         _r.shuffle(docs)
         for d in docs[:3]:
@@ -5109,7 +5169,8 @@ async def community_zoning(slug: str):
 # --- Admin: zoning approval workflow ---
 @api.get("/admin/approvals/zoning")
 async def pending_zoning(_=Depends(verify_admin)):
-    return await db.community_zoning.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).to_list(2000)
+    # Cap at 500 items — pending-approvals UI should paginate beyond that.
+    return await db.community_zoning.find({"approved": {"$ne": True}}, {"_id":0}).sort("ts", -1).limit(500).to_list(500)
 
 class ApproveZoning(BaseModel):
     slug: str

@@ -177,10 +177,8 @@ export default function AdminReelAnalytics() {
   const load = async () => {
     setLoading(true); setErr("");
     try {
-      const token = localStorage.getItem("eztoken") || "";
-      const r = await axios.get(`${API}/admin/reel_events/summary?days=${days}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      // SEC-009: auth via HttpOnly cookie (axios.defaults.withCredentials=true).
+      const r = await axios.get(`${API}/admin/reel_events/summary?days=${days}`);
       setData(r.data);
     } catch (e) {
       setErr(e?.response?.data?.detail || e.message || "Failed to load reel analytics");

@@ -1892,3 +1892,34 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `frontend/src/components/ListingNarration.jsx`: char-offset cue mapping.
 - `frontend/src/App.js`: import + mount `TourNarration` in Virtual Tour section.
 
+
+---
+
+## Delivered (Feb 3, 2026) — Code Review Triage + JWT httpOnly Cookie Migration
+
+### Applied fixes
+- **DB `.limit()` on unbounded queries** (`server.py:3096`, `5112`) — glossary sibling lookup and pending-zoning admin list now cap at 50 and 500 respectively.
+- **Array-index keys → stable IDs** where reordering could cause React reconciliation bugs: `SearchPage.jsx:259` (search result groups now keyed by `g.title || g.type`), `AdminSearchAnalytics.jsx:46` (table rows now keyed by `r.query || r.term || r.slug || r.id`). Remaining ~63 array-index keys are all in static config lists (compliance strips, guide sections, SVG grid ticks) that never reorder — safe as-is.
+- **SEC-009: Admin JWT moved from localStorage → HttpOnly cookie**:
+  - Backend: `verify_admin` now reads the `eztoken` cookie first, then falls back to `Authorization: Bearer` for backwards compat.  `POST /api/admin/login` sets `Set-Cookie: eztoken=<jwt>; HttpOnly; Secure; SameSite=Lax; Max-Age=604800; Path=/`.  New endpoints: `POST /api/admin/logout` (clears cookie) and `GET /api/admin/whoami` (auth-status ping).
+  - Frontend: `axios.defaults.withCredentials = true` so the browser attaches the cookie on cross-origin XHRs (works with our explicit CORS allowlist).  `AdminLogin` no longer stores the raw JWT — it writes only a non-sensitive marker `ez_admin_session = "<email>"` to localStorage so `useAdmin` can gate rendering without a server round-trip.  Sign-out now calls `/api/admin/logout` to clear the cookie server-side.  All 9 callers that used `localStorage.getItem("eztoken")` were updated (App.js AdminGrowth + AdminPolicies + sign-out; AdminReelAnalytics; AdminLeadTriage x2; ComingSoon).
+  - Verified end-to-end: login → 200 + cookie set with correct attrs → whoami → admin API → logout → cookie cleared → subsequent whoami 401.  Browser test confirms `localStorage.eztoken === null` after login; `ez_admin_session === "doug@eztofind.ca"`; admin dashboard loads with data.
+
+### Rejected findings (false positives / design-scope items)
+- **"Hardcoded secret in `tests/test_saved_searches.py:98`"** — false positive; line 98 is `pytest.saved_ss_id = ss_id`; the file already reads `ADMIN_PASSWORD` from env and errors on startup if missing.
+- **"126 `is` vs `==` comparison bugs in test files"** — false positive; zero occurrences of `is "string"` or `is <number>`. All 32 uses are `is None`/`is True`/`is False` which are **PEP 8 compliant** (the style guide *requires* `is None`).
+- **"168 missing React hook dependencies in `VisualAgentDemo.jsx`"** — deferred. Blindly adding deps to a 1,719-line component causes infinite render loops. No user-visible bug tied to any specific stale-closure has been reported. Better tackled reactively when a real bug surfaces.
+- **"Complexity / refactoring items"** (`server.py doogie_chat`, `admin_login`; `App.js` anonymous components; `VisualAgentDemo` 1,719 lines) — all real technical debt, but each is multi-day scope with regression risk and zero user-visible benefit. Already tracked as P3.
+- **"localStorage insecure storage"** (misc UI state) — most flagged entries are non-sensitive UI prefs (mute flag, tour dismissed, favorites, session ID). The ONE real item — the JWT — was migrated (SEC-009 above).
+- **"Python type hints coverage 0%"** — deferred (nice-to-have, no functional benefit).
+
+### Files touched
+- `backend/server.py`: `_extract_admin_token` helper; `verify_admin` cookie+bearer fallback; `admin_login` sets HttpOnly cookie; new `admin_logout` and `admin_whoami` endpoints; `glossary` + `zoning` query limits.
+- `frontend/src/App.js`: `axios.defaults.withCredentials = true`; `AdminLogin` uses `_ADMIN_MARKER_KEY`; `useAdmin` returns empty headers; `_adminSignOut` helper; `AdminGrowth` + `AdminPolicies` updates.
+- `frontend/src/pages/AdminReelAnalytics.jsx`: dropped Authorization header (cookie handles auth).
+- `frontend/src/pages/AdminLeadTriage.jsx`: same, two call sites.
+- `frontend/src/pages/ComingSoon.jsx`: same, preview mode.
+- `frontend/src/pages/AdminSearchAnalytics.jsx`: stable table keys.
+- `frontend/src/pages/SearchPage.jsx`: stable result-group keys.
+- `memory/test_credentials.md`: SEC-009 note added.
+

@@ -43,7 +43,7 @@ const Table = ({ title, subtitle, rows, emptyMsg, testId, columns, actionForRow 
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i} data-testid={`${testId}-row-${i}`}>
+              <tr key={r.query || r.term || r.slug || r.id || `row-${i}`} data-testid={`${testId}-row-${i}`}>
                 {columns.map(c => (
                   <td key={c.key} style={{ padding: "0.5rem 0.6rem", borderBottom: "1px solid rgba(15,42,91,0.08)", textAlign: c.align || "left", color: c.key === "query" ? "var(--brand-navy)" : "#1F2937", fontWeight: c.key === "query" ? 600 : 400 }}>
                     {c.render ? c.render(r[c.key], r) : r[c.key]}

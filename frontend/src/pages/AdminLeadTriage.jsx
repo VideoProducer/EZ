@@ -59,9 +59,8 @@ const LeadCard = ({ lead, onUpdate }) => {
   const patch = async (fields) => {
     setSaving(true); setMsg("");
     try {
-      const r = await axios.put(`${API}/admin/leads/${kind}/${lead.id}/followup`, fields, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("eztoken")}` },
-      });
+      // SEC-009: auth via HttpOnly cookie (axios.defaults.withCredentials=true).
+      const r = await axios.put(`${API}/admin/leads/${kind}/${lead.id}/followup`, fields);
       onUpdate(kind, lead.id, r.data.followup);
       setMsg("✓ saved");
       setTimeout(() => setMsg(""), 1500);
@@ -256,9 +255,9 @@ export default function AdminLeadTriage({ AdminShell }) {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
+      // SEC-009: auth via HttpOnly cookie (axios.defaults.withCredentials=true).
       const r = await axios.get(`${API}/admin/lead-triage`, {
         params: { status: statusFilter },
-        headers: { Authorization: `Bearer ${localStorage.getItem("eztoken")}` },
       });
       setData(r.data);
     } catch (e) {
