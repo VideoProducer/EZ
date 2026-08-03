@@ -10303,6 +10303,60 @@ async def doogie_tools_spec():
 
 
 # ── Dashboard mockup: Consultation Request ────────────────────────────────
+
+# ── Insights trend endpoint ────────────────────────────────────────────────
+# Powers the 90-day median-list-price sparkline in Buyer/Seller Insights cards.
+# Buckets active CREA DDF® listings for a given city into 12 weekly slots by
+# `list_date`, returning the median list price per week. Real numbers, no
+# fabrication.
+
+@app.get("/api/insights/trend", tags=["Insights"])
+async def insights_trend(city: str, weeks: int = 12, property_type: str | None = None):
+    if not city or len(city.strip()) < 2:
+        raise HTTPException(status_code=400, detail="city is required")
+    weeks = max(4, min(int(weeks or 12), 26))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(weeks=weeks)
+    match = {
+        "status": "Active",
+        "city": {"$regex": f"^{re.escape(city.strip())}$", "$options": "i"},
+        "list_price": {"$gt": 0},
+        "list_date": {"$gte": since},
+    }
+    if property_type:
+        match["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+    pipeline = [
+        {"$match": match},
+        {"$group": {
+            "_id": {"$dateTrunc": {"date": "$list_date", "unit": "week", "startOfWeek": "monday"}},
+            "prices": {"$push": "$list_price"},
+            "count":  {"$sum": 1},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    buckets = []
+    async for row in db.listings.aggregate(pipeline):
+        prices = sorted(row.get("prices") or [])
+        if not prices:
+            continue
+        mid = len(prices) // 2
+        median = prices[mid] if len(prices) % 2 == 1 else (prices[mid - 1] + prices[mid]) / 2
+        buckets.append({
+            "week_of": row["_id"].isoformat() if row.get("_id") else None,
+            "median_list_price": median,
+            "count": row.get("count", 0),
+        })
+    return {
+        "city": city,
+        "property_type": property_type,
+        "weeks": weeks,
+        "series": buckets,
+        "source": "CREA DDF®",
+        "compliance": "Historical median list prices only — never a forecast or opinion of value.",
+    }
+
+
+
 # CASL+PIPA-compliant intake endpoint used by /dashboard-mockup and any future
 # consultation flow. Persists to `consultation_requests` collection, fires a
 # CASL-safe notification to Doug via Resend, and returns a confirmation ID

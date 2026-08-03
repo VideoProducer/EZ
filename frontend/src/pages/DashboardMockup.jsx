@@ -420,47 +420,159 @@ const SellerInsightsPanel = () => <InsightsPanel role="seller"/>;
 
 const InsightsPanel = ({ role }) => {
   const [city, setCity] = useState("Vancouver");
+  const [propType, setPropType] = useState("");
   const data = useInsights(city);
+  const [comps, setComps] = useState(null);
+  useEffect(() => {
+    if (role !== "seller" || !city) return;
+    let cancelled = false;
+    setComps(null);
+    (async () => {
+      try {
+        const p = new URLSearchParams({ city, limit: "10", sort: "newest" });
+        if (propType) p.set("property_type", propType);
+        const r = await fetch(`${API}/listings?${p}`);
+        if (!cancelled && r.ok) setComps(await r.json());
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [role, city, propType]);
+
   const fmtM = (n) => !n ? "—" : (n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : (n >= 1e3 ? `$${(n/1e3).toFixed(0)}K` : `$${Math.round(n).toLocaleString()}`));
-  const stats = data ? [
-    { label: "Active inventory",   value: String(data.active_count || "—"), sub: `${city} · CREA DDF®` },
-    { label: "Median list price",  value: fmtM(data.median_list_price),     sub: `avg ${fmtM(data.avg_list_price)}` },
-    { label: "Avg days on market", value: data.avg_days_on_market ? `${data.avg_days_on_market} days` : "—", sub: role === "buyer" ? "Buyer signal" : "Seller signal" },
-    { label: "Sold last 90d",      value: String(data.sold_90d_count || "—"), sub: `Median ${fmtM(data.sold_90d_median_price)}` },
+  const lastUpdated = data?.last_updated
+    ? new Date(data.last_updated).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Vancouver" })
+    : "";
+
+  const buyerCards = data ? [
+    { key: "inv",  label: "Active inventory", value: (data.active_count || 0).toLocaleString(), sub: `${city} · CREA DDF®` },
+    { key: "mlp",  label: "Median list price", value: fmtM(data.median_list_price),             sub: `avg ${fmtM(data.avg_list_price)}` },
+    { key: "bb",   label: "Avg. beds / baths",  value: `${data.avg_beds ?? "—"} / ${data.avg_baths ?? "—"}`, sub: "across active listings" },
   ] : [];
+
+  const sellerCards = data ? [
+    { key: "acp",  label: "Active comps",   value: (data.active_count || 0).toLocaleString(), sub: `${city} · CREA DDF®` },
+    { key: "avg",  label: "Avg. list price", value: fmtM(data.avg_list_price),                sub: `median ${fmtM(data.median_list_price)}` },
+    { key: "rng",  label: "Price range",     value: `${fmtM(data.min_price)} — ${fmtM(data.max_price)}`, sub: "across active listings" },
+  ] : [];
+
+  const cards = role === "buyer" ? buyerCards : sellerCards;
+  const title = role === "buyer"
+    ? `Buyer snapshot · ${city}${propType ? " · " + propType : ""}`
+    : `Comparable actives · ${city}${propType ? " · " + propType : ""}`;
+
   return (
     <div>
       <PanelIntro
         title={role === "buyer" ? "Buyer Insights" : "Seller Insights"}
         blurb={role === "buyer"
-          ? "Live buyer-side market signals from CREA DDF® — inventory, price, DOM, and 90-day trend. Refreshes every 4 hours."
-          : "Live comparable sales and pricing signals from CREA DDF® — perfect for a seller planning their list price. General information only, not an opinion of value."
+          ? "Live buyer-side market signals from CREA DDF® — inventory, price, and avg. bed/bath counts. Refreshes every 4 hours."
+          : "Live comparable actives from CREA DDF® — perfect for a seller planning their list price. General information only, not an opinion of value."
         }
         cityInput={{ city, setCity }}
       />
-      {!data && <SkeletonGrid/>}
-      {data && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))", gap: 14 }}>
-          {stats.map(s => (
-            <div key={s.label} data-testid={`dash-insight-${s.label.replace(/\s/g,'-').toLowerCase()}`} style={{
-              background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #E5E7EB",
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: C.muted, textTransform: "uppercase" }}>{s.label}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: C.navy, marginTop: 6 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: C.muted }}>{s.sub}</div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Property type</label>
+        {["", "House", "Apartment", "Townhouse"].map(t => (
+          <button key={t || "all"} onClick={() => setPropType(t)}
+            data-testid={`dash-insight-ptype-${(t || "all").toLowerCase()}`}
+            style={{
+              padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+              cursor: "pointer",
+              background: propType === t ? C.blue : "#fff",
+              color: propType === t ? "#fff" : C.navy,
+              border: `1px solid ${propType === t ? C.blue : "#DDE6FA"}`,
+            }}>{t || "All"}</button>
+        ))}
+      </div>
+
+      {!data ? <SkeletonGrid/> : (
+        <>
+          {/* Snapshot card */}
+          <section data-testid={`dash-insights-${role}-snapshot`} style={{
+            background: "#fff", border: "1px solid #DDE6FA", borderRadius: 14,
+            padding: 20, marginBottom: 20,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+              <strong style={{ color: C.navy, fontSize: 14 }}>{title}</strong>
+              <span style={{
+                background: "rgba(34,197,94,0.10)", color: "#166534", border: "1px solid rgba(34,197,94,0.35)",
+                fontSize: 11, fontWeight: 700, padding: "5px 11px", borderRadius: 999,
+                display: "inline-flex", alignItems: "center", gap: 6,
+              }} title={lastUpdated}>
+                <span style={{ display: "inline-block", width: 7, height: 7, background: "#22C55E", borderRadius: "50%", boxShadow: "0 0 0 3px rgba(34,197,94,0.25)" }}/>
+                Source: CREA DDF® · live · updated in the last 4 hours
+              </span>
             </div>
-          ))}
-        </div>
-      )}
-      {role === "seller" && data && (
-        <div style={{ marginTop: 20, background: "#fff", padding: 16, borderRadius: 12, border: "1px solid #E5E7EB" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>Active comparables in {city}</div>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Exact matches only — CREA DDF® active listings that match your city.</div>
-          <button
-            onClick={() => window.open(`/listings?city=${encodeURIComponent(city)}&limit=24&sort=newest`, "_blank")}
-            style={btnGhost} data-testid="dash-seller-view-comps"
-          >Open comparables ↗</button>
-        </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+              {cards.map(c => (
+                <div key={c.key} data-testid={`dash-insight-card-${c.key}`} style={{
+                  background: C.mist, border: "1px solid #DDE6FA", borderRadius: 12, padding: 16,
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.8, color: C.blue, textTransform: "uppercase" }}>{c.label}</div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, fontWeight: 800, color: C.navy, marginTop: 8, lineHeight: 1.05 }}>{c.value}</div>
+                  <div style={{ fontSize: 12, color: C.ink, marginTop: 6 }}>{c.sub}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 6, fontStyle: "italic" }}>Source: CREA DDF® · in the last 4 hours</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Comps table (Seller) */}
+          {role === "seller" && (
+            <section data-testid="dash-seller-comps" style={{
+              background: "#fff", border: "1px solid #DDE6FA", borderRadius: 14, padding: 20,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
+                <strong style={{ color: C.navy, fontSize: 14 }}>Active comparables · {city}{propType ? " · " + propType : ""}</strong>
+                <span style={{ color: C.muted, fontSize: 12 }}>Exact matches only from CREA DDF®</span>
+              </div>
+              {!comps ? <SkeletonGrid/> : (
+                comps.listings?.length ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {comps.listings.slice(0, 8).map(l => (
+                      <Link key={l.listing_key} to={`/listings/${l.listing_key}`}
+                        data-testid={`dash-seller-comp-${l.listing_key}`}
+                        style={{
+                          display: "grid", gridTemplateColumns: "1fr auto auto", gap: 16, alignItems: "center",
+                          padding: "12px 14px", background: C.mist, borderRadius: 10, textDecoration: "none",
+                          color: C.navy, border: "1px solid transparent",
+                          transition: "border-color 0.15s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = "transparent"}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {l.street_address || l.unparsed_address || l.address} · {l.city}
+                          </div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>
+                            {l.beds != null && `${l.beds}bd`}
+                            {l.baths != null && ` · ${l.baths}ba`}
+                            {l.living_area_sqft && ` · ${Number(l.living_area_sqft).toLocaleString()} sqft`}
+                            {l.days_on_market != null && ` · ${l.days_on_market}d on market`}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 800, color: C.blue, fontSize: 15 }}>${Number(l.list_price || 0).toLocaleString()}</div>
+                        <span style={{
+                          background: "rgba(34,197,94,0.12)", color: "#166534",
+                          border: "1px solid rgba(34,197,94,0.4)", padding: "3px 10px",
+                          borderRadius: 999, fontSize: 11, fontWeight: 700,
+                        }}>Active</span>
+                      </Link>
+                    ))}
+                    {comps.total > 8 && (
+                      <Link to={`/listings?city=${encodeURIComponent(city)}${propType ? "&property_type=" + encodeURIComponent(propType) : ""}&limit=24&sort=newest`}
+                        style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 13, marginTop: 6, display: "inline-block" }}
+                        data-testid="dash-seller-view-comps">
+                        View all {comps.total.toLocaleString()} comparables →
+                      </Link>
+                    )}
+                  </div>
+                ) : <EmptyBox>No exact-match comparables right now — widen the property type or try a neighbouring city.</EmptyBox>
+              )}
+            </section>
+          )}
+        </>
       )}
     </div>
   );
