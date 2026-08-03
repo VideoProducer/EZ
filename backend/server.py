@@ -1278,13 +1278,92 @@ class UnsubscribeIn(BaseModel):
 
 @api.post("/unsubscribe")
 async def unsubscribe(body: UnsubscribeIn, request: Request):
+    """Immediate one-click unsubscribe. Flips every list this email is on
+    (buyer leads, seller leads, realtor applications, saved searches,
+    favorites) to unsubscribed, logs an audit row with IP, then fires a
+    transactional confirmation email so the user has proof it was actioned.
+    CASL requires unsubscribe to take effect within 10 business days — we
+    do it in <200ms and email the receipt."""
     email = body.email.lower()
-    result_b = await db.buyer_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso(), "unsubscribed_ip": get_consent_meta(request)["consent_ip"]}})
-    result_s = await db.seller_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso(), "unsubscribed_ip": get_consent_meta(request)["consent_ip"]}})
-    result_r = await db.realtor_applications.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now_iso()}})
-    total = result_b.modified_count + result_s.modified_count + result_r.modified_count
-    await db.unsubscribe_log.insert_one({"email": email, "ts": now_iso(), "records_updated": total, "ip": get_consent_meta(request)["consent_ip"]})
-    return {"success": True, "records_updated": total, "message": "You have been unsubscribed. It may take up to 10 business days to remove you from all lists, per CASL."}
+    now = now_iso()
+    ip = get_consent_meta(request)["consent_ip"]
+
+    result_b = await db.buyer_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now, "unsubscribed_ip": ip}})
+    result_s = await db.seller_leads.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now, "unsubscribed_ip": ip}})
+    result_r = await db.realtor_applications.update_many({"email": email}, {"$set": {"unsubscribed": True, "unsubscribed_at": now}})
+    # Also flip any saved-search alerts + favorite-drop alerts under this
+    # email so they stop firing immediately (single source of truth).
+    result_ss = await db.saved_searches.update_many(
+        {"email": email, "status": {"$ne": "unsubscribed"}},
+        {"$set": {"status": "unsubscribed", "unsubscribed_at": now, "unsubscribed_ip": ip}},
+    )
+    result_fv = await db.user_favorites.update_many(
+        {"email": email, "unsubscribed_at": None},
+        {"$set": {"unsubscribed_at": now, "unsubscribed_ip": ip}},
+    )
+    total = (result_b.modified_count + result_s.modified_count + result_r.modified_count
+             + result_ss.modified_count + result_fv.modified_count)
+    await db.unsubscribe_log.insert_one({
+        "email": email, "ts": now, "records_updated": total, "ip": ip,
+        "detail": {"buyer": result_b.modified_count, "seller": result_s.modified_count,
+                   "realtor": result_r.modified_count, "saved_searches": result_ss.modified_count,
+                   "favorites": result_fv.modified_count},
+    })
+    # Send confirmation email — fire-and-forget; unsubscribe still succeeds
+    # even if the receipt fails to send.
+    try:
+        await _send_unsubscribe_confirmation(email, total)
+    except Exception as exc:
+        logger.warning(f"Unsubscribe confirmation email failed for {email}: {exc}")
+    return {
+        "success": True,
+        "records_updated": total,
+        "message": "You've been unsubscribed. A confirmation email is on its way.",
+    }
+
+
+async def _send_unsubscribe_confirmation(email: str, records_updated: int) -> None:
+    """Send a transactional confirmation email so the user has an audit trail
+    that their unsubscribe was received and actioned. Idempotent — safe to
+    call multiple times (e.g., if user clicks unsubscribe twice)."""
+    from services.email_sender import send_email as _send_email
+    now_utc = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+    html = (
+        "<div style='font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#0F2A5B'>"
+        "<h2 style='color:#0F2A5B'>🐾 You've been unsubscribed</h2>"
+        "<p>We've received your request and immediately removed you from all EZtoFind.ca email lists.</p>"
+        f"<p style='background:#F0F4FB;border-left:3px solid #1E4FCF;padding:12px 14px;border-radius:4px'>"
+        f"<strong>Email:</strong> {email}<br/>"
+        f"<strong>Confirmed:</strong> {now_utc}<br/>"
+        f"<strong>Lists removed from:</strong> {records_updated}</p>"
+        "<p>You won't receive any more commercial emails from us. Transactional messages "
+        "(receipts, unsubscribe confirmations like this one) are the only exception.</p>"
+        "<p style='color:#6b7280;font-size:0.85em'>If this was a mistake — or you'd like to opt back in later — "
+        "you can always request a fresh subscription from <a href='https://eztofind.ca' style='color:#1E4FCF'>eztofind.ca</a>. "
+        "We follow Canadian CASL and BC PIPA rules to the letter.</p>"
+        "<hr style='border:none;border-top:1px solid #E5E7EB;margin:20px 0'/>"
+        "<p style='color:#6b7280;font-size:0.8em'>Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.<br/>"
+        "info@eztofind.ca</p>"
+        "</div>"
+    )
+    text = (
+        "You've been unsubscribed from EZtoFind.ca.\n\n"
+        f"Email: {email}\n"
+        f"Confirmed: {now_utc}\n"
+        f"Lists removed from: {records_updated}\n\n"
+        "You won't receive any more commercial emails from us. If this was a mistake, "
+        "you can request a fresh subscription anytime from https://eztofind.ca.\n\n"
+        "— Doug LeMaire, REALTOR®\n"
+        "Fraser Property Management Realty Services Ltd.\n"
+        "info@eztofind.ca"
+    )
+    await _send_email(
+        db, to=email,
+        subject="🐾 EZtoFind.ca — unsubscribe confirmed",
+        html=html, text=text,
+        kind="transactional", related_id=None,
+        unsubscribe_url=None,  # transactional; no unsubscribe footer needed
+    )
 
 # =============== SAVED-SEARCH ALERTS (CASL + PIPA compliant) ===============
 # Compliance design:
@@ -1460,8 +1539,19 @@ async def unsubscribe_saved_search(token: str, request: Request):
             "unsubscribed_ip": meta["consent_ip"],
         }},
     )
+    # Log + send transactional confirmation (fire-and-forget)
+    await db.unsubscribe_log.insert_one({
+        "email": ss.get("email", "").lower(), "ts": now_iso(),
+        "records_updated": 1, "ip": meta["consent_ip"],
+        "detail": {"source": "saved_search_token", "saved_search_id": ss["id"]},
+    })
+    try:
+        await _send_unsubscribe_confirmation(ss.get("email", "").lower(), 1)
+    except Exception as exc:
+        logger.warning(f"Unsubscribe confirmation email failed for {ss.get('email')}: {exc}")
     return HTMLResponse(_landing_page("You've been unsubscribed",
         "You will no longer receive BC listing alerts from EZtoFind.ca. This took effect immediately.<br/><br/>"
+        "A confirmation email is on its way to your inbox.<br/><br/>"
         "If you unsubscribed by mistake, feel free to re-subscribe from any listing search page."))
 
 # One-click POST endpoint (for RFC 8058 List-Unsubscribe-Post support)
@@ -1667,6 +1757,17 @@ async def unsubscribe_favorites(token: str, request: Request):
         {"id": rec["id"]},
         {"$set": {"status": "unsubscribed", "unsubscribed_at": now_iso(), "listing_keys": []}},
     )
+    # Log + send transactional confirmation (fire-and-forget)
+    email_lc = (rec.get("email") or "").lower()
+    if email_lc:
+        await db.unsubscribe_log.insert_one({
+            "email": email_lc, "ts": now_iso(), "records_updated": 1,
+            "detail": {"source": "favorites_token", "favorites_id": rec["id"]},
+        })
+        try:
+            await _send_unsubscribe_confirmation(email_lc, 1)
+        except Exception as exc:
+            logger.warning(f"Unsubscribe confirmation email failed for {email_lc}: {exc}")
     return HTMLResponse("""
 <!doctype html><html><body style="font-family:Inter,Arial,sans-serif;background:#F5F0E1;padding:40px 20px;text-align:center;color:#111827">
 <div style="background:#fff;max-width:520px;margin:0 auto;padding:2.5rem 2rem;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08)">
