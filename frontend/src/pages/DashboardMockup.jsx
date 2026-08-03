@@ -440,9 +440,6 @@ const SidebarFilters = () => {
       >
         <Search size={13}/> Search CREA DDF®
       </button>
-      <div style={{ fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.4 }}>
-        No substitutions, no interpretation.
-      </div>
     </form>
   );
 };
