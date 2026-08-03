@@ -561,7 +561,6 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
               background: "linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.75) 75%, rgba(15,42,91,0.90) 100%)",
             }}/>
             <div style={{ position: "relative", padding: "16px 18px 18px" }}>
-              <div style={{ fontSize: 22 }}>💎</div>
               <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>Luxury Real Estate</div>
               <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4, lineHeight: 1.4 }}>Waterfront estates, mountain chalets, custom acreages</div>
             </div>
@@ -581,7 +580,6 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
               background: "linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.75) 75%, rgba(15,42,91,0.90) 100%)",
             }}/>
             <div style={{ position: "relative", padding: "16px 18px 18px" }}>
-              <div style={{ fontSize: 22 }}>🐴</div>
               <div style={{ fontWeight: 800, fontSize: 15, marginTop: 4 }}>Equestrian & Acreage</div>
               <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4, lineHeight: 1.4 }}>Horse properties, hobby farms</div>
             </div>
