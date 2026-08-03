@@ -1760,3 +1760,42 @@ Removed the global Virtual Tours hub (sidebar entry + dashboard quick tile + Pan
 - `frontend/src/pages/DashboardMockup.jsx`: `SECTIONS` +Home, `Sidebar` filters items by `hideWhen`, `Panel` splits `home` vs `search`, `SearchFiltersContext`, `SidebarFilters` bubble, `SearchPanel` uses context + hover/focus state, `ListingsMap` accepts `hoveredKey`/`focusKey` + wires marker mouseover, `ResultsGrid` + `ListingCard` new props/pin button, `InsightsPanel` fetches regions + uses `CityAutocomplete`, `PanelIntro` adds `cityAutocomplete` slot, `AskDoogieDrawer` parses `routing` event + debug badge.
 - `frontend/src/App.js`: `/` route now passes `homeVariant="dashboard"`.
 
+
+---
+
+## Feb 03, 2026 — Virtual Doogie (voice) shipped
+
+**Voice**: Doogie now speaks in the OpenAI TTS **`ash`** voice (warm friendly male). Backend `/api/doogie/tts` already existed with a 30-day cache — no backend changes.
+
+### Concept A — Guided Site Tour (`DoogieTour`)
+- New component at `/app/frontend/src/components/DoogieTour.jsx`.
+- 5-stop walkthrough of the homepage: FILTERS → Map → Focus-on-Map button → Buyer Insights nav → Ask Doogie nav.
+- Auto-plays on first visit (localStorage flag `ez_doogie_tour_seen`), 1.5s after page settles. Big **Skip tour** button on every step.
+- Each stop:
+  - Scrolls the target element into view (`scrollIntoView` centered).
+  - Draws a gold pulsing highlight ring around the target with a 4-rectangle dim backdrop cutout (no CSS mask — better cross-browser).
+  - Fetches the step's script from `/api/doogie/tts` and auto-plays via `<audio>`.
+  - Auto-advances on `audio.onEnded`, or user taps Next.
+- After the tour is dismissed once, a **"Take the Doogie tour"** replay pill mounts in the bottom-right corner (not intrusive).
+- Mounted at the DashboardMockup shell so it appears on `/`.
+
+### Concept B — Listing Narration (`ListingNarration`)
+- New component at `/app/frontend/src/components/ListingNarration.jsx`.
+- Blue "▶ **Have Doogie walk me through this home**" pill just below the price on `/listings/:key`.
+- Script composed compliance-safe from CREA listing fields (address, beds/baths, price, sqft, year built, tour flag, photo count) + a generic buyer checklist (roof/mechanicals or strata depreciation report + easements/property lines).
+- **Never states a value opinion** — always ends with "This is general information only, not advice."
+- If the listing is in Doug's service area (hard-coded whitelist), also appends "Ask Doug for a viewing" to the script AND renders a navy CTA button linking to `/buyer?city=...&mls=...&address=...`. Outside the service area, the CTA is hidden (Quesnel test case verified).
+- Play/Pause/Stop controls. Loading state while waiting for TTS blob. Reuses the shared 30-day TTS cache so replays are $0.
+
+### Verified
+- Screenshot: DoogieTour Step 1 spotlights FILTERS sidebar bubble with pulsing gold ring; card in bottom-right with "Step 1 of 5", Skip and Next buttons.
+- Screenshot: DoogieTour Step 2 spotlights Interactive Map; card flipped to bottom-left.
+- Screenshot: ListingNarration pill visible on `/listings/30106368` (Quesnel), CTA hidden because Quesnel is outside Doug's service area.
+
+### Files touched
+- Created `frontend/src/components/DoogieTour.jsx` (~230 lines).
+- Created `frontend/src/components/ListingNarration.jsx` (~140 lines).
+- `frontend/src/pages/DashboardMockup.jsx`: import + mount `<DoogieTour/>` in the shell.
+- `frontend/src/App.js`: import `ListingNarration` and mount it inside `ListingDetail` just below the price.
+- Static voice samples added to `frontend/public/samples/` (nova, onyx, shimmer, ash, fable, coral, sage).
+

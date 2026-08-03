@@ -14,6 +14,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext, createContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators } from "../App";
+import DoogieTour from "../components/DoogieTour";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
@@ -166,6 +167,9 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       </div>
       <AskDoogieDrawer open={askOpen} onClose={() => setAskOpen(false)}/>
       {showToast && <FirstVisitToast onDismiss={dismissToast} setSection={setSection}/>}
+      {/* Doogie's guided site tour — auto-plays on first visit, then becomes
+          a "Take the Doogie tour" replay pill in the bottom-right. */}
+      <DoogieTour/>
     </div>
     </SearchFiltersContext.Provider>
   );

@@ -18,6 +18,7 @@ import DashboardMockup from "./pages/DashboardMockup";
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
+import ListingNarration from "./components/ListingNarration";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -3300,6 +3301,7 @@ const ListingDetail = () => {
             <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
+          <ListingNarration listing={listing}/>
           {/* Ask Doogie listing button removed per BCFSA compliance — Doogie
               cannot provide property-specific commentary. */}
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
