@@ -7497,6 +7497,40 @@ _NARRATION_PROMPT = (
 )
 
 
+# ── Virtual-tour narration ─────────────────────────────────────────────────
+# Same voice / rules as the photo-reel narration, but longer (10-14 sentences,
+# ~2-3 minutes when spoken by OpenAI TTS at 1x) and formatted for a *video*
+# walk-through — no photo_idx cues, and paced so it can layer over the
+# Matterport/YouTube tour without ending in 30 seconds.
+_TOUR_NARRATION_PROMPT = (
+    "You are Doogie, a friendly golden-retriever real estate helper for British Columbia. "
+    "The listener is watching a virtual tour of this listing right now (Matterport 3D or a video walk-through) "
+    "and you're providing warm, factual voice-over commentary — like an audio-guide track at a museum. "
+    "One 'Woof!' opener is fine. \n\n"
+    "STRICT RULES:\n"
+    "1. Only reference features that appear in the listing description or the fact sheet — never invent "
+    "rooms, finishes, views, or history.\n"
+    "2. Never state or imply a value opinion. NO 'great deal', 'well priced', 'won't last', 'perfect for you'.\n"
+    "3. Do NOT include listing agent name, brokerage, phone, email, realtor.ca URL, or 'call today' CTAs.\n"
+    "4. Length: 10-14 sentences, roughly 2 to 3 minutes when read aloud. Longer than a photo-reel narration "
+    "because virtual tours run 60-180 seconds and your commentary should fill that span.\n"
+    "5. Pacing cues: pause naturally between rooms with clear sentence breaks. Use words that hint at the "
+    "viewer's likely on-screen action ('as you walk into the entry…', 'take a moment to look up at the ceiling…', "
+    "'when you're ready, spin around and head down the hall…'). Do NOT describe controls, buttons, or hotspots — "
+    "you can't see the actual tour, so keep instructions generic.\n"
+    "6. Walk through in natural order — arrival/entry → main living/kitchen → bedrooms/baths → outdoor/parking → close.\n"
+    "7. MUST mention the list price ONCE using the spelled-out `Price in words` (e.g. 'four hundred ninety-nine "
+    "thousand dollars'). Never write digits.\n"
+    "8. When you mention beds/baths/sqft/year, use words too.\n"
+    "9. Include one gentle reminder mid-narration that the viewer can pause or replay the tour any time — "
+    "you don't want to rush them.\n"
+    "10. End with a factual close (e.g. 'That's the tour — feel free to explore any room again on your own, "
+    "and check the photos above when you're ready.'). Do NOT add compliance boilerplate — the frontend appends it.\n\n"
+    "OUTPUT FORMAT — output STRICT plain text, no JSON, no code fences, no bullet points, no headings, "
+    "no emojis, no markdown. Just the narration as one continuous string with sentences separated by a single space.\n"
+)
+
+
 def _num_to_words(n: int) -> str:
     """Very small English cardinal converter — enough for BC list prices
     (up to hundreds of millions) and bed/bath/year integers. Not a general
@@ -7732,6 +7766,115 @@ async def get_listing_narration(request: Request, listing_key: str):
     except Exception as e:
         logger.warning(f"Failed to cache narration for {listing_key}: {e}")
     return {"script": script, "cues": cues, "cached": False}
+
+
+# ── Virtual-tour narration (audio voice-over for the tour iframe) ─────────
+async def _generate_tour_narration(listing: dict, session_id: str) -> str:
+    """Same fact-sheet inputs as `_generate_listing_narration`, but a longer
+    plain-text script (no cues) so Doogie can voice over the virtual tour
+    iframe.  Falls back to a graceful description-read on any error."""
+    desc_raw = (listing.get("description") or "").strip()
+    desc = _clean_agent_puffery(desc_raw)
+    facts = []
+    addr = listing.get("street_address") or listing.get("unparsed_address") or ""
+    city = listing.get("city") or ""
+    if addr or city: facts.append(f"Address: {addr}{', ' + city if city else ''}")
+    if listing.get("list_price"):
+        n = int(listing['list_price'])
+        facts.append(f"List price (as digits): ${n:,}")
+        facts.append(f"List price (write it in these EXACT words for TTS): {_price_to_words(n)}")
+    if listing.get("beds") is not None:      facts.append(f"Beds: {listing['beds']}")
+    if listing.get("baths") is not None:     facts.append(f"Baths: {listing['baths']}")
+    if listing.get("half_baths"):            facts.append(f"Half baths: {listing['half_baths']}")
+    if listing.get("property_type"):         facts.append(f"Property type: {listing['property_type']}")
+    if listing.get("living_area_sqft"):      facts.append(f"Living area: {int(listing['living_area_sqft']):,} sqft")
+    if listing.get("year_built"):            facts.append(f"Year built: {listing['year_built']}")
+    if listing.get("features"):
+        try: facts.append(f"Features: {', '.join(str(f) for f in listing['features'])}")
+        except Exception: pass
+    tour = listing.get("virtual_tour_embed") or {}
+    if tour.get("host"):
+        facts.append(f"Virtual tour host: {tour['host']} ({'branded' if tour.get('is_branded') else 'unbranded'})")
+
+    user_msg = (
+        "LISTING FACT SHEET:\n" + "\n".join(f"- {f}" for f in facts)
+        + "\n\nLISTING DESCRIPTION (from CREA DDF®):\n"
+        + (desc[:2400] if desc else "(no description provided by the listing brokerage)")
+    )
+    fallback = (
+        f"Woof! Welcome to the virtual tour of {addr or 'this home'}"
+        f"{', in ' + city if city else ''}. "
+        f"{(desc[:900] + '.') if desc else ''} "
+        "Take your time to look around — you can pause or spin at any point. "
+        "That's the tour — check the photos above when you're ready, "
+        "and I'm always here if you have questions."
+    ).strip()
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"tour-{session_id}",
+            system_message=_TOUR_NARRATION_PROMPT,
+        ).with_model("anthropic", "claude-haiku-4-5-20251001")
+        buf = ""
+        async for ev in chat.stream_message(UserMessage(text=user_msg[:6000])):
+            if isinstance(ev, TextDelta):
+                buf += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        text = buf.strip()
+        text = re.sub(r"^```(?:\w+)?\s*|\s*```$", "", text, flags=re.IGNORECASE | re.MULTILINE).strip()
+        text = text.strip('"').strip()
+        if len(text) < 80:
+            return _spell_out_money_in_script(fallback)
+        return _spell_out_money_in_script(text)
+    except Exception as e:
+        logger.warning(f"Doogie tour narration Haiku failed for {listing.get('listing_key')}: {e}")
+        return _spell_out_money_in_script(fallback)
+
+
+@api.get("/listings/{listing_key}/tour_narration")
+@_limiter.limit("60/minute")
+async def get_listing_tour_narration(request: Request, listing_key: str):
+    """Return a Doogie voice-over script for the listing's virtual tour.
+    Cached under `doogie_tour_narration` on the listing doc so replays are
+    instant.  Requires the listing to have *any* virtual tour URL — the
+    voice-over doesn't need the tour to be iframe-embeddable, it just needs
+    the listing to have a tour to talk about.  Otherwise returns 404 so the
+    frontend can hide the button."""
+    l = await db.listings.find_one({"listing_key": listing_key})
+    if not l:
+        raise HTTPException(404, "Listing not found")
+    # `virtual_tour_embed` is built at request-time by `get_listing`, not
+    # persisted — so check the underlying `virtual_tour_urls` array here.
+    tours = l.get("virtual_tour_urls") or []
+    if not any((t.get("url") or "").strip() for t in tours if isinstance(t, dict)):
+        raise HTTPException(404, "Listing has no virtual tour")
+    cache_key = str(l.get("modified_at") or l.get("_id"))
+    cached = (l.get("doogie_tour_narration") or {})
+    if cached.get("cache_key") == cache_key and cached.get("script"):
+        return {"script": cached["script"], "cached": True}
+    l = _sanitize_listing(l)
+    # Attach a synthetic virtual_tour_embed so the prompt's fact sheet can
+    # mention host + branded/unbranded (used by _generate_tour_narration).
+    first = next((t for t in tours if isinstance(t, dict) and (t.get("url") or "").strip()), {})
+    if first:
+        l["virtual_tour_embed"] = {
+            "host": (first.get("category") or "video tour").lower(),
+            "is_branded": bool(first.get("is_branded", False)),
+        }
+    script = await _generate_tour_narration(l, session_id=f"tour-{listing_key}")
+    try:
+        await db.listings.update_one(
+            {"listing_key": listing_key},
+            {"$set": {"doogie_tour_narration": {
+                "script": script,
+                "cache_key": cache_key,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }}},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to cache tour narration for {listing_key}: {e}")
+    return {"script": script, "cached": False}
 
 
 # ── Doogie Handoff Tracking ─────────────────────────────────────────────────

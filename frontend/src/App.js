@@ -20,6 +20,7 @@ import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
+import TourNarration from "./components/TourNarration";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -3327,6 +3328,9 @@ const ListingDetail = () => {
                   }}
                 >▶ Play full-screen ↗</a>
               </div>
+              {/* Doogie voice-over pill — sits above the iframe so it's the
+                  first thing the user sees when the tour section loads. */}
+              <TourNarration listing={listing}/>
               <div style={{
                 position:"relative", width:"100%", paddingBottom:"56.25%",
                 borderRadius:12, overflow:"hidden", border:"1px solid rgba(15,42,91,0.15)",

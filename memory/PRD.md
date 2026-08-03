@@ -1865,3 +1865,30 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `curl` verification of every finding (401/404/200/429 assertions above).
 - Direct import + async invocation of `_fetch_bytes` with private/loopback/link-local/ftp URLs — all blocked.
 - Backend restarts cleanly; existing endpoints (analytics, admin login, GIF cover, share landing) still 200.
+
+---
+
+## Delivered (Feb 3, 2026) — Photo-Reel Sync Fix + Virtual-Tour Voice-Over
+
+### 1) Photo-reel sync bug (P0 · DONE)
+- Root cause: `ListingNarration.jsx` mapped cues to the timeline via `Math.floor(ratio * cues.length)` — every cue got an equal 1/N slice of the audio duration regardless of sentence length.  A 5-word sentence and a 40-word sentence both consumed the same slice, causing photos to drift out of sync with what Doogie was actually saying.
+- Fix: precompute each cue's **start character offset** inside the full script (one linear scan with forward-only `indexOf`, so a duplicate phrase later in the script doesn't collide with an earlier occurrence).  At playback, map `audio.currentTime / duration → charProgress` and binary-lookup the last cue whose `startChar ≤ charProgress`.  Character position is a much better proxy for spoken duration than a fixed count-per-cue slice.  The outro appended by the frontend (disclaimer + CTA) automatically becomes "sticky" on the last cue's photo.
+- Verified: 7/7 cues in the test listing (30106347) map cleanly to script offsets at 0%, 16%, 32%, 50%, 63%, 76%, 90% — photos 7 → 9 → 12 → 25 → 33 → 35 → 37.
+- Files: `frontend/src/components/ListingNarration.jsx` (cueOffsets + `_cueIndexAt`).
+
+### 2) Virtual-tour voice-over (P0 · DONE)
+- New Doogie feature: a longer voice-over track that plays over the Matterport/YouTube/Vimeo tour iframe.
+- Backend (`server.py`):
+  - New prompt `_TOUR_NARRATION_PROMPT` — 10–14 sentence tour-oriented script (~2–3 min TTS), plain text, no cues.  Includes a mid-narration "you can pause or replay any part" reminder and a factual close.  Same compliance rails as `_NARRATION_PROMPT` (no value opinions, no agent branding, spelled-out price, room-by-room walk).
+  - New helper `_generate_tour_narration(listing, session_id)` + endpoint `GET /api/listings/{listing_key}/tour_narration` (rate-limited 60/min).  Cached under `doogie_tour_narration` on the listing doc.  Precondition: listing must have at least one `virtual_tour_urls[].url` — otherwise 404 so the frontend hides the button.
+- Frontend:
+  - New component `frontend/src/components/TourNarration.jsx` — navy gradient pill, gold "Have Doogie narrate this virtual tour" button, Stop button, Doogie mascot with bounce animation while speaking.  Includes a "Tip: mute the tour's own audio (if any)" reminder.  Reuses the shared `useDoogieMuted` + `useDoogieSpeed` voice preferences.
+  - Mounted in `App.js` inside `ListingDetail`'s Virtual Tour section, positioned above the iframe.
+- Verified: on listing `25344727` (YouTube tour), the pill renders, the Play click produces a **105.6s TTS audio** (~1min 45s), button toggles to "Pause voice-over" and the mascot bounces.  Verified 404 on a listing without a tour.
+
+### Files touched
+- `backend/server.py`: `_TOUR_NARRATION_PROMPT`, `_generate_tour_narration`, `get_listing_tour_narration` endpoint.
+- `frontend/src/components/TourNarration.jsx` (NEW, ~150 lines).
+- `frontend/src/components/ListingNarration.jsx`: char-offset cue mapping.
+- `frontend/src/App.js`: import + mount `TourNarration` in Virtual Tour section.
+
