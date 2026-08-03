@@ -18,6 +18,7 @@ import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
   Mic, Send, ChevronRight, ExternalLink, X, Sparkles, Building2,
+  Plane, DollarSign,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -56,9 +57,11 @@ const SECTIONS = [
   { key: "saved",     label: "Saved Homes",    icon: Heart },
   { key: "buyer",     label: "Buyer Insights", icon: BarChart3 },
   { key: "seller",    label: "Seller Insights",icon: TrendingUp },
+  { key: "value",     label: "Home Value",     icon: DollarSign, href: "/valuation" },
   { key: "community", label: "Communities",    icon: MapPin },
   { key: "glossary",  label: "Glossary",       icon: BookOpen },
   { key: "tours",     label: "Virtual Tours",  icon: Video },
+  { key: "relocating",label: "Relocating",     icon: Plane, href: "/relocating" },
   { key: "consult",   label: "Consultation",   icon: CalendarClock },
   { key: "ask",       label: "Ask Doogie",     icon: MessageCircle },
 ];
@@ -178,12 +181,14 @@ const FirstVisitToast = ({ onDismiss, setSection }) => (
 );
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
-const Sidebar = ({ section, setSection, onAsk }) => (
+const Sidebar = ({ section, setSection, onAsk }) => {
+  const navHook = useNavigate();
+  return (
   <aside style={{
     background: C.navy, color: "#fff", padding: "20px 14px", position: "sticky", top: 0,
     height: "100vh", overflowY: "auto", boxShadow: "2px 0 20px rgba(15,42,91,0.15)",
   }} data-testid="dash-sidebar">
-    <Link to="/" data-testid="dash-brand" style={{
+    <Link to="/about" data-testid="dash-brand" style={{
       textDecoration: "none", display: "block",
       padding: "0 0 20px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 14,
     }}>
@@ -219,7 +224,11 @@ const Sidebar = ({ section, setSection, onAsk }) => (
         return (
           <button
             key={s.key}
-            onClick={() => (s.key === "ask" ? onAsk() : setSection(s.key))}
+            onClick={() => {
+              if (s.href) return navHook(s.href);
+              if (s.key === "ask") return onAsk();
+              setSection(s.key);
+            }}
             data-testid={`dash-nav-${s.key}`}
             style={{
               display: "flex", alignItems: "center", gap: 12,
@@ -234,7 +243,8 @@ const Sidebar = ({ section, setSection, onAsk }) => (
       })}
     </nav>
   </aside>
-);
+  );
+};
 
 // ── Top bar ────────────────────────────────────────────────────────────────
 const TopBar = ({ section, homeVariant }) => {
@@ -466,8 +476,8 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
   return (
     <div data-testid="dash-home-tiles" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Welcome strip */}
-      <div style={{ ...tile, display: "grid", gridTemplateColumns: "176px 1fr auto", gap: 18, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
-        <img src={DOOGIE.head} alt="Doogie" style={{ width: 176, height: 176, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
+      <div style={{ ...tile, display: "grid", gridTemplateColumns: "352px 1fr auto", gap: 18, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
+        <img src={DOOGIE.head} alt="Doogie" style={{ width: 352, height: 352, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: C.navy, lineHeight: 1.1 }}>
             <span style={{ color: C.brandGreen }}>Real estate,</span> <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
@@ -528,6 +538,33 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
             </div>
             <Sparkline series={history}/>
           </div>
+        </div>
+      </div>
+
+      {/* Doug's Specialties — Luxury / Equestrian / Estate Sales */}
+      <div style={tile} data-testid="dash-home-specialties">
+        <div style={tileHeader}>
+          <h3 style={tileTitle}>Doug's specialties</h3>
+          <Link to="/specialties" style={linkAction}>See all →</Link>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          {[
+            { slug: "luxury",       title: "Luxury Real Estate",   sub: "Waterfront estates, mountain chalets, custom acreages", emoji: "💎" },
+            { slug: "equestrian",   title: "Equestrian & Acreage", sub: "Horse properties, hobby farms, ALR-aware rep",           emoji: "🐴" },
+            { slug: "estate-sales", title: "Estate Sales / Probate", sub: "WESA-compliant, executor-guided sales",                emoji: "📜" },
+          ].map(s => (
+            <Link key={s.slug} to={`/specialties/${s.slug}`}
+              data-testid={`dash-home-specialty-${s.slug}`}
+              style={{
+                background: "#FBFAF5", border: "1px solid #E5E7EB", borderRadius: 10,
+                padding: "14px 14px", textDecoration: "none", color: C.navy,
+                display: "flex", flexDirection: "column", gap: 6,
+              }}>
+              <div style={{ fontSize: 22 }}>{s.emoji}</div>
+              <div style={{ fontWeight: 800, fontSize: 13, color: C.navy }}>{s.title}</div>
+              <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>{s.sub}</div>
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -852,7 +889,7 @@ const SearchPanel = () => {
       <div>
         <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : "· Doug's office"}</strong>
+            <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
             <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
           </div>
           <ListingsMap city={city} listings={results?.listings || []}/>
@@ -2179,7 +2216,7 @@ const ComplianceFooter = () => (
   <footer data-testid="dash-compliance-footer" style={{
     background: C.navy, color: "#fff", padding: "18px 32px", fontSize: 11, lineHeight: 1.6,
   }}>
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, opacity: 0.9 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 24, opacity: 0.9 }}>
       <div>
         <strong style={{ color: C.gold }}>CREA Compliance</strong><br/>
         MLS® data licensed from CREA DDF®.
@@ -2193,6 +2230,11 @@ const ComplianceFooter = () => (
         <strong style={{ color: C.gold }}>PIPA (BC)</strong><br/>
         Personal data collected for stated purpose only.<br/>
         <Link to="/terms" style={{ color: "#fff", textDecoration: "underline" }}>Terms</Link>
+      </div>
+      <div>
+        <strong style={{ color: C.gold }}>Referral Network</strong><br/>
+        Beyond Doug's primary service area?<br/>
+        <Link to="/realtor-network" data-testid="footer-realtor-network" style={{ color: "#fff", textDecoration: "underline" }}>REALTOR® Network</Link>
       </div>
     </div>
     <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)", opacity: 0.85 }}>
