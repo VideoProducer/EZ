@@ -44,6 +44,9 @@ const DOUG_SERVICE_AREAS = new Set([
 const C = {
   navy: "#0F2A5B", blue: "#1E4FCF", gold: "#F5A623", green: "#22C55E",
   cream: "#FBF7EE", ink: "#0B1220", mist: "#F0F4FB", muted: "#6B7280",
+  // Exact brand colors sampled from the EZtoFind-Sign-Letter-Centred logo PDF.
+  // Use these for the wordmark specifically (not for general UI accents).
+  brandBlue: "#0A3D99", brandGold: "#F9BD00", brandGreen: "#2F6B38",
 };
 
 const SECTIONS = [
@@ -79,8 +82,8 @@ const HeroIntro = () => (
         fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,
         fontSize: "clamp(28px, 3.4vw, 40px)", fontWeight: 800,
       }}>
-        <span style={{ color: C.green }}>Real estate,</span><br/>
-        <span style={{ color: C.navy }}>made </span><span style={{ color: C.blue }}>EZ to </span><span style={{ color: C.gold }}>Find.ca</span>
+        <span style={{ color: C.brandGreen }}>Real estate,</span><br/>
+        <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to </span><span style={{ color: C.brandGold }}>Find.ca</span>
       </h1>
       <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
         EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
@@ -186,7 +189,7 @@ const Sidebar = ({ section, setSection, onAsk }) => (
       }}>🐾</div>
       <div>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800 }}>EZtoFind<span style={{color:C.gold}}>.ca</span></div>
-        <div style={{ fontSize: 10, opacity: 0.75 }}>Real estate, made EZ to Find</div>
+        <div style={{ fontSize: 10, opacity: 0.75 }}>Real estate, made EZ to Find.ca</div>
       </div>
     </Link>
     <nav style={{ display: "grid", gap: 4 }}>
@@ -350,7 +353,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         <img src={DOOGIE.head} alt="Doogie" style={{ width: 88, height: 88, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: C.navy, lineHeight: 1.1 }}>
-            <span style={{ color: C.green }}>Real estate,</span> <span style={{ color: C.navy }}>made </span><span style={{ color: C.blue }}>EZ to </span><span style={{ color: C.gold }}>Find.ca</span>
+            <span style={{ color: C.brandGreen }}>Real estate,</span> <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to </span><span style={{ color: C.brandGold }}>Find.ca</span>
           </div>
           <div style={{ fontSize: 13, color: C.ink, marginTop: 6, lineHeight: 1.5, maxWidth: 640 }}>
             Live BC market signals from CREA DDF® — refreshed every 4 hours. General information only, never advice.
