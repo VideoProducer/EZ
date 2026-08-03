@@ -1063,6 +1063,68 @@ const PaneSellerLookup = () => {
 // This is a live, BCFSA-compliant intake that POSTs to /api/leads/buyer OR
 // /api/leads/seller depending on the visitor's stated intent. Fields match
 // the backend Pydantic schemas exactly (see server.py: BuyerLead / SellerLead).
+//
+// ── Focus-area detector (BCFSA-compliant) ─────────────────────────────────
+// Doug's licensed focus is Greater Vancouver, Fraser Valley, and the
+// Sea-to-Sky Corridor. Anywhere else in BC → we offer a friendly referral
+// bump to his vetted REALTOR® network. Match is case-insensitive substring
+// against a whitelist of common city / community names. Empty input returns
+// false (no bump until the user starts typing).
+const FOCUS_AREA_CITIES = [
+  // Greater Vancouver
+  "vancouver","burnaby","richmond","surrey","delta","tsawwassen","ladner",
+  "new westminster","coquitlam","port coquitlam","port moody","north vancouver",
+  "west vancouver","maple ridge","pitt meadows","langley","white rock",
+  "bowen island","anmore","belcarra","lions bay","cloverdale","south surrey",
+  "kitsilano","kits","fairview","mount pleasant","kerrisdale","dunbar",
+  "point grey","yaletown","gastown","strathcona","hastings-sunrise","marpole",
+  "champlain heights","south vancouver","east vancouver","downtown vancouver",
+  "west end","commercial drive","riley park","oakridge","cambie","shaughnessy",
+  "arbutus","southlands","killarney","victoria-fraserview","sunset","renfrew",
+  "grandview","hastings","brentwood","metrotown","edmonds","lougheed","deer lake",
+  "willingdon","capitol hill","cedar cottage",
+  // Fraser Valley
+  "abbotsford","chilliwack","mission","hope","agassiz","harrison hot springs",
+  "kent","boston bar","yarrow","cultus lake","rosedale","sardis",
+  // Sea-to-Sky Corridor
+  "squamish","whistler","pemberton","britannia beach","furry creek","d'arcy",
+  "mount currie","lillooet lake",
+];
+const isOutsideFocusArea = (text) => {
+  const t = (text || "").trim().toLowerCase();
+  if (t.length < 2) return false;
+  return !FOCUS_AREA_CITIES.some(c => t.includes(c));
+};
+const OutsideFocusBump = ({ label, testId = "outside-focus-bump" }) => (
+  <div
+    data-testid={testId}
+    style={{
+      background: "#FFF8E1", border: "1px solid #F5D28A", borderRadius: 10,
+      padding: "10px 12px", fontSize: 12.5, color: "#4B3300", lineHeight: 1.55,
+      display: "grid", gap: 6,
+    }}
+  >
+    <div>
+      <strong>{label || "That area"}</strong> falls outside the Greater
+      Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that
+      doesn't mean we can't help you get connected! <span aria-hidden>🐾</span>{" "}
+      Would you like to be connected with a licensed REALTOR® in that area
+      through Doug's referral network?
+    </div>
+    <div>
+      <a
+        href="/referral-request"
+        data-testid={`${testId}-link`}
+        style={{
+          display: "inline-block", padding: "6px 12px", borderRadius: 8,
+          background: "#0F2A5B", color: "#fff", fontWeight: 700,
+          fontSize: 12, textDecoration: "none",
+        }}
+      >Referral REALTOR® →</a>
+    </div>
+  </div>
+);
+
 const PaneQualify = () => {
   // Step: 1=intent, 2=REALTOR ethics qualifier, 3=contact, 4=buyer/seller specifics, 5=consent+submit
   const [step, setStep] = useState(1);
@@ -1347,6 +1409,9 @@ const PaneQualify = () => {
         <div data-testid="qualify-step-4-buyer" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your search</div>
           <TextField label="Target areas or cities in BC *" value={form.areas} onChange={v => upd("areas", v)} testId="q-areas" placeholder="e.g. Kitsilano, North Vancouver, Squamish" hint="Comma-separated list is fine"/>
+          {isOutsideFocusArea(form.areas) && (
+            <OutsideFocusBump label={form.areas.trim()} testId="q-areas-outside-focus"/>
+          )}
           <SelectField label="Budget range" value={form.budget_range} onChange={v => upd("budget_range", v)} testId="q-budget"
             options={["Under $500K","$500K – $800K","$800K – $1.2M","$1.2M – $1.8M","$1.8M – $2.5M","$2.5M – $4M","Over $4M"]}/>
           <SelectField label="Property type" value={form.property_type} onChange={v => upd("property_type", v)} testId="q-property-type"
@@ -1367,6 +1432,9 @@ const PaneQualify = () => {
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your home</div>
           <TextField label="Property address *" value={form.property_address} onChange={v => upd("property_address", v)} testId="q-address"/>
           <TextField label="City (BC) *" value={form.city} onChange={v => upd("city", v)} testId="q-city"/>
+          {isOutsideFocusArea(form.city) && (
+            <OutsideFocusBump label={form.city.trim()} testId="q-city-outside-focus"/>
+          )}
           <SelectField label="Property type" value={form.property_type} onChange={v => upd("property_type", v)} testId="q-property-type"
             options={["Detached","Townhouse","Condo","Duplex","Luxury","Estate Sale / Probate","Equestrian / Acreage","Land"]}/>
           <SelectField label="Timeline" value={form.timeline} onChange={v => upd("timeline", v)} testId="q-timeline"
