@@ -921,16 +921,23 @@ const PaneNeighbourhood = () => {
         ))}
       </div>
       <div style={{
-        marginTop: 4, background: C.mist, border: "1px dashed #C7D2E8",
-        borderRadius: 12, padding: 12, height: 120, position: "relative", overflow: "hidden",
+        marginTop: 4, background: C.mist, border: "1px solid #DDE6FA",
+        borderRadius: 12, height: 220, position: "relative", overflow: "hidden",
       }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage:
-          "repeating-linear-gradient(0deg, rgba(15,42,91,0.06) 0 1px, transparent 1px 22px), repeating-linear-gradient(90deg, rgba(15,42,91,0.06) 0 1px, transparent 1px 22px)"
-        }}/>
-        <MapPin size={22} color={C.blue} style={{ position: "absolute", left: "40%", top: "45%" }}/>
-        <MapPin size={16} color={C.gold} style={{ position: "absolute", left: "22%", top: "60%" }}/>
-        <MapPin size={16} color={C.gold} style={{ position: "absolute", left: "68%", top: "30%" }}/>
-        <div style={{ position: "absolute", right: 10, bottom: 8, fontSize: 11, color: "#6B7280" }}>Mock map · CoV Open Data</div>
+        <iframe
+          data-testid="pane-neighbourhood-map"
+          title="Kitsilano · Vancouver West — live map"
+          src="https://www.google.com/maps?q=Kitsilano,+Vancouver+West,+BC+real+estate&z=14&output=embed"
+          style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
+        <div style={{
+          position: "absolute", right: 10, bottom: 8, fontSize: 11,
+          background: "rgba(255,255,255,0.92)", padding: "2px 6px", borderRadius: 4,
+          color: "#374151",
+        }}>Live · Google Maps</div>
       </div>
     </div>
   );
@@ -2005,15 +2012,48 @@ export default function VisualAgentDemo() {
       "kelowna", "vernon", "penticton", "kamloops", "nanaimo", "victoria",
       "sooke", "duncan", "courtenay", "comox", "campbell river", "nelson",
       "cranbrook", "revelstoke", "fernie", "prince george", "tofino",
+      // Okanagan / Boundary / Kootenays / North / Coast additions — anywhere in BC
+      "osoyoos", "oliver", "summerland", "peachland", "west kelowna", "lake country",
+      "salmon arm", "sicamous", "enderby", "armstrong", "coldstream",
+      "castlegar", "trail", "kimberley", "invermere", "creston", "grand forks",
+      "sechelt", "gibsons", "powell river", "port alberni", "parksville", "qualicum beach",
+      "ucluelet", "port hardy", "port mcneill", "prince rupert", "terrace", "kitimat",
+      "smithers", "quesnel", "williams lake", "100 mile house", "dawson creek", "fort st. john",
+      "merritt", "logan lake", "clearwater", "lillooet", "lytton", "hazelton",
+      "bowen island", "gabriola", "salt spring island", "pender island", "galiano",
+      "ladysmith", "chemainus", "mill bay", "shawnigan lake", "cobble hill",
+      "sidney", "saanich", "oak bay", "colwood", "langford", "esquimalt", "view royal", "metchosin",
+      "cumberland", "black creek", "sayward",
     ];
     for (const c of CITIES) { if (q.includes(c)) { city = c; break; } }
     // Property type keyword
     if (/\bcondo\b|\bapartment\b/.test(q)) propType = "Apartment";
     else if (/\bhouse\b|\bdetached\b|\bhome\b/.test(q)) propType = "House";
     else if (/\btownhouse\b|\btownhome\b|\brow\b/.test(q)) propType = "Townhouse";
+    // Feature keywords — mapped to canonical phrases the backend matches
+    // against the DDF `features` array OR the public remarks regex. Each entry
+    // survives as a comma-separated `features=` URL param on the /listings
+    // page. Backend uses _features_query() to match structured or fulltext.
+    const FEATURE_MAP = [
+      { re: /\brv\s*(?:parking|hookup|pad|garage|storage)\b|\broom\s+for\s+(?:an?\s+)?rv\b/, tag: "rv parking" },
+      { re: /\bpool\b|\bswimming\s+pool\b/, tag: "pool" },
+      { re: /\bocean\s*(?:view|front)\b|\bsea\s*view\b/, tag: "ocean view" },
+      { re: /\bwater\s*front\b|\blake\s*front\b|\briver\s*front\b/, tag: "waterfront" },
+      { re: /\bmountain\s*view\b/, tag: "mountain view" },
+      { re: /\bacreage\b|\backer?s?\b|\bfarm\b|\branch\b/, tag: "acreage" },
+      { re: /\bsuite\b|\bmortgage\s*helper\b|\bbasement\s*suite\b|\blegal\s*suite\b/, tag: "suite" },
+      { re: /\bgarage\b|\b(?:double|triple)\s*car\b/, tag: "garage" },
+      { re: /\bwork\s*shop\b|\bworkshop\b/, tag: "workshop" },
+      { re: /\bhot\s*tub\b/, tag: "hot tub" },
+      { re: /\bair\s*conditioning\b|\bcentral\s*air\b|\ba\s*\/\s*c\b/, tag: "air conditioning" },
+      { re: /\bequestrian\b|\bhorse\b|\bstable\b|\bpaddock\b/, tag: "equestrian" },
+      { re: /\bvirtual\s*tour\b|\bvideo\s*tour\b/, tag: "virtual tour" },
+    ];
+    const features = [];
+    for (const f of FEATURE_MAP) { if (f.re.test(q)) features.push(f.tag); }
     // If none matched, don't bother firing a listing search
-    if (!city && !beds && !priceMax && !propType) return null;
-    return { city, beds, priceMax, propType };
+    if (!city && !beds && !priceMax && !propType && features.length === 0) return null;
+    return { city, beds, priceMax, propType, features };
   };
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -2048,6 +2088,7 @@ export default function VisualAgentDemo() {
           if (parsed.beds) listingParams.set("beds_min", String(parsed.beds));
           if (parsed.priceMax) listingParams.set("price_max", String(parsed.priceMax));
           if (parsed.propType) listingParams.set("property_type", parsed.propType);
+          if (parsed.features && parsed.features.length) listingParams.set("features", parsed.features.join(","));
         } else {
           // Free-text fallback — hand the whole query to /api/listings
           listingParams.set("q", q);
@@ -2168,6 +2209,7 @@ export default function VisualAgentDemo() {
       if (parsed?.beds)      p.set("beds_min", String(parsed.beds));
       if (parsed?.priceMax)  p.set("price_max", String(parsed.priceMax));
       if (parsed?.propType)  p.set("property_type", parsed.propType);
+      if (parsed?.features && parsed.features.length) p.set("features", parsed.features.join(","));
       setSearchOpen(false);
       nav(`/listings?${p.toString()}`);
       return;
@@ -2805,7 +2847,6 @@ export default function VisualAgentDemo() {
 
           <div style={{ minWidth: 260 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              <Pill tone="glass"><ShieldCheck size={12}/> BCFSA-safe · educational</Pill>
               <Pill tone="glass"><MessageCircle size={12}/> Text · Voice · Video</Pill>
               <Pill tone="glass"><HomeIcon size={12}/> Buying · Selling</Pill>
             </div>

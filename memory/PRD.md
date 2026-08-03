@@ -1570,3 +1570,26 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 - Compliance banner text now matches Doug's exact wording ✓
 - `curl /api/tours/library?limit=12` returns 12 real BC MLS® tour listings ✓
 - Typing "3 bed condo in vancouver under 900k" + Enter lands on `/listings?q=…&city=vancouver&beds_min=3&price_max=900000&property_type=Apartment` ✓
+
+
+## Feb 4, 2026 — CREA sync, live map, cleanup
+
+### 1. Search bar synced with CREA DDF® for every BC city + feature keywords
+- Expanded `parseListingQuery` city list from 32 → 90+ BC municipalities (added Okanagan: Osoyoos, Oliver, Summerland, Peachland, West Kelowna; Boundary/Kootenays: Castlegar, Trail, Kimberley, Invermere, Creston, Grand Forks; Sunshine Coast: Sechelt, Gibsons, Powell River; Vancouver Island: Parksville, Qualicum Beach, Ucluelet, Cumberland, Cobble Hill, Mill Bay, Sidney, Saanich, Oak Bay, Colwood, Langford, Esquimalt; North: Prince Rupert, Terrace, Kitimat, Smithers, Quesnel, Williams Lake, 100 Mile House, Dawson Creek, Fort St. John; Gulf Islands: Bowen, Gabriola, Salt Spring, Pender, Galiano; and more).
+- Added client-side **feature keyword extraction** — regex-mapped 13 canonical tags (rv parking, pool, ocean view, waterfront, mountain view, acreage, suite, garage, workshop, hot tub, air conditioning, equestrian, virtual tour) — passed as `features=` URL param to `/api/listings`, which uses `_features_query()` for structured OR fulltext-regex matching against DDF remarks.
+- Both the debounced smart-search dropdown fetch AND the form-submit routing now carry the extracted features.
+
+Verified:
+- "3 bedrooms in osoyoos" → `/listings?q=…&city=osoyoos&beds_min=3` → **151 real Osoyoos 3+bd MLS® listings** ✓
+- "homes in prince george with RV parking" → `/listings?q=…&city=prince+george&features=rv+parking` → **37 real PG listings with RV parking** ✓
+
+### 2. Live Google Maps embed on the Kitsilano Neighbourhood pane
+- Replaced the fake CSS-grid "Mock map · CoV Open Data" with a real Google Maps iframe (`https://www.google.com/maps?q=Kitsilano,+Vancouver+West,+BC+real+estate&z=14&output=embed`, no API key needed, `loading="lazy"`).
+- Renders live real-estate pins on the Kitsilano map (Realtor offices, Macdonald Commercial, condo listings) — new "Live · Google Maps" badge.
+- data-testid: `pane-neighbourhood-map`.
+
+### 3. Removed BCFSA-safe · educational pill
+- Dropped from the Visual Agent hero header. The compliance banner strip above + per-answer microtext + Compliance page footer still carry the BCFSA/CASL/PIPA references.
+
+### Files touched
+- Modified frontend/src/pages/VisualAgentDemo.jsx: expanded CITIES array; added FEATURE_MAP regex list; wired `features` into runSearchSubmit + smart-search useEffect; replaced mock map div with Google Maps iframe; removed BCFSA-safe Pill
