@@ -2161,11 +2161,8 @@ const DoogieOnboarding = () => {
             background: "#FFF8E8", border: "1px solid #F5D28A", borderRadius: 12,
             padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
           }}>
-            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--brand-navy)", marginBottom: 4 }}>
+            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--brand-navy)", marginBottom: 10 }}>
               Quick question — are you working with a REALTOR<sup style={{fontSize:9}}>®</sup>?
-            </div>
-            <div style={{ fontSize: "0.75rem", color: "#4B5563", marginBottom: 10, lineHeight: 1.5 }}>
-              The REALTOR<sup style={{fontSize:8}}>®</sup> Code of Ethics asks Doug not to interfere with an existing agent relationship.
             </div>
             <div style={{ display: "grid", gap: 6 }}>
               <button
@@ -2201,6 +2198,9 @@ const DoogieOnboarding = () => {
             padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
             fontSize: "0.85rem", lineHeight: 1.55, color: "var(--brand-navy)",
           }}>
+            <div style={{ fontSize: "0.78rem", color: "#4B5563", marginBottom: 8, lineHeight: 1.55, fontStyle: "italic" }}>
+              The REALTOR<sup style={{fontSize:8}}>®</sup> Code of Ethics asks Doug not to interfere with an existing agent relationship.
+            </div>
             That's wonderful — please continue working with your REALTOR<sup style={{fontSize:8}}>®</sup>.{" "}
             <span aria-hidden>🐾</span> You're welcome to explore EZtoFind.ca for
             general BC real estate information, but Doug won't reach out or
