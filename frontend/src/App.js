@@ -4735,6 +4735,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminders")} className={active==="reminders"?"active":""} data-testid="admin-nav-reminders">🎂 Reminders</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reminder-templates")} className={active==="rem-templates"?"active":""} data-testid="admin-nav-rem-templates">📧 Reminder Templates</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-log")} className={active==="email-log"?"active":""} data-testid="admin-nav-email-log">📮 Email Log</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-outbox")} className={active==="email-outbox"?"active":""} data-testid="admin-nav-email-outbox">📬 Email Outbox</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/saved-searches")} className={active==="saved-searches"?"active":""} data-testid="admin-nav-saved-searches">🔔 Saved Searches</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
@@ -5407,6 +5408,133 @@ const AdminEmailLog = () => {
     </table>
   </AdminShell>;
 };
+
+// ── Master email outbox — every send from every campaign (saved-search alerts,
+//   welcome series, buyer digest, dormant wake-up, admin tests). Backed by the
+//   `email_outbox` Mongo collection which the Resend send wrapper writes to on
+//   every attempt (success or failure). One-click flush retries every pending
+//   / errored row so nothing sits stuck after DNS / API-key hiccups.
+const AdminEmailOutbox = () => {
+  const {headers} = useAdmin();
+  const [data, setData] = useState({pending_count: 0, recent: []});
+  const [busy, setBusy] = useState(false);
+  const [flushResult, setFlushResult] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [testTo, setTestTo] = useState("");
+  const [testBusy, setTestBusy] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const load = () => axios.get(`${API}/admin/email-outbox`, {headers})
+    .then(r => setData(r.data)).catch(() => {});
+  useEffect(() => { if(headers) load(); }, []);
+  const flush = async () => {
+    if (!window.confirm("Retry every pending / failed email in the outbox now?")) return;
+    setBusy(true); setFlushResult(null);
+    try {
+      const r = await axios.post(`${API}/admin/email-outbox/flush`, {}, {headers});
+      setFlushResult(r.data);
+      load();
+    } catch (x) {
+      setFlushResult({error: x?.response?.data?.detail || "Flush failed."});
+    } finally { setBusy(false); }
+  };
+  const sendTest = async (e) => {
+    e.preventDefault();
+    if (!testTo) return;
+    setTestBusy(true); setTestResult(null);
+    try {
+      const r = await axios.post(`${API}/admin/email/send-test`, {to: testTo}, {headers});
+      setTestResult(r.data);
+      load();
+    } catch (x) {
+      setTestResult({error: x?.response?.data?.detail || "Test send failed."});
+    } finally { setTestBusy(false); }
+  };
+  const rows = statusFilter ? data.recent.filter(r => r.status === statusFilter) : data.recent;
+  const statusCounts = data.recent.reduce((acc, r) => { acc[r.status] = (acc[r.status]||0)+1; return acc; }, {});
+  const fmtDate = (s) => s ? String(s).slice(0,16).replace("T"," ") : "—";
+  const statusPill = (s) => {
+    const map = {sent:{bg:"#F0FDF4",fg:"#166534"}, pending:{bg:"#FEF3C7",fg:"#92400E"}, error:{bg:"#FEE2E2",fg:"#991B1B"}, failed:{bg:"#FEE2E2",fg:"#991B1B"}};
+    const c = map[s] || {bg:"#F3F4F6",fg:"#374151"};
+    return <span style={{fontSize:"0.7rem",fontWeight:700,padding:"0.18rem 0.5rem",borderRadius:999,background:c.bg,color:c.fg,textTransform:"uppercase",letterSpacing:"0.04em"}}>{s}</span>;
+  };
+  return <AdminShell active="email-outbox">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
+      <h1 className="font-display" style={{fontSize:"2rem",margin:0}}>📬 Email Outbox</h1>
+      <button className="btn btn-primary" onClick={flush} disabled={busy || data.pending_count===0} data-testid="email-outbox-flush">
+        {busy ? "Flushing…" : `🔁 Retry pending (${data.pending_count})`}
+      </button>
+    </div>
+    <p style={{color:"var(--muted)",marginTop:"0.5rem"}}>Every email the site sends via Resend — saved-search confirmations, alert digests, welcome series, dormant wake-ups, admin tests. Shows the last 500 attempts. Deliverability status comes straight from the Resend API.</p>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:"0.75rem",marginTop:"1.25rem",marginBottom:"1.25rem"}}>
+      <button onClick={()=>setStatusFilter("")} data-testid="outbox-filter-all" style={{background:statusFilter===""?"var(--brand-navy)":"#F0F4FB",color:statusFilter===""?"#fff":"var(--brand-navy)",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.8}}>Total (last 500)</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.recent.length}</div>
+      </button>
+      <button onClick={()=>setStatusFilter("sent")} data-testid="outbox-filter-sent" style={{background:statusFilter==="sent"?"#22C55E":"#F0FDF4",color:statusFilter==="sent"?"#fff":"#166534",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Delivered</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{statusCounts.sent||0}</div>
+      </button>
+      <button onClick={()=>setStatusFilter("pending")} data-testid="outbox-filter-pending" style={{background:statusFilter==="pending"?"#F5A623":"#FEF3C7",color:statusFilter==="pending"?"#fff":"#92400E",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Pending</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{data.pending_count||0}</div>
+      </button>
+      <button onClick={()=>setStatusFilter("error")} data-testid="outbox-filter-error" style={{background:statusFilter==="error"?"#DC2626":"#FEE2E2",color:statusFilter==="error"?"#fff":"#991B1B",border:"none",borderRadius:10,padding:"0.9rem 0.75rem",cursor:"pointer",textAlign:"left"}}>
+        <div style={{fontSize:"0.72rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.85}}>Errored</div>
+        <div style={{fontSize:"1.5rem",fontWeight:700,marginTop:"0.15rem"}}>{(statusCounts.error||0)+(statusCounts.failed||0)}</div>
+      </button>
+    </div>
+
+    {flushResult && (
+      <div className="notice" style={{background:flushResult.error?"#FEE2E2":"#F0FDF4",borderColor:flushResult.error?"#DC2626":"#22C55E",marginBottom:"1.25rem"}} data-testid="outbox-flush-result">
+        {flushResult.error
+          ? <span>❌ {flushResult.error}</span>
+          : <span>✅ Flushed — attempted <strong>{flushResult.attempted}</strong>, delivered <strong>{flushResult.sent}</strong>, still failing <strong>{flushResult.still_failed}</strong>.</span>}
+      </div>
+    )}
+
+    {/* Test-send widget — verifies the whole send pipeline in one click */}
+    <div style={{background:"#F0F4FB",border:"1px solid rgba(15,42,91,0.15)",borderRadius:12,padding:"1rem 1.25rem",marginBottom:"1.25rem"}}>
+      <div style={{fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem"}}>🧪 Send a live test email</div>
+      <p style={{color:"var(--muted)",fontSize:"0.85rem",margin:"0 0 0.75rem"}}>Fires a real email through Resend from <code>info@eztofind.ca</code>. Verifies API key + DNS + sender in one shot.</p>
+      <form onSubmit={sendTest} style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+        <input required type="email" value={testTo} onChange={e=>setTestTo(e.target.value)} placeholder="you@example.com" style={{flex:"1 1 220px",padding:"0.55rem 0.85rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.15)",fontFamily:"inherit",fontSize:"0.9rem"}} data-testid="outbox-test-to"/>
+        <button type="submit" disabled={testBusy} className="btn btn-primary" style={{padding:"0.5rem 1.15rem",fontSize:"0.9rem"}} data-testid="outbox-test-send">
+          {testBusy ? "Sending…" : "Send test"}
+        </button>
+      </form>
+      {testResult && (
+        <div className="notice" style={{background:testResult.error?"#FEE2E2":"#F0FDF4",borderColor:testResult.error?"#DC2626":"#22C55E",marginTop:"0.75rem",fontSize:"0.85rem"}} data-testid="outbox-test-result">
+          {testResult.error ? <>❌ {testResult.error}</> : <>✅ {testResult.status === "sent" ? "Delivered to Resend" : `Queued (${testResult.status})`}. Message ID: <code>{testResult.provider_message_id || "—"}</code></>}
+        </div>
+      )}
+    </div>
+
+    <table className="admin-table" data-testid="admin-email-outbox-table">
+      <thead><tr>
+        <th>Created</th><th>To</th><th>Subject</th><th>Kind</th><th>Provider</th><th>Attempts</th><th>Status</th><th>Error</th>
+      </tr></thead>
+      <tbody>
+        {rows.length===0
+          ? <tr><td colSpan="8" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No emails in this bucket yet.</td></tr>
+          : rows.map((r,i)=>(
+            <tr key={i}>
+              <td style={{whiteSpace:"nowrap",fontSize:"0.85rem"}}>{fmtDate(r.created_at)}</td>
+              <td style={{fontSize:"0.85rem"}}>{r.to}</td>
+              <td style={{maxWidth:"20rem",fontSize:"0.85rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.subject}>{r.subject}</td>
+              <td style={{fontSize:"0.75rem",color:"var(--muted)"}}>{r.kind||"—"}</td>
+              <td style={{fontSize:"0.75rem",color:"var(--muted)"}}>{r.provider||"—"}</td>
+              <td style={{textAlign:"center",fontSize:"0.85rem"}}>{r.attempts||0}</td>
+              <td>{statusPill(r.status)}</td>
+              <td style={{maxWidth:"14rem",fontSize:"0.72rem",color:"#991B1B",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.provider_error||""}>{r.provider_error||"—"}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </AdminShell>;
+};
+
 
 // --- Communities (all of BC) ---
 const Communities = () => {
@@ -9144,6 +9272,7 @@ function App() {
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
+      <Route path="/admin/email-outbox" element={<AdminEmailOutbox/>}/>
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
