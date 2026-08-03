@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { TurnstileWidget, getTurnstileToken, DoogieChat } from "../App";
+import { TurnstileWidget, getTurnstileToken } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -3139,22 +3139,14 @@ export default function VisualAgentDemo() {
         </div>
       </div>
 
-      {/* ── Split screen: transcript + dynamic pane ───────────────────────── */}
+      {/* ── Dynamic pane (full width) ─────────────────────────────────────
+          The embedded Doogie chat panel was removed at Doug's request (Feb 4,
+          2026) — the smart search bar + scenario tabs above already carry the
+          interactive AI surface without duplicating a full chat window here. */}
       <section style={{ maxWidth: 1200, margin: "18px auto 0", padding: "0 20px" }}>
         <div className="visual-agent-split" style={{
-          display: "grid", gridTemplateColumns: "minmax(280px, 420px) 1fr", gap: 18,
+          display: "grid", gridTemplateColumns: "1fr", gap: 18,
         }}>
-          {/* Live conversation — real Doogie chat panel embedded in the Visual
-              Agent. Consolidates the previously-separate DoogieChat FAB + hero
-              search bar into a single, always-visible interactive surface with
-              language switcher, voice input (Whisper), TTS, related chips, and
-              inline listing cards. */}
-          <div data-testid="visual-agent-doogie-embed" style={{
-            minHeight: 520, display: "flex",
-          }}>
-            <DoogieChat mode="embedded"/>
-          </div>
-
           {/* Dynamic pane */}
           <div style={{
             background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14, padding: 16, minHeight: 460,

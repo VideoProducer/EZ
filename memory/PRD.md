@@ -1507,3 +1507,19 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 
 ### Files touched
 - Modified backend/server.py: `_TTS_ALLOWED_VOICES` doc comment; `doogie_tts` fallback default
+
+
+## Feb 4, 2026 — Removed embedded Doogie chat panel from home + Visual Agent
+
+### What changed
+- Deleted the `<DoogieChat mode="embedded"/>` left column from the Visual Agent split-screen (VisualAgentDemo.jsx). Since the same page is embedded on the homepage, this removes the panel from both surfaces in one shot.
+- Grid collapsed from 2-column (`minmax(280px, 420px) 1fr`) to single-column (`1fr`); the dynamic scenario pane now spans full width.
+- Removed unused `DoogieChat` import.
+- Reason: smart search bar + scenario tabs above already carry the interactive AI surface; the extra chat window was duplicative.
+
+### Verified
+- Screenshot at 1200px scroll shows no chat panel; onboarding modal + scenario tabs render cleanly ✓
+- Playwright counts: `doogie-panel-embedded=0`, `visual-agent-doogie-embed=0` ✓
+
+### Files touched
+- Modified frontend/src/pages/VisualAgentDemo.jsx: removed embedded chat column, collapsed split-grid, removed unused import
