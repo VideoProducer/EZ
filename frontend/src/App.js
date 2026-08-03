@@ -2378,7 +2378,12 @@ const Home = () => {
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>.ca</span></h1>
         <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p className="lead" style={{marginTop:"1.25rem",fontSize:"1.65rem",fontWeight:700,color:"var(--brand-navy)",lineHeight:1.2,fontFamily:"'Playfair Display', serif"}}>
-          Meet <span style={{color:"#FDB813",fontStyle:"italic"}}>Doogie</span> — your BC real estate helper
+          <Link to="/" data-testid="home-meet-doogie-link" style={{color:"inherit",textDecoration:"none"}}
+            onMouseOver={e=>e.currentTarget.style.opacity="0.85"}
+            onMouseOut={e=>e.currentTarget.style.opacity="1"}
+            title="Home — EZtoFind.ca">
+            Meet <span style={{color:"#FDB813",fontStyle:"italic"}}>Doogie</span> — your BC real estate helper
+          </Link>
         </p>
         <p className="lead" style={{marginTop:"0.5rem"}}>Ask about active BC listings, neighborhoods, or real estate terms. Doogie provides general information only, never advice.</p>
         <p className="lead" style={{marginTop:"1rem"}}>Real Estate services are provided by Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. — He is a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential strata's. His primary practice areas are: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC.</p>
