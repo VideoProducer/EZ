@@ -2298,9 +2298,9 @@ const ComplianceFooter = () => (
         <Link to="/terms" style={{ color: "#fff", textDecoration: "underline" }}>Terms</Link>
       </div>
       <div>
-        <strong style={{ color: C.gold }}>Referral Network</strong><br/>
-        Beyond Doug's primary service area?<br/>
-        <Link to="/realtor-network" data-testid="footer-realtor-network" style={{ color: "#fff", textDecoration: "underline" }}>REALTOR® Network</Link>
+        <Link to="/realtor-network" data-testid="footer-realtor-network" style={{ color: C.gold, textDecoration: "none" }}>
+          <strong>REALTOR® Network</strong>
+        </Link>
       </div>
     </div>
     <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)", opacity: 0.85 }}>
