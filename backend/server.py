@@ -9810,7 +9810,7 @@ class DoogieTTSIn(BaseModel):
     voice: Optional[str] = "ash"    # ash = warm, friendly male voice — best fit for Doogie mascot
     session_id: Optional[str] = None
 
-# TTS voice allow-list — anything else falls back to `nova`.
+# TTS voice allow-list — anything else falls back to `ash` (Doogie's default).
 _TTS_ALLOWED_VOICES = {"alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"}
 
 
@@ -9841,9 +9841,9 @@ async def doogie_tts(request: Request, body: DoogieTTSIn):
         # OpenAI TTS caps at 4096 chars; also protects the bill.
         text = text[:4000]
 
-    voice = (body.voice or "nova").lower()
+    voice = (body.voice or "ash").lower()
     if voice not in _TTS_ALLOWED_VOICES:
-        voice = "nova"
+        voice = "ash"
 
     key = _tts_cache_key(text, voice)
 

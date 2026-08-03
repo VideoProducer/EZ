@@ -1489,3 +1489,21 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 
 ### Files touched
 - Modified frontend/src/pages/VisualAgentDemo.jsx: added parseListingQuery helper; smart-search useEffect fires parallel /api/search + /api/listings and merges; dropdown badges handle new "Listing" (single card) and "Listings" (see-more) group names
+
+
+## Feb 4, 2026 — Doogie default TTS voice locked to `ash`
+
+### What changed
+- Backend `/api/doogie/tts` fallback default changed from `nova` → `ash` in both:
+  - `_TTS_ALLOWED_VOICES` docstring comment
+  - `voice = (body.voice or "ash").lower()` and invalid-voice fallback
+- Frontend (`VisualAgentDemo.jsx`, `App.js`) was already sending `voice: "ash"` on every TTS call; backend now agrees with the frontend so any client that omits `voice` still gets Doogie's canonical warm-friendly voice.
+
+### Available voices (allow-listed)
+`alloy`, `ash` (default — warm friendly male, Doogie's canonical voice), `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`
+
+### Verified
+- `curl POST /api/doogie/tts {"text":"Hi, I am Doogie...", "voice":"ash"}` → HTTP 200, 39 KB audio/mpeg blob ✓
+
+### Files touched
+- Modified backend/server.py: `_TTS_ALLOWED_VOICES` doc comment; `doogie_tts` fallback default
