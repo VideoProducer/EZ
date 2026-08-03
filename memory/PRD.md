@@ -1467,3 +1467,25 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 ### Files touched
 - Modified frontend/src/App.js: DOOGIE_ONBOARDING_SCRIPTS map; mode pills + mode-aware Play in DoogieHeroGreeting and DoogieOnboarding; startTour passes ?mode=… query param
 - Modified frontend/src/pages/VisualAgentDemo.jsx: kioskMode greeting effect reads ?mode + localStorage; new voice-search state + startVoiceSearch/stopVoiceSearch handlers; mic button in the input; va-mic-pulse keyframe added to inline style block
+
+
+## Feb 3, 2026 — Natural-language MLS search in the smart bar
+
+### What changed
+- Added `parseListingQuery(raw)` in VisualAgentDemo.jsx — extracts city, beds_min, price_max, and property_type from phrases like:
+  - "4 bedroom homes in whistler under 2M"
+  - "condo under 800k vancouver"
+  - "3+ bed detached surrey"
+  - "luxury estate in west vancouver"
+- Smart search debounced effect now fires TWO parallel fetches: /api/search (autocomplete groups) AND /api/listings (real MLS results). Merges them into a single dropdown.
+- Real listings show at the TOP of the dropdown as clickable rows: "$1,950,000 · 9199 EMERALD DRIVE" + "Whistler · 5bd · 3ba · House". Each row is a direct link to /listings/{listing_key}.
+- "See all N matching listings →" tail appears when total > shown, linking to /listings with the parsed filters as URL params.
+- Ask Doogie fallback is always appended so no query goes unanswered.
+
+### Verified end-to-end
+- "4 bedroom homes in whistler under 2M" → 4 real Whistler listings ranging $399K to $1.95M, all with beds_min=4 (some show 5 beds, satisfying 4+), all under $2M ✓
+- Real listing pill "MLS® LISTING" (blue) distinguishes from Communities (green) / Terms / Ask Doogie (gold)
+- Voice input via mic → same natural-language parser → same results
+
+### Files touched
+- Modified frontend/src/pages/VisualAgentDemo.jsx: added parseListingQuery helper; smart-search useEffect fires parallel /api/search + /api/listings and merges; dropdown badges handle new "Listing" (single card) and "Listings" (see-more) group names

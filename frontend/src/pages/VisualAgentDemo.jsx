@@ -1973,6 +1973,49 @@ export default function VisualAgentDemo() {
 
   // ── Persistent BC search (lifted so a top-level always-visible bar can drive
   //     the PaneSearch results and jump the demo straight to Buyer Search).
+  // Natural-language query parser for the smart search bar. Extracts city,
+  // beds_min, and price_max from phrases like:
+  //   "4 bedroom homes in whistler under 2M"
+  //   "condo under 800k vancouver"
+  //   "3+ bed detached surrey"
+  // Anything not matched is left blank so the listings API returns broader
+  // results. Returns null if nothing meaningful was extracted.
+  const parseListingQuery = (raw) => {
+    const q = (raw || "").toLowerCase();
+    if (q.length < 3) return null;
+    let beds = null, priceMax = null, city = null, propType = null;
+    // Beds — "4 bed", "3+ bedroom", "two-bedroom"
+    const bedMatch = q.match(/(\d+)\s*\+?\s*(?:bed|bedroom|br)/);
+    if (bedMatch) beds = parseInt(bedMatch[1], 10);
+    // Price ceiling — "under 2M", "under $850k", "less than 1,200,000"
+    const priceMatch = q.match(/(?:under|below|less than|max|<)\s*\$?\s*([\d.,]+)\s*(m|k)?\b/);
+    if (priceMatch) {
+      let n = parseFloat(priceMatch[1].replace(/,/g, "")); const unit = priceMatch[2];
+      if (unit === "m") n *= 1_000_000; else if (unit === "k") n *= 1_000;
+      else if (n < 1000) n *= 1_000_000; // "2" = 2M shorthand
+      if (isFinite(n) && n > 0) priceMax = Math.round(n);
+    }
+    // Common BC cities (case-insensitive substring match on the query)
+    const CITIES = [
+      "vancouver", "burnaby", "richmond", "surrey", "delta", "new westminster",
+      "coquitlam", "port coquitlam", "port moody", "north vancouver",
+      "west vancouver", "maple ridge", "pitt meadows", "langley", "white rock",
+      "abbotsford", "chilliwack", "mission", "hope",
+      "squamish", "whistler", "pemberton",
+      "kelowna", "vernon", "penticton", "kamloops", "nanaimo", "victoria",
+      "sooke", "duncan", "courtenay", "comox", "campbell river", "nelson",
+      "cranbrook", "revelstoke", "fernie", "prince george", "tofino",
+    ];
+    for (const c of CITIES) { if (q.includes(c)) { city = c; break; } }
+    // Property type keyword
+    if (/\bcondo\b|\bapartment\b/.test(q)) propType = "Apartment";
+    else if (/\bhouse\b|\bdetached\b|\bhome\b/.test(q)) propType = "House";
+    else if (/\btownhouse\b|\btownhome\b|\brow\b/.test(q)) propType = "Townhouse";
+    // If none matched, don't bother firing a listing search
+    if (!city && !beds && !priceMax && !propType) return null;
+    return { city, beds, priceMax, propType };
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCommitted, setSearchCommitted] = useState("Vancouver");
   // ── Smart search state ────────────────────────────────────────────────────
@@ -1997,16 +2040,64 @@ export default function VisualAgentDemo() {
         const controller = new AbortController();
         searchAbortRef.current = controller;
         setSearchLoading(true);
-        const r = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=6`, { signal: controller.signal });
-        if (!r.ok) throw new Error("search failed");
-        const data = await r.json();
+        // Fire smart-search + real-listing parser in parallel
+        const parsed = parseListingQuery(q);
+        const listingParams = new URLSearchParams({ limit: "4", sort: "newest" });
+        if (parsed) {
+          if (parsed.city) listingParams.set("city", parsed.city);
+          if (parsed.beds) listingParams.set("beds_min", String(parsed.beds));
+          if (parsed.priceMax) listingParams.set("price_max", String(parsed.priceMax));
+          if (parsed.propType) listingParams.set("property_type", parsed.propType);
+        } else {
+          // Free-text fallback — hand the whole query to /api/listings
+          listingParams.set("q", q);
+        }
+        const [smartRes, listRes] = await Promise.all([
+          fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=6`, { signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${API}/listings?${listingParams}`, { signal: controller.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        ]);
         const flat = [];
-        for (const g of (data.groups || [])) {
+        // 1) Real matching listings first (up to 4 clickable cards to the exact detail page)
+        const liveListings = (listRes && Array.isArray(listRes.listings)) ? listRes.listings.slice(0, 4) : [];
+        for (const l of liveListings) {
+          const priceNum = typeof l.list_price === "number" ? l.list_price : parseFloat(l.list_price || 0);
+          const priceStr = priceNum ? `$${priceNum.toLocaleString("en-CA")}` : "";
+          const beds = l.beds ?? l.bedrooms;
+          const baths = l.baths ?? l.bathrooms;
+          const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
+          const subBits = [];
+          if (l.city) subBits.push(l.city);
+          if (beds != null) subBits.push(`${beds}bd`);
+          if (baths != null) subBits.push(`${baths}ba`);
+          if (l.property_type) subBits.push(l.property_type);
+          flat.push({
+            group: "Listing",
+            kind: "Listing",
+            title: `${priceStr}${priceStr && addr ? " · " : ""}${addr}`,
+            blurb: subBits.join(" · "),
+            href: `/listings/${l.listing_key}`,
+          });
+        }
+        // 2) Then everything the smart-search endpoint found (excluding its
+        //    single "Live listings" pill — the cards above replaced it)
+        for (const g of ((smartRes && smartRes.groups) || [])) {
+          if (g.kind === "Listings") continue;
           for (const it of (g.items || [])) {
             flat.push({ ...it, group: g.kind });
           }
         }
-        // Guarantee an Ask Doogie fallback item is always present
+        // 3) "See all matches" tail
+        if (listRes && listRes.total > liveListings.length) {
+          const search = listingParams.toString();
+          flat.push({
+            group: "Listings",
+            kind: "SeeMore",
+            title: `See all ${listRes.total} matching listings →`,
+            blurb: "Opens the full BC MLS® search with these filters",
+            href: `/listings?${search}`,
+          });
+        }
+        // 4) Always-appended Ask Doogie fallback
         if (!flat.some(x => x.group === "Doogie")) {
           flat.push({
             group: "Doogie",
@@ -2804,13 +2895,17 @@ export default function VisualAgentDemo() {
                     </div>
                     <span style={{
                       fontSize: 10, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
-                      color: isDoogie ? "#7C4A03" : (it.group === "Communities" ? "#166534" : (it.group === "Listings" ? "#0369A1" : C.blue)),
+                      color: isDoogie ? "#7C4A03"
+                        : (it.group === "Communities" ? "#166534"
+                        : ((it.group === "Listing" || it.group === "Listings") ? "#0369A1" : C.blue)),
                       background: isDoogie ? "rgba(245,166,35,0.18)"
                         : (it.group === "Communities" ? "rgba(22,163,74,0.10)"
-                        : (it.group === "Listings" ? "rgba(3,105,161,0.10)" : "rgba(14,165,233,0.10)")),
+                        : ((it.group === "Listing" || it.group === "Listings") ? "rgba(3,105,161,0.10)" : "rgba(14,165,233,0.10)")),
                       padding: "3px 8px", borderRadius: 999, flexShrink: 0,
                     }}>
-                      {it.group === "Doogie" ? "Ask Doogie" : (it.group || "").toUpperCase()}
+                      {it.group === "Doogie" ? "Ask Doogie"
+                        : it.group === "Listing" ? "MLS® LISTING"
+                        : (it.group || "").toUpperCase()}
                     </span>
                   </button>
                 );
