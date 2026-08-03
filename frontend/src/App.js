@@ -46,7 +46,10 @@ const useFormLang = () => {
 };
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const SITE_URL = "https://eztofind.ca";
+// Canonical production URL for SEO (JSON-LD, hreflang, sitemap, canonical tags).
+// Falls back to production so preview builds still emit the right canonical
+// pointers to the live site, but can be overridden via env for staging.
+const SITE_URL = process.env.REACT_APP_PUBLIC_URL || "https://eztofind.ca";
 
 // Google Maps iframe embed — no API key required for basic q=... embed.
 // Google handles geocoding, so no client-side geocoder or rate limits needed.
