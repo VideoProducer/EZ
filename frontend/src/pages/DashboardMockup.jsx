@@ -510,11 +510,12 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
           </div>
           {/* 90-day median list price sparkline (same source as Buyer Insights) */}
           <div style={{ marginTop: 14 }} data-testid="dash-home-buyer-sparkline">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: C.blue }}>90-day median list price trend</span>
-              <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>Real daily snapshots</span>
+              <TrendCaption history={history}/>
             </div>
             <Sparkline series={history}/>
+            <TrendSourceLine history={history}/>
           </div>
         </div>
         <div style={tile} data-testid="dash-home-seller-tile">
@@ -532,11 +533,12 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
             ) : <SkeletonGrid/>}
           </div>
           <div style={{ marginTop: 14 }} data-testid="dash-home-seller-sparkline">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, flexWrap: "wrap", gap: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: C.blue }}>90-day median list price trend</span>
-              <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>Real daily snapshots</span>
+              <TrendCaption history={history}/>
             </div>
             <Sparkline series={history}/>
+            <TrendSourceLine history={history}/>
           </div>
         </div>
       </div>
@@ -1052,6 +1054,54 @@ const useInsightsHistory = (city, propType) => {
 };
 
 // Simple SVG sparkline that gracefully explains itself when there's <2 points
+// ── TrendCaption + TrendSourceLine — expose the exact "how current is this?"
+//   metadata for the median-price trend chart. Reads the latest snapshot's
+//   `at` timestamp and shows how many days ago it was captured, so buyers /
+//   sellers immediately see the chart is fresh (updated daily by our cron).
+const _fmtDate = (iso) => {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+  } catch { return iso.slice(0, 10); }
+};
+const _daysAgo = (iso) => {
+  if (!iso) return null;
+  try {
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    return Math.max(0, Math.round((now - then) / 86400000));
+  } catch { return null; }
+};
+
+const TrendCaption = ({ history }) => {
+  const s = Array.isArray(history) ? history : (history?.series || []);
+  if (!s.length) return <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>Loading…</span>;
+  const latest = s[s.length - 1];
+  const first = s[0];
+  const days = _daysAgo(latest?.at);
+  const freshness = days === 0 ? "Updated today"
+    : days === 1 ? "Updated yesterday"
+    : days != null ? `Updated ${days}d ago`
+    : "";
+  return (
+    <span style={{ fontSize: 9, color: C.muted, fontStyle: "italic" }}>
+      {s.length} weekly points · {_fmtDate(first?.at)} → {_fmtDate(latest?.at)} · <strong style={{ color: "#059669", fontStyle: "normal" }}>{freshness}</strong>
+    </span>
+  );
+};
+
+const TrendSourceLine = ({ history }) => {
+  const s = Array.isArray(history) ? history : (history?.series || []);
+  if (!s.length) return null;
+  return (
+    <div style={{ fontSize: 9.5, color: C.muted, marginTop: 4, lineHeight: 1.4, textAlign: "right" }}>
+      Source: <strong style={{ color: C.navy }}>CREA DDF® MLS® feed</strong> · weekly median of active listings · refreshed hourly · re-snapshotted daily · <em>historical prices only — never a forecast or opinion of value</em>
+    </div>
+  );
+};
+
+
 const Sparkline = ({ series }) => {
   if (!series) return <div style={{ height: 60, background: C.mist, borderRadius: 8 }}/>;
   if (series.length < 2) {
@@ -1198,15 +1248,14 @@ const InsightsPanel = ({ role }) => {
             </div>
             {/* 90-day median list price sparkline — real weekly snapshots */}
             <div style={{ marginTop: 20 }} data-testid="dash-insights-sparkline">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8, flexWrap: "wrap", gap: 4 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.blue }}>
                   90-day median list price trend
                 </div>
-                <div style={{ fontSize: 10, color: C.muted, fontStyle: "italic" }}>
-                  Real daily snapshots · never a forecast
-                </div>
+                <TrendCaption history={history}/>
               </div>
               <Sparkline series={history}/>
+              <TrendSourceLine history={history}/>
             </div>
           </section>
 
