@@ -7406,7 +7406,31 @@ _NARRATION_PROMPT = (
     "9. End with a factual close (e.g. 'That's the walk-through — check the photos and the virtual "
     "tour above for the details I couldn't put into words.'). Do NOT add compliance boilerplate — "
     "the frontend appends it separately.\n\n"
-    "Output ONLY the narration text, no framing, no JSON, no quotes.\n"
+    "OUTPUT FORMAT — output STRICT JSON, no prose, no code fences, on a single object:\n"
+    "{\n"
+    "  \"script\": \"the full narration text as ONE string, all sentences joined by a single space\",\n"
+    "  \"cues\": [\n"
+    "    {\"sentence\": \"exact sentence text ending with . or ! or ?\", \"photo_idx\": 0},\n"
+    "    {\"sentence\": \"...\", \"photo_idx\": 5},\n"
+    "    ...\n"
+    "  ]\n"
+    "}\n\n"
+    "PHOTO-INDEX RULES (crucial):\n"
+    "• The fact sheet tells you how many photos the listing has (0-based indices).\n"
+    "• BC MLS listings almost always order photos like this: first 20% are exterior/front/curb, "
+    "next 15% main living room + entry, next 10% kitchen and dining, next 15% primary bedroom "
+    "and ensuite, next 15% other bedrooms and baths, next 15% basement/laundry/utilities, "
+    "final 10% outdoor/garage/shop/lot views.\n"
+    "• Match each sentence to a photo_idx that falls in the appropriate zone. Example for 37 photos:\n"
+    "    - opener sentence about arrival / driveway / front → photo_idx 0-2\n"
+    "    - living room / main floor sentence → photo_idx around 8-12\n"
+    "    - kitchen sentence → photo_idx around 13-16\n"
+    "    - primary bedroom / ensuite → photo_idx around 18-22\n"
+    "    - other beds / baths → photo_idx around 24-27\n"
+    "    - outdoor / shop / garage → photo_idx around 30-36\n"
+    "• If the listing has fewer than 6 photos, cluster many sentences on photo 0 rather than spread.\n"
+    "• Every `sentence` in cues MUST appear verbatim inside `script` — no paraphrasing.\n"
+    "• `photo_idx` MUST be an integer between 0 and (photo_count - 1) inclusive. Never negative, never over.\n"
 )
 
 
@@ -7497,10 +7521,10 @@ def _clean_agent_puffery(text: str) -> str:
     return out
 
 
-async def _generate_listing_narration(listing: dict, session_id: str) -> str:
-    """Hit Haiku with the sanitised listing description + fact sheet, return
-    the raw narration text. Returns a graceful fallback string on any error
-    so the UI never breaks."""
+async def _generate_listing_narration(listing: dict, session_id: str) -> dict:
+    """Hit Haiku with the sanitised listing description + fact sheet, return a
+    dict {script, cues} where cues is a list of {sentence, photo_idx}. Returns
+    a graceful fallback on any error so the UI never breaks."""
     desc_raw = (listing.get("description") or "").strip()
     desc = _clean_agent_puffery(desc_raw)
     facts = []
@@ -7532,8 +7556,9 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> str:
     if listing.get("has_virtual_tour"):
         facts.append("Virtual tour: yes")
     photos = listing.get("photos") or []
+    photo_count = len(photos)
     if photos:
-        facts.append(f"Photo count: {len(photos)}")
+        facts.append(f"Photo count: {photo_count} (valid photo_idx range: 0 to {photo_count-1})")
 
     user_msg = (
         "LISTING FACT SHEET:\n"
@@ -7541,6 +7566,20 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> str:
         + "\n\nLISTING DESCRIPTION (from CREA DDF®):\n"
         + (desc[:2400] if desc else "(no description provided by the listing brokerage)")
     )
+
+    def _fallback_result(script_body: str) -> dict:
+        script = _spell_out_money_in_script(script_body)
+        # Even-distribution cues so the reel still advances.
+        cues = []
+        if photo_count > 0:
+            sents = re.findall(r"[^.!?]+[.!?]+", script)
+            if not sents:
+                sents = [script]
+            for i, sent in enumerate(sents):
+                ratio = i / max(1, len(sents) - 1) if len(sents) > 1 else 0
+                idx = min(photo_count - 1, int(round(ratio * (photo_count - 1))))
+                cues.append({"sentence": sent.strip(), "photo_idx": idx})
+        return {"script": script, "cues": cues}
 
     try:
         chat = make_chat(
@@ -7554,48 +7593,82 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> str:
                 buf += ev.content
             elif isinstance(ev, StreamDone):
                 break
-        text = buf.strip().strip('"').strip("'")
-        if len(text) < 40:
-            raise ValueError("empty narration")
-        # Belt-and-suspenders: post-process to spell out any remaining `$X,XXX`
-        # figures the model wrote despite rule #7.
-        return _spell_out_money_in_script(text)
+        text = buf.strip()
+        # Strip fenced code (in case the model wraps output).
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE | re.MULTILINE).strip()
+        # Extract first JSON object from anywhere in the response.
+        m = re.search(r"\{.*\"script\".*\}", text, re.DOTALL)
+        raw_json = m.group(0) if m else text
+        try:
+            parsed = json.loads(raw_json)
+        except Exception:
+            # Fall back to plain-text interpretation.
+            if len(text) < 40:
+                raise ValueError("empty narration")
+            return _fallback_result(text)
+        script = str(parsed.get("script") or "").strip().strip('"')
+        if len(script) < 40:
+            raise ValueError("script too short")
+        raw_cues = parsed.get("cues") or []
+        clean_cues = []
+        for c in raw_cues:
+            try:
+                sent = str(c.get("sentence") or "").strip()
+                idx = int(c.get("photo_idx"))
+                if not sent:
+                    continue
+                if photo_count > 0:
+                    idx = max(0, min(photo_count - 1, idx))
+                else:
+                    idx = 0
+                # Only keep cues whose sentence actually appears in the script.
+                if sent in script or sent.rstrip(".!?") in script:
+                    clean_cues.append({"sentence": sent, "photo_idx": idx})
+            except Exception:
+                continue
+        script = _spell_out_money_in_script(script)
+        # If Haiku returned no valid cues, generate them from an even split.
+        if not clean_cues:
+            return _fallback_result(script)
+        return {"script": script, "cues": clean_cues}
     except Exception as e:
         logger.warning(f"Doogie narration Haiku failed for {listing.get('listing_key')}: {e}")
         # Fallback: at least read the (cleaned) description with a Doogie wrapper.
         opener = f"Woof! Let me walk you through {addr or 'this home'}{', in ' + city if city else ''}."
-        if desc:
-            return opener + " " + desc[:900]
-        return opener + " I've got the basic facts on this one — check the photos and the virtual tour above for the full picture."
+        body = opener + " " + (desc[:900] if desc else "I've got the basic facts on this one — check the photos and the virtual tour above for the full picture.")
+        return _fallback_result(body)
 
 
 @api.get("/listings/{listing_key}/narration")
 @_limiter.limit("60/minute")
 async def get_listing_narration(request: Request, listing_key: str):
-    """Return a Doogie-voiced walk-through script for the listing. Cached in
-    the listing document so repeat views are instant + free."""
+    """Return a Doogie-voiced walk-through script + photo cues for the
+    listing. Cached in the listing document so repeat views are instant."""
     l = await db.listings.find_one({"listing_key": listing_key})
     if not l:
         raise HTTPException(404, "Listing not found")
     # Cache key includes modified_at so a re-synced listing regenerates.
     cache_key = str(l.get("modified_at") or l.get("_id"))
     cached = (l.get("doogie_narration") or {})
-    if cached.get("cache_key") == cache_key and cached.get("script"):
-        return {"script": cached["script"], "cached": True}
+    if cached.get("cache_key") == cache_key and cached.get("script") and cached.get("cues"):
+        return {"script": cached["script"], "cues": cached["cues"], "cached": True}
     l = _sanitize_listing(l)  # gives us the same shape as get_listing
-    script = await _generate_listing_narration(l, session_id=f"narr-{listing_key}")
+    result = await _generate_listing_narration(l, session_id=f"narr-{listing_key}")
+    script = result.get("script", "")
+    cues = result.get("cues", [])
     try:
         await db.listings.update_one(
             {"listing_key": listing_key},
             {"$set": {"doogie_narration": {
                 "script": script,
+                "cues": cues,
                 "cache_key": cache_key,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }}},
         )
     except Exception as e:
         logger.warning(f"Failed to cache narration for {listing_key}: {e}")
-    return {"script": script, "cached": False}
+    return {"script": script, "cues": cues, "cached": False}
 
 @api.post("/listings/analytics/track")
 @_limiter.limit("120/minute")

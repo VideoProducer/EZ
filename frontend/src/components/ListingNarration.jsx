@@ -7,7 +7,7 @@
 //  opinion. Ends with a CTA to Doug if the listing is in his service area.
 // ============================================================================
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Play, Pause, StopCircle, VolumeX, Maximize2, X } from "lucide-react";
+import { Play, Pause, StopCircle, VolumeX, Maximize2, X, Share2, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
@@ -64,44 +64,54 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   const [progress, setProgress] = useState(0); // 0..1 for the reel indicator
   const [fullscreen, setFullscreen] = useState(false);
   const [scriptText, setScriptText] = useState("");
+  const [cues, setCues] = useState([]); // [{sentence, photo_idx}]
   const [photoIdx, setLocalPhotoIdx] = useState(0);
+  const [shareStatus, setShareStatus] = useState(""); // "" | "copied" | "failed"
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
-  const scriptCacheRef = useRef(null); // last fetched LLM narration
+  const scriptCacheRef = useRef(null); // last fetched LLM narration bundle
   const muted = useDoogieMuted();
   const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
   // Reset any cached LLM narration when the user navigates to a new listing.
-  React.useEffect(() => { scriptCacheRef.current = null; setScriptText(""); }, [listing?.listing_key]);
+  React.useEffect(() => {
+    scriptCacheRef.current = null;
+    setScriptText("");
+    setCues([]);
+  }, [listing?.listing_key]);
 
   // Re-apply speed if the user drags the slider mid-narration.
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed]);
 
-  // Sentence timeline — evenly split the script across audio duration so we
-  // can highlight the "current" sentence as a caption during full-screen.
+  // Sentence timeline — prefer room-aware Haiku cues, fall back to even split.
   const sentences = useMemo(() => {
+    if (cues && cues.length) return cues.map(c => c.sentence);
     if (!scriptText) return [];
-    // Split on sentence terminators but keep terminators, then trim empties.
     const raw = scriptText.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [scriptText];
     return raw.map(s => s.trim()).filter(Boolean);
-  }, [scriptText]);
+  }, [cues, scriptText]);
   const currentSentenceIdx = useMemo(() => {
     if (!sentences.length) return 0;
     return Math.min(sentences.length - 1, Math.floor(progress * sentences.length));
   }, [progress, sentences.length]);
 
-  // Handle audio time updates → drive the reel + progress bar.
+  // Handle audio time updates → drive the reel + progress bar. When we have
+  // room-aware cues, use them; otherwise even-distribute across all photos.
   const onTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !a.duration || !isFinite(a.duration)) return;
     const ratio = Math.max(0, Math.min(1, a.currentTime / a.duration));
     setProgress(ratio);
     if (photoCount > 1) {
-      // Distribute the reel across all photos — first sentence lands on photo 0,
-      // last sentence on the final photo, evenly spaced in between.
-      const idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
+      let idx;
+      if (cues && cues.length) {
+        const cueIdx = Math.min(cues.length - 1, Math.floor(ratio * cues.length));
+        idx = Math.max(0, Math.min(photoCount - 1, cues[cueIdx].photo_idx | 0));
+      } else {
+        idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
+      }
       setLocalPhotoIdx(idx);
       if (onAdvancePhoto) onAdvancePhoto(idx);
     }
@@ -110,21 +120,64 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   // Fetch (or reuse) the LLM narration script from the backend, then fall
   // back to a local composition if the endpoint fails.
   const _resolveScript = async () => {
-    if (scriptCacheRef.current) return scriptCacheRef.current;
+    if (scriptCacheRef.current) return scriptCacheRef.current.script;
     let body = "";
+    let fetchedCues = [];
     try {
       const r = await fetch(`${API}/listings/${encodeURIComponent(listing.listing_key)}/narration`);
       if (r.ok) {
         const j = await r.json();
         if (j && typeof j.script === "string" && j.script.trim().length > 40) body = j.script.trim();
+        if (Array.isArray(j?.cues)) fetchedCues = j.cues;
       }
     } catch { /* fall through to local */ }
     if (!body) body = _buildFallbackScript(listing);
     const full = body + _buildOutro(listing, inServiceArea);
-    scriptCacheRef.current = full;
+    scriptCacheRef.current = { script: full, cues: fetchedCues };
     setScriptText(full);
+    setCues(fetchedCues);
     return full;
   };
+
+  // Copy a share URL that reopens the fullscreen reel + auto-plays on land.
+  const copyShareLink = async () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("reel", "1");
+      const link = url.toString();
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        // Legacy fallback for older browsers / non-secure contexts.
+        const ta = document.createElement("textarea");
+        ta.value = link;
+        document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setShareStatus("copied");
+      setTimeout(() => setShareStatus(""), 2200);
+    } catch {
+      setShareStatus("failed");
+      setTimeout(() => setShareStatus(""), 2200);
+    }
+  };
+
+  // Auto-open + auto-play the reel when the page lands with `?reel=1` in the
+  // URL. Runs ONCE per listing_key so it doesn't fight the user's later clicks.
+  const autoOpenedRef = useRef(false);
+  React.useEffect(() => {
+    if (autoOpenedRef.current) return;
+    if (muted) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reel") === "1") {
+        autoOpenedRef.current = true;
+        // Small delay so the audio element is mounted + listing is fetched.
+        setTimeout(() => { openFullscreen(); }, 600);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing?.listing_key, muted]);
 
   // "Watch full-screen reel" — open the immersive overlay AND start playback
   // if not already going. Reuses the same <audio> so pause/seek stays in sync.
@@ -305,6 +358,8 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
           isPlaying={state === "playing"}
           onTogglePlay={play}
           onClose={closeFullscreen}
+          onShare={copyShareLink}
+          shareStatus={shareStatus}
         />
       )}
     </div>
@@ -316,7 +371,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
 //  photoIdx state — same one driving the on-page gallery), current sentence
 //  as a caption strip at the bottom, and a gradient progress bar. The parent
 //  still owns the <audio> element, so pause/seek stays in sync automatically.
-const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, sentence, isPlaying, onTogglePlay, onClose }) => {
+const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, sentence, isPlaying, onTogglePlay, onClose, onShare, shareStatus }) => {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -410,7 +465,7 @@ const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, 
             transition: "width 0.25s linear",
           }} data-testid="doogie-reel-progress-bar"/>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 14, marginTop: 18 }}>
           <button
             onClick={onTogglePlay}
             data-testid="doogie-reel-playpause"
@@ -424,6 +479,27 @@ const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, 
           >
             {isPlaying ? <Pause size={22}/> : <Play size={22} style={{ marginLeft: 3 }}/>}
           </button>
+          {onShare && (
+            <button
+              onClick={onShare}
+              data-testid="doogie-reel-share"
+              aria-label="Copy shareable reel link"
+              title="Copy a shareable link that auto-opens this reel"
+              style={{
+                background: shareStatus === "copied" ? "rgba(34,197,94,0.85)" : "rgba(255,255,255,0.10)",
+                border: `1px solid ${shareStatus === "copied" ? "rgba(34,197,94,0.9)" : "rgba(255,255,255,0.25)"}`,
+                color: "#fff",
+                padding: "10px 18px", borderRadius: 999, cursor: "pointer",
+                fontFamily: "'Inter', system-ui, sans-serif", fontWeight: 700, fontSize: 13,
+                display: "inline-flex", alignItems: "center", gap: 8,
+                transition: "background 0.2s",
+              }}
+            >
+              {shareStatus === "copied" ? (<><Check size={14}/> Link copied</>)
+                : shareStatus === "failed" ? "Copy failed — try again"
+                : (<><Share2 size={14}/> Share this reel</>)}
+            </button>
+          )}
         </div>
       </div>
     </div>
