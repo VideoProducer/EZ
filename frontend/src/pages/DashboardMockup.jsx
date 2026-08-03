@@ -1339,26 +1339,67 @@ const InsightsPanel = ({ role }) => {
 
 // ── For You / Saved ────────────────────────────────────────────────────────
 const ForYouPanel = () => {
-  // For-You feed: exact-match listings whose city matches whatever the buyer
-  // saved most recently (from localStorage). If nothing saved, we simply show
-  // freshest CREA DDF® actives across BC.
+  // For-You feed: exact-match listings tied to what the buyer has already
+  // engaged with. Priority: (1) most recent saved search text → (2) city of
+  // the most recently saved home. If neither exists, show a friendly empty
+  // state with a CTA instead of the entire 43,399-listing firehose.
   const [rows, setRows] = useState(null);
+  const [source, setSource] = useState(null); // { kind: "search"|"home"|"none", label: string }
   useEffect(() => {
     (async () => {
       try {
-        const saved = JSON.parse(localStorage.getItem("ez_saved_searches") || "[]");
+        const savedSearches = JSON.parse(localStorage.getItem("ez_saved_searches") || "[]");
+        const savedHomes = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]");
         const params = new URLSearchParams({ limit: "12", sort: "newest" });
-        if (saved.length) params.set("q", saved[0]);
+        if (savedSearches.length && (savedSearches[0]?.q || typeof savedSearches[0] === "string")) {
+          const q = typeof savedSearches[0] === "string" ? savedSearches[0] : savedSearches[0].q;
+          params.set("q", q);
+          setSource({ kind: "search", label: q });
+        } else if (savedHomes.length && savedHomes[0]?.city) {
+          params.set("city", savedHomes[0].city);
+          setSource({ kind: "home", label: savedHomes[0].city });
+        } else {
+          setSource({ kind: "none" });
+          setRows({ listings: [], total: 0 });
+          return;
+        }
         const r = await fetch(`${API}/listings?${params}`);
         setRows(await r.json());
-      } catch { setRows({ listings: [] }); }
+      } catch { setSource({ kind: "none" }); setRows({ listings: [] }); }
     })();
   }, []);
+
+  const blurb = !source                        ? "Loading your personalized picks…"
+              : source.kind === "search"       ? `Live matches for your saved search — "${source.label}".`
+              : source.kind === "home"         ? `Freshest CREA DDF® listings in ${source.label} — based on the home you saved most recently.`
+              : "Save a search or a home to unlock your personalized feed.";
+
+  const nav = useNavigate();
   return (
     <div>
-      <PanelIntro title="For You"
-        blurb="A live feed drawn from your most recent saved search"/>
-      <ResultsGrid results={rows} loading={rows === null}/>
+      <PanelIntro title="For You" blurb={blurb}/>
+      {source?.kind === "none" ? (
+        <div data-testid="foryou-empty" style={{
+          background: "#fff", border: "1px dashed #DDE6FA", borderRadius: 14,
+          padding: "36px 28px", textAlign: "center", maxWidth: 560, margin: "20px auto",
+        }}>
+          <div style={{ fontSize: 42, marginBottom: 10 }}>🐾</div>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.navy, margin: 0 }}>
+            Save a home or a search — then this feed learns what you like.
+          </h3>
+          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginTop: 10 }}>
+            Doogie won't second-guess your taste. Tap the ❤️ on any listing, or run a search you'd want to see again — this pane will fill with fresh matches every time you come back.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+            <button onClick={() => nav("/listings")} data-testid="foryou-browse-listings" style={{
+              background: C.brandBlue, color: "#fff", border: "none", padding: "10px 20px",
+              borderRadius: 999, fontWeight: 700, fontSize: 13, cursor: "pointer",
+            }}>Browse listings →</button>
+          </div>
+        </div>
+      ) : (
+        <ResultsGrid results={rows} loading={rows === null}/>
+      )}
     </div>
   );
 };
