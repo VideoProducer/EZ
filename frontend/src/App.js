@@ -3312,7 +3312,18 @@ const ListingDetail = () => {
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
           {listing.virtual_tour_embed?.url && (
             <div style={{marginTop:"1.75rem"}} data-testid="listing-virtual-tour">
-              <h2 style={{fontSize:"1.35rem",marginBottom:"0.6rem"}}>Virtual Tour</h2>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.6rem",marginBottom:"0.6rem"}}>
+                <h2 style={{fontSize:"1.35rem",margin:0}}>Virtual Tour</h2>
+                <a href={listing.virtual_tour_embed.url_raw || listing.virtual_tour_embed.url} target="_blank" rel="noopener noreferrer" data-testid="listing-virtual-tour-open"
+                  style={{
+                    display:"inline-flex",alignItems:"center",gap:6,
+                    background:"var(--brand-blue)",color:"#fff",
+                    fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:"0.85rem",
+                    padding:"0.55rem 1rem",borderRadius:999,textDecoration:"none",
+                    boxShadow:"0 4px 10px rgba(15,42,91,0.22)",
+                  }}
+                >▶ Play full-screen ↗</a>
+              </div>
               <div style={{
                 position:"relative", width:"100%", paddingBottom:"56.25%",
                 borderRadius:12, overflow:"hidden", border:"1px solid rgba(15,42,91,0.15)",
@@ -3322,15 +3333,16 @@ const ListingDetail = () => {
                   title={`Virtual tour — ${listing.street_address || "listing"}`}
                   src={listing.virtual_tour_embed.url}
                   loading="lazy"
-                  allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope"
+                  allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope; autoplay; encrypted-media"
                   allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
                   data-testid="listing-virtual-tour-iframe"
                   style={{position:"absolute", inset:0, width:"100%", height:"100%", border:0}}
                 />
               </div>
-              <div style={{marginTop:"0.5rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)"}}>
-                <span>{listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D tour" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}</span>
-                <a href={listing.virtual_tour_embed.url_raw || listing.virtual_tour_embed.url} target="_blank" rel="noopener noreferrer" data-testid="listing-virtual-tour-open" style={{color:"var(--brand-blue)",textDecoration:"none",fontWeight:600}}>Open in new tab ↗</a>
+              <div style={{marginTop:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.5}}>
+                {listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D walk-through" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}.
+                {" "}If the tour doesn't load above (some browsers block third-party embeds), tap <strong>Play full-screen</strong> to open it in a new tab.
               </div>
             </div>
           )}
@@ -9382,6 +9394,8 @@ function App() {
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
+      {/* Alias — the dashboard ListingCard + shared URLs use the plural form. */}
+      <Route path="/listings/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
