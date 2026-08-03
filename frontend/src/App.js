@@ -3310,6 +3310,30 @@ const ListingDetail = () => {
           </div>
           <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
+          {listing.virtual_tour_embed?.url && (
+            <div style={{marginTop:"1.75rem"}} data-testid="listing-virtual-tour">
+              <h2 style={{fontSize:"1.35rem",marginBottom:"0.6rem"}}>Virtual Tour</h2>
+              <div style={{
+                position:"relative", width:"100%", paddingBottom:"56.25%",
+                borderRadius:12, overflow:"hidden", border:"1px solid rgba(15,42,91,0.15)",
+                background:"#0F2A5B",
+              }}>
+                <iframe
+                  title={`Virtual tour — ${listing.street_address || "listing"}`}
+                  src={listing.virtual_tour_embed.url}
+                  loading="lazy"
+                  allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope"
+                  allowFullScreen
+                  data-testid="listing-virtual-tour-iframe"
+                  style={{position:"absolute", inset:0, width:"100%", height:"100%", border:0}}
+                />
+              </div>
+              <div style={{marginTop:"0.5rem",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)"}}>
+                <span>{listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D tour" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}</span>
+                <a href={listing.virtual_tour_embed.url_raw || listing.virtual_tour_embed.url} target="_blank" rel="noopener noreferrer" data-testid="listing-virtual-tour-open" style={{color:"var(--brand-blue)",textDecoration:"none",fontWeight:600}}>Open in new tab ↗</a>
+              </div>
+            </div>
+          )}
           {listing.features?.length > 0 && (
             <div style={{marginTop:"1.5rem"}}>
               <h3 style={{fontSize:"1.1rem",marginBottom:"0.75rem"}}>Features</h3>

@@ -1702,3 +1702,28 @@ Verified:
 ### Files touched
 - Modified `backend/server.py`: `list_glossary` rewritten (2599–2649).
 - Modified `frontend/src/pages/DashboardMockup.jsx`: `GlossaryPanel` rewritten with debounced fetch, category chips, clear button, match counter, highlight. `useRef` import added.
+
+
+---
+
+## Virtual Tours scoped to listing detail (Feb 03, 2026)
+
+### User request (Msg 771)
+> "Virtual tours only need to appear and be available if someone is looking at a listing."
+
+### Change
+Removed the global Virtual Tours hub (sidebar entry + dashboard quick tile + Panel switch case) from `/preview-dashboard`. Virtual tours now surface ONLY inside individual listing detail views, and only when the CREA DDF® feed carries an iframe-embeddable Matterport / YouTube / Vimeo tour URL for that listing.
+
+### Backend
+- `GET /api/listings/{listing_key}` now attaches a `virtual_tour_embed` object when a tour exists: `{url, url_raw, host, is_branded, category}`. Unbranded tours are preferred; hosts limited to Matterport / YouTube / Vimeo (RESA-safe).
+- `GET /api/tours/library` still exists (used by `/visual-agent-demo`) — no behaviour change.
+
+### Frontend
+- `DashboardMockup.jsx`: removed `{ key: "tours", label: "Virtual Tours" }` from the `SECTIONS` sidebar array; removed the Virtual Tours quick-tile (replaced with a Communities tile); removed `case "tours"` from the `Panel` switch. `ToursPanel` component code retained but no longer reachable via UI.
+- `App.js`: `ListingDetail` renders a new "Virtual Tour" section (16:9 iframe + host/branding caption + "Open in new tab") **only when** `listing.virtual_tour_embed?.url` is set.
+
+### Verified
+- Sidebar on `/preview-dashboard` no longer shows "Virtual Tours" (screenshot ✓).
+- Dashboard quick-tile row now shows Saved Homes / For You / Communities / Consultation (no Tours).
+- `/listing/29152426` (Matterport-tour listing) renders the Virtual Tour block with "Matterport 3D tour · unbranded" caption (screenshot ✓).
+- `GET /api/listings/29152426` returns `virtual_tour_embed.host = "matterport"` (curl ✓).

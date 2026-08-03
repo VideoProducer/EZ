@@ -60,7 +60,6 @@ const SECTIONS = [
   { key: "value",     label: "Home Value",     icon: DollarSign, href: "/valuation" },
   { key: "community", label: "Communities",    icon: MapPin },
   { key: "glossary",  label: "Glossary",       icon: BookOpen },
-  { key: "tours",     label: "Virtual Tours",  icon: Video },
   { key: "relocating",label: "Relocating",     icon: Plane, href: "/relocating" },
   { key: "consult",   label: "Consultation",   icon: CalendarClock },
   { key: "ask",       label: "Ask Doogie",     icon: MessageCircle },
@@ -288,7 +287,6 @@ const Panel = ({ section, setSection, homeVariant, onAsk }) => {
     case "seller":    return <SellerInsightsPanel/>;
     case "community": return <CommunityPanel setSection={setSection}/>;
     case "glossary":  return <GlossaryPanel/>;
-    case "tours":     return <ToursPanel/>;
     case "consult":   return <ConsultPanel/>;
     default: return null;
   }
@@ -394,7 +392,7 @@ const CityAutocomplete = ({ regions, value, onPick }) => {
 // Alternate landing view that swaps the yellow Doogie hero + massive listings
 // grid for a SaaS-style tile dashboard: live buyer/seller KPIs for Vancouver,
 // a Communities pulse strip, a compact Doogie prompt card, the 6 newest CREA
-// DDF® listings, and quick tiles to Saved Homes / Virtual Tours. Available
+// DDF® listings, and quick tiles to Saved Homes / Communities. Available
 // at `/preview-dashboard` for side-by-side review with the current homepage.
 const DashboardHomeTiles = ({ setSection, onAsk }) => {
   const nav = useNavigate();
@@ -670,7 +668,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         {[
           { key: "saved",    label: "Saved Homes",    value: savedCount || "—", sub: "on this device", section: "saved",    icon: Heart },
           { key: "foryou",   label: "For You",        value: "Personal picks",  sub: "based on saves",  section: "foryou",   icon: Sparkles },
-          { key: "tours",    label: "Virtual Tours",  value: "3D · Video",      sub: "Matterport / YT", section: "tours",    icon: Video },
+          { key: "community",label: "Communities",    value: "Explore BC",      sub: "240+ cities",     section: "community",icon: MapPin },
           { key: "consult",  label: "Consultation",   value: "No Charge Consultation", sub: "REALTOR® · BCFSA", section: "consult",  icon: CalendarClock },
         ].map(q => {
           const Ic = q.icon;
