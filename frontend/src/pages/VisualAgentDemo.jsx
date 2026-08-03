@@ -2163,11 +2163,18 @@ export default function VisualAgentDemo() {
   // transcript we drop it into the search input; the existing debounced
   // /api/search fetch then populates the dropdown so the user can pick a
   // result or press Enter to hand off to Doogie chat.
+  //
+  // Voice Reply Everywhere: after the mic returns a question-like transcript
+  // (contains a question word or "?") we ALSO fire /api/doogie/chat SSE
+  // directly and play the streaming reply aloud via /api/doogie/tts — mirrors
+  // Kiosk mode's behavior without forcing the user into Kiosk.
   const [voiceSearchOn, setVoiceSearchOn] = useState(false);
-  const [voiceSearchStatus, setVoiceSearchStatus] = useState(""); // "listening" | "transcribing" | ""
+  const [voiceSearchStatus, setVoiceSearchStatus] = useState(""); // "listening" | "transcribing" | "speaking" | ""
+  const [voiceReplyText, setVoiceReplyText] = useState("");
   const voiceRecogRef = useRef(null);
   const voiceRecorderRef = useRef(null);
   const voiceChunksRef = useRef([]);
+  const voiceReplyAudioRef = useRef(null);
   const stopVoiceSearch = () => {
     try { if (voiceRecogRef.current) voiceRecogRef.current.stop(); } catch { /* ignore */ }
     try {
@@ -2175,11 +2182,80 @@ export default function VisualAgentDemo() {
         voiceRecorderRef.current.stop();
       }
     } catch { /* ignore */ }
+    try { if (voiceReplyAudioRef.current) { voiceReplyAudioRef.current.pause(); voiceReplyAudioRef.current.src = ""; } } catch { /* ignore */ }
     setVoiceSearchOn(false);
+  };
+  // Fires Doogie chat SSE + speaks the accumulated reply. Only invoked when
+  // the mic returned a question-like transcript so casual browsing queries
+  // don't spam TTS calls.
+  const speakDoogieAnswer = async (question) => {
+    try {
+      setVoiceSearchStatus("thinking");
+      const res = await fetch(`${API}/doogie/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: question, session_id: `voice-${Date.now()}`, language: "en" }),
+      });
+      if (!res.ok || !res.body) { setVoiceSearchStatus(""); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "", buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) !== -1) {
+          const frame = buf.slice(0, i); buf = buf.slice(i + 2);
+          const line = frame.split("\n").find(l => l.startsWith("data:"));
+          if (!line) continue;
+          try {
+            const obj = JSON.parse(line.slice(5).trim());
+            const chunk = obj.delta || obj.text || obj.content || "";
+            if (chunk) acc += chunk;
+          } catch { /* skip malformed frame */ }
+        }
+      }
+      const answer = acc.trim();
+      if (!answer) { setVoiceSearchStatus(""); return; }
+      setVoiceReplyText(answer);
+      setVoiceSearchStatus("speaking");
+      // Play TTS
+      try {
+        const r = await fetch(`${API}/doogie/tts`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: answer.slice(0, 3800), voice: "ash" }),
+        });
+        if (r.ok) {
+          const blob = await r.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          voiceReplyAudioRef.current = audio;
+          audio.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } setVoiceSearchStatus(""); };
+          audio.onerror = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } setVoiceSearchStatus(""); };
+          await audio.play();
+        } else {
+          setVoiceSearchStatus("");
+        }
+      } catch { setVoiceSearchStatus(""); }
+    } catch { setVoiceSearchStatus(""); }
+  };
+  const finalizeVoice = (transcript) => {
+    const text = (transcript || "").trim();
+    if (!text) return;
+    setSearchQuery(text);
+    // Fire TTS answer only when it looks like a question or general ask —
+    // NOT when the transcript looks like a listing filter (has beds/price/city).
+    const parsed = parseListingQuery(text);
+    const looksLikeQuestion = /\b(what|how|why|when|where|explain|tell me|can you|do you|is|are|should|does|difference|meaning)\b|\?$/i.test(text);
+    if (looksLikeQuestion && !parsed) {
+      speakDoogieAnswer(text);
+    }
   };
   const startVoiceSearch = async () => {
     if (voiceSearchOn) { stopVoiceSearch(); return; }
     stopAutoplay();
+    setVoiceReplyText("");
     // Prefer Web Speech API for instant local transcription
     const SR = (typeof window !== "undefined") && (window.SpeechRecognition || window.webkitSpeechRecognition);
     if (SR) {
@@ -2189,9 +2265,10 @@ export default function VisualAgentDemo() {
         rec.interimResults = true;
         rec.continuous = false;
         rec.maxAlternatives = 1;
+        let lastFinal = "";
         rec.onstart = () => { setVoiceSearchOn(true); setVoiceSearchStatus("listening"); };
         rec.onerror = () => { setVoiceSearchOn(false); setVoiceSearchStatus(""); };
-        rec.onend = () => { setVoiceSearchOn(false); setVoiceSearchStatus(""); };
+        rec.onend = () => { setVoiceSearchOn(false); setVoiceSearchStatus(""); if (lastFinal) finalizeVoice(lastFinal); };
         rec.onresult = (evt) => {
           let interim = "", final = "";
           for (let i = evt.resultIndex; i < evt.results.length; i++) {
@@ -2200,6 +2277,7 @@ export default function VisualAgentDemo() {
           }
           const text = (final || interim).trim();
           if (text) setSearchQuery(text);
+          if (final) lastFinal = final.trim();
         };
         voiceRecogRef.current = rec;
         rec.start();
@@ -2223,7 +2301,7 @@ export default function VisualAgentDemo() {
           if (r.ok) {
             const data = await r.json();
             const text = (data.text || data.transcript || "").trim();
-            if (text) setSearchQuery(text);
+            if (text) { setSearchQuery(text); finalizeVoice(text); }
           }
         } catch { /* ignore */ }
         finally {
@@ -2235,7 +2313,6 @@ export default function VisualAgentDemo() {
       mr.start();
       setVoiceSearchOn(true);
       setVoiceSearchStatus("listening");
-      // Auto-stop after 8s so it doesn't record forever
       window.setTimeout(() => { try { if (mr.state !== "inactive") mr.stop(); } catch { /* ignore */ } setVoiceSearchOn(false); }, 8000);
     } catch (e) {
       setVoiceSearchOn(false);
@@ -2243,6 +2320,30 @@ export default function VisualAgentDemo() {
     }
   };
   useEffect(() => () => stopVoiceSearch(), []);
+
+  // ── Saved Searches ─────────────────────────────────────────────────────────
+  // Users can bookmark a natural-language query (e.g. "4 bedroom Whistler
+  // under 2M") and re-run it with one tap. Persisted to localStorage — no
+  // account required, private to the browser.
+  const [savedSearches, setSavedSearches] = useState(() => {
+    try {
+      const raw = localStorage.getItem("ez_saved_searches");
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+  const persistSaved = (list) => {
+    setSavedSearches(list);
+    try { localStorage.setItem("ez_saved_searches", JSON.stringify(list)); } catch { /* ignore */ }
+  };
+  const saveCurrentQuery = () => {
+    const q = (searchQuery || "").trim();
+    if (q.length < 2) return;
+    if (savedSearches.some(s => s.toLowerCase() === q.toLowerCase())) return;
+    persistSaved([q, ...savedSearches].slice(0, 6)); // keep 6 most recent
+  };
+  const removeSaved = (q) => persistSaved(savedSearches.filter(s => s !== q));
+  const runSaved = (q) => { setSearchQuery(q); stopAutoplay(); };
+  const isCurrentSaved = savedSearches.some(s => s.toLowerCase() === (searchQuery || "").trim().toLowerCase());
   const commitSearch = (raw) => {
     const clean = (raw || "").trim();
     if (clean.length < 2) return;
@@ -2809,13 +2910,34 @@ export default function VisualAgentDemo() {
               aria-expanded={searchOpen}
               aria-controls="va-search-dropdown"
               style={{
-                width: "100%", padding: "12px 44px 12px 36px",
+                width: "100%", padding: "12px 76px 12px 36px",
                 borderRadius: 10, border: "1px solid #DDE6FA",
                 fontSize: 14, fontFamily: "inherit", background: "#F7FAFF",
                 color: C.navy, fontWeight: 600,
                 outline: "none",
               }}
             />
+            {/* Save-current-query star */}
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); saveCurrentQuery(); }}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={((searchQuery || "").trim().length < 2) || isCurrentSaved}
+              data-testid="visual-agent-persistent-search-save"
+              aria-label={isCurrentSaved ? "Search already saved" : "Save this search"}
+              title={isCurrentSaved ? "Already saved" : "Save this search"}
+              style={{
+                position: "absolute", right: 44, top: "50%", transform: "translateY(-50%)",
+                width: 32, height: 32, borderRadius: "50%",
+                border: "1px solid rgba(15,42,91,0.15)",
+                background: isCurrentSaved ? "#FDB813" : "#fff",
+                color: isCurrentSaved ? "#fff" : C.navy,
+                cursor: (((searchQuery || "").trim().length < 2) || isCurrentSaved) ? "default" : "pointer",
+                opacity: (((searchQuery || "").trim().length < 2) && !isCurrentSaved) ? 0.4 : 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 15, lineHeight: 1,
+              }}
+            >{isCurrentSaved ? "★" : "☆"}</button>
             {/* Voice-Answer mic — one-tap voice queries without opening Kiosk */}
             <button
               type="button"
@@ -2928,6 +3050,59 @@ export default function VisualAgentDemo() {
             <div>
               Prefer voice? Tap <strong style={{ color: C.navy }}>Ask by voice</strong> at the top-right and just say where you're looking.
             </div>
+            {/* Voice Reply status + last spoken answer */}
+            {(voiceSearchStatus === "thinking" || voiceSearchStatus === "speaking") && (
+              <div data-testid="voice-reply-status" style={{
+                marginTop: 4, padding: "6px 10px", borderRadius: 8,
+                background: voiceSearchStatus === "speaking" ? "rgba(245,166,35,0.15)" : "rgba(15,42,91,0.06)",
+                border: `1px solid ${voiceSearchStatus === "speaking" ? "rgba(245,166,35,0.35)" : "rgba(15,42,91,0.15)"}`,
+                color: C.navy, fontWeight: 700, fontSize: 11,
+              }}>
+                {voiceSearchStatus === "thinking" ? "🐾 Doogie is thinking…" : "🔊 Doogie is answering aloud…"}
+              </div>
+            )}
+            {voiceReplyText && voiceSearchStatus === "" && (
+              <div data-testid="voice-reply-text" style={{
+                marginTop: 4, padding: "6px 10px", borderRadius: 8,
+                background: "#F7FAFF", border: "1px solid #DDE6FA",
+                color: C.navy, fontSize: 11, lineHeight: 1.5, maxHeight: 60, overflow: "hidden",
+              }}>
+                <strong>Doogie said:</strong> {voiceReplyText.slice(0, 220)}{voiceReplyText.length > 220 ? "…" : ""}
+              </div>
+            )}
+            {/* Saved searches — one-tap re-run of favourite natural-language queries */}
+            {savedSearches.length > 0 && (
+              <div data-testid="visual-agent-saved-searches" style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                <span style={{ fontWeight: 700, color: C.navy, fontSize: 10, letterSpacing: 0.4, textTransform: "uppercase" }}>★ Saved</span>
+                {savedSearches.map((s) => (
+                  <span
+                    key={s}
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      background: "#FFF8E8", border: "1px solid #F5D28A", borderRadius: 999,
+                      padding: "3px 8px 3px 10px", fontSize: 11, color: C.navy, fontWeight: 600,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => runSaved(s)}
+                      data-testid={`saved-search-run-${s.replace(/\s+/g, "-").slice(0, 30)}`}
+                      style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", color: "inherit", fontSize: "inherit", fontWeight: "inherit" }}
+                    >{s.length > 40 ? s.slice(0, 38) + "…" : s}</button>
+                    <button
+                      type="button"
+                      onClick={() => removeSaved(s)}
+                      data-testid={`saved-search-remove-${s.replace(/\s+/g, "-").slice(0, 30)}`}
+                      aria-label={`Remove saved search "${s}"`}
+                      style={{
+                        background: "transparent", border: "none", padding: "0 2px", cursor: "pointer",
+                        color: "#9CA3AF", fontSize: 13, lineHeight: 1,
+                      }}
+                    >×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </form>
       </div>
