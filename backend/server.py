@@ -7670,6 +7670,246 @@ async def get_listing_narration(request: Request, listing_key: str):
         logger.warning(f"Failed to cache narration for {listing_key}: {e}")
     return {"script": script, "cues": cues, "cached": False}
 
+
+# ── Doogie Handoff Tracking ─────────────────────────────────────────────────
+# Logs every reel share + view + completion so Doug can see which listings
+# resonated with which prospects. Stored in `reel_events`, indexed by
+# (listing_key, at) so we can pull per-listing timelines fast.
+class ReelEventBody(BaseModel):
+    event_type: str      # "share" | "view" | "complete" | "photo_change"
+    session_id: str | None = None
+    context: dict | None = None   # e.g. {"photo_idx": 12, "referrer": "..."}
+
+
+@api.post("/listings/{listing_key}/reel_events")
+@_limiter.limit("240/minute")
+async def log_reel_event(request: Request, listing_key: str, body: ReelEventBody):
+    """Fire-and-forget beacon from the reel component. Never blocks the UI
+    if writes fail — returns 200 so the frontend doesn't retry-storm."""
+    if body.event_type not in ("share", "view", "complete", "photo_change"):
+        raise HTTPException(400, "Invalid event_type")
+    try:
+        ua = request.headers.get("user-agent", "")[:180]
+        ip_raw = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "")
+        ip_hash = hashlib.sha256((ip_raw + "|reel").encode()).hexdigest()[:16] if ip_raw else ""
+        ref = request.headers.get("referer", "")[:400]
+        doc = {
+            "listing_key": listing_key,
+            "event_type": body.event_type,
+            "session_id": (body.session_id or "")[:80],
+            "context": body.context or {},
+            "ua": ua,
+            "ip_hash": ip_hash,
+            "referrer": ref,
+            "at": datetime.now(timezone.utc),
+        }
+        await db.reel_events.insert_one(doc)
+    except Exception as e:
+        logger.warning(f"reel_events insert failed for {listing_key}: {e}")
+    return {"ok": True}
+
+
+@api.get("/admin/reel_events/summary")
+async def reel_events_summary(days: int = 30, _=Depends(verify_admin)):
+    since = datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 180)))
+    pipeline = [
+        {"$match": {"at": {"$gte": since}}},
+        {"$group": {
+            "_id": {"listing_key": "$listing_key", "event_type": "$event_type"},
+            "count": {"$sum": 1},
+            "last_at": {"$max": "$at"},
+        }},
+    ]
+    rows = await db.reel_events.aggregate(pipeline).to_list(2000)
+    summary = {}
+    for r in rows:
+        key = r["_id"]["listing_key"]
+        et  = r["_id"]["event_type"]
+        summary.setdefault(key, {"listing_key": key, "shares": 0, "views": 0, "completes": 0, "photo_changes": 0, "last_at": None})
+        summary[key][{"share":"shares","view":"views","complete":"completes","photo_change":"photo_changes"}[et]] = r["count"]
+        if not summary[key]["last_at"] or r["last_at"] > summary[key]["last_at"]:
+            summary[key]["last_at"] = r["last_at"]
+    out = list(summary.values())
+    out.sort(key=lambda x: (x["shares"] + x["views"], x["last_at"] or datetime.min), reverse=True)
+    for r in out:
+        if r["last_at"]: r["last_at"] = r["last_at"].isoformat()
+    return {"days": days, "listings": out[:200]}
+
+
+# ── Reel Cover Preview + Share Landing ──────────────────────────────────────
+# Static PNG poster composited from the listing's first photo + Doogie mascot
+# + play button. Used as `og:image` when the reel share URL is unfurled by
+# iMessage, WhatsApp, Slack, etc. Cached in-memory after first render.
+_REEL_COVER_CACHE: dict[str, tuple[bytes, float]] = {}
+_REEL_COVER_TTL = 60 * 60  # seconds
+
+
+async def _fetch_bytes(url: str, timeout: float = 8.0) -> bytes | None:
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            r = await client.get(url)
+            if r.status_code == 200:
+                return r.content
+    except Exception:
+        return None
+    return None
+
+
+async def _build_reel_cover(listing: dict) -> bytes | None:
+    """Composite: hero photo (blurred edge) + Doogie mascot + play badge +
+    address text. Returns raw PNG bytes. On any error returns None so the
+    endpoint can fall back to a redirect to the raw first photo."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
+        from io import BytesIO
+    except Exception:
+        return None
+    photos = listing.get("photos") or []
+    if not photos:
+        return None
+    photo_bytes = await _fetch_bytes(photos[0])
+    if not photo_bytes:
+        return None
+    try:
+        W, H = 1200, 630  # Facebook / iMessage recommended
+        canvas = Image.new("RGB", (W, H), (10, 15, 30))
+        # Background: blurred hero, then sharp hero centered.
+        hero = Image.open(BytesIO(photo_bytes)).convert("RGB")
+        bg = hero.copy()
+        bg_ratio = max(W / bg.width, H / bg.height)
+        bg = bg.resize((int(bg.width * bg_ratio), int(bg.height * bg_ratio)))
+        bg = bg.crop(((bg.width - W) // 2, (bg.height - H) // 2, (bg.width + W) // 2, (bg.height + H) // 2))
+        bg = bg.filter(ImageFilter.GaussianBlur(24))
+        # Darken the bg so text pops
+        overlay = Image.new("RGB", (W, H), (10, 15, 30))
+        bg = Image.blend(bg, overlay, 0.35)
+        canvas.paste(bg, (0, 0))
+        # Sharp hero centred, scaled to fit within 900x500 padding
+        sh = hero.copy()
+        sh_ratio = min(900 / sh.width, 500 / sh.height)
+        sh = sh.resize((int(sh.width * sh_ratio), int(sh.height * sh_ratio)))
+        canvas.paste(sh, ((W - sh.width) // 2, (H - sh.height) // 2 - 30))
+        # Doogie mascot in top-left
+        mascot_path = "/app/frontend/public/doogie/thinking.png"
+        try:
+            mascot = Image.open(mascot_path).convert("RGBA")
+            m_ratio = 130 / mascot.height
+            mascot = mascot.resize((int(mascot.width * m_ratio), 130))
+            canvas.paste(mascot, (30, 30), mascot)
+        except Exception:
+            pass
+        # Big play badge dead centre
+        draw = ImageDraw.Draw(canvas, "RGBA")
+        cx, cy = W // 2, H // 2 - 30
+        r = 70
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(245, 166, 35, 235), outline=(255, 255, 255, 200), width=4)
+        # Triangle inside the circle (points right)
+        tri = [(cx - 22, cy - 30), (cx - 22, cy + 30), (cx + 30, cy)]
+        draw.polygon(tri, fill=(15, 42, 91, 255))
+        # Title strip along the bottom
+        strip_h = 120
+        draw.rectangle([0, H - strip_h, W, H], fill=(15, 42, 91, 230))
+        try:
+            title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 40)
+            sub_font   = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 22)
+        except Exception:
+            title_font = ImageFont.load_default()
+            sub_font   = ImageFont.load_default()
+        title = "Doogie's walk-through"
+        sub = (listing.get("street_address") or listing.get("unparsed_address") or "") + (
+            f" · {listing['city']}" if listing.get("city") else "")
+        draw.text((50, H - strip_h + 22), title, fill=(245, 166, 35, 255), font=title_font)
+        draw.text((50, H - strip_h + 70), sub[:80], fill=(255, 255, 255, 255), font=sub_font)
+        buf = BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"reel cover render failed: {e}")
+        return None
+
+
+@api.get("/listings/{listing_key}/reel_cover.png")
+async def get_reel_cover(request: Request, listing_key: str):
+    """Return an og:image poster (1200x630 PNG) for the listing's Doogie
+    reel. Falls back to redirecting to the raw first photo on any render
+    failure so unfurl previews always show something."""
+    import time
+    now = time.time()
+    cached = _REEL_COVER_CACHE.get(listing_key)
+    if cached and (now - cached[1]) < _REEL_COVER_TTL:
+        return Response(content=cached[0], media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=3600"})
+    l = await db.listings.find_one({"listing_key": listing_key})
+    if not l:
+        raise HTTPException(404, "Listing not found")
+    l = _sanitize_listing(l)
+    png = await _build_reel_cover(l)
+    if png:
+        _REEL_COVER_CACHE[listing_key] = (png, now)
+        return Response(content=png, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=3600"})
+    # Fallback: redirect to raw first photo
+    photos = (l.get("photos") or [])
+    if photos:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=photos[0], status_code=302)
+    raise HTTPException(404, "No cover available")
+
+
+@api.get("/reel/{listing_key}", response_class=HTMLResponse)
+async def reel_share_landing(request: Request, listing_key: str):
+    """Server-rendered HTML page that carries the Open Graph tags iMessage,
+    WhatsApp, Slack, Discord, and Facebook scrape when unfurling a link.
+    Auto-redirects visitors to the SPA reel view after ~0.5s."""
+    l = await db.listings.find_one({"listing_key": listing_key})
+    if not l:
+        raise HTTPException(404, "Listing not found")
+    l = _sanitize_listing(l)
+    addr = l.get("street_address") or l.get("unparsed_address") or "This listing"
+    city = l.get("city") or "British Columbia"
+    title = f"Doogie's walk-through · {addr}, {city}"
+    narration_doc = l.get("doogie_narration") or {}
+    script = (narration_doc.get("script") or "").strip()
+    if not script and l.get("description"):
+        script = l["description"][:300]
+    desc = (script or f"A voice walk-through of {addr} narrated by Doogie, your BC real estate helper.")[:280]
+    # Absolute URLs so scrapers can fetch them.
+    base = str(request.base_url).rstrip("/")
+    cover_url = f"{base}/api/listings/{listing_key}/reel_cover.png"
+    target_url = f"{base.replace('/api','')}/listings/{listing_key}?reel=1"
+    # Some ingress mounts include /api in base_url; ensure the SPA URL doesn't.
+    target_url = target_url.replace("/api/listings/", "/listings/")
+    html = f"""<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>{title}</title>
+<meta name="description" content="{desc}">
+<meta property="og:type" content="video.other">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{desc}">
+<meta property="og:image" content="{cover_url}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="{target_url}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{cover_url}">
+<meta http-equiv="refresh" content="0; url={target_url}">
+<style>body{{font-family:system-ui,sans-serif;background:#0F2A5B;color:#fff;display:flex;
+align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center}}
+a{{color:#F5A623;font-weight:700}}</style>
+</head><body>
+<div>
+<h1 style="font-family:Georgia,serif;margin:0 0 10px">Doogie's walk-through</h1>
+<p>{addr}, {city}</p>
+<p><a href="{target_url}">Tap here if you're not redirected automatically →</a></p>
+</div>
+<script>setTimeout(function(){{window.location.replace('{target_url}');}},500);</script>
+</body></html>"""
+    return HTMLResponse(content=html, headers={"Cache-Control": "public, max-age=300"})
+
 @api.post("/listings/analytics/track")
 @_limiter.limit("120/minute")
 async def track_event(request: Request, payload: dict):

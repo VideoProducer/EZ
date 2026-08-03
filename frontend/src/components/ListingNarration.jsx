@@ -139,12 +139,27 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     return full;
   };
 
+  // Fire-and-forget beacon to the reel-events endpoint.
+  const _logReel = (eventType, context) => {
+    try {
+      if (!listing?.listing_key) return;
+      const sid = (typeof localStorage !== "undefined" && localStorage.getItem("ez_doogie_session")) || "";
+      fetch(`${API}/listings/${encodeURIComponent(listing.listing_key)}/reel_events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_type: eventType, session_id: sid, context: context || {} }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
+  };
+
   // Copy a share URL that reopens the fullscreen reel + auto-plays on land.
+  // The URL points at the server-rendered `/api/reel/{key}` landing page so
+  // iMessage / WhatsApp / Slack can scrape OG tags and show the Doogie cover.
   const copyShareLink = async () => {
     try {
-      const url = new URL(window.location.href);
-      url.searchParams.set("reel", "1");
-      const link = url.toString();
+      const backend = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
+      const link = `${backend}/api/reel/${encodeURIComponent(listing.listing_key)}`;
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(link);
       } else {
@@ -154,6 +169,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
         document.body.appendChild(ta); ta.select(); document.execCommand("copy");
         document.body.removeChild(ta);
       }
+      _logReel("share", { link });
       setShareStatus("copied");
       setTimeout(() => setShareStatus(""), 2200);
     } catch {
@@ -173,7 +189,11 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
       if (params.get("reel") === "1") {
         autoOpenedRef.current = true;
         // Small delay so the audio element is mounted + listing is fetched.
-        setTimeout(() => { openFullscreen(); }, 600);
+        setTimeout(() => {
+          setFullscreen(true);
+          _logReel("view", { auto: true, from: document.referrer || "" });
+          if (state === "idle") play();
+        }, 600);
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,6 +203,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   // if not already going. Reuses the same <audio> so pause/seek stays in sync.
   const openFullscreen = async () => {
     setFullscreen(true);
+    _logReel("view", { auto: false });
     if (muted) return;
     if (state === "idle") await play();
     else if (state === "paused") { audioRef.current?.play(); setState("playing"); }
@@ -310,7 +331,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
         ref={audioRef}
         preload="none"
         onTimeUpdate={onTimeUpdate}
-        onEnded={() => { setState("idle"); setProgress(0); }}
+        onEnded={() => { setState("idle"); setProgress(0); _logReel("complete"); }}
         onError={() => setState("idle")}
         data-testid="listing-narration-audio"
       />
