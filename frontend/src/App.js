@@ -3034,7 +3034,7 @@ const Listings = () => {
 // Rendered from the /listings page; captures the visitor's current filter state
 // and requires both consent checkboxes before submission. Backend sends a
 // verification email; nothing else is sent until the visitor clicks the link.
-const SavedSearchModal = ({ open, onClose, currentFilters }) => {
+export const SavedSearchModal = ({ open, onClose, currentFilters }) => {
   const [email, setEmail] = useState("");
   const [label, setLabel] = useState("");
   const [casl, setCasl] = useState(false);

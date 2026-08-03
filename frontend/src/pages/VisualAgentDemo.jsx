@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { TurnstileWidget, getTurnstileToken } from "../App";
+import { TurnstileWidget, getTurnstileToken, SavedSearchModal } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -2344,6 +2344,25 @@ export default function VisualAgentDemo() {
   const removeSaved = (q) => persistSaved(savedSearches.filter(s => s !== q));
   const runSaved = (q) => { setSearchQuery(q); stopAutoplay(); };
   const isCurrentSaved = savedSearches.some(s => s.toLowerCase() === (searchQuery || "").trim().toLowerCase());
+  // ── Saved-search email alerts ──────────────────────────────────────────
+  // When a user clicks the 🔔 bell on a saved chip we parse the natural-language
+  // query into structured filters and open the shared SavedSearchModal from
+  // App.js. That modal handles CASL double opt-in, PIPA, and creates a real
+  // backend `saved_searches` record — which the alert_matcher (running after
+  // every 4-hour CREA DDF sync) uses to email the user when new matching
+  // listings hit the MLS® feed.
+  const [alertChipFilters, setAlertChipFilters] = useState(null);
+  const openAlertForChip = (chip) => {
+    const parsed = parseListingQuery(chip) || {};
+    const filters = {};
+    if (parsed.city) filters.city = parsed.city;
+    if (parsed.beds) filters.beds_min = parsed.beds;
+    if (parsed.priceMax) filters.price_max = parsed.priceMax;
+    if (parsed.propType) filters.property_type = parsed.propType;
+    // Also stash the raw chip as `keyword` so Doug can see what the user typed
+    filters.keyword = chip;
+    setAlertChipFilters(filters);
+  };
   const commitSearch = (raw) => {
     const clean = (raw || "").trim();
     if (clean.length < 2) return;
@@ -3096,6 +3115,17 @@ export default function VisualAgentDemo() {
                     >{s.length > 40 ? s.slice(0, 38) + "…" : s}</button>
                     <button
                       type="button"
+                      onClick={() => openAlertForChip(s)}
+                      data-testid={`saved-search-alert-${s.replace(/\s+/g, "-").slice(0, 30)}`}
+                      aria-label={`Get email alerts for "${s}"`}
+                      title="Email me when new BC MLS® listings match — free, 1-click unsubscribe"
+                      style={{
+                        background: "transparent", border: "none", padding: "0 3px", cursor: "pointer",
+                        color: C.gold, fontSize: 12, lineHeight: 1, marginLeft: 2,
+                      }}
+                    >🔔</button>
+                    <button
+                      type="button"
                       onClick={() => removeSaved(s)}
                       data-testid={`saved-search-remove-${s.replace(/\s+/g, "-").slice(0, 30)}`}
                       aria-label={`Remove saved search "${s}"`}
@@ -3492,6 +3522,15 @@ export default function VisualAgentDemo() {
           50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
         }
       `}</style>
+
+      {/* Saved-search email alert modal — CASL double opt-in + PIPA ack.
+          Firing this creates a real backend `saved_searches` doc that the
+          alert_matcher scans after every 4-hour CREA DDF sync. */}
+      <SavedSearchModal
+        open={!!alertChipFilters}
+        onClose={() => setAlertChipFilters(null)}
+        currentFilters={alertChipFilters || {}}
+      />
     </div>
   );
 }
