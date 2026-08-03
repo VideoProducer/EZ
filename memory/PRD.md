@@ -1326,3 +1326,48 @@ Three enhancements landed together — one backend milestone (public Doogie Tool
 ### Pending — Address validation
 - Canada Post AddressComplete playbook obtained via integration_playbook_expert_v2.
 - User needs to purchase a **transactional API Key** at https://www.canadapost-postescanada.ca/ac/ (5,000 lookups $450 CAD tier recommended) and paste it back so we can wire up `/api/address/suggest` + `/api/address/validate` (backend proxy — key never exposed to browser).
+
+
+## Feb 3, 2026 — Canada Post AddressComplete (address validation)
+
+### Backend proxy (key stays server-side)
+- Added `ADDRESS_COMPLETE_KEY=yt29-dj29-na21-yx59` to `backend/.env`
+- Two new FastAPI endpoints in `server.py`:
+  - `GET /api/address/suggest?q=...&lastId=...` → debounced Canada Post **Find v2.10** call, appends ", BC" hint, returns display-safe `[{id, text, description, next}]`
+  - `GET /api/address/validate?id=...` → **Retrieve v2.11** call, enforces `CountryIso2 == "CA"` and `ProvinceCode == "BC"`. Returns 422 with `{code: "out_of_focus" | "out_of_country", province, city, message}` when outside BC so the client can render a referral bump. Returns 200 with `{address: {label, line1, line2, city, province, postal_code, country, data_level}}` on success.
+- Both endpoints load the key from `os.environ` at request time — never in code, never in the frontend.
+
+### Frontend integration
+- New `<AddressAutocompleteField>` component in `VisualAgentDemo.jsx` — 250ms debounced input, dropdown of suggestions, keyboard/mouse selection, hierarchical drill-down when `next === "Find"`, red border + inline "referral to a REALTOR® in {city}" bump when the selected address is outside BC, green border + "Validated by Canada Post" hint on success.
+- Wired into the Consultation Request seller step 4: replaces the plain property_address TextField. On validation success it auto-fills the linked City and Postal Code fields via the `onValidated` callback.
+- data-testids: `q-address`, `q-address-suggestions`, `q-address-suggestion-{i}`, `q-address-out-of-bc`.
+
+### Verification
+- `curl /api/address/suggest?q=1234
+
+## Feb 3, 2026 — Canada Post AddressComplete (address validation)
+
+### Backend proxy (key stays server-side)
+- Added `ADDRESS_COMPLETE_KEY=yt29-dj29-na21-yx59` to `backend/.env`
+- Two new FastAPI endpoints in `server.py`:
+  - `GET /api/address/suggest?q=...&lastId=...` — debounced Canada Post Find v2.10, appends ", BC" hint, returns display-safe items only.
+  - `GET /api/address/validate?id=...` — Retrieve v2.11, enforces CountryIso2 == "CA" and ProvinceCode == "BC". Returns 422 with `{code:"out_of_focus"|"out_of_country", province, city, message}` outside BC. Returns 200 with `{address:{label,line1,line2,city,province,postal_code,country,data_level}}` on success.
+- Key loaded from os.environ at request time — never in code, never in the frontend.
+
+### Frontend integration
+- New `<AddressAutocompleteField>` in VisualAgentDemo.jsx — 250ms debounced input, suggestions dropdown, hierarchical drill-down when next === "Find", red border + inline referral pointer when outside BC, green border + "Validated by Canada Post" hint on success.
+- Wired into Consultation Request seller step 4: replaces the plain property_address TextField. On validation success auto-fills the linked City and Postal Code fields via onValidated callback.
+- data-testids: q-address, q-address-suggestions, q-address-suggestion-{i}, q-address-out-of-bc.
+
+### Verification
+- curl /api/address/suggest?q=1234%20W%208th — returns real BC suggestions
+- curl /api/address/validate — returns full validated Kamloops BC address (200)
+- Frontend UI renders — Consultation Request step 3 loads, autocomplete component in place at step 4-seller
+
+### Security note
+- Original snippet embedded the key in browser HTML/JS. Replaced with server-side proxy so the key never touches the browser and cannot be scraped from view-source. Rate limiting can now be added at the backend proxy layer.
+
+### Files touched
+- Modified backend/.env (added ADDRESS_COMPLETE_KEY)
+- Modified backend/server.py (added Find/Retrieve proxy endpoints before shutdown hook)
+- Modified frontend/src/pages/VisualAgentDemo.jsx (new AddressAutocompleteField + integration into seller step)

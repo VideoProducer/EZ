@@ -10236,3 +10236,113 @@ async def doogie_ai_plugin_manifest():
 
 @app.on_event("shutdown")
 async def shutdown(): mongo_client.close()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Canada Post AddressComplete — backend proxy
+# ═════════════════════════════════════════════════════════════════════════════
+# The AddressComplete key MUST stay server-side. If it leaks into the browser
+# anyone can burn through Doug's paid credits. We proxy the two documented
+# endpoints (Find + Retrieve) here and only return the display-safe fields to
+# the client. Rate limit + BC-only enforcement live here too.
+#
+# Docs: https://www.canadapost-postescanada.ca/ac/support/api/
+# ═════════════════════════════════════════════════════════════════════════════
+
+_ADDRESSCOMPLETE_BASE = "https://ws1.postescanada-canadapost.ca/AddressComplete/Interactive"
+
+
+@app.get("/api/address/suggest", tags=["Address"])
+async def address_suggest(q: str, lastId: str | None = None):
+    """Debounced Find call. Returns [{id, text, description, next}] up to 7.
+    Adds ", BC" as a BC hint but does NOT enforce province at this stage —
+    province is enforced only after Retrieve (per Canada Post docs)."""
+    key = os.environ.get("ADDRESS_COMPLETE_KEY")
+    if not key:
+        raise HTTPException(status_code=503, detail="Address service not configured")
+    q = (q or "").strip()
+    if len(q) < 3 or len(q) > 120:
+        return {"items": []}
+    search_term = q if lastId else f"{q}, BC"
+    params = {
+        "Key": key,
+        "SearchTerm": search_term,
+        "Country": "CAN",
+        "LanguagePreference": "en",
+        "MaxSuggestions": 7,
+    }
+    if lastId:
+        params["LastId"] = lastId
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            r = await client.get(f"{_ADDRESSCOMPLETE_BASE}/Find/v2.10/json3.ws", params=params)
+            r.raise_for_status()
+            data = r.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Address service unavailable")
+    items = data.get("Items", []) if isinstance(data, dict) else []
+    # Upstream returns an error item when the key is invalid — surface as 502
+    if items and items[0].get("Error"):
+        raise HTTPException(status_code=502, detail="Address service error")
+    return {"items": [
+        {
+            "id": x.get("Id"),
+            "text": x.get("Text"),
+            "description": x.get("Description"),
+            "next": x.get("Next"),
+        }
+        for x in items if x.get("Id") and x.get("Text")
+    ]}
+
+
+@app.get("/api/address/validate", tags=["Address"])
+async def address_validate(id: str):
+    """Retrieve the full validated address and enforce BC + Canada.
+    Returns 422 for out-of-province or out-of-country addresses so the
+    frontend can prompt the user with the referral bump."""
+    key = os.environ.get("ADDRESS_COMPLETE_KEY")
+    if not key:
+        raise HTTPException(status_code=503, detail="Address service not configured")
+    if not id or len(id) > 300:
+        raise HTTPException(status_code=400, detail="Invalid address id")
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            r = await client.get(
+                f"{_ADDRESSCOMPLETE_BASE}/Retrieve/v2.11/json3.ws",
+                params={"Key": key, "Id": id},
+            )
+            r.raise_for_status()
+            data = r.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Address service unavailable")
+    items = data.get("Items", []) if isinstance(data, dict) else []
+    if not items or items[0].get("Error"):
+        raise HTTPException(status_code=422, detail="Address was not validated")
+    a = items[0]
+    if a.get("CountryIso2") != "CA":
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "out_of_country", "message": "Only Canadian addresses are accepted"},
+        )
+    province = a.get("ProvinceCode")
+    if province != "BC":
+        # 422 with structured detail so the client can show the referral bump
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "out_of_focus",
+                "message": f"That address is in {a.get('ProvinceName') or province} — outside Doug's licensed BC focus area.",
+                "province": province,
+                "city": a.get("City"),
+            },
+        )
+    return {"address": {
+        "label": a.get("Label"),
+        "line1": a.get("Line1"),
+        "line2": a.get("Line2"),
+        "city": a.get("City"),
+        "province": province,
+        "postal_code": a.get("PostalCode"),
+        "country": a.get("CountryIso2"),
+        "data_level": a.get("DataLevel"),
+    }}

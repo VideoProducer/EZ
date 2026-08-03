@@ -1430,7 +1430,16 @@ const PaneQualify = () => {
       {step === 4 && intent === "seller" && (
         <div data-testid="qualify-step-4-seller" style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14, display: "grid", gap: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>Tell Doug about your home</div>
-          <TextField label="Property address *" value={form.property_address} onChange={v => upd("property_address", v)} testId="q-address"/>
+          <AddressAutocompleteField
+            value={form.property_address}
+            onChange={v => upd("property_address", v)}
+            onValidated={(a) => {
+              // Auto-fill city + postal code once Canada Post confirms the address
+              if (a.city) upd("city", a.city);
+              if (a.postal_code) upd("postal_code", a.postal_code);
+            }}
+            testId="q-address"
+          />
           <TextField label="City (BC) *" value={form.city} onChange={v => upd("city", v)} testId="q-city"/>
           {isOutsideFocusArea(form.city) && (
             <OutsideFocusBump label={form.city.trim()} testId="q-city-outside-focus"/>
@@ -1534,8 +1543,168 @@ const TextField = ({ label, value, onChange, testId, type = "text", placeholder,
   </label>
 );
 
-const SelectField = ({ label, value, onChange, options, testId }) => (
-  <label style={{ display: "grid", gap: 4, fontSize: 12, color: C.navy }}>
+// ── AddressAutocompleteField ─────────────────────────────────────────────────
+// Real-time Canada Post AddressComplete autocomplete (proxied via
+// GET /api/address/suggest + GET /api/address/validate — the API key stays
+// server-side). Enforces BC-only after Retrieve. If the selected address is
+// outside BC we surface a friendly referral pointer; if inside BC we auto-fill
+// the linked city field (via onValidated) and save the label back into the
+// property_address string so the form submission carries the validated text.
+const AddressAutocompleteField = ({
+  label = "Property address *",
+  value,
+  onChange,
+  onValidated,
+  testId = "q-address",
+}) => {
+  const [items, setItems] = React.useState([]);
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [validated, setValidated] = React.useState(false);
+  const [outOfBC, setOutOfBC] = React.useState(null);
+  const abortRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (validated) return;
+    const v = (value || "").trim();
+    if (v.length < 3) { setItems([]); setOpen(false); return; }
+    const t = window.setTimeout(async () => {
+      try {
+        if (abortRef.current) abortRef.current.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        setLoading(true);
+        const r = await fetch(`${API}/address/suggest?q=${encodeURIComponent(v)}`, { signal: controller.signal });
+        if (!r.ok) throw new Error("suggest failed");
+        const data = await r.json();
+        setItems(Array.isArray(data.items) ? data.items : []);
+        setOpen(true);
+      } catch (e) {
+        if (e && e.name !== "AbortError") { setItems([]); setOpen(false); }
+      } finally { setLoading(false); }
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [value, validated]);
+
+  const pick = async (item) => {
+    setOpen(false);
+    // Hierarchical result — drill down instead of retrieving
+    if (item.next === "Find") {
+      try {
+        setLoading(true);
+        const r = await fetch(`${API}/address/suggest?q=${encodeURIComponent(value)}&lastId=${encodeURIComponent(item.id)}`);
+        if (r.ok) {
+          const data = await r.json();
+          setItems(Array.isArray(data.items) ? data.items : []);
+          setOpen(true);
+        }
+      } finally { setLoading(false); }
+      return;
+    }
+    // Retrieve — validate + BC-enforce
+    try {
+      setLoading(true);
+      const r = await fetch(`${API}/address/validate?id=${encodeURIComponent(item.id)}`);
+      if (r.status === 422) {
+        const err = await r.json().catch(() => ({}));
+        const detail = err && err.detail;
+        if (detail && detail.code === "out_of_focus") {
+          setOutOfBC({ province: detail.province, city: detail.city, message: detail.message });
+          setValidated(false);
+          return;
+        }
+        setOutOfBC({ province: null, city: null, message: "That address couldn't be validated. Please try again." });
+        return;
+      }
+      if (!r.ok) throw new Error("validate failed");
+      const data = await r.json();
+      const a = data.address || {};
+      const nice = a.label ? a.label.replace(/\n/g, ", ") : (a.line1 || item.text);
+      onChange(nice);
+      setValidated(true);
+      setOutOfBC(null);
+      if (typeof onValidated === "function") onValidated(a);
+    } catch (e) {
+      setOutOfBC({ province: null, city: null, message: "Address service unavailable. Please type your address manually." });
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <label style={{ display: "grid", gap: 4, fontSize: 12, color: C.navy, position: "relative" }}>
+      <span style={{ fontWeight: 700 }}>{label}</span>
+      <input
+        data-testid={testId}
+        value={value}
+        onChange={e => { onChange(e.target.value); setValidated(false); setOutOfBC(null); }}
+        onFocus={() => { if (items.length) setOpen(true); }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 180)}
+        placeholder="Start typing a BC address — e.g. 1234 W 8th Ave"
+        autoComplete="off"
+        style={{
+          padding: "8px 10px", borderRadius: 8,
+          border: `1px solid ${validated ? "#16A34A" : outOfBC ? "#DC2626" : "#D1D5DB"}`,
+          fontSize: 13, fontFamily: "inherit",
+        }}
+      />
+      <span style={{ fontSize: 10, color: "#6B7280", display: "flex", alignItems: "center", gap: 6 }}>
+        {loading ? "Looking up address…"
+          : validated ? <><CheckCircle2 size={11} color="#16A34A"/> Validated by Canada Post</>
+          : "Powered by Canada Post AddressComplete"}
+      </span>
+      {open && items.length > 0 && !validated && (
+        <div
+          data-testid={`${testId}-suggestions`}
+          role="listbox"
+          style={{
+            position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20,
+            background: "#fff", border: "1px solid #D1D5DB", borderRadius: 8,
+            boxShadow: "0 12px 28px rgba(15,42,91,0.15)", marginTop: 4,
+            maxHeight: 260, overflowY: "auto",
+          }}
+        >
+          {items.map((it, i) => (
+            <button
+              key={it.id || i}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(it)}
+              data-testid={`${testId}-suggestion-${i}`}
+              style={{
+                display: "block", width: "100%", padding: "8px 10px",
+                textAlign: "left", background: "transparent", border: "none",
+                borderBottom: i < items.length - 1 ? "1px solid #F1F5F9" : "none",
+                cursor: "pointer", fontSize: 12, fontFamily: "inherit",
+              }}
+            >
+              <div style={{ fontWeight: 600, color: C.navy }}>{it.text}</div>
+              {it.description && <div style={{ fontSize: 11, color: "#6B7280" }}>{it.description}</div>}
+            </button>
+          ))}
+        </div>
+      )}
+      {outOfBC && (
+        <div
+          data-testid={`${testId}-out-of-bc`}
+          style={{
+            background: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: 8,
+            padding: "8px 10px", fontSize: 11.5, color: "#7F1D1D", lineHeight: 1.5,
+          }}
+        >
+          <strong>{outOfBC.message}</strong>
+          {outOfBC.province && outOfBC.province !== "BC" && (
+            <div style={{ marginTop: 4 }}>
+              Doug is BCFSA-licensed in British Columbia only. Would you like a referral to a licensed REALTOR® in{" "}
+              <strong>{outOfBC.city || outOfBC.province}</strong>?{" "}
+              <a href="/referral-request" style={{ color: C.blue, fontWeight: 700 }}>Referral REALTOR® →</a>
+            </div>
+          )}
+        </div>
+      )}
+    </label>
+  );
+};
+
+const SelectField = ({ label, value, onChange, options, testId }) => (  <label style={{ display: "grid", gap: 4, fontSize: 12, color: C.navy }}>
     <span style={{ fontWeight: 700 }}>{label}</span>
     <select
       data-testid={testId}
