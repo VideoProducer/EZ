@@ -282,32 +282,33 @@ const SidebarFilters = () => {
   const { filters, setFilters, runSearch } = ctx;
   const set = (k, v) => setFilters(prev => ({ ...prev, [k]: v }));
   const onSubmit = (e) => { e.preventDefault(); runSearch(); };
-  // White inputs sit on the navy sidebar. Kept compact so all four inputs
-  // + submit fit inside the 260px sidebar column without needing a scroll.
+  // White inputs on a white card — matches the classic FILTERS bubble the
+  // user asked to preserve. Kept compact so all four inputs + submit fit
+  // inside the 260px sidebar column without needing a scroll.
   const sInp = {
     width: "100%", padding: "8px 10px", borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.25)",
-    background: "rgba(255,255,255,0.10)", color: "#fff",
+    border: "1px solid #DDE6FA",
+    background: "#fff", color: C.navy,
     fontSize: 12.5, fontWeight: 600, outline: "none",
   };
   const sLabel = {
-    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.65)",
+    fontSize: 10, fontWeight: 700, color: C.muted,
     textTransform: "uppercase", letterSpacing: 0.5,
     display: "block", marginBottom: 5, marginTop: 10,
   };
   return (
     <form onSubmit={onSubmit} data-testid="dash-search-form"
       style={{
-        marginTop: 18, paddingTop: 16,
-        borderTop: "1px solid rgba(255,255,255,0.12)",
+        marginTop: 18, padding: 14,
+        background: "#fff", borderRadius: 12,
+        border: "1px solid #E5E7EB",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        color: C.navy,
       }}>
       <div style={{
         fontSize: 11, fontWeight: 800, letterSpacing: 0.6,
-        color: C.gold, textTransform: "uppercase", marginBottom: 4,
+        color: C.muted, textTransform: "uppercase",
       }}>Filters</div>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
-        Live CREA DDF® · exact matches only
-      </div>
       <label style={sLabel}>Natural language (Doogie parses)</label>
       <input
         value={filters.q}
@@ -360,7 +361,7 @@ const SidebarFilters = () => {
       >
         <Search size={13}/> Search CREA DDF®
       </button>
-      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginTop: 8, lineHeight: 1.4 }}>
+      <div style={{ fontSize: 10, color: C.muted, marginTop: 8, lineHeight: 1.4 }}>
         No substitutions, no interpretation.
       </div>
     </form>
