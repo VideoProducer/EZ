@@ -109,12 +109,35 @@ const HeroIntro = () => (
 // map + results driven by the same state.
 const SearchFiltersContext = createContext(null);
 
+// ── useIsMobile — tiny viewport-width hook. Debounced via matchMedia.
+const useIsMobile = (breakpoint = 900) => {
+  const [isMobile, setIsMobile] = useState(() => {
+    try { return window.matchMedia(`(max-width: ${breakpoint}px)`).matches; }
+    catch { return false; }
+  });
+  useEffect(() => {
+    try {
+      const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+      const onChange = (e) => setIsMobile(e.matches);
+      mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+      return () => {
+        mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange);
+      };
+    } catch {}
+  }, [breakpoint]);
+  return isMobile;
+};
+
 export default function DashboardMockup({ homeVariant = "search" }) {
+  const isMobile = useIsMobile(900);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Landing section depends on the variant: the tile view (`home`) is the
   // default on the /-mounted "dashboard" variant, while the map+listings
   // search view is the default on any legacy /-search mounts.
   const [section, setSection] = useState(homeVariant === "dashboard" ? "home" : "search");
   const [askOpen, setAskOpen] = useState(false);
+  // Section changes on mobile → close the drawer so the panel is visible.
+  const gotoSection = (s) => { setSection(s); if (isMobile) setSidebarOpen(false); };
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
   const [filters, setFilters] = useState({ q: "", city: "", beds: "", priceMax: "" });
@@ -151,16 +174,57 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   return (
     <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch }}>
     <div data-testid="dashboard-mockup" style={{
-      minHeight: "100vh", display: "grid",
-      gridTemplateColumns: "260px 1fr", background: C.cream, color: C.navy,
+      minHeight: "100vh",
+      display: isMobile ? "block" : "grid",
+      gridTemplateColumns: isMobile ? undefined : "260px 1fr",
+      background: C.cream, color: C.navy,
       fontFamily: "'Inter', system-ui, sans-serif",
     }}>
-      <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)} homeVariant={homeVariant}/>
+      {/* Sidebar — slides in from the left on mobile, fixed rail on desktop */}
+      {isMobile ? (
+        <>
+          {sidebarOpen && (
+            <div
+              onClick={() => setSidebarOpen(false)}
+              data-testid="dash-sidebar-scrim"
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 500 }}
+            />
+          )}
+          <div style={{
+            position: "fixed", top: 0, left: 0, bottom: 0, width: 280, zIndex: 501,
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.24s ease-out",
+            overflowY: "auto",
+          }}>
+            <Sidebar section={section} setSection={gotoSection} onAsk={() => { setAskOpen(true); setSidebarOpen(false); }} homeVariant={homeVariant}/>
+          </div>
+        </>
+      ) : (
+        <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)} homeVariant={homeVariant}/>
+      )}
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <HomeComplianceBanner/>
         <DashboardBackHomeBar/>
+        {isMobile && (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 16px", background: C.navy, color: "#fff",
+          }}>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              data-testid="dash-sidebar-toggle"
+              aria-label="Open menu"
+              style={{
+                background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.25)",
+                color: "#fff", padding: "8px 14px", borderRadius: 999, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13,
+              }}
+            >☰ Menu</button>
+            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16 }}>EZtoFind.ca</span>
+          </div>
+        )}
         <TopBar section={section} homeVariant={homeVariant}/>
-        <main style={{ padding: "24px 32px", flex: 1, overflowX: "hidden" }}>
+        <main style={{ padding: isMobile ? "16px" : "24px 32px", flex: 1, overflowX: "hidden" }}>
           <Panel section={section} setSection={setSection} homeVariant={homeVariant} onAsk={() => setAskOpen(true)}/>
           {(section === "search" || section === "home") && <HomeExtras/>}
         </main>
@@ -393,22 +457,25 @@ const TopBar = ({ section, homeVariant }) => {
     : "Data sourced from CREA DDF® · Doogie provides general information only, never advice.";
   return (
     <header style={{
-      background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "16px 32px",
+      background: "#fff", borderBottom: "1px solid #E5E7EB", padding: "16px 20px",
       display: "flex", justifyContent: "space-between", alignItems: "center",
+      gap: 12, flexWrap: "wrap",
     }}>
-      <div>
+      <div style={{ minWidth: 0, flex: "1 1 200px" }}>
         <h1 style={{
-          fontFamily: "'Playfair Display', serif", fontSize: 24, margin: 0, color: C.navy,
+          fontFamily: "'Playfair Display', serif", fontSize: 20, margin: 0, color: C.navy,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }} data-testid="dash-section-title">{title}</h1>
         <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <DoogieVoiceToggle/>
         <DoogieSpeedSlider/>
         <div style={{
           background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)",
           padding: "5px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#166534",
-        }}><CheckDot/> Live CREA DDF® sync · every 4h</div>
+          whiteSpace: "nowrap",
+        }}><CheckDot/> Live CREA DDF® · 4h</div>
       </div>
     </header>
   );
