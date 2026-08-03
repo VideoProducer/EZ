@@ -2111,10 +2111,16 @@ export default function VisualAgentDemo() {
           </button>
           <div style={{
             flexBasis: "100%", fontSize: 11, color: "#6B7280", paddingLeft: 4,
+            display: "grid", gap: 4,
           }}>
-            {userInteracted
-              ? "Auto-play paused — take your time. Tap Play at the top to resume the demo."
-              : "Type a BC area to search real listings. Or explore the scenarios below."}
+            <div>
+              {userInteracted
+                ? "Auto-play paused — take your time. Tap Play at the top to resume the demo."
+                : "Type a BC area to search real listings. Or explore the scenarios below."}
+            </div>
+            <div>
+              Prefer voice? Tap <strong style={{ color: C.navy }}>Ask by voice</strong> at the top-right and just say where you're looking.
+            </div>
           </div>
         </form>
       </div>
