@@ -2039,6 +2039,7 @@ const DoogieHeroGreeting = () => {
 // mandated by BCFSA: Doug cannot interfere with an existing REALTOR®-client
 // relationship, so if the visitor already has one we surface a polite decline
 // and end the funnel cleanly.
+const DOOGIE_WELCOME_FACE = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/5tqc5w5t_Doogie%20Headshot.jpeg";
 const DoogieOnboarding = () => {
   const [visible, setVisible] = useState(() => {
     try { return typeof localStorage !== "undefined" && localStorage.getItem("ez_onboarding_done") !== "1"; }
@@ -2133,7 +2134,7 @@ const DoogieOnboarding = () => {
           }}
         >×</button>
         <img
-          src={DOOGIE_THINKING} alt="Doogie mascot"
+          src={DOOGIE_WELCOME_FACE} alt="Doogie mascot"
           style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #FDB813", background: "#FFF8E8", margin: "0 auto 0.75rem" }}
         />
         <h2 id="onboarding-title" style={{
