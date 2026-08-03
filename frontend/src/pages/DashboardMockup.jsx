@@ -350,7 +350,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         <img src={DOOGIE.head} alt="Doogie" style={{ width: 88, height: 88, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: C.navy, lineHeight: 1.1 }}>
-            <span style={{ color: C.green }}>Real estate,</span> made <span style={{ color: C.blue }}>EZ</span> <span style={{ color: C.gold }}>to Find</span>
+            <span style={{ color: C.green }}>Real estate,</span> <span style={{ color: C.navy }}>made </span><span style={{ color: C.blue }}>EZ to </span><span style={{ color: C.gold }}>Find.ca</span>
           </div>
           <div style={{ fontSize: 13, color: C.ink, marginTop: 6, lineHeight: 1.5, maxWidth: 640 }}>
             Live BC market signals from CREA DDF® — refreshed every 4 hours. General information only, never advice.
