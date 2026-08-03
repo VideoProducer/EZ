@@ -5775,11 +5775,17 @@ const CommunityPage = () => {
       {slug && found && <VibeScore slug={slug} community={found}/>}
       <div className="eyebrow" style={{marginTop:"1rem"}}>{region}</div>
       <h1 className="section-title">{found}, BC</h1>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
-        {isFocus
-          ? `${found} sits within Doug LeMaire's primary practice area. As a licensed BC REALTOR® with 13 years' experience specializing in detached, luxury, equestrian, estate-sale, and condo properties, Doug can represent buyers and sellers here directly.`
-          : `Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky — but we'll connect you with a qualified REALTOR® active in ${found} if you like.`}
-      </p>
+      {isFocus ? (
+        <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
+          {`${found} sits within Doug LeMaire's primary practice area. As a licensed BC REALTOR® with 13 years' experience specializing in detached, luxury, equestrian, estate-sale, and condo properties, Doug can represent buyers and sellers here directly.`}
+        </p>
+      ) : (
+        <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}} data-testid="community-referral-copy">
+          {`As a smaller BC community, ${found} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?`}
+          {" "}
+          <Link to={`/referral-request?city=${encodeURIComponent(found)}`} style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}} data-testid="community-referral-link">Referral REALTOR® link</Link>.
+        </p>
+      )}
       <div style={{marginTop:"2rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
         {isFocus ? <>
           <Link to="/buyer" className="btn btn-primary">I'm Buying in {found}</Link>
