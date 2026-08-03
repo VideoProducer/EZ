@@ -1523,3 +1523,25 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 
 ### Files touched
 - Modified frontend/src/pages/VisualAgentDemo.jsx: removed embedded chat column, collapsed split-grid, removed unused import
+
+
+## Feb 4, 2026 — Saved Search Alerts wired to chip UI + Deployment readiness
+
+### Saved Search Alerts (P2 → shipped)
+- New 🔔 bell button on every saved-search chip in the Visual Agent (VisualAgentDemo.jsx).
+- Clicking the bell parses the chip's natural-language query via `parseListingQuery` and opens the shared `SavedSearchModal` (now exported from App.js) pre-populated with `{city, beds_min, price_max, property_type, keyword}` filters.
+- The modal enforces CASL double opt-in + PIPA acknowledgement and posts to `POST /api/saved-searches` → creates a real `saved_searches` Mongo doc → Resend fires the CASL confirmation email → alert_matcher (already scheduled after every 4-hour CREA DDF auto-sync) emails matches to confirmed subscribers with a 6-hour cooldown.
+- Verified end-to-end: modal opens with correct parsed filters, `POST /api/saved-searches` returns `{success:true, status:"pending", email_dispatch:"sent"}`.
+
+### Files touched
+- Modified frontend/src/App.js: `SavedSearchModal` now exported (added `export`); hardcoded `SITE_URL` swapped for `process.env.REACT_APP_PUBLIC_URL || "https://eztofind.ca"` fallback.
+- Modified frontend/src/pages/VisualAgentDemo.jsx: imports `SavedSearchModal`; added `alertChipFilters` state + `openAlertForChip` helper; added 🔔 bell button to each saved chip; renders the shared modal.
+- Modified backend/.env: `ADMIN_PASSWORD` synced to `Doug2026Login!` (matches memory/test_credentials.md).
+
+### Deployment readiness
+- Deployment agent flagged and resolved: (1) hardcoded SITE_URL → env-driven with prod fallback for canonical SEO; (2) admin password mismatch → .env now matches docs.
+- Second-pass deployment scan raised a false positive on `AdminLogin` (defined at App.js:4678, agent's grep missed it). Live smoke test verified: `curl` to `/`, `/admin/login`, `/api/listings` all return 200; all supervised services running.
+
+### Shipping
+- Deployment to production is initiated by Doug via Emergent's Deploy button in the chat input (not something I can trigger from here).
+- CREA DDF® auto-sync loop pulls the live feed every 4 hours and immediately runs the alert_matcher — so once deployed, saved-search subscribers get emails within 4 hours of a new matching listing appearing in the MLS.
