@@ -6,8 +6,8 @@
 //  generic buyer checklist (roof / mechanicals / strata) — never a value
 //  opinion. Ends with a CTA to Doug if the listing is in his service area.
 // ============================================================================
-import React, { useMemo, useRef, useState } from "react";
-import { Play, Pause, StopCircle, VolumeX } from "lucide-react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
+import { Play, Pause, StopCircle, VolumeX, Maximize2, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
@@ -62,6 +62,9 @@ const _buildOutro = (l, inServiceArea) => {
 export default function ListingNarration({ listing, onAdvancePhoto, photoCount = 0 }) {
   const [state, setState] = useState("idle"); // idle | loading | playing | paused
   const [progress, setProgress] = useState(0); // 0..1 for the reel indicator
+  const [fullscreen, setFullscreen] = useState(false);
+  const [scriptText, setScriptText] = useState("");
+  const [photoIdx, setLocalPhotoIdx] = useState(0);
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
   const scriptCacheRef = useRef(null); // last fetched LLM narration
@@ -69,12 +72,25 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
   // Reset any cached LLM narration when the user navigates to a new listing.
-  React.useEffect(() => { scriptCacheRef.current = null; }, [listing?.listing_key]);
+  React.useEffect(() => { scriptCacheRef.current = null; setScriptText(""); }, [listing?.listing_key]);
 
   // Re-apply speed if the user drags the slider mid-narration.
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed]);
+
+  // Sentence timeline — evenly split the script across audio duration so we
+  // can highlight the "current" sentence as a caption during full-screen.
+  const sentences = useMemo(() => {
+    if (!scriptText) return [];
+    // Split on sentence terminators but keep terminators, then trim empties.
+    const raw = scriptText.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [scriptText];
+    return raw.map(s => s.trim()).filter(Boolean);
+  }, [scriptText]);
+  const currentSentenceIdx = useMemo(() => {
+    if (!sentences.length) return 0;
+    return Math.min(sentences.length - 1, Math.floor(progress * sentences.length));
+  }, [progress, sentences.length]);
 
   // Handle audio time updates → drive the reel + progress bar.
   const onTimeUpdate = () => {
@@ -82,11 +98,12 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     if (!a || !a.duration || !isFinite(a.duration)) return;
     const ratio = Math.max(0, Math.min(1, a.currentTime / a.duration));
     setProgress(ratio);
-    if (onAdvancePhoto && photoCount > 1) {
+    if (photoCount > 1) {
       // Distribute the reel across all photos — first sentence lands on photo 0,
       // last sentence on the final photo, evenly spaced in between.
       const idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
-      onAdvancePhoto(idx);
+      setLocalPhotoIdx(idx);
+      if (onAdvancePhoto) onAdvancePhoto(idx);
     }
   };
 
@@ -105,8 +122,19 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     if (!body) body = _buildFallbackScript(listing);
     const full = body + _buildOutro(listing, inServiceArea);
     scriptCacheRef.current = full;
+    setScriptText(full);
     return full;
   };
+
+  // "Watch full-screen reel" — open the immersive overlay AND start playback
+  // if not already going. Reuses the same <audio> so pause/seek stays in sync.
+  const openFullscreen = async () => {
+    setFullscreen(true);
+    if (muted) return;
+    if (state === "idle") await play();
+    else if (state === "paused") { audioRef.current?.play(); setState("playing"); }
+  };
+  const closeFullscreen = () => setFullscreen(false);
 
   const play = async () => {
     if (muted) return;
@@ -206,6 +234,23 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
               <StopCircle size={14}/> Stop
             </button>
           )}
+          {!muted && photoCount > 1 && (
+            <button
+              onClick={openFullscreen}
+              aria-label="Watch the reel full-screen"
+              title="Watch the reel full-screen"
+              data-testid="listing-narration-fullscreen"
+              style={{
+                background: "#0F2A5B", color: "#fff",
+                border: "none", borderRadius: 999, cursor: "pointer",
+                padding: "9px 14px", fontWeight: 700, fontSize: 12,
+                display: "inline-flex", alignItems: "center", gap: 6,
+                boxShadow: "0 4px 12px rgba(15,42,91,0.28)",
+              }}
+            >
+              <Maximize2 size={13}/> Full-screen
+            </button>
+          )}
         </div>
       </div>
       <audio
@@ -248,6 +293,139 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
           </Link>
         </div>
       )}
+
+      {fullscreen && (
+        <DoogieReelFullscreen
+          listing={listing}
+          photo={((listing?.photos || [])[photoIdx]) || (listing?.photos || [])[0]}
+          photoIdx={photoIdx}
+          photoCount={(listing?.photos || []).length}
+          progress={progress}
+          sentence={sentences[currentSentenceIdx] || ""}
+          isPlaying={state === "playing"}
+          onTogglePlay={play}
+          onClose={closeFullscreen}
+        />
+      )}
     </div>
   );
 }
+
+// ── DoogieReelFullscreen ────────────────────────────────────────────────────
+//  Full-viewport black lightbox. Big hero photo (fed from the parent's
+//  photoIdx state — same one driving the on-page gallery), current sentence
+//  as a caption strip at the bottom, and a gradient progress bar. The parent
+//  still owns the <audio> element, so pause/seek stays in sync automatically.
+const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, sentence, isPlaying, onTogglePlay, onClose }) => {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      role="dialog"
+      aria-label="Doogie's full-screen listing walk-through"
+      data-testid="doogie-reel-fullscreen"
+      style={{
+        position: "fixed", inset: 0, zIndex: 10001,
+        background: "#0A0F1E",
+        display: "flex", flexDirection: "column",
+        fontFamily: "'Inter', system-ui, sans-serif",
+      }}
+    >
+      {/* Top bar — address + close */}
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "14px 20px", color: "#fff", flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img
+            src="/doogie/thinking.png"
+            alt="Doogie"
+            className={isPlaying ? "doogie-talking" : ""}
+            style={{ width: 40, height: 40, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}
+            onError={e => { e.currentTarget.style.display = "none"; }}
+          />
+          <div>
+            <div style={{ fontSize: 12, opacity: 0.75, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie's walk-through</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700 }}>
+              {listing?.street_address || "This listing"}{listing?.city ? ` · ${listing.city}` : ""}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close full-screen reel"
+          data-testid="doogie-reel-close"
+          style={{
+            background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.30)",
+            color: "#fff", borderRadius: "50%", width: 40, height: 40,
+            display: "grid", placeItems: "center", cursor: "pointer",
+          }}
+        ><X size={18}/></button>
+      </div>
+
+      {/* Hero photo */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+        {photo ? (
+          <img
+            src={photo}
+            alt={`${listing?.street_address || "Listing"} — photo ${photoIdx + 1} of ${photoCount}`}
+            data-testid="doogie-reel-hero"
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,0.55)" }}
+          />
+        ) : (
+          <div style={{ color: "rgba(255,255,255,0.5)" }}>No photos available</div>
+        )}
+        <div style={{
+          position: "absolute", top: 14, right: 20,
+          background: "rgba(0,0,0,0.55)", color: "#fff", borderRadius: 999,
+          padding: "4px 12px", fontSize: 12, fontWeight: 700,
+          backdropFilter: "blur(4px)",
+        }} data-testid="doogie-reel-counter">
+          {photoIdx + 1} / {photoCount}
+        </div>
+      </div>
+
+      {/* Caption + progress + play/pause */}
+      <div style={{ padding: "20px 32px 28px", flexShrink: 0 }}>
+        <div style={{
+          minHeight: 60, background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 12, padding: "14px 18px",
+          color: "#fff", fontSize: 17, lineHeight: 1.55, fontFamily: "'Playfair Display', serif",
+          fontWeight: 500, textAlign: "center",
+          transition: "opacity 0.25s",
+        }} data-testid="doogie-reel-caption">
+          {sentence || "Getting ready…"}
+        </div>
+        <div style={{
+          height: 6, borderRadius: 6, background: "rgba(255,255,255,0.10)",
+          overflow: "hidden", marginTop: 14,
+        }}>
+          <div style={{
+            height: "100%", width: `${(progress * 100).toFixed(1)}%`,
+            background: "linear-gradient(90deg, #0A3D99, #F5A623)",
+            transition: "width 0.25s linear",
+          }} data-testid="doogie-reel-progress-bar"/>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>
+          <button
+            onClick={onTogglePlay}
+            data-testid="doogie-reel-playpause"
+            aria-label={isPlaying ? "Pause" : "Play"}
+            style={{
+              background: "#F5A623", color: "#0F2A5B", border: "none",
+              width: 56, height: 56, borderRadius: "50%",
+              display: "grid", placeItems: "center", cursor: "pointer",
+              boxShadow: "0 8px 22px rgba(245,166,35,0.45)",
+            }}
+          >
+            {isPlaying ? <Pause size={22}/> : <Play size={22} style={{ marginLeft: 3 }}/>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
