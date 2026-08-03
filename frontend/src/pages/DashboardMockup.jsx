@@ -266,7 +266,7 @@ const FirstVisitToast = ({ onDismiss, setSection }) => (
         Woof! I'm Doogie 🐾
       </div>
       <div style={{ fontSize: 12, lineHeight: 1.5, color: C.ink }}>
-        Tap any of the <strong>10 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the chat bubble in the sidebar.
+        Tap any of the <strong>11 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the chat bubble in the sidebar.
       </div>
       <button
         onClick={() => { onDismiss(); if (setSection) setSection("community"); }}
