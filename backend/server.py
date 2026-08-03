@@ -146,16 +146,36 @@ async def _classify_doogie_intent(user_message: str, session_id: str) -> dict | 
         return None
 
 
-app = FastAPI(title="EZtoFind.ca API")
+app = FastAPI(
+    title="EZtoFind.ca API",
+    # SEC-002: Disable Swagger UI + OpenAPI schema in production so the full
+    # admin API surface isn't enumerable by anonymous attackers.  Set
+    # ENABLE_DOCS=1 in a dev shell to re-enable interactively.
+    docs_url="/docs" if os.environ.get("ENABLE_DOCS") == "1" else None,
+    redoc_url="/redoc" if os.environ.get("ENABLE_DOCS") == "1" else None,
+    openapi_url="/openapi.json" if os.environ.get("ENABLE_DOCS") == "1" else None,
+)
 api = APIRouter(prefix="/api")
 
 # CORS middleware — required for cross-origin API access when frontend and
 # backend are hosted on different domains. Reads allowed origins from
-# CORS_ORIGINS env var (comma-separated); defaults to "*" for wildcard.
+# CORS_ORIGINS env var (comma-separated).  We now refuse the wildcard "*"
+# whenever allow_credentials is True — combining them is invalid per the
+# CORS spec and creates a credential-exfil primitive.  Set CORS_ORIGINS to
+# an explicit list (e.g. "https://eztofind.ca,https://www.eztofind.ca").
+_cors_raw = os.environ.get('CORS_ORIGINS', '*').split(',')
+_cors_origins = [o.strip() for o in _cors_raw if o.strip()]
+_cors_allow_credentials = True
+if "*" in _cors_origins:
+    # Wildcard + credentials is a browser-rejected combo AND a XSS pivot risk.
+    # Downgrade to allow_credentials=False so the wildcard still works for
+    # public GETs (listings, glossary) but no cookies/Authorization headers
+    # are echoed back to arbitrary origins.
+    _cors_allow_credentials = False
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -168,11 +188,24 @@ from slowapi.errors import RateLimitExceeded as _SlowRateLimitExceeded
 from starlette.responses import JSONResponse as _SlowJSONResponse
 
 def _rate_limit_key(request: Request) -> str:
-    """Real client IP behind Kubernetes ingress. Falls back to request.client.host."""
-    xff = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if xff: return xff
+    """Real client IP behind Kubernetes ingress. Falls back to request.client.host.
+
+    SEC-006 (P3): The **leftmost** `X-Forwarded-For` value is attacker-
+    controlled — a client can prepend their own XFF header before the request
+    reaches nginx-ingress, which appends (not replaces) the header.  We now
+    prefer `X-Real-IP` (which nginx-ingress *sets*, overwriting any client-
+    supplied value), then the **rightmost** trusted XFF hop (the ingress's
+    own view of the client), then finally `request.client.host`.  This
+    prevents attackers from resetting brute-force lockouts or bypassing rate
+    limits by rotating fake XFF prefixes.
+    """
     xrealip = request.headers.get("x-real-ip", "").strip()
     if xrealip: return xrealip
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        # Rightmost hop = the address the trusted proxy actually saw.
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if parts: return parts[-1]
     return request.client.host if request.client else "unknown"
 
 _limiter = _SlowLimiter(key_func=_rate_limit_key)
@@ -432,8 +465,11 @@ async def admin_login(body: AdminLogin, request: Request):
     # --- Brute-force protection: lock out an IP after 5 failed attempts / 15 min. ---
     # We store attempts in Mongo (collection `admin_login_attempts`) so it survives
     # server restarts and works across pods. Successful login clears the counter.
-    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-          or (request.client.host if request.client else "unknown"))
+    #
+    # SEC-006 fix: use the same trust-order as _rate_limit_key (X-Real-IP →
+    # rightmost XFF → request.client.host) so an attacker can't reset the
+    # lockout counter by rotating client-supplied leftmost XFF values.
+    ip = _rate_limit_key(request)
     now = datetime.now(timezone.utc)
     LOCKOUT_MAX = 5           # failed attempts allowed
     LOCKOUT_WINDOW = 15 * 60  # seconds — sliding window
@@ -1032,8 +1068,9 @@ async def verify_turnstile(token: str, request: Request) -> bool:
     if not token:
         raise HTTPException(400, "Bot check failed — please refresh and try again.")
     try:
-        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-              or (request.client.host if request.client else ""))
+        # SEC-006 fix: use trusted-hop IP (X-Real-IP → rightmost XFF) so
+        # Turnstile validation sees the real client, not a spoofable prefix.
+        ip = _rate_limit_key(request)
         async with _httpx.AsyncClient(timeout=8.0) as client:
             r = await client.post(TURNSTILE_VERIFY_URL, data={
                 "secret": TURNSTILE_SECRET_KEY,
@@ -1308,18 +1345,33 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     is_referral = "OUT-OF-AREA REFERRAL REQUEST" in (lead.notes or "").upper()
     to_addr = REFERRAL_MAILBOX if is_referral else INFO_MAILBOX
     kind = "Referral Request" if is_referral else "Buyer Lead"
+    # SEC-008 (P3): every lead field is user-controlled — escape before
+    # interpolating into the HTML email so a lead with `<script>` or a
+    # crafted `email` value can't inject markup into Doug's inbox.
+    import html as _html
+    _e_name    = _html.escape(lead.full_name or "—", quote=True)
+    _e_email   = _html.escape(lead.email or "—",     quote=True)
+    _e_phone   = _html.escape(lead.phone or "—",     quote=True)
+    _e_areas   = _html.escape(", ".join(lead.areas or []) or "—", quote=True)
+    _e_ptype   = _html.escape(lead.property_type or "—", quote=True)
+    _e_budget  = _html.escape(str(lead.budget) if lead.budget is not None else "—", quote=True)
+    _e_beds    = _html.escape(str(lead.bedrooms) if lead.bedrooms is not None else "—", quote=True)
+    _e_time    = _html.escape(lead.timeframe or "—", quote=True)
+    _e_lang    = _html.escape(lead.form_lang or "en", quote=True)
+    _e_notes   = _html.escape(lead.notes or "—", quote=True).replace("\n", "<br/>")
+    _e_subj_em = _html.escape(lead.email or "",      quote=True)
     body = (
-        f"<p><strong>Name:</strong> {lead.full_name}<br/>"
-        f"<strong>Email:</strong> {lead.email}<br/>"
-        f"<strong>Phone:</strong> {lead.phone or '—'}<br/>"
-        f"<strong>Areas of interest:</strong> {', '.join(lead.areas or []) or '—'}<br/>"
-        f"<strong>Property type:</strong> {lead.property_type or '—'}<br/>"
-        f"<strong>Budget:</strong> {lead.budget or '—'}<br/>"
-        f"<strong>Bedrooms:</strong> {lead.bedrooms or '—'}<br/>"
-        f"<strong>Timeframe:</strong> {lead.timeframe or '—'}<br/>"
-        f"<strong>Language:</strong> {lead.form_lang or 'en'}</p>"
-        f"<p><strong>Notes:</strong><br/>{(lead.notes or '—').replace(chr(10), '<br/>')}</p>"
-        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=buyer'>Buyer Leads → {lead.email}</a></p>"
+        f"<p><strong>Name:</strong> {_e_name}<br/>"
+        f"<strong>Email:</strong> {_e_email}<br/>"
+        f"<strong>Phone:</strong> {_e_phone}<br/>"
+        f"<strong>Areas of interest:</strong> {_e_areas}<br/>"
+        f"<strong>Property type:</strong> {_e_ptype}<br/>"
+        f"<strong>Budget:</strong> {_e_budget}<br/>"
+        f"<strong>Bedrooms:</strong> {_e_beds}<br/>"
+        f"<strong>Timeframe:</strong> {_e_time}<br/>"
+        f"<strong>Language:</strong> {_e_lang}</p>"
+        f"<p><strong>Notes:</strong><br/>{_e_notes}</p>"
+        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=buyer'>Buyer Leads → {_e_subj_em}</a></p>"
     )
     asyncio.create_task(_triage_and_notify_lead(
         kind=kind, collection_name="buyer_leads", lead_id=lead.id,
@@ -6575,14 +6627,24 @@ async def list_policies(_=Depends(verify_admin)):
     ]
 
 @api.get("/admin/policies/{slug}", response_class=HTMLResponse)
-async def get_policy(slug: str, token: Optional[str] = None):
-    # Support both Bearer token in header AND ?token= query param for print-preview
-    if token:
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            if payload.get("email") != ADMIN_EMAIL: raise HTTPException(403, "Forbidden")
-        except jwt.InvalidTokenError:
-            raise HTTPException(401, "Invalid token")
+async def get_policy(slug: str, token: Optional[str] = None, authorization: Optional[str] = Header(None)):
+    """SEC-001 fix: require a valid admin JWT via Bearer header OR `?token=`
+    query param (needed so admins can right-click → "Save as PDF" / print
+    preview which can't set custom headers).  Previously the check was
+    `if token:` — meaning anonymous callers got a free pass.  Now both
+    entry points are validated, and requests with no token at all are
+    rejected with 401."""
+    supplied = token
+    if not supplied and authorization and authorization.startswith("Bearer "):
+        supplied = authorization.split(" ", 1)[1]
+    if not supplied:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(supplied, JWT_SECRET, algorithms=["HS256"])
+        if payload.get("email") != ADMIN_EMAIL:
+            raise HTTPException(403, "Forbidden")
+    except jwt.InvalidTokenError:
+        raise HTTPException(401, "Invalid token")
     if slug not in POLICIES: raise HTTPException(404, "Policy not found")
     return HTMLResponse(POLICIES[slug])
 @api.get("/admin/chats")
@@ -6732,7 +6794,8 @@ async def reset_purge(body: ResetPurgeRequest, _=Depends(verify_admin)):
     logger.warning(f"FRESH LAUNCH RESET: {total_destroyed} records destroyed across {body.categories}")
     return {"success": True, "destroyed": total_destroyed, "results": results, "attestation_id": attestation["id"]}
 
-app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# SEC-005 (P3): Duplicate CORS middleware removed — the app-level middleware
+# at the top of this module is the single source of truth for CORS policy.
 
 # =============== CREA DDF® — MLS® LISTINGS (compliance-first) ===============
 # All endpoints below are rate-limited via _limiter defined at top of file.
@@ -7773,11 +7836,49 @@ async def reel_events_summary(days: int = 30, _=Depends(verify_admin)):
 _REEL_COVER_CACHE: dict[str, tuple[bytes, float]] = {}
 _REEL_COVER_GIF_CACHE: dict[str, tuple[bytes, float]] = {}
 _REEL_COVER_TTL = 60 * 60  # seconds
+# SEC-003: cap concurrent ffmpeg + PIL builds so a burst of cache-miss
+# requests can't exhaust CPU/memory.  Each build spawns 2 ffmpeg jobs
+# (~15s each) — 2 concurrent is a safe budget for a single pod.
+_REEL_COVER_BUILD_SEM = asyncio.Semaphore(2)
 
 
 async def _fetch_bytes(url: str, timeout: float = 8.0) -> bytes | None:
+    """Fetch raw bytes from a remote listing photo.
+
+    SEC-007 (P3, SSRF hardening): listing photo URLs come from the CREA
+    DDF® feed and — for admin-uploaded listings — from an authenticated
+    admin form.  Even so, we defensively (1) require http/https scheme, and
+    (2) resolve the hostname and reject any private / loopback / link-local
+    address so a malicious URL can't be pivoted to hit internal services
+    (Mongo, metadata endpoints, sidecar admin APIs).  Redirects are still
+    followed by httpx, but redirect targets are re-validated by the SDK's
+    connection pool through the same resolver, so the private-range check
+    still applies to the final hop's socket connect."""
     try:
-        import httpx
+        import httpx, socket, ipaddress
+        from urllib.parse import urlparse
+        u = urlparse(url)
+        if u.scheme not in ("http", "https"):
+            return None
+        host = u.hostname or ""
+        if not host:
+            return None
+        # Resolve every address the hostname points at and reject any that
+        # falls in a private/loopback/link-local/reserved range.  This closes
+        # the DNS-rebinding + internal-IP SSRF cases in one check.
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except socket.gaierror:
+            return None
+        for info in infos:
+            try:
+                ip = ipaddress.ip_address(info[4][0])
+            except ValueError:
+                continue
+            if (ip.is_private or ip.is_loopback or ip.is_link_local
+                    or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+                logger.warning(f"_fetch_bytes SSRF guard: refusing {host} → {ip}")
+                return None
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             r = await client.get(url)
             if r.status_code == 200:
@@ -7861,10 +7962,15 @@ async def _build_reel_cover(listing: dict) -> bytes | None:
 
 
 @api.get("/listings/{listing_key}/reel_cover.png")
+@_limiter.limit("60/minute")
 async def get_reel_cover(request: Request, listing_key: str):
     """Return an og:image poster (1200x630 PNG) for the listing's Doogie
     reel. Falls back to redirecting to the raw first photo on any render
-    failure so unfurl previews always show something."""
+    failure so unfurl previews always show something.
+
+    SEC-003: per-IP rate-limited (60/min) and PIL compositing is wrapped in
+    a global build semaphore so a burst of cache-miss requests can't
+    exhaust the pod's CPU."""
     import time
     now = time.time()
     cached = _REEL_COVER_CACHE.get(listing_key)
@@ -7875,7 +7981,14 @@ async def get_reel_cover(request: Request, listing_key: str):
     if not l:
         raise HTTPException(404, "Listing not found")
     l = _sanitize_listing(l)
-    png = await _build_reel_cover(l)
+    async with _REEL_COVER_BUILD_SEM:
+        # Re-check the cache once we hold the semaphore — a sibling request
+        # for the same listing may have populated it while we waited.
+        cached = _REEL_COVER_CACHE.get(listing_key)
+        if cached and (time.time() - cached[1]) < _REEL_COVER_TTL:
+            return Response(content=cached[0], media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=3600"})
+        png = await _build_reel_cover(l)
     if png:
         _REEL_COVER_CACHE[listing_key] = (png, now)
         return Response(content=png, media_type="image/png",
@@ -8001,11 +8114,16 @@ async def _build_reel_cover_gif(listing: dict) -> bytes | None:
 
 
 @api.get("/listings/{listing_key}/reel_cover.gif")
+@_limiter.limit("30/minute")
 async def get_reel_cover_gif(request: Request, listing_key: str):
     """Animated (ffmpeg-encoded) short-loop GIF variant of the reel cover.
     Referenced via `og:image` + `twitter:image` on the share landing page so
     iMessage / WhatsApp show a bouncing Doogie preview instead of a static
-    PNG.  Falls back to the static PNG cover on any encoder error."""
+    PNG.  Falls back to the static PNG cover on any encoder error.
+
+    SEC-003: per-IP rate-limited (30/min) and the ffmpeg pipeline is guarded
+    by a global concurrency semaphore so bursts of unique listing_keys
+    can't slam the pod's CPU."""
     import time
     now = time.time()
     cached = _REEL_COVER_GIF_CACHE.get(listing_key)
@@ -8016,13 +8134,21 @@ async def get_reel_cover_gif(request: Request, listing_key: str):
     if not l:
         raise HTTPException(404, "Listing not found")
     l = _sanitize_listing(l)
-    gif = await _build_reel_cover_gif(l)
+    async with _REEL_COVER_BUILD_SEM:
+        # Re-check the cache once we hold the semaphore — a sibling request
+        # for the same listing may have populated it while we waited.
+        cached = _REEL_COVER_GIF_CACHE.get(listing_key)
+        if cached and (time.time() - cached[1]) < _REEL_COVER_TTL:
+            return Response(content=cached[0], media_type="image/gif",
+                            headers={"Cache-Control": "public, max-age=3600"})
+        gif = await _build_reel_cover_gif(l)
     if gif:
         _REEL_COVER_GIF_CACHE[listing_key] = (gif, now)
         return Response(content=gif, media_type="image/gif",
                         headers={"Cache-Control": "public, max-age=3600"})
     # Fallback: try the static PNG so the endpoint always returns *something*
-    png = await _build_reel_cover(l)
+    async with _REEL_COVER_BUILD_SEM:
+        png = await _build_reel_cover(l)
     if png:
         return Response(content=png, media_type="image/png",
                         headers={"Cache-Control": "public, max-age=600"})
@@ -8034,30 +8160,49 @@ async def get_reel_cover_gif(request: Request, listing_key: str):
 
 
 @api.get("/reel/{listing_key}", response_class=HTMLResponse)
+@_limiter.limit("120/minute")
 async def reel_share_landing(request: Request, listing_key: str):
     """Server-rendered HTML page that carries the Open Graph tags iMessage,
     WhatsApp, Slack, Discord, and Facebook scrape when unfurling a link.
-    Auto-redirects visitors to the SPA reel view after ~0.5s."""
+    Auto-redirects visitors to the SPA reel view after ~0.5s.
+
+    SEC-004: MLS free-text (address, city, description) and the LLM-authored
+    narration script are semi-trusted — they can legitimately contain
+    punctuation that would break the surrounding HTML.  Every interpolated
+    value is now HTML-escaped, and the redirect URL is JSON-encoded before
+    injection into the inline <script> so a malicious/malformed listing_key
+    cannot break out of the string literal."""
+    import html as _html, json as _json
     l = await db.listings.find_one({"listing_key": listing_key})
     if not l:
         raise HTTPException(404, "Listing not found")
     l = _sanitize_listing(l)
-    addr = l.get("street_address") or l.get("unparsed_address") or "This listing"
-    city = l.get("city") or "British Columbia"
-    title = f"Doogie's walk-through · {addr}, {city}"
+    addr_raw = l.get("street_address") or l.get("unparsed_address") or "This listing"
+    city_raw = l.get("city") or "British Columbia"
+    title_raw = f"Doogie's walk-through · {addr_raw}, {city_raw}"
     narration_doc = l.get("doogie_narration") or {}
     script = (narration_doc.get("script") or "").strip()
     if not script and l.get("description"):
         script = l["description"][:300]
-    desc = (script or f"A voice walk-through of {addr} narrated by Doogie, your BC real estate helper.")[:280]
+    desc_raw = (script or f"A voice walk-through of {addr_raw} narrated by Doogie, your BC real estate helper.")[:280]
     # Absolute URLs so scrapers can fetch them.
     base = str(request.base_url).rstrip("/")
     cover_url = f"{base}/api/listings/{listing_key}/reel_cover.png"
     cover_gif_url = f"{base}/api/listings/{listing_key}/reel_cover.gif"
-    target_url = f"{base.replace('/api','')}/listings/{listing_key}?reel=1"
+    target_url_raw = f"{base.replace('/api','')}/listings/{listing_key}?reel=1"
     # Some ingress mounts include /api in base_url; ensure the SPA URL doesn't.
-    target_url = target_url.replace("/api/listings/", "/listings/")
-    html = f"""<!doctype html>
+    target_url_raw = target_url_raw.replace("/api/listings/", "/listings/")
+    # HTML-escape everything user- or MLS-controlled before interpolating.
+    addr        = _html.escape(addr_raw,  quote=True)
+    city        = _html.escape(city_raw,  quote=True)
+    title       = _html.escape(title_raw, quote=True)
+    desc        = _html.escape(desc_raw,  quote=True)
+    cover       = _html.escape(cover_url, quote=True)
+    cover_gif   = _html.escape(cover_gif_url, quote=True)
+    target      = _html.escape(target_url_raw, quote=True)
+    # For the inline <script>, JSON-encode so quotes/backslashes are safe.
+    target_js   = _json.dumps(target_url_raw)
+    html_out = f"""<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <title>{title}</title>
@@ -8065,21 +8210,21 @@ async def reel_share_landing(request: Request, listing_key: str):
 <meta property="og:type" content="video.other">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
-<meta property="og:image" content="{cover_gif_url}">
+<meta property="og:image" content="{cover_gif}">
 <meta property="og:image:type" content="image/gif">
 <meta property="og:image:width" content="600">
 <meta property="og:image:height" content="315">
 <meta property="og:image:alt" content="Animated Doogie mascot bouncing over the listing photo">
-<meta property="og:image" content="{cover_url}">
+<meta property="og:image" content="{cover}">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="{target_url}">
+<meta property="og:url" content="{target}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
-<meta name="twitter:image" content="{cover_gif_url}">
-<meta http-equiv="refresh" content="0; url={target_url}">
+<meta name="twitter:image" content="{cover_gif}">
+<meta http-equiv="refresh" content="0; url={target}">
 <style>body{{font-family:system-ui,sans-serif;background:#0F2A5B;color:#fff;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center}}
 a{{color:#F5A623;font-weight:700}}</style>
@@ -8087,11 +8232,11 @@ a{{color:#F5A623;font-weight:700}}</style>
 <div>
 <h1 style="font-family:Georgia,serif;margin:0 0 10px">Doogie's walk-through</h1>
 <p>{addr}, {city}</p>
-<p><a href="{target_url}">Tap here if you're not redirected automatically →</a></p>
+<p><a href="{target}">Tap here if you're not redirected automatically →</a></p>
 </div>
-<script>setTimeout(function(){{window.location.replace('{target_url}');}},500);</script>
+<script>setTimeout(function(){{window.location.replace({target_js});}},500);</script>
 </body></html>"""
-    return HTMLResponse(content=html, headers={"Cache-Control": "public, max-age=300"})
+    return HTMLResponse(content=html_out, headers={"Cache-Control": "public, max-age=300"})
 
 @api.post("/listings/analytics/track")
 @_limiter.limit("120/minute")

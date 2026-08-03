@@ -1838,3 +1838,30 @@ Removed the global Virtual Tours hub (sidebar entry + dashboard quick tile + Pan
 - **P2**: Multilingual narrations (zh-Hant, zh-Hans, pa, fa, pt-PT).
 - **P3**: Break down `server.py` / `App.js` monoliths.
 - **P3**: Move "Coming Soon" uploads to object storage.
+
+
+---
+
+## Delivered (Feb 3, 2026) — Security Audit Remediation (Post-Audit)
+
+Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 findings; all closed in the same session.
+
+### MEDIUM findings — fixed
+- **SEC-001** Admin policy endpoint `/api/admin/policies/{slug}` now requires a valid JWT (Bearer header OR `?token=` query param).  Previously the `if token:` guard let anonymous callers through.  Verified: 401 for no/bad tokens, 200 for valid.  `server.py:6584-6604`.
+- **SEC-002** FastAPI docs surface (`/docs`, `/redoc`, `/openapi.json`) disabled by default.  Set `ENABLE_DOCS=1` in the shell to re-enable locally.  Verified: all three return 404 on backend port 8001.  `server.py:149-155`.
+- **SEC-003** `/api/listings/{key}/reel_cover.png` + `reel_cover.gif` now rate-limited (60 & 30 /min per-IP) and the ffmpeg / PIL pipeline runs behind a global `asyncio.Semaphore(2)` so bursts of cache-misses can't exhaust CPU.  A cache re-check inside the semaphore prevents stampede duplicate builds.  Verified: 40 rapid requests → 29 × 200 + 11 × 429.  `server.py:7788-7808, 8017-8060`.
+- **SEC-004** `/api/reel/{key}` share landing now HTML-escapes every interpolated MLS/LLM value (address, city, description, narration script, title) with `html.escape` and JSON-encodes the redirect URL before injecting into the inline `<script>` — eliminates any stored-XSS pivot through MLS free-text.  Verified: title output shows `&#x27;` for the apostrophe.  `server.py:8078-8158`.
+
+### P3 hardening — fixed
+- **SEC-005** Duplicate `CORSMiddleware` at `server.py:6735` removed.  The app-level middleware now rejects the `*` origin whenever `allow_credentials=True` (invalid CORS combo → credential-exfil risk).  With the default `CORS_ORIGINS="*"`, `allow_credentials` auto-downgrades to `False`; setting an explicit origin allowlist re-enables it.
+- **SEC-006** Rate-limit key + admin-login lockout + Turnstile-verify IP extraction switched from **leftmost XFF** (attacker-controlled prefix) to **X-Real-IP → rightmost XFF → `request.client.host`** so an attacker can't reset lockout counters by rotating fake XFF chains.  `server.py:172-215, 468, 1075`.
+- **SEC-007** `_fetch_bytes` (photo loader used by reel cover) hardened against SSRF: rejects non-http(s) schemes, resolves hostname via `socket.getaddrinfo`, and blocks any address in private / loopback / link-local / reserved / multicast ranges.  Verified: localhost, `169.254.169.254` (cloud-metadata), and `ftp://` all refused; public HTTPS still allowed.  `server.py:7802-7842`.
+- **SEC-008** Lead-notification email HTML now escapes every user-controlled field (`full_name`, `email`, `phone`, `areas`, `property_type`, `budget`, `bedrooms`, `timeframe`, `notes`) with `html.escape` before f-string interpolation.  `server.py:1330-1359`.
+
+### Files touched
+- `backend/server.py`: 8 discrete edits — FastAPI docs config, CORS single-source, `_rate_limit_key`, admin policy auth, reel cover rate-limits + semaphore, share-landing HTML escape, `_fetch_bytes` SSRF guard, lead email escape.
+
+### Testing performed
+- `curl` verification of every finding (401/404/200/429 assertions above).
+- Direct import + async invocation of `_fetch_bytes` with private/loopback/link-local/ftp URLs — all blocked.
+- Backend restarts cleanly; existing endpoints (analytics, admin login, GIF cover, share landing) still 200.
