@@ -214,19 +214,6 @@ const Sidebar = ({ section, setSection, onAsk }) => (
         );
       })}
     </nav>
-    <div style={{
-      marginTop: 20, padding: 12, background: "rgba(255,255,255,0.08)", borderRadius: 10,
-      fontSize: 11, lineHeight: 1.4,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, marginBottom: 4 }}>
-        <ShieldCheck size={12} color={C.gold}/> BCFSA-licensed
-      </div>
-      <div style={{ opacity: 0.85 }}>
-        Doug LeMaire, REALTOR®<br/>
-        Fraser Property Management<br/>
-        Realty Services Ltd.
-      </div>
-    </div>
   </aside>
 );
 
@@ -724,39 +711,53 @@ const SavedPanel = () => {
 
 // ── Communities ────────────────────────────────────────────────────────────
 const CommunityPanel = ({ setSection }) => {
-  const [rows, setRows] = useState(null);
+  // The `/api/communities` endpoint returns a dict shaped
+  //   { "Greater Vancouver": [...names], "Fraser Valley": [...names], ... }
+  // so we render each region as a section header with a chip grid underneath.
+  const [regions, setRegions] = useState(null);
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(`${API}/communities?limit=24`);
+        const r = await fetch(`${API}/communities`);
         const d = await r.json();
-        setRows(Array.isArray(d) ? d : (d.communities || []));
-      } catch { setRows([]); }
+        setRegions(d && typeof d === "object" && !Array.isArray(d) ? d : {});
+      } catch { setRegions({}); }
     })();
   }, []);
+  const slugify = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return (
     <div>
-      <PanelIntro title="Communities" blurb="Full community pages — school scores, transit, walkability, live map, and CREA DDF® homes for you in that community."/>
-      {rows === null && <SkeletonGrid/>}
-      {rows && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
-          {rows.slice(0, 18).map(c => (
-            <Link key={c.slug || c.name} to={`/communities/${c.slug || c.name?.toLowerCase().replace(/\s+/g,'-')}`}
-              data-testid={`dash-community-${c.slug || c.name}`}
-              style={{
-              background: "#fff", padding: 14, borderRadius: 12, border: "1px solid #E5E7EB",
-              textDecoration: "none", color: C.navy, display: "block",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <strong>{c.name}</strong>
+      <PanelIntro title="Communities" blurb="Every BC community — school scores, transit, walkability, live map, and homes for you."/>
+      {regions === null && <SkeletonGrid/>}
+      {regions && Object.keys(regions).length === 0 && <EmptyBox>Communities feed is warming up — check back in a moment.</EmptyBox>}
+      {regions && Object.entries(regions).map(([region, names]) => (
+        <div key={region} data-testid={`dash-community-region-${slugify(region)}`} style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
+            <h3 style={{ margin: 0, color: C.navy, fontFamily: "'Playfair Display', serif", fontSize: 18 }}>{region}</h3>
+            <span style={{ color: C.muted, fontSize: 11 }}>{(names || []).length} communities</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+            {(names || []).map(name => (
+              <Link key={name} to={`/communities/${slugify(name)}`}
+                data-testid={`dash-community-${slugify(name)}`}
+                style={{
+                  background: "#fff", padding: "12px 14px", borderRadius: 10, border: "1px solid #E5E7EB",
+                  textDecoration: "none", color: C.navy, display: "flex", alignItems: "center", justifyContent: "space-between",
+                  transition: "border-color 0.15s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "#E5E7EB"}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{name}</div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{region}</div>
+                </div>
                 <ChevronRight size={14} color={C.blue}/>
-              </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{c.region || c.city || "BC"}</div>
-              {c.tagline && <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{c.tagline}</div>}
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   );
 };
@@ -768,35 +769,46 @@ const GlossaryPanel = () => {
   useEffect(() => {
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`${API}/glossary${q ? `?q=${encodeURIComponent(q)}` : "?limit=50"}`);
+        const params = new URLSearchParams();
+        if (q) params.set("q", q);
+        else params.set("limit", "60");
+        const r = await fetch(`${API}/glossary?${params}`);
         const d = await r.json();
+        // Endpoint returns a bare array; guard for older wrapped shape too
         setRows(Array.isArray(d) ? d : (d.terms || d.results || []));
       } catch { setRows([]); }
     }, 220);
     return () => clearTimeout(t);
   }, [q]);
+  const slugify = (t) => (t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return (
     <div>
-      <PanelIntro title="Glossary" blurb="Every term returns only the exact definition stored in our glossary — no invented paraphrases. BC-specific."/>
+      <PanelIntro title="Glossary" blurb="Every term returns only the exact definition stored in our glossary — never invented. BC-specific."/>
       <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search a term (PTT, subject removal, GST, ALR…)" data-testid="dash-glossary-q" style={{...inp, maxWidth: 480, marginBottom: 14}}/>
       {rows === null && <SkeletonGrid/>}
       {rows && rows.length === 0 && <EmptyBox>No matching glossary terms.</EmptyBox>}
       {rows && rows.length > 0 && (
         <div style={{ display: "grid", gap: 10 }}>
-          {rows.slice(0, 20).map(t => (
-            <div key={t.term || t.slug} data-testid={`dash-glossary-${t.slug || t.term}`} style={{
-              background: "#fff", padding: 14, borderRadius: 12, border: "1px solid #E5E7EB",
-            }}>
-              <strong style={{ color: C.navy }}>{t.term || t.name}</strong>
-              <div style={{ fontSize: 13, color: C.ink, marginTop: 4, lineHeight: 1.5 }}>
-                {(t.definition || t.summary || "").slice(0, 320)}{(t.definition || t.summary || "").length > 320 ? "…" : ""}
+          {rows.slice(0, 30).map(t => {
+            const term = t.term || t.name || t.title || "";
+            const slug = t.slug || slugify(term);
+            const def = t.definition || t.summary || t.description || "";
+            return (
+              <div key={slug || term} data-testid={`dash-glossary-${slug}`} style={{
+                background: "#fff", padding: 14, borderRadius: 12, border: "1px solid #E5E7EB",
+              }}>
+                <strong style={{ color: C.navy }}>{term}</strong>
+                {t.category && <span style={{ marginLeft: 8, fontSize: 10, background: C.mist, padding: "2px 8px", borderRadius: 999, color: C.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{t.category}</span>}
+                <div style={{ fontSize: 13, color: C.ink, marginTop: 4, lineHeight: 1.5 }}>
+                  {def.slice(0, 320)}{def.length > 320 ? "…" : ""}
+                </div>
+                {slug && (
+                  <Link to={`/glossary/${slug}`}
+                    style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 12, marginTop: 6, display: "inline-block" }}>Full entry →</Link>
+                )}
               </div>
-              {(t.slug || t.term) && (
-                <Link to={`/glossary/${t.slug || (t.term || "").toLowerCase().replace(/\s+/g,'-')}`}
-                  style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 12, marginTop: 6, display: "inline-block" }}>Full entry →</Link>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1027,21 +1039,76 @@ const AskDoogieDrawer = ({ open, onClose }) => {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
+  // Persistent session id so Doogie can carry context across turns
+  const [sessionId] = useState(() => {
+    try {
+      const cached = localStorage.getItem("ez_doogie_session");
+      if (cached) return cached;
+      const id = "sess-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("ez_doogie_session", id);
+      return id;
+    } catch { return "sess-" + Date.now(); }
+  });
   const send = async () => {
     if (!q.trim() || busy) return;
     const question = q.trim();
-    setHistory(h => [...h, { role: "user", text: question }]);
+    setHistory(h => [...h, { role: "user", text: question }, { role: "doogie", text: "" }]);
     setQ(""); setBusy(true);
     try {
-      const r = await fetch(`${API}/doogie/chat`, {
+      const res = await fetch(`${API}/doogie/chat`, {
         method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ messages: [{ role: "user", content: question }], stream: false }),
+        body: JSON.stringify({ session_id: sessionId, message: question, language: "en" }),
       });
-      const data = await r.json();
-      const answer = data.answer || data.text || "I'm not able to answer that right now — general information only.";
-      setHistory(h => [...h, { role: "doogie", text: answer }]);
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const j = JSON.parse(payload);
+            if (typeof j.delta === "string") {
+              acc += j.delta;
+              setHistory(h => {
+                const copy = [...h];
+                copy[copy.length - 1] = { role: "doogie", text: acc };
+                return copy;
+              });
+            } else if (typeof j.error === "string") {
+              acc += `\n\n⚠️ ${j.error}`;
+              setHistory(h => {
+                const copy = [...h];
+                copy[copy.length - 1] = { role: "doogie", text: acc };
+                return copy;
+              });
+            }
+          } catch {}
+        }
+      }
+      if (!acc) {
+        setHistory(h => {
+          const copy = [...h];
+          copy[copy.length - 1] = { role: "doogie", text: "I couldn't reach my brain just now — try again in a moment." };
+          return copy;
+        });
+      }
     } catch {
-      setHistory(h => [...h, { role: "doogie", text: "Hmm, connection blip. Try again in a moment." }]);
+      setHistory(h => {
+        const copy = [...h];
+        copy[copy.length - 1] = { role: "doogie", text: "Hmm, connection blip. Try again in a moment." };
+        return copy;
+      });
     } finally { setBusy(false); }
   };
   if (!open) return null;
