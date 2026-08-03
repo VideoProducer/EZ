@@ -760,6 +760,29 @@ const PaneTour = () => {
               style={{ border: 0, display: "block" }}
               data-testid="tour-live-iframe"
             />
+            {/* Fallback affordance — some hosts still block iframe embedding
+                (private CDNs, expired session URLs). Always show a "Open in
+                new tab" pill so the buyer never sees a dead-end broken image. */}
+            {provider === "dougs" && dougPicked && (dougPicked.tour_url_raw || dougPicked.tour_url) && (
+              <a
+                href={dougPicked.tour_url_raw || dougPicked.tour_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="tour-open-newtab"
+                style={{
+                  position: "absolute", right: 12, top: 12,
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(255,255,255,0.94)", color: C.navy,
+                  padding: "5px 11px", borderRadius: 999,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                  fontSize: 11, fontWeight: 700, textDecoration: "none",
+                  border: `1px solid ${C.blue}`,
+                }}
+                title="Open the original tour in a new tab if it doesn't load here"
+              >
+                Open in new tab ↗
+              </a>
+            )}
             <div style={{
               position: "absolute", left: 10, top: 10, background: "rgba(15,42,91,0.85)",
               color: "#fff", padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,

@@ -9928,6 +9928,7 @@ async def listings_with_virtual_tours(limit: int = 12):
         if not tours:
             continue
         primary = tours[0]  # already sorted: unbranded first, branded fallback
+        raw_url = primary.get("url") or ""
         rows.append({
             "listing_key":    l["listing_key"],
             "mls_number":     l.get("mls_number") or l["listing_key"],
@@ -9938,7 +9939,9 @@ async def listings_with_virtual_tours(limit: int = 12):
             "baths":          l.get("baths"),
             "property_type":  l.get("property_type") or "",
             "cover_photo":    (l.get("photos") or [None])[0],
-            "tour_url":       primary.get("url"),
+            "tour_url":       _sanitize_tour_url(raw_url),  # iframe-safe version
+            "tour_url_raw":   raw_url,                       # for "Open in new tab"
+            "tour_embeddable": _is_embeddable_tour(raw_url),
             "tour_category":  primary.get("category") or "",
             "tour_unbranded": not primary.get("is_branded", False),
             "eztofind_url":   f"/listing/{l['listing_key']}",
@@ -9952,6 +9955,63 @@ async def listings_with_virtual_tours(limit: int = 12):
             "sources (RESA-safe). Public demos may show if none are available yet."
         ),
     }
+
+
+def _sanitize_tour_url(url: str) -> str:
+    """Rewrite third-party video/tour URLs into iframe-embeddable variants.
+    Many providers (Google Drive, YouTube, Vimeo) block iframe embedding on
+    their consumer-facing URLs via X-Frame-Options. The DDF feed hands us
+    those consumer URLs, so we transform to the well-known embed variants
+    before dropping into an iframe. Providers we don't recognise are returned
+    as-is (Matterport, Kuula, youriguide, etc. already allow embedding)."""
+    if not url:
+        return url
+    try:
+        # Google Drive: /file/d/{id}/view → /file/d/{id}/preview
+        m = re.search(r"drive\.google\.com/file/d/([a-zA-Z0-9_-]+)", url)
+        if m:
+            return f"https://drive.google.com/file/d/{m.group(1)}/preview"
+        # YouTube: watch?v=X, /shorts/X, youtu.be/X  →  /embed/X
+        m = re.search(r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([a-zA-Z0-9_-]{11})", url)
+        if m:
+            return f"https://www.youtube.com/embed/{m.group(1)}"
+        # Vimeo: vimeo.com/{id}  →  player.vimeo.com/video/{id}
+        m = re.search(r"^https?://(?:www\.)?vimeo\.com/(\d+)", url)
+        if m:
+            return f"https://player.vimeo.com/video/{m.group(1)}"
+        # Force https on any bare http:// URL (mixed-content block in the browser)
+        if url.startswith("http://"):
+            return "https://" + url[7:]
+    except Exception:
+        pass
+    return url
+
+
+# Hosts that we know allow being embedded in a third-party iframe.
+# Anything else we still render — most tour providers work — but the frontend
+# will surface an "Open in new tab" affordance more prominently.
+_EMBEDDABLE_TOUR_HOSTS = {
+    "drive.google.com", "www.youtube.com", "youtube.com",
+    "player.vimeo.com", "my.matterport.com", "matterport.com",
+    "kuula.co", "www.kuula.co", "youriguide.com", "www.youriguide.com",
+    "tour.giraffe360.com", "hommati.com", "www.hommati.com",
+    "eyespy360.com", "www.eyespy360.com", "iguide.report",
+    "www.iguide.report", "spinclusive.ca", "www.spinclusive.ca",
+    "urbanimmersive.com", "www.urbanimmersive.com",
+    "listingslab.com", "app.cloudpano.com", "www.tourwizard.net",
+    "asteroom.com", "www.asteroom.com",
+}
+
+
+def _is_embeddable_tour(url: str) -> bool:
+    """Best-effort check that the given URL will render inside an iframe."""
+    if not url:
+        return False
+    try:
+        from urllib.parse import urlparse
+        return (urlparse(url).netloc or "").lower() in _EMBEDDABLE_TOUR_HOSTS
+    except Exception:
+        return False
 
 
 # ============================================================================
