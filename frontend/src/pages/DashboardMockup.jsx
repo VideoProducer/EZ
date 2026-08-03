@@ -318,6 +318,14 @@ const CityAutocomplete = ({ regions, value, onPick }) => {
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }, [regions]);
   const trimmed = q.trim().toLowerCase();
+  // Exact case-insensitive match against the full BC city list. When present,
+  // Enter/Blur can commit it directly even if the dropdown shows no other
+  // starts-with matches (fixes: typing the full city name — e.g. "Salmon Arm"
+  // — used to leave the previous city selected because suggestions was empty).
+  const exactMatch = useMemo(() => {
+    if (!trimmed) return null;
+    return allCities.find(c => c.name.toLowerCase() === trimmed) || null;
+  }, [allCities, trimmed]);
   const suggestions = useMemo(() => {
     if (!trimmed) return [];
     const starts = [], contains = [];
@@ -332,11 +340,24 @@ const CityAutocomplete = ({ regions, value, onPick }) => {
   }, [allCities, trimmed]);
   const commit = (name) => { setQ(name); onPick(name); setFocused(false); };
   const onKey = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (suggestions.length) commit(suggestions[hi].name);
+      else if (exactMatch) commit(exactMatch.name);
+      return;
+    }
+    if (e.key === "Escape") { setFocused(false); return; }
     if (!suggestions.length) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setHi((hi + 1) % suggestions.length); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setHi((hi - 1 + suggestions.length) % suggestions.length); }
-    else if (e.key === "Enter") { e.preventDefault(); commit(suggestions[hi].name); }
-    else if (e.key === "Escape") setFocused(false);
+  };
+  const onBlur = () => {
+    // Auto-commit an exact typed city when the user tabs/clicks away without
+    // pressing Enter. Skips if the typed text already matches the committed
+    // value (avoids fighting the useEffect that mirrors `value` → `q`).
+    if (exactMatch && exactMatch.name.toLowerCase() !== (value || "").toLowerCase()) {
+      commit(exactMatch.name);
+    }
   };
   return (
     <div ref={boxRef} style={{ position: "relative", maxWidth: 380 }}>
@@ -344,6 +365,7 @@ const CityAutocomplete = ({ regions, value, onPick }) => {
         value={q}
         onChange={e => { setQ(e.target.value); setFocused(true); setHi(0); }}
         onFocus={() => setFocused(true)}
+        onBlur={onBlur}
         onKeyDown={onKey}
         placeholder="Type any BC city (Kamloops, Nanaimo, Fernie…)"
         data-testid="dash-home-city-input"
@@ -1472,6 +1494,7 @@ const CommunityPanel = ({ setSection }) => {
   //   { "Greater Vancouver": [...names], "Fraser Valley": [...names], ... }
   // so we render each region as a section header with a chip grid underneath.
   const [regions, setRegions] = useState(null);
+  const [q, setQ] = useState("");           // free-text community search
   useEffect(() => {
     (async () => {
       try {
@@ -1482,16 +1505,79 @@ const CommunityPanel = ({ setSection }) => {
     })();
   }, []);
   const slugify = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const trimmed = q.trim().toLowerCase();
+  // Filter regions by community name substring. Regions with zero matches
+  // are hidden so the user only sees relevant sections.
+  const filtered = React.useMemo(() => {
+    if (!regions) return null;
+    if (!trimmed) return regions;
+    const out = {};
+    Object.entries(regions).forEach(([region, names]) => {
+      const hits = (names || []).filter(n => n.toLowerCase().includes(trimmed));
+      if (hits.length) out[region] = hits;
+    });
+    return out;
+  }, [regions, trimmed]);
+  const totalMatches = React.useMemo(() => {
+    if (!filtered) return 0;
+    return Object.values(filtered).reduce((s, arr) => s + (arr || []).length, 0);
+  }, [filtered]);
+  const highlight = (name) => {
+    if (!trimmed) return name;
+    const lc = name.toLowerCase();
+    const i = lc.indexOf(trimmed);
+    if (i < 0) return name;
+    return (<>
+      {name.slice(0, i)}
+      <mark style={{ background: "#FFE9A8", color: C.navy, padding: 0 }}>{name.slice(i, i + trimmed.length)}</mark>
+      {name.slice(i + trimmed.length)}
+    </>);
+  };
   return (
     <div>
       <PanelIntro title="Communities" blurb="Every BC community — school scores, transit, walkability, live map, and homes for you."/>
+      {/* Search bar */}
+      <div style={{ position: "relative", marginBottom: 18, maxWidth: 480 }}>
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search communities (Chase, Whistler, Kits…)"
+          data-testid="dash-community-search"
+          style={{
+            width: "100%", padding: "11px 40px 11px 14px", borderRadius: 10,
+            border: `1px solid ${q ? C.brandBlue : "#DDE6FA"}`,
+            fontSize: 13, color: C.navy, fontWeight: 600, background: "#fff", outline: "none",
+          }}
+        />
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            data-testid="dash-community-search-clear"
+            aria-label="Clear community search"
+            style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              background: "transparent", border: "none", cursor: "pointer",
+              color: C.muted, fontSize: 16, padding: "4px 8px",
+            }}
+          >×</button>
+        )}
+        {q && filtered && (
+          <div style={{ marginTop: 8, fontSize: 12, color: C.muted }} data-testid="dash-community-search-count">
+            {totalMatches === 0 ? "No matching communities" : `${totalMatches} match${totalMatches === 1 ? "" : "es"}`}
+          </div>
+        )}
+      </div>
       {regions === null && <SkeletonGrid/>}
       {regions && Object.keys(regions).length === 0 && <EmptyBox>Communities feed is warming up — check back in a moment.</EmptyBox>}
-      {regions && Object.entries(regions).map(([region, names]) => (
+      {filtered && trimmed && totalMatches === 0 && (
+        <EmptyBox>No community names match "{q}". Try a shorter search.</EmptyBox>
+      )}
+      {filtered && Object.entries(filtered).map(([region, names]) => (
         <div key={region} data-testid={`dash-community-region-${slugify(region)}`} style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 10 }}>
             <h3 style={{ margin: 0, color: C.navy, fontFamily: "'Playfair Display', serif", fontSize: 18 }}>{region}</h3>
-            <span style={{ color: C.muted, fontSize: 11 }}>{(names || []).length} communities</span>
+            <span style={{ color: C.muted, fontSize: 11 }}>{(names || []).length} communit{(names || []).length === 1 ? "y" : "ies"}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
             {(names || []).map(name => (
@@ -1506,7 +1592,7 @@ const CommunityPanel = ({ setSection }) => {
                 onMouseLeave={e => e.currentTarget.style.borderColor = "#E5E7EB"}
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{name}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{highlight(name)}</div>
                   <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{region}</div>
                 </div>
                 <ChevronRight size={14} color={C.blue}/>
