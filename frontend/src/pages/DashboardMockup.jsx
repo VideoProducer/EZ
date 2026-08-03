@@ -884,10 +884,11 @@ const ensureLeafletCss = () => {
   _leafletCssInjected.current = true;
 };
 
-const ListingsMap = ({ city, listings }) => {
+const ListingsMap = ({ city, listings, hoveredKey, onHoverKey }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const markerByKeyRef = useRef({});   // listing_key → Leaflet marker
   const centerCacheRef = useRef({});
 
   useEffect(() => {
@@ -952,17 +953,17 @@ const ListingsMap = ({ city, listings }) => {
       if (!map || !layer) return;
       const L = (await import("leaflet")).default;
       layer.clearLayers();
+      markerByKeyRef.current = {};
       const pts = (listings || []).filter(l => l.lat && l.lon);
       if (!pts.length) return;
-      const priceIcon = (price) => L.divIcon({
-        className: "eztofind-price-marker",
-        html: `<div style="background:${C.brandBlue};color:#fff;border:2px solid #fff;border-radius:14px;padding:3px 8px;font-weight:800;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;font-family:Inter,system-ui,sans-serif;">${fmtPrice(price)}</div>`,
-        iconSize: [70, 24],
-        iconAnchor: [35, 12],
+      const priceIcon = (price, active) => L.divIcon({
+        className: "eztofind-price-marker" + (active ? " is-active" : ""),
+        html: `<div style="background:${active ? C.gold : C.brandBlue};color:${active ? C.navy : "#fff"};border:2px solid #fff;border-radius:14px;padding:${active ? "5px 12px" : "3px 8px"};font-weight:800;font-size:${active ? "13px" : "11px"};box-shadow:0 ${active ? 6 : 2}px ${active ? 14 : 6}px rgba(0,0,0,${active ? 0.5 : 0.35});white-space:nowrap;font-family:Inter,system-ui,sans-serif;transform:${active ? "scale(1.15)" : "none"};transition:transform 0.15s;">${fmtPrice(price)}</div>`,
+        iconSize: active ? [90, 32] : [70, 24],
+        iconAnchor: active ? [45, 16] : [35, 12],
       });
-      const bounds = [];
       pts.forEach(l => {
-        const m = L.marker([l.lat, l.lon], { icon: priceIcon(l.list_price) })
+        const m = L.marker([l.lat, l.lon], { icon: priceIcon(l.list_price, false), riseOnHover: true })
           .addTo(layer)
           .bindPopup(
             `<div style="min-width:180px;font-family:Inter,system-ui,sans-serif;font-size:12px;">
@@ -974,6 +975,14 @@ const ListingsMap = ({ city, listings }) => {
                 : ""}
              </div>`
           );
+        // Wire marker → listing-card hover so cards below highlight when
+        // pointing at the pin, mirroring the card → pin direction.
+        if (onHoverKey) {
+          m.on("mouseover", () => onHoverKey(l.listing_key));
+          m.on("mouseout",  () => onHoverKey(null));
+        }
+        m._listPrice = l.list_price;
+        markerByKeyRef.current[l.listing_key] = m;
       });
       // Fit to markers (but don't override too aggressively — cap zoom)
       if (pts.length > 1) {
@@ -981,7 +990,27 @@ const ListingsMap = ({ city, listings }) => {
         map.fitBounds(b, { maxZoom: 13, padding: [30, 30] });
       }
     })();
-  }, [listings]);
+  }, [listings, onHoverKey]);
+
+  // React to hoveredKey changes: swap the corresponding marker's icon so it
+  // "pops" (gold, larger, above other pins) while all others sit muted.
+  useEffect(() => {
+    (async () => {
+      const L = (await import("leaflet")).default;
+      const priceIcon = (price, active) => L.divIcon({
+        className: "eztofind-price-marker" + (active ? " is-active" : ""),
+        html: `<div style="background:${active ? C.gold : C.brandBlue};color:${active ? C.navy : "#fff"};border:2px solid #fff;border-radius:14px;padding:${active ? "5px 12px" : "3px 8px"};font-weight:800;font-size:${active ? "13px" : "11px"};box-shadow:0 ${active ? 6 : 2}px ${active ? 14 : 6}px rgba(0,0,0,${active ? 0.5 : 0.35});white-space:nowrap;font-family:Inter,system-ui,sans-serif;transform:${active ? "scale(1.15)" : "none"};transition:transform 0.15s;">${fmtPrice(price)}</div>`,
+        iconSize: active ? [90, 32] : [70, 24],
+        iconAnchor: active ? [45, 16] : [35, 12],
+      });
+      Object.entries(markerByKeyRef.current).forEach(([key, marker]) => {
+        const active = key === hoveredKey;
+        marker.setIcon(priceIcon(marker._listPrice, active));
+        if (active) marker.setZIndexOffset(1000);
+        else marker.setZIndexOffset(0);
+      });
+    })();
+  }, [hoveredKey]);
 
   return (
     <div ref={mapContainerRef} data-testid="dash-search-map"
@@ -1001,6 +1030,9 @@ const SearchPanel = () => {
   const ctx = useContext(SearchFiltersContext);
   const { filters, results, loading } = ctx || { filters: {}, results: null, loading: false };
   const { city } = filters;
+  // Shared "hovered listing_key" — when you hover a listing card the
+  // corresponding map pin pops; hovering a pin highlights the card.
+  const [hoveredKey, setHoveredKey] = useState(null);
   return (
     <>
       <HeroIntro/>
@@ -1011,7 +1043,7 @@ const SearchPanel = () => {
           <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
           <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
         </div>
-        <ListingsMap city={city} listings={results?.listings || []}/>
+        <ListingsMap city={city} listings={results?.listings || []} hoveredKey={hoveredKey} onHoverKey={setHoveredKey}/>
         <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
           <a
             href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
@@ -1021,12 +1053,12 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      <ResultsGrid results={results} loading={loading}/>
+      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey}/>
     </>
   );
 };
 
-const ResultsGrid = ({ results, loading }) => {
+const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey }) => {
   if (loading && !results) return <SkeletonGrid/>;
   const rows = (results?.listings || []);
   if (!rows.length) return <EmptyBox>No exact matches in CREA DDF® right now — try widening a filter.</EmptyBox>;
@@ -1037,13 +1069,20 @@ const ResultsGrid = ({ results, loading }) => {
         <span style={{ fontSize: 11, color: C.muted }}>Sorted by newest · CREA DDF®</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
-        {rows.slice(0, 12).map(l => <ListingCard key={l.listing_key} l={l}/>)}
+        {rows.slice(0, 12).map(l => (
+          <ListingCard
+            key={l.listing_key}
+            l={l}
+            isHovered={hoveredKey === l.listing_key}
+            onHoverKey={onHoverKey}
+          />
+        ))}
       </div>
     </>
   );
 };
 
-const ListingCard = ({ l }) => {
+const ListingCard = ({ l, isHovered, onHoverKey }) => {
   const price = l.list_price ? `$${Number(l.list_price).toLocaleString()}` : "—";
   const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
   const cover = (l.photos && l.photos[0]) || (l.Media && l.Media[0]?.MediaURL);
@@ -1075,14 +1114,21 @@ const ListingCard = ({ l }) => {
       localStorage.setItem(SAVED_HOMES_KEY, JSON.stringify(list.slice(0, 100)));
     } catch {}
   };
+  const notify = (key) => { if (onHoverKey) onHoverKey(key); };
   return (
-    <Link to={`/listings/${l.listing_key}`} data-testid={`dash-listing-${l.listing_key}`} style={{
-      background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", overflow: "hidden",
-      textDecoration: "none", color: C.navy, display: "block", transition: "transform 0.15s",
-      position: "relative",
-    }}
-      onMouseEnter={e => e.currentTarget.style.transform = "translateY(-3px)"}
-      onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+    <Link to={`/listings/${l.listing_key}`} data-testid={`dash-listing-${l.listing_key}`}
+      onMouseEnter={() => notify(l.listing_key)}
+      onMouseLeave={() => notify(null)}
+      style={{
+        background: "#fff", borderRadius: 12,
+        border: `1px solid ${isHovered ? C.gold : "#E5E7EB"}`,
+        overflow: "hidden",
+        textDecoration: "none", color: C.navy, display: "block",
+        transition: "transform 0.15s, box-shadow 0.15s, border-color 0.15s",
+        position: "relative",
+        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+        boxShadow: isHovered ? `0 12px 24px rgba(245,166,35,0.25)` : "none",
+      }}
     >
       <div style={{
         height: 140, background: cover ? `url(${cover}) center/cover` : C.mist,
