@@ -183,16 +183,24 @@ const Sidebar = ({ section, setSection, onAsk }) => (
     height: "100vh", overflowY: "auto", boxShadow: "2px 0 20px rgba(15,42,91,0.15)",
   }} data-testid="dash-sidebar">
     <Link to="/" data-testid="dash-brand" style={{
-      color: "#fff", textDecoration: "none", display: "flex", alignItems: "center", gap: 10,
-      padding: "6px 8px 20px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 14,
+      textDecoration: "none", display: "block",
+      padding: "0 0 20px", borderBottom: "1px solid rgba(255,255,255,0.12)", marginBottom: 14,
     }}>
       <div style={{
-        width: 40, height: 40, background: C.gold, borderRadius: "50%",
-        display: "grid", placeItems: "center", fontSize: 22, color: C.navy, fontWeight: 900,
-      }}>🐾</div>
-      <div>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800 }}>EZtoFind<span style={{color:C.gold}}>.ca</span></div>
-        <div style={{ fontSize: 10, opacity: 0.75 }}>Real estate, made EZ to Find.ca</div>
+        background: "#fff", borderRadius: 12, padding: "10px 14px",
+        display: "flex", alignItems: "center", gap: 10,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}>
+        <div style={{
+          width: 34, height: 34, background: C.brandGold, borderRadius: "50%",
+          display: "grid", placeItems: "center", fontSize: 18, color: C.brandBlue, fontWeight: 900, flexShrink: 0,
+        }}>🐾</div>
+        <div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
+            <span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
+          </div>
+          <div style={{ fontSize: 9.5, color: C.muted, marginTop: 2 }}>Real estate, made EZ to Find.ca</div>
+        </div>
       </div>
     </Link>
     <nav style={{ display: "grid", gap: 4 }}>
