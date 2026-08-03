@@ -820,7 +820,7 @@ const CommunityPanel = ({ setSection }) => {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
             {(names || []).map(name => (
-              <Link key={name} to={`/communities/${slugify(name)}`}
+              <Link key={name} to={`/community/${slugify(name)}`}
                 data-testid={`dash-community-${slugify(name)}`}
                 style={{
                   background: "#fff", padding: "12px 14px", borderRadius: 10, border: "1px solid #E5E7EB",
