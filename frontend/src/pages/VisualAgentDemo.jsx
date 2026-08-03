@@ -11,7 +11,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { TurnstileWidget, getTurnstileToken } from "../App";
+import { TurnstileWidget, getTurnstileToken, DoogieChat } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -2230,184 +2230,15 @@ export default function VisualAgentDemo() {
         <div className="visual-agent-split" style={{
           display: "grid", gridTemplateColumns: "minmax(280px, 420px) 1fr", gap: 18,
         }}>
-          {/* Transcript */}
-          <div style={{
-            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
-            display: "flex", flexDirection: "column", minHeight: 460, overflow: "hidden",
+          {/* Live conversation — real Doogie chat panel embedded in the Visual
+              Agent. Consolidates the previously-separate DoogieChat FAB + hero
+              search bar into a single, always-visible interactive surface with
+              language switcher, voice input (Whisper), TTS, related chips, and
+              inline listing cards. */}
+          <div data-testid="visual-agent-doogie-embed" style={{
+            minHeight: 520, display: "flex",
           }}>
-            <div style={{
-              padding: "12px 14px", borderBottom: "1px solid #EEF2FB",
-              display: "flex", alignItems: "center", gap: 8,
-              background: "linear-gradient(180deg, #fff, #FAFBFF)",
-            }}>
-              <Mic size={16} color={C.blue}/>
-              <strong style={{ color: C.navy, fontSize: 13 }}>Live conversation</strong>
-              <span style={{ marginLeft: "auto", fontSize: 11, color: "#6B7280" }}>
-                Scenario {scenarioIdx + 1} / {SCENARIOS.length}
-              </span>
-            </div>
-            <div ref={transcriptRef} data-testid="visual-agent-transcript" style={{ padding: 14, overflowY: "auto", flex: 1, maxHeight: 460 }}>
-              <AnimatePresence initial={false}>
-                {visibleTurns.map((t, i) => {
-                  const doogieSrc = t.pose && DOOGIE[t.pose] ? DOOGIE[t.pose] : DOOGIE.headshot;
-                  // Transparent poses look better on a soft-cream circle so
-                  // the JPEG headshot and PNG cutouts read consistently.
-                  const isCutout = t.pose === "thinking" || t.pose === "pointing" || t.pose === "celebrating";
-                  return (
-                  <motion.div
-                    key={`${scenarioIdx}-${i}`}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      display: "flex", justifyContent: t.who === "user" ? "flex-end" : "flex-start",
-                      marginBottom: 10, gap: 8, alignItems: "flex-end",
-                    }}
-                  >
-                    {t.who === "agent" && (
-                      <motion.div
-                        key={doogieSrc}
-                        initial={{ scale: 0.6, rotate: -10, opacity: 0 }}
-                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                        style={{
-                          width: 32, height: 32, borderRadius: "50%",
-                          background: isCutout ? "#FFF4D9" : "transparent",
-                          border: `2px solid ${t.pose === "celebrating" ? C.green : C.gold}`,
-                          overflow: "hidden", flexShrink: 0,
-                          boxShadow: t.pose === "celebrating"
-                            ? "0 0 0 4px rgba(34,197,94,0.25)"
-                            : "0 2px 6px rgba(15,42,91,0.15)",
-                        }}
-                      >
-                        <img
-                          src={doogieSrc}
-                          alt={`Doogie ${t.pose || "headshot"}`}
-                          data-testid={`doogie-chip-${i}-${t.pose || "headshot"}`}
-                          style={{
-                            width: "100%", height: "100%",
-                            objectFit: "cover",
-                            objectPosition: isCutout ? "center 30%" : "center 42%",
-                          }}
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
-                      </motion.div>
-                    )}
-                    <div style={{
-                      maxWidth: "85%",
-                      padding: "9px 13px", borderRadius: 14,
-                      background: t.who === "user" ? C.mist :
-                        (t.pose === "celebrating"
-                          ? `linear-gradient(135deg, ${C.green}, #15803D)`
-                          : `linear-gradient(135deg, ${C.navy}, ${C.blue})`),
-                      color: t.who === "user" ? C.navy : "#fff",
-                      fontSize: 13, lineHeight: 1.45,
-                      boxShadow: "0 1px 2px rgba(15,42,91,0.05)",
-                    }}>
-                      <div style={{
-                        fontSize: 10, opacity: 0.7, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
-                      }}>
-                        {t.who === "user" ? "You" : (
-                          t.pose === "celebrating" ? "Doogie · celebrating"
-                          : t.pose === "thinking" ? "Doogie · thinking"
-                          : t.pose === "pointing" ? "Doogie · pointing"
-                          : "Doogie Visual"
-                        )}
-                      </div>
-                      {t.text}
-                    </div>
-                  </motion.div>
-                );})}
-
-                {/* Voice interaction — user "spoken" bubble */}
-                {voiceState !== "idle" && (
-                  <motion.div
-                    key={`voice-user-${scenarioIdx}`}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    data-testid="voice-user-bubble"
-                    style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}
-                  >
-                    <div style={{
-                      maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
-                      background: "linear-gradient(135deg, rgba(245,166,35,0.15), rgba(245,166,35,0.05))",
-                      color: C.navy, border: "1px solid rgba(245,166,35,0.45)",
-                      fontSize: 13, lineHeight: 1.45,
-                    }}>
-                      <div style={{
-                        fontSize: 10, opacity: 0.8, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                      }}>
-                        <Mic size={10}/> You · voice
-                      </div>
-                      {voiceState === "listening" ? (
-                        <span style={{ opacity: 0.6, fontStyle: "italic" }}>
-                          <VoiceDots/> listening…
-                        </span>
-                      ) : (
-                        <>{voiceHeard}<Cursor active={voiceState === "transcribing"}/></>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Voice interaction — agent "narrated" reply */}
-                {(voiceState === "replying" || voiceState === "done") && (
-                  <motion.div
-                    key={`voice-agent-${scenarioIdx}`}
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    data-testid="voice-agent-bubble"
-                    style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10, gap: 8, alignItems: "flex-end" }}
-                  >
-                    <motion.div
-                      key={voiceState}
-                      initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                      style={{
-                        width: 32, height: 32, borderRadius: "50%",
-                        background: "#FFF4D9",
-                        border: `2px solid ${C.gold}`,
-                        overflow: "hidden", flexShrink: 0,
-                        boxShadow: "0 2px 6px rgba(15,42,91,0.15)",
-                      }}
-                    >
-                      <img
-                        src={voiceState === "replying" ? DOOGIE.thinking : DOOGIE.pointing}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
-                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                      />
-                    </motion.div>
-                    <div style={{
-                      maxWidth: "85%", padding: "9px 13px", borderRadius: 14,
-                      background: `linear-gradient(135deg, ${C.navy}, ${C.blue})`,
-                      color: "#fff", fontSize: 13, lineHeight: 1.45,
-                      boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
-                    }}>
-                      <div style={{
-                        fontSize: 10, opacity: 0.85, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 700,
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                      }}>
-                        <Volume2 size={10}/> Doogie Visual · narration
-                      </div>
-                      {voiceState === "replying" && !voiceReply
-                        ? <VoiceDots light/>
-                        : (voiceReply || <VoiceDots light/>)}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* chip suggestions */}
-            <div style={{ padding: 10, borderTop: "1px solid #EEF2FB", display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {(CHIPS[scenario.id] || []).map(c => (
-                <button
-                  key={c}
-                  data-testid={`chip-${c.replace(/\s+/g,'-').toLowerCase()}`}
-                  onClick={() => setTurnIdx(i => Math.min(i + 1, scenario.turns.length - 1))}
-                  style={chipBtn}
-                >
-                  <Search size={11}/> {c}
-                </button>
-              ))}
-            </div>
+            <DoogieChat mode="embedded"/>
           </div>
 
           {/* Dynamic pane */}

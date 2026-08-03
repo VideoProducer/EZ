@@ -1079,8 +1079,9 @@ const DOOGIE_TRANSLATION_DISCLAIMER = {
   "pt-PT":  "⚠️ Tradução por IA — as respostas do Doogie nesta língua podem conter pequenos erros. Para qualquer decisão que envolva dinheiro, consulte primeiro um profissional.",
 };
 
-const DoogieChat = () => {
-  const [open, setOpen] = useState(false);
+export const DoogieChat = ({ mode = "fab" }) => {
+  const embedded = mode === "embedded";
+  const [open, setOpen] = useState(embedded);   // embedded mode is always open
   const [expanded, setExpanded] = useState(false);   // Doogie panel: normal ↔ maximized
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
   const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
@@ -1357,10 +1358,10 @@ const DoogieChat = () => {
   };
 
   return (<>
-    <button className="doogie-fab" onClick={()=>setOpen(o=>!o)} data-testid="doogie-fab" aria-label="Chat with Doogie">
+    {!embedded && <button className="doogie-fab" onClick={()=>setOpen(o=>!o)} data-testid="doogie-fab" aria-label="Chat with Doogie">
       <img src={DOOGIE_THINKING} alt="Doogie"/>
-    </button>
-    {open && <div className={`doogie-panel${expanded ? " doogie-panel-expanded" : ""}`} data-testid="doogie-panel">
+    </button>}
+    {open && <div className={`doogie-panel${expanded ? " doogie-panel-expanded" : ""}${embedded ? " doogie-panel-embedded" : ""}`} data-testid={embedded ? "doogie-panel-embedded" : "doogie-panel"}>
       <header><img src={DOOGIE_THINKING} alt="Doogie"/><div style={{minWidth:0,flexShrink:1,overflow:"hidden"}}><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>AI Helper · General Info Only</div></div>
         <button type="button" onClick={()=>setVoiceOut(v=>!v)} data-testid="doogie-voiceout-toggle"
           aria-label={voiceOut ? "Turn Doogie's voice off" : "Turn Doogie's voice on"}
@@ -1375,15 +1376,15 @@ const DoogieChat = () => {
           style={{marginLeft:"0.35rem",flexShrink:0,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.4rem",fontSize:"0.8rem",cursor:"pointer",fontFamily:"Inter,sans-serif",maxWidth:"85px"}}>
           {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label}</option>)}
         </select>
-        <button onClick={()=>setExpanded(e=>!e)} data-testid="doogie-expand" aria-label={expanded?"Restore chat window":"Expand chat window"} title={expanded?"Restore chat window":"Expand chat window"}
+        {!embedded && <button onClick={()=>setExpanded(e=>!e)} data-testid="doogie-expand" aria-label={expanded?"Restore chat window":"Expand chat window"} title={expanded?"Restore chat window":"Expand chat window"}
           aria-pressed={expanded}
           style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.35rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
           onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
-          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>{expanded?"⤡":"⤢"}</button>
-        <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
+          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>{expanded?"⤡":"⤢"}</button>}
+        {!embedded && <button onClick={()=>setOpen(false)} data-testid="doogie-close" aria-label="Close Doogie chat" title="Close chat"
           style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1.35rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.5rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
           onMouseOver={e=>e.currentTarget.style.background="rgba(255,255,255,0.28)"}
-          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>×</button></header>
+          onMouseOut={e=>e.currentTarget.style.background="rgba(255,255,255,0.15)"}>×</button>}</header>
       {DOOGIE_TRANSLATION_DISCLAIMER[lang] && (
         <div data-testid="doogie-translation-disclaimer" style={{background:"#F5F0E1",borderBottom:"1px solid rgba(15,42,91,0.15)",color:"var(--brand-navy)",padding:"0.7rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",lineHeight:1.5,direction:isRTL(lang)?"rtl":"ltr",textAlign:isRTL(lang)?"right":"left"}}>
           {DOOGIE_TRANSLATION_DISCLAIMER[lang]}
@@ -2019,23 +2020,27 @@ const Home = () => {
         <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship. Doug LeMaire, REALTOR® is accountable for the content Doogie provides, and any information you share with Doogie is handled under our <Link to="/privacy" style={{color:"inherit",fontWeight:"inherit",textDecoration:"none"}}>Privacy Policy</Link> in compliance with BC's Personal Information Protection Act (PIPA).</p>
         <p className="lead" style={{marginTop:"1rem"}}>Real Estate services are provided by Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. — He is a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential strata's. His primary practice areas are: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC.</p>
-        <form onSubmit={onSubmit} className="search-bar" data-testid="hero-search" style={{position:"relative"}} autoComplete="off">
-          <input value={q} onChange={e=>{setQ(e.target.value); setHi(0);}} onFocus={()=>setFocus(true)} onBlur={()=>setTimeout(()=>setFocus(false),200)} onKeyDown={onKeyDown} placeholder="Try: '4-bed homes in Whistler', a community, or a real estate term…" data-testid="hero-search-input"/>
-          <button type="submit" className="btn btn-green" data-testid="hero-search-btn">Search →</button>
-          {focus && suggestions.length > 0 && (
-            <div data-testid="hero-search-suggestions" style={{position:"absolute",top:"calc(100% + 0.35rem)",left:0,right:0,background:"white",borderRadius:14,boxShadow:"0 20px 40px rgba(15,42,91,0.2)",border:"1px solid rgba(15,42,91,0.1)",overflow:"hidden",zIndex:10,fontFamily:"Inter,sans-serif",maxHeight:"22rem",overflowY:"auto"}}>
-              {suggestions.map((s, i) => (
-                <button type="button" key={s.type+"-"+s.label} onMouseDown={(e)=>{e.preventDefault(); go(s.path);}} onMouseEnter={()=>setHi(i)} data-testid={`suggestion-${s.type.toLowerCase()}-${slugify(s.label)}`} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"1rem",padding:"0.75rem 1rem",background:i===hi?"#F5F0E1":"transparent",border:"none",cursor:"pointer",textAlign:"left"}}>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontWeight:600,color:"var(--brand-navy)",fontSize:"0.95rem"}}>{s.label}</div>
-                    <div style={{fontSize:"0.78rem",color:"var(--muted)"}}>{s.sub}</div>
-                  </div>
-                  <span style={{fontSize:"0.7rem",fontWeight:700,letterSpacing:"0.06em",color:s.type==="Community"?"#16A34A":"#0EA5E9",background:s.type==="Community"?"rgba(22,163,74,0.08)":"rgba(14,165,233,0.08)",padding:"0.2rem 0.55rem",borderRadius:999,flexShrink:0}}>{s.type.toUpperCase()}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </form>
+        {/* Hero search bar retired — the Visual Agent at /visual-agent-demo
+            is now the single unified entry point for search, chat, voice, and
+            tours. CTA below links straight to it. */}
+        <div style={{marginTop:"1.25rem",display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+          <Link
+            to="/visual-agent-demo"
+            data-testid="hero-visual-agent-cta"
+            className="btn btn-primary"
+            style={{fontSize:"1.05rem",padding:"0.85rem 1.35rem",fontWeight:700,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:"0.5rem"}}
+          >
+            🐾 Talk to Doogie — search, ask, tour →
+          </Link>
+          <Link
+            to="/listings"
+            data-testid="hero-browse-listings-cta"
+            className="btn"
+            style={{fontSize:"1rem",padding:"0.85rem 1.35rem",fontWeight:600,textDecoration:"none",background:"white",color:"var(--brand-navy)",border:"1.5px solid rgba(15,42,91,0.15)"}}
+          >
+            Browse BC listings
+          </Link>
+        </div>
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
           {[
             {label:"Detached",     slug:"detached"},
@@ -6973,7 +6978,9 @@ const AppLayout = ({children}) => {
     <BackHomeBar/>
     <main id="main-content" tabIndex={-1}>{children}</main>
     <Footer/>
-    <DoogieChat/>
+    {/* DoogieChat floating FAB retired site-wide — the Visual Agent at
+        /visual-agent-demo is now the single unified entry point for Doogie
+        (chat, voice, search, tours, insights, consultation). */}
     <CookieBanner/>
     <PageViewBeacon/>
     <PostHogGate/>

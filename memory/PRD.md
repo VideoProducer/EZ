@@ -1294,3 +1294,35 @@ Three enhancements landed together — one backend milestone (public Doogie Tool
 
 ### Files touched
 - **Modified**: `frontend/src/pages/VisualAgentDemo.jsx` — added `VolumeX` import, `speakerOn`/`speaking`/`audioRef`/`ttsAbortRef` state, `speakDoogie`/`stopSpeaking` helpers, TTS `useEffect`, speaker toggle button, REALTOR® copy fix
+
+
+## Feb 3, 2026 — Unified Doogie inside Visual Agent + hero cleanup
+
+### Consolidation
+- **Retired the floating `<DoogieChat/>` FAB globally.** No more corner bubble on any page. Removed from AppShell render (was `App.js` line ~6976).
+- **Retired the hero search bar** on the homepage. Replaced with two CTAs: primary **"Talk to Doogie — search, ask, tour →"** (routes to `/visual-agent-demo`) and secondary **"Browse BC listings"** (routes to `/listings`).
+- **Embedded DoogieChat inside the Visual Agent left column.** Added `mode` prop to DoogieChat (`fab` default | `embedded`). In embedded mode: no FAB, always open, no expand/close buttons, sized to parent. New CSS class `.doogie-panel-embedded` in `index.css` overrides fixed-position rules and gives min-height 520px (480px mobile).
+- **All chatbot features preserved**: 6-language selector (EN/FR/繁/简/ਪੰ/فا/PT), consent gate, SSE streaming from `/api/doogie/chat`, voice input via Whisper (`/api/doogie/transcribe`), voice output TTS toggle, related chips, inline listing cards, personalized greeting from localStorage (last community/last search/favorites), `?ask=` URL prefill, cross-app `ez-open-doogie` event listener.
+- **New export**: `export const DoogieChat` in App.js (was internal only) so VisualAgentDemo can import it. TurnstileWidget/getTurnstileToken pattern reused; circular-import safe because usage is inside JSX.
+
+### Referral bump (out-of-focus areas)
+- New helper `isOutsideFocusArea(text)` + `<OutsideFocusBump>` component in `VisualAgentDemo.jsx`. Whitelist covers Greater Vancouver + Fraser Valley + Sea-to-Sky Corridor cities/communities.
+- Renders inline under the Buyer target-areas field AND the Seller city field in the Consultation Request form when the entered city falls outside Doug's licensed focus areas.
+- Message: *"[city] falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?"* with **Referral REALTOR® →** button linking to `/referral-request`.
+- data-testid: `q-city-outside-focus`, `q-areas-outside-focus`.
+
+### Verification
+- Visual Agent chat: consent → typed "What are strata fees?" → received real streaming reply with proper markdown ✓
+- FAB count on visual-agent-demo, `/` and every other page: 0 ✓
+- Homepage: old `hero-search-input` gone, new `hero-visual-agent-cta` present ✓
+- 6 language options visible in embedded chat header dropdown ✓
+- Right pane still shows real CREA DDF Kitsilano cards ✓
+
+### Files touched
+- **Modified**: `frontend/src/App.js` — DoogieChat now accepts `mode` prop + exported; FAB removed from AppShell; hero search form replaced with CTA row
+- **Modified**: `frontend/src/pages/VisualAgentDemo.jsx` — imported DoogieChat; replaced entire transcript column (~180 lines) with `<DoogieChat mode="embedded"/>`; added focus-area detector + referral bump
+- **Modified**: `frontend/src/index.css` — added `.doogie-panel-embedded` overrides
+
+### Pending — Address validation
+- Canada Post AddressComplete playbook obtained via integration_playbook_expert_v2.
+- User needs to purchase a **transactional API Key** at https://www.canadapost-postescanada.ca/ac/ (5,000 lookups $450 CAD tier recommended) and paste it back so we can wire up `/api/address/suggest` + `/api/address/validate` (backend proxy — key never exposed to browser).
