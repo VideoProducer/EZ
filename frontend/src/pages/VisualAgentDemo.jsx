@@ -377,13 +377,10 @@ const Cursor = ({ active }) => (
 );
 
 // ── Right pane: Search scenario (listing carousel + real area input) ─────────
-const PaneSearch = () => {
-  const [q, setQ] = useState("");
-  const [committed, setCommitted] = useState("Kitsilano");
+const PaneSearch = ({ query, setQuery, committed, onCommit }) => {
   const submit = (e) => {
     e && e.preventDefault && e.preventDefault();
-    const clean = q.trim();
-    if (clean.length >= 2) setCommitted(clean);
+    onCommit(query);
   };
   return (
     <div data-testid="pane-search" style={{ display: "grid", gap: 12 }}>
@@ -400,8 +397,8 @@ const PaneSearch = () => {
           <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#6B7280" }}/>
           <input
             data-testid="search-area-input"
-            value={q}
-            onChange={e => setQ(e.target.value)}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
             placeholder="Type a BC area — e.g. Kitsilano, Whistler, Kelowna, Nanaimo, Cranbrook"
             style={{
               width: "100%", padding: "9px 12px 9px 32px",
@@ -1515,7 +1512,18 @@ const FormNav = ({ onBack, onNext, nextDisabled, nextLabel }) => (
 export default function VisualAgentDemo() {
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [turnIdx, setTurnIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  // Autoplay only until the user shows any intent. Once they tap, focus, or
+  // submit anything we stop cycling scenarios so they can read/type at their
+  // own pace. On mobile we start paused so nothing moves under their thumb.
+  const [playing, setPlaying] = useState(() => {
+    try { return typeof window !== "undefined" && window.innerWidth >= 820; }
+    catch { return true; }
+  });
+  const [userInteracted, setUserInteracted] = useState(false);
+  const stopAutoplay = () => {
+    if (!userInteracted) setUserInteracted(true);
+    setPlaying(false);
+  };
   // Voice prototype state
   const [voiceState, setVoiceState] = useState("idle"); // idle | listening | transcribing | replying | done | error
   const [voiceHeard, setVoiceHeard] = useState("");     // progressively typed user speech
@@ -1557,6 +1565,21 @@ export default function VisualAgentDemo() {
   }
   const transcriptRef = useRef(null);
 
+  // ── Persistent BC search (lifted so a top-level always-visible bar can drive
+  //     the PaneSearch results and jump the demo straight to Buyer Search).
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCommitted, setSearchCommitted] = useState("Kitsilano");
+  const commitSearch = (raw) => {
+    const clean = (raw || "").trim();
+    if (clean.length < 2) return;
+    setSearchCommitted(clean);
+    // Jump the demo to Buyer Search + stop the autoplay so the user doesn't
+    // lose their results the moment the timer rotates to the next scenario.
+    setScenarioIdx(SCENARIOS.findIndex(s => s.id === "search"));
+    setTurnIdx(0);
+    stopAutoplay();
+  };
+
   const scenario = SCENARIOS[scenarioIdx];
   const visibleTurns = scenario.turns.slice(0, turnIdx + 1);
   const voiceScript = VOICE_SCRIPT[scenario.id];
@@ -1570,7 +1593,8 @@ export default function VisualAgentDemo() {
     if (voiceState !== "idle" && voiceState !== "done") return;
     if (scenario.id === "qualify") return;   // don't auto-leave the live form
     const isLastTurn = turnIdx >= scenario.turns.length - 1;
-    const delay = isLastTurn ? 3200 : 2200;
+    // Give consumers breathing room — 7s per turn, 10s before rotating scenario.
+    const delay = isLastTurn ? 10000 : 7000;
     const t = setTimeout(() => {
       if (isLastTurn) {
         setScenarioIdx(i => (i + 1) % SCENARIOS.length);
@@ -1849,7 +1873,7 @@ export default function VisualAgentDemo() {
 
   const RightPane = useMemo(() => {
     switch (scenario.id) {
-      case "search": return <PaneSearch/>;
+      case "search": return <PaneSearch query={searchQuery} setQuery={setSearchQuery} committed={searchCommitted} onCommit={commitSearch}/>;
       case "tour": return <PaneTour/>;
       case "neighbourhood": return <PaneNeighbourhood/>;
       case "buyerinsights": return <PaneBuyerInsights/>;
@@ -1857,10 +1881,11 @@ export default function VisualAgentDemo() {
       case "qualify": return <PaneQualify/>;
       default: return null;
     }
-  }, [scenario.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario.id, searchQuery, searchCommitted]);
 
-  const jumpTo = (i) => { setScenarioIdx(i); setTurnIdx(0); setPlaying(true); };
-  const restart = () => { setScenarioIdx(0); setTurnIdx(0); setPlaying(true); };
+  const jumpTo = (i) => { setScenarioIdx(i); setTurnIdx(0); stopAutoplay(); };
+  const restart = () => { setScenarioIdx(0); setTurnIdx(0); setUserInteracted(false); setPlaying(true); };
   const voiceActive = voiceState === "listening" || voiceState === "transcribing" || voiceState === "replying";
 
   return (
@@ -2037,8 +2062,65 @@ export default function VisualAgentDemo() {
         </div>
       </section>
 
+      {/* ── Persistent BC search bar — always visible, mobile-first ────────
+          A single, prominent search input under the hero. Submitting jumps
+          the demo to "Buyer Search" and stops the auto-advance so consumers
+          have all the time they need to read/type. */}
+      <div style={{ maxWidth: 1200, margin: "-28px auto 0", padding: "0 20px", position: "relative", zIndex: 3 }}>
+        <form
+          onSubmit={(e) => { e.preventDefault(); commitSearch(searchQuery); }}
+          data-testid="visual-agent-persistent-search"
+          style={{
+            background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
+            padding: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
+            boxShadow: "0 14px 34px rgba(15,42,91,0.10)",
+          }}
+        >
+          <div style={{ position: "relative", flex: "1 1 220px", minWidth: 0 }}>
+            <Search size={16} style={{
+              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.blue,
+            }}/>
+            <input
+              data-testid="visual-agent-persistent-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={stopAutoplay}
+              placeholder="Search anywhere in BC — Kitsilano, Whistler, Kelowna, Nanaimo, Cranbrook…"
+              aria-label="Search anywhere in British Columbia"
+              style={{
+                width: "100%", padding: "12px 14px 12px 36px",
+                borderRadius: 10, border: "1px solid #DDE6FA",
+                fontSize: 14, fontFamily: "inherit", background: "#F7FAFF",
+                color: C.navy, fontWeight: 600,
+                outline: "none",
+              }}
+            />
+          </div>
+          <button
+            type="submit"
+            data-testid="visual-agent-persistent-search-submit"
+            style={{
+              padding: "12px 20px", borderRadius: 10, border: "none",
+              background: C.navy, color: "#fff", fontWeight: 800, fontSize: 14,
+              cursor: "pointer", whiteSpace: "nowrap",
+              display: "inline-flex", alignItems: "center", gap: 8,
+              boxShadow: "0 8px 18px rgba(15,42,91,0.25)",
+            }}
+          >
+            <Search size={14}/> Search BC
+          </button>
+          <div style={{
+            flexBasis: "100%", fontSize: 11, color: "#6B7280", paddingLeft: 4,
+          }}>
+            {userInteracted
+              ? "Auto-play paused — take your time. Tap Play at the top to resume the demo."
+              : "Type a BC area to search real listings. Or explore the scenarios below."}
+          </div>
+        </form>
+      </div>
+
       {/* ── Scenario tabs ─────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "-18px auto 0", padding: "0 20px", position: "relative", zIndex: 2 }}>
+      <div style={{ maxWidth: 1200, margin: "12px auto 0", padding: "0 20px", position: "relative", zIndex: 2 }}>
         <div style={{
           background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,
           padding: 8, display: "flex", flexWrap: "wrap", gap: 6, boxShadow: "0 10px 30px rgba(15,42,91,0.08)",
