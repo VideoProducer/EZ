@@ -1944,7 +1944,15 @@ export default function VisualAgentDemo() {
   // (React state closures were re-triggering the PIPA gate instead of starting the mic).
   const voicePipaAckRef = useRef(false);
   useEffect(() => { voicePipaAckRef.current = voicePipaAck; }, [voicePipaAck]);
-  const [kioskMode, setKioskMode] = useState(false);   // fullscreen voice-only
+  const [kioskMode, setKioskMode] = useState(() => {
+    // Auto-enter kiosk mode when the URL carries ?kiosk=1 — used by the
+    // homepage onboarding flow to route directly into hands-free tour mode.
+    try {
+      if (typeof window === "undefined") return false;
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("kiosk") === "1";
+    } catch { return false; }
+  });   // fullscreen voice-only
   // Kiosk audio — Doogie speaks answers aloud in Kiosk mode via /api/doogie/tts.
   // Speaker defaults ON; user can mute via the speaker toggle in the kiosk overlay.
   // Autoplay policy: the mic tap is a user gesture, so subsequent audio playback
@@ -2183,6 +2191,29 @@ export default function VisualAgentDemo() {
     speakDoogie(reply);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceState, voiceReply, kioskMode, speakerOn]);
+
+  // First-visit onboarding hand-off: /visual-agent-demo?kiosk=1 → auto-start
+  // kiosk (already handled in the kioskMode initializer) + play the 15-second
+  // Doogie greeting aloud. Then strip the query param so a page refresh
+  // doesn't repeat the greeting. Runs exactly once per navigation.
+  const greetedRef = useRef(false);
+  useEffect(() => {
+    if (greetedRef.current) return;
+    if (typeof window === "undefined") return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("kiosk") !== "1") return;
+      greetedRef.current = true;
+      const greeting = "Hi, I'm Doogie — your BC real estate helper. Try searching for a listing in Whistler, ask me about strata fees, take a virtual tour, or book a free consultation with Doug. General information only — not advice.";
+      // Small delay so the kiosk overlay is fully mounted before audio starts
+      window.setTimeout(() => { speakDoogie(greeting); }, 600);
+      // Strip ?kiosk from the URL without triggering navigation
+      sp.delete("kiosk");
+      const newUrl = window.location.pathname + (sp.toString() ? `?${sp}` : "") + window.location.hash;
+      window.history.replaceState({}, "", newUrl);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Voice prototype: two modes
   //  • "scripted" — 100% mocked, safe for demo videos, no mic permission needed.

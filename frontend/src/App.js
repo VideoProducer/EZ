@@ -1920,6 +1920,202 @@ const PersonalizedHome = () => {
   );
 };
 
+const DOOGIE_ONBOARDING_SCRIPT = "Hi, I'm Doogie — your BC real estate helper. Search anywhere in British Columbia, ask me about listings, terms, or neighbourhoods, take a virtual tour, or book a free consultation with Doug LeMaire, REALTOR®. Everything I share is general information only — not advice.";
+
+// Shared TTS helper used by both the hero greeting card and the onboarding
+// modal. Fetches the MP3 blob from /api/doogie/tts and plays it. Returns the
+// <audio> element so callers can stop it if the user dismisses mid-play.
+const _playDoogieTTS = async (text, onEnded) => {
+  try {
+    const r = await fetch(`${API}/doogie/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text.slice(0, 3800), voice: "ash" }),
+    });
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    a.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } onEnded && onEnded(); };
+    await a.play();
+    return a;
+  } catch { return null; }
+};
+
+// ── Hero greeting card — small, friendly, invites first-time visitors ──
+const DoogieHeroGreeting = () => {
+  const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef(null);
+  useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
+  const toggle = async () => {
+    if (speaking && audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ }
+      audioRef.current = null;
+      setSpeaking(false);
+      return;
+    }
+    setSpeaking(true);
+    audioRef.current = await _playDoogieTTS(DOOGIE_ONBOARDING_SCRIPT, () => setSpeaking(false));
+    if (!audioRef.current) setSpeaking(false);
+  };
+  return (
+    <div
+      data-testid="home-doogie-hero-greeting"
+      style={{
+        display: "flex", alignItems: "center", gap: "0.85rem",
+        background: "linear-gradient(135deg, #FFF8E8 0%, #FFF3D6 100%)",
+        border: "1.5px solid #F5D28A", borderRadius: 14,
+        padding: "0.75rem 0.9rem", marginBottom: "1.25rem",
+        boxShadow: "0 6px 18px rgba(15,42,91,0.08)",
+      }}
+    >
+      <img
+        src={DOOGIE_THINKING} alt="Doogie the AI helper"
+        style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", border: "2px solid #FDB813", background: "#fff", flexShrink: 0 }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, color: "var(--brand-navy)", fontSize: "1rem", lineHeight: 1.25 }}>
+          Hi, I'm Doogie <span aria-hidden>🐾</span>
+        </div>
+        <div style={{ fontSize: "0.85rem", color: "var(--ink)", marginTop: 2, lineHeight: 1.4 }}>
+          Ask me anything about BC real estate, or search for a listing below.
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        data-testid="home-doogie-hero-play"
+        aria-pressed={speaking}
+        aria-label={speaking ? "Stop Doogie's introduction" : "Play Doogie's 15-second introduction"}
+        style={{
+          flexShrink: 0, background: speaking ? "#DC2626" : "var(--brand-navy)",
+          color: "#fff", border: "none", borderRadius: 999,
+          padding: "0.55rem 0.95rem", fontWeight: 700, fontSize: "0.82rem",
+          cursor: "pointer", whiteSpace: "nowrap",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+        }}
+      >
+        {speaking ? "◼ Stop" : "▶ Hear intro"}
+      </button>
+    </div>
+  );
+};
+
+// ── First-visit onboarding modal ──
+// Shown once per browser. Big Play button (user gesture) plays the 15-second
+// Doogie greeting. Skip / dismiss also stores the flag so we don't nag users.
+const DoogieOnboarding = () => {
+  const [visible, setVisible] = useState(() => {
+    try { return typeof localStorage !== "undefined" && localStorage.getItem("ez_onboarding_done") !== "1"; }
+    catch { return false; }
+  });
+  const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef(null);
+  const nav = useNavigate();
+  useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
+  const dismiss = () => {
+    try { localStorage.setItem("ez_onboarding_done", "1"); } catch { /* ignore */ }
+    if (audioRef.current) { try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ } audioRef.current = null; }
+    setVisible(false);
+  };
+  const play = async () => {
+    setSpeaking(true);
+    audioRef.current = await _playDoogieTTS(DOOGIE_ONBOARDING_SCRIPT, () => setSpeaking(false));
+    if (!audioRef.current) setSpeaking(false);
+  };
+  const startTour = () => {
+    dismiss();
+    nav("/visual-agent-demo?kiosk=1");
+  };
+  if (!visible) return null;
+  return (
+    <div
+      data-testid="home-onboarding-modal"
+      role="dialog" aria-modal="true" aria-labelledby="onboarding-title"
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(15,42,91,0.55)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+      }}
+      onClick={dismiss}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff", borderRadius: 20, maxWidth: 460, width: "100%",
+          padding: "2rem 1.75rem 1.5rem", textAlign: "center", position: "relative",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.35)",
+        }}
+      >
+        <button
+          type="button" onClick={dismiss}
+          data-testid="home-onboarding-close"
+          aria-label="Close welcome"
+          style={{
+            position: "absolute", top: 12, right: 12, background: "transparent",
+            border: "none", cursor: "pointer", fontSize: 22, color: "#6B7280", lineHeight: 1,
+          }}
+        >×</button>
+        <img
+          src={DOOGIE_THINKING} alt="Doogie mascot"
+          style={{ width: 96, height: 96, borderRadius: "50%", objectFit: "cover", border: "3px solid #FDB813", background: "#FFF8E8", margin: "0 auto 0.75rem" }}
+        />
+        <h2 id="onboarding-title" style={{
+          fontSize: "1.35rem", fontWeight: 700, color: "var(--brand-navy)",
+          margin: "0 0 0.4rem", fontFamily: "'Playfair Display', serif",
+        }}>Welcome — I'm Doogie <span aria-hidden>🐾</span></h2>
+        <p style={{ fontSize: "0.92rem", color: "var(--ink)", lineHeight: 1.55, margin: "0 0 1.15rem" }}>
+          Your BC real-estate helper. Tap play for a 15-second intro, or jump straight in.
+        </p>
+        <div style={{ display: "grid", gap: 8 }}>
+          <button
+            type="button"
+            onClick={play}
+            data-testid="home-onboarding-play"
+            aria-pressed={speaking}
+            style={{
+              background: speaking ? "#DC2626" : "var(--brand-navy)", color: "#fff",
+              border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
+              fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
+              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            {speaking ? "◼ Stop intro" : "▶ Hear Doogie's 15-second intro"}
+          </button>
+          <button
+            type="button"
+            onClick={startTour}
+            data-testid="home-onboarding-tour"
+            style={{
+              background: "#16A34A", color: "#fff",
+              border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
+              fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
+            }}
+          >
+            Start hands-free kiosk tour →
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            data-testid="home-onboarding-skip"
+            style={{
+              background: "transparent", color: "#6B7280",
+              border: "none", padding: "0.5rem", fontWeight: 600, fontSize: "0.85rem",
+              cursor: "pointer", textDecoration: "underline",
+            }}
+          >
+            Skip — I'll explore on my own
+          </button>
+        </div>
+        <p style={{ fontSize: "0.7rem", color: "#9CA3AF", marginTop: "1rem", lineHeight: 1.5 }}>
+          Doogie shares general information only — not legal, tax, or property-specific advice.
+        </p>
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
   const [q, setQ] = useState("");
   const [terms, setTerms] = useState([]);
@@ -2013,9 +2209,23 @@ const Home = () => {
     </Helmet>
     <PersonalizedHome/>
     <ComingSoonHero mode="home"/>
+
+    {/* ── First-visit onboarding modal (voice-guided) ────────────────────────
+        Shown once per browser (localStorage flag `ez_onboarding_done`). Big
+        Play button ties audio playback to a user gesture so Chrome/Safari
+        autoplay policy is respected. Users can also skip / dismiss. */}
+    <DoogieOnboarding/>
+
     <section className="hero"><div className="container-x hero-grid">
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
+
+        {/* ── Mini Doogie greeting card ───────────────────────────────────────
+            Sits at the very top of the hero. Warm, friendly, gives new visitors
+            a face-to-name intro before the licensing paragraph. Play button
+            triggers the same 15-second TTS greeting used in onboarding. */}
+        <DoogieHeroGreeting/>
+
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>.ca</span></h1>
         <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship. Doug LeMaire, REALTOR® is accountable for the content Doogie provides, and any information you share with Doogie is handled under our <Link to="/privacy" style={{color:"inherit",fontWeight:"inherit",textDecoration:"none"}}>Privacy Policy</Link> in compliance with BC's Personal Information Protection Act (PIPA).</p>

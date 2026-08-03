@@ -1413,3 +1413,31 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 - Modified backend/server.py: replaced Canada Post proxy with Nominatim; added /api/insights aggregation
 - Modified frontend/src/pages/VisualAgentDemo.jsx: smart-search dropdown + keyboard nav + Ask Doogie hand-off; live listings fetch in PaneSearch; live insights fetch in PaneBuyerInsights and PaneSellerLookup; default city Vancouver
 - Modified backend/.env: removed ADDRESS_COMPLETE_KEY (no longer needed)
+
+
+## Feb 3, 2026 — Homepage Doogie greeting + voice-first onboarding
+
+### Homepage Doogie hero greeting card
+- New `<DoogieHeroGreeting>` component in App.js. Small warm card above the H1 with Doogie avatar, "Hi, I'm Doogie 🐾", one-line invite, and a ▶ Hear intro button that plays the same 15-second TTS greeting via /api/doogie/tts (voice="ash"). Toggles to a red ◼ Stop button while playing.
+- data-testids: home-doogie-hero-greeting, home-doogie-hero-play
+
+### First-visit voice-first onboarding modal
+- New `<DoogieOnboarding>` component in App.js, mounted above the hero section on the homepage.
+- Shows exactly once per browser (localStorage flag `ez_onboarding_done`). Full-viewport modal with backdrop-blur.
+- Three CTAs: ▶ Hear intro (plays 15s TTS greeting), Start hands-free kiosk tour → (routes to /visual-agent-demo?kiosk=1), Skip — I'll explore on my own.
+- data-testids: home-onboarding-modal, home-onboarding-play, home-onboarding-tour, home-onboarding-skip, home-onboarding-close.
+
+### Kiosk auto-open from URL param
+- VisualAgentDemo now reads `?kiosk=1` and auto-enters Kiosk mode on mount.
+- A `useEffect` also plays the 15-second Doogie greeting via speakDoogie() 600ms after mount (gives the overlay time to render), then strips the `kiosk=1` param via history.replaceState so refresh doesn't repeat.
+- Uses the existing greetedRef guard so the effect runs at most once per navigation.
+
+### Verified
+- Onboarding modal shown on first visit (localStorage cleared) ✓
+- Hero greeting card visible right below the "🏔️ British Columbia" eyebrow ✓
+- localStorage flag prevents modal from re-showing on 2nd visit ✓
+- Modal Play + hero Play both call the same TTS backend (voice=ash, 30-day cache HIT after first fetch) ✓
+
+### Files touched
+- Modified frontend/src/App.js: added DoogieHeroGreeting + DoogieOnboarding components + hero + AppShell mount
+- Modified frontend/src/pages/VisualAgentDemo.jsx: kioskMode reads ?kiosk=1 URL param; new useEffect speaks greeting on auto-open + strips param
