@@ -1173,7 +1173,7 @@ const SearchPanel = () => {
       <div className="dash-search-splitgrid" style={{
         display: "grid", gridTemplateColumns: "280px 1fr", gap: 20, alignItems: "start",
       }}>
-        <div className="dash-search-filters-col" style={{ position: "sticky", top: 16 }}>
+        <div className="dash-search-filters-col" style={{ position: "sticky", top: 460 }}>
           <SidebarFilters/>
         </div>
         <div>
@@ -1194,7 +1194,7 @@ const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) =
         <strong style={{ color: C.navy }}>{results.total?.toLocaleString?.() || rows.length} listings</strong>
         <span style={{ fontSize: 11, color: C.muted }}>Sorted by newest · CREA DDF®</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
         {rows.slice(0, 12).map(l => (
           <ListingCard
             key={l.listing_key}
