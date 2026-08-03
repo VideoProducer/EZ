@@ -70,7 +70,7 @@ const SECTIONS = [
 
 // ── Hero (introduces Doogie + BCFSA context) ──────────────────────────────
 const HeroIntro = () => (
-  <section data-testid="dash-hero" style={{
+  <section data-testid="dash-hero" className="dash-hero-section" style={{
     background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)",
     border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14,
     padding: "22px 24px", marginBottom: 22, display: "grid",
@@ -78,6 +78,7 @@ const HeroIntro = () => (
   }}>
     <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
       data-testid="dash-hero-doogie"
+      className="dash-hero-doogie"
       style={{
         width: "100%", maxWidth: 440, height: "auto", filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
       }}
