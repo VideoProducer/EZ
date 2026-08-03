@@ -329,6 +329,11 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
   /* Filter sidebar on mobile: not sticky (would trap under browser chrome), full width */
   .listings-search-layout > div:first-child > form { position: static !important; }
   .listing-detail-layout  > div:last-child  > div  { position: static !important; }
+  /* Dashboard search split-grid: collapse the 280px filter column so filters
+     stack above listings on phones, and unstick so the phone browser chrome
+     doesn't trap the card at the top of the viewport. */
+  .dash-search-splitgrid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .dash-search-filters-col { position: static !important; }
 }
 
 @media(max-width: 700px) {

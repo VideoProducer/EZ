@@ -346,7 +346,8 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
         );
       })}
     </nav>
-    {section === "search" && <SidebarFilters/>}
+    {/* SidebarFilters used to live here — moved to a sticky column beside
+        the listings grid inside <SearchPanel/> for a more spacious layout. */}
   </aside>
   );
 };
@@ -1148,8 +1149,7 @@ const SearchPanel = () => {
   return (
     <>
       <HeroIntro/>
-      {/* Map + Results — Filters live in the sidebar so this pane can use the
-          full main-content width. */}
+      {/* Map — full-width above the two-column filters/listings block. */}
       <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
@@ -1165,7 +1165,20 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+      {/* Two-column: sticky FILTERS bubble on the left, listings grid on the
+          right.  On mobile (<900px) the sticky positioning would trap the
+          filters under the browser chrome, so it collapses to a normal
+          static block above the listings via CSS below. */}
+      <div className="dash-search-splitgrid" style={{
+        display: "grid", gridTemplateColumns: "280px 1fr", gap: 20, alignItems: "start",
+      }}>
+        <div className="dash-search-filters-col" style={{ position: "sticky", top: 16 }}>
+          <SidebarFilters/>
+        </div>
+        <div>
+          <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+        </div>
+      </div>
     </>
   );
 };
