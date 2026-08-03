@@ -930,6 +930,7 @@ const LISTING_INTENT_REGEX = new RegExp(
   "i"
 );
 const looksLikeListingSearch = (text) => LISTING_INTENT_REGEX.test(text || "");
+export { looksLikeListingSearch };
 
 // --- Favorites (❤️) — localStorage-backed heart button
 // -------------------------------------------------------

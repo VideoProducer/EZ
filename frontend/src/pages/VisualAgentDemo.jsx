@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { TurnstileWidget, getTurnstileToken, SavedSearchModal } from "../App";
+import { TurnstileWidget, getTurnstileToken, SavedSearchModal, looksLikeListingSearch } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -664,7 +664,7 @@ const PaneTour = () => {
           </div>
           <Pill tone={mode === "live" ? "green" : "gold"}>
             {mode === "live"
-              ? <><Radio size={12}/> {provider === "dougs" && dougReady ? "Doug's MLS" : P.label}</>
+              ? <><Radio size={12}/> {provider === "dougs" && dougReady ? "BC MLS® Tours" : P.label}</>
               : <><Compass size={12}/> Interactive</>}
           </Pill>
         </div>
@@ -686,10 +686,10 @@ const PaneTour = () => {
               display: "inline-flex", alignItems: "center", gap: 5,
             }}
           >
-            <Building2 size={11}/> Doug's Listings
+            <Building2 size={11}/> BC MLS® Video Tours
             {dougTours === null ? " …"
               : dougReady ? ` · ${dougTours.length}`
-              : " · 0 (using demo)"}
+              : " · public demo"}
           </button>
           {Object.entries(TOUR_PROVIDERS).map(([k, v]) => (
             <button
@@ -2142,18 +2142,38 @@ export default function VisualAgentDemo() {
     }
   };
   const onSearchKey = (e) => {
-    if (!searchOpen || searchSug.length === 0) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        // Nothing matched — treat as "Ask Doogie"
-        if ((searchQuery || "").trim().length >= 2) askDoogie(searchQuery);
-      }
+    if (e.key === "ArrowDown") { e.preventDefault(); if (searchOpen && searchSug.length) setSearchHi(i => Math.min(i + 1, searchSug.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (searchOpen && searchSug.length) setSearchHi(i => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter") { e.preventDefault(); runSearchSubmit(); }
+    else if (e.key === "Escape") { setSearchOpen(false); }
+  };
+  // Shared submit — used by both Enter-key and the Search button. Preserves the
+  // previous hero-search behaviour: listing-intent queries route to
+  // /listings?… with the parsed filters (city, beds_min, price_max, property_type)
+  // so the buyer lands directly on a filtered MLS® results page. Community/term
+  // suggestions only win if the user explicitly arrow-navigated to them.
+  const runSearchSubmit = () => {
+    const raw = (searchQuery || "").trim();
+    if (raw.length < 2) return;
+    // 1) User arrow-selected a suggestion below the first row → open it
+    if (searchOpen && searchSug.length > 0 && searchHi > 0) {
+      openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]);
       return;
     }
-    if (e.key === "ArrowDown") { e.preventDefault(); setSearchHi(i => Math.min(i + 1, searchSug.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setSearchHi(i => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter") { e.preventDefault(); openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]); }
-    else if (e.key === "Escape") { setSearchOpen(false); }
+    // 2) Query looks like a listing search → filtered /listings page
+    const parsed = parseListingQuery(raw);
+    if (parsed || looksLikeListingSearch(raw)) {
+      const p = new URLSearchParams({ q: raw });
+      if (parsed?.city)      p.set("city", parsed.city);
+      if (parsed?.beds)      p.set("beds_min", String(parsed.beds));
+      if (parsed?.priceMax)  p.set("price_max", String(parsed.priceMax));
+      if (parsed?.propType)  p.set("property_type", parsed.propType);
+      setSearchOpen(false);
+      nav(`/listings?${p.toString()}`);
+      return;
+    }
+    // 3) Otherwise treat as a Doogie Q&A (glossary, "how much is PTT?", etc.)
+    askDoogie(raw);
   };
 
   // ── Voice-Answer Everywhere ────────────────────────────────────────────────
@@ -2730,7 +2750,7 @@ export default function VisualAgentDemo() {
         padding: "8px 16px", fontSize: 12, letterSpacing: 0.3,
       }}>
         <ShieldCheck size={12} style={{ verticalAlign: "-2px", marginRight: 6, color: C.gold }}/>
-        Doogie provides <strong>general information only — not advice</strong>. BCFSA · CASL · PIPA compliant. For personalized guidance, ask a <a href="/referral-request" style={{ color: C.gold }}>licensed BC REALTOR®</a>.
+        Doogie provides <strong>general information only — not advice</strong>.
       </div>
 
       {/* ── Hero: agent avatar + waveform ─────────────────────────────────── */}
@@ -2900,14 +2920,7 @@ export default function VisualAgentDemo() {
           the embedded chat. */}
       <div style={{ maxWidth: 1200, margin: "-28px auto 0", padding: "0 20px", position: "relative", zIndex: 3 }}>
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (searchOpen && searchSug.length > 0) {
-              openSug(searchSug[Math.min(searchHi, searchSug.length - 1)]);
-            } else if ((searchQuery || "").trim().length >= 2) {
-              askDoogie(searchQuery);
-            }
-          }}
+          onSubmit={(e) => { e.preventDefault(); runSearchSubmit(); }}
           data-testid="visual-agent-persistent-search"
           style={{
             background: "#fff", border: "1px solid #E5E7EB", borderRadius: 14,

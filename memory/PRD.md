@@ -1545,3 +1545,28 @@ Swapped the paid Canada Post AddressComplete proxy for OpenStreetMap Nominatim:
 ### Shipping
 - Deployment to production is initiated by Doug via Emergent's Deploy button in the chat input (not something I can trigger from here).
 - CREA DDF® auto-sync loop pulls the live feed every 4 hours and immediately runs the alert_matcher — so once deployed, saved-search subscribers get emails within 4 hours of a new matching listing appearing in the MLS.
+
+
+## Feb 4, 2026 — Home + Visual Agent trio-fix
+
+### 1. Compliance banner shortened
+- VisualAgentDemo.jsx: banner now reads just "Doogie provides general information only — not advice." — dropped the "BCFSA · CASL · PIPA compliant. For personalized guidance, ask a licensed BC REALTOR®" tail per Doug's ask (still surfaces on the /compliance page + per-badge microtext elsewhere).
+
+### 2. Video Tour scenario labelled correctly
+- The `/api/tours/library` endpoint already returns ALL active BC MLS® listings with virtual/video tours (`has_virtual_tour: True`, unbranded first). The pill label was misleading ("Doug's Listings · 0 (using demo)"). Renamed to "BC MLS® Video Tours · N" and dropped the demo suffix (real feed returns 12+ listings today).
+- Live pill also updated: "BC MLS® Tours" instead of "Doug's MLS".
+
+### 3. Search bar exact-requirement routing restored
+- The Visual Agent's smart search now honours the retired hero-search contract: listing-intent queries (with city, beds, price, or property-type keywords) route to `/listings?q=…&city=…&beds_min=…&price_max=…&property_type=…` on Enter or button click — the buyer lands on the full filtered MLS® results page instead of the auto-selected first dropdown card.
+- Added shared `runSearchSubmit` helper wired to both the input's `Enter` key handler and the form's `onSubmit`, replacing the divergent logic that let the first listing-card suggestion hijack the submit.
+- Community/glossary dropdown suggestions still work — they only "win" when the user explicitly arrow-navigates to them (`searchHi > 0`). Pure Q&A queries ("how much is PTT?") still fall through to Doogie.
+- Exported `looksLikeListingSearch` from App.js (already existed for the retired hero search — now reused).
+
+### Files touched
+- Modified frontend/src/App.js: exported `looksLikeListingSearch`
+- Modified frontend/src/pages/VisualAgentDemo.jsx: shortened compliance banner; renamed video-tour pill; added `runSearchSubmit` shared submit helper; rewired Enter + form submit to route listing-intent queries to /listings with parsed URL params
+
+### Verified end-to-end
+- Compliance banner text now matches Doug's exact wording ✓
+- `curl /api/tours/library?limit=12` returns 12 real BC MLS® tour listings ✓
+- Typing "3 bed condo in vancouver under 900k" + Enter lands on `/listings?q=…&city=vancouver&beds_min=3&price_max=900000&property_type=Apartment` ✓
