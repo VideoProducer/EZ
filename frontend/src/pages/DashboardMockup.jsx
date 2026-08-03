@@ -27,6 +27,7 @@ const DOOGIE = {
   thinking:     "/doogie/thinking.png",       // empty states / Ask drawer welcome
   pointingLeft: "/doogie/pointing_left.png",  // form guidance / REALTOR® gate
   pointingRight:"/doogie/pointing_right.png", // CTA nudges
+  head:         "/doogie/head.png",           // avatar / toast / admin table row
 };
 const DOOGIE_LAPTOP_URL = DOOGIE.laptop;
 const SAVED_HOMES_KEY = "ez_saved_homes";
@@ -97,6 +98,20 @@ const HeroIntro = () => (
 export default function DashboardMockup() {
   const [section, setSection] = useState("search");
   const [askOpen, setAskOpen] = useState(false);
+  // First-visit sidebar toast — appears once, dismissible, remembers via localStorage
+  const [showToast, setShowToast] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("ez_dash_onboarded")) {
+        const t = setTimeout(() => setShowToast(true), 900);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, []);
+  const dismissToast = () => {
+    try { localStorage.setItem("ez_dash_onboarded", "1"); } catch {}
+    setShowToast(false);
+  };
   return (
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh", display: "grid",
@@ -112,6 +127,7 @@ export default function DashboardMockup() {
         <ComplianceFooter/>
       </div>
       <AskDoogieDrawer open={askOpen} onClose={() => setAskOpen(false)}/>
+      {showToast && <FirstVisitToast onDismiss={dismissToast}/>}
       <button
         onClick={() => setAskOpen(true)}
         data-testid="dash-ask-doogie-fab"
@@ -125,6 +141,38 @@ export default function DashboardMockup() {
     </div>
   );
 }
+
+// ── First-visit sidebar toast — one-time onboarding hint ──────────────────
+const FirstVisitToast = ({ onDismiss }) => (
+  <div
+    data-testid="dash-first-visit-toast"
+    style={{
+      position: "fixed", left: 274, bottom: 24, zIndex: 60,
+      background: "#fff", border: "2px solid " + C.gold, borderRadius: 14,
+      padding: "14px 16px 14px 14px", maxWidth: 340,
+      boxShadow: "0 12px 32px rgba(15,42,91,0.28)",
+      display: "flex", gap: 12, alignItems: "flex-start",
+      animation: "toast-slide 0.35s cubic-bezier(0.16,1,0.3,1)",
+    }}
+  >
+    <img src={DOOGIE.head} alt="Doogie welcomes you"
+      data-testid="dash-first-visit-doogie"
+      style={{ width: 64, height: 64, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))" }}/>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 800, color: C.navy, marginBottom: 4 }}>
+        Woof! I'm Doogie 🐾
+      </div>
+      <div style={{ fontSize: 12, lineHeight: 1.5, color: C.ink }}>
+        Tap any of the <strong>10 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the bubble in the bottom-right.
+      </div>
+      <button onClick={onDismiss} data-testid="dash-first-visit-dismiss" style={{
+        marginTop: 10, background: C.blue, color: "#fff", border: "none",
+        padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
+      }}>Got it — let's explore</button>
+    </div>
+    <style>{`@keyframes toast-slide { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }`}</style>
+  </div>
+);
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
 const Sidebar = ({ section, setSection, onAsk }) => (
@@ -456,9 +504,10 @@ const InsightsPanel = ({ role }) => {
   ] : [];
 
   const cards = role === "buyer" ? buyerCards : sellerCards;
+  const propTypeLabel = propType === "Apartment" ? "Condo" : propType;
   const title = role === "buyer"
-    ? `Buyer snapshot · ${city}${propType ? " · " + propType : ""}`
-    : `Comparable actives · ${city}${propType ? " · " + propType : ""}`;
+    ? `Buyer snapshot · ${city}${propTypeLabel ? " · " + propTypeLabel : ""}`
+    : `Comparable actives · ${city}${propTypeLabel ? " · " + propTypeLabel : ""}`;
 
   return (
     <div>
@@ -472,16 +521,21 @@ const InsightsPanel = ({ role }) => {
       />
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Property type</label>
-        {["", "House", "Apartment", "Townhouse"].map(t => (
-          <button key={t || "all"} onClick={() => setPropType(t)}
-            data-testid={`dash-insight-ptype-${(t || "all").toLowerCase()}`}
+        {[
+          { label: "All",       value: "" },
+          { label: "House",     value: "House" },
+          { label: "Condo",     value: "Apartment" },
+          { label: "Townhouse", value: "Townhouse" },
+        ].map(t => (
+          <button key={t.label} onClick={() => setPropType(t.value)}
+            data-testid={`dash-insight-ptype-${t.label.toLowerCase()}`}
             style={{
               padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
               cursor: "pointer",
-              background: propType === t ? C.blue : "#fff",
-              color: propType === t ? "#fff" : C.navy,
-              border: `1px solid ${propType === t ? C.blue : "#DDE6FA"}`,
-            }}>{t || "All"}</button>
+              background: propType === t.value ? C.blue : "#fff",
+              color: propType === t.value ? "#fff" : C.navy,
+              border: `1px solid ${propType === t.value ? C.blue : "#DDE6FA"}`,
+            }}>{t.label}</button>
         ))}
       </div>
 
@@ -523,7 +577,7 @@ const InsightsPanel = ({ role }) => {
               background: "#fff", border: "1px solid #DDE6FA", borderRadius: 14, padding: 20,
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
-                <strong style={{ color: C.navy, fontSize: 14 }}>Active comparables · {city}{propType ? " · " + propType : ""}</strong>
+                <strong style={{ color: C.navy, fontSize: 14 }}>Active comparables · {city}{propTypeLabel ? " · " + propTypeLabel : ""}</strong>
                 <span style={{ color: C.muted, fontSize: 12 }}>Exact matches only from CREA DDF®</span>
               </div>
               {!comps ? <SkeletonGrid/> : (
