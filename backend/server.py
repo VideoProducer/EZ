@@ -7373,6 +7373,230 @@ async def get_listing(request: Request, listing_key: str):
         pass
     return d
 
+
+# ── Doogie Listing Narration Script ─────────────────────────────────────────
+# Rewrites the CREA DDF listing description as a first-person "walk-through"
+# in Doogie's voice using Haiku. Kept as a separate endpoint so the frontend
+# can call it lazily (only when the user hits "Have Doogie walk me through
+# this home") and cache the resulting script in Mongo for reuse. Follow-up
+# call to /api/doogie/tts synthesises the audio in the Ash voice.
+
+_NARRATION_PROMPT = (
+    "You are Doogie, a friendly golden-retriever real estate helper for British Columbia. "
+    "Your job is to narrate a listing walk-through in first person, like you're strolling "
+    "through the home with the buyer. Keep it warm, curious, playful (one 'Woof!' opener is fine — "
+    "don't overdo it). \n\n"
+    "STRICT RULES — must follow all of these:\n"
+    "1. Only reference features that are explicitly in the listing description or the fact sheet. "
+    "NEVER invent rooms, features, views, or details.\n"
+    "2. Never state or imply a value opinion. NO phrases like 'great deal', 'well priced', "
+    "'a steal', 'won't last', 'move-in ready', 'perfect for you'. Just describe what's there.\n"
+    "3. Do NOT include the listing agent's name, brokerage, phone number, email, or website. "
+    "If the description mentions them, skip that part.\n"
+    "4. Do NOT include realtor.ca URLs, contact-us CTAs, or 'call today' language.\n"
+    "5. Length: 5-8 sentences MAX, ~90 seconds when spoken. Suitable for TTS — no bullet points, no headings, "
+    "no emojis, no markdown.\n"
+    "6. Walk through the home in a natural order (arrival/entry → main living spaces → bedrooms/baths → "
+    "outdoor/parking → close). Only include rooms/features actually mentioned.\n"
+    "7. MUST mention the list price ONCE, using the spelled-out `Price in words` from the fact sheet "
+    "(e.g. 'listed at three million five hundred thousand dollars'). Do NOT write the price as digits — "
+    "text-to-speech mis-reads figures like $3,500,000 as 'three thousand five hundred'. Always use words.\n"
+    "8. When you mention beds/baths/sqft/year, use words too: 'three bedroom, two bath' not '3 bed 2 bath', "
+    "'nineteen twenty-six' not '1926', 'forty-seven point five acres' not '47.50 acres'.\n"
+    "9. End with a factual close (e.g. 'That's the walk-through — check the photos and the virtual "
+    "tour above for the details I couldn't put into words.'). Do NOT add compliance boilerplate — "
+    "the frontend appends it separately.\n\n"
+    "Output ONLY the narration text, no framing, no JSON, no quotes.\n"
+)
+
+
+def _num_to_words(n: int) -> str:
+    """Very small English cardinal converter — enough for BC list prices
+    (up to hundreds of millions) and bed/bath/year integers. Not a general
+    library dependency to keep this file self-contained."""
+    if n < 0:
+        return "negative " + _num_to_words(-n)
+    if n == 0:
+        return "zero"
+    ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+            "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+            "seventeen", "eighteen", "nineteen"]
+    tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+    def under_thousand(x):
+        parts = []
+        if x >= 100:
+            parts.append(ones[x // 100] + " hundred")
+            x %= 100
+            if x:
+                parts.append("and" if False else "")  # skip 'and' for TTS clarity
+        if x >= 20:
+            t = tens[x // 10]
+            u = x % 10
+            parts.append(t + ("-" + ones[u] if u else ""))
+        elif x > 0:
+            parts.append(ones[x])
+        return " ".join(p for p in parts if p)
+    scales = [(10**9, "billion"), (10**6, "million"), (10**3, "thousand"), (1, "")]
+    words = []
+    for value, name in scales:
+        chunk = n // value
+        if chunk:
+            piece = under_thousand(chunk)
+            words.append(piece + (" " + name if name else ""))
+            n -= chunk * value
+    return " ".join(words).strip()
+
+
+def _price_to_words(price: float | int) -> str:
+    """Spell out a Canadian dollar price for TTS."""
+    try:
+        n = int(round(float(price)))
+    except Exception:
+        return ""
+    if n <= 0:
+        return ""
+    return f"{_num_to_words(n)} dollars"
+
+
+_MONEY_RE = re.compile(r"\$\s?(\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d{1,2})?")
+
+def _spell_out_money_in_script(script: str) -> str:
+    """Post-processor safety net — if the LLM ignored rule #7 and still wrote
+    a `$1,234,567` figure, replace it with the spelled-out words so TTS never
+    stumbles."""
+    if not script:
+        return script
+    def repl(m):
+        try:
+            raw = m.group(1).replace(",", "")
+            return _price_to_words(int(raw))
+        except Exception:
+            return m.group(0)
+    return _MONEY_RE.sub(repl, script)
+
+
+def _clean_agent_puffery(text: str) -> str:
+    """Strip common agent-contact strings, all-caps phone numbers, and URLs
+    from the DDF description before we feed it to Haiku so the model can't
+    accidentally regurgitate them."""
+    if not text:
+        return ""
+    out = text
+    # Phone numbers (loose match, works for BC formats)
+    out = re.sub(r"\(?\b\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}\b", " ", out)
+    # Emails
+    out = re.sub(r"\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b", " ", out, flags=re.IGNORECASE)
+    # URLs
+    out = re.sub(r"\bhttps?://\S+|\bwww\.\S+\b", " ", out, flags=re.IGNORECASE)
+    # "Call today", "Contact us", "Call the listing agent", etc.
+    out = re.sub(r"\b(call|contact|reach out to|book|schedule)\s+(today|us|me|the (listing )?agent|now)\b[^.!?]*[.!?]", " ", out, flags=re.IGNORECASE)
+    # MLS® shout-out lines
+    out = re.sub(r"MLS[®#\s]*[:#]?\s*[A-Z0-9-]+", " ", out)
+    # Collapse whitespace
+    out = re.sub(r"\s+", " ", out).strip()
+    return out
+
+
+async def _generate_listing_narration(listing: dict, session_id: str) -> str:
+    """Hit Haiku with the sanitised listing description + fact sheet, return
+    the raw narration text. Returns a graceful fallback string on any error
+    so the UI never breaks."""
+    desc_raw = (listing.get("description") or "").strip()
+    desc = _clean_agent_puffery(desc_raw)
+    facts = []
+    addr = listing.get("street_address") or listing.get("unparsed_address") or ""
+    city = listing.get("city") or ""
+    if addr or city:
+        facts.append(f"Address: {addr}{', ' + city if city else ''}")
+    if listing.get("list_price"):
+        n = int(listing['list_price'])
+        facts.append(f"List price (as digits): ${n:,}")
+        facts.append(f"List price (write it in these EXACT words for TTS): {_price_to_words(n)}")
+    if listing.get("beds") is not None:
+        facts.append(f"Beds: {listing['beds']}")
+    if listing.get("baths") is not None:
+        facts.append(f"Baths: {listing['baths']}")
+    if listing.get("half_baths"):
+        facts.append(f"Half baths: {listing['half_baths']}")
+    if listing.get("property_type"):
+        facts.append(f"Property type: {listing['property_type']}")
+    if listing.get("living_area_sqft"):
+        facts.append(f"Living area: {int(listing['living_area_sqft']):,} sqft")
+    if listing.get("year_built"):
+        facts.append(f"Year built: {listing['year_built']}")
+    if listing.get("features"):
+        try:
+            facts.append(f"Features: {', '.join(str(f) for f in listing['features'])}")
+        except Exception:
+            pass
+    if listing.get("has_virtual_tour"):
+        facts.append("Virtual tour: yes")
+    photos = listing.get("photos") or []
+    if photos:
+        facts.append(f"Photo count: {len(photos)}")
+
+    user_msg = (
+        "LISTING FACT SHEET:\n"
+        + "\n".join(f"- {f}" for f in facts)
+        + "\n\nLISTING DESCRIPTION (from CREA DDF®):\n"
+        + (desc[:2400] if desc else "(no description provided by the listing brokerage)")
+    )
+
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"narr-{session_id}",
+            system_message=_NARRATION_PROMPT,
+        ).with_model("anthropic", "claude-haiku-4-5-20251001")
+        buf = ""
+        async for ev in chat.stream_message(UserMessage(text=user_msg[:6000])):
+            if isinstance(ev, TextDelta):
+                buf += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        text = buf.strip().strip('"').strip("'")
+        if len(text) < 40:
+            raise ValueError("empty narration")
+        # Belt-and-suspenders: post-process to spell out any remaining `$X,XXX`
+        # figures the model wrote despite rule #7.
+        return _spell_out_money_in_script(text)
+    except Exception as e:
+        logger.warning(f"Doogie narration Haiku failed for {listing.get('listing_key')}: {e}")
+        # Fallback: at least read the (cleaned) description with a Doogie wrapper.
+        opener = f"Woof! Let me walk you through {addr or 'this home'}{', in ' + city if city else ''}."
+        if desc:
+            return opener + " " + desc[:900]
+        return opener + " I've got the basic facts on this one — check the photos and the virtual tour above for the full picture."
+
+
+@api.get("/listings/{listing_key}/narration")
+@_limiter.limit("60/minute")
+async def get_listing_narration(request: Request, listing_key: str):
+    """Return a Doogie-voiced walk-through script for the listing. Cached in
+    the listing document so repeat views are instant + free."""
+    l = await db.listings.find_one({"listing_key": listing_key})
+    if not l:
+        raise HTTPException(404, "Listing not found")
+    # Cache key includes modified_at so a re-synced listing regenerates.
+    cache_key = str(l.get("modified_at") or l.get("_id"))
+    cached = (l.get("doogie_narration") or {})
+    if cached.get("cache_key") == cache_key and cached.get("script"):
+        return {"script": cached["script"], "cached": True}
+    l = _sanitize_listing(l)  # gives us the same shape as get_listing
+    script = await _generate_listing_narration(l, session_id=f"narr-{listing_key}")
+    try:
+        await db.listings.update_one(
+            {"listing_key": listing_key},
+            {"$set": {"doogie_narration": {
+                "script": script,
+                "cache_key": cache_key,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }}},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to cache narration for {listing_key}: {e}")
+    return {"script": script, "cached": False}
+
 @api.post("/listings/analytics/track")
 @_limiter.limit("120/minute")
 async def track_event(request: Request, payload: dict):

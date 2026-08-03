@@ -27,8 +27,12 @@ const _isInServiceArea = (city) => {
   return SERVICE_AREA_CITIES.has(String(city).trim().toLowerCase());
 };
 
-// Compose a compliance-safe narration script from a CREA listing document.
-const _buildScript = (l) => {
+// Build a lightweight opener/closer wrapper the LLM narration slots into.
+// The main body now comes from `/api/listings/{key}/narration` (Haiku
+// rewrites the DDF description as a first-person walk-through in Doogie's
+// voice) — this local builder is only used as a fallback when the network
+// call fails so the pill never becomes useless.
+const _buildFallbackScript = (l) => {
   if (!l) return "";
   const parts = [];
   const addr = l.street_address || l.unparsed_address || "this property";
@@ -36,31 +40,22 @@ const _buildScript = (l) => {
   parts.push(`Woof! Let me walk you through ${addr}, in ${city}.`);
   const beds = l.beds != null ? `${l.beds} bed` : null;
   const baths = l.baths != null ? `${l.baths} bath` : null;
-  const half  = l.half_baths ? ` plus ${l.half_baths} half` : "";
   const pt = (l.property_type || "").toLowerCase() || "home";
   const price = l.list_price ? `$${Number(l.list_price).toLocaleString()}` : null;
-  const spec = [beds, baths ? `${baths}${half}` : null].filter(Boolean).join(", ");
+  const spec = [beds, baths].filter(Boolean).join(", ");
   if (spec && price) parts.push(`It's a ${spec} ${pt} listed at ${price}.`);
-  else if (price)    parts.push(`It's listed at ${price}.`);
-  else if (spec)     parts.push(`It's a ${spec} ${pt}.`);
-  if (l.living_area_sqft) parts.push(`Living area is about ${Math.round(l.living_area_sqft).toLocaleString()} square feet.`);
-  if (l.year_built)       parts.push(`Built in ${l.year_built}.`);
-  const photoCount = (l.photos || []).length;
-  const hasTour = !!(l.virtual_tour_embed?.url || l.has_virtual_tour);
-  if (hasTour && photoCount) parts.push(`This listing has a virtual tour plus ${photoCount} photos.`);
-  else if (hasTour)          parts.push(`This listing has a virtual tour.`);
-  else if (photoCount)       parts.push(`This listing has ${photoCount} photos to browse.`);
-  // Generic buyer checklist — no value opinion, just categories to research.
-  const checklist = [];
-  if (l.year_built && (2026 - l.year_built) > 30) checklist.push("the roof and mechanicals given its age");
-  else checklist.push("the mechanicals and warranty status");
-  if (/apartment|condo|strata|townhouse|row/i.test(pt)) checklist.push("the strata's depreciation report and monthly fees");
-  else checklist.push("the property lines and any easements");
-  parts.push(`When you view any home, remember to check ${checklist.join(", and ")}.`);
-  parts.push(`This is general information only, not advice. For value or fit, always talk to a REALTOR.`);
-  if (_isInServiceArea(l.city)) {
-    parts.push(`Want to see this one in person? Ask Doug for a viewing — he's licensed for this area.`);
-  }
+  const desc = (l.description || "").trim();
+  if (desc) parts.push(desc.slice(0, 700));
+  parts.push("That's the walk-through — check the photos and virtual tour above for the details I couldn't put into words.");
+  return parts.join(" ");
+};
+
+// Compliance-safe outro appended after the LLM body (or fallback body). The
+// LLM prompt intentionally omits this so we can tailor it based on
+// service-area membership at render time.
+const _buildOutro = (l, inServiceArea) => {
+  const parts = [" This is general information only, not advice. For value or fit, always talk to a REALTOR."];
+  if (inServiceArea) parts.push(" Want to see this one in person? Ask Doug for a viewing — he's licensed for this area.");
   return parts.join(" ");
 };
 
@@ -68,23 +63,44 @@ export default function ListingNarration({ listing }) {
   const [state, setState] = useState("idle"); // idle | loading | playing | paused
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
+  const scriptCacheRef = useRef(null); // last fetched LLM narration
   const muted = useDoogieMuted();
   const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
-  const script = useMemo(() => _buildScript(listing), [listing]);
+  // Reset any cached LLM narration when the user navigates to a new listing.
+  React.useEffect(() => { scriptCacheRef.current = null; }, [listing?.listing_key]);
 
   // Re-apply speed if the user drags the slider mid-narration.
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed]);
 
+  // Fetch (or reuse) the LLM narration script from the backend, then fall
+  // back to a local composition if the endpoint fails.
+  const _resolveScript = async () => {
+    if (scriptCacheRef.current) return scriptCacheRef.current;
+    let body = "";
+    try {
+      const r = await fetch(`${API}/listings/${encodeURIComponent(listing.listing_key)}/narration`);
+      if (r.ok) {
+        const j = await r.json();
+        if (j && typeof j.script === "string" && j.script.trim().length > 40) body = j.script.trim();
+      }
+    } catch { /* fall through to local */ }
+    if (!body) body = _buildFallbackScript(listing);
+    const full = body + _buildOutro(listing, inServiceArea);
+    scriptCacheRef.current = full;
+    return full;
+  };
+
   const play = async () => {
     if (muted) return;
     if (state === "playing") { audioRef.current?.pause(); setState("paused"); return; }
     if (state === "paused")  { audioRef.current?.play(); setState("playing"); return; }
-    // Fresh play — fetch TTS, load into <audio>, and start.
+    // Fresh play — resolve script (LLM walk-through with fallback), then TTS.
     setState("loading");
     try {
+      const script = await _resolveScript();
       const r = await fetch(`${API}/doogie/tts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
