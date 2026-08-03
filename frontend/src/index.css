@@ -365,6 +365,40 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
   /* Listing detail page — smaller H1 */
   [data-testid="listing-address"] { font-size: 1.6rem !important; }
   [data-testid="listing-price"] { font-size: 1.6rem !important; }
+  /* ─── Listing detail: mobile-stack audit (iPhone ~390px) ──────────────── */
+  /* Gallery hero + arrows: shrink so they don't obscure the photo */
+  [data-testid="listing-hero-photo"] button[aria-label="Previous photo"],
+  [data-testid="listing-hero-photo"] button[aria-label="Next photo"] {
+    width: 36px !important; height: 36px !important; font-size: 1.15rem !important;
+  }
+  [data-testid="photo-counter"] { font-size: 0.7rem !important; padding: 0.2rem 0.55rem !important; }
+  [data-testid="photo-viewall"] { font-size: 0.72rem !important; padding: 0.28rem 0.65rem !important; }
+  /* Thumbnail strip — smaller tiles so more fit above the fold */
+  [data-testid="photo-thumbstrip"] button { width: 78px !important; height: 52px !important; }
+  /* ListingNarration Doogie bubble — stack mascot + copy + controls vertically */
+  [data-testid="listing-narration"] > div:first-of-type {
+    flex-direction: column !important; align-items: stretch !important; gap: 10px !important;
+    padding: 12px !important;
+  }
+  [data-testid="listing-narration"] > div:first-of-type > img { align-self: center; }
+  [data-testid="listing-narration"] > div:first-of-type > div:nth-child(2) { text-align: center; min-width: 0 !important; }
+  [data-testid="listing-narration"] > div:first-of-type > div:last-child {
+    flex-wrap: wrap; justify-content: center; width: 100%;
+  }
+  /* Give the primary play button full width on the narrowest phones */
+  [data-testid="listing-narration-play"] {
+    flex: 1 1 100%; justify-content: center; padding: 12px 14px !important;
+    white-space: normal; text-align: center; line-height: 1.25;
+  }
+  [data-testid="listing-narration-stop"],
+  [data-testid="listing-narration-fullscreen"] { flex: 1 1 45%; justify-content: center; }
+  [data-testid="listing-narration-cta"] { display: block !important; text-align: center; }
+  /* Inquiry sidebar CTAs — full-width */
+  [data-testid="listing-ask-doug-pill"] { display: block !important; text-align: center; }
+  /* Features chip cloud slightly denser */
+  [data-testid="listing-features"] span { font-size: 0.76rem !important; padding: 0.25rem 0.6rem !important; }
+  /* Location map — shorter iframe so it doesn't dominate the viewport */
+  [data-testid="listing-hero-photo"] + * ~ h2 + div > iframe { height: 240px !important; }
 }
 
 /* ==========================================================================

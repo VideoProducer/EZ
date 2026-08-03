@@ -7711,7 +7711,9 @@ async def log_reel_event(request: Request, listing_key: str, body: ReelEventBody
 
 @api.get("/admin/reel_events/summary")
 async def reel_events_summary(days: int = 30, _=Depends(verify_admin)):
-    since = datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 180)))
+    days = max(1, min(days, 180))
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    # ── Per-listing rollup (unchanged) ──────────────────────────────────────
     pipeline = [
         {"$match": {"at": {"$gte": since}}},
         {"$group": {
@@ -7733,7 +7735,35 @@ async def reel_events_summary(days: int = 30, _=Depends(verify_admin)):
     out.sort(key=lambda x: (x["shares"] + x["views"], x["last_at"] or datetime.min), reverse=True)
     for r in out:
         if r["last_at"]: r["last_at"] = r["last_at"].isoformat()
-    return {"days": days, "listings": out[:200]}
+    # ── Daily time-series for the admin chart ───────────────────────────────
+    ts_pipeline = [
+        {"$match": {"at": {"$gte": since}}},
+        {"$group": {
+            "_id": {
+                "day": {"$dateToString": {"format": "%Y-%m-%d", "date": "$at"}},
+                "event_type": "$event_type",
+            },
+            "count": {"$sum": 1},
+        }},
+    ]
+    ts_rows = await db.reel_events.aggregate(ts_pipeline).to_list(5000)
+    ts_map: dict[str, dict[str, int]] = {}
+    for r in ts_rows:
+        day = r["_id"]["day"]
+        et  = r["_id"]["event_type"]
+        col = {"share":"shares","view":"views","complete":"completes","photo_change":"photo_changes"}.get(et)
+        if not col: continue
+        ts_map.setdefault(day, {"shares":0,"views":0,"completes":0,"photo_changes":0})
+        ts_map[day][col] = r["count"]
+    # Fill zero-days so the sparkline is continuous
+    today = datetime.now(timezone.utc).date()
+    series = []
+    for i in range(days - 1, -1, -1):
+        d = today - timedelta(days=i)
+        key = d.isoformat()
+        row = ts_map.get(key, {"shares":0,"views":0,"completes":0,"photo_changes":0})
+        series.append({"date": key, **row})
+    return {"days": days, "listings": out[:200], "series": series}
 
 
 # ── Reel Cover Preview + Share Landing ──────────────────────────────────────
@@ -7741,6 +7771,7 @@ async def reel_events_summary(days: int = 30, _=Depends(verify_admin)):
 # + play button. Used as `og:image` when the reel share URL is unfurled by
 # iMessage, WhatsApp, Slack, etc. Cached in-memory after first render.
 _REEL_COVER_CACHE: dict[str, tuple[bytes, float]] = {}
+_REEL_COVER_GIF_CACHE: dict[str, tuple[bytes, float]] = {}
 _REEL_COVER_TTL = 60 * 60  # seconds
 
 
@@ -7857,6 +7888,151 @@ async def get_reel_cover(request: Request, listing_key: str):
     raise HTTPException(404, "No cover available")
 
 
+async def _build_reel_cover_gif(listing: dict) -> bytes | None:
+    """Animated Doogie mascot bouncing on top of the static reel cover.
+    Composites 12 PIL frames (mascot Y-offset varies via sine curve) then
+    pipes them to ffmpeg for a tight palette-optimised looping GIF suitable
+    for iMessage/WhatsApp/Slack link unfurls.  Returns None on failure so
+    callers can fall back to the static PNG."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
+        from io import BytesIO
+        import math, subprocess, tempfile, os
+    except Exception:
+        return None
+    photos = listing.get("photos") or []
+    if not photos:
+        return None
+    photo_bytes = await _fetch_bytes(photos[0])
+    if not photo_bytes:
+        return None
+    try:
+        W, H = 600, 315  # Half-res of static cover — GIF friendly file size
+        # ── Base canvas identical layout to static PNG, downscaled ──────────
+        hero = Image.open(BytesIO(photo_bytes)).convert("RGB")
+        bg = hero.copy()
+        bg_ratio = max(W / bg.width, H / bg.height)
+        bg = bg.resize((int(bg.width * bg_ratio), int(bg.height * bg_ratio)))
+        bg = bg.crop(((bg.width - W) // 2, (bg.height - H) // 2, (bg.width + W) // 2, (bg.height + H) // 2))
+        bg = bg.filter(ImageFilter.GaussianBlur(12))
+        overlay = Image.new("RGB", (W, H), (10, 15, 30))
+        bg = Image.blend(bg, overlay, 0.35)
+        sh = hero.copy()
+        sh_ratio = min(450 / sh.width, 250 / sh.height)
+        sh = sh.resize((int(sh.width * sh_ratio), int(sh.height * sh_ratio)))
+        base = Image.new("RGB", (W, H), (10, 15, 30))
+        base.paste(bg, (0, 0))
+        base.paste(sh, ((W - sh.width) // 2, (H - sh.height) // 2 - 20))
+        # Play badge + title strip stay static — they're part of `base`
+        draw = ImageDraw.Draw(base, "RGBA")
+        cx, cy = W // 2, H // 2 - 20
+        r = 36
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(245, 166, 35, 235), outline=(255, 255, 255, 220), width=3)
+        tri = [(cx - 11, cy - 15), (cx - 11, cy + 15), (cx + 16, cy)]
+        draw.polygon(tri, fill=(15, 42, 91, 255))
+        strip_h = 60
+        draw.rectangle([0, H - strip_h, W, H], fill=(15, 42, 91, 235))
+        try:
+            title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 20)
+            sub_font   = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+        except Exception:
+            title_font = ImageFont.load_default()
+            sub_font   = ImageFont.load_default()
+        sub = (listing.get("street_address") or listing.get("unparsed_address") or "") + (
+            f" · {listing['city']}" if listing.get("city") else "")
+        draw.text((25, H - strip_h + 10), "Doogie's walk-through", fill=(245, 166, 35, 255), font=title_font)
+        draw.text((25, H - strip_h + 36), sub[:60], fill=(255, 255, 255, 255), font=sub_font)
+        # ── Load mascot once — bounced per frame ────────────────────────────
+        mascot_path = "/app/frontend/public/doogie/thinking.png"
+        try:
+            mascot = Image.open(mascot_path).convert("RGBA")
+            m_ratio = 78 / mascot.height
+            mascot = mascot.resize((int(mascot.width * m_ratio), 78))
+        except Exception:
+            mascot = None
+        # ── Build frames — 14 frames, ~140ms each → ~2s loop ────────────────
+        frame_count = 14
+        with tempfile.TemporaryDirectory(prefix="reelgif_") as tmpdir:
+            for i in range(frame_count):
+                fr = base.copy()
+                if mascot is not None:
+                    # Sine-based bounce, -14px..+0px around baseline y=18
+                    t = i / frame_count
+                    dy = int(-14 * abs(math.sin(math.pi * t * 2)))
+                    tilt = 3 * math.sin(math.pi * t * 2)
+                    m = mascot.rotate(tilt, resample=Image.BICUBIC, expand=False)
+                    fr.paste(m, (18, 18 + dy), m)
+                fr.save(os.path.join(tmpdir, f"f_{i:03d}.png"), format="PNG")
+            # Encode with ffmpeg — high-quality palette pass for smooth GIF.
+            gif_path = os.path.join(tmpdir, "out.gif")
+            palette_path = os.path.join(tmpdir, "palette.png")
+            fps = 10
+            # Pass 1: generate optimised palette
+            cmd_palette = [
+                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "-framerate", str(fps),
+                "-i", os.path.join(tmpdir, "f_%03d.png"),
+                "-vf", "palettegen=max_colors=128:stats_mode=diff",
+                palette_path,
+            ]
+            # Pass 2: apply palette
+            cmd_gif = [
+                "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+                "-framerate", str(fps),
+                "-i", os.path.join(tmpdir, "f_%03d.png"),
+                "-i", palette_path,
+                "-lavfi", "paletteuse=dither=bayer:bayer_scale=5",
+                "-loop", "0",
+                gif_path,
+            ]
+            p1 = subprocess.run(cmd_palette, capture_output=True, timeout=15)
+            if p1.returncode != 0:
+                logger.warning(f"ffmpeg palette failed: {p1.stderr[:200]}")
+                return None
+            p2 = subprocess.run(cmd_gif, capture_output=True, timeout=15)
+            if p2.returncode != 0:
+                logger.warning(f"ffmpeg gif failed: {p2.stderr[:200]}")
+                return None
+            with open(gif_path, "rb") as f:
+                return f.read()
+    except Exception as e:
+        logger.warning(f"reel cover gif render failed: {e}")
+        return None
+
+
+@api.get("/listings/{listing_key}/reel_cover.gif")
+async def get_reel_cover_gif(request: Request, listing_key: str):
+    """Animated (ffmpeg-encoded) short-loop GIF variant of the reel cover.
+    Referenced via `og:image` + `twitter:image` on the share landing page so
+    iMessage / WhatsApp show a bouncing Doogie preview instead of a static
+    PNG.  Falls back to the static PNG cover on any encoder error."""
+    import time
+    now = time.time()
+    cached = _REEL_COVER_GIF_CACHE.get(listing_key)
+    if cached and (now - cached[1]) < _REEL_COVER_TTL:
+        return Response(content=cached[0], media_type="image/gif",
+                        headers={"Cache-Control": "public, max-age=3600"})
+    l = await db.listings.find_one({"listing_key": listing_key})
+    if not l:
+        raise HTTPException(404, "Listing not found")
+    l = _sanitize_listing(l)
+    gif = await _build_reel_cover_gif(l)
+    if gif:
+        _REEL_COVER_GIF_CACHE[listing_key] = (gif, now)
+        return Response(content=gif, media_type="image/gif",
+                        headers={"Cache-Control": "public, max-age=3600"})
+    # Fallback: try the static PNG so the endpoint always returns *something*
+    png = await _build_reel_cover(l)
+    if png:
+        return Response(content=png, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=600"})
+    photos = (l.get("photos") or [])
+    if photos:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=photos[0], status_code=302)
+    raise HTTPException(404, "No cover available")
+
+
 @api.get("/reel/{listing_key}", response_class=HTMLResponse)
 async def reel_share_landing(request: Request, listing_key: str):
     """Server-rendered HTML page that carries the Open Graph tags iMessage,
@@ -7877,6 +8053,7 @@ async def reel_share_landing(request: Request, listing_key: str):
     # Absolute URLs so scrapers can fetch them.
     base = str(request.base_url).rstrip("/")
     cover_url = f"{base}/api/listings/{listing_key}/reel_cover.png"
+    cover_gif_url = f"{base}/api/listings/{listing_key}/reel_cover.gif"
     target_url = f"{base.replace('/api','')}/listings/{listing_key}?reel=1"
     # Some ingress mounts include /api in base_url; ensure the SPA URL doesn't.
     target_url = target_url.replace("/api/listings/", "/listings/")
@@ -7888,14 +8065,20 @@ async def reel_share_landing(request: Request, listing_key: str):
 <meta property="og:type" content="video.other">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
+<meta property="og:image" content="{cover_gif_url}">
+<meta property="og:image:type" content="image/gif">
+<meta property="og:image:width" content="600">
+<meta property="og:image:height" content="315">
+<meta property="og:image:alt" content="Animated Doogie mascot bouncing over the listing photo">
 <meta property="og:image" content="{cover_url}">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="{target_url}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{desc}">
-<meta name="twitter:image" content="{cover_url}">
+<meta name="twitter:image" content="{cover_gif_url}">
 <meta http-equiv="refresh" content="0; url={target_url}">
 <style>body{{font-family:system-ui,sans-serif;background:#0F2A5B;color:#fff;display:flex;
 align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center}}

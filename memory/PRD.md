@@ -1799,3 +1799,42 @@ Removed the global Virtual Tours hub (sidebar entry + dashboard quick tile + Pan
 - `frontend/src/App.js`: import `ListingNarration` and mount it inside `ListingDetail` just below the price.
 - Static voice samples added to `frontend/public/samples/` (nova, onyx, shimmer, ash, fable, coral, sage).
 
+
+
+---
+
+## Delivered (Feb 3, 2026) — Analytics Timeseries + Mobile Detail + Animated Cover GIF
+
+### Reel Analytics — Time Series Chart (P0 · DONE)
+- `GET /api/admin/reel_events/summary` now returns an additional `series: [{date, shares, views, completes, photo_changes}]` daily buckets, zero-filled to keep the sparkline continuous for the selected 7/30/90-day window.
+- New dep-free inline SVG chart (`ReelTimeSeriesChart`) added to `AdminReelAnalytics.jsx` between the KPI cards and the per-listing table. Three colour-matched lines (Shares navy, Views gold, Completes green) with grid lines, X-axis date ticks, hover crosshair + tooltip, and empty-state copy for no-activity windows.
+- Fixed a pre-existing typo: token was being read from `admin_token`; the app writes it to `eztoken`. Corrected so the dashboard actually authenticates.
+- Verified end-to-end via screenshot: `Last 7 days` window shows two seeded datapoints (Aug 2 → Aug 3) rendered as expected.
+
+### Mobile Listing Detail Audit (P0 · DONE)
+- Added iPhone-width (`≤480px`) CSS overrides in `index.css` for `[data-testid="listing-narration"]`:
+  - Bubble flex-direction stacks vertically, mascot centred, buttons wrap and become full-width tap targets (`flex: 1 1 100%` for the primary Play button; `flex: 1 1 45%` for Stop/Full-screen).
+  - Hero photo arrows shrunk to 36×36, counter font tuned, thumbstrip tiles reduced to 78×52.
+  - Ask Doug CTA / narration CTA now render as full-width blocks on mobile.
+- Live probe confirms `flexDirection=column`, `gridTemplateColumns=358px`, `playFlex="1 1 100%"` at 390px viewport.
+
+### Animated Cover GIF via ffmpeg (P1 · DONE)
+- Installed `ffmpeg` in the container.
+- New async fn `_build_reel_cover_gif(listing)` in `server.py`: composites 14 PIL frames of the reel cover with the Doogie mascot bouncing (sine-wave Y offset + slight rotation), pipes them via ffmpeg `palettegen` → `paletteuse` (bayer dither, 128-colour palette) into a tight ~74KB GIF at 10fps → 1.4s loop.
+- New endpoint `GET /api/listings/{listing_key}/reel_cover.gif` (in-memory cached 1h; falls back to static PNG then raw first-photo redirect).
+- `/api/reel/{listing_key}` share landing HTML now advertises both the animated GIF and the static PNG in OG tags — the GIF is listed first as `og:image` + `twitter:image`, with the PNG as the secondary 1200×630 asset for scrapers that reject GIFs.
+- Verified via `ffprobe`: 14 frames, 10fps, 600×315, 1.4s duration.
+
+### Files touched
+- `backend/server.py`: `reel_events_summary` (added `series`); `_REEL_COVER_GIF_CACHE`; `_build_reel_cover_gif`; `get_reel_cover_gif`; updated OG meta in `reel_share_landing`.
+- `frontend/src/pages/AdminReelAnalytics.jsx`: added `ReelTimeSeriesChart` component + fixed token key.
+- `frontend/src/index.css`: expanded `@media(max-width:480px)` block with listing-detail mobile rules.
+- `apt install ffmpeg` (system-level).
+
+### Next Actions (Backlog)
+- **P1**: Real Luxury/Horse photo swap for "Doug's Specialties" (waiting on user URLs).
+- **P1**: Feature-Sheet Narrator — upload PDF/image → Doogie reads aloud with moving cursor.
+- **P2**: Submit Doogie to ChatGPT Store (`ai-plugin.json`).
+- **P2**: Multilingual narrations (zh-Hant, zh-Hans, pa, fa, pt-PT).
+- **P3**: Break down `server.py` / `App.js` monoliths.
+- **P3**: Move "Coming Soon" uploads to object storage.
