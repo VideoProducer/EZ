@@ -758,7 +758,7 @@ const PaneTour = () => {
                 onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
               <div style={{ display: "grid", lineHeight: 1.2 }}>
-                <span style={{ fontSize: 11, fontWeight: 600 }}>Ask Doogie · research helper</span>
+                <span style={{ fontSize: 11, fontWeight: 600 }}>Ask Doogie · real estate helper</span>
                 <span style={{ fontSize: 9, opacity: 0.65, fontStyle: "italic" }}>General information only — not advice</span>
               </div>
             </motion.div>
