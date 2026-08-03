@@ -898,33 +898,8 @@ const SearchPanel = () => {
   return (
     <>
       <HeroIntro/>
-      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
-      {/* Filters */}
-      <form onSubmit={run} data-testid="dash-search-form" style={{ background: "#fff", padding: 18, borderRadius: 12, border: "1px solid #E5E7EB", height: "fit-content" }}>
-        <h3 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: 0.5, color: C.muted }}>Filters</h3>
-        <FormField label="Natural language (Doogie parses)">
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="e.g. 3 bed condo in kelowna with pool" data-testid="dash-search-q" style={inp}/>
-        </FormField>
-        <FormField label="City (BC, anywhere)">
-          <input value={city} onChange={e=>setCity(e.target.value)} placeholder="Vancouver / Osoyoos / Prince George" data-testid="dash-search-city" style={inp}/>
-        </FormField>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <FormField label="Beds (min)">
-            <input type="number" value={beds} onChange={e=>setBeds(e.target.value)} data-testid="dash-search-beds" style={inp} min="0"/>
-          </FormField>
-          <FormField label="Max price ($)">
-            <input type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="900000" data-testid="dash-search-price" style={inp} min="0"/>
-          </FormField>
-        </div>
-        <button type="submit" data-testid="dash-search-submit" style={btnPrimary}>
-          <Search size={14}/> Search CREA DDF®
-        </button>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 10, lineHeight: 1.4 }}>
-          Results are <strong>exact matches only</strong> from the CREA DDF® feed. No substitutions, no interpretation.
-        </div>
-      </form>
-
-      {/* Results + Map */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Results + Map (full width now that Filters sits below) */}
       <div>
         <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -943,6 +918,35 @@ const SearchPanel = () => {
         </div>
         <ResultsGrid results={results} loading={loading}/>
       </div>
+
+      {/* Filters — now placed below the map+listings, horizontal layout so it
+          only claims one row of vertical space. The map above expands to
+          fill the full main-content width. */}
+      <form onSubmit={run} data-testid="dash-search-form" style={{ background: "#fff", padding: 18, borderRadius: 12, border: "1px solid #E5E7EB" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: 0.5, color: C.muted }}>Filters</h3>
+          <span style={{ fontSize: 11, color: C.muted }}>
+            Results are <strong>exact matches only</strong> from the CREA DDF® feed — no substitutions, no interpretation.
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 0.7fr 1fr auto", gap: 10, alignItems: "end" }}>
+          <FormField label="Natural language (Doogie parses)">
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="e.g. 3 bed condo in kelowna with pool" data-testid="dash-search-q" style={inp}/>
+          </FormField>
+          <FormField label="City (BC, anywhere)">
+            <input value={city} onChange={e=>setCity(e.target.value)} placeholder="Vancouver / Osoyoos / Prince George" data-testid="dash-search-city" style={inp}/>
+          </FormField>
+          <FormField label="Beds (min)">
+            <input type="number" value={beds} onChange={e=>setBeds(e.target.value)} data-testid="dash-search-beds" style={inp} min="0"/>
+          </FormField>
+          <FormField label="Max price ($)">
+            <input type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="900000" data-testid="dash-search-price" style={inp} min="0"/>
+          </FormField>
+          <button type="submit" data-testid="dash-search-submit" style={{ ...btnPrimary, marginTop: 0, whiteSpace: "nowrap" }}>
+            <Search size={14}/> Search CREA DDF®
+          </button>
+        </div>
+      </form>
     </div>
     </>
   );
