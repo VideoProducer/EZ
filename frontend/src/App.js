@@ -2098,11 +2098,12 @@ const DoogieOnboarding = () => {
     cursor: "pointer", letterSpacing: 0.3,
   });
   if (!visible) return null;
-  // Buyer / Seller MUST answer the ethics qualifier before seeing the CTAs.
-  // "Just exploring" skips it entirely.
-  const needsEthics = (mode === "buyer" || mode === "seller");
-  const showPoliteDecline = needsEthics && ethics === "yes";
-  const canProceed = !needsEthics || ethics === "no";
+  // New flow: ask REALTOR® ethics FIRST. If they already have a REALTOR® we
+  // show the polite decline and stop. Only after "No" do we show the mode
+  // picker (buyer / seller / just exploring) + Play + Tour CTAs.
+  const showEthicsFirst = ethics === null;
+  const showPoliteDecline = ethics === "yes";
+  const showMainFlow = ethics === "no";
   return (
     <div
       data-testid="home-onboarding-modal"
@@ -2139,64 +2140,54 @@ const DoogieOnboarding = () => {
           fontSize: "1.35rem", fontWeight: 700, color: "var(--brand-navy)",
           margin: "0 0 0.4rem", fontFamily: "'Playfair Display', serif",
         }}>Welcome — I'm Doogie <span aria-hidden>🐾</span></h2>
-        <p style={{ fontSize: "0.9rem", color: "var(--ink)", lineHeight: 1.5, margin: "0 0 0.8rem" }}>
-          Are you buying or selling? I'll tailor a 15-second tour just for you.
-        </p>
-        <div
-          data-testid="home-onboarding-mode-picker"
-          style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: "1rem" }}
-          role="radiogroup" aria-label="I'm here to"
-        >
-          <button type="button" role="radio" aria-checked={mode === "buyer"} onClick={() => pickMode("buyer")} style={pillStyle("buyer")} data-testid="onboarding-mode-buyer">I'm buying</button>
-          <button type="button" role="radio" aria-checked={mode === "seller"} onClick={() => pickMode("seller")} style={pillStyle("seller")} data-testid="onboarding-mode-seller">I'm selling</button>
-          <button type="button" role="radio" aria-checked={mode === "all"} onClick={() => pickMode("all")} style={pillStyle("all")} data-testid="onboarding-mode-all">Just exploring</button>
-        </div>
 
-        {/* ── REALTOR® ethics qualifier (BCFSA-mandated) ────────────────────
-            Doug cannot interfere with an existing REALTOR®-client relationship.
-            If the visitor already works with a REALTOR® we show a polite
-            decline instead of pushing them into the funnel. */}
-        {needsEthics && ethics === null && (
-          <div data-testid="onboarding-ethics" style={{
-            background: "#FFF8E8", border: "1px solid #F5D28A", borderRadius: 12,
-            padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
-          }}>
-            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--brand-navy)", marginBottom: 10 }}>
-              Quick question — are you working with a REALTOR<sup style={{fontSize:9}}>®</sup>?
+        {/* ── Step 1: REALTOR® ethics qualifier (BCFSA-mandated, asked FIRST) */}
+        {showEthicsFirst && (
+          <>
+            <p style={{ fontSize: "0.9rem", color: "var(--ink)", lineHeight: 1.5, margin: "0 0 0.8rem" }}>
+              Before we start — a quick question so I know how best to help.
+            </p>
+            <div data-testid="onboarding-ethics" style={{
+              background: "#FFF8E8", border: "1px solid #F5D28A", borderRadius: 12,
+              padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
+            }}>
+              <div style={{ fontSize: "0.92rem", fontWeight: 700, color: "var(--brand-navy)", marginBottom: 10 }}>
+                Are you already working with a REALTOR<sup style={{fontSize:9}}>®</sup>?
+              </div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => pickEthics("yes")}
+                  data-testid="onboarding-ethics-yes"
+                  style={{
+                    padding: "0.75rem 0.9rem", borderRadius: 10,
+                    border: "1.5px solid rgba(15,42,91,0.2)", background: "#fff",
+                    color: "var(--brand-navy)", fontWeight: 700, fontSize: "0.88rem",
+                    cursor: "pointer", textAlign: "left",
+                  }}
+                >Yes — I already have a REALTOR<sup style={{fontSize:8}}>®</sup></button>
+                <button
+                  type="button"
+                  onClick={() => pickEthics("no")}
+                  data-testid="onboarding-ethics-no"
+                  style={{
+                    padding: "0.75rem 0.9rem", borderRadius: 10,
+                    border: "1.5px solid rgba(22,163,74,0.4)", background: "#F0FDF4",
+                    color: "#166534", fontWeight: 700, fontSize: "0.88rem",
+                    cursor: "pointer", textAlign: "left",
+                  }}
+                >No — I am free to work with a REALTOR<sup style={{fontSize:8}}>®</sup></button>
+              </div>
             </div>
-            <div style={{ display: "grid", gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => pickEthics("yes")}
-                data-testid="onboarding-ethics-yes"
-                style={{
-                  padding: "0.65rem 0.9rem", borderRadius: 10,
-                  border: "1.5px solid rgba(15,42,91,0.2)", background: "#fff",
-                  color: "var(--brand-navy)", fontWeight: 700, fontSize: "0.82rem",
-                  cursor: "pointer", textAlign: "left",
-                }}
-              >Yes — I already have a REALTOR<sup style={{fontSize:8}}>®</sup></button>
-              <button
-                type="button"
-                onClick={() => pickEthics("no")}
-                data-testid="onboarding-ethics-no"
-                style={{
-                  padding: "0.65rem 0.9rem", borderRadius: 10,
-                  border: "1.5px solid rgba(22,163,74,0.4)", background: "#F0FDF4",
-                  color: "#166534", fontWeight: 700, fontSize: "0.82rem",
-                  cursor: "pointer", textAlign: "left",
-                }}
-              >No — I am free to work with a REALTOR<sup style={{fontSize:8}}>®</sup></button>
-            </div>
-          </div>
+          </>
         )}
 
-        {/* Polite decline path — respectful exit, no CTAs beyond Close */}
+        {/* ── Step 2A: Polite decline (Yes path) */}
         {showPoliteDecline && (
           <div data-testid="onboarding-polite-decline" style={{
             background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 12,
             padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
-            fontSize: "0.85rem", lineHeight: 1.55, color: "var(--brand-navy)",
+            fontSize: "0.9rem", lineHeight: 1.55, color: "var(--brand-navy)",
           }}>
             <div style={{ fontSize: "0.78rem", color: "#4B5563", marginBottom: 8, lineHeight: 1.55, fontStyle: "italic" }}>
               The REALTOR<sup style={{fontSize:8}}>®</sup> Code of Ethics asks Doug not to interfere with an existing agent relationship.
@@ -2209,8 +2200,26 @@ const DoogieOnboarding = () => {
           </div>
         )}
 
+        {/* ── Step 2B: Mode picker + Play + Tour (No path) */}
+        {showMainFlow && (
+          <>
+            <p style={{ fontSize: "0.9rem", color: "var(--ink)", lineHeight: 1.5, margin: "0 0 0.8rem" }}>
+              Are you buying or selling? I'll tailor a 15-second tour just for you.
+            </p>
+            <div
+              data-testid="home-onboarding-mode-picker"
+              style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: "1rem" }}
+              role="radiogroup" aria-label="I'm here to"
+            >
+              <button type="button" role="radio" aria-checked={mode === "buyer"} onClick={() => pickMode("buyer")} style={pillStyle("buyer")} data-testid="onboarding-mode-buyer">I'm buying</button>
+              <button type="button" role="radio" aria-checked={mode === "seller"} onClick={() => pickMode("seller")} style={pillStyle("seller")} data-testid="onboarding-mode-seller">I'm selling</button>
+              <button type="button" role="radio" aria-checked={mode === "all"} onClick={() => pickMode("all")} style={pillStyle("all")} data-testid="onboarding-mode-all">Just exploring</button>
+            </div>
+          </>
+        )}
+
         <div style={{ display: "grid", gap: 8 }}>
-          {canProceed && (
+          {showMainFlow && (
             <button
               type="button"
               onClick={play}
@@ -2226,7 +2235,7 @@ const DoogieOnboarding = () => {
               {speaking ? "◼ Stop intro" : `▶ Hear Doogie's 15-second ${mode === "all" ? "" : mode + " "}intro`}
             </button>
           )}
-          {canProceed && (
+          {showMainFlow && (
             <button
               type="button"
               onClick={startTour}
