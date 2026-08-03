@@ -1615,37 +1615,53 @@ const ConsultPanel = () => {
 //       React nodes. Everything else stays plain text.
 //   Deliberately minimal (no external markdown lib) — keeps bundle small
 //   and gives Doug exact control over the visual rules.
-const REFERRAL_PHRASE_RE = /(?:\[Referral REALTOR® link\]\([^)]*\)|Referral REALTOR® link)/gi;
+const REFERRAL_PHRASE_RE = /(?:\[Referral REALTOR® link(?:\s*[:\-]\s*([A-Z][A-Za-z' \-]{1,40}?))?\]\([^)]*\)|Referral REALTOR® link(?:\s*[:\-]\s*([A-Z][A-Za-z' \-]{1,40})(?=[.,;!?\n)]|$))?)/g;
 
-const DoogieReferralButton = () => {
+const DoogieReferralButton = ({ location }) => {
   const nav = useNavigate();
+  const buttonLabel = location
+    ? `Request a Referral REALTOR® in ${location}`
+    : "Request a Referral REALTOR®";
+  const href = location
+    ? `/referral-request?city=${encodeURIComponent(location)}`
+    : "/referral-request";
   return (
     <div style={{ marginTop: 12 }} data-testid="doogie-referral-cta">
       <div style={{
         background: "#FEF3C7", border: "1px solid #F59E0B",
         padding: "10px 12px", borderRadius: 10, fontSize: 12,
-        color: "#7A3E0A", lineHeight: 1.5, marginBottom: 10,
+        color: "#7A3E0A", lineHeight: 1.5, marginBottom: 12,
       }}>
-        <strong>Outside Doug's service area?</strong> Doug's primary practice is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor. For anywhere else in BC we'll hand you off to a licensed local REALTOR® through his referral network — no obligation, no cost to you.
+        <strong>Outside Doug's service area?</strong> Doug's primary practice is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor. For anywhere else in BC, if you like we will match you to a licensed local REALTOR®.
       </div>
       <button
         type="button"
-        onClick={() => nav("/referral-request")}
+        onClick={() => nav(href)}
         data-testid="doogie-referral-button"
         style={{
-          background: C.brandGold, color: C.navy, border: "none",
-          padding: "10px 18px", borderRadius: 999, fontWeight: 800,
-          fontSize: 13, cursor: "pointer", boxShadow: "0 3px 10px rgba(245,166,35,0.35)",
+          background: C.brandBlue, color: "#fff", border: "none",
+          padding: "12px 22px", borderRadius: 999, fontWeight: 800,
+          fontSize: 13, cursor: "pointer", boxShadow: "0 4px 12px rgba(10,61,153,0.30)",
           display: "inline-flex", alignItems: "center", gap: 6,
+          lineHeight: 1.3, textAlign: "center",
         }}
-      >🐾 Get a Referral REALTOR® →</button>
+      >{buttonLabel}</button>
     </div>
   );
 };
 
 const DoogieMessage = ({ text }) => {
   if (!text) return null;
-  const hasReferral = REFERRAL_PHRASE_RE.test(text);
+  // Detect referral phrase + optional captured city (e.g. "Referral REALTOR® link: Armstrong")
+  let referralLocation = null;
+  let hasReferral = false;
+  let match;
+  REFERRAL_PHRASE_RE.lastIndex = 0;
+  while ((match = REFERRAL_PHRASE_RE.exec(text))) {
+    hasReferral = true;
+    const cap = match[1] || match[2];
+    if (cap && !referralLocation) referralLocation = cap.trim();
+  }
   REFERRAL_PHRASE_RE.lastIndex = 0;
   const cleaned = text.replace(REFERRAL_PHRASE_RE, "").replace(/\n{3,}/g, "\n\n").trim();
 
@@ -1707,7 +1723,7 @@ const DoogieMessage = ({ text }) => {
         if (b.kind === "space") return <div key={i} style={{ height: 6 }}/>;
         return <p key={i} style={{ margin: "4px 0", lineHeight: 1.5 }}>{renderInline(b.text, `p-${i}`)}</p>;
       })}
-      {hasReferral && <DoogieReferralButton/>}
+      {hasReferral && <DoogieReferralButton location={referralLocation}/>}
     </>
   );
 };
