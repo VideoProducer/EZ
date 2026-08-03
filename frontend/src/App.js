@@ -5737,7 +5737,8 @@ const CommunityPage = () => {
     }).catch(() => {});
   }, [slug]);
   let found = null, region = null;
-  for(const [r, list] of Object.entries(data)) { const m = list.find(c => c.toLowerCase().replace(/[^a-z0-9]+/g,"-") === slug); if(m) { found = m; region = r; break; } }
+  const _norm = (s) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  for(const [r, list] of Object.entries(data)) { const m = list.find(c => _norm(c) === slug); if(m) { found = m; region = r; break; } }
   const isFocus = region && ["Greater Vancouver","Fraser Valley","Sea-to-Sky"].includes(region);
   const jsonLd = found ? {"@context":"https://schema.org","@type":"Place","name":`${found}, British Columbia`,"containedInPlace":{"@type":"AdministrativeArea","name":region},"description":syn?.synopsis?.substring(0,300)} : null;
   const articleLd = (found && syn?.synopsis) ? {

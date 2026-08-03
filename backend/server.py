@@ -4287,6 +4287,15 @@ async def community_forecast(slug: str):
     return result
 
 # =============== COMMUNITY SYNOPSIS (Claude Sonnet 4.6, cached) ===============
+import unicodedata as _unicodedata_mod
+
+def _community_slug(s: str) -> str:
+    """Slugify a community name into the URL-safe form used across the site.
+    Strips Unicode diacritics so accented BC place names (Tête Jaune Cache,
+    100 Mile House, etc.) map to stable ascii slugs (tete-jaune-cache)."""
+    nfkd = _unicodedata_mod.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "-", nfkd.lower()).strip("-")
+
 async def generate_community_synopsis(name: str, region: str) -> str:
     """Generate a 300-450 word BC community synopsis using Claude Sonnet 4.6."""
     prompt = f"""Write a factual, informative synopsis of {name}, a community in the {region} region of British Columbia, Canada.
@@ -4325,7 +4334,7 @@ async def community_synopsis(slug: str):
     name = None; region = None
     for r, lst in all_comm.items():
         for c in lst:
-            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+            if _community_slug(c) == slug:
                 name = c; region = r; break
         if name: break
     if not name: raise HTTPException(404, "Community not found")
@@ -4378,7 +4387,7 @@ async def community_weather(slug: str):
     name = None; region = None
     for r, lst in all_comm.items():
         for c in lst:
-            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+            if _community_slug(c) == slug:
                 name = c; region = r; break
         if name: break
     if not name: raise HTTPException(404, "Community not found")
@@ -5046,7 +5055,7 @@ async def community_climate_normals(slug: str):
     name = None; region = None
     for r, lst in all_comm.items():
         for c in lst:
-            if re.sub(r"[^a-z0-9]+","-", c.lower()).strip("-") == slug:
+            if _community_slug(c) == slug:
                 name = c; region = r; break
         if name: break
     if not name: raise HTTPException(404, "Community not found")
