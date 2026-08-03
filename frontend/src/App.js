@@ -2281,37 +2281,12 @@ const Home = () => {
       <div>
         <div className="eyebrow">🏔️ British Columbia</div>
 
-        {/* ── Mini Doogie greeting card ───────────────────────────────────────
-            Sits at the very top of the hero. Warm, friendly, gives new visitors
-            a face-to-name intro before the licensing paragraph. Play button
-            triggers the same 15-second TTS greeting used in onboarding. */}
-        <DoogieHeroGreeting/>
-
         <h1><span className="accent" style={{color:"#16A34A",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#000080",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0EA5E9",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>EZ to Find</span><span className="green" style={{color:"#FDB813",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>.ca</span></h1>
         <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p className="lead" style={{marginTop:"1rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship. Doug LeMaire, REALTOR® is accountable for the content Doogie provides, and any information you share with Doogie is handled under our <Link to="/privacy" style={{color:"inherit",fontWeight:"inherit",textDecoration:"none"}}>Privacy Policy</Link> in compliance with BC's Personal Information Protection Act (PIPA).</p>
         <p className="lead" style={{marginTop:"1rem"}}>Real Estate services are provided by Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. — He is a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential strata's. His primary practice areas are: Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC.</p>
-        {/* Hero search bar retired — the Visual Agent at /visual-agent-demo
-            is now the single unified entry point for search, chat, voice, and
-            tours. CTA below links straight to it. */}
-        <div style={{marginTop:"1.25rem",display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
-          <Link
-            to="/visual-agent-demo"
-            data-testid="hero-visual-agent-cta"
-            className="btn btn-primary"
-            style={{fontSize:"1.05rem",padding:"0.85rem 1.35rem",fontWeight:700,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:"0.5rem"}}
-          >
-            🐾 Talk to Doogie — search, ask, tour →
-          </Link>
-          <Link
-            to="/listings"
-            data-testid="hero-browse-listings-cta"
-            className="btn"
-            style={{fontSize:"1rem",padding:"0.85rem 1.35rem",fontWeight:600,textDecoration:"none",background:"white",color:"var(--brand-navy)",border:"1.5px solid rgba(15,42,91,0.15)"}}
-          >
-            Browse BC listings
-          </Link>
-        </div>
+        {/* Hero search bar retired — the Visual Agent embedded below is now
+            the single unified entry point for search, chat, voice, and tours. */}
         <div style={{marginTop:"1.5rem",display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
           {[
             {label:"Detached",     slug:"detached"},
