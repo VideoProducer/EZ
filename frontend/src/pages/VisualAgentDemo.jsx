@@ -2858,7 +2858,7 @@ export default function VisualAgentDemo() {
                 onMouseOver={e=>e.currentTarget.style.opacity="0.9"}
                 onMouseOut={e=>e.currentTarget.style.opacity="1"}
                 title="Home — EZtoFind.ca">
-                Meet <span style={{ color: C.gold, fontStyle: "italic" }}>Doogie</span> — your BC real estate helper
+                <span style={{ color: C.gold, fontStyle: "italic" }}>Doogie</span> — your BC real estate helper
               </Link>
             </h1>
             <p style={{ margin: "10px 0 0", opacity: 0.88, maxWidth: 620, fontSize: 14 }}>
