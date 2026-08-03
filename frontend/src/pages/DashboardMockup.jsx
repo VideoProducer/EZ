@@ -69,12 +69,12 @@ const HeroIntro = () => (
     background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)",
     border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14,
     padding: "22px 24px", marginBottom: 22, display: "grid",
-    gridTemplateColumns: "220px 1fr", gap: 22, alignItems: "center",
+    gridTemplateColumns: "440px 1fr", gap: 22, alignItems: "center",
   }}>
     <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
       data-testid="dash-hero-doogie"
       style={{
-        width: "100%", maxWidth: 220, height: "auto", filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+        width: "100%", maxWidth: 440, height: "auto", filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
       }}
       onError={e => { e.currentTarget.style.display = "none"; }}
     />
@@ -1789,9 +1789,18 @@ const AskDoogieDrawer = ({ open, onClose }) => {
         display: "flex", flexDirection: "column", boxShadow: "-10px 0 40px rgba(0,0,0,0.2)",
       }}>
         <div style={{ padding: 16, borderBottom: "1px solid #E5E7EB", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <strong style={{ color: C.navy }}>🐾 Ask Doogie</strong>
-            <div style={{ fontSize: 11, color: C.muted }}>General information only, never advice</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img
+              src={DOOGIE.thinking}
+              alt="Doogie thinking"
+              data-testid="dash-ask-header-doogie"
+              style={{ width: 48, height: 48, flexShrink: 0, filter: "drop-shadow(0 2px 6px rgba(15,42,91,0.18))" }}
+              onError={e => { e.currentTarget.style.display = "none"; }}
+            />
+            <div>
+              <strong style={{ color: C.navy }}>🐾 Ask Doogie</strong>
+              <div style={{ fontSize: 11, color: C.muted }}>General information only, never advice</div>
+            </div>
           </div>
           <button onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer" }} data-testid="dash-ask-close"><X size={18}/></button>
         </div>
