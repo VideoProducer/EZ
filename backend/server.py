@@ -2597,8 +2597,57 @@ async def unsubscribe_reminder(token: str):
 
 # =============== GLOSSARY ===============
 @api.get("/glossary")
-async def list_glossary():
-    return await db.glossary.find({}, {"_id":0}).sort("term", 1).to_list(2000)
+async def list_glossary(
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 500,
+    offset: int = 0,
+):
+    """List glossary terms. Supports `q` (case-insensitive match against term,
+    definition and category), `category` filter, and paging. Returns lightweight
+    projections (no FAQs / audit metadata) so the dashboard search stays fast
+    and responsive on every keystroke. Results are ranked: exact term match →
+    prefix match on term → other term/category matches → definition contains.
+    """
+    proj = {
+        "_id": 0, "id": 1, "term": 1, "slug": 1, "category": 1,
+        "definition": 1, "last_curated_at": 1,
+    }
+    limit = max(1, min(int(limit or 500), 1000))
+    offset = max(0, int(offset or 0))
+    q_clean = (q or "").strip()
+    cat_clean = (category or "").strip()
+
+    if not q_clean and not cat_clean:
+        return await db.glossary.find({}, proj).sort("term", 1).skip(offset).limit(limit).to_list(limit)
+
+    import re as _re
+    filt: dict = {}
+    if cat_clean:
+        filt["category"] = {"$regex": f"^{_re.escape(cat_clean)}$", "$options": "i"}
+    if q_clean:
+        rx = {"$regex": _re.escape(q_clean), "$options": "i"}
+        filt["$or"] = [{"term": rx}, {"definition": rx}, {"category": rx}]
+
+    docs = await db.glossary.find(filt, proj).sort("term", 1).to_list(2000)
+
+    if not q_clean:
+        return docs[offset: offset + limit]
+
+    # Rank: exact term match → term starts with q → term contains q →
+    # category contains q → definition contains q. Preserves alphabetical
+    # order within each bucket.
+    ql = q_clean.lower()
+    def _rank(d):
+        term = (d.get("term") or "").lower()
+        if term == ql: return 0
+        if term.startswith(ql): return 1
+        if ql in term: return 2
+        cat = (d.get("category") or "").lower()
+        if ql in cat: return 3
+        return 4
+    docs.sort(key=lambda d: (_rank(d), (d.get("term") or "").lower()))
+    return docs[offset: offset + limit]
 
 @api.get("/glossary/{slug}")
 async def get_term(slug: str):

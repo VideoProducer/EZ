@@ -11,7 +11,7 @@
 //  step so the mockup faithfully mirrors what a live production build would
 //  look like.
 // ============================================================================
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -847,42 +847,141 @@ const CommunityPanel = ({ setSection }) => {
 // ── Glossary ───────────────────────────────────────────────────────────────
 const GlossaryPanel = () => {
   const [q, setQ] = useState("");
+  const [cat, setCat] = useState("");        // active category filter chip
   const [rows, setRows] = useState(null);
+  const [total, setTotal] = useState(0);     // total matches before slice
+  const abortRef = useRef(null);
+
   useEffect(() => {
+    if (abortRef.current) abortRef.current.abort();
+    const ctl = new AbortController();
+    abortRef.current = ctl;
     const t = setTimeout(async () => {
       try {
         const params = new URLSearchParams();
-        if (q) params.set("q", q);
-        else params.set("limit", "60");
-        const r = await fetch(`${API}/glossary?${params}`);
+        if (q.trim()) params.set("q", q.trim());
+        if (cat) params.set("category", cat);
+        params.set("limit", "500");
+        const r = await fetch(`${API}/glossary?${params}`, { signal: ctl.signal });
         const d = await r.json();
-        // Endpoint returns a bare array; guard for older wrapped shape too
-        setRows(Array.isArray(d) ? d : (d.terms || d.results || []));
-      } catch { setRows([]); }
-    }, 220);
-    return () => clearTimeout(t);
-  }, [q]);
+        const items = Array.isArray(d) ? d : (d.terms || d.results || []);
+        setRows(items);
+        setTotal(items.length);
+      } catch (e) {
+        if (e.name !== "AbortError") { setRows([]); setTotal(0); }
+      }
+    }, 180);
+    return () => { clearTimeout(t); ctl.abort(); };
+  }, [q, cat]);
+
   const slugify = (t) => (t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  // Derive top categories from the current result set so users can narrow.
+  const catCounts = React.useMemo(() => {
+    const m = new Map();
+    (rows || []).forEach(t => { const c = t.category || "Other"; m.set(c, (m.get(c) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [rows]);
+
+  // Highlight matched substring (case-insensitive) inside a piece of text.
+  const highlight = (text, needle) => {
+    if (!needle || !text) return text;
+    const idx = text.toLowerCase().indexOf(needle.toLowerCase());
+    if (idx === -1) return text;
+    return (<>
+      {text.slice(0, idx)}
+      <mark style={{ background: "#FEF3C7", color: C.navy, padding: "0 2px", borderRadius: 3 }}>
+        {text.slice(idx, idx + needle.length)}
+      </mark>
+      {text.slice(idx + needle.length)}
+    </>);
+  };
+
+  const shownRows = (rows || []).slice(0, 30);
+  const hasQuery = q.trim().length > 0 || !!cat;
+
   return (
     <div>
       <PanelIntro title="Glossary" blurb="Every term returns only the exact definition stored in our glossary — never invented. BC-specific."/>
-      <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search a term (PTT, subject removal, GST, ALR…)" data-testid="dash-glossary-q" style={{...inp, maxWidth: 480, marginBottom: 14}}/>
+
+      {/* Search input with clear button and inline match counter */}
+      <div style={{ position: "relative", maxWidth: 480, marginBottom: 10 }}>
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search a term (PTT, subject removal, GST, ALR…)"
+          data-testid="dash-glossary-q"
+          style={{ ...inp, paddingRight: q ? 34 : 12 }}
+        />
+        {q && (
+          <button
+            type="button"
+            data-testid="dash-glossary-clear"
+            onClick={() => setQ("")}
+            aria-label="Clear glossary search"
+            style={{
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              width: 22, height: 22, borderRadius: 999, border: "none", cursor: "pointer",
+              background: "#E5E7EB", color: "#374151", fontSize: 14, lineHeight: 1,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >×</button>
+        )}
+      </div>
+
+      {/* Live match counter + category chips (built from current result set) */}
+      {rows !== null && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginBottom: 12 }}>
+          <span data-testid="dash-glossary-count" style={{ fontSize: 12, color: C.ink, fontWeight: 700 }}>
+            {hasQuery
+              ? `${total} match${total === 1 ? "" : "es"}${total > 30 ? " · showing first 30" : ""}`
+              : `${total} terms · showing first 30`}
+          </span>
+          {cat && (
+            <button
+              type="button"
+              data-testid="dash-glossary-cat-clear"
+              onClick={() => setCat("")}
+              style={{ background: C.gold, color: C.navy, border: "none", padding: "3px 10px", fontSize: 11, fontWeight: 700, borderRadius: 999, cursor: "pointer" }}
+              title="Clear category filter"
+            >{cat} ×</button>
+          )}
+          {!cat && catCounts.length > 1 && catCounts.map(([c, n]) => (
+            <button
+              key={c}
+              type="button"
+              data-testid={`dash-glossary-cat-${slugify(c)}`}
+              onClick={() => setCat(c)}
+              style={{ background: "#F3F4F6", color: "#374151", border: "1px solid #E5E7EB", padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 999, cursor: "pointer" }}
+              title={`Filter to ${c}`}
+            >{c} <span style={{ opacity: 0.6 }}>({n})</span></button>
+          ))}
+        </div>
+      )}
+
       {rows === null && <SkeletonGrid/>}
-      {rows && rows.length === 0 && <EmptyBox>No matching glossary terms.</EmptyBox>}
+      {rows && rows.length === 0 && <EmptyBox>No matching glossary terms. Try a shorter word (e.g. “strata”, “PTT”, “ALR”).</EmptyBox>}
       {rows && rows.length > 0 && (
         <div style={{ display: "grid", gap: 10 }}>
-          {rows.slice(0, 30).map(t => {
+          {shownRows.map(t => {
             const term = t.term || t.name || t.title || "";
             const slug = t.slug || slugify(term);
             const def = t.definition || t.summary || t.description || "";
+            const preview = def.length > 320 ? def.slice(0, 320) + "…" : def;
             return (
               <div key={slug || term} data-testid={`dash-glossary-${slug}`} style={{
                 background: "#fff", padding: 14, borderRadius: 12, border: "1px solid #E5E7EB",
               }}>
-                <strong style={{ color: C.navy }}>{term}</strong>
-                {t.category && <span style={{ marginLeft: 8, fontSize: 10, background: C.mist, padding: "2px 8px", borderRadius: 999, color: C.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{t.category}</span>}
+                <strong style={{ color: C.navy }}>{highlight(term, q.trim())}</strong>
+                {t.category && (
+                  <span
+                    onClick={() => setCat(t.category)}
+                    style={{ marginLeft: 8, fontSize: 10, background: C.mist, padding: "2px 8px", borderRadius: 999, color: C.blue, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, cursor: "pointer" }}
+                    title={`Filter to ${t.category}`}
+                  >{t.category}</span>
+                )}
                 <div style={{ fontSize: 13, color: C.ink, marginTop: 4, lineHeight: 1.5 }}>
-                  {def.slice(0, 320)}{def.length > 320 ? "…" : ""}
+                  {highlight(preview, q.trim())}
                 </div>
                 {slug && (
                   <Link to={`/glossary/${slug}`}

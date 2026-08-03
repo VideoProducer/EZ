@@ -1672,3 +1672,33 @@ Verified:
 - P3: Retroactively seed `insights_history` for full 90-day sparkline immediately
 - P3: Move "Coming Soon" local files to CDN/Object Storage
 - P3: Break down monolithic `server.py` and `App.js` into modular routers/components
+
+
+## Feb 8, 2026 (later) — Glossary search bug fix + intuitive UX
+
+### Root cause
+`GET /api/glossary` was ignoring the `q` query param completely — it always returned all 439 terms alphabetically. The dashboard Glossary pane appeared frozen: typing "PTT", "strata", or anything else showed the same first-30-alphabetically terms every keystroke.
+
+### Backend fix (`backend/server.py` `list_glossary`)
+- Added `q`, `category`, `limit`, `offset` query params.
+- Case-insensitive regex match against `term`, `definition`, `category`.
+- Ranking: exact term → term prefix → term contains → category contains → definition contains, alphabetized within each bucket.
+- Lightweight projection (drops heavy FAQ arrays + audit metadata) so the payload is small on every keystroke. Full FAQs still available via `/api/glossary/{slug}`.
+
+### Frontend UX polish (`DashboardMockup.jsx` `GlossaryPanel`)
+- Debounced fetch with AbortController so stale requests never overwrite fresh results.
+- Live "N matches" counter + "showing first 30" hint.
+- Top-6 category chips derived from the current result set — one tap narrows the list. Active category renders as a gold "×" chip.
+- Inline clear ("×") button inside the search input.
+- Yellow-highlight of the matched substring inside both term titles and definition previews.
+- Category badges on each row are now clickable to filter.
+- Friendlier empty state with example queries.
+
+### Verified via screenshot
+- Empty state → 439 terms + category chips ✓
+- `q=ptt` → 5 matches, PTT highlighted, Taxation chip ✓
+- `q=strata` → 112 matches, Strata prefixes first, strata highlighted ✓
+
+### Files touched
+- Modified `backend/server.py`: `list_glossary` rewritten (2599–2649).
+- Modified `frontend/src/pages/DashboardMockup.jsx`: `GlossaryPanel` rewritten with debounced fetch, category chips, clear button, match counter, highlight. `useRef` import added.
