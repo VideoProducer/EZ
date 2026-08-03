@@ -583,145 +583,93 @@ const TOUR_PROVIDERS = {
 };
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const PaneTour = () => {
-  const [hot, setHot] = useState(null);
-  const [mode, setMode] = useState("mock");           // "mock" | "live"
-  // Provider tab: "dougs" (Doug's real MLS listings) | "kuula" | "matterport"
-  const [provider, setProvider] = useState("dougs");
-  const [dougTours, setDougTours] = useState(null);   // null=loading, []=none, [...]=have
-  const [dougPick, setDougPick] = useState(0);        // index within dougTours
+const PaneTour = ({ focusCity }) => {
+  // Live BC MLS® video tours from CREA DDF®. Backend restricts to Matterport,
+  // YouTube and Vimeo only (per Doug's ask — those three embed cleanly and
+  // auto-play). If a search is active, we scope tours to the searched city;
+  // otherwise we show freshest-across-BC. Autoplay = first tour renders
+  // instantly, no click required.
+  const [tours, setTours] = useState(null);   // null=loading, []=none, [...]=have
+  const [pick, setPick] = useState(0);
 
-  // Fetch Doug's live listings with virtual tours on first mount.
   useEffect(() => {
     let cancelled = false;
+    setTours(null); setPick(0);
     (async () => {
       try {
-        const res = await fetch(`${API}/tours/library?limit=12`);
+        const cityParam = focusCity ? `&city=${encodeURIComponent(focusCity)}` : "";
+        const res = await fetch(`${API}/tours/library?limit=12${cityParam}`);
         const data = await res.json();
-        if (!cancelled) setDougTours(Array.isArray(data.listings) ? data.listings : []);
+        let rows = Array.isArray(data.listings) ? data.listings : [];
+        // If a city was scoped but empty, quietly fall back to BC-wide
+        if (rows.length === 0 && focusCity) {
+          const res2 = await fetch(`${API}/tours/library?limit=12`);
+          const data2 = await res2.json();
+          rows = Array.isArray(data2.listings) ? data2.listings : [];
+        }
+        if (!cancelled) setTours(rows);
       } catch {
-        if (!cancelled) setDougTours([]);
+        if (!cancelled) setTours([]);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [focusCity]);
 
-  // If Doug has no tours yet, silently fall back so "Live 360°" still works.
-  const dougReady = Array.isArray(dougTours) && dougTours.length > 0;
-  const activeProvider =
-    provider === "dougs" && !dougReady ? "kuula" : provider;
-  const P = TOUR_PROVIDERS[activeProvider] || TOUR_PROVIDERS.kuula;
-  const dougPicked = dougReady ? dougTours[Math.min(dougPick, dougTours.length - 1)] : null;
+  const ready = Array.isArray(tours) && tours.length > 0;
+  const picked = ready ? tours[Math.min(pick, tours.length - 1)] : null;
 
-  const iframeSrc = provider === "dougs" && dougPicked
-    ? dougPicked.tour_url
-    : P.src;
-  const captionText = provider === "dougs" && dougPicked
-    ? `${dougPicked.tour_unbranded ? "Unbranded" : "Branded"} tour · CREA DDF® · ${dougPicked.city}`
-    : P.caption;
+  const headerAddr = picked
+    ? `${picked.address || picked.mls_number}${picked.city ? " · " + picked.city : ""}`
+    : (focusCity ? `Loading ${focusCity} tours…` : "Loading BC MLS® tours…");
 
-  const hotspots = [
-    { id: "kitchen", x: 22, y: 55, label: "Kitchen · Bosch appliances" },
-    { id: "ceiling", x: 55, y: 22, label: "9' over-height ceilings" },
-    { id: "view", x: 78, y: 40, label: "SW peek to English Bay" },
-  ];
-
-  const headerAddr = provider === "dougs" && dougPicked
-    ? `${dougPicked.address || dougPicked.mls_number}${dougPicked.city ? " · " + dougPicked.city : ""}`
-    : "2135 W 8th Ave";
+  const hostBadge = (h) => {
+    if (h === "matterport") return "Matterport";
+    if (h === "youtube") return "YouTube";
+    if (h === "vimeo") return "Vimeo";
+    return "Live";
+  };
 
   return (
     <div data-testid="pane-tour" style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>360° Tour · {headerAddr}</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>360° / Video Tour · {headerAddr}</strong>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <div style={{
-            display: "inline-flex", padding: 3, background: "#EEF2FB",
-            borderRadius: 99, border: "1px solid #DDE6FA",
-          }}>
-            <button
-              data-testid="tour-mode-mock"
-              onClick={() => setMode("mock")}
-              style={{
-                border: "none", cursor: "pointer",
-                padding: "5px 12px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                background: mode === "mock" ? C.navy : "transparent",
-                color: mode === "mock" ? "#fff" : C.navy,
-                display: "inline-flex", alignItems: "center", gap: 5,
-              }}
-            ><Compass size={11}/> Mock</button>
-            <button
-              data-testid="tour-mode-live"
-              onClick={() => setMode("live")}
-              style={{
-                border: "none", cursor: "pointer",
-                padding: "5px 12px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                background: mode === "live" ? C.green : "transparent",
-                color: mode === "live" ? "#fff" : C.navy,
-                display: "inline-flex", alignItems: "center", gap: 5,
-              }}
-            ><Radio size={11}/> Live 360°</button>
-          </div>
-          <Pill tone={mode === "live" ? "green" : "gold"}>
-            {mode === "live"
-              ? <><Radio size={12}/> {provider === "dougs" && dougReady ? "BC MLS® Tours" : P.label}</>
-              : <><Compass size={12}/> Interactive</>}
+          <Pill tone="green">
+            <Radio size={12}/> Live · BC MLS® Tours{focusCity ? ` · ${focusCity}` : ""}
           </Pill>
         </div>
       </div>
 
-      {mode === "live" && (
+      {tours !== null && (
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontSize: 11, color: "#6B7280" }}>
           <span style={{ fontWeight: 600, color: C.navy }}>Source:</span>
-          <button
-            data-testid="tour-provider-dougs"
-            onClick={() => setProvider("dougs")}
-            disabled={dougTours === null}
-            style={{
-              border: "1px solid " + (provider === "dougs" ? C.green : "#DDE6FA"),
-              background: provider === "dougs" ? "rgba(34,197,94,0.10)" : "#fff",
-              color: provider === "dougs" ? "#15803D" : C.navy,
-              fontWeight: 700, cursor: dougTours === null ? "wait" : "pointer",
-              padding: "3px 10px", borderRadius: 99, fontSize: 11,
-              display: "inline-flex", alignItems: "center", gap: 5,
-            }}
-          >
-            <Building2 size={11}/> BC MLS® Video Tours
-            {dougTours === null ? " …"
-              : dougReady ? ` · ${dougTours.length}`
-              : " · public demo"}
-          </button>
-          {Object.entries(TOUR_PROVIDERS).map(([k, v]) => (
-            <button
-              key={k}
-              data-testid={`tour-provider-${k}`}
-              onClick={() => setProvider(k)}
-              style={{
-                border: "1px solid " + (provider === k ? C.blue : "#DDE6FA"),
-                background: provider === k ? "rgba(30,79,207,0.08)" : "#fff",
-                color: provider === k ? C.blue : C.navy,
-                fontWeight: 700, cursor: "pointer",
-                padding: "3px 10px", borderRadius: 99, fontSize: 11,
-              }}
-            >{v.label}</button>
-          ))}
-          {provider === "dougs" && dougReady && (
+          <span style={{
+            border: "1px solid #22C55E", background: "rgba(34,197,94,0.10)",
+            color: "#15803D", fontWeight: 700, padding: "3px 10px",
+            borderRadius: 99, fontSize: 11, display: "inline-flex",
+            alignItems: "center", gap: 5,
+          }}>
+            <Building2 size={11}/> CREA DDF® {focusCity ? `· ${focusCity}` : ""}
+            {ready ? ` · ${tours.length} tours` : " · loading…"}
+          </span>
+          {ready && (
             <select
               data-testid="tour-doug-listing-select"
-              value={dougPick}
-              onChange={(e) => setDougPick(Number(e.target.value))}
+              value={pick}
+              onChange={(e) => setPick(Number(e.target.value))}
               style={{
                 marginLeft: "auto", padding: "4px 8px", borderRadius: 8,
                 border: "1px solid #DDE6FA", background: "#fff",
                 color: C.navy, fontSize: 11, fontWeight: 600,
-                maxWidth: 320,
+                maxWidth: 340,
               }}
             >
-              {dougTours.map((l, i) => (
+              {tours.map((l, i) => (
                 <option key={l.listing_key} value={i}>
                   {(l.address || l.mls_number)}
                   {l.city ? ` · ${l.city}` : ""}
                   {l.list_price ? ` · $${Number(l.list_price).toLocaleString()}` : ""}
+                  {l.tour_host ? ` · ${hostBadge(l.tour_host)}` : ""}
                 </option>
               ))}
             </select>
@@ -729,20 +677,21 @@ const PaneTour = () => {
         </div>
       )}
 
-      {mode === "live" && provider === "dougs" && !dougReady && dougTours !== null && (
+      {tours !== null && tours.length === 0 && (
         <div style={{
           background: "rgba(245,166,35,0.08)", border: "1px dashed rgba(245,166,35,0.5)",
-          borderRadius: 10, padding: 10, fontSize: 11, color: "#78350F",
+          borderRadius: 10, padding: 12, fontSize: 12, color: "#78350F",
         }}>
-          <strong>No CREA DDF® tours indexed yet.</strong> Doug's live tours will appear here on the next
-          DDF sync (every 4 hours). Falling back to a Kuula public demo for now.
+          <strong>No Matterport, YouTube or Vimeo tours found{focusCity ? ` in ${focusCity}` : ""} right now.</strong>
+          {" "}The CREA DDF® feed refreshes every 4 hours — new tours will appear here automatically.
+          {focusCity && " Try searching a nearby BC community for now."}
         </div>
       )}
 
       <AnimatePresence mode="wait">
-        {mode === "live" ? (
+        {picked && (
           <motion.div
-            key={`live-${provider}-${dougPick}`}
+            key={`tour-${picked.listing_key}-${pick}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             data-testid="tour-live-embed-wrap"
             style={{
@@ -751,21 +700,26 @@ const PaneTour = () => {
             }}
           >
             <iframe
-              title={`Live 360° virtual tour (${captionText})`}
-              src={iframeSrc}
+              title={`Live tour · ${picked.address || picked.mls_number}`}
+              src={picked.tour_url}
               width="100%" height="100%"
               frameBorder="0"
-              allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
+              allow="autoplay; xr-spatial-tracking; gyroscope; accelerometer; fullscreen; encrypted-media; picture-in-picture"
               allowFullScreen
               style={{ border: 0, display: "block" }}
               data-testid="tour-live-iframe"
             />
-            {/* Fallback affordance — some hosts still block iframe embedding
-                (private CDNs, expired session URLs). Always show a "Open in
-                new tab" pill so the buyer never sees a dead-end broken image. */}
-            {provider === "dougs" && dougPicked && (dougPicked.tour_url_raw || dougPicked.tour_url) && (
+            <div style={{
+              position: "absolute", left: 10, top: 10, background: "rgba(15,42,91,0.85)",
+              color: "#fff", padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
+              display: "inline-flex", alignItems: "center", gap: 6, backdropFilter: "blur(6px)",
+            }}>
+              <Radio size={12} color={C.green}/>
+              {picked.tour_unbranded ? "Unbranded" : "Branded"} · {hostBadge(picked.tour_host)} · {picked.city}
+            </div>
+            {(picked.tour_url_raw || picked.tour_url) && (
               <a
-                href={dougPicked.tour_url_raw || dougPicked.tour_url}
+                href={picked.tour_url_raw || picked.tour_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="tour-open-newtab"
@@ -778,153 +732,58 @@ const PaneTour = () => {
                   fontSize: 11, fontWeight: 700, textDecoration: "none",
                   border: `1px solid ${C.blue}`,
                 }}
-                title="Open the original tour in a new tab if it doesn't load here"
-              >
-                Open in new tab ↗
-              </a>
+                title="Open the original tour in a new tab"
+              >Open in new tab ↗</a>
             )}
-            <div style={{
-              position: "absolute", left: 10, top: 10, background: "rgba(15,42,91,0.85)",
-              color: "#fff", padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
-              display: "inline-flex", alignItems: "center", gap: 6, backdropFilter: "blur(6px)",
-            }}>
-              <Radio size={12} color={provider === "dougs" && dougPicked ? C.green : C.gold}/> {captionText}
-            </div>
-            {/* Floating Doogie narrator badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              data-testid="tour-doogie-narrator"
-              style={{
-                position: "absolute", right: 12, bottom: 12,
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "rgba(255,255,255,0.94)", color: C.navy,
-                padding: "6px 12px 6px 6px", borderRadius: 999,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-                border: `1px solid ${C.gold}`,
-              }}
-            >
-              <div style={{
-                width: 42, height: 42, borderRadius: "50%",
-                background: "#FFF4D9",
-                border: `2px solid ${C.gold}`, flexShrink: 0,
-                overflow: "hidden",
-              }}>
-                <img
-                  src={DOOGIE.pointing} alt="Doogie pointing"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: 0.5, textTransform: "uppercase" }}>Doogie · Your Guide</div>
-                <div style={{ fontSize: 11, opacity: 0.85 }}>Ask about ceilings, strata, or nearby amenities</div>
-                <div style={{ fontSize: 9, opacity: 0.6, marginTop: 2, fontStyle: "italic" }}>General information only — not advice</div>
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="mock"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{
-              position: "relative", height: 280, borderRadius: 12, overflow: "hidden",
-              background: `radial-gradient(1200px 400px at 30% 40%, #4C74E8 0%, ${C.navy} 60%, ${C.ink} 100%)`,
-              border: "1px solid #E5E7EB",
-            }}
-          >
-            {/* mock horizon */}
-            <div style={{ position: "absolute", inset: 0, backgroundImage:
-              "repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 40px), radial-gradient(300px 100px at 50% 62%, rgba(245,166,35,0.25), transparent 70%)"
-            }}/>
-            <div style={{
-              position: "absolute", left: 0, right: 0, bottom: 0, height: "38%",
-              background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.35))",
-            }}/>
-            {hotspots.map(h => (
-              <motion.button
-                key={h.id}
-                data-testid={`tour-hotspot-${h.id}`}
-                onMouseEnter={() => setHot(h)}
-                onFocus={() => setHot(h)}
-                onMouseLeave={() => setHot(null)}
-                onBlur={() => setHot(null)}
-                animate={{ scale: [1, 1.15, 1] }}
-                transition={{ duration: 1.8, repeat: Infinity, delay: (h.x % 5) * 0.2 }}
-                style={{
-                  position: "absolute", left: `${h.x}%`, top: `${h.y}%`,
-                  width: 22, height: 22, borderRadius: "50%",
-                  background: "rgba(245,166,35,0.95)", border: "2px solid #fff",
-                  boxShadow: "0 0 0 6px rgba(245,166,35,0.25)", cursor: "pointer",
-                }}
-                aria-label={h.label}
-              />
-            ))}
-            <div style={{ position: "absolute", left: 12, bottom: 10, color: "#fff", fontSize: 12, opacity: 0.85 }}>
-              Drag to look around · Tap dots for narration
-            </div>
-            {/* Floating Doogie narrator badge (mock mode) */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              style={{
-                position: "absolute", right: 12, bottom: 12,
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "rgba(255,255,255,0.94)", color: C.navy,
-                padding: "6px 12px 6px 6px", borderRadius: 999,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-                border: `1px solid ${C.gold}`,
-              }}
-            >
-              <img
-                src={DOOGIE_HEADSHOT} alt="Doogie narrator"
-                style={{
-                  width: 32, height: 32, borderRadius: "50%",
-                  objectFit: "cover", objectPosition: "center 42%",
-                  border: `2px solid ${C.gold}`, flexShrink: 0,
-                }}
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
-              <div style={{ display: "grid", lineHeight: 1.2 }}>
-                <span style={{ fontSize: 11, fontWeight: 600 }}>Ask Doogie · real estate helper</span>
-                <span style={{ fontSize: 9, opacity: 0.65, fontStyle: "italic" }}>General information only — not advice</span>
-              </div>
-            </motion.div>
-            <AnimatePresence>
-              {hot && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  style={{
-                    position: "absolute", right: 12, top: 12, maxWidth: 220,
-                    background: "rgba(255,255,255,0.95)", color: C.navy, padding: "8px 12px",
-                    borderRadius: 10, fontSize: 12, fontWeight: 600, boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                  }}
-                >{hot.label}</motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12, color: "#4B5563" }}>
-        <span>Built 2018</span><span>·</span><span>Rentals OK</span><span>·</span><span>Pets w/ restrictions</span><span>·</span><span>Strata $412/mo</span>
-      </div>
+      {picked && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12, color: "#4B5563", alignItems: "center" }}>
+          <Link
+            to={`/listings/${picked.listing_key}`}
+            data-testid="tour-view-full-listing"
+            style={{
+              color: C.blue, fontWeight: 700, textDecoration: "none",
+              borderBottom: `1px dotted ${C.blue}`,
+            }}
+          >View full listing →</Link>
+          {picked.beds != null && <><span>·</span><span>{picked.beds} bd</span></>}
+          {picked.baths != null && <><span>·</span><span>{picked.baths} ba</span></>}
+          {picked.property_type && <><span>·</span><span>{picked.property_type}</span></>}
+          {picked.list_price && <><span>·</span><span style={{fontWeight:700,color:C.navy}}>${Number(picked.list_price).toLocaleString()}</span></>}
+        </div>
+      )}
     </div>
   );
 };
 
 // ── Right pane: Neighbourhood insights ───────────────────────────────────────
-const PaneNeighbourhood = () => {
-  const stats = [
+const PaneNeighbourhood = ({ focusCity }) => {
+  // The neighbourhood card syncs with the searched community. Doogie's
+  // illustrative fallbacks (Kitsilano) are only shown until a search fires.
+  const areaName = focusCity ? focusCity : "Kitsilano · Vancouver West";
+  const stats = focusCity ? [
+    { icon: School, label: "Schools nearby", value: "Multiple", sub: `${focusCity} · public + independent` },
+    { icon: Bus, label: "Local transit", value: "See map", sub: `Regional links` },
+    { icon: Trees, label: "Parks & trails", value: "Many", sub: "Public open space" },
+    { icon: Waves, label: "Landmarks", value: "Search map", sub: focusCity },
+  ] : [
     { icon: School, label: "École Bilingue Elem.", value: "0.8 km", sub: "French Immersion" },
     { icon: Bus, label: "Transit score", value: "88 / 100", sub: "4th Ave B-Line" },
     { icon: Trees, label: "Parks within 500m", value: "3", sub: "Kits Beach · Connaught · Volunteer" },
     { icon: Waves, label: "Walk to shoreline", value: "6 min", sub: "English Bay" },
   ];
+  const mapQuery = encodeURIComponent(
+    focusCity
+      ? `${focusCity}, BC real estate`
+      : "Kitsilano, Vancouver West, BC real estate"
+  );
   return (
     <div data-testid="pane-neighbourhood" style={{ display: "grid", gap: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Kitsilano · Vancouver West</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>{areaName}</strong>
         <Pill tone="green"><CheckCircle2 size={12}/> Public data · sourced</Pill>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
@@ -949,8 +808,8 @@ const PaneNeighbourhood = () => {
       }}>
         <iframe
           data-testid="pane-neighbourhood-map"
-          title="Kitsilano · Vancouver West — live map"
-          src="https://www.google.com/maps?q=Kitsilano,+Vancouver+West,+BC+real+estate&z=14&output=embed"
+          title={`${areaName} — live map`}
+          src={`https://www.google.com/maps?q=${mapQuery}&z=14&output=embed`}
           style={{ width: "100%", height: "100%", border: 0, display: "block" }}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
@@ -967,8 +826,12 @@ const PaneNeighbourhood = () => {
 };
 
 // ── Right pane: Buyer Insights (inventory + DOM + 90-day trend) ──────────────
-const PaneBuyerInsights = () => {
-  const region = useRotatingRegion();
+const PaneBuyerInsights = ({ focusCity }) => {
+  // If a search has committed to a city (e.g. "Osoyoos"), we scope the live
+  // insights to that city. Otherwise we roll a rotating BC region so the
+  // idle demo cycles through interesting communities.
+  const rotating = useRotatingRegion();
+  const region = focusCity ? { ...rotating, city: focusCity } : rotating;
   const [freshness, setFreshness] = useState("recently");
   // Real market insights for the currently-rotating region. Falls back to the
   // illustrative rotating figures if the aggregate query returns 0 (e.g. a
@@ -1117,8 +980,9 @@ const PaneBuyerInsights = () => {
 };
 
 // ── Right pane: Seller Insights (comparable actives + DOM) ───────────────────
-const PaneSellerLookup = () => {
-  const region = useRotatingRegion();
+const PaneSellerLookup = ({ focusCity }) => {
+  const rotating = useRotatingRegion();
+  const region = focusCity ? { ...rotating, city: focusCity } : rotating;
   const s = region.seller;
   // Freshness indicator — fetched from /api/tours/library sync log so consumers
   // see how current the CREA DDF® pull is. Falls back to "recently" if the
@@ -2782,18 +2646,35 @@ export default function VisualAgentDemo() {
     else runScriptedVoice();
   };
 
+  // Derive the "focus city" from whatever the buyer has typed into the search
+  // bar. Every scenario pane (Tour, Neighbourhood, Buyer/Seller Insights) syncs
+  // to this city so the whole right-hand column moves as one. Falls back to
+  // idle rotating regions when nothing is typed.
+  const focusCity = useMemo(() => {
+    const raw = (searchQuery || searchCommitted || "").trim();
+    if (!raw) return null;
+    const parsed = parseListingQuery(raw);
+    if (parsed?.city) {
+      // Title-case the extracted city so it displays cleanly ("Prince George",
+      // not "prince george")
+      return parsed.city.replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, searchCommitted]);
+
   const RightPane = useMemo(() => {
     switch (scenario.id) {
       case "search": return <PaneSearch query={searchQuery} setQuery={setSearchQuery} committed={searchCommitted} onCommit={commitSearch}/>;
-      case "tour": return <PaneTour/>;
-      case "neighbourhood": return <PaneNeighbourhood/>;
-      case "buyerinsights": return <PaneBuyerInsights/>;
-      case "sellerlookup": return <PaneSellerLookup/>;
+      case "tour": return <PaneTour focusCity={focusCity}/>;
+      case "neighbourhood": return <PaneNeighbourhood focusCity={focusCity}/>;
+      case "buyerinsights": return <PaneBuyerInsights focusCity={focusCity}/>;
+      case "sellerlookup": return <PaneSellerLookup focusCity={focusCity}/>;
       case "qualify": return <PaneQualify/>;
       default: return null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario.id, searchQuery, searchCommitted]);
+  }, [scenario.id, searchQuery, searchCommitted, focusCity]);
 
   const jumpTo = (i) => { setScenarioIdx(i); setTurnIdx(0); stopAutoplay(); };
   const restart = () => { setScenarioIdx(0); setTurnIdx(0); setUserInteracted(false); setPlaying(true); };
@@ -3084,55 +2965,83 @@ export default function VisualAgentDemo() {
                 position: "absolute", top: "calc(100% + 4px)", left: 10, right: 10, zIndex: 30,
                 background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
                 boxShadow: "0 20px 40px rgba(15,42,91,0.18)",
-                maxHeight: 380, overflowY: "auto",
+                maxHeight: 420, overflowY: "auto",
               }}
               onMouseDown={(e) => e.preventDefault()}
             >
-              {searchSug.map((it, i) => {
-                const active = i === searchHi;
-                const isDoogie = it.group === "Doogie";
-                return (
-                  <button
-                    key={`${it.group}-${it.title}-${i}`}
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    data-testid={`va-search-sug-${i}`}
-                    onMouseEnter={() => setSearchHi(i)}
-                    onClick={() => openSug(it)}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                      gap: 12, padding: "10px 12px",
-                      background: active ? "#F5F0E1" : "transparent",
-                      border: "none", cursor: "pointer", textAlign: "left",
-                      borderBottom: i < searchSug.length - 1 ? "1px solid #F1F5F9" : "none",
-                    }}
-                  >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontWeight: 700, color: C.navy, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {isDoogie
-                          ? <><span aria-hidden style={{marginRight:6}}>🐾</span>{it.title}</>
-                          : it.title}
-                      </div>
-                      {it.blurb && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.blurb}</div>}
+              {/* Grouped-section dropdown — listings, communities, terms & glossary,
+                  then Ask Doogie fallback. Each group gets a coloured header so the
+                  buyer can visually skim to the right kind of answer instantly. */}
+              {(() => {
+                const GROUP_META = {
+                  Listing:     { header: "🏠 MLS® Listings",         color: "#0369A1", bg: "rgba(3,105,161,0.08)"  },
+                  Listings:    { header: "🏠 MLS® Listings",         color: "#0369A1", bg: "rgba(3,105,161,0.08)"  },
+                  Communities: { header: "📍 BC Communities",        color: "#166534", bg: "rgba(22,163,74,0.08)"  },
+                  Terms:       { header: "📖 Terms & Glossary",      color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
+                  Tools:       { header: "🧰 Tools & Calculators",   color: "#0F2A5B", bg: "rgba(15,42,91,0.08)"   },
+                  Doogie:      { header: "🐾 Ask Doogie",            color: "#7C4A03", bg: "rgba(245,166,35,0.15)" },
+                };
+                const GROUP_ORDER = ["Listing", "Listings", "Communities", "Terms", "Tools", "Doogie"];
+                // Bucket the flat suggestion list back into sections
+                const buckets = {};
+                searchSug.forEach((it, i) => {
+                  const g = it.group || "Doogie";
+                  if (!buckets[g]) buckets[g] = [];
+                  buckets[g].push({ ...it, __i: i });
+                });
+                const seenKeys = new Set(GROUP_ORDER);
+                Object.keys(buckets).forEach(k => { if (!seenKeys.has(k)) GROUP_ORDER.push(k); });
+
+                return GROUP_ORDER.filter(g => buckets[g] && buckets[g].length).map((groupKey, gi) => {
+                  const meta = GROUP_META[groupKey] || { header: groupKey.toUpperCase(), color: C.blue, bg: "rgba(14,165,233,0.10)" };
+                  return (
+                    <div key={groupKey} data-testid={`va-search-group-${groupKey.toLowerCase()}`}>
+                      <div style={{
+                        padding: "6px 12px", fontSize: 10, fontWeight: 800,
+                        letterSpacing: 0.6, textTransform: "uppercase",
+                        color: meta.color, background: meta.bg,
+                        borderTop: gi === 0 ? "none" : "1px solid #F1F5F9",
+                        position: "sticky", top: 0, zIndex: 1,
+                      }}>{meta.header}</div>
+                      {buckets[groupKey].map((it) => {
+                        const i = it.__i;
+                        const active = i === searchHi;
+                        const isDoogie = it.group === "Doogie";
+                        const isSeeMore = it.kind === "SeeMore";
+                        return (
+                          <button
+                            key={`${it.group}-${it.title}-${i}`}
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            data-testid={`va-search-sug-${i}`}
+                            onMouseEnter={() => setSearchHi(i)}
+                            onClick={() => openSug(it)}
+                            style={{
+                              width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                              gap: 12, padding: "10px 12px",
+                              background: active ? "#F5F0E1" : "transparent",
+                              border: "none", cursor: "pointer", textAlign: "left",
+                              borderBottom: "1px solid #F8FAFC",
+                            }}
+                          >
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{
+                                fontWeight: 700, color: isSeeMore ? meta.color : C.navy,
+                                fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                textDecoration: isSeeMore ? "underline" : "none",
+                              }}>
+                                {isDoogie ? <><span aria-hidden style={{marginRight:6}}>🐾</span>{it.title}</> : it.title}
+                              </div>
+                              {it.blurb && <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.blurb}</div>}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase",
-                      color: isDoogie ? "#7C4A03"
-                        : (it.group === "Communities" ? "#166534"
-                        : ((it.group === "Listing" || it.group === "Listings") ? "#0369A1" : C.blue)),
-                      background: isDoogie ? "rgba(245,166,35,0.18)"
-                        : (it.group === "Communities" ? "rgba(22,163,74,0.10)"
-                        : ((it.group === "Listing" || it.group === "Listings") ? "rgba(3,105,161,0.10)" : "rgba(14,165,233,0.10)")),
-                      padding: "3px 8px", borderRadius: 999, flexShrink: 0,
-                    }}>
-                      {it.group === "Doogie" ? "Ask Doogie"
-                        : it.group === "Listing" ? "MLS® LISTING"
-                        : (it.group || "").toUpperCase()}
-                    </span>
-                  </button>
-                );
-              })}
+                  );
+                });
+              })()}
               {searchLoading && (
                 <div style={{ padding: "6px 12px", fontSize: 11, color: "#9CA3AF" }}>Searching…</div>
               )}

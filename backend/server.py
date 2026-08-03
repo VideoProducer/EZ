@@ -9909,26 +9909,45 @@ async def doogie_tts(request: Request, body: DoogieTTSIn):
 # ============================================================================
 
 @app.get("/api/tours/library", tags=["MLS Listings"])
-async def listings_with_virtual_tours(limit: int = 12):
+async def listings_with_virtual_tours(limit: int = 12, city: str | None = None):
     """Return up to `limit` active BC listings that have at least one virtual
-    tour URL from the CREA DDF® feed. Each row includes a curated `tour_url`
-    (unbranded first) that the frontend can drop straight into an iframe."""
+    tour URL from the CREA DDF® feed. Restricted to Matterport, YouTube and
+    Vimeo hosts (per Doug's ask — those three formats always embed cleanly
+    and auto-play). Optionally scoped to a single BC `city` so panes can sync
+    to whatever community the buyer is currently searching for."""
     limit = max(1, min(int(limit or 12), 30))
+    query = {"status": "Active", "has_virtual_tour": True}
+    if city:
+        query["city"] = {"$regex": f"^{re.escape(city)}$", "$options": "i"}
     cursor = db.listings.find(
-        {"status": "Active", "has_virtual_tour": True},
+        query,
         {
             "_id": 0, "listing_key": 1, "mls_number": 1, "street_address": 1,
             "city": 1, "list_price": 1, "beds": 1, "baths": 1, "property_type": 1,
             "photos": {"$slice": 1}, "virtual_tour_urls": 1, "realtor_ca_url": 1,
         },
-    ).sort("synced_at", -1).limit(limit)
+    ).sort("synced_at", -1).limit(limit * 4)  # over-fetch since we filter by host
     rows = []
     async for l in cursor:
         tours = l.get("virtual_tour_urls") or []
         if not tours:
             continue
-        primary = tours[0]  # already sorted: unbranded first, branded fallback
-        raw_url = primary.get("url") or ""
+        # Find the first Matterport / YouTube / Vimeo URL (unbranded first,
+        # already sorted). Skip Google Drive, YouIGUIDE and anything else —
+        # per Doug's ask, only these three hosts.
+        picked = None
+        for t in tours:
+            raw = (t.get("url") or "").strip()
+            if not raw:
+                continue
+            sanitised = _sanitize_tour_url(raw)
+            host = _tour_host_family(sanitised)
+            if host in ("matterport", "youtube", "vimeo"):
+                picked = (t, sanitised, host)
+                break
+        if not picked:
+            continue
+        t, sanitised, host = picked
         rows.append({
             "listing_key":    l["listing_key"],
             "mls_number":     l.get("mls_number") or l["listing_key"],
@@ -9939,22 +9958,40 @@ async def listings_with_virtual_tours(limit: int = 12):
             "baths":          l.get("baths"),
             "property_type":  l.get("property_type") or "",
             "cover_photo":    (l.get("photos") or [None])[0],
-            "tour_url":       _sanitize_tour_url(raw_url),  # iframe-safe version
-            "tour_url_raw":   raw_url,                       # for "Open in new tab"
-            "tour_embeddable": _is_embeddable_tour(raw_url),
-            "tour_category":  primary.get("category") or "",
-            "tour_unbranded": not primary.get("is_branded", False),
+            "tour_url":       sanitised,        # iframe-safe embed URL
+            "tour_url_raw":   t.get("url"),      # for "Open in new tab"
+            "tour_host":      host,              # matterport|youtube|vimeo
+            "tour_category":  t.get("category") or "",
+            "tour_unbranded": not t.get("is_branded", False),
             "eztofind_url":   f"/listing/{l['listing_key']}",
             "realtor_ca_url": l.get("realtor_ca_url"),
         })
+        if len(rows) >= limit:
+            break
     return {
         "count": len(rows),
         "listings": rows,
+        "city": city,
         "notice": (
-            "MLS® data licensed from CREA DDF®. Virtual tour URLs prioritize unbranded "
-            "sources (RESA-safe). Public demos may show if none are available yet."
+            "MLS® data licensed from CREA DDF®. Virtual tours restricted to "
+            "Matterport, YouTube and Vimeo (all iframe-embeddable). Unbranded "
+            "sources prioritised for RESA compliance."
         ),
     }
+
+
+def _tour_host_family(url: str) -> str:
+    """Classify a sanitised tour URL into a coarse provider family so the
+    /api/tours/library endpoint can restrict to Matterport / YouTube / Vimeo."""
+    try:
+        from urllib.parse import urlparse
+        host = (urlparse(url or "").netloc or "").lower()
+        if "matterport" in host: return "matterport"
+        if "youtube" in host or "youtu.be" in host: return "youtube"
+        if "vimeo" in host: return "vimeo"
+    except Exception:
+        pass
+    return "other"
 
 
 def _sanitize_tour_url(url: str) -> str:

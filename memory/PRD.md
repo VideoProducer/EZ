@@ -1593,3 +1593,41 @@ Verified:
 
 ### Files touched
 - Modified frontend/src/pages/VisualAgentDemo.jsx: expanded CITIES array; added FEATURE_MAP regex list; wired `features` into runSearchSubmit + smart-search useEffect; replaced mock map div with Google Maps iframe; removed BCFSA-safe Pill
+
+
+## Feb 4, 2026 — Cohesive search + community-synced panes + tour cleanup
+
+### 1. Removed "Ask Doogie · real estate helper" narrator chip
+- Was living inside the retired mock 360° tour view — now gone entirely.
+
+### 2. Mock tour mode + Kuula/Matterport public-demo tabs removed
+- Only Matterport, YouTube and Vimeo tours from the CREA DDF® feed (per Doug's ask). Every other host is filtered out server-side.
+- Backend `/api/tours/library` restricted via new `_tour_host_family()` classifier — accepts optional `city` query param to scope tours to the searched community.
+- Front-end PaneTour rewritten: single mode (Live), no toggle, no hotspots, no CSS-grid mock. Autoplays the first tour instantly (no click required).
+
+### 3. Cohesive grouped search dropdown
+- Redesigned `/api/search` dropdown to render as sticky-header sections instead of a flat list with tail pills. Groups & icons:
+  * 🏠 MLS® Listings (real CREA DDF® matches, up to 4)
+  * 🏠 MLS® Listings "See all N matching →" footer link
+  * 📍 BC Communities (community pages)
+  * 📖 Terms & Glossary
+  * 🧰 Tools & Calculators
+  * 🐾 Ask Doogie (always-appended fallback)
+- Buyer can visually skim to the right kind of answer instantly.
+
+### 4. Right panes synced with searched community
+- `focusCity` derived from `parseListingQuery(searchQuery || searchCommitted)?.city`, title-cased, passed as a prop to every pane.
+- **PaneTour**: scopes `/api/tours/library?city=…` (falls back to BC-wide if the searched city has 0 tours).
+- **PaneBuyerInsights**: uses focusCity for `/api/insights?city=…` fetch.
+- **PaneSellerLookup**: same.
+- **PaneNeighbourhood**: syncs the Google Maps iframe centre + card title to the searched community.
+- When nothing is typed, the panes idle-rotate through BC_REGIONS as before.
+
+### Verified
+- Typed "kelowna condo" → dropdown shows grouped sections (MLS® Listings, Communities, Ask Doogie) ✓
+- Virtual Tour pane auto-loads `415 Commonwealth Road #313 · Kelowna` (YouTube, unbranded) with header "Live · BC MLS® Tours · Kelowna" ✓
+- No "Mock" button anywhere; no "Ask Doogie · real estate helper" badge ✓
+
+### Files touched
+- Modified backend/server.py: `_tour_host_family` + Matterport/YouTube/Vimeo-only filter in `/api/tours/library`, optional `city` scoping
+- Modified frontend/src/pages/VisualAgentDemo.jsx: PaneTour rewrite; PaneNeighbourhood, PaneBuyerInsights, PaneSellerLookup accept focusCity; RightPane derives focusCity from search state; grouped-section dropdown
