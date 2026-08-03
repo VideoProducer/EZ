@@ -10,6 +10,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { X, Play, ChevronRight } from "lucide-react";
+import { useDoogieMuted } from "./voicePref";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const TOUR_SEEN_KEY = "ez_doogie_tour_seen";
@@ -66,8 +67,10 @@ export default function DoogieTour() {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [box, setBox] = useState(null);
   const audioRef = useRef(null);
+  const muted = useDoogieMuted();
 
   // Auto-play on first visit — 1.5s delay so the page settles.
   useEffect(() => {
@@ -101,10 +104,18 @@ export default function DoogieTour() {
     };
   }, [open, i, step]);
 
-  // Load + auto-play audio for the current step.
+  // Load + auto-play audio for the current step (skipped when muted — the
+  // step still auto-advances via a short read-time timer so the tour keeps
+  // pace with the visual highlight, but no audio plays).
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    setPlaying(false);
+    if (muted) {
+      // Auto-advance after a short read window (~4s per step) when audio is off.
+      const t = setTimeout(() => { if (!cancelled) next(); }, 4200);
+      return () => { cancelled = true; clearTimeout(t); };
+    }
     setBusy(true);
     (async () => {
       try {
@@ -119,13 +130,14 @@ export default function DoogieTour() {
         const url = URL.createObjectURL(blob);
         if (audioRef.current) {
           audioRef.current.src = url;
-          audioRef.current.play().catch(() => { /* autoplay policy may block; user can hit Next */ });
+          audioRef.current.play().then(() => setPlaying(true)).catch(() => { /* autoplay policy may block; user can hit Next */ });
         }
       } catch { /* fall through — user can advance manually */ }
       finally { if (!cancelled) setBusy(false); }
     })();
-    return () => { cancelled = true; if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; } };
-  }, [open, i, step.script]);
+    return () => { cancelled = true; setPlaying(false); if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ""; } };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, i, step.script, muted]);
 
   const close = (dismiss) => {
     setOpen(false);
@@ -227,6 +239,7 @@ export default function DoogieTour() {
             src="/doogie/thinking.png"
             alt="Doogie"
             data-testid="doogie-tour-mascot"
+            className={playing ? "doogie-talking" : ""}
             style={{ width: 72, height: 72, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.2))" }}
             onError={e => { e.currentTarget.style.display = "none"; }}
           />
@@ -249,7 +262,7 @@ export default function DoogieTour() {
             <div style={{ fontSize: 13, lineHeight: 1.5, color: "#374151" }}>{step.script}</div>
           </div>
         </div>
-        <audio ref={audioRef} preload="auto" onEnded={next} data-testid="doogie-tour-audio"/>
+        <audio ref={audioRef} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); next(); }} data-testid="doogie-tour-audio"/>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, gap: 8 }}>
           <button
             onClick={() => close(true)}

@@ -7,8 +7,10 @@
 //  opinion. Ends with a CTA to Doug if the listing is in his service area.
 // ============================================================================
 import React, { useMemo, useRef, useState } from "react";
-import { Play, Pause, StopCircle } from "lucide-react";
+import { Play, Pause, StopCircle, VolumeX } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useDoogieMuted } from "./voicePref";
+import { DoogieTalkingStyle } from "./voicePref";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -66,10 +68,12 @@ export default function ListingNarration({ listing }) {
   const [state, setState] = useState("idle"); // idle | loading | playing | paused
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
+  const muted = useDoogieMuted();
   const inServiceArea = _isInServiceArea(listing?.city);
   const script = useMemo(() => _buildScript(listing), [listing]);
 
   const play = async () => {
+    if (muted) return;
     if (state === "playing") { audioRef.current?.pause(); setState("paused"); return; }
     if (state === "paused")  { audioRef.current?.play(); setState("playing"); return; }
     // Fresh play — fetch TTS, load into <audio>, and start.
@@ -104,14 +108,16 @@ export default function ListingNarration({ listing }) {
   };
 
   if (!listing) return null;
-  const label = state === "loading" ? "Loading Doogie's voice…"
+  const label = muted           ? "Voice muted — click the header speaker to unmute"
+              : state === "loading" ? "Loading Doogie's voice…"
               : state === "playing" ? "Pause narration"
               : state === "paused"  ? "Resume narration"
               : "Have Doogie walk me through this home";
-  const Icon = state === "playing" ? Pause : Play;
+  const Icon = muted ? VolumeX : (state === "playing" ? Pause : Play);
 
   return (
     <div style={{ marginTop: "1.25rem" }} data-testid="listing-narration">
+      <DoogieTalkingStyle/>
       <div style={{
         background: "#F0F4FB", border: "1px solid #DDE6FA", borderRadius: 12,
         padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
@@ -120,6 +126,7 @@ export default function ListingNarration({ listing }) {
           src="/doogie/thinking.png"
           alt="Doogie"
           data-testid="listing-narration-mascot"
+          className={state === "playing" ? "doogie-talking" : ""}
           style={{ width: 56, height: 56, flexShrink: 0, filter: "drop-shadow(0 2px 6px rgba(15,42,91,0.18))" }}
           onError={e => { e.currentTarget.style.display = "none"; }}
         />
@@ -134,14 +141,14 @@ export default function ListingNarration({ listing }) {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
             onClick={play}
-            disabled={state === "loading"}
+            disabled={state === "loading" || muted}
             data-testid="listing-narration-play"
             style={{
-              background: "var(--brand-blue, #0A3D99)", color: "#fff",
-              border: "none", borderRadius: 999, cursor: state === "loading" ? "wait" : "pointer",
+              background: muted ? "#9CA3AF" : "var(--brand-blue, #0A3D99)", color: "#fff",
+              border: "none", borderRadius: 999, cursor: (state === "loading" || muted) ? "not-allowed" : "pointer",
               padding: "10px 18px", fontWeight: 700, fontSize: 13,
               display: "inline-flex", alignItems: "center", gap: 8,
-              boxShadow: "0 4px 12px rgba(10,61,153,0.28)",
+              boxShadow: muted ? "none" : "0 4px 12px rgba(10,61,153,0.28)",
               opacity: state === "loading" ? 0.7 : 1,
             }}
           >

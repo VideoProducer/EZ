@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useRef, useState, useContext, createContext 
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators } from "../App";
 import DoogieTour from "../components/DoogieTour";
+import { DoogieVoiceToggle, DoogieTalkingStyle, useDoogieMuted } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
@@ -170,6 +171,8 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       {/* Doogie's guided site tour — auto-plays on first visit, then becomes
           a "Take the Doogie tour" replay pill in the bottom-right. */}
       <DoogieTour/>
+      {/* Shared "talking bounce" keyframes for every Doogie mascot */}
+      <DoogieTalkingStyle/>
     </div>
     </SearchFiltersContext.Provider>
   );
@@ -400,6 +403,7 @@ const TopBar = ({ section, homeVariant }) => {
         <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <DoogieVoiceToggle/>
         <div style={{
           background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)",
           padding: "5px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#166534",
