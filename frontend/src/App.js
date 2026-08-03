@@ -2035,6 +2035,10 @@ const DoogieHeroGreeting = () => {
 // ── First-visit onboarding modal ──
 // Shown once per browser. Big Play button (user gesture) plays the 15-second
 // Doogie greeting. Skip / dismiss also stores the flag so we don't nag users.
+// Buyer / Seller mode selection triggers the REALTOR® ethics qualifier —
+// mandated by BCFSA: Doug cannot interfere with an existing REALTOR®-client
+// relationship, so if the visitor already has one we surface a polite decline
+// and end the funnel cleanly.
 const DoogieOnboarding = () => {
   const [visible, setVisible] = useState(() => {
     try { return typeof localStorage !== "undefined" && localStorage.getItem("ez_onboarding_done") !== "1"; }
@@ -2045,18 +2049,31 @@ const DoogieOnboarding = () => {
     try { return localStorage.getItem("ez_doogie_mode") || "all"; }
     catch { return "all"; }
   });
+  // Ethics qualifier state: null = not asked yet, "yes" = has REALTOR® (polite
+  // decline path), "no" = free to work with a REALTOR® (continue).
+  const [ethics, setEthics] = useState(() => {
+    try { return localStorage.getItem("ez_realtor_ethics") || null; }
+    catch { return null; }
+  });
   const audioRef = useRef(null);
   const nav = useNavigate();
   useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
   const pickMode = (m) => {
     setMode(m);
     try { localStorage.setItem("ez_doogie_mode", m); } catch { /* ignore */ }
-    // If currently speaking, restart with the newly selected script
+    // Reset the ethics answer whenever mode changes so we always ask again
+    // when the user switches between Buying/Selling. "Just exploring" skips it.
+    setEthics(null);
+    try { localStorage.removeItem("ez_realtor_ethics"); } catch { /* ignore */ }
     if (audioRef.current) {
       try { audioRef.current.pause(); audioRef.current.src = ""; } catch { /* ignore */ }
       audioRef.current = null;
       setSpeaking(false);
     }
+  };
+  const pickEthics = (e) => {
+    setEthics(e);
+    try { localStorage.setItem("ez_realtor_ethics", e); } catch { /* ignore */ }
   };
   const dismiss = () => {
     try { localStorage.setItem("ez_onboarding_done", "1"); } catch { /* ignore */ }
@@ -2081,6 +2098,11 @@ const DoogieOnboarding = () => {
     cursor: "pointer", letterSpacing: 0.3,
   });
   if (!visible) return null;
+  // Buyer / Seller MUST answer the ethics qualifier before seeing the CTAs.
+  // "Just exploring" skips it entirely.
+  const needsEthics = (mode === "buyer" || mode === "seller");
+  const showPoliteDecline = needsEthics && ethics === "yes";
+  const canProceed = !needsEthics || ethics === "no";
   return (
     <div
       data-testid="home-onboarding-modal"
@@ -2129,33 +2151,95 @@ const DoogieOnboarding = () => {
           <button type="button" role="radio" aria-checked={mode === "seller"} onClick={() => pickMode("seller")} style={pillStyle("seller")} data-testid="onboarding-mode-seller">I'm selling</button>
           <button type="button" role="radio" aria-checked={mode === "all"} onClick={() => pickMode("all")} style={pillStyle("all")} data-testid="onboarding-mode-all">Just exploring</button>
         </div>
+
+        {/* ── REALTOR® ethics qualifier (BCFSA-mandated) ────────────────────
+            Doug cannot interfere with an existing REALTOR®-client relationship.
+            If the visitor already works with a REALTOR® we show a polite
+            decline instead of pushing them into the funnel. */}
+        {needsEthics && ethics === null && (
+          <div data-testid="onboarding-ethics" style={{
+            background: "#FFF8E8", border: "1px solid #F5D28A", borderRadius: 12,
+            padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
+          }}>
+            <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--brand-navy)", marginBottom: 4 }}>
+              Quick question — are you working with a REALTOR<sup style={{fontSize:9}}>®</sup>?
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#4B5563", marginBottom: 10, lineHeight: 1.5 }}>
+              The REALTOR<sup style={{fontSize:8}}>®</sup> Code of Ethics asks Doug not to interfere with an existing agent relationship.
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => pickEthics("yes")}
+                data-testid="onboarding-ethics-yes"
+                style={{
+                  padding: "0.65rem 0.9rem", borderRadius: 10,
+                  border: "1.5px solid rgba(15,42,91,0.2)", background: "#fff",
+                  color: "var(--brand-navy)", fontWeight: 700, fontSize: "0.82rem",
+                  cursor: "pointer", textAlign: "left",
+                }}
+              >Yes — I already have a REALTOR<sup style={{fontSize:8}}>®</sup></button>
+              <button
+                type="button"
+                onClick={() => pickEthics("no")}
+                data-testid="onboarding-ethics-no"
+                style={{
+                  padding: "0.65rem 0.9rem", borderRadius: 10,
+                  border: "1.5px solid rgba(22,163,74,0.4)", background: "#F0FDF4",
+                  color: "#166534", fontWeight: 700, fontSize: "0.82rem",
+                  cursor: "pointer", textAlign: "left",
+                }}
+              >No — I am free to work with a REALTOR<sup style={{fontSize:8}}>®</sup></button>
+            </div>
+          </div>
+        )}
+
+        {/* Polite decline path — respectful exit, no CTAs beyond Close */}
+        {showPoliteDecline && (
+          <div data-testid="onboarding-polite-decline" style={{
+            background: "#F0F9FF", border: "1px solid #BAE6FD", borderRadius: 12,
+            padding: "0.9rem 0.85rem", marginBottom: "1rem", textAlign: "left",
+            fontSize: "0.85rem", lineHeight: 1.55, color: "var(--brand-navy)",
+          }}>
+            That's wonderful — please continue working with your REALTOR<sup style={{fontSize:8}}>®</sup>.{" "}
+            <span aria-hidden>🐾</span> You're welcome to explore EZtoFind.ca for
+            general BC real estate information, but Doug won't reach out or
+            solicit your business. If your representation ever changes,
+            you can always come back and we'll be here.
+          </div>
+        )}
+
         <div style={{ display: "grid", gap: 8 }}>
-          <button
-            type="button"
-            onClick={play}
-            data-testid="home-onboarding-play"
-            aria-pressed={speaking}
-            style={{
-              background: speaking ? "#DC2626" : "var(--brand-navy)", color: "#fff",
-              border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
-              fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
-              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}
-          >
-            {speaking ? "◼ Stop intro" : `▶ Hear Doogie's 15-second ${mode === "all" ? "" : mode + " "}intro`}
-          </button>
-          <button
-            type="button"
-            onClick={startTour}
-            data-testid="home-onboarding-tour"
-            style={{
-              background: "#16A34A", color: "#fff",
-              border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
-              fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
-            }}
-          >
-            Start hands-free kiosk tour →
-          </button>
+          {canProceed && (
+            <button
+              type="button"
+              onClick={play}
+              data-testid="home-onboarding-play"
+              aria-pressed={speaking}
+              style={{
+                background: speaking ? "#DC2626" : "var(--brand-navy)", color: "#fff",
+                border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
+                fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
+                display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+            >
+              {speaking ? "◼ Stop intro" : `▶ Hear Doogie's 15-second ${mode === "all" ? "" : mode + " "}intro`}
+            </button>
+          )}
+          {canProceed && (
+            <button
+              type="button"
+              onClick={startTour}
+              data-testid="home-onboarding-tour"
+              style={{
+                background: "#16A34A", color: "#fff",
+                border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
+                fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
+              }}
+            >
+              Start hands-free kiosk tour →
+            </button>
+          )}
           <button
             type="button"
             onClick={dismiss}
@@ -2166,7 +2250,7 @@ const DoogieOnboarding = () => {
               cursor: "pointer", textDecoration: "underline",
             }}
           >
-            Skip — I'll explore on my own
+            {showPoliteDecline ? "Close" : "Skip — I'll explore on my own"}
           </button>
         </div>
         <p style={{ fontSize: "0.7rem", color: "#9CA3AF", marginTop: "1rem", lineHeight: 1.5 }}>
