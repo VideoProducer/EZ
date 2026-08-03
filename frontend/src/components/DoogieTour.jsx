@@ -10,7 +10,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { X, Play, ChevronRight } from "lucide-react";
-import { useDoogieMuted } from "./voicePref";
+import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const TOUR_SEEN_KEY = "ez_doogie_tour_seen";
@@ -71,6 +71,13 @@ export default function DoogieTour() {
   const [box, setBox] = useState(null);
   const audioRef = useRef(null);
   const muted = useDoogieMuted();
+  const speed = useDoogieSpeed();
+
+  // Apply playbackRate whenever the shared speed pref changes — no reload
+  // needed, the audio picks it up mid-clip.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+  }, [speed, i]);
 
   // Auto-play on first visit — 1.5s delay so the page settles.
   useEffect(() => {
@@ -130,6 +137,7 @@ export default function DoogieTour() {
         const url = URL.createObjectURL(blob);
         if (audioRef.current) {
           audioRef.current.src = url;
+          audioRef.current.playbackRate = speed;
           audioRef.current.play().then(() => setPlaying(true)).catch(() => { /* autoplay policy may block; user can hit Next */ });
         }
       } catch { /* fall through — user can advance manually */ }
@@ -263,6 +271,29 @@ export default function DoogieTour() {
           </div>
         </div>
         <audio ref={audioRef} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); next(); }} data-testid="doogie-tour-audio"/>
+        {/* Progress dots — one per step. Clickable so users can jump. */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }} data-testid="doogie-tour-progress">
+          {STEPS.map((_, idx) => {
+            const active = idx === i;
+            const done = idx < i;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setI(idx)}
+                data-testid={`doogie-tour-dot-${idx}`}
+                aria-label={`Go to step ${idx + 1}`}
+                aria-current={active ? "step" : undefined}
+                style={{
+                  width: active ? 20 : 8, height: 8, borderRadius: 999,
+                  background: active ? "#F5A623" : done ? "#0A3D99" : "#E5E7EB",
+                  border: "none", padding: 0, cursor: "pointer",
+                  transition: "width 0.2s, background 0.2s",
+                }}
+              />
+            );
+          })}
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, gap: 8 }}>
           <button
             onClick={() => close(true)}

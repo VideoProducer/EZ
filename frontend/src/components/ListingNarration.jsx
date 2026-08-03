@@ -9,7 +9,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Play, Pause, StopCircle, VolumeX } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useDoogieMuted } from "./voicePref";
+import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -69,8 +69,14 @@ export default function ListingNarration({ listing }) {
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
   const muted = useDoogieMuted();
+  const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
   const script = useMemo(() => _buildScript(listing), [listing]);
+
+  // Re-apply speed if the user drags the slider mid-narration.
+  React.useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+  }, [speed]);
 
   const play = async () => {
     if (muted) return;
@@ -91,6 +97,7 @@ export default function ListingNarration({ listing }) {
       objectUrlRef.current = url;
       if (audioRef.current) {
         audioRef.current.src = url;
+        audioRef.current.playbackRate = speed;
         await audioRef.current.play();
         setState("playing");
       }

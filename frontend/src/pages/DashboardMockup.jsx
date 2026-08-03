@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useRef, useState, useContext, createContext 
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators } from "../App";
 import DoogieTour from "../components/DoogieTour";
-import { DoogieVoiceToggle, DoogieTalkingStyle, useDoogieMuted } from "../components/voicePref";
+import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
@@ -404,6 +404,7 @@ const TopBar = ({ section, homeVariant }) => {
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <DoogieVoiceToggle/>
+        <DoogieSpeedSlider/>
         <div style={{
           background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.35)",
           padding: "5px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#166534",
