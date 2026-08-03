@@ -59,8 +59,9 @@ const _buildOutro = (l, inServiceArea) => {
   return parts.join(" ");
 };
 
-export default function ListingNarration({ listing }) {
+export default function ListingNarration({ listing, onAdvancePhoto, photoCount = 0 }) {
   const [state, setState] = useState("idle"); // idle | loading | playing | paused
+  const [progress, setProgress] = useState(0); // 0..1 for the reel indicator
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
   const scriptCacheRef = useRef(null); // last fetched LLM narration
@@ -74,6 +75,20 @@ export default function ListingNarration({ listing }) {
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed]);
+
+  // Handle audio time updates → drive the reel + progress bar.
+  const onTimeUpdate = () => {
+    const a = audioRef.current;
+    if (!a || !a.duration || !isFinite(a.duration)) return;
+    const ratio = Math.max(0, Math.min(1, a.currentTime / a.duration));
+    setProgress(ratio);
+    if (onAdvancePhoto && photoCount > 1) {
+      // Distribute the reel across all photos — first sentence lands on photo 0,
+      // last sentence on the final photo, evenly spaced in between.
+      const idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
+      onAdvancePhoto(idx);
+    }
+  };
 
   // Fetch (or reuse) the LLM narration script from the backend, then fall
   // back to a local composition if the endpoint fails.
@@ -196,10 +211,27 @@ export default function ListingNarration({ listing }) {
       <audio
         ref={audioRef}
         preload="none"
-        onEnded={() => setState("idle")}
+        onTimeUpdate={onTimeUpdate}
+        onEnded={() => { setState("idle"); setProgress(0); }}
         onError={() => setState("idle")}
         data-testid="listing-narration-audio"
       />
+      {(state === "playing" || state === "paused") && photoCount > 1 && (
+        <div style={{
+          marginTop: 8, height: 4, borderRadius: 4, background: "#E5E7EB", overflow: "hidden",
+        }} data-testid="listing-narration-progress">
+          <div style={{
+            height: "100%", width: `${(progress * 100).toFixed(1)}%`,
+            background: "linear-gradient(90deg, #0A3D99, #F5A623)",
+            transition: "width 0.25s linear",
+          }}/>
+        </div>
+      )}
+      {state === "playing" && photoCount > 1 && (
+        <div style={{ marginTop: 6, fontSize: 10, color: "#6B7280", textAlign: "right" }} data-testid="listing-narration-reel-hint">
+          <span aria-hidden="true">🎞</span> Photo reel is syncing to Doogie — watch the gallery above
+        </div>
+      )}
       {inServiceArea && (
         <div style={{ marginTop: 10, textAlign: "right" }}>
           <Link

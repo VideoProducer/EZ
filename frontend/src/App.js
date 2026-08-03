@@ -3301,7 +3301,7 @@ const ListingDetail = () => {
             <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
-          <ListingNarration listing={listing}/>
+          <ListingNarration listing={listing} onAdvancePhoto={setPhotoIdx} photoCount={(listing.photos || []).length}/>
           {/* Ask Doogie listing button removed per BCFSA compliance — Doogie
               cannot provide property-specific commentary. */}
           <div style={{display:"flex",gap:"1.5rem",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",color:"var(--ink)",flexWrap:"wrap"}}>
