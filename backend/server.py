@@ -10750,7 +10750,15 @@ async def market_insights(city: str, property_type: str | None = None):
         "city": {"$regex": f"^{re.escape(city)}$", "$options": "i"},
     }
     if property_type:
-        match["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
+        # Use the same CREA synonym expansion as the listings search so
+        # "Townhouse" also matches "Row / Townhouse", "Attached", "Row";
+        # "Condo" also matches "Apartment"; etc. Otherwise the KPI count
+        # is a false zero for any city whose DDF uses the CREA canonical
+        # label instead of the friendly UI label.
+        try:
+            match["property_type"] = _property_type_query(property_type)
+        except Exception:
+            match["property_type"] = {"$regex": f"^{re.escape(property_type)}$", "$options": "i"}
     pipeline = [
         {"$match": match},
         {"$group": {

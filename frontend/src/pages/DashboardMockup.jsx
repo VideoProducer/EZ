@@ -475,7 +475,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
           { key: "saved",    label: "Saved Homes",    value: savedCount || "—", sub: "on this device", section: "saved",    icon: Heart },
           { key: "foryou",   label: "For You",        value: "Personal picks",  sub: "based on saves",  section: "foryou",   icon: Sparkles },
           { key: "tours",    label: "Virtual Tours",  value: "3D · Video",      sub: "Matterport / YT", section: "tours",    icon: Video },
-          { key: "consult",  label: "Book Doug",       value: "Free intro",      sub: "REALTOR® · BCFSA", section: "consult",  icon: CalendarClock },
+          { key: "consult",  label: "Consultation",   value: "No Charge Consultation", sub: "REALTOR® · BCFSA", section: "consult",  icon: CalendarClock },
         ].map(q => {
           const Ic = q.icon;
           return (
@@ -710,7 +710,7 @@ const ListingCard = ({ l }) => {
 };
 
 // ── Insights Panels ────────────────────────────────────────────────────────
-const useInsights = (city) => {
+const useInsights = (city, propType) => {
   const [data, setData] = useState(null);
   useEffect(() => {
     if (!city) return;
@@ -718,12 +718,14 @@ const useInsights = (city) => {
     setData(null);
     (async () => {
       try {
-        const r = await fetch(`${API}/insights?city=${encodeURIComponent(city)}`);
+        const p = new URLSearchParams({ city });
+        if (propType) p.set("property_type", propType);
+        const r = await fetch(`${API}/insights?${p}`);
         if (r.ok && !cancelled) setData(await r.json());
       } catch { /* keep null */ }
     })();
     return () => { cancelled = true; };
-  }, [city]);
+  }, [city, propType]);
   return data;
 };
 
@@ -794,7 +796,7 @@ const SellerInsightsPanel = () => <InsightsPanel role="seller"/>;
 const InsightsPanel = ({ role }) => {
   const [city, setCity] = useState("Vancouver");
   const [propType, setPropType] = useState("");
-  const data = useInsights(city);
+  const data = useInsights(city, propType);
   const history = useInsightsHistory(city, propType);
   const [comps, setComps] = useState(null);
   useEffect(() => {
