@@ -20,7 +20,15 @@ import {
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const DOOGIE_LAPTOP_URL = "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/vo8679bv_Doogie%20Laptop.png";
+// Doogie mascot library (all transparent PNGs served from /public/doogie/)
+const DOOGIE = {
+  laptop:       "/doogie/laptop.png",         // hero on Search panel
+  celebrating:  "/doogie/celebrating.png",    // success screens
+  thinking:     "/doogie/thinking.png",       // empty states / Ask drawer welcome
+  pointingLeft: "/doogie/pointing_left.png",  // form guidance / REALTOR® gate
+  pointingRight:"/doogie/pointing_right.png", // CTA nudges
+};
+const DOOGIE_LAPTOP_URL = DOOGIE.laptop;
 const SAVED_HOMES_KEY = "ez_saved_homes";
 
 // Doug's primary service area (BCFSA licensing) — anything outside triggers
@@ -730,9 +738,17 @@ const ConsultPanel = () => {
 
   if (submitted) {
     return <div style={panelBase}>
-      <h2 style={{ color: C.navy }}>✅ Consultation request received.</h2>
-      <p style={{ color: C.muted }}>Doug will reach out within one business day. You'll always receive a confirmation email (with an easy-unsubscribe footer) — that's CASL by design.</p>
-      <button onClick={() => { setStep("realtor_check"); setSubmitted(null); }} style={btnGhost}>Start another request</button>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "12px 0 8px" }}>
+        <img src={DOOGIE.celebrating} alt="Doogie celebrating"
+          data-testid="dash-consult-success-doogie"
+          style={{ width: 200, height: "auto", marginBottom: 12, filter: "drop-shadow(0 6px 18px rgba(15,42,91,0.2))" }}/>
+        <h2 style={{ color: C.navy, margin: 0 }}>Consultation request received!</h2>
+        <p style={{ color: C.muted, maxWidth: 520, lineHeight: 1.5, marginTop: 10 }}>
+          Doug will personally follow up within one business day.
+          You'll receive a confirmation email shortly (with an easy-unsubscribe footer — that's CASL by design).
+        </p>
+        <button onClick={() => { setStep("realtor_check"); setSubmitted(null); }} style={btnGhost}>Start another request</button>
+      </div>
     </div>;
   }
 
@@ -742,11 +758,19 @@ const ConsultPanel = () => {
       <p style={{ color: C.muted, maxWidth: 640, lineHeight: 1.5 }}>
         Before we proceed, one important compliance question required by the <strong>CREA Code of Ethics</strong>:
       </p>
-      <div style={{ background: "#FEF3C7", border: "1px solid #F59E0B", padding: 20, borderRadius: 12, marginTop: 16, maxWidth: 640 }}>
-        <strong style={{ fontSize: 16 }}>Are you currently working with a REALTOR®?</strong>
-        <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
-          <button data-testid="dash-realtor-yes" onClick={() => setStep("declined")} style={{...btnPrimary, background: "#DC2626", justifyContent: "center", flex: 1}}>Yes — I'm working with one</button>
-          <button data-testid="dash-realtor-no" onClick={() => setStep("intent")} style={{...btnPrimary, background: C.green, justifyContent: "center", flex: 1}}>No</button>
+      <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 20, alignItems: "center", maxWidth: 780, marginTop: 16 }}>
+        <img src={DOOGIE.pointingLeft} alt="Doogie pointing"
+          data-testid="dash-realtor-gate-doogie"
+          style={{ width: "100%", maxWidth: 160, height: "auto", filter: "drop-shadow(0 6px 16px rgba(15,42,91,0.18))" }}/>
+        <div style={{ background: "#FEF3C7", border: "1px solid #F59E0B", padding: 20, borderRadius: 12 }}>
+          <strong style={{ fontSize: 16 }}>Are you currently working with a REALTOR®?</strong>
+          <div style={{ fontSize: 12, color: "#78350F", marginTop: 6, lineHeight: 1.4 }}>
+            The CREA Code of Ethics prevents us from interfering with an existing client relationship. Your honest answer here keeps everyone on the right side of the rules.
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 14 }}>
+            <button data-testid="dash-realtor-yes" onClick={() => setStep("declined")} style={{...btnPrimary, background: "#DC2626", justifyContent: "center", flex: 1}}>Yes — I'm working with one</button>
+            <button data-testid="dash-realtor-no" onClick={() => setStep("intent")} style={{...btnPrimary, background: C.green, justifyContent: "center", flex: 1}}>No</button>
+          </div>
         </div>
       </div>
     </div>
@@ -870,8 +894,13 @@ const AskDoogieDrawer = ({ open, onClose }) => {
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
           {history.length === 0 && (
-            <div style={{ background: C.mist, padding: 12, borderRadius: 10, fontSize: 13, color: C.navy }}>
-              Ask me anything about BC real estate — glossary terms, communities, market snapshots. I return only what's in our verified sources.
+            <div style={{ background: C.mist, padding: 16, borderRadius: 10, fontSize: 13, color: C.navy, display: "flex", alignItems: "center", gap: 14 }}>
+              <img src={DOOGIE.thinking} alt="Doogie thinking"
+                data-testid="dash-ask-welcome-doogie"
+                style={{ width: 84, height: 84, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))" }}/>
+              <div style={{ lineHeight: 1.5 }}>
+                Ask me anything about BC real estate — glossary terms, communities, market snapshots. I only surface what's in our verified sources — never invent an answer.
+              </div>
             </div>
           )}
           {history.map((m, i) => (
@@ -953,7 +982,16 @@ const FormField = ({ label, children }) => (
 );
 
 const EmptyBox = ({ children }) => (
-  <div style={{ background: "#fff", border: "1px dashed #DDE6FA", padding: 24, borderRadius: 12, textAlign: "center", color: C.muted, fontSize: 13 }}>{children}</div>
+  <div style={{
+    background: "#fff", border: "1px dashed #DDE6FA", padding: 24, borderRadius: 12,
+    color: C.muted, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 20,
+    flexWrap: "wrap",
+  }}>
+    <img src={DOOGIE.thinking} alt="Doogie thinking"
+      data-testid="dash-empty-doogie"
+      style={{ width: 96, height: 96, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.12))" }}/>
+    <div style={{ maxWidth: 480, textAlign: "left", lineHeight: 1.5 }}>{children}</div>
+  </div>
 );
 
 const SkeletonGrid = () => (
