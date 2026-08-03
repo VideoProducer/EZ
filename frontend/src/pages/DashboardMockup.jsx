@@ -125,6 +125,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       <Sidebar section={section} setSection={setSection} onAsk={() => setAskOpen(true)}/>
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <HomeComplianceBanner/>
+        <DashboardBackHomeBar/>
         <TopBar section={section} homeVariant={homeVariant}/>
         <main style={{ padding: "24px 32px", flex: 1, overflowX: "hidden" }}>
           <Panel section={section} setSection={setSection} homeVariant={homeVariant} onAsk={() => setAskOpen(true)}/>
@@ -649,6 +650,138 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
   );
 };
 
+// ── ListingsMap — interactive Leaflet map that (a) defaults to Doug LeMaire's
+//   Maple Ridge business address when no city filter is active, (b) recenters
+//   to the searched city, and (c) drops a price-tag marker for every listing
+//   returned by the CREA DDF® query that has valid lat/lon. Click a marker
+//   → opens the listing detail in a new tab.
+const DOUG_ADDRESS = { lat: 49.2124, lon: -122.5946, label: "Doug LeMaire · Maple Ridge" };
+
+const _leafletCssInjected = { current: false };
+const ensureLeafletCss = () => {
+  if (_leafletCssInjected.current || typeof document === "undefined") return;
+  if (!document.querySelector('link[href*="leaflet"]')) {
+    const l = document.createElement("link");
+    l.rel = "stylesheet";
+    l.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(l);
+  }
+  _leafletCssInjected.current = true;
+};
+
+const ListingsMap = ({ city, listings }) => {
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersLayerRef = useRef(null);
+  const centerCacheRef = useRef({});
+
+  useEffect(() => {
+    ensureLeafletCss();
+    let cancelled = false;
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (cancelled || !mapContainerRef.current) return;
+      if (mapRef.current) return; // already initialized
+      const map = L.map(mapContainerRef.current, {
+        center: [DOUG_ADDRESS.lat, DOUG_ADDRESS.lon],
+        zoom: 12, scrollWheelZoom: false,
+      });
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      L.marker([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], {
+        title: DOUG_ADDRESS.label,
+      }).addTo(map).bindPopup(`<strong>${DOUG_ADDRESS.label}</strong><br/><em>Doug LeMaire · REALTOR®</em>`);
+      markersLayerRef.current = L.layerGroup().addTo(map);
+      mapRef.current = map;
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Recenter on city change (uses cached geocode or falls back to first listing lat/lon)
+  useEffect(() => {
+    (async () => {
+      const map = mapRef.current;
+      if (!map) return;
+      if (!city) {
+        map.setView([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 12);
+        return;
+      }
+      const key = city.toLowerCase().trim();
+      let center = centerCacheRef.current[key];
+      if (!center) {
+        // 1. Try to derive from a listing with lat/lon
+        const hit = (listings || []).find(l => l.lat && l.lon);
+        if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 12 };
+      }
+      if (!center) {
+        // 2. Fallback: hit OpenStreetMap Nominatim (rate-limited, so cached)
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ", British Columbia, Canada")}&format=json&limit=1`);
+          const j = await r.json();
+          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 11 };
+        } catch {}
+      }
+      if (center) {
+        centerCacheRef.current[key] = center;
+        map.setView([center.lat, center.lon], center.zoom || 12);
+      }
+    })();
+  }, [city, listings]);
+
+  // Redraw listing markers whenever listings change
+  useEffect(() => {
+    (async () => {
+      const map = mapRef.current;
+      const layer = markersLayerRef.current;
+      if (!map || !layer) return;
+      const L = (await import("leaflet")).default;
+      layer.clearLayers();
+      const pts = (listings || []).filter(l => l.lat && l.lon);
+      if (!pts.length) return;
+      const priceIcon = (price) => L.divIcon({
+        className: "eztofind-price-marker",
+        html: `<div style="background:${C.brandBlue};color:#fff;border:2px solid #fff;border-radius:14px;padding:3px 8px;font-weight:800;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.35);white-space:nowrap;font-family:Inter,system-ui,sans-serif;">${fmtPrice(price)}</div>`,
+        iconSize: [70, 24],
+        iconAnchor: [35, 12],
+      });
+      const bounds = [];
+      pts.forEach(l => {
+        const m = L.marker([l.lat, l.lon], { icon: priceIcon(l.list_price) })
+          .addTo(layer)
+          .bindPopup(
+            `<div style="min-width:180px;font-family:Inter,system-ui,sans-serif;font-size:12px;">
+              <div style="font-weight:800;color:#0F2A5B;font-size:13px;">${fmtPrice(l.list_price)}</div>
+              <div style="color:#374151;margin-top:2px;">${(l.unparsed_address || "").replace(/</g, "")}</div>
+              <div style="color:#6B7280;margin-top:2px;">${l.beds || "—"}bd · ${l.baths || "—"}ba · ${l.property_type || ""}</div>
+              ${l.realtor_ca_url
+                ? `<a href="${l.realtor_ca_url}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;color:#0A3D99;font-weight:700;">View on realtor.ca ↗</a>`
+                : ""}
+             </div>`
+          );
+      });
+      // Fit to markers (but don't override too aggressively — cap zoom)
+      if (pts.length > 1) {
+        const b = pts.reduce((acc, p) => { acc.push([p.lat, p.lon]); return acc; }, []);
+        map.fitBounds(b, { maxZoom: 13, padding: [30, 30] });
+      }
+    })();
+  }, [listings]);
+
+  return (
+    <div ref={mapContainerRef} data-testid="dash-search-map"
+      style={{ width: "100%", height: 320, borderRadius: 8, overflow: "hidden", border: "1px solid #E5E7EB" }}/>
+  );
+};
+
+const fmtPrice = (n) => {
+  if (!n) return "—";
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${n}`;
+};
+
+
 const SearchPanel = () => {
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
@@ -703,27 +836,17 @@ const SearchPanel = () => {
       <div>
         <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <strong style={{ color: C.navy }}>Interactive map</strong>
-            <span style={{ fontSize: 11, color: C.muted }}>Live · OpenStreetMap</span>
+            <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : "· Doug's office"}</strong>
+            <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
           </div>
-          <iframe
-            title="BC listings map"
-            src={`https://www.google.com/maps?q=${encodeURIComponent(
-              city
-                ? `${city}, British Columbia real estate`
-                : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC"
-            )}&z=${city ? 11 : 14}&output=embed`}
-            style={{ width: "100%", height: 260, border: 0, borderRadius: 8 }}
-            loading="lazy"
-            data-testid="dash-search-map"
-          />
+          <ListingsMap city={city} listings={results?.listings || []}/>
           <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
             <a
-              href="https://www.google.com/maps?q=Doug+LeMaire+REALTOR,+22374+Lougheed+Hwy,+Maple+Ridge+BC"
+              href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
               target="_blank" rel="noopener noreferrer"
               style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
               data-testid="dash-search-map-open"
-            >Open in Maps ↗</a>
+            >Open in Google Maps ↗</a>
           </div>
         </div>
         <ResultsGrid results={results} loading={loading}/>
@@ -1876,6 +1999,31 @@ const AskDoogieDrawer = ({ open, onClose }) => {
 //   homepage. Matches the classic-home compliance strip and keeps the BCFSA
 //   "not-advice" educational disclaimer front-and-centre before the user
 //   engages with any card. Same wording as the production /classic-home.
+// ── DashboardBackHomeBar — matches the classic `<BackHomeBar/>` in App.js so
+//   the two navigation styles (dashboard shell + classic AppLayout) both
+//   surface "← Back" and "🏠 Home" in the SAME visual location on every page.
+const DashboardBackHomeBar = () => {
+  const nav = useNavigate();
+  return (
+    <div data-testid="dash-back-home-bar" style={{
+      background: "#fff", borderBottom: "1px solid rgba(15,42,91,0.06)",
+      padding: "8px 32px", display: "flex", gap: 8, alignItems: "center",
+    }}>
+      <button onClick={() => nav(-1)} data-testid="dash-btn-back" style={{
+        background: "transparent", border: "1px solid #DDE6FA", color: C.navy,
+        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+        cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
+      }}>← Back</button>
+      <Link to="/" data-testid="dash-btn-home" style={{
+        background: "transparent", border: "1px solid #DDE6FA", color: C.navy,
+        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+        textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
+      }}>🏠 Home</Link>
+    </div>
+  );
+};
+
+
 const HomeComplianceBanner = () => (
   <div data-testid="dash-home-compliance-banner" style={{
     background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
