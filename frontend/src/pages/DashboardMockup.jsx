@@ -11,7 +11,7 @@
 //  step so the mockup faithfully mirrors what a live production build would
 //  look like.
 // ============================================================================
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useContext, createContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators } from "../App";
 import {
@@ -101,9 +101,33 @@ const HeroIntro = () => (
   </section>
 );
 
+// Search filter context — lifts filter state up so the Sidebar can host the
+// FILTERS form (below "Ask Doogie") while the main content area shows the
+// map + results driven by the same state.
+const SearchFiltersContext = createContext(null);
+
 export default function DashboardMockup({ homeVariant = "search" }) {
   const [section, setSection] = useState("search");
   const [askOpen, setAskOpen] = useState(false);
+  // Lifted search state (previously local to SearchPanel). Enables the
+  // FILTERS form to live in the Sidebar while map + results render in main.
+  const [filters, setFilters] = useState({ q: "", city: "", beds: "", priceMax: "" });
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const runSearch = async () => {
+    setLoading(true);
+    try {
+      const p = new URLSearchParams({ limit: "24", sort: "newest" });
+      if (filters.q) p.set("q", filters.q);
+      if (filters.city) p.set("city", filters.city);
+      if (filters.beds) p.set("beds_min", filters.beds);
+      if (filters.priceMax) p.set("price_max", filters.priceMax);
+      const r = await fetch(`${API}/listings?${p}`);
+      setResults(await r.json());
+    } finally { setLoading(false); }
+  };
+  // First-load fetch (no filters).
+  useEffect(() => { runSearch(); /* eslint-disable-next-line */ }, []);
   // First-visit sidebar toast — appears once, dismissible, remembers via localStorage
   const [showToast, setShowToast] = useState(false);
   useEffect(() => {
@@ -119,6 +143,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     setShowToast(false);
   };
   return (
+    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch }}>
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh", display: "grid",
       gridTemplateColumns: "260px 1fr", background: C.cream, color: C.navy,
@@ -138,6 +163,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       <AskDoogieDrawer open={askOpen} onClose={() => setAskOpen(false)}/>
       {showToast && <FirstVisitToast onDismiss={dismissToast} setSection={setSection}/>}
     </div>
+    </SearchFiltersContext.Provider>
   );
 }
 
@@ -241,7 +267,103 @@ const Sidebar = ({ section, setSection, onAsk }) => {
         );
       })}
     </nav>
+    {section === "search" && <SidebarFilters/>}
   </aside>
+  );
+};
+
+// ── Sidebar Filters — the FILTERS card lives inside the sidebar, directly
+// below the "Ask Doogie" nav row, and only appears on the Search view. Uses
+// the shared SearchFiltersContext so both this form and the main-area map +
+// results panel are driven by the same state.
+const SidebarFilters = () => {
+  const ctx = useContext(SearchFiltersContext);
+  if (!ctx) return null;
+  const { filters, setFilters, runSearch } = ctx;
+  const set = (k, v) => setFilters(prev => ({ ...prev, [k]: v }));
+  const onSubmit = (e) => { e.preventDefault(); runSearch(); };
+  // White inputs sit on the navy sidebar. Kept compact so all four inputs
+  // + submit fit inside the 260px sidebar column without needing a scroll.
+  const sInp = {
+    width: "100%", padding: "8px 10px", borderRadius: 8,
+    border: "1px solid rgba(255,255,255,0.25)",
+    background: "rgba(255,255,255,0.10)", color: "#fff",
+    fontSize: 12.5, fontWeight: 600, outline: "none",
+  };
+  const sLabel = {
+    fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.65)",
+    textTransform: "uppercase", letterSpacing: 0.5,
+    display: "block", marginBottom: 5, marginTop: 10,
+  };
+  return (
+    <form onSubmit={onSubmit} data-testid="dash-search-form"
+      style={{
+        marginTop: 18, paddingTop: 16,
+        borderTop: "1px solid rgba(255,255,255,0.12)",
+      }}>
+      <div style={{
+        fontSize: 11, fontWeight: 800, letterSpacing: 0.6,
+        color: C.gold, textTransform: "uppercase", marginBottom: 4,
+      }}>Filters</div>
+      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>
+        Live CREA DDF® · exact matches only
+      </div>
+      <label style={sLabel}>Natural language (Doogie parses)</label>
+      <input
+        value={filters.q}
+        onChange={e => set("q", e.target.value)}
+        placeholder="3 bed condo in kelowna"
+        data-testid="dash-search-q"
+        style={sInp}
+      />
+      <label style={sLabel}>City (BC, anywhere)</label>
+      <input
+        value={filters.city}
+        onChange={e => set("city", e.target.value)}
+        placeholder="Vancouver / Osoyoos"
+        data-testid="dash-search-city"
+        style={sInp}
+      />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div>
+          <label style={sLabel}>Beds (min)</label>
+          <input
+            type="number" min="0"
+            value={filters.beds}
+            onChange={e => set("beds", e.target.value)}
+            data-testid="dash-search-beds"
+            style={sInp}
+          />
+        </div>
+        <div>
+          <label style={sLabel}>Max price ($)</label>
+          <input
+            type="number" min="0"
+            value={filters.priceMax}
+            onChange={e => set("priceMax", e.target.value)}
+            placeholder="900000"
+            data-testid="dash-search-price"
+            style={sInp}
+          />
+        </div>
+      </div>
+      <button
+        type="submit"
+        data-testid="dash-search-submit"
+        style={{
+          width: "100%", marginTop: 14, padding: "10px 12px", borderRadius: 999,
+          background: C.brandBlue, color: "#fff", border: "none",
+          fontWeight: 800, fontSize: 13, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          boxShadow: "0 4px 12px rgba(30,79,207,0.35)",
+        }}
+      >
+        <Search size={13}/> Search CREA DDF®
+      </button>
+      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginTop: 8, lineHeight: 1.4 }}>
+        No substitutions, no interpretation.
+      </div>
+    </form>
   );
 };
 
@@ -875,79 +997,30 @@ const fmtPrice = (n) => {
 
 
 const SearchPanel = () => {
-  const [q, setQ] = useState("");
-  const [city, setCity] = useState("");
-  const [beds, setBeds] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const run = async (e) => {
-    if (e) e.preventDefault();
-    setLoading(true);
-    try {
-      const p = new URLSearchParams({ limit: "24", sort: "newest" });
-      if (q) p.set("q", q);
-      if (city) p.set("city", city);
-      if (beds) p.set("beds_min", beds);
-      if (priceMax) p.set("price_max", priceMax);
-      const r = await fetch(`${API}/listings?${p}`);
-      setResults(await r.json());
-    } finally { setLoading(false); }
-  };
-  useEffect(() => { run(); /* first-load, no filters */ /* eslint-disable-next-line */ }, []);
+  const ctx = useContext(SearchFiltersContext);
+  const { filters, results, loading } = ctx || { filters: {}, results: null, loading: false };
+  const { city } = filters;
   return (
     <>
       <HeroIntro/>
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Results + Map (full width now that Filters sits below) */}
-      <div>
-        <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
-            <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
-          </div>
-          <ListingsMap city={city} listings={results?.listings || []}/>
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
-            <a
-              href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
-              data-testid="dash-search-map-open"
-            >Open in Google Maps ↗</a>
-          </div>
+      {/* Map + Results — Filters live in the sidebar so this pane can use the
+          full main-content width. */}
+      <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
+          <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
         </div>
-        <ResultsGrid results={results} loading={loading}/>
+        <ListingsMap city={city} listings={results?.listings || []}/>
+        <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
+          <a
+            href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
+            data-testid="dash-search-map-open"
+          >Open in Google Maps ↗</a>
+        </div>
       </div>
-
-      {/* Filters — now placed below the map+listings, horizontal layout so it
-          only claims one row of vertical space. The map above expands to
-          fill the full main-content width. */}
-      <form onSubmit={run} data-testid="dash-search-form" style={{ background: "#fff", padding: 18, borderRadius: 12, border: "1px solid #E5E7EB" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 14, textTransform: "uppercase", letterSpacing: 0.5, color: C.muted }}>Filters</h3>
-          <span style={{ fontSize: 11, color: C.muted }}>
-            Results are <strong>exact matches only</strong> from the CREA DDF® feed — no substitutions, no interpretation.
-          </span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 0.7fr 1fr auto", gap: 10, alignItems: "end" }}>
-          <FormField label="Natural language (Doogie parses)">
-            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="e.g. 3 bed condo in kelowna with pool" data-testid="dash-search-q" style={inp}/>
-          </FormField>
-          <FormField label="City (BC, anywhere)">
-            <input value={city} onChange={e=>setCity(e.target.value)} placeholder="Vancouver / Osoyoos / Prince George" data-testid="dash-search-city" style={inp}/>
-          </FormField>
-          <FormField label="Beds (min)">
-            <input type="number" value={beds} onChange={e=>setBeds(e.target.value)} data-testid="dash-search-beds" style={inp} min="0"/>
-          </FormField>
-          <FormField label="Max price ($)">
-            <input type="number" value={priceMax} onChange={e=>setPriceMax(e.target.value)} placeholder="900000" data-testid="dash-search-price" style={inp} min="0"/>
-          </FormField>
-          <button type="submit" data-testid="dash-search-submit" style={{ ...btnPrimary, marginTop: 0, whiteSpace: "nowrap" }}>
-            <Search size={14}/> Search CREA DDF®
-          </button>
-        </div>
-      </form>
-    </div>
+      <ResultsGrid results={results} loading={loading}/>
     </>
   );
 };
