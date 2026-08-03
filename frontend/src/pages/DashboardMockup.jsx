@@ -268,6 +268,101 @@ const Panel = ({ section, setSection, homeVariant, onAsk }) => {
 };
 
 // ── Search Panel ───────────────────────────────────────────────────────────
+// ── CityAutocomplete — free-text input over the full 240-community BC set.
+//   Types like Kamloops, Nanaimo, Fernie, Prince Rupert, Ucluelet — anything
+//   Doogie's CREA DDF feed knows about. Suggests up to 8 matches; Enter or
+//   click picks a city and refires the buyer/seller snapshot queries.
+const CityAutocomplete = ({ regions, value, onPick }) => {
+  const [q, setQ] = useState("");
+  const [focused, setFocused] = useState(false);
+  const [hi, setHi] = useState(0);
+  const boxRef = useRef(null);
+  useEffect(() => { setQ(value || ""); }, [value]);
+  useEffect(() => {
+    const handler = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setFocused(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  const allCities = useMemo(() => {
+    if (!regions) return [];
+    const seen = new Set();
+    const out = [];
+    Object.entries(regions).forEach(([region, names]) => {
+      (names || []).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); out.push({ name: n, region }); } });
+    });
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  }, [regions]);
+  const trimmed = q.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    if (!trimmed) return [];
+    const starts = [], contains = [];
+    for (const c of allCities) {
+      const lc = c.name.toLowerCase();
+      if (lc === trimmed) continue;
+      if (lc.startsWith(trimmed)) starts.push(c);
+      else if (lc.includes(trimmed)) contains.push(c);
+      if (starts.length + contains.length >= 40) break;
+    }
+    return [...starts, ...contains].slice(0, 8);
+  }, [allCities, trimmed]);
+  const commit = (name) => { setQ(name); onPick(name); setFocused(false); };
+  const onKey = (e) => {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setHi((hi + 1) % suggestions.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setHi((hi - 1 + suggestions.length) % suggestions.length); }
+    else if (e.key === "Enter") { e.preventDefault(); commit(suggestions[hi].name); }
+    else if (e.key === "Escape") setFocused(false);
+  };
+  return (
+    <div ref={boxRef} style={{ position: "relative", maxWidth: 380 }}>
+      <input
+        value={q}
+        onChange={e => { setQ(e.target.value); setFocused(true); setHi(0); }}
+        onFocus={() => setFocused(true)}
+        onKeyDown={onKey}
+        placeholder="Type any BC city (Kamloops, Nanaimo, Fernie…)"
+        data-testid="dash-home-city-input"
+        style={{
+          width: "100%", padding: "10px 14px", borderRadius: 10,
+          border: `1px solid ${focused ? C.brandBlue : "#DDE6FA"}`,
+          fontSize: 13, color: C.navy, fontWeight: 600, background: "#fff",
+          outline: "none",
+        }}
+      />
+      {focused && suggestions.length > 0 && (
+        <div data-testid="dash-home-city-suggestions" style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20,
+          background: "#fff", border: "1px solid #DDE6FA", borderRadius: 10,
+          boxShadow: "0 6px 20px rgba(15,42,91,0.12)", overflow: "hidden",
+        }}>
+          {suggestions.map((s, i) => (
+            <div
+              key={s.name}
+              onMouseEnter={() => setHi(i)}
+              onMouseDown={(e) => { e.preventDefault(); commit(s.name); }}
+              data-testid={`dash-home-city-sugg-${s.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+              style={{
+                padding: "8px 12px", cursor: "pointer",
+                background: hi === i ? "#F0F4FB" : "#fff",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                fontSize: 12.5, color: C.navy,
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>{s.name}</span>
+              <span style={{ fontSize: 10, color: C.muted }}>{s.region}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ marginTop: 8, fontSize: 11, color: C.muted, display: "flex", alignItems: "center", gap: 6 }}>
+        Currently showing:
+        <span style={{ background: C.brandBlue, color: "#fff", padding: "2px 10px", borderRadius: 999, fontWeight: 700, fontSize: 11 }}>{value || "—"}</span>
+      </div>
+    </div>
+  );
+};
+
+
 // ── Dashboard Home Tiles (preview variant) ─────────────────────────────────
 // Alternate landing view that swaps the yellow Doogie hero + massive listings
 // grid for a SaaS-style tile dashboard: live buyer/seller KPIs for Vancouver,
@@ -410,23 +505,8 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
             <h3 style={tileTitle}>Filter snapshots</h3>
             <span style={{ fontSize: 11, color: C.muted }}>Powers both snapshots ↑</span>
           </div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>City</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {["Vancouver","Burnaby","Surrey","Richmond","Coquitlam","Maple Ridge","Squamish","Whistler","Kelowna"].map(c => (
-              <button
-                key={c}
-                data-testid={`dash-home-city-${slugify(c)}`}
-                onClick={() => setCity(c)}
-                style={{
-                  padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-                  cursor: "pointer",
-                  background: city === c ? C.blue : "#fff",
-                  color: city === c ? "#fff" : C.navy,
-                  border: `1px solid ${city === c ? C.blue : "#DDE6FA"}`,
-                }}
-              >{c}</button>
-            ))}
-          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>City <span style={{ opacity: 0.6, fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>· any BC community</span></div>
+          <CityAutocomplete regions={regions} value={city} onPick={setCity}/>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 14, marginBottom: 6 }}>Property type</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -1513,6 +1593,118 @@ const ConsultPanel = () => {
 };
 
 // ── Ask Doogie Drawer ──────────────────────────────────────────────────────
+// ── DoogieMessage — light-weight renderer for Doogie's assistant replies.
+//   Doogie is prompted to emit markdown (## headings, **bold**, "- bullets")
+//   and the literal phrase "Referral REALTOR® link" whenever it suggests
+//   connecting the user to a licensed REALTOR® outside Doug's service area.
+//   This renderer:
+//     • Turns every occurrence of "Referral REALTOR® link" (with or without
+//       markdown-bracket wrapping, e.g. `[Referral REALTOR® link](#)`) into
+//       a real orange CTA button that navigates to /referral-request.
+//     • Whenever that phrase appears, prepends the out-of-service-area
+//       qualifier chip so the user always sees WHY they're being referred.
+//     • Renders `## heading`, `**bold**`, `- bullet`, blank lines as native
+//       React nodes. Everything else stays plain text.
+//   Deliberately minimal (no external markdown lib) — keeps bundle small
+//   and gives Doug exact control over the visual rules.
+const REFERRAL_PHRASE_RE = /(?:\[Referral REALTOR® link\]\([^)]*\)|Referral REALTOR® link)/gi;
+
+const DoogieReferralButton = () => {
+  const nav = useNavigate();
+  return (
+    <div style={{ marginTop: 12 }} data-testid="doogie-referral-cta">
+      <div style={{
+        background: "#FEF3C7", border: "1px solid #F59E0B",
+        padding: "10px 12px", borderRadius: 10, fontSize: 12,
+        color: "#7A3E0A", lineHeight: 1.5, marginBottom: 10,
+      }}>
+        <strong>Outside Doug's service area?</strong> Doug's primary practice is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor. For anywhere else in BC we'll hand you off to a licensed local REALTOR® through his referral network — no obligation, no cost to you.
+      </div>
+      <button
+        type="button"
+        onClick={() => nav("/referral-request")}
+        data-testid="doogie-referral-button"
+        style={{
+          background: C.brandGold, color: C.navy, border: "none",
+          padding: "10px 18px", borderRadius: 999, fontWeight: 800,
+          fontSize: 13, cursor: "pointer", boxShadow: "0 3px 10px rgba(245,166,35,0.35)",
+          display: "inline-flex", alignItems: "center", gap: 6,
+        }}
+      >🐾 Get a Referral REALTOR® →</button>
+    </div>
+  );
+};
+
+const DoogieMessage = ({ text }) => {
+  if (!text) return null;
+  const hasReferral = REFERRAL_PHRASE_RE.test(text);
+  REFERRAL_PHRASE_RE.lastIndex = 0;
+  const cleaned = text.replace(REFERRAL_PHRASE_RE, "").replace(/\n{3,}/g, "\n\n").trim();
+
+  const lines = cleaned.split("\n");
+  const blocks = [];
+  let list = null;
+  const flushList = () => { if (list) { blocks.push({ kind: "ul", items: list }); list = null; } };
+  lines.forEach((raw) => {
+    const line = raw.trimEnd();
+    if (/^##\s+/.test(line)) { flushList(); blocks.push({ kind: "h3", text: line.replace(/^##\s+/, "") }); return; }
+    if (/^#\s+/.test(line))  { flushList(); blocks.push({ kind: "h2", text: line.replace(/^#\s+/, "") }); return; }
+    if (/^-\s+/.test(line))  { if (!list) list = []; list.push(line.replace(/^-\s+/, "")); return; }
+    if (line.trim() === "")  { flushList(); blocks.push({ kind: "space" }); return; }
+    if (/^---+$/.test(line.trim())) { flushList(); blocks.push({ kind: "hr" }); return; }
+    flushList();
+    blocks.push({ kind: "p", text: line });
+  });
+  flushList();
+
+  const renderInline = (str, keyBase = "") => {
+    const parts = [];
+    let last = 0;
+    const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let m;
+    while ((m = linkRe.exec(str))) {
+      if (m.index > last) parts.push({ t: "text", v: str.slice(last, m.index) });
+      parts.push({ t: "link", label: m[1], href: m[2] });
+      last = m.index + m[0].length;
+    }
+    if (last < str.length) parts.push({ t: "text", v: str.slice(last) });
+
+    const out = [];
+    parts.forEach((p, i) => {
+      if (p.t === "link") {
+        const isInternal = p.href.startsWith("/");
+        out.push(isInternal
+          ? <Link key={`${keyBase}-l${i}`} to={p.href} style={{ color: C.brandBlue, fontWeight: 700 }}>{p.label}</Link>
+          : <a key={`${keyBase}-l${i}`} href={p.href} target="_blank" rel="noreferrer" style={{ color: C.brandBlue, fontWeight: 700 }}>{p.label}</a>);
+      } else {
+        const chunks = p.v.split(/(\*\*[^*]+\*\*)/g);
+        chunks.forEach((c, j) => {
+          if (/^\*\*[^*]+\*\*$/.test(c)) out.push(<strong key={`${keyBase}-b${i}-${j}`} style={{ color: C.navy }}>{c.slice(2, -2)}</strong>);
+          else if (c) out.push(<React.Fragment key={`${keyBase}-t${i}-${j}`}>{c}</React.Fragment>);
+        });
+      }
+    });
+    return out;
+  };
+
+  return (
+    <>
+      {blocks.map((b, i) => {
+        if (b.kind === "h2") return <h2 key={i} style={{ margin: "10px 0 6px", fontSize: 16, color: C.navy, fontWeight: 800 }}>{renderInline(b.text, `h2-${i}`)}</h2>;
+        if (b.kind === "h3") return <h3 key={i} style={{ margin: "10px 0 6px", fontSize: 14, color: C.navy, fontWeight: 800 }}>{renderInline(b.text, `h3-${i}`)}</h3>;
+        if (b.kind === "ul") return <ul key={i} style={{ margin: "6px 0", paddingLeft: 20 }}>
+          {b.items.map((it, j) => <li key={j} style={{ marginBottom: 3 }}>{renderInline(it, `ul-${i}-${j}`)}</li>)}
+        </ul>;
+        if (b.kind === "hr") return <hr key={i} style={{ margin: "10px 0", border: "none", borderTop: "1px solid #E5E7EB" }}/>;
+        if (b.kind === "space") return <div key={i} style={{ height: 6 }}/>;
+        return <p key={i} style={{ margin: "4px 0", lineHeight: 1.5 }}>{renderInline(b.text, `p-${i}`)}</p>;
+      })}
+      {hasReferral && <DoogieReferralButton/>}
+    </>
+  );
+};
+
+
 const AskDoogieDrawer = ({ open, onClose }) => {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1620,8 +1812,11 @@ const AskDoogieDrawer = ({ open, onClose }) => {
               background: m.role === "user" ? C.blue : "#F1F5F9",
               color: m.role === "user" ? "#fff" : C.navy,
               alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-              fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap",
-            }}>{m.text}</div>
+              fontSize: 13, lineHeight: 1.45,
+              whiteSpace: m.role === "user" ? "pre-wrap" : "normal",
+            }}>
+              {m.role === "user" ? m.text : <DoogieMessage text={m.text}/>}
+            </div>
           ))}
           {busy && <div style={{ color: C.muted, fontStyle: "italic" }}>Doogie is thinking…</div>}
         </div>
