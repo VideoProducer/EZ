@@ -10538,6 +10538,111 @@ async def consultation_request(body: ConsultationRequest, request: Request):
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Admin views for consultation intakes. Backs the /admin/consultations page so
+# Doug can triage new leads without leaving the site and export a
+# CASL-compliant CSV audit trail for his brokerage records.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CONSULTATION_STATUSES = ("new", "contacted", "booked", "closed", "referred", "archived")
+
+
+@app.get("/api/admin/consultations", tags=["Consultations"])
+async def admin_list_consultations(
+    status: Optional[str] = None,
+    role: Optional[str] = None,
+    _=Depends(verify_admin),
+):
+    """List all consultation intakes, newest first. Optional filters by
+    status (new/contacted/booked/closed/referred/archived) and role
+    (buyer/seller)."""
+    q: dict = {}
+    if status and status in _CONSULTATION_STATUSES:
+        q["status"] = status
+    if role in ("buyer", "seller"):
+        q["role"] = role
+    docs = await db.consultation_requests.find(q, {"_id": 0}).sort("created_at", -1).limit(1000).to_list(1000)
+    # Normalize datetime → ISO string for JSON serialization safety.
+    for d in docs:
+        ca = d.get("created_at")
+        if hasattr(ca, "isoformat"):
+            d["created_at"] = ca.isoformat()
+    counts: dict = {"total": len(docs)}
+    for s in _CONSULTATION_STATUSES:
+        counts[s] = await db.consultation_requests.count_documents({"status": s})
+    return {"items": docs, "counts": counts}
+
+
+class ConsultationStatusUpdate(BaseModel):
+    status: str
+    note: Optional[str] = None
+
+
+@app.post("/api/admin/consultations/{cid}/status", tags=["Consultations"])
+async def admin_update_consultation_status(cid: str, body: ConsultationStatusUpdate, _=Depends(verify_admin)):
+    """Update the triage status of a consultation intake. Appends an audit
+    entry so Doug can prove chain-of-custody on any lead."""
+    if body.status not in _CONSULTATION_STATUSES:
+        raise HTTPException(status_code=400, detail=f"status must be one of {_CONSULTATION_STATUSES}")
+    now = datetime.now(timezone.utc).isoformat()
+    audit_entry = {"status": body.status, "at": now, "note": (body.note or "").strip() or None}
+    res = await db.consultation_requests.update_one(
+        {"id": cid},
+        {
+            "$set": {"status": body.status, "status_updated_at": now},
+            "$push": {"status_history": audit_entry},
+        },
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="consultation request not found")
+    return {"success": True, "id": cid, "status": body.status}
+
+
+@app.get("/api/admin/consultations.csv", tags=["Consultations"])
+async def admin_export_consultations_csv(
+    status: Optional[str] = None,
+    role: Optional[str] = None,
+    _=Depends(verify_admin),
+):
+    """Stream all consultation intakes as a CSV file. Includes CASL consent
+    and PIPA acknowledgement columns so Doug's brokerage records satisfy
+    audit requests."""
+    import csv, io
+    q: dict = {}
+    if status and status in _CONSULTATION_STATUSES:
+        q["status"] = status
+    if role in ("buyer", "seller"):
+        q["role"] = role
+    docs = await db.consultation_requests.find(q, {"_id": 0}).sort("created_at", -1).limit(5000).to_list(5000)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "created_at", "id", "role", "is_referral", "status",
+        "name", "email", "phone",
+        "preferred_contact", "preferred_time", "city",
+        "working_with_realtor", "casl_consent_at", "pipa_ack_at",
+        "ip", "user_agent",
+    ])
+    for d in docs:
+        ca = d.get("created_at")
+        ca_str = ca.isoformat() if hasattr(ca, "isoformat") else (ca or "")
+        writer.writerow([
+            ca_str, d.get("id", ""), d.get("role", ""),
+            "yes" if d.get("is_referral") else "no",
+            d.get("status", ""),
+            d.get("name", ""), d.get("email", ""), d.get("phone", ""),
+            d.get("preferred_contact", ""), d.get("preferred_time", ""), d.get("city", ""),
+            "yes" if d.get("working_with_realtor") else "no",
+            d.get("casl_consent_at", ""), d.get("pipa_ack_at", ""),
+            d.get("ip", "") or "", d.get("user_agent", "") or "",
+        ])
+    csv_bytes = buf.getvalue().encode("utf-8")
+    filename = f"eztofind-consultations-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.csv"
+    return Response(
+        content=csv_bytes,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/api/.well-known/ai-plugin.json", tags=["Doogie Tools API"])

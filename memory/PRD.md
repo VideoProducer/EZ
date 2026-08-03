@@ -1631,3 +1631,44 @@ Verified:
 ### Files touched
 - Modified backend/server.py: `_tour_host_family` + Matterport/YouTube/Vimeo-only filter in `/api/tours/library`, optional `city` scoping
 - Modified frontend/src/pages/VisualAgentDemo.jsx: PaneTour rewrite; PaneNeighbourhood, PaneBuyerInsights, PaneSellerLookup accept focusCity; RightPane derives focusCity from search state; grouped-section dropdown
+
+
+## Feb 8, 2026 — REALTOR® decline copy + Consultations admin page
+
+### 1. Updated REALTOR® representation decline message (P0)
+- File: `frontend/src/pages/DashboardMockup.jsx` (Consultation → "Yes" step).
+- Old text mentioned "CREA Code of Ethics Article 16" and framed the response as a hard rejection. New copy (verbatim from Doug):
+  > "If you're currently working with a REALTOR® under a signed representation agreement, that REALTOR® is the right person to bring this question to — they know your file and they're contracted to advise you on it. We won't step into that. If you're not under an agreement, or yours has ended, we're happy to help."
+- Second paragraph softened to invite general-information questions to Doogie without implying advice/representation.
+
+### 2. Consultation Admin View (P1)
+- New backend endpoints:
+  * `GET /api/admin/consultations` — list intakes with `status` + `role` filters, returns per-status counts.
+  * `POST /api/admin/consultations/{id}/status` — flip triage status (new → contacted → booked → referred → closed → archived) and append an audit entry to `status_history`.
+  * `GET /api/admin/consultations.csv` — streams a CASL/PIPA-compliant CSV audit trail (respects the same filters).
+- New frontend admin route: `/admin/consultations` (component `AdminConsultations` in `App.js`) with:
+  * Filter pills for status (with live counts) + role toggle
+  * Table row per intake with clickable email/phone, status pill, inline status dropdown, "Details" expander
+  * Expander surfaces CASL consent timestamps, PIPA ack, IP/UA and full status history
+  * "⬇ Export CSV" button downloads the file client-side
+- Sidebar entry "📝 Consultations" added right after Lead Triage in `AdminShell`.
+
+### Verified
+- Screenshot: decline message renders the new wording on the /Consultation → Yes step ✓
+- curl: `GET /api/admin/consultations` returns `{items, counts}` (2 intakes, 1 new / 1 contacted after test flip) ✓
+- curl: `POST /api/admin/consultations/{id}/status` returns 200 + persists ✓
+- curl: `GET /api/admin/consultations.csv` returns `text/csv; charset=utf-8` + Content-Disposition attachment ✓
+- Screenshot: /admin/consultations page renders sidebar highlight, filters, table, and CSV button ✓
+
+### Files touched
+- Modified `backend/server.py`: 3 new admin endpoints + `ConsultationStatusUpdate` model + `_CONSULTATION_STATUSES` tuple.
+- Modified `frontend/src/pages/DashboardMockup.jsx`: decline copy rewrite (step "declined" panel).
+- Modified `frontend/src/App.js`: `AdminConsultations` component, sidebar entry, `/admin/consultations` route.
+
+## Remaining Backlog (as of Feb 8, 2026)
+- P1: Submit Doogie to ChatGPT Store via `/api/.well-known/ai-plugin.json`
+- P2: Ask Doogie Markdown rendering (bold/bullets/headings) in SSE stream
+- P2: Multilingual Buyer/Seller Guides + Kiosk intros (zh-Hant, zh-Hans, pa, fa, pt-PT)
+- P3: Retroactively seed `insights_history` for full 90-day sparkline immediately
+- P3: Move "Coming Soon" local files to CDN/Object Storage
+- P3: Break down monolithic `server.py` and `App.js` into modular routers/components

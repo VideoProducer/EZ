@@ -4729,6 +4729,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/coming-soon")} className={active==="coming-soon"?"active":""} data-testid="admin-nav-coming-soon">🏛️ Coming Soon</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/lead-triage")} className={active==="lead-triage"?"active":""} data-testid="admin-nav-lead-triage">🎯 Lead Triage</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consultations")} className={active==="consultations"?"active":""} data-testid="admin-nav-consultations">📝 Consultations</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/realtors")} className={active==="realtors"?"active":""} data-testid="admin-nav-realtors">👥 REALTORS®</a>
@@ -5535,6 +5536,146 @@ const AdminEmailOutbox = () => {
     </table>
   </AdminShell>;
 };
+
+
+// ── Consultation intake triage. Reads from /api/admin/consultations, lets
+//   Doug flip status (new → contacted → booked → closed), and export the
+//   entire audit trail as a CSV so his brokerage records satisfy CASL /
+//   BCFSA audit requests.
+const AdminConsultations = () => {
+  const {headers} = useAdmin();
+  const [data, setData] = useState({items: [], counts: {total:0}});
+  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const [msg, setMsg] = useState("");
+  const load = () => {
+    if(!headers) return;
+    const qs = new URLSearchParams();
+    if(statusFilter) qs.set("status", statusFilter);
+    if(roleFilter) qs.set("role", roleFilter);
+    const url = `${API}/admin/consultations${qs.toString()?`?${qs}`:""}`;
+    axios.get(url, {headers}).then(r => setData(r.data)).catch(()=>{});
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [statusFilter, roleFilter, headers && headers.Authorization]);
+  const setStatus = async (id, status) => {
+    try {
+      await axios.post(`${API}/admin/consultations/${id}/status`, {status}, {headers});
+      setMsg(`Updated ${id.slice(0,8)}… → ${status}`);
+      load();
+    } catch { setMsg("Update failed — try again."); }
+    setTimeout(()=>setMsg(""), 2500);
+  };
+  const downloadCsv = async () => {
+    const qs = new URLSearchParams();
+    if(statusFilter) qs.set("status", statusFilter);
+    if(roleFilter) qs.set("role", roleFilter);
+    const url = `${API}/admin/consultations.csv${qs.toString()?`?${qs}`:""}`;
+    try {
+      const r = await axios.get(url, {headers, responseType: "blob"});
+      const blob = new Blob([r.data], {type: "text/csv;charset=utf-8"});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `eztofind-consultations-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link); link.click(); link.remove();
+    } catch { setMsg("CSV download failed."); setTimeout(()=>setMsg(""), 2500); }
+  };
+  const c = data.counts || {};
+  const pill = (s) => {
+    const map = {new:"#2563EB", contacted:"#7C3AED", booked:"#059669", closed:"#374151", referred:"#F59E0B", archived:"#9CA3AF"};
+    return <span style={{background: (map[s]||"#6B7280")+"22", color: map[s]||"#6B7280", padding:"0.15rem 0.55rem", borderRadius:999, fontSize:"0.72rem", fontWeight:700, textTransform:"uppercase", letterSpacing:0.4}}>{s}</span>;
+  };
+  return <AdminShell active="consultations">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.75rem"}}>
+      <div>
+        <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,marginBottom:"0.3rem"}}>Consultation Intakes</h1>
+        <p style={{color:"var(--muted)",margin:0}}>CASL + PIPA-compliant lead intakes from the homepage Consultation flow. {c.total||0} total.</p>
+      </div>
+      <button className="btn btn-primary" data-testid="admin-consultations-csv" onClick={downloadCsv} style={{padding:"0.6rem 1.1rem"}}>⬇ Export CSV</button>
+    </div>
+
+    <div style={{display:"flex",gap:"1rem",flexWrap:"wrap",margin:"1.25rem 0"}}>
+      {[
+        ["", "All", c.total],
+        ["new", "New", c.new],
+        ["contacted", "Contacted", c.contacted],
+        ["booked", "Booked", c.booked],
+        ["referred", "Referred", c.referred],
+        ["closed", "Closed", c.closed],
+        ["archived", "Archived", c.archived],
+      ].map(([v,l,n]) => (
+        <button key={l} onClick={()=>setStatusFilter(v)} className={statusFilter===v?"btn btn-primary":"btn btn-ghost"} data-testid={`admin-consultations-filter-${v||"all"}`} style={{padding:"0.35rem 0.9rem",fontSize:"0.82rem"}}>{l} ({n||0})</button>
+      ))}
+    </div>
+    <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem",alignItems:"center"}}>
+      <span style={{fontSize:"0.8rem",color:"var(--muted)"}}>Role:</span>
+      {[["","All"],["buyer","Buyer"],["seller","Seller"]].map(([v,l]) => (
+        <button key={l} onClick={()=>setRoleFilter(v)} className={roleFilter===v?"btn btn-primary":"btn btn-ghost"} style={{padding:"0.25rem 0.75rem",fontSize:"0.78rem"}}>{l}</button>
+      ))}
+      {msg && <span style={{marginLeft:"auto",color:"#059669",fontSize:"0.8rem",fontWeight:600}}>{msg}</span>}
+    </div>
+
+    <table className="admin-table" data-testid="admin-consultations-table">
+      <thead><tr>
+        <th>Received</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>City</th><th>Status</th><th style={{minWidth:220}}>Actions</th>
+      </tr></thead>
+      <tbody>
+        {(data.items||[]).length===0 ? <tr><td colSpan="8" style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>No consultation requests match this filter.</td></tr> :
+          data.items.map(r => (
+            <React.Fragment key={r.id}>
+              <tr>
+                <td style={{whiteSpace:"nowrap",fontFamily:"monospace",fontSize:"0.78rem"}}>{(r.created_at||"").slice(0,16).replace("T"," ")}</td>
+                <td style={{fontWeight:600}}>{r.name}</td>
+                <td><a href={`mailto:${r.email}`} style={{color:"var(--brand-blue)"}}>{r.email}</a></td>
+                <td>{r.phone ? <a href={`tel:${r.phone}`} style={{color:"var(--brand-blue)"}}>{r.phone}</a> : <span style={{color:"var(--muted)"}}>—</span>}</td>
+                <td style={{textTransform:"capitalize"}}>{r.role}{r.is_referral && <span style={{color:"#F59E0B",fontSize:"0.72rem",marginLeft:4}}>(referral)</span>}</td>
+                <td>{r.city || <span style={{color:"var(--muted)"}}>—</span>}</td>
+                <td>{pill(r.status || "new")}</td>
+                <td>
+                  <select
+                    data-testid={`admin-consultation-status-${r.id}`}
+                    value={r.status||"new"}
+                    onChange={(e)=>setStatus(r.id, e.target.value)}
+                    style={{padding:"0.35rem 0.5rem",borderRadius:6,border:"1px solid rgba(15,42,91,0.2)",fontSize:"0.8rem"}}
+                  >
+                    {["new","contacted","booked","referred","closed","archived"].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <button onClick={()=>setExpanded(expanded===r.id?null:r.id)} className="btn btn-ghost" style={{padding:"0.3rem 0.7rem",fontSize:"0.75rem",marginLeft:8}}>{expanded===r.id?"Hide":"Details"}</button>
+                </td>
+              </tr>
+              {expanded===r.id && (
+                <tr>
+                  <td colSpan="8" style={{background:"rgba(15,42,91,0.03)",padding:"1rem 1.5rem"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"0.75rem",fontSize:"0.82rem"}}>
+                      <div><strong>ID:</strong> <code style={{fontSize:"0.72rem"}}>{r.id}</code></div>
+                      <div><strong>Preferred contact:</strong> {r.preferred_contact||"—"}</div>
+                      <div><strong>Preferred time:</strong> {r.preferred_time||"—"}</div>
+                      <div><strong>Working with REALTOR®:</strong> {r.working_with_realtor?"Yes":"No"}</div>
+                      <div><strong>Outside service area:</strong> {r.is_referral?"Yes (referral)":"No"}</div>
+                      <div><strong>CASL consent at:</strong> {(r.casl_consent_at||"").slice(0,19).replace("T"," ")}</div>
+                      <div><strong>PIPA ack at:</strong> {(r.pipa_ack_at||"").slice(0,19).replace("T"," ")}</div>
+                      <div><strong>IP:</strong> <code style={{fontSize:"0.72rem"}}>{r.ip||"—"}</code></div>
+                      <div style={{gridColumn:"1/-1"}}><strong>User agent:</strong> <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{r.user_agent||"—"}</span></div>
+                      {r.status_history?.length>0 && (
+                        <div style={{gridColumn:"1/-1"}}>
+                          <strong>Status history:</strong>
+                          <ul style={{margin:"0.35rem 0 0 1rem",padding:0,fontSize:"0.78rem"}}>
+                            {r.status_history.map((h,i)=><li key={i}>{(h.at||"").slice(0,19).replace("T"," ")} — {h.status}{h.note?` · ${h.note}`:""}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          ))
+        }
+      </tbody>
+    </table>
+  </AdminShell>;
+};
+
 
 
 // --- Communities (all of BC) ---
@@ -9278,6 +9419,7 @@ function App() {
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
       <Route path="/admin/reminder-templates" element={<AdminReminderTemplates/>}/>
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
+      <Route path="/admin/consultations" element={<AdminConsultations/>}/>
       <Route path="/admin/email-outbox" element={<AdminEmailOutbox/>}/>
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>

@@ -1041,11 +1041,10 @@ const ConsultPanel = () => {
       <h2 style={{ color: C.navy, marginTop: 0 }}>Respectfully — we can't proceed.</h2>
       <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", padding: 20, borderRadius: 12, maxWidth: 640, lineHeight: 1.5 }}>
         <p style={{ margin: 0 }}>
-          The <strong>CREA Code of Ethics</strong> (Article 16) prohibits us from interfering with an existing REALTOR® relationship.
-          Your current REALTOR® is your best resource — please continue that conversation with them.
+          If you're currently working with a REALTOR® under a signed representation agreement, that REALTOR® is the right person to bring this question to — they know your file and they're contracted to advise you on it. We won't step into that. If you're not under an agreement, or yours has ended, we're happy to help.
         </p>
         <p style={{ marginBottom: 0, marginTop: 12, fontSize: 13, color: "#7F1D1D" }}>
-          We're happy to help with <strong>general information</strong> anytime via Doogie — that never counts as advice or representation.
+          You're always welcome to ask Doogie <strong>general information</strong> questions — that never counts as advice or representation.
         </p>
       </div>
       <button onClick={() => setStep("realtor_check")} style={{...btnGhost, marginTop: 16}}>← Back</button>
