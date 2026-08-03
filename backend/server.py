@@ -10484,6 +10484,65 @@ async def admin_insights_snapshot(_=Depends(verify_admin)):
     return {"success": True, "rows_written": n}
 
 
+@app.post("/api/admin/insights/backfill", tags=["Insights"])
+async def admin_insights_backfill(weeks: int = 12, _=Depends(verify_admin)):
+    """Retroactively seed `insights_history` with weekly buckets derived from
+    each listing's CREA `modified_at` timestamp + its current list_price. This
+    is not a forecast and not a re-imagined historical market — it's the
+    weekly median list price of listings whose price/status was last updated
+    inside that week. Real CREA DDF® data, labelled as such on the frontend.
+
+    For every (city, property_type, week) triple we upsert one row anchored
+    at that week's Monday 00:00 UTC so it slots cleanly into the same series
+    the daily cron writes going forward."""
+    from statistics import median as _median
+    weeks = max(4, min(int(weeks or 12), 26))
+    now = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Anchor each week to its Monday 00:00 UTC. Skip the current (partial) week
+    # since the daily cron already writes today's snapshot.
+    monday_of_now = now - timedelta(days=now.weekday())
+    week_starts = [(monday_of_now - timedelta(weeks=i)) for i in range(1, weeks + 1)][::-1]
+    wrote = 0
+    for city in BC_INSIGHTS_CITIES:
+        for ptype in INSIGHTS_PROPERTY_TYPES:
+            for wk_start in week_starts:
+                wk_end = wk_start + timedelta(days=7)
+                q = {
+                    "modified_at": {"$gte": wk_start.isoformat(), "$lt": wk_end.isoformat()},
+                    "city": {"$regex": f"^{re.escape(city)}$", "$options": "i"},
+                    "list_price": {"$gt": 0},
+                }
+                if ptype:
+                    q["property_type"] = _property_type_query(ptype)
+                prices = []
+                async for l in db.listings.find(q, {"list_price": 1, "_id": 0}):
+                    p = l.get("list_price")
+                    if p and p > 0:
+                        prices.append(p)
+                if not prices or len(prices) < 3:
+                    continue
+                row = {
+                    "city": city,
+                    "property_type": ptype or None,
+                    "snapshot_at": wk_start,
+                    "week_key": wk_start.isocalendar()[1],
+                    "active_count": len(prices),
+                    "median_list_price": _median(prices),
+                    "avg_list_price": sum(prices) / len(prices),
+                    "min_price": min(prices),
+                    "max_price": max(prices),
+                    "source": "backfill_v1",
+                }
+                await db.insights_history.update_one(
+                    {"city": row["city"], "property_type": row["property_type"], "snapshot_at": wk_start},
+                    {"$set": row},
+                    upsert=True,
+                )
+                wrote += 1
+    logger.info(f"insights_history backfill: wrote/updated {wrote} rows across {weeks} weeks")
+    return {"success": True, "weeks": weeks, "rows_written": wrote}
+
+
 
 # CASL+PIPA-compliant intake endpoint used by /dashboard-mockup and any future
 # consultation flow. Persists to `consultation_requests` collection, fires a
