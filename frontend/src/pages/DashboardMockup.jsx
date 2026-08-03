@@ -486,7 +486,7 @@ const ForYouPanel = () => {
   return (
     <div>
       <PanelIntro title="For You"
-        blurb="A live feed drawn from your most recent saved search — always exact matches from CREA DDF®, never substitutions."/>
+        blurb="A live feed drawn from your most recent saved search"/>
       <ResultsGrid results={rows} loading={rows === null}/>
     </div>
   );
