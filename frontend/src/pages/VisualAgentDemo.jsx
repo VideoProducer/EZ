@@ -2585,8 +2585,7 @@ export default function VisualAgentDemo() {
               Meet <span style={{ color: C.gold, fontStyle: "italic" }}>Doogie</span> — your BC real estate helper
             </h1>
             <p style={{ margin: "10px 0 0", opacity: 0.88, maxWidth: 620, fontSize: 14 }}>
-              Ask about active BC listings, neighbourhoods, or real estate terms. Doogie looks things up
-              from CREA DDF® and BC public data — general information only, never advice.
+              Ask about active BC listings, neighborhoods, or real estate terms. Doogie provides general information only, never advice.
             </p>
           </div>
 
