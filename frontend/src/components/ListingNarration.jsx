@@ -92,13 +92,67 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     const raw = scriptText.match(/[^.!?]+[.!?]+(?:\s|$)/g) || [scriptText];
     return raw.map(s => s.trim()).filter(Boolean);
   }, [cues, scriptText]);
+
+  // Precompute each cue's START character offset in the full script — the
+  // outro appended by the frontend (disclaimer + CTA) doesn't have cues, so
+  // this map naturally leaves the last cue "sticky" for the tail of the
+  // audio.  We search each sentence in order, forward-only, so a duplicate
+  // phrase later in the script doesn't collide with an earlier occurrence.
+  // Character offsets are a MUCH better proxy for spoken duration than a
+  // fixed count-per-cue slice (which was the source of the desync bug — a
+  // 3-word sentence and a 40-word sentence were each getting 1/N of the
+  // audio timeline).
+  const cueOffsets = useMemo(() => {
+    if (!cues || !cues.length || !scriptText) return [];
+    const out = [];
+    let searchFrom = 0;
+    for (const c of cues) {
+      const sent = (c.sentence || "").trim();
+      if (!sent) continue;
+      let pos = scriptText.indexOf(sent, searchFrom);
+      if (pos < 0) {
+        // Try without trailing punctuation (Haiku sometimes drops a period)
+        const stripped = sent.replace(/[.!?]+\s*$/, "");
+        pos = stripped ? scriptText.indexOf(stripped, searchFrom) : -1;
+      }
+      if (pos < 0) pos = searchFrom; // fall back to sequential
+      out.push({ sentence: sent, photo_idx: c.photo_idx | 0, startChar: pos });
+      searchFrom = pos + sent.length;
+    }
+    return out;
+  }, [cues, scriptText]);
+
+  // Locate the "current cue" via linear scan through the char-offset list.
+  // Because cueOffsets is sorted by startChar, we return the LAST cue whose
+  // start is <= the caret position.  This is O(cues.length) but cues rarely
+  // exceed ~20 sentences.
+  const _cueIndexAt = (charPos) => {
+    if (!cueOffsets.length) return 0;
+    let bestIdx = 0;
+    for (let i = 0; i < cueOffsets.length; i++) {
+      if (cueOffsets[i].startChar <= charPos) bestIdx = i;
+      else break;
+    }
+    return bestIdx;
+  };
+
   const currentSentenceIdx = useMemo(() => {
     if (!sentences.length) return 0;
+    if (cueOffsets.length && scriptText.length > 0) {
+      const charProgress = progress * scriptText.length;
+      return _cueIndexAt(charProgress);
+    }
     return Math.min(sentences.length - 1, Math.floor(progress * sentences.length));
-  }, [progress, sentences.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, sentences.length, cueOffsets, scriptText]);
 
   // Handle audio time updates → drive the reel + progress bar. When we have
   // room-aware cues, use them; otherwise even-distribute across all photos.
+  // NOTE: previously this used `ratio * cues.length` which gave equal time
+  // per cue regardless of sentence length — leading to obvious desync on
+  // listings where sentence lengths varied.  We now use the cue's start-
+  // character offset in the full script so timing follows the (roughly
+  // linear) TTS pacing.
   const onTimeUpdate = () => {
     const a = audioRef.current;
     if (!a || !a.duration || !isFinite(a.duration)) return;
@@ -106,9 +160,10 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     setProgress(ratio);
     if (photoCount > 1) {
       let idx;
-      if (cues && cues.length) {
-        const cueIdx = Math.min(cues.length - 1, Math.floor(ratio * cues.length));
-        idx = Math.max(0, Math.min(photoCount - 1, cues[cueIdx].photo_idx | 0));
+      if (cueOffsets.length && scriptText.length > 0) {
+        const charProgress = ratio * scriptText.length;
+        const cueIdx = _cueIndexAt(charProgress);
+        idx = Math.max(0, Math.min(photoCount - 1, cueOffsets[cueIdx].photo_idx | 0));
       } else {
         idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
       }
