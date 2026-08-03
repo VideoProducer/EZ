@@ -277,7 +277,8 @@ const Panel = ({ section, setSection, homeVariant, onAsk }) => {
 const DashboardHomeTiles = ({ setSection, onAsk }) => {
   const nav = useNavigate();
   const [city, setCity] = useState("Vancouver");
-  const insights = useInsights(city);
+  const [propType, setPropType] = useState("");
+  const insights = useInsights(city, propType);
   const [latest, setLatest] = useState(null);
   const [savedCount, setSavedCount] = useState(0);
   const [regions, setRegions] = useState(null);
@@ -372,7 +373,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div style={tile} data-testid="dash-home-buyer-tile">
           <div style={tileHeader}>
-            <h3 style={tileTitle}>Buyer snapshot · {city}</h3>
+            <h3 style={tileTitle}>Buyer snapshot · {city}{propType ? " · " + propType : ""}</h3>
             <button style={linkAction} onClick={() => setSection("buyer")}>Full insights →</button>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -387,7 +388,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         </div>
         <div style={tile} data-testid="dash-home-seller-tile">
           <div style={tileHeader}>
-            <h3 style={tileTitle}>Seller snapshot · {city}</h3>
+            <h3 style={tileTitle}>Seller snapshot · {city}{propType ? " · " + propType : ""}</h3>
             <button style={linkAction} onClick={() => setSection("seller")}>Full insights →</button>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -406,9 +407,10 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         <div style={tile} data-testid="dash-home-city-picker">
           <div style={tileHeader}>
-            <h3 style={tileTitle}>Change city</h3>
+            <h3 style={tileTitle}>Filter snapshots</h3>
             <span style={{ fontSize: 11, color: C.muted }}>Powers both snapshots ↑</span>
           </div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>City</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {["Vancouver","Burnaby","Surrey","Richmond","Coquitlam","Maple Ridge","Squamish","Whistler","Kelowna"].map(c => (
               <button
@@ -423,6 +425,28 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
                   border: `1px solid ${city === c ? C.blue : "#DDE6FA"}`,
                 }}
               >{c}</button>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 14, marginBottom: 6 }}>Property type</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "All",        value: "" },
+              { label: "Detached",   value: "Detached" },
+              { label: "Condo",      value: "Condo" },
+              { label: "Townhouse",  value: "Townhouse" },
+            ].map(t => (
+              <button
+                key={t.label}
+                data-testid={`dash-home-ptype-${t.label.toLowerCase()}`}
+                onClick={() => setPropType(t.value)}
+                style={{
+                  padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  cursor: "pointer",
+                  background: propType === t.value ? C.blue : "#fff",
+                  color: propType === t.value ? "#fff" : C.navy,
+                  border: `1px solid ${propType === t.value ? C.blue : "#DDE6FA"}`,
+                }}
+              >{t.label}</button>
             ))}
           </div>
           <div style={{ marginTop: 14, fontSize: 12, color: C.muted, lineHeight: 1.5 }}>
