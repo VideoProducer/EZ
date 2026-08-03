@@ -456,8 +456,8 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
   return (
     <div data-testid="dash-home-tiles" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Welcome strip */}
-      <div style={{ ...tile, display: "grid", gridTemplateColumns: "88px 1fr auto", gap: 18, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
-        <img src={DOOGIE.head} alt="Doogie" style={{ width: 88, height: 88, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
+      <div style={{ ...tile, display: "grid", gridTemplateColumns: "176px 1fr auto", gap: 18, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
+        <img src={DOOGIE.head} alt="Doogie" style={{ width: 176, height: 176, objectFit: "contain" }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, color: C.navy, lineHeight: 1.1 }}>
             <span style={{ color: C.brandGreen }}>Real estate,</span> <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
