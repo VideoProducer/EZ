@@ -543,17 +543,12 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         </div>
       </div>
 
-      {/* Doug's Specialties — Luxury / Equestrian / Estate Sales */}
+      {/* Doug's Specialties — Luxury / Equestrian */}
       <div style={tile} data-testid="dash-home-specialties">
-        <div style={tileHeader}>
-          <h3 style={tileTitle}>Doug's specialties</h3>
-          <Link to="/specialties" style={linkAction}>See all →</Link>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
           {[
-            { slug: "luxury",       title: "Luxury Real Estate",   sub: "Waterfront estates, mountain chalets, custom acreages", emoji: "💎" },
-            { slug: "equestrian",   title: "Equestrian & Acreage", sub: "Horse properties, hobby farms, ALR-aware rep",           emoji: "🐴" },
-            { slug: "estate-sales", title: "Estate Sales / Probate", sub: "WESA-compliant, executor-guided sales",                emoji: "📜" },
+            { slug: "luxury",     title: "Luxury Real Estate",   sub: "Waterfront estates, mountain chalets, custom acreages", emoji: "💎" },
+            { slug: "equestrian", title: "Equestrian & Acreage", sub: "Horse properties, hobby farms, ALR-aware rep",          emoji: "🐴" },
           ].map(s => (
             <Link key={s.slug} to={`/specialties/${s.slug}`}
               data-testid={`dash-home-specialty-${s.slug}`}
