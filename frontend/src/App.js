@@ -3935,15 +3935,17 @@ const GlossaryTerm = () => {
 
   // AEO / LLM Article schema — combines definition, author, publisher, FAQPage
   const now = new Date().toISOString();
-  const dateMod = t.last_curated_at || now;
+  const dateMod = t.last_curated_at || t.updated_at || t.reviewed_at || now;
+  const datePub = t.published_at || t.created_at || t.first_seen_at || dateMod;
   const articleSchema = {
     "@context":"https://schema.org",
     "@type":"Article",
     "headline":`${t.term} — BC Real Estate`,
     "description":t.definition.substring(0,200),
-    "datePublished": dateMod,
+    "datePublished": datePub,
     "dateModified": dateMod,
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
+    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR® · BCFSA #167790","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     "mainEntity":{"@type":"DefinedTerm","name":t.term,"description":t.definition,"inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":"https://eztofind.ca/glossary"}},
     "url":`https://eztofind.ca/glossary/${t.slug}`,
@@ -5854,8 +5856,11 @@ const CommunityPage = () => {
   const articleLd = (found && syn?.synopsis) ? {
     "@context":"https://schema.org","@type":"Article",
     "headline":`${found}, British Columbia — Community Overview`,
-    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
-    "publisher":{"@type":"Organization","name":"EZtoFind.ca"},
+    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},"url":"https://eztofind.ca/about"},
+    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR® · BCFSA #167790","url":"https://eztofind.ca/about"},
+    "publisher":{"@type":"Organization","name":"EZtoFind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
+    "datePublished": syn.published_at || syn.created_at || "2026-01-12",
+    "dateModified": syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || new Date().toISOString().slice(0,10),
     "about":{"@type":"Place","name":`${found}, British Columbia`},
     "inLanguage":"en-CA",
     "articleBody":syn.synopsis

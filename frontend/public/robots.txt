@@ -49,20 +49,23 @@ Allow: /
 Disallow: /listings
 Disallow: /listing/
 
-# LLM training corpora — BLOCKED site-wide (moat hardening).
-# These bots exist ONLY to scrape content into training datasets — they do
-# not cite back or drive traffic. Blocking them protects the EZtoFind content
-# investment (CIPO Reg. 1247822) without sacrificing AEO/AI-citation reach,
-# because the citation-capable bots above (GPTBot, ClaudeBot, PerplexityBot,
-# OAI-SearchBot, ChatGPT-User, Perplexity-User, DuckAssistBot) are still
-# fully welcome on educational content.
+# LLM training corpora — mixed policy.
+# Google-Extended controls citation in Google AI Overviews / Gemini / Bard.
+# For AEO reach, we explicitly Allow it on educational content while keeping
+# MLS® listings disallowed (CREA DDF® licensing). CCBot (Common Crawl) is
+# similarly allowed for citation. Training-only bots that don't cite back
+# remain fully blocked below.
+User-agent: Google-Extended
+Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: CCBot
-Disallow: /
+Allow: /
+Disallow: /listings
+Disallow: /listing/
 User-agent: FacebookBot
 Disallow: /
 User-agent: Meta-ExternalFetcher
-Disallow: /
-User-agent: Google-Extended
 Disallow: /
 User-agent: Applebot-Extended
 Disallow: /
