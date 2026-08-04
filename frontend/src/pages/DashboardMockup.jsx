@@ -141,7 +141,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const gotoSection = (s) => { setSection(s); if (isMobile) setSidebarOpen(false); };
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
-  const [filters, setFilters] = useState({ q: "", city: "", beds: "", baths: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" });
+  const [filters, setFilters] = useState({ q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const runSearch = async () => {
@@ -152,6 +152,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       if (filters.city) p.set("city", filters.city);
       if (filters.beds) p.set("beds_min", filters.beds);
       if (filters.baths) p.set("baths_min", filters.baths);
+      if (filters.priceMin) p.set("price_min", filters.priceMin);
       if (filters.priceMax) p.set("price_max", filters.priceMax);
       if (filters.propertyType) p.set("property_type", filters.propertyType);
       if (filters.keyword) p.set("features", filters.keyword);
@@ -390,6 +391,7 @@ const SidebarFilters = () => {
     return "$" + Number(d).toLocaleString("en-CA");
   };
   const onPriceChange = (e) => set("priceMax", digitsOnly(e.target.value));
+  const onPriceMinChange = (e) => set("priceMin", digitsOnly(e.target.value));
   const applyFilters = (e) => {
     // Belt-and-braces submit handler — Edge sometimes drops the implicit
     // form-submit on <button type="submit"> inside a position:fixed
@@ -485,6 +487,17 @@ const SidebarFilters = () => {
           </select>
         </div>
       </div>
+      <label style={sLabel} htmlFor="dash-f-price-min">Minimum price ($)</label>
+      <input
+        id="dash-f-price-min"
+        type="text"
+        inputMode="numeric"
+        value={formatMoney(filters.priceMin)}
+        onChange={onPriceMinChange}
+        placeholder="$ Any"
+        data-testid="dash-search-price-min"
+        style={sInp}
+      />
       <label style={sLabel} htmlFor="dash-f-price">Maximum price ($)</label>
       <input
         id="dash-f-price"
