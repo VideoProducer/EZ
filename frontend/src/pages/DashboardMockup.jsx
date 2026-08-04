@@ -450,16 +450,17 @@ const SidebarFilters = () => {
 // User can drag it by the header grip to reposition anywhere on the page.
 // Position persists in localStorage so it stays where they left it. On mobile
 // (<900px) it degrades to a static block at the top of the results area.
-const FLOATING_POS_KEY = "ez_floating_filters_pos_v1";
+const FLOATING_POS_KEY = "ez_floating_filters_pos_v2";
+const FLOATING_DEFAULT = { x: 24, y: 560 };
 const FloatingFilters = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
   const [pos, setPos] = useState(() => {
-    if (typeof window === "undefined") return { x: 24, y: 320 };
+    if (typeof window === "undefined") return FLOATING_DEFAULT;
     try {
       const saved = JSON.parse(localStorage.getItem(FLOATING_POS_KEY) || "null");
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) return saved;
     } catch { /* ignore */ }
-    return { x: 24, y: 320 };
+    return FLOATING_DEFAULT;
   });
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ dx: 0, dy: 0 });
@@ -499,7 +500,7 @@ const FloatingFilters = () => {
   };
 
   const resetPos = () => {
-    const next = { x: 24, y: 320 };
+    const next = { ...FLOATING_DEFAULT };
     setPos(next);
     try { localStorage.setItem(FLOATING_POS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
