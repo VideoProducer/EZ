@@ -402,7 +402,7 @@ const SidebarFilters = () => {
       <input
         value={filters.city}
         onChange={e => set("city", e.target.value)}
-        placeholder="Vancouver / Osoyoos"
+        placeholder=""
         data-testid="dash-search-city"
         style={sInp}
       />
