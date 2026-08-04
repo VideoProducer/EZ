@@ -2,8 +2,20 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#0F2A5B" />
+        <!-- Viewport: viewport-fit=cover lets safe-area-inset-* CSS reach into the
+             notch/punch-hole/gesture-bar on iPhone 14+/Pixel/Galaxy foldables.
+             maximum-scale=5 keeps pinch-zoom (WCAG 1.4.4) while stopping iOS
+             from auto-zooming when a form input gets focused. -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+        <!-- Chrome/Android tinted address bar + light-mode fallback. -->
+        <meta name="theme-color" content="#0F2A5B" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)" />
+        <!-- Microsoft Edge / Windows tile + IE11 legacy fallback. -->
+        <meta name="msapplication-TileColor" content="#0F2A5B" />
+        <meta name="msapplication-navbutton-color" content="#0F2A5B" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <!-- Samsung Internet + KaiOS respect the standard PWA meta below. -->
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Sora:wght@800&family=Manrope:wght@600;700&family=Playfair+Display:wght@700;800;900&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />

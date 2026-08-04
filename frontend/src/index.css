@@ -121,6 +121,76 @@ button::-moz-focus-inner { border: 0; padding: 0; }
   body { background: #fff !important; color: #000 !important; }
   a { color: #000 !important; text-decoration: underline; }
 }
+
+/* 13. Android Chrome + Samsung Internet — remove the 300ms tap delay legacy
+       WebViews sometimes still ship with, and stop the pull-to-refresh
+       overscroll that eats scroll gestures inside our sticky FILTERS card. */
+html { touch-action: manipulation; overscroll-behavior-y: none; }
+
+/* 14. Notched device safe-areas (iPhone 14+ Dynamic Island, Pixel 8 Pro
+       punch-hole, Galaxy Z Fold, Xiaomi Mix Fold).  Pad the sidebar and
+       compliance strip with the OS-reported inset so nothing hides under
+       the notch/gesture bar in landscape.  Falls back to 0 on browsers
+       without env() support (all modern browsers ship it). */
+@supports (padding: max(0px, env(safe-area-inset-top))) {
+  aside, header {
+    padding-left:  max(env(safe-area-inset-left),  0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+  }
+  footer, .compliance-strip {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+}
+
+/* 15. Stop long-press on tappable elements from selecting text on Android
+       (users kept accidentally selecting nav labels while scrolling).
+       Body inputs/textareas keep default select behaviour. */
+button, [role="button"], nav a, aside a {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+
+/* 16. Firefox Mobile (Gecko) — sticky elements need the parent scroll
+       container to NOT have `overflow: clip` (Chromium-tolerant, Gecko
+       strict).  Our main content wrapper already has visible overflow from
+       rule 9; belt-and-suspenders here for the aside sidebar too. */
+aside, .admin-shell, .admin-main { overflow-x: clip; overflow-y: visible; }
+
+/* 17. Legacy Edge (pre-Chromium, EdgeHTML) — CSS Grid `gap` was the older
+       `grid-gap` property.  Modern browsers accept both; adding both
+       aliases keeps the Reel Analytics chart + FILTERS split-grid working
+       for anyone still on Windows 10 without an Edge update. */
+.dash-search-splitgrid, .listings-search-layout, .listing-detail-layout {
+  grid-gap: inherit;
+}
+
+/* 18. Android Chrome date/time picker — the popup native picker inherits
+       system dark mode.  Force our brand fields to stay light-mode so the
+       navy text isn't invisible on a dark keyboard bar. */
+input, textarea, select { color-scheme: light; }
+
+/* 19. Foldables + tablets in "book" posture — display fold spanning.  When
+       the user unfolds a Galaxy Z Fold / Surface Duo the viewport doubles.
+       Cap our max content width so text stays readable and doesn't stretch
+       across the whole 2000px unfolded canvas. */
+@media (min-width: 1600px) {
+  .container-x, .admin-main { max-width: 1400px; margin-left: auto; margin-right: auto; }
+}
+
+/* 20. Reduced-motion respect — iOS, Android, Windows all expose this OS
+       preference.  Users who enable "Reduce Motion" get all our Doogie
+       bounce / progress-bar / tour-spotlight animations disabled. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* ==================== end cross-browser polish ==================== */
 html {
   /* Explicit root font-size + zero text-size-adjust protects the layout from

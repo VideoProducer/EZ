@@ -6143,7 +6143,7 @@ const AffordabilityCalculator = () => {
       {/* Big result card */}
       <div style={{background:"linear-gradient(135deg,#0F2A5B 0%,#1E4180 100%)",color:"#fff",borderRadius:14,marginTop:"1.5rem",padding:"1.5rem 1.25rem",fontFamily:"Inter,sans-serif",textAlign:"center",boxShadow:"0 10px 24px rgba(15,42,91,0.18)"}}>
         <div style={{fontSize:"0.78rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.75,fontWeight:600}}>You can afford up to</div>
-        <div data-testid="afford-max-price" style={{fontFamily:"Sora,sans-serif",fontSize:"3rem",fontWeight:700,margin:"0.35rem 0",lineHeight:1.05}}>{fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000))}</div>
+        <div data-testid="afford-max-price" style={{fontFamily:"Sora,sans-serif",fontSize:"clamp(1.6rem, 9vw, 3rem)",fontWeight:700,margin:"0.35rem 0",lineHeight:1.05,letterSpacing:"-0.01em",overflowWrap:"anywhere",wordBreak:"break-word"}}>{fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000))}</div>
         <div style={{fontSize:"0.9rem",opacity:0.85}}>Based on BC stress test at qualifying rate {qualRate.toFixed(2)}%</div>
       </div>
 

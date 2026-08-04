@@ -1923,3 +1923,10 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `frontend/src/pages/SearchPage.jsx`: stable result-group keys.
 - `memory/test_credentials.md`: SEC-009 note added.
 
+
+---
+
+## Feb 4, 2026 — Mobile: Affordability bubble number overflow
+**Reported**: On iPhone, the "$691,000" (afford-max-price) in the affordability calculator overflowed the blue "YOU CAN AFFORD UP TO" bubble to the right.
+**Fix**: `App.js:6146` — changed `fontSize: "3rem"` (fixed) to `fontSize: "clamp(1.6rem, 9vw, 3rem)"` plus `overflowWrap:"anywhere"` and `wordBreak:"break-word"` safety. Desktop size preserved; scales down fluidly on narrow viewports. Fix applies to both `/valuation` calculator and dashboard-home `dash-home-afford` section (same `<Calculators/>` component).
+**Verified**: Screenshot at 390px width confirms $691,000 now fits inside the bubble with padding on both sides.
