@@ -1,7 +1,7 @@
 {
   "name": "EZtoFind.ca — BC Real Estate",
   "short_name": "EZtoFind",
-  "description": "AI-powered BC real estate research and lead generation. Doug LeMaire, REALTOR®.",
+  "description": "Free BC real estate research — non-transactional. Live MLS® search, statute-cited glossary, community profiles, Doogie AI guide. Doug LeMaire, REALTOR®.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
