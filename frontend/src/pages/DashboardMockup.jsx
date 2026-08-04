@@ -244,25 +244,41 @@ export default function DashboardMockup({ homeVariant = "search" }) {
 }
 
 // ── First-visit sidebar toast — one-time onboarding hint ──────────────────
-const FirstVisitToast = ({ onDismiss, setSection }) => (
+const FirstVisitToast = ({ onDismiss, setSection }) => {
+  // Responsive positioning — on desktop the toast sits beside the 260-px
+  // sidebar (left: 274). On mobile the sidebar is hidden behind a hamburger
+  // and the fixed 360-px card was overflowing the right edge on iPhone /
+  // Android narrow viewports. Anchor to both edges on narrow screens.
+  const [viewW, setViewW] = useState(typeof window === "undefined" ? 1200 : window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setViewW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isNarrow = viewW < 900;
+  const pos = isNarrow
+    ? { left: 8, right: 8, bottom: 16, maxWidth: "none", width: "auto" }
+    : { left: 274, bottom: 24, maxWidth: 360 };
+  return (
   <div
     data-testid="dash-first-visit-toast"
     style={{
-      position: "fixed", left: 274, bottom: 24, zIndex: 60,
+      position: "fixed", zIndex: 60,
       background: "#fff", border: "2px solid " + C.gold, borderRadius: 14,
-      padding: "14px 16px 14px 14px", maxWidth: 360,
+      padding: isNarrow ? "12px 12px 12px 12px" : "14px 16px 14px 14px",
       boxShadow: "0 12px 32px rgba(15,42,91,0.28)",
-      display: "flex", gap: 14, alignItems: "flex-start",
+      display: "flex", gap: isNarrow ? 10 : 14, alignItems: "flex-start",
       animation: "toast-slide 0.35s cubic-bezier(0.16,1,0.3,1)",
+      ...pos,
     }}
   >
     <img src={DOOGIE.head} alt="Doogie welcomes you"
       data-testid="dash-first-visit-doogie"
       style={{
-        width: 72, height: 72, flexShrink: 0, objectFit: "contain",
+        width: isNarrow ? 56 : 72, height: isNarrow ? 56 : 72, flexShrink: 0, objectFit: "contain",
         filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))",
       }}/>
-    <div style={{ minWidth: 0 }}>
+    <div style={{ minWidth: 0, flex: 1 }}>
       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 800, color: C.navy, marginBottom: 4 }}>
         Woof! I'm Doogie 🐾
       </div>
@@ -279,7 +295,8 @@ const FirstVisitToast = ({ onDismiss, setSection }) => (
     </div>
     <style>{`@keyframes toast-slide { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }`}</style>
   </div>
-);
+  );
+};
 
 // ── Sidebar ────────────────────────────────────────────────────────────────
 const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
