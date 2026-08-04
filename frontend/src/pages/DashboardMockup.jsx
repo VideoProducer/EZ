@@ -516,8 +516,8 @@ const SidebarFilters = () => {
 // User can drag it by the header grip to reposition anywhere on the page.
 // Position persists in localStorage so it stays where they left it. On mobile
 // (<900px) it degrades to a static block at the top of the results area.
-const FLOATING_POS_KEY = "ez_floating_filters_pos_v2";
-const FLOATING_DEFAULT = { x: 24, y: 560 };
+const FLOATING_POS_KEY = "ez_floating_filters_pos_v3";
+const FLOATING_DEFAULT = { x: 24, y: 320 };
 const FloatingFilters = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
   const [pos, setPos] = useState(() => {
