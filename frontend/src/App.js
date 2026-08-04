@@ -2324,7 +2324,7 @@ const Home = () => {
   };
   return (<>
     <SEO
-      title="EZtoFind.ca — BC Real Estate Information, Glossary & Community Insights"
+      title="EZtoFind.ca | BC Real Estate Search"
       description="Free BC real estate information platform: 396 glossary terms with authoritative sources, 239 community profiles with real Environment Canada climate data, and BC-wide REALTOR® referral network. By Doug LeMaire, REALTOR®."
       path="/"
     />
