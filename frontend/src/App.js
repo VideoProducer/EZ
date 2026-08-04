@@ -3281,6 +3281,127 @@ const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
   );
 };
 
+// ── Virtual-Tour Frame with VPN / geo-block friendly fallback ─────────────
+// Iframes don't fire onError reliably for cross-origin content, so we run a
+// 7-second sentinel timer. If the tour hasn't fired `onLoad` by then, or if
+// onLoad fires but its contentWindow is 0×0 (a signal the host refused the
+// embed), we show a friendly fallback that keeps the visitor engaged instead
+// of a broken black rectangle. Common reasons: US/EU VPN + Canadian MLS geo-
+// fence, corporate firewall, X-Frame-Options DENY from the host.
+const VirtualTourFrame = ({ listing }) => {
+  const embed = listing.virtual_tour_embed || {};
+  const [status, setStatus] = React.useState("loading"); // loading | ok | blocked
+  const timerRef = React.useRef(null);
+  React.useEffect(() => {
+    timerRef.current = setTimeout(() => {
+      // If we haven't marked it OK in 7 seconds assume the embed is blocked.
+      setStatus(prev => (prev === "loading" ? "blocked" : prev));
+    }, 7000);
+    return () => clearTimeout(timerRef.current);
+  }, []);
+  const onFrameLoad = () => {
+    clearTimeout(timerRef.current);
+    setStatus("ok");
+  };
+  const openInNewTab = embed.url_raw || embed.url;
+
+  if (status === "blocked") {
+    return (
+      <div
+        data-testid="listing-virtual-tour-fallback"
+        style={{
+          borderRadius: 12, border: "1px solid rgba(15,42,91,0.15)",
+          background: "linear-gradient(135deg, #FFF9E8 0%, #F5F0E1 100%)",
+          padding: "1.6rem 1.6rem 1.4rem", position: "relative",
+        }}
+      >
+        <div style={{
+          display: "inline-block", fontSize: "0.7rem", textTransform: "uppercase",
+          letterSpacing: "0.1em", fontWeight: 800, color: "#7A5100",
+          background: "rgba(253,184,19,0.28)", padding: "3px 10px", borderRadius: 999,
+          marginBottom: "0.6rem",
+        }}>Video didn't load</div>
+        <h3 style={{
+          margin: "0 0 0.5rem", color: "var(--brand-navy, #0F2A5B)",
+          fontSize: "1.1rem", fontFamily: '"Playfair Display", serif',
+        }}>Some tours are licensed only for Canadian playback.</h3>
+        <p style={{
+          margin: "0 0 1.1rem", fontFamily: "Inter, sans-serif",
+          color: "#334155", fontSize: "0.92rem", lineHeight: 1.55,
+        }}>
+          The listing brokerage or a VPN may be blocking this embed on your
+          current network. You can still see this home in three ways:
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1rem" }}>
+          <a
+            href={openInNewTab}
+            target="_blank" rel="noopener noreferrer"
+            data-testid="listing-virtual-tour-open-blocked"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "var(--brand-blue, #1E4FCF)", color: "#fff",
+              padding: "0.65rem 1.1rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.88rem",
+              boxShadow: "0 4px 10px rgba(30,79,207,0.28)",
+            }}
+          >▶ Open the tour in a new tab ↗</a>
+          <Link
+            to={`/referral-request?context=${encodeURIComponent(`Private tour request — ${listing.street_address || listing.listing_key || "listing"}`)}`}
+            data-testid="listing-request-tour-btn"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "#fff", color: "var(--brand-navy, #0F2A5B)",
+              border: "2px solid var(--brand-navy, #0F2A5B)",
+              padding: "0.6rem 1.1rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.88rem",
+            }}
+          >📅 Ask Doug for a private tour</Link>
+          <button
+            type="button"
+            onClick={() => { clearTimeout(timerRef.current); setStatus("loading"); setTimeout(() => setStatus(prev => prev==="loading"?"blocked":prev), 7000); }}
+            data-testid="listing-virtual-tour-retry"
+            style={{
+              background: "transparent", border: "1px solid rgba(15,42,91,0.35)",
+              color: "var(--brand-navy, #0F2A5B)",
+              padding: "0.55rem 1rem", borderRadius: 999, cursor: "pointer",
+              fontWeight: 600, fontSize: "0.85rem",
+            }}
+          >↻ Try again</button>
+        </div>
+        <p style={{
+          fontSize: "0.78rem", color: "#64748B",
+          fontFamily: "Inter, sans-serif", margin: 0, lineHeight: 1.45,
+        }}>
+          Doogie's audio walk-through above narrates every room even when the
+          video is unavailable — try pressing play at the top of this section
+          while you scroll the photos.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      position: "relative", width: "100%", paddingBottom: "56.25%",
+      borderRadius: 12, overflow: "hidden", border: "1px solid rgba(15,42,91,0.15)",
+      background: "#0F2A5B",
+    }}>
+      <iframe
+        title={`Virtual tour — ${listing.street_address || "listing"}`}
+        src={embed.url}
+        loading="lazy"
+        allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope; autoplay; encrypted-media"
+        allowFullScreen
+        referrerPolicy="no-referrer-when-downgrade"
+        onLoad={onFrameLoad}
+        onError={() => { clearTimeout(timerRef.current); setStatus("blocked"); }}
+        data-testid="listing-virtual-tour-iframe"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+      />
+    </div>
+  );
+};
+
 const ListingDetail = () => {
   const { key } = useParams();
   const [listing, setListing] = useState(null);
@@ -3336,22 +3457,7 @@ const ListingDetail = () => {
               {/* Doogie voice-over pill — sits above the iframe so it's the
                   first thing the user sees when the tour section loads. */}
               <TourNarration listing={listing}/>
-              <div style={{
-                position:"relative", width:"100%", paddingBottom:"56.25%",
-                borderRadius:12, overflow:"hidden", border:"1px solid rgba(15,42,91,0.15)",
-                background:"#0F2A5B",
-              }}>
-                <iframe
-                  title={`Virtual tour — ${listing.street_address || "listing"}`}
-                  src={listing.virtual_tour_embed.url}
-                  loading="lazy"
-                  allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope; autoplay; encrypted-media"
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  data-testid="listing-virtual-tour-iframe"
-                  style={{position:"absolute", inset:0, width:"100%", height:"100%", border:0}}
-                />
-              </div>
+              <VirtualTourFrame listing={listing}/>
               <div style={{marginTop:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.5}}>
                 {listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D walk-through" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}.
                 {" "}If the tour doesn't load above (some browsers block third-party embeds), tap <strong>Play full-screen</strong> to open it in a new tab.
