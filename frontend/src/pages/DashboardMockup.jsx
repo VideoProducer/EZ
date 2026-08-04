@@ -141,17 +141,20 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const gotoSection = (s) => { setSection(s); if (isMobile) setSidebarOpen(false); };
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
-  const [filters, setFilters] = useState({ q: "", city: "", beds: "", priceMax: "" });
+  const [filters, setFilters] = useState({ q: "", city: "", beds: "", baths: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const runSearch = async () => {
     setLoading(true);
     try {
-      const p = new URLSearchParams({ limit: "24", sort: "newest" });
+      const p = new URLSearchParams({ limit: "24", sort: filters.sort || "newest" });
       if (filters.q) p.set("q", filters.q);
       if (filters.city) p.set("city", filters.city);
       if (filters.beds) p.set("beds_min", filters.beds);
+      if (filters.baths) p.set("baths_min", filters.baths);
       if (filters.priceMax) p.set("price_max", filters.priceMax);
+      if (filters.propertyType) p.set("property_type", filters.propertyType);
+      if (filters.keyword) p.set("features", filters.keyword);
       const r = await fetch(`${API}/listings?${p}`);
       setResults(await r.json());
     } finally { setLoading(false); }
@@ -380,84 +383,130 @@ const SidebarFilters = () => {
   const { filters, setFilters, runSearch } = ctx;
   const set = (k, v) => setFilters(prev => ({ ...prev, [k]: v }));
   const onSubmit = (e) => { e.preventDefault(); runSearch(); };
-  // White inputs on a white card — matches the classic FILTERS bubble the
-  // user asked to preserve. Kept compact so all four inputs + submit fit
-  // inside the 260px sidebar column without needing a scroll.
+  // Compact card matching the redesigned filter (Community/City, Property
+  // Type, Min beds + Min baths, Max price, Keyword, Sort, Apply). Same
+  // shared SearchFiltersContext so results grid + map stay in sync.
   const sInp = {
-    width: "100%", padding: "8px 10px", borderRadius: 8,
-    border: "1px solid #DDE6FA",
-    background: "#fff", color: C.navy,
-    fontSize: 12.5, fontWeight: 600, outline: "none",
+    width: "100%", padding: "10px 12px", borderRadius: 8,
+    border: "1px solid #D1D5DB",
+    background: "#fff", color: "#0F172A",
+    fontSize: 13, fontWeight: 500, outline: "none",
+    boxSizing: "border-box",
   };
+  const sSel = { ...sInp, appearance: "auto", cursor: "pointer" };
   const sLabel = {
-    fontSize: 10, fontWeight: 700, color: C.muted,
-    textTransform: "uppercase", letterSpacing: 0.5,
-    display: "block", marginBottom: 5, marginTop: 10,
+    fontSize: 12, fontWeight: 700, color: "#0F172A",
+    display: "block", marginBottom: 4, marginTop: 12,
   };
   return (
     <form onSubmit={onSubmit} data-testid="dash-search-form"
       style={{
-        marginTop: 18, padding: 14,
-        background: "#fff", borderRadius: 12,
+        marginTop: 18, padding: 20,
+        background: "#fff", borderRadius: 14,
         border: "1px solid #E5E7EB",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         color: C.navy,
       }}>
       <div style={{
-        fontSize: 11, fontWeight: 800, letterSpacing: 0.6,
-        color: C.muted, textTransform: "uppercase",
-      }}>Filters</div>
-      <label style={sLabel}>Natural language (Doogie parses)</label>
+        fontSize: 13, fontWeight: 800, letterSpacing: 1.2,
+        color: C.brandBlue, textTransform: "uppercase", marginBottom: 4,
+      }}>Filter Listings</div>
+      <label style={sLabel} htmlFor="dash-f-city">Community / City</label>
       <input
-        value={filters.q}
-        onChange={e => set("q", e.target.value)}
-        placeholder="3 bed condo in kelowna"
-        data-testid="dash-search-q"
-        style={sInp}
-      />
-      <label style={sLabel}>City (BC, anywhere)</label>
-      <input
+        id="dash-f-city"
         value={filters.city}
         onChange={e => set("city", e.target.value)}
-        placeholder=""
+        placeholder="Type any BC community"
         data-testid="dash-search-city"
         style={sInp}
       />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <label style={sLabel} htmlFor="dash-f-ptype">Property Type</label>
+      <select
+        id="dash-f-ptype"
+        value={filters.propertyType}
+        onChange={e => set("propertyType", e.target.value)}
+        data-testid="dash-search-property-type"
+        style={sSel}
+      >
+        <option value="">Any</option>
+        <option value="House">House</option>
+        <option value="Apartment">Condo / Apartment</option>
+        <option value="Row / Townhouse">Townhouse</option>
+        <option value="Duplex">Duplex</option>
+        <option value="Manufactured Home">Manufactured Home</option>
+        <option value="Single Family">Single Family</option>
+        <option value="Vacant Land">Vacant Land</option>
+      </select>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <label style={sLabel}>Beds (min)</label>
-          <input
-            type="number" min="0"
+          <label style={sLabel} htmlFor="dash-f-beds">Min beds</label>
+          <select
+            id="dash-f-beds"
             value={filters.beds}
             onChange={e => set("beds", e.target.value)}
             data-testid="dash-search-beds"
-            style={sInp}
-          />
+            style={sSel}
+          >
+            <option value="">Any</option>
+            {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
+          </select>
         </div>
         <div>
-          <label style={sLabel}>Max price ($)</label>
-          <input
-            type="number" min="0"
-            value={filters.priceMax}
-            onChange={e => set("priceMax", e.target.value)}
-            placeholder="900000"
-            data-testid="dash-search-price"
-            style={sInp}
-          />
+          <label style={sLabel} htmlFor="dash-f-baths">Min baths</label>
+          <select
+            id="dash-f-baths"
+            value={filters.baths}
+            onChange={e => set("baths", e.target.value)}
+            data-testid="dash-search-baths"
+            style={sSel}
+          >
+            <option value="">Any</option>
+            {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
+          </select>
         </div>
       </div>
+      <label style={sLabel} htmlFor="dash-f-price">Maximum price ($)</label>
+      <input
+        id="dash-f-price"
+        type="number" min="0"
+        value={filters.priceMax}
+        onChange={e => set("priceMax", e.target.value)}
+        placeholder="Any"
+        data-testid="dash-search-price"
+        style={sInp}
+      />
+      <label style={sLabel} htmlFor="dash-f-keyword">Keyword</label>
+      <input
+        id="dash-f-keyword"
+        value={filters.keyword}
+        onChange={e => set("keyword", e.target.value)}
+        placeholder="e.g. suite, waterfront"
+        data-testid="dash-search-keyword"
+        style={sInp}
+      />
+      <label style={sLabel} htmlFor="dash-f-sort">Sort by</label>
+      <select
+        id="dash-f-sort"
+        value={filters.sort}
+        onChange={e => set("sort", e.target.value)}
+        data-testid="dash-search-sort"
+        style={sSel}
+      >
+        <option value="newest">Newest first</option>
+        <option value="price_asc">Price: low to high</option>
+        <option value="price_desc">Price: high to low</option>
+      </select>
       <button
         type="submit"
         data-testid="dash-search-submit"
         style={{
-          width: "100%", marginTop: 14, padding: "10px 12px", borderRadius: 999,
+          width: "100%", marginTop: 18, padding: "12px 16px", borderRadius: 999,
           background: C.brandBlue, color: "#fff", border: "none",
-          fontWeight: 800, fontSize: 13, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          fontWeight: 800, fontSize: 14, cursor: "pointer",
           boxShadow: "0 4px 12px rgba(30,79,207,0.35)",
         }}
       >
-        <Search size={13}/> Search CREA DDF®
+        Apply Filters
       </button>
     </form>
   );
