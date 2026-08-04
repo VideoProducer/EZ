@@ -5,8 +5,8 @@
 EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Management Realty Services Ltd. Doug's primary practice area is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor (up to Whistler). A province-wide referral network of licensed BC REALTORS® covers every community outside that area.
 
 ## What EZtoFind.ca Provides
-- **396-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
-- **239 BC community profiles** — geography, demographics, and **real 1981–2010 Environment Canada Climate Normals** (via the official MSC GeoMet API), plus authoritative source citations to Statistics Canada and BC Stats
+- **439-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
+- **240 BC community profiles** with 518 neighbourhood pages — geography, demographics, and **real 1981–2010 Environment Canada Climate Normals** (via the official MSC GeoMet API), plus authoritative source citations to Statistics Canada and BC Stats
 - **Doogie AI** — a compliance-guarded chatbot powered by a leading commercial large language model, providing general information only, never financial / legal / real estate / investment advice, and always defers to a licensed REALTOR® for advice
 - **Live MLS® listings** via licensed board iframes
 - **Home valuation, buyer intake, seller intake** — all forms hard-block visitors currently under contract with another REALTOR® (CREA Article 16 compliance)
@@ -30,7 +30,7 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 ## Contact
 - General: info@eztofind.ca
 - REALTOR® network applications: realtors@eztofind.ca
-- Consumer referral leads: referral@eztofind.ca
+- Consumer referral leads: referrals@eztofind.ca
 
 ## Verified Identity Graph (sameAs)
 - Google Business Profile: https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9

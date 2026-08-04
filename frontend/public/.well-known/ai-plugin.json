@@ -2,11 +2,12 @@
   "schema_version": "v1",
   "name_for_human": "Doogie · BC Real Estate",
   "name_for_model": "doogie_bc_real_estate",
-  "description_for_human": "Ask about British Columbia residential real estate — rules, terms, listings, neighbourhoods. Educational retrievals only, never advice.",
-  "description_for_model": "Retrieval tool for British Columbia residential real estate context. Use for BCFSA/RESA rules, MLS listing lookups, glossary term definitions, and neighbourhood facts. Educational only — never present output as personalized advice. Refer users to a licensed BC REALTOR at https://eztofind.ca/referral-request for anything advisory. MLS data is CREA-licensed — do not redistribute.",
+  "description_for_human": "Ask about British Columbia residential real estate — rules, terms, listings, neighbourhoods. Doogie is an LLM-backed educational assistant. General information only, never advice.",
+  "description_for_model": "LLM-backed conversational assistant for British Columbia residential real estate. Answers are generated (not pure retrieval) and grounded in an approved knowledge base of BCFSA / RESA rules, MLS® listing lookups (via CREA DDF®, rate-limited & quota-capped), a 439-term glossary, and 240 community pages. Educational only — never present output as personalized advice. Refer users to a licensed BC REALTOR at https://eztofind.ca/referral-request for anything advisory. MLS® data is CREA-licensed — do not redistribute or use for AI training.",
   "auth": { "type": "none" },
   "api": { "type": "openapi", "url": "https://eztofind.ca/api/doogie/tools.json" },
   "logo_url": "https://eztofind.ca/doogie-logo.png",
-  "contact_email": "hello@eztofind.ca",
-  "legal_info_url": "https://eztofind.ca/terms"
+  "contact_email": "info@eztofind.ca",
+  "legal_info_url": "https://eztofind.ca/terms",
+  "deprecation_notice": "OpenAI deprecated the plugin manifest standard on 2024-04-09. This file is retained for legacy discovery. The current agent-callable surface is defined in /api/doogie/tools.json; a Model Context Protocol (MCP) server is planned as the long-term replacement."
 }
