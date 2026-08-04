@@ -347,8 +347,15 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
         );
       })}
     </nav>
-    {/* SidebarFilters used to live here — moved to a sticky column beside
-        the listings grid inside <SearchPanel/> for a more spacious layout. */}
+    {/* FILTERS card — placed inside the sidebar (below the nav) so it lives
+        in the empty navy panel beside the listings, exactly where the user
+        asked to move it. Only rendered on the Search view; on any other
+        section the space stays clean. */}
+    {section === "search" && (
+      <div style={{ marginTop: 18 }}>
+        <SidebarFilters/>
+      </div>
+    )}
   </aside>
   );
 };
@@ -1166,21 +1173,10 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      {/* Two-column: sticky FILTERS bubble on the left, listings grid on the
-          right.  On mobile (<900px) the sticky positioning would trap the
-          filters under the browser chrome, so it collapses to a normal
-          static block above the listings via CSS below. */}
-      <div className="dash-search-splitgrid" style={{
-        display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, alignItems: "start",
-        marginLeft: -32,
-      }}>
-        <div className="dash-search-filters-col" style={{ position: "sticky", top: 460, marginTop: 280 }}>
-          <SidebarFilters/>
-        </div>
-        <div>
-          <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
-        </div>
-      </div>
+      {/* Listings run full-width — the FILTERS card now lives inside the
+          Sidebar (left rail) directly below the nav, matching the empty
+          navy panel where the user asked to move it. */}
+      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
     </>
   );
 };
