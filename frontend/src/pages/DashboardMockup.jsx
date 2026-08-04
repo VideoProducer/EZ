@@ -1212,7 +1212,15 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Recenter on city change (uses cached geocode or falls back to first listing lat/lon)
+  // Recenter on city change. Priority order (fixed 2026-08-04 — previously
+  // used listing lat/lon FIRST, which meant a stale/wrong listing left over
+  // from a previous city search would strand the map on the wrong region;
+  // typing "Osoyoos" could recentre on Vancouver Island because the first
+  // stale listing happened to be there):
+  //   1. Cached geocode for this exact city string
+  //   2. Nominatim geocode (authoritative — city name wins over stale pins)
+  //   3. Listing lat/lon from a listing whose city actually matches
+  //   4. Doug's default coords
   useEffect(() => {
     (async () => {
       const map = mapRef.current;
@@ -1224,21 +1232,27 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
       const key = city.toLowerCase().trim();
       let center = centerCacheRef.current[key];
       if (!center) {
-        // 1. Try to derive from a listing with lat/lon
-        const hit = (listings || []).find(l => l.lat && l.lon);
-        if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 12 };
-      }
-      if (!center) {
-        // 2. Fallback: hit OpenStreetMap Nominatim (rate-limited, so cached)
+        // Authoritative source: Nominatim geocode for the exact city name
         try {
           const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ", British Columbia, Canada")}&format=json&limit=1`);
           const j = await r.json();
-          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 11 };
-        } catch {}
+          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 12 };
+        } catch { /* fall through */ }
+      }
+      if (!center) {
+        // Last-resort fallback: use lat/lon from a listing whose `city` field
+        // actually matches the searched city (case-insensitive). Never use
+        // a stale unrelated listing — that was the Osoyoos → Vancouver Island bug.
+        const hit = (listings || []).find(l => l.lat && l.lon && l.city && l.city.toLowerCase().trim() === key);
+        if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 12 };
       }
       if (center) {
         centerCacheRef.current[key] = center;
         map.setView([center.lat, center.lon], center.zoom || 12);
+      } else {
+        // Geocode failed and no matching listing — fall back to Doug's coords
+        // rather than leaving the map stranded on the previous city.
+        map.setView([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 8);
       }
     })();
   }, [city, listings]);
