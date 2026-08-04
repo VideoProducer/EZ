@@ -1171,9 +1171,10 @@ const SearchPanel = () => {
           filters under the browser chrome, so it collapses to a normal
           static block above the listings via CSS below. */}
       <div className="dash-search-splitgrid" style={{
-        display: "grid", gridTemplateColumns: "280px 1fr", gap: 20, alignItems: "start",
+        display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, alignItems: "start",
+        marginLeft: -32,
       }}>
-        <div className="dash-search-filters-col" style={{ position: "sticky", top: 460 }}>
+        <div className="dash-search-filters-col" style={{ position: "sticky", top: 460, marginTop: 280 }}>
           <SidebarFilters/>
         </div>
         <div>

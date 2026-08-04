@@ -496,8 +496,8 @@ input, textarea, select, button { font-size: 16px; } /* prevent iOS auto-zoom */
   /* Dashboard search split-grid: collapse the 280px filter column so filters
      stack above listings on phones, and unstick so the phone browser chrome
      doesn't trap the card at the top of the viewport. */
-  .dash-search-splitgrid { grid-template-columns: 1fr !important; gap: 12px !important; }
-  .dash-search-filters-col { position: static !important; }
+  .dash-search-splitgrid { grid-template-columns: 1fr !important; gap: 12px !important; margin-left: 0 !important; }
+  .dash-search-filters-col { position: static !important; margin-top: 0 !important; }
   /* Dashboard hero: the 440px image column starves text on phones and made
      the Doogie mascot balloon to fill a screen-height column with the copy
      pushed off-screen.  Collapse to single column, centre the mascot, and
