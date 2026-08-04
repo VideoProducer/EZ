@@ -28,6 +28,100 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+
+/* ============================================================================
+   Cross-browser polish — Chrome, Edge, Firefox, Safari (macOS + iOS).
+   Everything below normalises rendering quirks between Chromium and WebKit
+   so the same visual result ships to all four target browsers.
+   ============================================================================ */
+
+/* 1. Consistent font antialiasing.  Chrome/Edge default to subpixel AA;
+      Safari on macOS ships heavier fonts.  Force greyscale/antialiased for
+      the light-on-dark surfaces used across the site so weights match. */
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* 2. Prevent iOS Safari from auto-inflating text on landscape rotation. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* 3. Kill the grey tap-highlight box iOS draws over every tappable element. */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* 4. Momentum scroll for horizontally-overflowing strips (thumbstrip,
+      admin tables, chip clouds).  Chromium ignores it (already smooth). */
+[data-testid="photo-thumbstrip"],
+[data-testid$="-row"],
+.admin-table { -webkit-overflow-scrolling: touch; }
+
+/* 5. Vendor-prefixed backdrop-filter for older iOS Safari (< 18). */
+[data-testid="listing-hero-photo"] button,
+[data-testid="photo-counter"] {
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* 6. iOS Safari 100vh bug — the address bar toggle changes viewport height
+      mid-scroll, causing fullscreen overlays to jump.  `dvh` (dynamic
+      viewport height) tracks the actual visible viewport.  Applied to
+      the reel + gallery lightboxes which use inset:0. */
+@supports (height: 100dvh) {
+  [data-testid="photo-lightbox"],
+  [data-testid="doogie-reel-fullscreen"] { min-height: 100dvh; }
+}
+
+/* 7. Safari renders <input type="number"> spinners bigger than Chrome and
+      styles date inputs with a native badge — normalise to plain look. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="date"], input[type="search"] { -webkit-appearance: none; appearance: none; }
+
+/* 8. Safari autofill paints inputs yellow — override so our navy/gold
+      brand palette survives password managers filling the login form. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #fff inset !important;
+  -webkit-text-fill-color: var(--ink) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 9. Safari's `position: sticky` inside a `display: grid` cell needs the
+      parent to have `align-items: start` (already set on our split-grid),
+      but it *also* silently breaks if the sticky element's ancestors have
+      `overflow: hidden`.  Force our main content wrapper to `visible`. */
+main, .container-x { overflow: visible; }
+
+/* 10. Consistent focus rings.  Chrome/Edge default to blue; Safari to grey.
+       Force our brand gold focus ring on every focusable element so keyboard
+       users get the same accessible indicator everywhere. */
+:focus-visible {
+  outline: 2px solid var(--brand-gold);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* Kill the ugly Firefox dotted inner focus ring on buttons. */
+button::-moz-focus-inner { border: 0; padding: 0; }
+
+/* 11. Scrollbar polish — thin, brand-navy on webkit browsers.  Firefox uses
+       the `scrollbar-width` + `scrollbar-color` shorthand instead. */
+* { scrollbar-width: thin; scrollbar-color: rgba(15,42,91,0.35) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(15,42,91,0.35); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(15,42,91,0.55); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* 12. Print — hide navigation chrome + Doogie widgets so admins printing
+       a listing detail or policy PDF get a clean paper layout. */
+@media print {
+  aside, header, footer, .compliance-strip,
+  [data-testid="doogie-tour-card"],
+  [data-testid="doogie-fab"],
+  [data-testid="listing-narration"],
+  [data-testid="tour-narration"] { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  a { color: #000 !important; text-decoration: underline; }
+}
+/* ==================== end cross-browser polish ==================== */
 html {
   /* Explicit root font-size + zero text-size-adjust protects the layout from
      browser defaults that differ from 16px (some Chromium/Edge builds on
