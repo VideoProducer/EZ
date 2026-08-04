@@ -60,6 +60,91 @@
              Ahrefs Site Audit + Rank Tracker consume back for the eztofind.ca
              property audit. Site key: ffNNxar7jQ7nxXaPcHLagw -->
         <script src="https://analytics.ahrefs.com/analytics.js" data-key="ffNNxar7jQ7nxXaPcHLagw" async></script>
+        <!-- Server-side JSON-LD — visible to non-JS crawlers, auditors, and
+             LLM training bots that don't execute React. React injects a
+             richer graph on top of this for interactive pages, but everything
+             below is guaranteed schema regardless of client. -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://eztofind.ca/#organization",
+              "name": "EZtoFind.ca",
+              "alternateName": "EZ to Find",
+              "url": "https://eztofind.ca",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://eztofind.ca/images/doogie-laptop.png",
+                "width": 512,
+                "height": 512
+              },
+              "sameAs": [
+                "https://ez2find.ca",
+                "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9"
+              ],
+              "description": "AI-first British Columbia residential real estate information platform. Live MLS® search, 439 statute-cited glossary terms, 240 community pages.",
+              "areaServed": {
+                "@type": "AdministrativeArea",
+                "name": "British Columbia, Canada"
+              }
+            },
+            {
+              "@type": "RealEstateAgent",
+              "@id": "https://eztofind.ca/#agent",
+              "name": "Doug LeMaire, REALTOR®",
+              "jobTitle": "Licensed BC REALTOR®",
+              "url": "https://eztofind.ca/about",
+              "image": "https://eztofind.ca/images/doug-lemaire.jpg",
+              "worksFor": {
+                "@type": "Organization",
+                "name": "Fraser Property Management Realty Services Ltd."
+              },
+              "hasCredential": [
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "License",
+                  "name": "BCFSA Real Estate Trading Services Licence",
+                  "identifier": "167790",
+                  "recognizedBy": {
+                    "@type": "GovernmentOrganization",
+                    "name": "BC Financial Services Authority",
+                    "url": "https://www.bcfsa.ca"
+                  }
+                }
+              ],
+              "areaServed": [
+                { "@type": "Place", "name": "Greater Vancouver, BC" },
+                { "@type": "Place", "name": "Fraser Valley, BC" },
+                { "@type": "Place", "name": "Sea-to-Sky Corridor, BC" },
+                { "@type": "Place", "name": "British Columbia, Canada" }
+              ],
+              "knowsAbout": [
+                "Residential real estate", "Luxury homes", "Equestrian and acreage estates",
+                "Estate sales and probate", "Residential stratas", "BC real estate law",
+                "BCFSA compliance", "MLS® CREA DDF®"
+              ]
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://eztofind.ca/#website",
+              "url": "https://eztofind.ca",
+              "name": "EZtoFind.ca | BC Real Estate Search",
+              "inLanguage": "en-CA",
+              "publisher": { "@id": "https://eztofind.ca/#organization" },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": {
+                  "@type": "EntryPoint",
+                  "urlTemplate": "https://eztofind.ca/search?q={search_term_string}"
+                },
+                "query-input": "required name=search_term_string"
+              }
+            }
+          ]
+        }
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
