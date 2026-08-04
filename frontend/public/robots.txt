@@ -97,7 +97,16 @@ User-agent: ZoominfoBot
 Disallow: /
 User-agent: SemrushBot
 Disallow: /
+# Ahrefs — the site owner runs Ahrefs Web Analytics + Ahrefs Webmaster Tools
+# on this property, so both AhrefsBot (backlink + keyword index) and
+# AhrefsSiteAudit (technical health crawler) are fully welcomed.
 User-agent: AhrefsBot
-Disallow: /
+Allow: /
+Disallow: /admin/
+Disallow: /my-journey/
+User-agent: AhrefsSiteAudit
+Allow: /
+Disallow: /admin/
+Disallow: /my-journey/
 
 Sitemap: https://eztofind.ca/sitemap.xml
