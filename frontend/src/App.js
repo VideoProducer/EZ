@@ -4081,6 +4081,25 @@ const BuyerForm = () => {
   const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    {/* HowTo JSON-LD — Google surfaces this as a rich card for "how to buy a house in BC" queries. */}
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
+      "@context":"https://schema.org","@type":"HowTo",
+      "name":"How to buy a home in British Columbia",
+      "description":"The typical 7-step buyer journey for BC residential real estate, from pre-approval through closing. Governed by BCFSA, RESA and the Real Estate Services Rules.",
+      "totalTime":"P90D",
+      "estimatedCost":{"@type":"MonetaryAmount","currency":"CAD","value":"5000"},
+      "supply":[{"@type":"HowToSupply","name":"Government-issued ID"},{"@type":"HowToSupply","name":"Proof of down payment"},{"@type":"HowToSupply","name":"Employment / income documentation"}],
+      "tool":[{"@type":"HowToTool","name":"Licensed BC REALTOR®"},{"@type":"HowToTool","name":"Licensed BC mortgage broker or lender"},{"@type":"HowToTool","name":"BC lawyer or notary"}],
+      "step":[
+        {"@type":"HowToStep","position":1,"name":"Get mortgage pre-approval","text":"Speak with a licensed BC mortgage broker or lender. They'll confirm your qualifying rate (BC stress test at OSFI B-20), maximum mortgage, and down-payment requirement. Pre-approval typically holds for 90–120 days.","url":"https://eztofind.ca/valuation"},
+        {"@type":"HowToStep","position":2,"name":"Sign a written buyer agency agreement (DORTS)","text":"BCFSA's Disclosure of Representation in Trading Services (DORTS) form is legally required before your REALTOR® can represent you in showings, offers, or negotiations.","url":"https://eztofind.ca/dorts"},
+        {"@type":"HowToStep","position":3,"name":"Search live MLS® listings","text":"Use natural-language search or filter by community, price, beds, and property type. Every result is a live CREA DDF® listing — no stale data, no coming-soon.","url":"https://eztofind.ca/listings"},
+        {"@type":"HowToStep","position":4,"name":"Tour homes and shortlist","text":"Book showings with your REALTOR®. Track your favourites so you can compare features, condition, and neighbourhood fit."},
+        {"@type":"HowToStep","position":5,"name":"Write an offer with subjects","text":"Standard BC subjects: financing, home inspection, title review, insurance, and (for strata) Form B + minutes review. Your REALTOR® drafts the Contract of Purchase and Sale."},
+        {"@type":"HowToStep","position":6,"name":"Remove subjects and pay deposit","text":"Once subjects are satisfied, you sign the subject removal addendum and deliver the deposit (typically 5% of purchase price) to the listing brokerage's trust account."},
+        {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"Your BC lawyer or notary handles title transfer, PTT payment, mortgage registration at the Land Title & Survey Authority (LTSA), and delivery of the keys on possession day.","url":"https://eztofind.ca/glossary"}
+      ]
+    })}}/>
     <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
@@ -4115,6 +4134,24 @@ const SellerForm = () => {
   const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
+    <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
+      "@context":"https://schema.org","@type":"HowTo",
+      "name":"How to sell a home in British Columbia",
+      "description":"The typical 7-step seller journey for BC residential real estate, from pre-listing prep through completion. Governed by BCFSA, RESA and the Real Estate Services Rules.",
+      "totalTime":"P75D",
+      "supply":[{"@type":"HowToSupply","name":"Title certificate"},{"@type":"HowToSupply","name":"Recent property tax notice"},{"@type":"HowToSupply","name":"Utility bills"},{"@type":"HowToSupply","name":"Strata Form B + minutes (if applicable)"}],
+      "tool":[{"@type":"HowToTool","name":"Licensed BC listing REALTOR®"},{"@type":"HowToTool","name":"BC lawyer or notary"},{"@type":"HowToTool","name":"Home stager or professional photographer"}],
+      "step":[
+        {"@type":"HowToStep","position":1,"name":"Get a Comparative Market Analysis (CMA)","text":"A licensed BC REALTOR® prepares a CMA using recent comparable sales, active competition, and market absorption to recommend a listing price.","url":"https://eztofind.ca/valuation"},
+        {"@type":"HowToStep","position":2,"name":"Sign a Listing Contract + DORTS","text":"BCFSA's Disclosure of Representation in Trading Services is legally required. The Multiple Listing Contract authorizes your REALTOR® to market the property on the MLS® system.","url":"https://eztofind.ca/dorts"},
+        {"@type":"HowToStep","position":3,"name":"Complete the Property Disclosure Statement","text":"BC's PDS discloses known material latent defects. Truthful, up-to-date disclosure protects you from post-sale liability."},
+        {"@type":"HowToStep","position":4,"name":"Prepare, stage, and photograph","text":"Declutter, complete minor repairs, and hire a professional photographer. Media quality directly impacts click-through on listing portals."},
+        {"@type":"HowToStep","position":5,"name":"List on MLS® and market","text":"Your listing publishes to the CREA DDF® feed, syndicating to REALTOR.ca and every board's public site. Your REALTOR® coordinates showings and open houses."},
+        {"@type":"HowToStep","position":6,"name":"Review offers and negotiate","text":"Your REALTOR® presents each offer with a summary of price, deposit, subjects, dates, and included/excluded items. Counter-offers negotiated in writing."},
+        {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"After subjects are removed, your BC lawyer or notary handles title transfer at the Land Title & Survey Authority (LTSA), payout of existing mortgage(s), and disbursement of net proceeds on completion day.","url":"https://eztofind.ca/glossary"}
+      ]
+    })}}/>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">

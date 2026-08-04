@@ -446,6 +446,132 @@ const SidebarFilters = () => {
   );
 };
 
+// ── Floating draggable FILTERS card ────────────────────────────────────────
+// User can drag it by the header grip to reposition anywhere on the page.
+// Position persists in localStorage so it stays where they left it. On mobile
+// (<900px) it degrades to a static block at the top of the results area.
+const FLOATING_POS_KEY = "ez_floating_filters_pos_v1";
+const FloatingFilters = () => {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
+  const [pos, setPos] = useState(() => {
+    if (typeof window === "undefined") return { x: 24, y: 320 };
+    try {
+      const saved = JSON.parse(localStorage.getItem(FLOATING_POS_KEY) || "null");
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) return saved;
+    } catch { /* ignore */ }
+    return { x: 24, y: 320 };
+  });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef({ dx: 0, dy: 0 });
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const nx = Math.max(8, Math.min(window.innerWidth - 280, clientX - dragRef.current.dx));
+      const ny = Math.max(8, Math.min(window.innerHeight - 80, clientY - dragRef.current.dy));
+      setPos({ x: nx, y: ny });
+    };
+    const onUp = () => {
+      setDragging(false);
+      try { localStorage.setItem(FLOATING_POS_KEY, JSON.stringify(pos)); } catch { /* ignore */ }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [dragging, pos]);
+
+  const startDrag = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragRef.current = { dx: clientX - rect.left, dy: clientY - rect.top };
+    setDragging(true);
+    e.preventDefault();
+  };
+
+  const resetPos = () => {
+    const next = { x: 24, y: 320 };
+    setPos(next);
+    try { localStorage.setItem(FLOATING_POS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  if (isMobile) {
+    return (
+      <div style={{ marginTop: 16 }} data-testid="floating-filters-mobile">
+        <SidebarFilters/>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-testid="floating-filters"
+      style={{
+        position: "fixed", left: pos.x, top: pos.y, zIndex: 400,
+        width: 260, userSelect: dragging ? "none" : "auto",
+        cursor: dragging ? "grabbing" : "default",
+        filter: dragging ? "drop-shadow(0 12px 24px rgba(15,42,91,0.35))" : "drop-shadow(0 6px 16px rgba(15,42,91,0.20))",
+        transition: dragging ? "none" : "filter 0.18s",
+      }}
+    >
+      <div
+        onMouseDown={startDrag}
+        onTouchStart={startDrag}
+        data-testid="floating-filters-handle"
+        style={{
+          cursor: "grab",
+          background: C.navy, color: "#fff",
+          padding: "6px 10px",
+          borderTopLeftRadius: 12, borderTopRightRadius: 12,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          fontSize: 10.5, fontWeight: 800, letterSpacing: 0.7, textTransform: "uppercase",
+          borderBottom: `2px solid ${C.brandGold}`,
+        }}
+        title="Drag to move the filters"
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span aria-hidden="true" style={{ display: "inline-flex", gap: 2 }}>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+            <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
+          </span>
+          Drag filters
+        </span>
+        <button
+          type="button"
+          onClick={resetPos}
+          data-testid="floating-filters-reset"
+          title="Reset filter card to default position"
+          style={{
+            background: "transparent", color: C.brandGold, border: "1px solid rgba(249,189,0,0.5)",
+            borderRadius: 999, padding: "1px 7px", fontSize: 9, fontWeight: 800, cursor: "pointer",
+            letterSpacing: 0.5, textTransform: "uppercase",
+          }}
+        >Reset</button>
+      </div>
+      <div style={{ background: "#fff", borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: "hidden" }}>
+        {/* SidebarFilters already renders its own white card + shadow; wrap so
+            the drag header attaches flush on top. */}
+        <div style={{ margin: "-18px 0 0" }}>
+          <SidebarFilters/>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Top bar ────────────────────────────────────────────────────────────────
 const TopBar = ({ section, homeVariant }) => {
   const meta = SECTIONS.find(s => s.key === section) || { label: "Dashboard" };
@@ -1166,21 +1292,12 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      {/* Two-column: sticky FILTERS bubble on the left, listings grid on the
-          right.  On mobile (<900px) the sticky positioning would trap the
-          filters under the browser chrome, so it collapses to a normal
-          static block above the listings via CSS below. */}
-      <div className="dash-search-splitgrid" style={{
-        display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, alignItems: "start",
-        marginLeft: -32,
-      }}>
-        <div className="dash-search-filters-col" style={{ position: "sticky", top: 460, marginTop: 280 }}>
-          <SidebarFilters/>
-        </div>
-        <div>
-          <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
-        </div>
-      </div>
+      {/* Listings run full-width. The FILTERS card is a floating, draggable
+          panel (rendered separately as <FloatingFilters/>) so the user can
+          move it anywhere on screen. Default position: top-left. Position
+          persists across sessions via localStorage. */}
+      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+      <FloatingFilters/>
     </>
   );
 };
