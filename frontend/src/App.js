@@ -9426,6 +9426,11 @@ const AdminReferrals = () => {
 
 function App() {
   return (<BrowserRouter>
+    {/* Global scroll-to-top on every route change — applies to ALL routes
+        including DashboardMockup, VisualAgentDemo, MyJourney (which don't
+        wrap in AppLayout). Kept inside AppLayout too as a belt-and-braces
+        no-op safety for lazy-loaded async content. */}
+    <ScrollToTop/>
     <Routes>
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home

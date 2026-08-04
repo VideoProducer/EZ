@@ -1307,6 +1307,23 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
             <MapPin size={16} color={C.navy}/>
           </button>
         )}
+        {l.has_virtual_tour && (
+          <div
+            data-testid={`dash-listing-vr-${l.listing_key}`}
+            aria-label="Video / virtual tour available"
+            title="Video / virtual tour available"
+            style={{
+              position: "absolute", right: hasPin && onFocusMap ? 88 : 48, top: 8, height: 32,
+              padding: "0 10px", borderRadius: 999, border: "none",
+              background: C.brandGold || "#F5A623", color: "#0F2A5B",
+              display: "inline-flex", alignItems: "center", gap: 4,
+              fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+            }}
+          >
+            <Video size={12} strokeWidth={2.5}/> VR
+          </div>
+        )}
       </div>
       <div style={{ padding: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 15 }}>{price}</div>

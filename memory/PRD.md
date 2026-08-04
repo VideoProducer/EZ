@@ -1930,3 +1930,9 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Reported**: On iPhone, the "$691,000" (afford-max-price) in the affordability calculator overflowed the blue "YOU CAN AFFORD UP TO" bubble to the right.
 **Fix**: `App.js:6146` — changed `fontSize: "3rem"` (fixed) to `fontSize: "clamp(1.6rem, 9vw, 3rem)"` plus `overflowWrap:"anywhere"` and `wordBreak:"break-word"` safety. Desktop size preserved; scales down fluidly on narrow viewports. Fix applies to both `/valuation` calculator and dashboard-home `dash-home-afford` section (same `<Calculators/>` component).
 **Verified**: Screenshot at 390px width confirms $691,000 now fits inside the bubble with padding on both sides.
+
+---
+
+## Feb 4, 2026 — Global scroll-to-top + VR video badge
+1. **Scroll-to-top now global**: `<ScrollToTop/>` was only wired inside `<AppLayout>`, so DashboardMockup (`/`, `/preview-dashboard`, `/dashboard-mockup`), VisualAgentDemo (`/visual-agent-demo`), and MyJourney (`/my-journey/:token`) kept the previous scroll position on route change. Moved the component up one level to be a sibling of `<Routes>` inside `<BrowserRouter>` (App.js:9428). Verified: navigating from `/` (scrollY=3000) → `/communities` lands at scrollY=0.
+2. **VR badge beside pindrop**: When `l.has_virtual_tour` is truthy, a gold pill labeled "VR" with a `<Video>` icon now renders at `right: 88, top: 8` (immediately left of the MapPin pindrop) on every `ListingCard` in `DashboardMockup.jsx:1310-1327`. Existing top-left "Virtual tour" chip retained for full-tour disclosure.
