@@ -380,9 +380,29 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
 const SidebarFilters = () => {
   const ctx = useContext(SearchFiltersContext);
   if (!ctx) return null;
-  const { filters, setFilters, runSearch } = ctx;
+  const { filters, setFilters, runSearch, loading } = ctx;
   const set = (k, v) => setFilters(prev => ({ ...prev, [k]: v }));
-  const onSubmit = (e) => { e.preventDefault(); runSearch(); };
+  // Currency helpers — display "$1,000,000" while typing; store raw digits.
+  const digitsOnly = (s) => String(s || "").replace(/[^\d]/g, "");
+  const formatMoney = (raw) => {
+    const d = digitsOnly(raw);
+    if (!d) return "";
+    return "$" + Number(d).toLocaleString("en-CA");
+  };
+  const onPriceChange = (e) => set("priceMax", digitsOnly(e.target.value));
+  const applyFilters = (e) => {
+    // Belt-and-braces submit handler — Edge sometimes drops the implicit
+    // form-submit on <button type="submit"> inside a position:fixed
+    // container. Bind the click too, cancel default, and scroll the user
+    // to the listings so they can see the update land.
+    if (e && e.preventDefault) e.preventDefault();
+    runSearch();
+    setTimeout(() => {
+      const el = document.querySelector('[data-testid^="dash-listing-"]') ||
+                 document.querySelector('[data-testid="dash-map"]');
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+  };
   // Compact card matching the redesigned filter (Community/City, Property
   // Type, Min beds + Min baths, Max price, Keyword, Sort, Apply). Same
   // shared SearchFiltersContext so results grid + map stay in sync.
@@ -399,7 +419,7 @@ const SidebarFilters = () => {
     display: "block", marginBottom: 4, marginTop: 12,
   };
   return (
-    <form onSubmit={onSubmit} data-testid="dash-search-form"
+    <form onSubmit={applyFilters} data-testid="dash-search-form"
       style={{
         marginTop: 18, padding: 20,
         background: "#fff", borderRadius: 14,
@@ -468,10 +488,11 @@ const SidebarFilters = () => {
       <label style={sLabel} htmlFor="dash-f-price">Maximum price ($)</label>
       <input
         id="dash-f-price"
-        type="number" min="0"
-        value={filters.priceMax}
-        onChange={e => set("priceMax", e.target.value)}
-        placeholder="Any"
+        type="text"
+        inputMode="numeric"
+        value={formatMoney(filters.priceMax)}
+        onChange={onPriceChange}
+        placeholder="$ Any"
         data-testid="dash-search-price"
         style={sInp}
       />
@@ -498,15 +519,17 @@ const SidebarFilters = () => {
       </select>
       <button
         type="submit"
+        onClick={applyFilters}
+        disabled={loading}
         data-testid="dash-search-submit"
         style={{
           width: "100%", marginTop: 18, padding: "12px 16px", borderRadius: 999,
-          background: C.brandBlue, color: "#fff", border: "none",
-          fontWeight: 800, fontSize: 14, cursor: "pointer",
+          background: loading ? "#8AA0CC" : C.brandBlue, color: "#fff", border: "none",
+          fontWeight: 800, fontSize: 14, cursor: loading ? "wait" : "pointer",
           boxShadow: "0 4px 12px rgba(30,79,207,0.35)",
         }}
       >
-        Apply Filters
+        {loading ? "Applying…" : "Apply Filters"}
       </button>
     </form>
   );
@@ -614,7 +637,7 @@ const FloatingFilters = () => {
             <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
             <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#fff", opacity: 0.9 }}/>
           </span>
-          Drag filters
+          Drag filter here
         </span>
         <button
           type="button"
