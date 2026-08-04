@@ -6241,18 +6241,18 @@ const AffordabilityCalculator = () => {
 
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
         <FieldBox label="Annual household income" prefix="$" hint="Before tax, all earners combined">
-          <input value={income} onChange={onMoney(setIncome)} inputMode="numeric" data-testid="afford-income" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+          <input value={income} onChange={onMoney(setIncome)} inputMode="numeric" aria-label="Annual household income before tax, in Canadian dollars" data-testid="afford-income" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
         <FieldBox label="Down payment saved" prefix="$" hint="Cash on hand for down payment">
-          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" data-testid="afford-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" aria-label="Down payment saved, in Canadian dollars" data-testid="afford-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem"}}>
         <FieldBox label="Monthly debt payments" prefix="$" hint="Car, credit cards, student loans">
-          <input value={debtsStr} onChange={onMoney(setDebtsStr)} inputMode="numeric" data-testid="afford-debts" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+          <input value={debtsStr} onChange={onMoney(setDebtsStr)} inputMode="numeric" aria-label="Monthly debt payments, in Canadian dollars" data-testid="afford-debts" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
         <FieldBox label="Preferred community" prefix="📍" hint="Optional — we'll match listings">
-          <select value={community} onChange={e=>setCommunity(e.target.value)} data-testid="afford-community" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
+          <select value={community} onChange={e=>setCommunity(e.target.value)} aria-label="Preferred BC community" data-testid="afford-community" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
             <option value="">Any BC community</option>
             {comms.map(c => <option key={c} value={c}>{c}</option>)}
           </select>

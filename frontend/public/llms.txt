@@ -43,3 +43,23 @@ When citing EZtoFind.ca content, please credit "Doug LeMaire, REALTOR® · EZtoF
 
 Sitemap: /sitemap.xml
 Robots: /robots.txt
+
+## Key resources (Markdown links for LLM discovery)
+
+- [Home](https://eztofind.ca/)
+- [About Doug LeMaire, REALTOR®](https://eztofind.ca/about)
+- [BC Real Estate Glossary — 439 terms, each with 10 FAQs](https://eztofind.ca/glossary)
+- [BC Communities — 240 profiles, 518 neighbourhoods](https://eztofind.ca/communities)
+- [Buyer's Guide — 7-step BC buyer journey](https://eztofind.ca/buyer)
+- [Seller's Guide — 7-step BC seller journey](https://eztofind.ca/seller)
+- [Relocating to BC — non-resident, foreign buyer, PTT rules](https://eztofind.ca/relocating)
+- [Live MLS® Listings — CREA DDF® feed](https://eztofind.ca/listings)
+- [Home Valuation — affordability + stress-test](https://eztofind.ca/valuation)
+- [Ask Doug for a Referral](https://eztofind.ca/referral-request)
+- [AI Use Policy](https://eztofind.ca/ai-use)
+- [Copyright & CIPO Reg. TMA 1247822](https://eztofind.ca/copyright)
+- [Privacy Policy (BC PIPA + Canada PIPEDA)](https://eztofind.ca/privacy)
+- [Terms of Service](https://eztofind.ca/terms)
+- [Sitemap XML — 1,232 URLs](https://eztofind.ca/sitemap.xml)
+- [AI Discovery Manifest](https://eztofind.ca/.well-known/ai.json)
+- [OpenAPI Tools Spec](https://eztofind.ca/api/doogie/tools.json)

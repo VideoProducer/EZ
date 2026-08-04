@@ -76,14 +76,22 @@ const HeroIntro = () => (
     padding: "22px 24px", marginBottom: 22, display: "grid",
     gridTemplateColumns: "440px 1fr", gap: 22, alignItems: "center",
   }}>
-    <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
-      data-testid="dash-hero-doogie"
-      className="dash-hero-doogie"
-      style={{
-        width: "100%", maxWidth: 440, height: "auto", filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
-      }}
-      onError={e => { e.currentTarget.style.display = "none"; }}
-    />
+    <picture>
+      <source srcSet="/doogie/laptop.webp" type="image/webp"/>
+      <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
+        data-testid="dash-hero-doogie"
+        className="dash-hero-doogie"
+        width={900} height={600}
+        fetchpriority="high"
+        loading="eager"
+        decoding="async"
+        style={{
+          width: "100%", maxWidth: 440, height: "auto", aspectRatio: "3/2",
+          filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+        }}
+        onError={e => { e.currentTarget.style.display = "none"; }}
+      />
+    </picture>
     <div>
       <h1 style={{
         fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,

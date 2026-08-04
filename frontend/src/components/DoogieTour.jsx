@@ -227,7 +227,9 @@ export default function DoogieTour() {
           <div style={_backdropRect({ top: spot.top, height: spot.height, left: 0, width: spot.left })}/>
           <div style={_backdropRect({ top: spot.top, height: spot.height, left: spot.left + spot.width, right: 0 })}/>
           <div style={_backdropRect({ top: spot.top + spot.height, left: 0, right: 0, bottom: 0 })}/>
-          {/* Highlight ring around the target */}
+          {/* Highlight ring around the target — static box-shadow (no
+              animation on this outer ring; the pulse is a compositor-safe
+              pseudo-halo on the mascot itself). */}
           <div style={{
             position: "fixed",
             top: spot.top, left: spot.left, width: spot.width, height: spot.height,
@@ -235,7 +237,6 @@ export default function DoogieTour() {
             borderRadius: 12,
             boxShadow: "0 0 0 4px rgba(245,166,35,0.30), 0 0 30px rgba(245,166,35,0.55)",
             zIndex: 190, pointerEvents: "none",
-            animation: "doogie-pulse 1.4s ease-in-out infinite",
           }}/>
         </>
       )}
@@ -323,9 +324,22 @@ export default function DoogieTour() {
       </div>
 
       <style>{`
+        /* Composited pulse — animates opacity + transform of a pseudo halo
+           instead of box-shadow, so it runs on the GPU and doesn't trigger
+           layout on every frame (was causing CLS 0.542 → aiming for <0.1). */
         @keyframes doogie-pulse {
-          0%, 100% { box-shadow: 0 0 0 4px rgba(245,166,35,0.30), 0 0 30px rgba(245,166,35,0.55); }
-          50%      { box-shadow: 0 0 0 8px rgba(245,166,35,0.18), 0 0 40px rgba(245,166,35,0.75); }
+          0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+          50%      { opacity: 0.85; transform: translate(-50%, -50%) scale(1.12); }
+        }
+        [data-testid="doogie-tour-mascot"] { position: relative; will-change: transform; }
+        [data-testid="doogie-tour-mascot"]::before {
+          content: ""; position: absolute; top: 50%; left: 50%;
+          width: 100%; height: 100%; border-radius: 50%;
+          background: radial-gradient(circle, rgba(245,166,35,0.55) 0%, rgba(245,166,35,0) 70%);
+          transform: translate(-50%, -50%);
+          animation: doogie-pulse 1.4s ease-in-out infinite;
+          pointer-events: none; z-index: -1;
+          will-change: transform, opacity;
         }
       `}</style>
     </div>
