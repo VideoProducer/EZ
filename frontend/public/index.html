@@ -38,12 +38,32 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>EZtoFind.ca | BC Real Estate Search</title>
+        <!-- Canonical points to the site root — React Router injects a per-route
+             canonical (via <Helmet>) after mount, but this default keeps
+             non-JS crawlers (Ahrefs, Bingbot, MJ12bot) from treating the SPA
+             shell as 1,000+ duplicate pages. -->
+        <link rel="canonical" href="https://eztofind.ca/"/>
         <!-- Copyright & IP protection meta tags — help cease-and-desist letters + search engines identify ownership -->
         <meta name="copyright" content="© 2026 Doug LeMaire. All rights reserved. CIPO Copyright Registration No. 1247822."/>
         <meta name="author" content="Doug LeMaire, REALTOR®"/>
         <meta name="rights" content="EZtoFind.ca content, code, design, and Doogie AI character are proprietary works of Doug LeMaire, federally registered with the Canadian Intellectual Property Office (Reg. No. 1247822). See https://eztofind.ca/copyright"/>
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
         <meta name="googlebot" content="index, follow, max-image-preview:large"/>
+        <!-- Open Graph — surfaces on Facebook, LinkedIn, Slack, Discord, iMessage link previews -->
+        <meta property="og:type" content="website"/>
+        <meta property="og:site_name" content="EZtoFind.ca"/>
+        <meta property="og:title" content="EZtoFind.ca | BC Real Estate Search"/>
+        <meta property="og:description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
+        <meta property="og:url" content="https://eztofind.ca/"/>
+        <meta property="og:image" content="https://eztofind.ca/images/doogie-laptop.png"/>
+        <meta property="og:image:width" content="512"/>
+        <meta property="og:image:height" content="512"/>
+        <meta property="og:locale" content="en_CA"/>
+        <!-- X (Twitter) card — larger preview for shares from X, Bluesky, Threads -->
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:title" content="EZtoFind.ca | BC Real Estate Search"/>
+        <meta name="twitter:description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
+        <meta name="twitter:image" content="https://eztofind.ca/images/doogie-laptop.png"/>
         <!-- PWA manifest — allows users to install the site as an app on iOS/Android/desktop -->
         <link rel="manifest" href="/manifest.json"/>
         <link rel="icon" href="/favicon.ico" sizes="any"/>
@@ -57,7 +77,7 @@
         <meta name="apple-mobile-web-app-title" content="EZtoFind"/>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
-        <meta name="description" content="Free BC real estate research assistant — non-transactional. Live CREA DDF® MLS® search, 439-term statute-cited glossary, 240 community profiles, and Doogie, an LLM-backed educational guide. Doug LeMaire, REALTOR® — Greater Vancouver, Fraser Valley & Sea-to-Sky."/>
+        <meta name="description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term statute-cited glossary, and 240 community profiles. By Doug LeMaire, REALTOR®."/>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
         <!-- Ahrefs Web Analytics — first-party, cookieless, GDPR/PIPA-friendly.
@@ -119,6 +139,12 @@
                   }
                 }
               ],
+              "address": {
+                "@type": "PostalAddress",
+                "addressRegion": "BC",
+                "addressCountry": "CA",
+                "addressLocality": "Greater Vancouver"
+              },
               "areaServed": [
                 { "@type": "Place", "name": "Greater Vancouver, BC" },
                 { "@type": "Place", "name": "Fraser Valley, BC" },
@@ -153,7 +179,38 @@
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
-        <div id="root"></div>
+        <!-- SEO shell content — visible to non-JS crawlers (Ahrefs, Bingbot,
+             SemrushBot, MJ12bot) so every route serves a valid H1, body copy,
+             and outgoing links even before React hydrates. React replaces
+             #root on mount, so real users never see this — it's purely for
+             crawlers that don't execute JavaScript. -->
+        <div id="root">
+            <header style="max-width:56rem;margin:0 auto;padding:1.5rem 1.5rem 0;font-family:'Inter',system-ui,sans-serif;color:#1F2937">
+                <h1 style="font-family:'Playfair Display',Georgia,serif;color:#0F2A5B;font-size:2rem;line-height:1.15;margin:0 0 .5rem">EZtoFind.ca — Free British Columbia Real Estate Research</h1>
+                <p style="font-size:1rem;line-height:1.55;margin:0 0 1rem">
+                    A non-transactional research site by <strong>Doug LeMaire, REALTOR®</strong>
+                    (BCFSA Licence #167790). Search the live CREA DDF® MLS® feed, browse
+                    240 British Columbia community profiles, and get instant answers from
+                    <strong>Doogie</strong> — an educational AI guide backed by 439
+                    statute-cited glossary entries.
+                </p>
+                <nav aria-label="Primary" style="font-size:0.95rem;line-height:1.9">
+                    <a href="/listings" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Search Listings</a>
+                    <a href="/communities" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Communities</a>
+                    <a href="/glossary" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">BC Real Estate Glossary</a>
+                    <a href="/buying-guide" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Buying Guide</a>
+                    <a href="/selling-guide" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Selling Guide</a>
+                    <a href="/valuation" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Home Valuation</a>
+                    <a href="/about" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">About Doug</a>
+                    <a href="/contact" style="color:#0EA5E9;text-decoration:none">Contact</a>
+                </nav>
+                <p style="font-size:0.82rem;color:#6B7280;margin:1.25rem 0 0">
+                    Loading the interactive experience… If it doesn't load, please
+                    <a href="/contact" style="color:#0EA5E9">contact Doug directly</a>
+                    or email <a href="mailto:info@eztofind.ca" style="color:#0EA5E9">info@eztofind.ca</a>.
+                </p>
+            </header>
+        </div>
         <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

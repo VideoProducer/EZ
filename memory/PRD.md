@@ -1936,3 +1936,25 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 ## Feb 4, 2026 — Global scroll-to-top + VR video badge
 1. **Scroll-to-top now global**: `<ScrollToTop/>` was only wired inside `<AppLayout>`, so DashboardMockup (`/`, `/preview-dashboard`, `/dashboard-mockup`), VisualAgentDemo (`/visual-agent-demo`), and MyJourney (`/my-journey/:token`) kept the previous scroll position on route change. Moved the component up one level to be a sibling of `<Routes>` inside `<BrowserRouter>` (App.js:9428). Verified: navigating from `/` (scrollY=3000) → `/communities` lands at scrollY=0.
 2. **VR badge beside pindrop**: When `l.has_virtual_tour` is truthy, a gold pill labeled "VR" with a `<Video>` icon now renders at `right: 88, top: 8` (immediately left of the MapPin pindrop) on every `ListingCard` in `DashboardMockup.jsx:1310-1327`. Existing top-left "Virtual tour" chip retained for full-tour disclosure.
+
+---
+
+## Feb 5, 2026 — Ahrefs Site Audit fixes (A + C + D)
+**Reported**: Ahrefs flagged ~1,235 pages with identical issues: missing H1, low word count, meta description too long, duplicate pages without canonical, missing Open Graph / Twitter Card, no outgoing links, orphan pages, structured data validation error. Root cause: SPA shell served identically to non-JS crawlers on every route (they never see the React-hydrated content).
+
+**Fixed**:
+1. **Shell HTML (`frontend/public/index.html`)** — every non-JS crawler (Ahrefs, Bingbot, MJ12bot) now gets valid page content on any route:
+   - `<link rel="canonical" href="https://eztofind.ca/">`
+   - Meta description shortened 358 → 155 chars
+   - Open Graph tags (`og:type/title/description/url/image/locale`)
+   - Twitter Card tags (`twitter:card/title/description/image`)
+   - Visible `<h1>EZtoFind.ca — Free British Columbia Real Estate Research</h1>` + intro paragraph + 8-link primary nav injected inside `#root`. React replaces this on hydrate so real users never see it.
+2. **Schema fix** — Added `PostalAddress` (BC, CA, Greater Vancouver) to `RealEstateAgent` node so schema.org validator no longer errors on missing address. JSON-LD parses clean (3 nodes: Organization, RealEstateAgent, WebSite).
+3. **Sitemap (`frontend/public/sitemap.xml`)** — Added 3 indexable pages Ahrefs said were missing: `/buying-guide`, `/selling-guide`, `/realtors`. Total 1,235 URLs.
+4. **Robots.txt** — Explicit `Disallow: /listing/` + `Disallow: /listings` added to both `AhrefsBot` and `AhrefsSiteAudit` sections. Matches CREA DDF® policy already applied to every AI/SEO crawler above; stops Ahrefs wasting crawl budget on 1,235 volatile MLS pages.
+
+**Verified**: `curl -A "AhrefsSiteAudit/2.0"` returns HTML with H1, canonical, OG, Twitter tags, PostalAddress. React screenshot confirms shell is replaced on hydrate — no leak to real users.
+
+**Not fixed in code (Cloudflare/DNS-layer)**:
+- 3XX redirect chain, HTTP→HTTPS, `www` → apex — user must handle in Cloudflare Rules.
+- Cloudflare Worker to serve `/snapshot/glossary/*.html` and `/snapshot/community/*.html` when UA contains `AhrefsSiteAudit`, `AhrefsBot`, `Bingbot`, `SemrushBot` — user must add these names to their existing bot-swap worker (snippet delivered inline in chat).

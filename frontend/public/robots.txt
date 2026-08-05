@@ -99,15 +99,22 @@ User-agent: SemrushBot
 Disallow: /
 # Ahrefs — the site owner runs Ahrefs Web Analytics + Ahrefs Webmaster Tools
 # on this property, so both AhrefsBot (backlink + keyword index) and
-# AhrefsSiteAudit (technical health crawler) are fully welcomed.
+# AhrefsSiteAudit (technical health crawler) are fully welcomed on the
+# educational corpus. Per-listing MLS® pages (/listings, /listing/) are
+# excluded to match the CREA DDF® bot policy applied to every other
+# crawler above — the data is licensed, hourly-changing, and non-canonical.
 User-agent: AhrefsBot
 Allow: /
 Disallow: /admin/
 Disallow: /my-journey/
+Disallow: /listings
+Disallow: /listing/
 User-agent: AhrefsSiteAudit
 Allow: /
 Disallow: /admin/
 Disallow: /my-journey/
+Disallow: /listings
+Disallow: /listing/
 
 Sitemap: https://eztofind.ca/sitemap.xml
 
