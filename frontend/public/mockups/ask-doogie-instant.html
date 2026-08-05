@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Ask Doogie · Instant Results</title>
+  <meta name="viewport" content="width=1500,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --navy:#0F2A5B; --gold:#F5A623; --cream:#F5F0E1; --mist:#F5F8FF;
+      --ink:#1F2937; --muted:#6B7280; --line:#E5E7EB; --success:#16A34A;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:2.5rem 2rem 5rem;
+      background:linear-gradient(135deg,#F5F8FF 0%,var(--cream) 100%);
+      font-family:'Inter',system-ui,sans-serif; color:var(--ink);
+    }
+    header{max-width:1440px;margin:0 auto 2rem;text-align:center}
+    header .badge{
+      display:inline-block; background:var(--gold); color:var(--navy);
+      font-size:.72rem; font-weight:800; letter-spacing:.08em;
+      text-transform:uppercase; padding:.3rem .8rem; border-radius:999px;
+      margin-bottom:.85rem;
+    }
+    header h1{
+      font-family:'Playfair Display',Georgia,serif; color:var(--navy);
+      font-size:2.1rem; margin:0 0 .5rem; letter-spacing:-.01em;
+    }
+    header p{color:var(--muted); max-width:720px; margin:0 auto; line-height:1.55; font-size:.98rem}
+
+    .flow{
+      max-width:1440px; margin:0 auto;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem;
+    }
+    @media(max-width:1100px){.flow{grid-template-columns:1fr}}
+
+    .step{display:flex; flex-direction:column; gap:.9rem}
+    .step-label{
+      font-size:.72rem; font-weight:800; letter-spacing:.14em;
+      text-transform:uppercase; color:var(--muted); text-align:center;
+    }
+    .step-label b{color:var(--navy)}
+
+    .device{
+      background:#fff; border:1px solid var(--line); border-radius:14px;
+      box-shadow:0 12px 32px rgba(15,42,91,.16); overflow:hidden;
+      position:relative;
+    }
+    .device-head{
+      background:var(--navy); color:#fff; padding:.65rem 1rem;
+      display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+      font-size:.72rem; font-weight:700; letter-spacing:.1em;
+    }
+    .device-head .live{
+      display:inline-flex; align-items:center; gap:.35rem;
+      background:rgba(255,255,255,.14); border-radius:999px; padding:.2rem .55rem;
+      font-size:.62rem; font-weight:800; letter-spacing:.1em;
+    }
+    .device-head .live::before{
+      content:""; width:6px; height:6px; border-radius:50%;
+      background:#22C55E; animation:blink 1.6s ease-in-out infinite;
+    }
+    @keyframes blink{50%{opacity:.35}}
+
+    /* ─── Ambient state · idle mic FAB on the map view ─── */
+    .map-view{
+      height:520px; background:
+        linear-gradient(180deg, rgba(15,42,91,.02) 0%, rgba(15,42,91,0) 30%),
+        repeating-linear-gradient(45deg, #E8ECF3 0 40px, #DDE3EC 40px 80px);
+      position:relative; padding:1rem;
+    }
+    .map-pin{
+      position:absolute; background:var(--navy); color:#fff;
+      padding:.25rem .55rem; border-radius:999px; font-size:.72rem; font-weight:700;
+      box-shadow:0 4px 10px rgba(0,0,0,.15);
+    }
+    .fab{
+      position:absolute; right:1.25rem; bottom:1.25rem;
+      background:linear-gradient(135deg,var(--gold) 0%,#E08800 100%);
+      color:var(--navy); border:none; border-radius:999px;
+      padding:.85rem 1.35rem; font-family:inherit; font-weight:800;
+      display:flex; align-items:center; gap:.55rem; cursor:pointer;
+      box-shadow:0 8px 24px rgba(245,166,35,.4), 0 0 0 6px rgba(245,166,35,.15);
+      font-size:.92rem; letter-spacing:.02em;
+    }
+    .fab .mic-icon{
+      width:26px; height:26px; border-radius:50%; background:var(--navy); color:#fff;
+      display:grid; place-items:center; font-size:.9rem;
+    }
+    .fab::after{
+      content:"Try: 3-bed pool Salmon Arm under 1.5M";
+      position:absolute; right:100%; margin-right:.7rem; top:50%; transform:translateY(-50%);
+      background:var(--navy); color:#fff; font-size:.68rem; padding:.35rem .6rem;
+      border-radius:6px; white-space:nowrap; font-weight:500; letter-spacing:0;
+      opacity:.95;
+    }
+    .fab::before{
+      content:""; position:absolute; right:100%; margin-right:.35rem; top:50%; transform:translateY(-50%);
+      border:6px solid transparent; border-left-color:var(--navy); border-right:0;
+    }
+    .ambient-count{
+      position:absolute; left:1rem; top:1rem;
+      background:#fff; padding:.35rem .7rem; border-radius:999px;
+      font-size:.75rem; color:var(--muted); font-weight:600;
+      box-shadow:0 2px 6px rgba(0,0,0,.08); border:1px solid var(--line);
+    }
+    .ambient-count b{color:var(--navy)}
+
+    /* ─── Listening full-screen state ─── */
+    .listen-scene{
+      height:520px;
+      background:radial-gradient(ellipse at center, #1a3a6f 0%, var(--navy) 70%);
+      color:#fff; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; text-align:center;
+      padding:1.5rem; position:relative;
+    }
+    .doogie-lg{
+      width:150px; height:150px; border-radius:50%;
+      background:var(--gold); display:grid; place-items:center;
+      margin-bottom:1rem; box-shadow:
+        0 0 0 10px rgba(245,166,35,.24),
+        0 0 0 22px rgba(245,166,35,.14),
+        0 0 0 36px rgba(245,166,35,.07);
+      animation:pulse-lg 1.6s ease-in-out infinite;
+      overflow:hidden;
+    }
+    .doogie-lg img{width:105%; height:105%; object-fit:cover}
+    @keyframes pulse-lg{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.06)}
+    }
+    .listen-title{
+      font-family:'Playfair Display',Georgia,serif;
+      font-size:1.65rem; margin:.4rem 0 .3rem; font-weight:800;
+    }
+    .listen-hint{
+      font-size:.86rem; color:rgba(255,255,255,.75);
+      max-width:280px; margin:0 auto .95rem; line-height:1.5;
+    }
+    .wave{
+      display:flex; align-items:center; gap:5px; height:34px; margin-bottom:1.1rem;
+    }
+    .wave span{
+      display:block; width:5px; background:var(--gold); border-radius:3px;
+      animation:bar 1.05s ease-in-out infinite;
+    }
+    .wave span:nth-child(1){height:12px; animation-delay:0s}
+    .wave span:nth-child(2){height:22px; animation-delay:.09s}
+    .wave span:nth-child(3){height:32px; animation-delay:.18s}
+    .wave span:nth-child(4){height:24px; animation-delay:.27s}
+    .wave span:nth-child(5){height:16px; animation-delay:.36s}
+    .wave span:nth-child(6){height:28px; animation-delay:.45s}
+    .wave span:nth-child(7){height:34px; animation-delay:.54s}
+    .wave span:nth-child(8){height:20px; animation-delay:.63s}
+    .wave span:nth-child(9){height:14px; animation-delay:.72s}
+    .wave span:nth-child(10){height:26px; animation-delay:.81s}
+    .wave span:nth-child(11){height:18px; animation-delay:.9s}
+    @keyframes bar{
+      0%,100%{transform:scaleY(.55); opacity:.7}
+      50%{transform:scaleY(1.2); opacity:1}
+    }
+    .live-transcript{
+      background:rgba(0,0,0,.28); backdrop-filter:blur(8px);
+      border:1px solid rgba(255,255,255,.16); border-radius:12px;
+      padding:.7rem 1rem; max-width:340px; margin:0 auto 1rem;
+      font-size:.92rem; line-height:1.4; font-style:italic;
+    }
+    .live-transcript::before{content:"\201C "; opacity:.7; font-weight:800}
+    .live-transcript::after{content:" \201D"; opacity:.7; font-weight:800}
+    .listen-stop{
+      background:#DC2626; color:#fff; border:none; padding:.55rem 1.3rem;
+      border-radius:999px; font-weight:800; letter-spacing:.05em;
+      cursor:pointer; font-family:inherit; font-size:.78rem;
+    }
+
+    /* ─── Results state · Doogie header + listing grid ─── */
+    .results-head{
+      background:linear-gradient(90deg, var(--cream) 0%, #FFF8E5 100%);
+      border-bottom:1px solid var(--gold);
+      padding:.95rem 1rem;
+      display:flex; align-items:center; gap:.85rem;
+    }
+    .results-head .doogie-sm{
+      width:56px; height:56px; border-radius:50%;
+      background:var(--gold); overflow:hidden; flex-shrink:0;
+      display:grid; place-items:center;
+      box-shadow:0 4px 10px rgba(245,166,35,.35);
+    }
+    .results-head .doogie-sm img{width:105%; height:105%; object-fit:cover}
+    .results-head .text{flex:1; min-width:0}
+    .results-head h4{
+      font-family:'Playfair Display',Georgia,serif; color:var(--navy);
+      margin:0 0 .15rem; font-size:1.05rem; line-height:1.15;
+    }
+    .results-head h4 .count{
+      display:inline-block; background:var(--navy); color:#fff;
+      padding:.05rem .5rem; border-radius:999px;
+      font-size:.85rem; margin-right:.35rem; vertical-align:2px;
+      font-family:'Inter',sans-serif;
+    }
+    .results-head p{
+      margin:0; font-size:.78rem; color:var(--ink); line-height:1.35;
+    }
+    .chip-row{
+      padding:.55rem 1rem .35rem;
+      display:flex; flex-wrap:wrap; gap:.35rem;
+      background:#fff; border-bottom:1px solid var(--line);
+    }
+    .chip{
+      background:var(--cream); color:var(--navy); border:1px solid #E8DFC8;
+      font-size:.72rem; font-weight:700; padding:.25rem .55rem; border-radius:999px;
+      display:inline-flex; align-items:center; gap:.25rem;
+    }
+    .chip.filled{background:var(--gold); color:var(--navy); border-color:#E08800}
+    .chip .x{opacity:.5; margin-left:.15rem; font-weight:800}
+    .chip.mic{background:var(--navy); color:#fff; border-color:var(--navy); cursor:pointer}
+    .chip.mic::before{content:"🎤"; margin-right:.15rem}
+
+    .listing-grid{
+      padding:.7rem 1rem 1rem;
+      display:grid; grid-template-columns:1fr 1fr; gap:.65rem;
+    }
+    .listing{
+      border:1px solid var(--line); border-radius:8px; overflow:hidden;
+      background:#fff; position:relative;
+    }
+    .listing .photo{
+      height:82px; background:
+        linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,.35) 100%),
+        linear-gradient(135deg, #6BAA8B 0%, #4A7A5E 100%);
+      position:relative;
+    }
+    .listing:nth-child(2) .photo{background:linear-gradient(135deg,#7A6B95 0%,#4C3F6E 100%)}
+    .listing:nth-child(3) .photo{background:linear-gradient(135deg,#9A7C5E 0%,#6B5540 100%)}
+    .listing:nth-child(4) .photo{background:linear-gradient(135deg,#5F8FBF 0%,#3C6494 100%)}
+    .listing .type-pill{
+      position:absolute; top:5px; left:5px;
+      background:var(--navy); color:#fff; font-size:.55rem; font-weight:700;
+      padding:.12rem .35rem; border-radius:999px; letter-spacing:.03em;
+    }
+    .listing .tour-pill{
+      position:absolute; top:5px; right:36px;
+      background:var(--gold); color:var(--navy); font-size:.55rem; font-weight:800;
+      padding:.12rem .35rem; border-radius:999px;
+    }
+    .listing .heart{
+      position:absolute; top:4px; right:5px;
+      width:22px; height:22px; border-radius:50%; background:rgba(255,255,255,.95);
+      display:grid; place-items:center; font-size:.7rem;
+    }
+    .listing .info{padding:.4rem .55rem .55rem}
+    .listing .price{font-weight:800; color:var(--navy); font-size:.85rem}
+    .listing .addr{font-size:.66rem; color:var(--muted); margin-top:.1rem}
+    .listing .stats{font-size:.66rem; color:var(--ink); margin-top:.2rem; font-weight:600}
+
+    .cta-row{
+      padding:.6rem 1rem 1rem;
+      display:flex; gap:.4rem; border-top:1px solid var(--line);
+      background:#FAFAF7;
+    }
+    .cta-row button{
+      flex:1; background:var(--navy); color:#fff; border:none; padding:.55rem;
+      font-weight:700; border-radius:8px; font-family:inherit; font-size:.78rem;
+      cursor:pointer;
+    }
+    .cta-row button.secondary{background:#fff; color:var(--navy); border:1.5px solid var(--navy)}
+
+    /* Doogie announcement modal (thinking step) shown briefly */
+    .thinking-overlay{
+      position:absolute; inset:0; background:rgba(15,42,91,.94);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      color:#fff; text-align:center; padding:1.5rem;
+    }
+    .thinking-overlay .paw{
+      font-size:2.6rem; margin-bottom:.35rem;
+      animation:paw 1.4s ease-in-out infinite;
+    }
+    @keyframes paw{
+      0%,100%{transform:rotate(-8deg)}
+      50%{transform:rotate(8deg)}
+    }
+    .thinking-overlay h5{
+      font-family:'Playfair Display',Georgia,serif;
+      margin:.25rem 0 .5rem; font-size:1.05rem;
+    }
+    .thinking-overlay p{
+      font-size:.78rem; opacity:.85; margin:0 0 .8rem; max-width:280px; line-height:1.45;
+    }
+    .thinking-overlay .steps{
+      display:flex; flex-direction:column; gap:.35rem; font-size:.72rem; text-align:left;
+    }
+    .thinking-overlay .steps div{opacity:.55}
+    .thinking-overlay .steps div.done{opacity:1}
+    .thinking-overlay .steps div.done::before{content:"✓ "; color:var(--gold); font-weight:800}
+    .thinking-overlay .steps div:not(.done)::before{content:"○ "; color:rgba(255,255,255,.5)}
+
+    footer{
+      max-width:1440px; margin:2.5rem auto 0; text-align:center;
+      font-size:.82rem; color:var(--muted); line-height:1.6;
+    }
+    footer strong{color:var(--navy)}
+    footer kbd{
+      background:#fff; border:1px solid var(--line); border-bottom-width:2px;
+      border-radius:4px; padding:1px 6px; font-size:.75rem; font-family:'Inter';
+      color:var(--navy); font-weight:700;
+    }
+    .highlight-box{
+      display:inline-block; background:var(--cream); border:1px dashed var(--gold);
+      padding:.5rem 1rem; border-radius:8px; margin-top:.75rem;
+      font-size:.85rem; color:var(--navy); font-weight:600; max-width:520px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">🎤 Voice → Instant Results</div>
+    <h1>Ask Doogie — Instant Search</h1>
+    <p>
+      No filter panel. No confirmation step. Speak the query, Doogie transcribes,
+      parses, searches CREA DDF®, and drops you straight onto the results page
+      with a warm header explaining what he heard.
+    </p>
+    <div class="highlight-box">
+      <em>"Doogie, find me a 3-bedroom house in Salmon Arm with a pool for under $1.5 million"</em>
+    </div>
+  </header>
+
+  <div class="flow">
+
+    <!-- ─── STEP 1 · Ambient (idle mic FAB on the map/dashboard) ─── -->
+    <div class="step">
+      <div class="step-label">Step <b>1</b> · Ambient — Tap the Mic</div>
+      <div class="device">
+        <div class="device-head">
+          <span>EZTOFIND.CA</span>
+          <span class="live">LIVE CREA DDF®</span>
+        </div>
+        <div class="map-view">
+          <div class="ambient-count"><b>43,399</b> BC listings</div>
+          <div class="map-pin" style="top:26%;left:38%">$1.6M</div>
+          <div class="map-pin" style="top:36%;left:52%">$895K</div>
+          <div class="map-pin" style="top:44%;left:64%">$2.1M</div>
+          <div class="map-pin" style="top:58%;left:48%">$725K</div>
+          <div class="map-pin" style="top:64%;left:32%">$1.2M</div>
+          <div class="map-pin" style="top:72%;left:58%">$489K</div>
+          <button class="fab">
+            <span class="mic-icon">🎤</span>
+            Ask Doogie
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── STEP 2 · Listening + processing overlay merged ─── -->
+    <div class="step">
+      <div class="step-label">Step <b>2</b> · Doogie Is Listening</div>
+      <div class="device">
+        <div class="device-head">
+          <span style="color:#FCA5A5;font-weight:800">● RECORDING</span>
+          <span class="live" style="background:rgba(220,38,38,.35)">MIC HOT</span>
+        </div>
+        <div class="listen-scene">
+          <div class="doogie-lg">
+            <img src="/doogie/celebrating.webp" alt="Doogie mascot"
+                 onerror="this.style.display='none';this.parentElement.innerText='🐕'"
+                 style="font-size:5rem"/>
+          </div>
+          <div class="listen-title">I'm all ears!</div>
+          <div class="listen-hint">
+            Say what you're looking for — location, beds, price, features. I'll find them.
+          </div>
+          <div class="wave">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="live-transcript">
+            find me a 3-bedroom house in Salmon Arm with a pool for under 1.5 million
+          </div>
+          <button class="listen-stop">■ SEND TO DOOGIE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── STEP 3 · Results with Doogie header ─── -->
+    <div class="step">
+      <div class="step-label">Step <b>3</b> · Doogie Presents the Results</div>
+      <div class="device">
+        <div class="device-head">
+          <span>SEARCH RESULTS</span>
+          <span class="live">LIVE CREA DDF®</span>
+        </div>
+
+        <!-- Doogie result header -->
+        <div class="results-head">
+          <div class="doogie-sm">
+            <img src="/images/doogie/pointing-left-transparent.webp" alt="Doogie"
+                 onerror="this.style.display='none';this.parentElement.innerText='🐕'"
+                 style="font-size:2.2rem"/>
+          </div>
+          <div class="text">
+            <h4>
+              <span class="count">4</span>
+              I found these for you.
+            </h4>
+            <p>
+              <strong>3+ bed houses</strong> in <strong>Salmon Arm</strong> with a
+              <strong>pool</strong>, under <strong>$1.5 M</strong>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Filter chips (what Doogie set) -->
+        <div class="chip-row">
+          <div class="chip filled">📍 Salmon Arm <span class="x">×</span></div>
+          <div class="chip filled">🏠 House <span class="x">×</span></div>
+          <div class="chip filled">🛏 3+ beds <span class="x">×</span></div>
+          <div class="chip filled">💰 ≤ $1.5 M <span class="x">×</span></div>
+          <div class="chip filled">🏊 pool <span class="x">×</span></div>
+          <div class="chip mic">Ask again</div>
+        </div>
+
+        <!-- Listing grid -->
+        <div class="listing-grid">
+          <div class="listing">
+            <div class="photo">
+              <div class="type-pill">House</div>
+              <div class="tour-pill">▶ Video</div>
+              <div class="heart">♡</div>
+            </div>
+            <div class="info">
+              <div class="price">$1,199,000</div>
+              <div class="addr">2410 Lakeshore Rd, Salmon Arm</div>
+              <div class="stats">3 bd · 2.5 ba · Pool · 0.42 ac</div>
+            </div>
+          </div>
+          <div class="listing">
+            <div class="photo">
+              <div class="type-pill">House</div>
+              <div class="tour-pill" style="background:#312E81;color:#fff">◆ 3D</div>
+              <div class="heart">♡</div>
+            </div>
+            <div class="info">
+              <div class="price">$1,375,000</div>
+              <div class="addr">771 20 St NE, Salmon Arm</div>
+              <div class="stats">4 bd · 3 ba · Pool · Lake view</div>
+            </div>
+          </div>
+          <div class="listing">
+            <div class="photo">
+              <div class="type-pill">House</div>
+              <div class="heart">♡</div>
+            </div>
+            <div class="info">
+              <div class="price">$1,449,900</div>
+              <div class="addr">6120 Kault Hill Rd, Salmon Arm</div>
+              <div class="stats">5 bd · 4 ba · Pool · 1.1 ac</div>
+            </div>
+          </div>
+          <div class="listing">
+            <div class="photo">
+              <div class="type-pill">House</div>
+              <div class="tour-pill">▶ Video</div>
+              <div class="heart">♡</div>
+            </div>
+            <div class="info">
+              <div class="price">$1,289,000</div>
+              <div class="addr">351 Okanagan Ave, Salmon Arm</div>
+              <div class="stats">3 bd · 3 ba · Pool · Shop</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-row">
+          <button>View all 4 on map</button>
+          <button class="secondary">🎤 Refine</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>
+      <strong>End-to-end latency (typical):</strong>
+      &nbsp;Tap mic → <kbd>0.3 s</kbd> stream open →
+      <kbd>2–4 s</kbd> spoken query →
+      Whisper transcribe <kbd>0.8 s</kbd> →
+      Claude Haiku parse <kbd>0.4 s</kbd> →
+      CREA search <kbd>0.6 s</kbd> →
+      <strong style="color:var(--navy)">results paint ≈ 5&nbsp;s from tap to listings.</strong>
+    </p>
+    <p>
+      <strong>Doogie's opening line is dynamic:</strong>
+      when 0 matches, he offers to relax price or beds.
+      When it's an out-of-area search (Salmon Arm is Interior BC / IAR board),
+      the results still render but Doogie's header also notes the referral-network policy.
+    </p>
+  </footer>
+
+</body>
+</html>
