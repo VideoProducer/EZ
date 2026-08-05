@@ -2271,3 +2271,35 @@ Plus module-level constants: `_DOOGIE_LANG_INSTRUCT`, `_DOOGIE_LANG_CTA`, `_DOOG
 **Item (b) VisualAgentDemo.jsx split — DEFERRED**: 1,719-line file with 6 large Pane components + 20+ shared constants. Extracting properly requires ~3-4 hours and its own conversation for the testing pass. Not started; documented here so it can be resumed cleanly.
 
 **Item (a) triage — completed earlier**: 1 real cleanup shipped (unused `BuyingGuide`/`SellingGuide` imports in App.js). Remaining code-review items verified as false positives (localStorage user prefs, static-list index keys, URL-string "secret", eslint-disable-on-purpose hook deps).
+
+---
+
+## Feb 05, 2026 — Map Anchor + Strata Content-Ban + Consistent Sizing + Empty-Filter Start
+
+**Doug's 5 requests, all shipped and verified**:
+
+1. **Map anchor = Fraser Property office**. `DOUG_ADDRESS` (`/app/frontend/src/pages/DashboardMockup.jsx` L1449) updated to real coords `49.21957 / -122.59721` for 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5. `ListingsMap` initial zoom now 13, uses a persistent gold-star `.eztofind-office-marker` divIcon with popup: office name + street + BCFSA #167790 + Google Maps directions link. City change now uses `map.flyTo(..., duration: 0.9)` for smooth animation (no more jumpy setView). `fitBounds` only fires when a city is set AND there are >1 listing pins.
+
+2. **Strata content ban for detached/acreage/equestrian searches**. Added `exclude_content_patterns` kwarg to `_search_glossary` and `_search_faqs` (`/app/backend/server.py` L3433–3546). `_PROPERTY_CATEGORY_MAP` (L12566) now carries a `content_ban` list per property class — banned substrings `["strata","form b","depreciation report","contingency reserve fund"]` for detached/acreage/equestrian. Substrings the user's own raw query mentions are automatically UN-banned (so "strata rules for detached house" still returns strata content). Wired into `/api/doogie/sync-search`. Regression tests: `/app/backend/tests/test_strata_content_ban.py` — 4/4 passing.
+
+3. **Consistent sizing across devices/browsers**. `/app/frontend/src/index.css`:
+   - `.container-x` padding fluidized with `clamp(1rem, 2vw, 1.5rem)`; new max-width caps at 1440px (1200px) and 1800px (1280px) so Windows 125% displays render at the same proportions as 100% macOS.
+   - `.hero h1` capped at 4rem (was 4.75rem), `line-height 1.05`, `text-wrap: balance`.
+   - `.doogie-hero-img` scale reduced to 1.5x (was 1.9x); max-width 380px.
+   - `.section-title` capped at 2.5rem.
+   - Hero padding + section padding use `clamp()`.
+
+4. **Empty search filter on every session**. `DashboardMockup.jsx` `useState(filters)` initializer (L166) unconditionally returns `DEFAULT_DASH_FILTERS`. localStorage restore removed. `wasRestoredRef` retained for API compatibility but always `false`.
+
+5. **Home & Back buttons validated**. `DashboardBackHomeBar` (`DashboardMockup.jsx` L3729) now accepts a `resetHome` callback — parent passes an in-place reset that clears filters, resets the section, empties syncQuery, and re-triggers `runSearch()` so the map recenters on the office anchor even when already at `/`. Classic `BackHomeBar` (`/app/frontend/src/App.js` L7795) unchanged; testids `btn-back` + `btn-home` verified.
+
+**Testing agent verdict** (iteration_14): 100% pass, backend + frontend. No critical issues. 4 new pytest cases created and passing.
+
+**Backlog / open items**:
+- P1: Split `VisualAgentDemo.jsx` (1,700+ lines) into per-Pane components — still deferred, needs its own session.
+- P1: Add data-testid on Apply Filters + floating-filters container (test-only cosmetic; the button already has `dash-search-submit`).
+- P2: Confirm GBP Rating/Reviews for `AggregateRating` schema (blocked on Doug's input).
+- P2: Ingress-level bot User-Agent switch for full-SSR SEO (option b) — needs DevOps.
+- P2: Submit Doogie to ChatGPT Store / WebMCP.
+- P3: Multilingual voice-overs (zh-Hant, zh-Hans, Punjabi, Farsi, Portuguese) — parked by user.
+- P3: Move "Coming Soon" uploaded files to CDN/Object Storage.
