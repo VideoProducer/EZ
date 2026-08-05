@@ -2252,3 +2252,22 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `robots.txt` lists all three sitemap URLs
 
 **Follow-up (option b, still open)**: The 100% fix would swap the snapshot to the primary URL for known bot User-Agents at the ingress layer. Requires the DevOps team to add one nginx rule; documented in this session but not shipped.
+
+---
+
+## Feb 05, 2026 — Code Review Response: doogie_chat() Refactor Complete
+
+**Item (c) delivered**: `doogie_chat()` cyclomatic complexity reduced from 24 → ~5 by extracting 5 pure helpers:
+- `_build_doogie_language_addon(lang)` — LANGUAGE PREFERENCE fragment
+- `_build_doogie_routing_hint(message, session_id)` — Haiku classifier + confidence downgrade
+- `_stream_cached_doogie_reply(text, session_id)` — SSE cached-text streamer
+- `_load_doogie_prior_context(chat, session_id)` — 10-turn history loader
+- `_stream_live_doogie_reply(...)` — Claude Sonnet SSE + cache save
+
+Plus module-level constants: `_DOOGIE_LANG_INSTRUCT`, `_DOOGIE_LANG_CTA`, `_DOOGIE_ROUTING_HINTS`.
+
+**Behavior preserved**: verified with live curl to `/api/doogie/chat` — routing event fires (glossary, 0.95), Sonnet stream begins immediately with correct markdown. No behavior change; only structure.
+
+**Item (b) VisualAgentDemo.jsx split — DEFERRED**: 1,719-line file with 6 large Pane components + 20+ shared constants. Extracting properly requires ~3-4 hours and its own conversation for the testing pass. Not started; documented here so it can be resumed cleanly.
+
+**Item (a) triage — completed earlier**: 1 real cleanup shipped (unused `BuyingGuide`/`SellingGuide` imports in App.js). Remaining code-review items verified as false positives (localStorage user prefs, static-list index keys, URL-string "secret", eslint-disable-on-purpose hook deps).

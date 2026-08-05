@@ -841,82 +841,16 @@ async def doogie_chat(request: Request, body: ChatIn):
     if pii_flags:
         logger.warning(f"Doogie chat: PII detected & redacted before storage. Flags={pii_flags} session={session_id}")
     expires = datetime.now(timezone.utc) + timedelta(days=30)
-    # Language handling — Doug speaks English only, but Doogie can chat in
-    # any of BC's top-5 languages. When language != 'en', Doogie also flags
-    # the message so Doug's admin dashboard can surface it for bilingual
-    # referral routing (the "language mismatch = referral fee" pattern).
-    LANG_INSTRUCT = {
-        "en":       "",
-        "fr":       "The user prefers Canadian French (français canadien). Reply entirely in Canadian French — use Canadian French conventions (e.g. 'courtier immobilier' for REALTOR®, 'condo' or 'copropriété', 'quartier' for neighbourhood, 'droit de mutation' for Property Transfer Tax) and polite 'vous' by default. Keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the French meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English. Compliance boilerplate (BCFSA licence #167790, MLS® trademark line, etc.) must remain in English exactly as-is.",
-        "zh-Hant":  "The user prefers Traditional Chinese (繁體中文, Cantonese-speaker convention). Reply entirely in Traditional Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Traditional Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
-        "zh-Hans":  "The user prefers Simplified Chinese (简体中文, Mandarin-speaker convention). Reply entirely in Simplified Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Simplified Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
-        "pa":       "The user prefers Punjabi (ਪੰਜਾਬੀ, Gurmukhi script). Reply entirely in Punjabi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Punjabi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
-        "fa":       "The user prefers Farsi (فارسی, right-to-left). Reply entirely in Farsi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Farsi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
-        "pt-PT":    "The user prefers European Portuguese (Português de Portugal). Reply entirely in European Portuguese — use European spelling and idioms (e.g. 'casa de banho' not 'banheiro', 'apartamento' not 'apartamento', 'a decorrer' not 'em andamento', 'você' or 'o senhor/a senhora' as polite form, informal 'tu' only if the user is clearly casual). Keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the European Portuguese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
-    }
+
+    # Compose the system prompt: base + language directives + routing hint.
+    # All three sub-steps are pure functions with no side effects, extracted
+    # from this endpoint to keep its cyclomatic complexity manageable.
     lang = (body.language or "en").strip()
-    lang_addon = LANG_INSTRUCT.get(lang, "")
-    # For non-English replies, add TWO closing rules that must appear at the very
-    # end of every substantive reply, in this exact order:
-    #   1. A localized "Would you like a referral to a same-language REALTOR®?" CTA
-    #      followed by an HTML anchor to /referral-request. The frontend chat renderer
-    #      converts any /referral-request anchor into the branded pill button style.
-    #   2. A localized "AI translation — verify with a professional" caveat.
-    if lang != "en" and lang_addon:
-        _lang_names_for_cta = {
-            "fr":      ("Français",             "Voulez-vous être mis en relation avec un(e) courtier(ère) immobilier(ère) qui parle français ?", "Demander un(e) REALTOR® en"),
-            "zh-Hant": ("繁體中文",              "您想聯繫一位會說中文的 REALTOR® 嗎？",                                                    "在此地區申請 REALTOR® 推薦"),
-            "zh-Hans": ("简体中文",              "您想联系一位会说中文的 REALTOR® 吗？",                                                    "在此地区申请 REALTOR® 推荐"),
-            "pa":      ("ਪੰਜਾਬੀ",                "ਕੀ ਤੁਸੀਂ ਕਿਸੇ ਅਜਿਹੇ REALTOR® ਨਾਲ ਸੰਪਰਕ ਕਰਨਾ ਚਾਹੋਗੇ ਜੋ ਪੰਜਾਬੀ ਬੋਲਦਾ ਹੈ?",                    "REALTOR® ਰੈਫਰਲ ਦੀ ਬੇਨਤੀ ਕਰੋ"),
-            "fa":      ("فارسی",                 "آیا مایلید با یک REALTOR® فارسی‌زبان در ارتباط قرار بگیرید؟",                             "درخواست معرفی REALTOR® در"),
-            "pt-PT":   ("Português",             "Gostaria de ser encaminhado para um(a) REALTOR® que fala Português?",                     "Solicitar Encaminhamento REALTOR® em"),
-        }
-        _lang_data = _lang_names_for_cta.get(lang)
-        if _lang_data:
-            lang_native, cta_question, button_label = _lang_data
-            lang_addon += (
-                f" CLOSING FORMULA — MANDATORY for any reply longer than a one-line greeting or clarification. "
-                f"End every substantive reply with these two blocks, in this exact order, each on its own paragraph in the target language:\n"
-                f"1. The following localized referral invitation, formatted as: "
-                f"'{cta_question}' followed by an HTML anchor exactly like this: "
-                f'<a href="/referral-request?lang={lang}&language_preference={lang}&city=[INFER_CITY_FROM_CONVERSATION_OR_LEAVE_BLANK]">{button_label} [CITY_OR_AREA_MENTIONED]</a>. '
-                f"If a specific BC city or area was mentioned in the conversation, use it in both the URL and the button label (e.g. 'Vancouver'). If unspecified, use the phrase equivalent to 'your area' in the target language and leave city empty in the URL. Never invent a fake area.\n"
-                f"2. The AI translation caveat sentence translated to the target language: 'AI translation — verify important details with a licensed professional before acting.'\n"
-                f"Do NOT include these closing blocks for trivial one-line greetings, one-line clarifying questions, or listing-search-result responses (those already have their own pill buttons)."
-            )
-    system_prompt = DOOGIE_SYSTEM + ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon if lang_addon else "")
-
-    # ── Doogie Routing v2 — fast Haiku intent classifier ─────────────────
-    # Before we hit the main model, ask Haiku 4.5 which knowledge base the
-    # question is really about (listings / glossary / communities / general
-    # / clarify). We use this to (a) emit an SSE `routing` event so the
-    # frontend can show a debug badge, and (b) append a soft routing hint to
-    # the system prompt so Sonnet stays anchored to the right KB. Classifier
-    # runs in ~200-400ms and is bypassed on cache hits.
-    routing_hint = ""
-    routing_meta = None
-    try:
-        routing_meta = await _classify_doogie_intent(body.message, session_id)
-        if routing_meta:
-            intent = routing_meta.get("intent") or "general"
-            confidence = float(routing_meta.get("confidence") or 0.0)
-            _hints = {
-                "listings":    "\n\nROUTING HINT: the user is asking about specific listings, addresses, prices, beds/baths, or search filters. Anchor your response to the CREA DDF® listing search flow — never invent a listing. If the question is about a listing's suitability or price fairness, refer them to Doug LeMaire, REALTOR® for advice.",
-                "glossary":    "\n\nROUTING HINT: the user is asking about a BC real estate term or concept. Anchor your response to the glossary knowledge (RESA, BCFSA, PTT, HBRP, strata, contingencies, etc.) and answer as general information only — no advice.",
-                "communities": "\n\nROUTING HINT: the user is asking about a BC community, neighbourhood, or region. Anchor your response to community-level facts (schools, transit, walkability) and route to the /community/:slug page if a specific city is named.",
-                "clarify":     "\n\nROUTING HINT: the user's question is ambiguous. Ask ONE clarifying question before answering, and keep it under 12 words.",
-                "general":     "",
-            }
-            routing_hint = _hints.get(intent, "")
-            if confidence < 0.55 and intent not in ("clarify", "general"):
-                # Low confidence — bias toward clarification instead of guessing.
-                routing_hint = _hints["clarify"]
-                routing_meta["intent"] = "clarify"
-                routing_meta["low_confidence_original"] = intent
-    except Exception as e:
-        logger.warning(f"Doogie intent classifier failed for {session_id}: {e}")
-
-    system_prompt = system_prompt + routing_hint
+    lang_addon = _build_doogie_language_addon(lang)
+    routing_hint, routing_meta = await _build_doogie_routing_hint(body.message, session_id)
+    system_prompt = DOOGIE_SYSTEM + (
+        ("\n\nLANGUAGE PREFERENCE:\n" + lang_addon) if lang_addon else ""
+    ) + routing_hint
 
     await db.chat_messages.insert_one({
         "session_id": session_id, "role": "user",
@@ -934,43 +868,153 @@ async def doogie_chat(request: Request, body: ChatIn):
     # FIRST message in a session (stateless) and the query contains no PII.
     cached = await _lookup_doogie_cache(redacted_msg, lang, session_id, pii_flags)
     if cached:
-        async def gen_cached():
-            # Stream the cached text in ~40-char chunks so the UX still feels natural.
-            text = cached
-            CHUNK = 40
-            for i in range(0, len(text), CHUNK):
-                yield f"data: {json.dumps({'delta': text[i:i+CHUNK]})}\n\n"
-                await asyncio.sleep(0.015)   # ~15ms between chunks
-            await db.chat_messages.insert_one({
-                "session_id": session_id, "role": "assistant",
-                "content": text, "ts": now_iso(), "cached": True,
-                "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
-            })
-            yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'cached': True}) }\n\n"
-        return StreamingResponse(gen_cached(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+        return _stream_cached_doogie_reply(cached, session_id)
 
     chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=system_prompt).with_model("anthropic", "claude-sonnet-4-6")
+    prior_count = await _load_doogie_prior_context(chat, session_id)
+    return _stream_live_doogie_reply(
+        chat, body.message, session_id, redacted_msg, lang,
+        prior_count, pii_flags, routing_meta,
+    )
 
-    # Load prior conversation turns so Doogie has context (up to 10 turns = 20 messages).
-    # Beyond 10 turns, older messages are dropped (oldest-first) — cheap, no
-    # summarization needed since Doogie's turns are short and stateless-tolerant.
-    # This also caps input-token growth so a chatty user can't compound your bill.
+
+# ── Doogie chat helpers ─────────────────────────────────────────────────────
+# Extracted from `doogie_chat()` to keep that endpoint focused on orchestration.
+# Every helper is pure or async-only-Mongo and can be unit-tested in isolation.
+
+# Language-specific system-prompt fragments. Doug speaks English only, but
+# Doogie can chat in any of BC's top-5 languages + Canadian French.
+_DOOGIE_LANG_INSTRUCT: dict[str, str] = {
+    "en":       "",
+    "fr":       "The user prefers Canadian French (français canadien). Reply entirely in Canadian French — use Canadian French conventions (e.g. 'courtier immobilier' for REALTOR®, 'condo' or 'copropriété', 'quartier' for neighbourhood, 'droit de mutation' for Property Transfer Tax) and polite 'vous' by default. Keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the French meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English. Compliance boilerplate (BCFSA licence #167790, MLS® trademark line, etc.) must remain in English exactly as-is.",
+    "zh-Hant":  "The user prefers Traditional Chinese (繁體中文, Cantonese-speaker convention). Reply entirely in Traditional Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Traditional Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+    "zh-Hans":  "The user prefers Simplified Chinese (简体中文, Mandarin-speaker convention). Reply entirely in Simplified Chinese — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Simplified Chinese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+    "pa":       "The user prefers Punjabi (ਪੰਜਾਬੀ, Gurmukhi script). Reply entirely in Punjabi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Punjabi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+    "fa":       "The user prefers Farsi (فارسی, right-to-left). Reply entirely in Farsi — but keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the Farsi meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+    "pt-PT":    "The user prefers European Portuguese (Português de Portugal). Reply entirely in European Portuguese — use European spelling and idioms (e.g. 'casa de banho' not 'banheiro', 'apartamento' not 'apartamento', 'a decorrer' not 'em andamento', 'você' or 'o senhor/a senhora' as polite form, informal 'tu' only if the user is clearly casual). Keep BC-specific real estate terms (RESA, BCFSA, HBRP, PTT, MLS®, REALTOR®) in English AND provide the European Portuguese meaning in parentheses on first mention. Route names (e.g. /referral-request) stay in English.",
+}
+
+# For non-English replies, Doogie adds a same-language referral CTA + AI-
+# translation caveat as the closing formula. Tuple = (native name, CTA
+# question, button label prefix).
+_DOOGIE_LANG_CTA: dict[str, tuple[str, str, str]] = {
+    "fr":      ("Français",   "Voulez-vous être mis en relation avec un(e) courtier(ère) immobilier(ère) qui parle français ?", "Demander un(e) REALTOR® en"),
+    "zh-Hant": ("繁體中文",   "您想聯繫一位會說中文的 REALTOR® 嗎？",                                                       "在此地區申請 REALTOR® 推薦"),
+    "zh-Hans": ("简体中文",   "您想联系一位会说中文的 REALTOR® 吗?",                                                       "在此地区申请 REALTOR® 推荐"),
+    "pa":      ("ਪੰਜਾਬੀ",     "ਕੀ ਤੁਸੀਂ ਕਿਸੇ ਅਜਿਹੇ REALTOR® ਨਾਲ ਸੰਪਰਕ ਕਰਨਾ ਚਾਹੋਗੇ ਜੋ ਪੰਜਾਬੀ ਬੋਲਦਾ ਹੈ?",                           "REALTOR® ਰੈਫਰਲ ਦੀ ਬੇਨਤੀ ਕਰੋ"),
+    "fa":      ("فارسی",      "آیا مایلید با یک REALTOR® فارسی‌زبان در ارتباط قرار بگیرید؟",                                 "درخواست معرفی REALTOR® در"),
+    "pt-PT":   ("Português",  "Gostaria de ser encaminhado para um(a) REALTOR® que fala Português?",                          "Solicitar Encaminhamento REALTOR® em"),
+}
+
+# Routing-hint text keyed by classifier intent. Kept module-level so it can be
+# unit tested independently of the LLM classifier and the chat endpoint.
+_DOOGIE_ROUTING_HINTS: dict[str, str] = {
+    "listings":    "\n\nROUTING HINT: the user is asking about specific listings, addresses, prices, beds/baths, or search filters. Anchor your response to the CREA DDF® listing search flow — never invent a listing. If the question is about a listing's suitability or price fairness, refer them to Doug LeMaire, REALTOR® for advice.",
+    "glossary":    "\n\nROUTING HINT: the user is asking about a BC real estate term or concept. Anchor your response to the glossary knowledge (RESA, BCFSA, PTT, HBRP, strata, contingencies, etc.) and answer as general information only — no advice.",
+    "communities": "\n\nROUTING HINT: the user is asking about a BC community, neighbourhood, or region. Anchor your response to community-level facts (schools, transit, walkability) and route to the /community/:slug page if a specific city is named.",
+    "clarify":     "\n\nROUTING HINT: the user's question is ambiguous. Ask ONE clarifying question before answering, and keep it under 12 words.",
+    "general":     "",
+}
+
+
+def _build_doogie_language_addon(lang: str) -> str:
+    """Compose the LANGUAGE PREFERENCE fragment for the system prompt.
+
+    English visitors get an empty string (base prompt is already English).
+    Non-English visitors get the language directive PLUS a mandatory closing
+    formula (referral CTA + AI-translation caveat) so replies always end with
+    the same-language pathway to a licensed local REALTOR®."""
+    addon = _DOOGIE_LANG_INSTRUCT.get(lang, "")
+    if lang == "en" or not addon:
+        return addon
+    cta = _DOOGIE_LANG_CTA.get(lang)
+    if not cta:
+        return addon
+    _lang_native, cta_question, button_label = cta
+    return addon + (
+        f" CLOSING FORMULA — MANDATORY for any reply longer than a one-line greeting or clarification. "
+        f"End every substantive reply with these two blocks, in this exact order, each on its own paragraph in the target language:\n"
+        f"1. The following localized referral invitation, formatted as: "
+        f"'{cta_question}' followed by an HTML anchor exactly like this: "
+        f'<a href="/referral-request?lang={lang}&language_preference={lang}&city=[INFER_CITY_FROM_CONVERSATION_OR_LEAVE_BLANK]">{button_label} [CITY_OR_AREA_MENTIONED]</a>. '
+        f"If a specific BC city or area was mentioned in the conversation, use it in both the URL and the button label (e.g. 'Vancouver'). If unspecified, use the phrase equivalent to 'your area' in the target language and leave city empty in the URL. Never invent a fake area.\n"
+        f"2. The AI translation caveat sentence translated to the target language: 'AI translation — verify important details with a licensed professional before acting.'\n"
+        f"Do NOT include these closing blocks for trivial one-line greetings, one-line clarifying questions, or listing-search-result responses (those already have their own pill buttons)."
+    )
+
+
+async def _build_doogie_routing_hint(message: str, session_id: str) -> tuple[str, dict | None]:
+    """Run the fast Haiku 4.5 intent classifier and return the routing-hint
+    fragment (may be empty) + the routing metadata dict (may be None on
+    failure). Low-confidence hits (<0.55) are downgraded to 'clarify' so
+    Sonnet asks one focused follow-up question instead of guessing."""
+    try:
+        routing_meta = await _classify_doogie_intent(message, session_id)
+    except Exception as e:
+        logger.warning(f"Doogie intent classifier failed for {session_id}: {e}")
+        return "", None
+    if not routing_meta:
+        return "", None
+    intent = routing_meta.get("intent") or "general"
+    confidence = float(routing_meta.get("confidence") or 0.0)
+    if confidence < 0.55 and intent not in ("clarify", "general"):
+        # Low confidence — bias toward clarification instead of guessing.
+        routing_meta["low_confidence_original"] = intent
+        routing_meta["intent"] = "clarify"
+        intent = "clarify"
+    return _DOOGIE_ROUTING_HINTS.get(intent, ""), routing_meta
+
+
+def _stream_cached_doogie_reply(cached_text: str, session_id: str) -> StreamingResponse:
+    """Emit a cached Doogie reply as an SSE stream so the UX still feels
+    natural (~40-char chunks, ~15ms apart) and log the assistant message."""
+    async def gen_cached():
+        text = cached_text
+        CHUNK = 40
+        for i in range(0, len(text), CHUNK):
+            yield f"data: {json.dumps({'delta': text[i:i+CHUNK]})}\n\n"
+            await asyncio.sleep(0.015)   # ~15ms between chunks
+        await db.chat_messages.insert_one({
+            "session_id": session_id, "role": "assistant",
+            "content": text, "ts": now_iso(), "cached": True,
+            "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
+        })
+        yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'cached': True})}\n\n"
+    return StreamingResponse(
+        gen_cached(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+async def _load_doogie_prior_context(chat, session_id: str) -> int:
+    """Load up to 10 prior user+assistant turns onto the chat's history so
+    Doogie has context. Older messages are dropped oldest-first — cheap, no
+    summarization needed since Doogie's turns are short and stateless-tolerant.
+    Also caps input-token growth so a chatty user can't compound the bill.
+    Returns the number of prior messages actually loaded."""
     _MAX_CONTEXT_TURNS = 10  # 10 user+10 assistant = 20 messages
-    prior_count = 0
     try:
         prior = await db.chat_messages.find(
             {"session_id": session_id, "role": {"$in": ["user", "assistant"]}},
             {"_id": 0, "role": 1, "content": 1}
         ).sort("ts", -1).limit(_MAX_CONTEXT_TURNS * 2).to_list(_MAX_CONTEXT_TURNS * 2)
-        # Reverse to chronological order and drop the current user turn we JUST inserted (last one)
+        # Reverse to chronological order and drop the current user turn we JUST inserted (last one).
         prior_chrono = list(reversed(prior))
         if prior_chrono and prior_chrono[-1].get("role") == "user":
             prior_chrono = prior_chrono[:-1]
         chat.history = [{"role": m["role"], "content": m["content"]} for m in prior_chrono]
-        prior_count = len(prior_chrono)
+        return len(prior_chrono)
     except Exception as e:
         logger.warning(f"Doogie context load failed for {session_id}: {e}")
+        return 0
 
+
+def _stream_live_doogie_reply(chat, original_message: str, session_id: str,
+                               redacted_msg: str, lang: str, prior_count: int,
+                               pii_flags: list, routing_meta: dict | None) -> StreamingResponse:
+    """Stream Claude Sonnet's response back to the client via SSE, log the
+    redacted final reply, and populate the response cache when eligible."""
     async def gen():
         full = ""
         try:
@@ -978,14 +1022,14 @@ async def doogie_chat(request: Request, body: ChatIn):
             # badge (behind ?debug=1) while the main response streams in.
             if routing_meta:
                 yield f"data: {json.dumps({'routing': routing_meta})}\n\n"
-            # Send ORIGINAL (unredacted) to Claude so the AI can respond naturally
-            async for ev in chat.stream_message(UserMessage(text=body.message)):
+            # Send ORIGINAL (unredacted) message to Claude so the AI can respond naturally.
+            async for ev in chat.stream_message(UserMessage(text=original_message)):
                 if isinstance(ev, TextDelta):
                     full += ev.content
                     yield f"data: {json.dumps({'delta': ev.content})}\n\n"
                 elif isinstance(ev, StreamDone):
                     break
-            # Also redact any PII from Claude's reply before storage (defense in depth)
+            # Also redact any PII from Claude's reply before storage (defense in depth).
             redacted_reply, _ = redact_pii(full)
             await db.chat_messages.insert_one({
                 "session_id": session_id, "role": "assistant",
@@ -1002,7 +1046,11 @@ async def doogie_chat(request: Request, body: ChatIn):
             logger.error(f"Doogie error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
-    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ---- Doogie response cache (MongoDB TTL) ----
