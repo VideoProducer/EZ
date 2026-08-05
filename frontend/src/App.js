@@ -1765,7 +1765,8 @@ const _hasPersonalization = () => {
     }
     return !!(localStorage.getItem("ez_last_search") ||
               localStorage.getItem("ez_favorites") ||
-              localStorage.getItem("ez_last_community"));
+              localStorage.getItem("ez_last_community") ||
+              localStorage.getItem("ez_dashboard_filters"));
   } catch { return false; }
 };
 
@@ -1842,7 +1843,7 @@ const PersonalizedHome = () => {
   };
   const resetPersonalization = () => {
     if (!window.confirm("This will clear your saved searches, favorites, and recently-viewed communities from this browser. Continue?")) return;
-    ["ez_favorites","ez_fav_prices","ez_last_search","ez_last_community","ez_personalized_dismissed"].forEach(k => localStorage.removeItem(k));
+    ["ez_favorites","ez_fav_prices","ez_last_search","ez_last_community","ez_personalized_dismissed","ez_dashboard_filters"].forEach(k => localStorage.removeItem(k));
     setVisible(false);
     window.dispatchEvent(new CustomEvent("ez-favorites-changed", { detail: [] }));
   };

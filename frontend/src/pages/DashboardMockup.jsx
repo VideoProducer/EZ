@@ -149,7 +149,24 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const gotoSection = (s) => { setSection(s); if (isMobile) setSidebarOpen(false); };
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
-  const [filters, setFilters] = useState({ q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" });
+  //
+  // Personalization: On mount we rehydrate the visitor's last dashboard
+  // search from localStorage — so a Kelowna condo hunter who left last week
+  // returns and lands straight on Kelowna condos. Runs entirely on-device;
+  // never sent to the server. Matches the /listings `ez_last_search` pattern
+  // and the site-wide PIPA localStorage strategy.
+  const DASH_FILTERS_LS_KEY = "ez_dashboard_filters";
+  const DEFAULT_DASH_FILTERS = { q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" };
+  const [filters, setFilters] = useState(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(DASH_FILTERS_LS_KEY) : null;
+      if (!raw) return DEFAULT_DASH_FILTERS;
+      const saved = JSON.parse(raw);
+      // Basic shape guard so a stale/corrupt entry doesn't crash the render.
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return DEFAULT_DASH_FILTERS;
+      return { ...DEFAULT_DASH_FILTERS, ...saved };
+    } catch { return DEFAULT_DASH_FILTERS; }
+  });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sync, setSync] = useState(null);         // Content Sync Engine payload
@@ -205,6 +222,16 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       ]);
       if (listResp.status === "fulfilled") setResults(listResp.value);
       if (syncResp.status === "fulfilled") setSync(syncResp.value);
+
+      // Persist the exact filter set that produced these results so the
+      // visitor lands here next time. Skip when nothing meaningful is set
+      // (avoids overwriting a real prior search with an empty state).
+      try {
+        const meaningful = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (f[k] || "").toString().trim() !== "");
+        if (meaningful) {
+          localStorage.setItem(DASH_FILTERS_LS_KEY, JSON.stringify(f));
+        }
+      } catch { /* localStorage may be disabled in private windows */ }
     } finally {
       setLoading(false);
       setSyncLoading(false);

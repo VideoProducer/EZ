@@ -2145,3 +2145,25 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `backend/server.py` — added `_parse_doogie_filter_text` helper, `POST /api/doogie/parse-filter` endpoint, extended `_detect_property_intel` normalization.
 - `frontend/src/components/DoogieFilterHeader.jsx` — new type mode + mode toggle + typed input UI.
 - `frontend/src/pages/DashboardMockup.jsx` — new `PropertyIntelPivotBadge`, `_PROPERTY_INTEL_OPTIONS`, dropped buggy propMap, `runSearch(overrideFilters?)`.
+
+---
+
+## Feb 05, 2026 — Persistent Dashboard Filters (welcome-back UX)
+
+**Feature**: The dashboard now remembers the visitor's last search in `localStorage` and rehydrates it on return. A Kelowna condo hunter who left last week comes back and lands straight on Kelowna condos with the whole Sync panel already populated — no re-clicking.
+
+**Implementation** (`DashboardMockup.jsx`):
+- New key: `ez_dashboard_filters` (matches the existing `ez_last_search` / `ez_favorites` / `ez_last_community` pattern).
+- `useState(() => ...)` initializer reads localStorage → shape-guards → falls back to defaults on corrupt entry.
+- Existing `useEffect(runSearch)` on mount now auto-runs with the loaded filters, so listings + sync + market insights + property intel all populate before the visitor even scrolls.
+- Persisted only when a meaningful field is set — empty runs never overwrite a real prior search.
+
+**Privacy** (`App.js`):
+- Added the new key to `resetPersonalization()` — visitors who tap "Reset personalization" from Cookie Preferences fully clear the dashboard cache alongside searches / favorites / community.
+- Added it to the `hasPersonalization()` detector so the "Welcome back" hero prompt picks up on the new signal.
+
+**Verified E2E**: Seeded `{city: Kelowna, propertyType: Apartment, beds: 2, priceMax: 900000}` → reloaded → sidebar re-fills, badge reads `CONDO ▼`, Market Insights: 532 condos, median $450k, listing cards show 2bd apartments in Kelowna.
+
+**Files touched**:
+- `frontend/src/pages/DashboardMockup.jsx` — `useState(() => loadPersistedFilters())`, persist inside `runSearch()` after successful fetch.
+- `frontend/src/App.js` — extended `resetPersonalization()` + `hasPersonalization()` with new key.
