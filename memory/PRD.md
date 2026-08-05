@@ -2074,3 +2074,31 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Testing**: `iteration_13.json` — 4/4 new backend pytest cases + 7/7 prior sync tests still pass. Frontend E2E validated Play button rendering, click-to-play transitions, caption text, mic button preservation, and full compliance banner. No JS console errors.
 
 **Files touched**: `backend/server.py` (helpers + spoken_summary field). `frontend/src/pages/DashboardMockup.jsx` (context nonce, TTS button + caption + auto-play logic).
+
+---
+
+## Feb 05, 2026 — Property-Type-Aware Glossary Filtering (bug fix)
+
+**Reported issue** (production): Searching "3 bedroom house in Prince George" surfaced strata-only glossary terms (Form K, Form B, Form G, Form H, Foreshore Lease) and strata FAQs, when the visitor was clearly looking for a detached house.
+
+**Root cause**: `_search_glossary` / `_search_faqs` scored purely by substring match against term/definition text, with no awareness of the visitor's property class. Strata forms rank high on generic real-estate queries because their definitions all repeat common words like "form", "property", "owner".
+
+**Fix** (`server.py`):
+- Added `exclude_categories` + `prefer_categories` parameters to `_search_glossary` and `_search_faqs`. Excludes filter entire categories at query time; prefer boosts matching category scores 3×.
+- Added `_PROPERTY_CATEGORY_MAP` — an intel_key → {exclude, preferred} lookup:
+  - **detached / acreage / equestrian** → exclude Strata, Strata Documents, Strata & Condo
+  - **condo / townhouse** → prefer Strata, Strata Documents, Strata & Condo
+  - **acreage / equestrian** → prefer Rural & Acreage, Land & Rural, Land Use
+  - **waterfront** → prefer Land & Rural, Insurance, Land Use
+  - **new-construction** → prefer Presale & Development, Building Code, Taxation
+- `doogie_sync_search` now passes these filters to both helpers.
+
+**Verified**:
+- Detached-house search in Prince George now surfaces Property Types (Detached House, Semi-Detached, Coach House, Guest house, Laneway House) + Buying & Selling (Open House) — no strata content.
+- Condo search still surfaces Strata Corporation, Strata Lot, Freehold Strata, Leaky Condo etc.
+- Acreage search surfaces Well Record, Septic System, Perc Test, RAPR — all rural.
+- All 7 prior sync-search pytest cases still pass.
+
+**Files touched**: `backend/server.py` (helpers signature + category map + sync-search wiring).
+
+**Action for user**: Preview shows the fix. Redeploy to push to production.

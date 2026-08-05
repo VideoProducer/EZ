@@ -3382,13 +3382,22 @@ def _slug_from_query(q: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")
 
 
-async def _search_glossary(q: str, q_terms: list, limit: int):
+async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None):
     """Search glossary terms + definitions. Returns list of (score, item).
     Records `title_hits` separately so callers can gate quick-answer promotion
-    on a real title match rather than pure body noise."""
+    on a real title match rather than pure body noise.
+
+    `exclude_categories` — case-insensitive list of category names to filter
+    out entirely (e.g. ["Strata", "Strata Documents", "Strata & Condo"] when
+    the visitor searched a detached / acreage / equestrian property).
+    `prefer_categories` — case-insensitive list of categories to boost 3x so
+    the most relevant terms rise to the top (e.g. condo search prefers Strata).
+    """
     pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
     if not pattern:
         return []
+    exclude_lower = {c.lower() for c in (exclude_categories or [])}
+    prefer_lower = {c.lower() for c in (prefer_categories or [])}
     hits = []
     async for d in db.glossary.find(
         {"$or": [
@@ -3397,38 +3406,54 @@ async def _search_glossary(q: str, q_terms: list, limit: int):
         ]},
         {"_id": 0, "term": 1, "slug": 1, "category": 1, "definition": 1}
     ).limit(200):
+        cat = (d.get("category") or "").strip()
+        if cat.lower() in exclude_lower:
+            continue
         title_hits = _score_match(d.get("term", ""), q_terms)
         body_hits = _score_match(d.get("definition", ""), q_terms)
         score = 3 * title_hits + body_hits
+        if cat.lower() in prefer_lower:
+            score *= 3
         hits.append((score, {
             "kind": "Terms",
             "title": d["term"],
             "blurb": (d.get("definition") or "")[:180] + ("…" if len(d.get("definition") or "") > 180 else ""),
             "href": f"/glossary/{d['slug']}",
-            "category": d.get("category") or "",
+            "category": cat,
             "title_hits": title_hits,
         }))
     hits.sort(key=lambda x: -x[0])
     return hits[:limit]
 
 
-async def _search_faqs(q: str, q_terms: list, limit: int):
-    """Search FAQs embedded on glossary terms. Returns list of (score, item)."""
+async def _search_faqs(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None):
+    """Search FAQs embedded on glossary terms. Returns list of (score, item).
+
+    Same `exclude_categories` / `prefer_categories` semantics as
+    `_search_glossary` so a detached-house search never surfaces strata FAQs.
+    """
     pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
     if not pattern:
         return []
+    exclude_lower = {c.lower() for c in (exclude_categories or [])}
+    prefer_lower = {c.lower() for c in (prefer_categories or [])}
     hits = []
     async for d in db.glossary.find(
         {"faqs": {"$elemMatch": {"$or": [
             {"q": {"$regex": pattern, "$options": "i"}},
             {"a": {"$regex": pattern, "$options": "i"}},
         ]}}},
-        {"_id": 0, "term": 1, "slug": 1, "faqs": 1}
+        {"_id": 0, "term": 1, "slug": 1, "faqs": 1, "category": 1}
     ).limit(80):
+        cat = (d.get("category") or "").strip()
+        if cat.lower() in exclude_lower:
+            continue
         for faq in (d.get("faqs") or []):
             score = 3 * _score_match(faq.get("q", ""), q_terms) + _score_match(faq.get("a", ""), q_terms)
             if score <= 0:
                 continue
+            if cat.lower() in prefer_lower:
+                score *= 3
             hits.append((score, {
                 "kind": "FAQs",
                 "title": faq.get("q") or "",
@@ -12381,6 +12406,20 @@ _PROPERTY_TYPE_KEYWORDS: list[tuple[str, re.Pattern]] = [
     ("detached",         re.compile(r"\b(detached|single[-\s]?family|sfh|house)\b", re.I)),
 ]
 
+# Property-type → glossary category filters. Strata categories are noise when
+# the visitor searched a detached / acreage / equestrian property, and vice
+# versa. `preferred` boosts the most-relevant category 3× so the top of the
+# panel always feels curated to the property class.
+_PROPERTY_CATEGORY_MAP: dict[str, dict[str, list[str]]] = {
+    "detached":         {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Property Types", "Title & Ownership", "Buying & Selling"]},
+    "acreage":          {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"]},
+    "equestrian":       {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"]},
+    "waterfront":       {"exclude": [],                                                "preferred": ["Land & Rural", "Insurance", "Land Use"]},
+    "condo":            {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo"]},
+    "townhouse":        {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo", "Property Types"]},
+    "new-construction": {"exclude": [],                                                "preferred": ["Presale & Development", "Building Code", "Taxation"]},
+}
+
 def _detect_property_intel(query: str, filters: dict | None) -> str | None:
     """Return a key from _PROPERTY_INTEL_PACKS, or None. Filter takes precedence
     over query text because it's what the user actually applied."""
@@ -12690,8 +12729,14 @@ async def doogie_sync_search(request: Request, body: SyncSearchIn):
     ) = await asyncio.gather(
         _fetch_insights(),
         _fetch_community_profile(),
-        _search_glossary(query, q_terms, lim) if q_terms else asyncio.sleep(0, result=[]),
-        _search_faqs(query, q_terms, lim) if q_terms else asyncio.sleep(0, result=[]),
+        _search_glossary(query, q_terms, lim,
+            exclude_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("exclude"),
+            prefer_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("preferred"),
+        ) if q_terms else asyncio.sleep(0, result=[]),
+        _search_faqs(query, q_terms, lim,
+            exclude_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("exclude"),
+            prefer_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("preferred"),
+        ) if q_terms else asyncio.sleep(0, result=[]),
         _fetch_intel_glossary_cards(intel_key, lim) if intel_key else asyncio.sleep(0, result=[]),
         _fetch_related_searches(query, lim) if query else asyncio.sleep(0, result=[]),
         return_exceptions=False,
