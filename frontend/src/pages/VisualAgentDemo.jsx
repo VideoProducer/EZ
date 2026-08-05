@@ -1489,7 +1489,7 @@ const PaneQualify = () => {
             value={form.property_address}
             onChange={v => upd("property_address", v)}
             onValidated={(a) => {
-              // Auto-fill city + postal code once Canada Post confirms the address
+              // Auto-fill city + postal code once the geocoder confirms the address
               if (a.city) upd("city", a.city);
               if (a.postal_code) upd("postal_code", a.postal_code);
             }}
@@ -1599,12 +1599,13 @@ const TextField = ({ label, value, onChange, testId, type = "text", placeholder,
 );
 
 // ── AddressAutocompleteField ─────────────────────────────────────────────────
-// Real-time Canada Post AddressComplete autocomplete (proxied via
-// GET /api/address/suggest + GET /api/address/validate — the API key stays
-// server-side). Enforces BC-only after Retrieve. If the selected address is
-// outside BC we surface a friendly referral pointer; if inside BC we auto-fill
-// the linked city field (via onValidated) and save the label back into the
-// property_address string so the form submission carries the validated text.
+// Real-time address autocomplete backed by OpenStreetMap Nominatim (proxied
+// via GET /api/address/suggest + GET /api/address/validate — no API key
+// required, keyless fair-use with a UA identifier). Enforces BC-only after
+// Retrieve. If the selected address is outside BC we surface a friendly
+// referral pointer; if inside BC we auto-fill the linked city field (via
+// onValidated) and save the label back into the property_address string so
+// the form submission carries the validated text.
 const AddressAutocompleteField = ({
   label = "Property address *",
   value,
@@ -1703,8 +1704,8 @@ const AddressAutocompleteField = ({
       />
       <span style={{ fontSize: 10, color: "#6B7280", display: "flex", alignItems: "center", gap: 6 }}>
         {loading ? "Looking up address…"
-          : validated ? <><CheckCircle2 size={11} color="#16A34A"/> Validated by Canada Post</>
-          : "Powered by Canada Post AddressComplete"}
+          : validated ? <><CheckCircle2 size={11} color="#16A34A"/> Validated · BC only</>
+          : "Powered by OpenStreetMap"}
       </span>
       {open && items.length > 0 && !validated && (
         <div
