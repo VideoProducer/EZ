@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Ask Doogie — Integrated Filter</title>
+<meta name="viewport" content="width=1500,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0F2A5B;--gold:#F5A623;--cream:#F5F0E1;--mist:#F5F8FF;--ink:#1F2937;--muted:#6B7280;--line:#E5E7EB}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 2rem 4rem;background:linear-gradient(135deg,#F5F8FF,var(--cream));font-family:'Inter',system-ui,sans-serif;color:var(--ink)}
+header{max-width:1500px;margin:0 auto 2rem;text-align:center}
+.badge{display:inline-block;background:var(--gold);color:var(--navy);font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:999px;margin-bottom:.75rem}
+header h1{font-family:'Playfair Display',Georgia,serif;color:var(--navy);font-size:2.1rem;margin:0 0 .5rem}
+header p{color:var(--muted);max-width:760px;margin:0 auto;line-height:1.55;font-size:.98rem}
+
+.row{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.step{display:flex;flex-direction:column;gap:.9rem}
+.step-label{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:center}
+.step-label b{color:var(--navy)}
+
+/* dashboard background behind the floating filter */
+.dashboard{position:relative;background:#F5F8FF;border:1px solid var(--line);border-radius:14px;overflow:hidden;height:640px;box-shadow:0 12px 32px rgba(15,42,91,.16)}
+.dash-hero{background:linear-gradient(135deg,#0F2A5B 0%,#1a3a6f 100%);color:#fff;padding:.65rem .95rem;font-size:.7rem;font-weight:700;letter-spacing:.1em;display:flex;justify-content:space-between}
+.dash-live{background:rgba(255,255,255,.15);padding:.15rem .5rem;border-radius:999px;font-size:.6rem}
+.dash-map{height:100%;background:repeating-linear-gradient(45deg,#E8ECF3 0 40px,#DDE3EC 40px 80px);position:relative;padding:1rem}
+.pin{position:absolute;background:var(--navy);color:#fff;padding:.2rem .5rem;border-radius:999px;font-size:.68rem;font-weight:700}
+
+/* the real filter card, floating */
+.floater{
+  position:absolute;top:22px;left:22px;width:260px;background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 12px 30px rgba(15,42,91,.28);overflow:hidden;font-family:'Inter';
+}
+.floater .grip{background:var(--navy);color:#fff;padding:.45rem .6rem;display:flex;align-items:center;justify-content:space-between;gap:.4rem;border-top:3px solid var(--gold)}
+.floater .grip .drag{font-size:.6rem;letter-spacing:.24em;opacity:.72;font-weight:700}
+.floater .grip .actions{display:flex;gap:.35rem;align-items:center}
+.pill{background:var(--gold);color:var(--navy);border:none;border-radius:999px;padding:.28rem .6rem;font-size:.6rem;font-weight:800;letter-spacing:.1em;display:inline-flex;align-items:center;gap:.25rem;cursor:pointer;font-family:inherit;white-space:nowrap}
+.pill.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+.pill.rec{background:#DC2626;color:#fff;border:none}
+.pill.rec::before{content:"";width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block;animation:blink 1.4s ease infinite;margin-right:.15rem}
+@keyframes blink{50%{opacity:.3}}
+
+.body{padding:.85rem .8rem 1rem}
+.title{font-size:.72rem;font-weight:800;color:var(--navy);letter-spacing:.06em;text-transform:uppercase;margin:0 0 .7rem}
+.field{margin-bottom:.65rem}
+.field label{display:block;font-size:.7rem;font-weight:700;margin:0 0 .25rem}
+.field input,.field select{width:100%;padding:.45rem .55rem;border:1.5px solid var(--line);border-radius:6px;font-size:.78rem;font-family:inherit;background:#fff;appearance:none}
+.field input::placeholder{color:#9CA3AF}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:.65rem}
+.row2>div{margin:0}
+.apply{width:100%;background:var(--navy);color:#fff;border:none;padding:.65rem;border-radius:8px;font-weight:700;letter-spacing:.03em;cursor:pointer;font-family:inherit;font-size:.82rem;margin-top:.2rem}
+
+/* callout on state 1 */
+.callout{position:absolute;top:56px;left:295px;background:var(--navy);color:#fff;padding:.45rem .65rem;border-radius:8px;font-size:.7rem;font-weight:600;max-width:180px;line-height:1.35;box-shadow:0 6px 14px rgba(0,0,0,.2)}
+.callout::before{content:"";position:absolute;left:-8px;top:12px;border:8px solid transparent;border-right-color:var(--navy);border-left:0}
+
+/* state 2 · listening takeover INSIDE the same card */
+.listen{
+  padding:0;background:radial-gradient(ellipse at top,#1a3a6f 0%,var(--navy) 70%);color:#fff;text-align:center;
+}
+.listen-inner{padding:1rem .8rem 1rem}
+.doogie{width:88px;height:88px;border-radius:50%;background:var(--gold);margin:.35rem auto .55rem;overflow:hidden;display:grid;place-items:center;box-shadow:0 0 0 6px rgba(245,166,35,.22),0 0 0 14px rgba(245,166,35,.11);animation:pulse 1.5s ease infinite}
+.doogie img{width:105%;height:105%;object-fit:cover}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.listen-title{font-family:'Playfair Display',Georgia,serif;font-weight:800;font-size:1rem;margin:.2rem 0 .1rem}
+.listen-hint{font-size:.7rem;opacity:.78;margin:0 0 .55rem;line-height:1.35;padding:0 .3rem}
+.wave{display:flex;justify-content:center;gap:3px;height:22px;align-items:center;margin-bottom:.6rem}
+.wave span{display:block;width:3px;background:var(--gold);border-radius:2px;animation:bar 1s ease infinite}
+.wave span:nth-child(1){height:6px;animation-delay:0s}
+.wave span:nth-child(2){height:14px;animation-delay:.08s}
+.wave span:nth-child(3){height:20px;animation-delay:.16s}
+.wave span:nth-child(4){height:16px;animation-delay:.24s}
+.wave span:nth-child(5){height:22px;animation-delay:.32s}
+.wave span:nth-child(6){height:12px;animation-delay:.4s}
+.wave span:nth-child(7){height:18px;animation-delay:.48s}
+.wave span:nth-child(8){height:8px;animation-delay:.56s}
+@keyframes bar{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1.2)}}
+.transcript{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.5rem .55rem;margin:0 0 .55rem;font-size:.72rem;line-height:1.35;font-style:italic}
+.transcript::before{content:"\201C ";opacity:.7;font-weight:800}
+.transcript::after{content:" \201D";opacity:.7;font-weight:800}
+.stop{background:#DC2626;color:#fff;border:none;padding:.4rem .9rem;border-radius:999px;font-weight:800;font-size:.7rem;letter-spacing:.05em;cursor:pointer;font-family:inherit;width:100%}
+
+/* state 3 · filled + results header behind */
+.doogie-set{background:var(--cream);border:1px dashed var(--gold);border-radius:8px;padding:.5rem .6rem;margin-bottom:.7rem;display:flex;gap:.55rem;align-items:center;font-size:.7rem}
+.doogie-set .mini{width:36px;height:36px;border-radius:50%;background:var(--gold);overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.doogie-set .mini img{width:110%;height:110%;object-fit:cover}
+.doogie-set b{color:var(--navy);display:block;font-size:.72rem}
+.doogie-set span{color:var(--muted);font-size:.62rem}
+.filled input{background:linear-gradient(90deg,rgba(245,166,35,.18) 0%,rgba(245,166,35,.06));border-color:var(--gold);color:var(--navy);font-weight:700}
+.filled label::after{content:" ✓";color:#16A34A;font-weight:800}
+
+/* results tile appearing BEHIND filter on state 3 */
+.results-tile{position:absolute;top:22px;right:22px;width:calc(100% - 320px);max-width:400px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px rgba(15,42,91,.18);overflow:hidden}
+.results-head{background:linear-gradient(90deg,var(--cream),#FFF8E5);border-bottom:1px solid var(--gold);padding:.6rem .75rem;display:flex;gap:.55rem;align-items:center}
+.results-head .mini{width:36px;height:36px;border-radius:50%;background:var(--gold);overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.results-head .mini img{width:110%;height:110%;object-fit:cover}
+.results-head h5{font-family:'Playfair Display',Georgia,serif;color:var(--navy);margin:0;font-size:.85rem;line-height:1.15}
+.results-head .count{display:inline-block;background:var(--navy);color:#fff;padding:0 .4rem;border-radius:999px;font-size:.68rem;margin-right:.25rem;font-family:'Inter';vertical-align:1px}
+.results-head p{margin:.1rem 0 0;font-size:.66rem;color:var(--ink);line-height:1.3}
+.mini-listings{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;padding:.5rem}
+.mini-card{border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.mini-card .ph{height:48px;position:relative}
+.mini-card:nth-child(1) .ph{background:linear-gradient(135deg,#6BAA8B,#4A7A5E)}
+.mini-card:nth-child(2) .ph{background:linear-gradient(135deg,#7A6B95,#4C3F6E)}
+.mini-card:nth-child(3) .ph{background:linear-gradient(135deg,#9A7C5E,#6B5540)}
+.mini-card:nth-child(4) .ph{background:linear-gradient(135deg,#5F8FBF,#3C6494)}
+.mini-card .tag{position:absolute;top:3px;left:3px;background:var(--navy);color:#fff;font-size:.48rem;padding:.05rem .25rem;border-radius:99px;font-weight:700}
+.mini-card .badge3d{position:absolute;top:3px;right:3px;background:#312E81;color:#fff;font-size:.48rem;padding:.05rem .25rem;border-radius:99px;font-weight:800}
+.mini-card .badgevid{position:absolute;top:3px;right:3px;background:var(--gold);color:var(--navy);font-size:.48rem;padding:.05rem .25rem;border-radius:99px;font-weight:800}
+.mini-card .m-info{padding:.3rem .4rem .35rem}
+.mini-card .m-price{font-weight:800;color:var(--navy);font-size:.72rem}
+.mini-card .m-addr{font-size:.55rem;color:var(--muted);margin-top:.05rem}
+.mini-card .m-stats{font-size:.55rem;color:var(--ink);margin-top:.1rem;font-weight:600}
+
+/* pointer showing where the button was tapped */
+.tap{position:absolute;width:36px;height:36px;border-radius:50%;background:rgba(245,166,35,.35);animation:tap 1.2s ease infinite}
+@keyframes tap{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2);opacity:0}}
+
+footer{max-width:1500px;margin:2.5rem auto 0;text-align:center;color:var(--muted);font-size:.85rem;line-height:1.6}
+footer strong{color:var(--navy)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">🎤 Voice Search — Native to Your Existing Filter</div>
+  <h1>Doogie inside your floating filter card</h1>
+  <p>
+    Same 260 px draggable filter card you have today. New gold <b>🎤 Ask Doogie</b> pill lives beside <b>RESET</b>.
+    Tap it, the card <em>itself</em> becomes the listening surface — no popovers, no new windows. When Doogie
+    finishes, the same card fills in with your criteria and matching listings surface immediately behind it.
+  </p>
+</header>
+
+<div class="row">
+
+  <!-- ─── STEP 1 · Filter with new Ask Doogie pill ─── -->
+  <div class="step">
+    <div class="step-label">Step <b>1</b> · Your Filter, Plus 🎤</div>
+    <div class="dashboard">
+      <div class="dash-hero"><span>EZTOFIND.CA · MAP</span><span class="dash-live">LIVE CREA DDF®</span></div>
+      <div class="dash-map">
+        <div class="pin" style="top:30%;left:52%">$1.6M</div>
+        <div class="pin" style="top:42%;left:64%">$895K</div>
+        <div class="pin" style="top:56%;left:48%">$725K</div>
+        <div class="pin" style="top:68%;left:56%">$489K</div>
+      </div>
+      <div class="floater">
+        <div class="grip">
+          <span class="drag">••••••</span>
+          <div class="actions">
+            <button class="pill">🎤 ASK DOOGIE</button>
+            <button class="pill ghost">RESET</button>
+          </div>
+        </div>
+        <div class="body">
+          <h3 class="title">Filter Listings</h3>
+          <div class="field"><label>Community / City</label><input placeholder="Type any BC community"/></div>
+          <div class="field"><label>Property Type</label><select><option>Any</option></select></div>
+          <div class="row2"><div><label style="font-size:.7rem;font-weight:700">Min beds</label><select><option>Any</option></select></div><div><label style="font-size:.7rem;font-weight:700">Min baths</label><select><option>Any</option></select></div></div>
+          <div class="field"><label>Minimum price ($)</label><input placeholder="$ Any"/></div>
+          <div class="field"><label>Maximum price ($)</label><input placeholder="$ Any"/></div>
+          <div class="field"><label>Keyword</label><input placeholder="e.g. suite, waterfront"/></div>
+          <button class="apply">Apply Filters</button>
+        </div>
+      </div>
+      <div class="callout">Tap 🎤 — I'll fill the filters and find the listings for you</div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 2 · Listening takeover INSIDE same card ─── -->
+  <div class="step">
+    <div class="step-label">Step <b>2</b> · Same Card, Listening Mode</div>
+    <div class="dashboard">
+      <div class="dash-hero"><span>EZTOFIND.CA · MAP</span><span class="dash-live">LIVE CREA DDF®</span></div>
+      <div class="dash-map">
+        <div class="pin" style="top:30%;left:52%;opacity:.35">$1.6M</div>
+        <div class="pin" style="top:42%;left:64%;opacity:.35">$895K</div>
+        <div class="pin" style="top:56%;left:48%;opacity:.35">$725K</div>
+        <div class="pin" style="top:68%;left:56%;opacity:.35">$489K</div>
+      </div>
+      <div class="floater">
+        <div class="grip">
+          <span class="drag">••••••</span>
+          <div class="actions">
+            <button class="pill rec">RECORDING</button>
+            <button class="pill ghost">RESET</button>
+          </div>
+        </div>
+        <div class="listen">
+          <div class="listen-inner">
+            <div class="doogie"><img src="/doogie/celebrating.webp" alt="Doogie" onerror="this.style.display='none';this.parentElement.innerText='🐕'" style="font-size:3rem"/></div>
+            <div class="listen-title">I'm all ears!</div>
+            <div class="listen-hint">Location, beds, price, features — I'll fill it all in.</div>
+            <div class="wave"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="transcript">find me a 3-bedroom house in Salmon Arm with a pool for under 1.5 million</div>
+            <button class="stop">■ SEND</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── STEP 3 · Filter auto-filled + results tile appears ─── -->
+  <div class="step">
+    <div class="step-label">Step <b>3</b> · Filled + Results Beside</div>
+    <div class="dashboard">
+      <div class="dash-hero"><span>EZTOFIND.CA · MAP</span><span class="dash-live">LIVE CREA DDF®</span></div>
+      <div class="dash-map">
+        <div class="pin" style="top:24%;left:60%;background:var(--gold);color:var(--navy)">$1.20M</div>
+        <div class="pin" style="top:38%;left:70%;background:var(--gold);color:var(--navy)">$1.38M</div>
+        <div class="pin" style="top:54%;left:64%;background:var(--gold);color:var(--navy)">$1.45M</div>
+        <div class="pin" style="top:64%;left:74%;background:var(--gold);color:var(--navy)">$1.29M</div>
+      </div>
+
+      <!-- filled filter card -->
+      <div class="floater" style="max-height:none">
+        <div class="grip">
+          <span class="drag">••••••</span>
+          <div class="actions">
+            <button class="pill">🎤 ASK AGAIN</button>
+            <button class="pill ghost">RESET</button>
+          </div>
+        </div>
+        <div class="body">
+          <div class="doogie-set">
+            <div class="mini"><img src="/images/doogie/pointing-left-transparent.webp" alt="Doogie" onerror="this.style.display='none';this.parentElement.innerText='🐕'" style="font-size:1.4rem"/></div>
+            <div><b>Doogie filled it in.</b><span>Review or apply below</span></div>
+          </div>
+          <div class="field filled"><label>Community / City</label><input value="Salmon Arm"/></div>
+          <div class="field filled"><label>Property Type</label><input value="House"/></div>
+          <div class="row2"><div class="field filled" style="margin:0"><label style="font-size:.7rem;font-weight:700">Min beds</label><input value="3"/></div><div><label style="font-size:.7rem;font-weight:700">Min baths</label><select><option>Any</option></select></div></div>
+          <div class="field filled"><label>Maximum price ($)</label><input value="$1,500,000"/></div>
+          <div class="field filled"><label>Keyword</label><input value="pool"/></div>
+          <button class="apply">✅ Apply These Filters</button>
+        </div>
+      </div>
+
+      <!-- companion results tile that slides in top-right -->
+      <div class="results-tile">
+        <div class="results-head">
+          <div class="mini"><img src="/images/doogie/pointing-left-transparent.webp" alt="Doogie" onerror="this.style.display='none';this.parentElement.innerText='🐕'" style="font-size:1.4rem"/></div>
+          <div>
+            <h5><span class="count">4</span> I found these for you.</h5>
+            <p><b>3+ bed houses</b> in <b>Salmon Arm</b> · <b>pool</b> · ≤ <b>$1.5M</b></p>
+          </div>
+        </div>
+        <div class="mini-listings">
+          <div class="mini-card"><div class="ph"><div class="tag">House</div><div class="badgevid">▶ Vid</div></div><div class="m-info"><div class="m-price">$1,199,000</div><div class="m-addr">2410 Lakeshore Rd</div><div class="m-stats">3 bd · Pool · 0.42 ac</div></div></div>
+          <div class="mini-card"><div class="ph"><div class="tag">House</div><div class="badge3d">◆ 3D</div></div><div class="m-info"><div class="m-price">$1,375,000</div><div class="m-addr">771 20 St NE</div><div class="m-stats">4 bd · Pool · Lake view</div></div></div>
+          <div class="mini-card"><div class="ph"><div class="tag">House</div></div><div class="m-info"><div class="m-price">$1,449,900</div><div class="m-addr">6120 Kault Hill Rd</div><div class="m-stats">5 bd · Pool · 1.1 ac</div></div></div>
+          <div class="mini-card"><div class="ph"><div class="tag">House</div><div class="badgevid">▶ Vid</div></div><div class="m-info"><div class="m-price">$1,289,000</div><div class="m-addr">351 Okanagan Ave</div><div class="m-stats">3 bd · Pool · Shop</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>
+    <strong>Nothing else on the page moves.</strong> Same 260 px draggable card. Same drag handle. Same RESET.
+    All that's added is one gold pill and — when Doogie is invoked — the card <em>internals</em> swap between
+    filter fields, listening surface, and filled state. The listings appear as a companion tile that respects
+    your existing map layout.
+  </p>
+  <p>
+    <strong>The user's mental model stays identical:</strong> <em>"my filter card is where I control the search."</em>
+    Voice becomes just another way to fill it.
+  </p>
+</footer>
+
+</body>
+</html>
