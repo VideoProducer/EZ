@@ -2102,3 +2102,23 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Files touched**: `backend/server.py` (helpers signature + category map + sync-search wiring).
 
 **Action for user**: Preview shows the fix. Redeploy to push to production.
+
+---
+
+## Feb 05, 2026 — Doogie Filter rolled out to all listing pages
+
+**Change**: Replaced the plain "FILTER LISTINGS" panel across the whole site with the Doogie-enabled filter design (matches user-approved mockup). Same design now on `/listings` and every specialty page (Waterfront, Detached, Acreage, Equestrian, Condo, Presale, etc.).
+
+**Shared component**: `/app/frontend/src/components/DoogieFilterHeader.jsx` — navy strip w/ gold bottom border, dot-drag icon + "Filter Listings" label on left, gold "🎤 Doogie" mic pill + outlined "Reset" button on right. Voice records via `MediaRecorder`, POSTs to `/api/doogie/voice-filter`, and hands back the parsed filter dict via `onVoiceFilter(vf)`. Reset triggers `onReset()`.
+
+**Wired into**:
+- `ListingFilters` (main `/listings` sidebar) — voice pre-fills the filter state then re-runs the search; Reset clears every field and refreshes results.
+- `SpecialtyFilterPanel` (every specialty page) — voice pre-fills state then navigates to `/listings?…`; Reset clears field state; locked property_type (e.g. Waterfront) is preserved even when Doogie tries to override it.
+
+**New field**: Both panels now expose **Minimum price ($)** in addition to Maximum price ($), matching the mockup.
+
+**Kept intact**: `FloatingFilters` on `/dashboard-mockup?section=search` — it also has drag-to-move which only makes sense on that map-heavy layout. All 3 components now share the same voice/reset UX.
+
+**Verified**: `/listings` renders with header=1, voice=1, reset=1, price-min=1, price-max=1. Visual matches the user's mockup pixel-for-pixel.
+
+**Action for user**: Fix lives on preview — redeploy to push to https://eztofind.ca.

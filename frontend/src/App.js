@@ -38,6 +38,7 @@ import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
+import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import TourNarration from "./components/TourNarration";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
@@ -2698,10 +2699,11 @@ const ListingCard = ({ listing }) => {
 // Detached/Condo/Townhomes pages where the type is inherent to the page).
 const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, excludeTypes = [], hideFields = [], title = "Filter Listings" }) => {
   const navigate = useNavigate();
-  const [state, setState] = useState({
+  const initial = {
     city: "", property_type: defaults.property_type || "",
-    beds_min: "", baths_min: "", price_max: "", q: "", sort: "newest",
-  });
+    beds_min: "", baths_min: "", price_min: "", price_max: "", q: "", sort: "newest",
+  };
+  const [state, setState] = useState(initial);
   const [facets, setFacets] = useState({});
   const [allComms, setAllComms] = useState([]);
   const [cityFocus, setCityFocus] = useState(false);
@@ -2717,10 +2719,45 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
   }, []);
 
   const set = (k, v) => setState(s => ({ ...s, [k]: v }));
+  const resetAll = () => setState(initial);
   const cityQ = (state.city || "").trim().toLowerCase();
   const suggestions = !cityQ ? [] : (allComms || [])
     .filter(c => c.name.toLowerCase().includes(cityQ) && c.name.toLowerCase() !== cityQ)
     .slice(0, 8);
+
+  // Map Doogie voice-filter response into this form's shape and submit.
+  const applyVoiceFilter = (vf) => {
+    if (!vf) return;
+    setState(s => ({
+      ...s,
+      city: vf.community || s.city,
+      // Never override a locked property_type (e.g. Waterfront page).
+      property_type: (!lockPropertyType && vf.property_type) ? vf.property_type : s.property_type,
+      beds_min: vf.min_beds != null ? String(vf.min_beds) : s.beds_min,
+      baths_min: vf.min_baths != null ? String(vf.min_baths) : s.baths_min,
+      price_min: vf.min_price != null ? String(vf.min_price) : s.price_min,
+      price_max: vf.max_price != null ? String(vf.max_price) : s.price_max,
+      q: vf.keyword || s.q,
+    }));
+    // Give the state a tick to settle, then navigate to /listings with results.
+    setTimeout(() => {
+      const merged = { ...defaults };
+      const nextFilter = {
+        city: vf.community || "",
+        property_type: (!lockPropertyType && vf.property_type) ? vf.property_type : (defaults.property_type || ""),
+        beds_min: vf.min_beds != null ? String(vf.min_beds) : "",
+        baths_min: vf.min_baths != null ? String(vf.min_baths) : "",
+        price_min: vf.min_price != null ? String(vf.min_price) : "",
+        price_max: vf.max_price != null ? String(vf.max_price) : "",
+        q: vf.keyword || "",
+        sort: "newest",
+      };
+      Object.entries(nextFilter).forEach(([k, v]) => { if (v !== "" && v != null) merged[k] = v; });
+      if (lockPropertyType && defaults.property_type) merged.property_type = defaults.property_type;
+      const qs = new URLSearchParams(merged).toString();
+      navigate(`/listings?${qs}`);
+    }, 120);
+  };
 
   const submit = (e) => {
     e.preventDefault();
@@ -2732,7 +2769,9 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
   };
 
   return (
-    <form onSubmit={submit} className="paper" data-testid="specialty-filter-panel" style={{marginBottom:"1.75rem"}}>
+    <form onSubmit={submit} className="paper" data-testid="specialty-filter-panel" style={{marginBottom:"1.75rem", padding: 0, overflow: "hidden"}}>
+      <DoogieFilterHeader onVoiceFilter={applyVoiceFilter} onReset={resetAll}/>
+      <div style={{padding:"1rem 1.25rem 1.25rem"}}>
       <div className="eyebrow" style={{marginBottom:"1rem"}}>{title}</div>
       <div className="field" style={{position:"relative"}}><label>Community / City</label>
         <input type="text" value={state.city} onChange={e=>set("city", e.target.value)}
@@ -2779,8 +2818,11 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
         )}
       </div>
       )}
+      <div className="field"><label>Minimum price ($)</label>
+        <input type="number" placeholder="$ Any" value={state.price_min} onChange={e=>set("price_min", e.target.value)} data-testid="specialty-filter-price-min"/>
+      </div>
       <div className="field"><label>Maximum price ($)</label>
-        <input type="number" placeholder="Any" value={state.price_max} onChange={e=>set("price_max", e.target.value)} data-testid="specialty-filter-price-max"/>
+        <input type="number" placeholder="$ Any" value={state.price_max} onChange={e=>set("price_max", e.target.value)} data-testid="specialty-filter-price-max"/>
       </div>
       <div className="field"><label>Keyword</label>
         <input placeholder="e.g. suite, waterfront" value={state.q} onChange={e=>set("q", e.target.value)} data-testid="specialty-filter-keyword"/>
@@ -2793,6 +2835,7 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
         </select>
       </div>
       <button type="submit" className="btn btn-primary" style={{width:"100%",marginTop:"0.75rem"}} data-testid="specialty-filter-apply">Apply Filters</button>
+      </div>
     </form>
   );
 };
@@ -2805,9 +2848,38 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
   const suggestions = !cityQ ? [] : (allComms || [])
     .filter(c => c.name.toLowerCase().includes(cityQ) && c.name.toLowerCase() !== cityQ)
     .slice(0, 8);
+
+  const resetAll = () => {
+    setFilters(f => ({
+      ...f, q: "", city: "", community: "", region: "", region_group: "",
+      property_type: "", beds_min: "", beds_exact: "", baths_min: "", baths_exact: "",
+      price_min: "", price_max: "", sort: "newest",
+    }));
+    // A tick later fire the search so results re-populate to "everything".
+    setTimeout(() => { try { onSubmit?.(); } catch {} }, 60);
+  };
+
+  // Map Doogie voice-filter output into <Listings/>'s filter shape and run search.
+  const applyVoiceFilter = (vf) => {
+    if (!vf) return;
+    const patched = {
+      ...filters,
+      city: vf.community || filters.city,
+      property_type: vf.property_type || filters.property_type,
+      beds_min: vf.min_beds != null ? String(vf.min_beds) : filters.beds_min,
+      baths_min: vf.min_baths != null ? String(vf.min_baths) : filters.baths_min,
+      price_min: vf.min_price != null ? String(vf.min_price) : filters.price_min,
+      price_max: vf.max_price != null ? String(vf.max_price) : filters.price_max,
+      q: vf.keyword || filters.q,
+    };
+    setFilters(patched);
+    setTimeout(() => { try { onSubmit?.(patched); } catch {} }, 60);
+  };
+
   return (
-    <form onSubmit={e=>{e.preventDefault(); onSubmit();}} className="paper" style={{position:"sticky",top:"1rem"}} data-testid="listings-filters">
-      <div className="eyebrow" style={{marginBottom:"1rem"}}>Filter Listings</div>
+    <form onSubmit={e=>{e.preventDefault(); onSubmit();}} className="paper" style={{position:"sticky",top:"1rem", padding: 0, overflow: "hidden"}} data-testid="listings-filters">
+      <DoogieFilterHeader onVoiceFilter={applyVoiceFilter} onReset={resetAll}/>
+      <div style={{padding:"1rem 1.25rem 1.25rem"}}>
       <div className="field" style={{position:"relative"}}><label>Community / City</label>
         <input
           type="text"
@@ -2852,7 +2924,8 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
           </select>
         </div>
       </div>
-      <div className="field"><label>Maximum price ($)</label><input type="number" placeholder="Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
+      <div className="field"><label>Minimum price ($)</label><input type="number" placeholder="$ Any" value={filters.price_min||""} onChange={e=>set("price_min", e.target.value)} data-testid="filter-price-min"/></div>
+      <div className="field"><label>Maximum price ($)</label><input type="number" placeholder="$ Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
       <div className="field"><label>Keyword</label><input placeholder="e.g. suite, waterfront" value={filters.q||""} onChange={e=>set("q", e.target.value)} data-testid="filter-keyword"/></div>
       <div className="field"><label>Sort by</label>
         <select value={filters.sort||"newest"} onChange={e=>set("sort", e.target.value)} data-testid="filter-sort">
@@ -2862,6 +2935,7 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
         </select>
       </div>
       <button type="submit" className="btn btn-primary" style={{width:"100%",marginTop:"0.75rem"}} data-testid="filter-apply">Apply Filters</button>
+      </div>
     </form>
   );
 };
@@ -2991,7 +3065,7 @@ const Listings = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const load = () => { setNlBanner(null); runSearch(); };
+  const load = (overrideFilters) => { setNlBanner(null); runSearch(overrideFilters); };
   return (
     <TermsGate>
     <section className="section"><div className="container-x">
