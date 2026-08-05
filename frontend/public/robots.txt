@@ -117,6 +117,8 @@ Disallow: /listings
 Disallow: /listing/
 
 Sitemap: https://eztofind.ca/sitemap.xml
+Sitemap: https://eztofind.ca/sitemap-snapshots.xml
+Sitemap: https://eztofind.ca/sitemap-index.xml
 
 # Backend API surface — explicitly blocked from all crawlers. Provides live
 # CREA DDF® data under a limited board licence; scraping / redistribution is

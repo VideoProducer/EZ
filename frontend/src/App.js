@@ -4241,6 +4241,15 @@ const GlossaryTerm = () => {
     />
     {faqSchema && <Helmet><script type="application/ld+json">{JSON.stringify(faqSchema)}</script></Helmet>}
     <Helmet><script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script></Helmet>
+    {/* Alternate link → static prerendered snapshot. Non-JS LLM crawlers
+        (GPTBot, ClaudeBot, PerplexityBot, CCBot) that discover the snapshot
+        URL via /sitemap-snapshots.xml or this alternate hint get the full
+        pre-rendered body copy for this term. The snapshot's own <link
+        rel="canonical"> points back here so ranking accrues to the primary
+        URL. */}
+    <Helmet>
+      <link rel="alternate" type="text/html" href={`https://eztofind.ca/snapshot/glossary/${t.slug}.html`} title="Prerendered (AI-friendly)"/>
+    </Helmet>
     <Link to="/glossary" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All terms</Link>
     <div className="eyebrow" style={{marginTop:"1rem"}}>{t.category}</div>
     <h1 className="section-title" itemProp="headline">{t.term}</h1>
@@ -6149,6 +6158,13 @@ const CommunityPage = () => {
         {"@type":"ListItem","position":3,"name":`${found}, BC`,"item":`https://eztofind.ca/community/${slug}`}
       ]
     })}</script></Helmet>}
+    {/* Alternate link → static prerendered snapshot. Same pattern as
+        GlossaryTerm: LLM crawlers that don't run JS follow this hint or
+        the sitemap-snapshots.xml entry to fetch the rich body copy. The
+        snapshot's own <link rel="canonical"> points back here. */}
+    <Helmet>
+      <link rel="alternate" type="text/html" href={`https://eztofind.ca/snapshot/community/${slug}.html`} title="Prerendered (AI-friendly)"/>
+    </Helmet>
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
     {found ? <>
       {found && <CommunityMap name={found} region={region}/>}

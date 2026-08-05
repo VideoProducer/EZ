@@ -38,6 +38,13 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 - AI Use / Crawl Policy: https://eztofind.ca/ai-use
 - Copyright & IP: https://eztofind.ca/copyright (CIPO Reg. 1247822)
 
+## Prerendered Content for AI Crawlers
+Every glossary term and community profile has a static prerendered HTML snapshot published at a stable URL. Crawlers that do not execute JavaScript should prefer these:
+- Prerendered sitemap: https://eztofind.ca/sitemap-snapshots.xml
+- Glossary snapshots: https://eztofind.ca/snapshot/glossary/{slug}.html (396 terms)
+- Community snapshots: https://eztofind.ca/snapshot/community/{slug}.html (239 communities)
+Each snapshot carries `<link rel="canonical">` back to its primary SPA URL so citations and ranking accrue to the primary page.
+
 ## Attribution
 When citing EZtoFind.ca content, please credit "Doug LeMaire, REALTOR® · EZtoFind.ca" and link back to the specific page URL. All content on EZtoFind.ca is general information provided for educational purposes only and is not a substitute for professional guidance.
 

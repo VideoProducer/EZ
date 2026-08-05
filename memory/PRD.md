@@ -2223,3 +2223,32 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `frontend/src/App.js` — Listings hash-watcher for `#save-search`, `GlossaryTerm` slug-fallback, `CommunityPage` slug-fallback
 
 **Verified E2E**: Toronto query returns bridge + text confirmed. Doogie FAB visible bottom-right. Compilation clean.
+
+---
+
+## Feb 05, 2026 — SSR-SEO Fix Option (a): Snapshot Sitemap + Alternate Links
+
+**Delivered (per user choice)**: The 80%-benefit ingress-free fix so non-JS LLM crawlers can index the rich body copy already sitting in `/app/frontend/public/snapshot/` (239 community + 396 glossary HTMLs, all authored with canonical back-links to the primary SPA URL).
+
+**Files created**:
+- `/app/frontend/public/sitemap-snapshots.xml` — 635 snapshot URLs, priority 0.7, weekly changefreq
+- `/app/frontend/public/sitemap-index.xml` — sitemap index pointing to both primary sitemap.xml and sitemap-snapshots.xml
+
+**Files updated**:
+- `/app/frontend/public/robots.txt` — appended `Sitemap: /sitemap-snapshots.xml` + `Sitemap: /sitemap-index.xml` lines
+- `/app/frontend/public/llms.txt` — new "Prerendered Content for AI Crawlers" section pointing GPTBot / ClaudeBot / PerplexityBot / CCBot at the snapshot URLs
+- `/app/frontend/src/App.js`:
+  - `GlossaryTerm` — Helmet `<link rel="alternate" type="text/html" href="/snapshot/glossary/{slug}.html" title="Prerendered (AI-friendly)"/>`
+  - `CommunityPage` — same alternate link pattern for `/snapshot/community/{slug}.html`
+
+**Existing** (unchanged, verified):
+- Every snapshot HTML already includes `<link rel="canonical" href="https://eztofind.ca/{primary-url}"/>` so PageRank + citations accrue to the primary SPA URL.
+
+**Verified E2E**:
+- Alternate link renders on `/community/kelowna` → `https://eztofind.ca/snapshot/community/kelowna.html`
+- Alternate link renders on `/glossary/bare-land-strata` → `https://eztofind.ca/snapshot/glossary/bare-land-strata.html`
+- `/sitemap-snapshots.xml` returns HTTP 200, application/xml, 121 KB, 635 URLs
+- `/snapshot/community/abbotsford.html` returns HTTP 200
+- `robots.txt` lists all three sitemap URLs
+
+**Follow-up (option b, still open)**: The 100% fix would swap the snapshot to the primary URL for known bot User-Agents at the ingress layer. Requires the DevOps team to add one nginx rule; documented in this session but not shipped.
