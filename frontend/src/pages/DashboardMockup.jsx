@@ -1788,11 +1788,6 @@ const SyncedResults = () => {
                 {ttsLoading ? "…" : playing ? "■ Stop" : "▶ Play summary"}
               </button>
             )}
-            {sync?.intent && sync.intent !== "browse" && (
-              <span data-testid="sync-intent-badge" style={{ background: sync.intent === "sell" ? "#DC2626" : C.navy, color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                Intent · {sync.intent === "sell" ? "Selling" : "Buying"}
-              </span>
-            )}
             {sync?.property_intel && (
               <span data-testid="sync-intel-badge" style={{ background: C.brandGold, color: C.navy, fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 {sync.property_intel.replace(/-/g, " ")}
