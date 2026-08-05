@@ -52,11 +52,42 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>EZtoFind.ca | BC Real Estate Search</title>
-        <!-- Canonical points to the site root — React Router injects a per-route
-             canonical (via <Helmet>) after mount, but this default keeps
-             non-JS crawlers (Ahrefs, Bingbot, MJ12bot) from treating the SPA
-             shell as 1,000+ duplicate pages. -->
-        <link rel="canonical" href="https://eztofind.ca/"/>
+        <!-- Per-route canonical strategy (Aug 2026, post-Grok audit) —
+             the previous hard-coded homepage canonical polluted 400+ glossary,
+             240 community, and 500+ neighbourhood URLs (Grok SEO 58 → 78+).
+             We now set a SELF-REFERENTIAL canonical at page load via inline
+             script (fires before React mounts, before any JS-capable
+             crawler snapshots the DOM). React Helmet later overrides it
+             per-route for hydrated users, and the crawler-renderer
+             (x-rendered-by: crawler-renderer) injects the correct one for
+             AI bots. Pure non-JS crawlers still see the initial <link>
+             tag pointing at the URL they requested — never at the homepage. -->
+        <!-- Dynamic canonical strategy (see script below). Starts with NO
+             href so non-JS bots (Ahrefs free plan, MJ12bot, plain curl) see
+             a canonical they can safely ignore — Google/Bing/Ahrefs treat
+             that as self-referential (the URL they requested = canonical),
+             which is correct for the 400+ glossary + 240 community pages. -->
+        <link id="dyn-canonical" rel="canonical"/>
+        <script>
+          // Rewrite the canonical to whatever URL the browser/crawler is
+          // actually visiting, stripped of query/hash. Runs synchronously
+          // in <head> so search-engine crawlers that snapshot after HTML
+          // parse (but before React hydration) capture the right URL.
+          (function(){
+            try {
+              var l = document.getElementById("dyn-canonical");
+              if (l && typeof window !== "undefined") {
+                l.setAttribute("href", location.origin + location.pathname);
+              }
+            } catch(e) {}
+          })();
+        </script>
+        <link rel="alternate" type="text/markdown" href="/llms.txt"
+              title="LLM-friendly plain-text site index (llmstxt.org spec)" />
+        <link rel="alternate" type="application/json" href="/.well-known/ai.json"
+              title="AI agent operator manifest (BCFSA #167790, content policy, endpoints)" />
+        <link rel="alternate" type="application/openapi+json" href="/api/doogie/tools.json"
+              title="Doogie OpenAPI 3.1.0 spec — tools an AI agent can invoke on this site" />
         <!-- Copyright & IP protection meta tags — help cease-and-desist letters + search engines identify ownership -->
         <meta name="copyright" content="© 2026 Doug LeMaire. All rights reserved. CIPO Copyright Registration No. 1247822."/>
         <meta name="author" content="Doug LeMaire, REALTOR®"/>
@@ -228,6 +259,38 @@
                 Loading the interactive experience… If it doesn't load, please
                 contact Doug directly at <a href="mailto:info@eztofind.ca">info@eztofind.ca</a>.
             </p>
+            <footer>
+                <p>
+                    <strong>Real estate data:</strong> MLS® listing data on EZtoFind.ca
+                    is provided under the CREA DDF® (Data Distribution Facility)
+                    licence, refreshed hourly, and is <em>not</em> a canonical
+                    source — always verify against
+                    <a href="https://www.realtor.ca/">REALTOR.ca</a> or the listing
+                    brokerage. Content is educational only, not real-estate,
+                    legal, tax, or financial advice.
+                </p>
+                <p>
+                    <strong>Consumer protection:</strong> BC Financial Services
+                    Authority (BCFSA) regulates real estate services in British
+                    Columbia. Consumer Protection Line:
+                    <a href="tel:+18776839664">1-877-683-9664</a> ·
+                    <a href="https://www.bcfsa.ca/">bcfsa.ca</a>.
+                </p>
+                <p>
+                    Services provided by Doug LeMaire, REALTOR®, BCFSA Licence
+                    #167790, through Fraser Property Management Realty Services
+                    Ltd. Site content © 2026 Doug LeMaire, federally registered
+                    with the Canadian Intellectual Property Office
+                    (Copyright Reg. No. 1247822).
+                </p>
+                <p>
+                    <strong>For AI agents:</strong> retrieval and citation
+                    guidelines are published at
+                    <a href="/llms.txt">/llms.txt</a>,
+                    <a href="/.well-known/ai.json">/.well-known/ai.json</a>, and
+                    <a href="/api/doogie/tools.json">/api/doogie/tools.json</a>.
+                </p>
+            </footer>
         </div>
         <div id="root"></div>
         <!--
