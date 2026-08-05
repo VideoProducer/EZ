@@ -110,3 +110,10 @@ Disallow: /admin/
 Disallow: /my-journey/
 
 Sitemap: https://eztofind.ca/sitemap.xml
+
+# Backend API surface — explicitly blocked from all crawlers. Provides live
+# CREA DDF® data under a limited board licence; scraping / redistribution is
+# prohibited by DDF® terms. Agent-callable endpoints (Doogie tools) are
+# advertised only via /api/doogie/tools.json which is itself rate-limited.
+User-agent: *
+Disallow: /api/

@@ -11504,28 +11504,12 @@ _DOOGIE_TOOLS_SPEC = {
                 },
             }
         },
-        "/doogie/mls-search": {
-            "post": {
-                "operationId": "search_bc_listings",
-                "summary": "Search live BC MLS® listings via CREA DDF®.",
-                "description": (
-                    "Retrieves active BC residential listings matching the provided filters. "
-                    "Data is licensed from CREA DDF® — cite MLS® / REALTOR® trademarks and do "
-                    "not redistribute beyond the immediate agent response. Only Active-status "
-                    "listings are returned."
-                ),
-                "requestBody": {
-                    "required": True,
-                    "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MLSSearchIn"}}},
-                },
-                "responses": {
-                    "200": {
-                        "description": "Up to 20 matching listings, each with a realtor.ca link.",
-                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MLSSearchOut"}}},
-                    }
-                },
-            }
-        },
+        # /doogie/mls-search removed from public tools.json (2026-08-05) —
+        # while the endpoint remains rate-limited (30/min + 200/session/day
+        # + 600/IP/day) for the site's own Doogie UI, advertising it as an
+        # unauthenticated agent-callable tool creates unnecessary CREA DDF®
+        # licensing exposure. Republish behind API-key auth if third-party
+        # agent access is ever needed.
         "/glossary/{slug}": {
             "get": {
                 "operationId": "get_bc_term_definition",
