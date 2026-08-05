@@ -1958,3 +1958,55 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Not fixed in code (Cloudflare/DNS-layer)**:
 - 3XX redirect chain, HTTP→HTTPS, `www` → apex — user must handle in Cloudflare Rules.
 - Cloudflare Worker to serve `/snapshot/glossary/*.html` and `/snapshot/community/*.html` when UA contains `AhrefsSiteAudit`, `AhrefsBot`, `Bingbot`, `SemrushBot` — user must add these names to their existing bot-swap worker (snippet delivered inline in chat).
+
+---
+
+## Feb 5, 2026 (Aug 5 2026 audit-day) — Big compliance + performance session
+
+**Ahrefs Site Audit fixes (shell + sitemap + robots)** — added canonical + OG + Twitter to `index.html`, added `PostalAddress` to RealEstateAgent JSON-LD, `Disallow: /listing/` added for `AhrefsBot` and `AhrefsSiteAudit`. Rolled back 3 mis-added sitemap URLs (`/buying-guide`, `/selling-guide`, `/realtors` — all redirects).
+
+**Canada Post → OpenStreetMap (UI honesty)** — backend was already Nominatim; frontend still name-dropped Canada Post. Fixed 4 UI strings in `VisualAgentDemo.jsx` to say *"Powered by OpenStreetMap"* + *"Validated · BC only"*.
+
+**Tour-type badges next to heart** — backend `_sanitize_listing` now emits `tour_kinds: ["matterport"|"video"]` per listing. Frontend renders distinct pills on both listing cards (App.js + DashboardMockup): indigo **"3D"** for Matterport, gold **"Video"** for YouTube/Vimeo/other. Stacks when both present. Falls back to `has_virtual_tour` for legacy payloads.
+
+**PageSpeed Sprint 1+2+3** — projected 42 → 75-85 Performance, CLS 0.525 → ~0.05:
+- SEO shell moved OUT of `#root` into an offscreen sibling `#seo-shell` (1×1 clipped). Killed the 0.525 CLS root cause.
+- Preconnect added for `customer-assets.emergentagent.com` (~320 ms LCP saving).
+- aria-labels added to `afford-rate` + `afford-type` → Accessibility 82 → ~95, Agentic Browsing 1/3 → 3/3.
+- Doogie PNGs → responsive WebPs (`pointing-left-transparent`, `thinking`, `head`, `laptop`). 286 KB saved.
+- Sea-to-Sky + Fraser Valley WebPs recompressed from 773+467 KB to 40+55 KB — hosted locally at `/images/regions/`. **1,143 KB saved.**
+- `VisualAgentDemo` route-lazy via `React.lazy` + `Suspense` (~28 KB deferred off homepage bundle).
+- Google Font `<link rel="preload">` added for Inter + Playfair.
+- Leaflet CSS + JS `<script>` removed from static `<head>` — `DashboardMockup` now injects dynamically only when the map component mounts.
+
+**Grok audit P0+P0.5+P1** — projected +11-14 overall score:
+- **Canonical pollution killed.** `index.html` no longer hardcodes homepage canonical for 400+ glossary + 240 community URLs. Now uses `<link id="dyn-canonical" rel="canonical"/>` with an inline `<script>` that sets `href = location.origin + location.pathname` synchronously in `<head>`. Non-JS bots see no href (self-referential per Google spec); JS-capable crawlers (Ahrefs paid, Screaming Frog, Bingbot, GPTBot) get the correct per-URL canonical.
+- `<link rel="alternate">` added for `/llms.txt`, `/.well-known/ai.json`, `/api/doogie/tools.json` — every route now advertises all three manifests in `<head>`.
+- CREA DDF® data disclaimer + BCFSA Consumer Protection Line `1-877-683-9664` + `bcfsa.ca` + Copyright Reg. 1247822 + Licence #167790 all added to the offscreen SEO shell — visible to every non-JS crawler on every route.
+
+**Claude audit follow-ups:**
+- **`realtors@eztofind.ca` was bouncing.** Fixed to `realtor@eztofind.ca` (singular) across `llms.txt` + `ai.json`. Backend and App.js footer already correct. `referrals@` (plural) is intentional — that's the consumer referral inbox cc:'d to `doug@`. `info@` is the catchall.
+- **Doogie description unified in llms.txt** — was vague *"chatbot powered by a leading commercial LLM"*, now matches ai.json + tools.json + ai-plugin.json wording: *"LLM-backed educational research assistant (generative, not pure retrieval)"*.
+- **"Free, non-transactional"** softened in llms.txt to *"Free to use and information-first — optional intake/valuation/referral forms are labelled as lead generation at point of submission."* Removes the semantic clash Claude flagged.
+- **Trademark/copyright** — Claude thought `ai.json` said `"trademark": "CIPO Reg. TMA 1247822"` — file actually says `"copyright_registration"`. No fix needed; Claude was working from stale cache.
+- **`/doogie/mls-search` in tools.json** — Claude thought it was published with `auth: none`. Production tools.json only exposes `/doogie/chat`, `/glossary/{slug}`, `/glossary`. No fix needed.
+- **Out-of-area community banner** — I built one (amber, above-fold, "REFERRAL ONLY — OUTSIDE DOUG'S PRACTICE AREA") but Doug preferred the original friendly *"🐾 As a smaller BC community…"* copy. Reverted. SEO shell disclosure (which Doug approved) stays in place for non-JS crawlers.
+
+**Still open (paused mid-conversation):**
+- The original **DevTools token extraction question** — how to secure `/doogie/mls-search` beyond IP rate limits (was the *very* first pending item this session).
+- **Grok/Claude Q3** — `attribution_required: true` + `x-agent-guidelines` in ai.json / tools.json. Claude flagged them as "injection-shaped." Keep / soften / remove?
+- **BCFSA licence** — is it `#167790` or `V73705`? (One is BCFSA, other is board membership.)
+- **Google Business Profile** rating + review count for `AggregateRating` schema.
+
+**Files touched:**
+- `frontend/public/index.html` — shell content, canonical script, manifest alternates, preconnect, font preload, Leaflet removal, out-of-area referral disclosure
+- `frontend/public/sitemap.xml` — cleaned redirect additions
+- `frontend/public/robots.txt` — added `Disallow: /listing/` for Ahrefs
+- `frontend/public/llms.txt` — Doogie description, non-transactional wording, `realtor@` fix
+- `frontend/public/.well-known/ai.json` — `realtor@` fix
+- `frontend/public/images/regions/` — new local compressed WebPs
+- `frontend/public/{images/,}doogie/*.webp` — resized responsive WebPs
+- `frontend/src/App.js` — route-lazy imports, Suspense boundaries, ListingCard tour badges, VisualAgentDemo comment cleanup
+- `frontend/src/pages/DashboardMockup.jsx` — tour badges + WebP references
+- `frontend/src/pages/VisualAgentDemo.jsx` — 4x Canada Post → OpenStreetMap strings
+- `backend/server.py` — `_sanitize_listing` now emits `tour_kinds`
