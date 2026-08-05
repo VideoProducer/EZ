@@ -2267,14 +2267,24 @@ const IntentInsightsBody = ({ bundle }) => {
 };
 
 const CommunityProfileBody = ({ profile }) => (
+  // Match the community detail page's rendering: `white-space: pre-wrap`
+  // preserves the DB's \n\n paragraph breaks natively without needing to
+  // split. Prevents the "wall of text" bug where every paragraph collapsed
+  // into one blob with no breathing room.
   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
     {profile.synopsis && (
-      <p style={{ margin: 0, color: C.navy, fontSize: 13, lineHeight: 1.6 }}>{profile.synopsis}</p>
+      <p
+        data-testid="sync-community-synopsis"
+        style={{
+          margin: 0, color: C.navy, fontSize: 13, lineHeight: 1.65,
+          whiteSpace: "pre-wrap",
+        }}
+      >{profile.synopsis}</p>
     )}
     {profile.region && (
-      <div style={{ fontSize: 11, color: C.muted }}>Region: <strong style={{ color: C.navy }}>{profile.region}</strong></div>
+      <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Region: <strong style={{ color: C.navy }}>{profile.region}</strong></div>
     )}
-    <Link to={profile.href} style={{ color: C.blue, fontWeight: 700, fontSize: 12, textDecoration: "none" }} data-testid="sync-community-profile-link">
+    <Link to={profile.href} style={{ color: C.blue, fontWeight: 700, fontSize: 12, textDecoration: "none", marginTop: 4 }} data-testid="sync-community-profile-link">
       Open the full {profile.community} community profile →
     </Link>
   </div>
