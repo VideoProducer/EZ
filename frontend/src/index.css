@@ -245,7 +245,18 @@ p {
 .font-sans { font-family: 'Inter', system-ui, sans-serif; }
 h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-spacing: -0.02em; }
 
-.container-x { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+.container-x { max-width: 1280px; margin: 0 auto; padding: 0 clamp(1rem, 2vw, 1.5rem); }
+/* Consistent-scale wrapper — pins the home page hero + section grid to a
+   predictable width regardless of OS display scaling. On Windows 125% (a
+   1920px monitor reports 1536 CSS pixels) the container caps at 1200px, so
+   the layout renders at the same PROPORTIONS as a macOS 100% 1440px screen.
+   CSS cannot override OS-level zoom, but this keeps the same visual weight. */
+@media (min-width: 1440px) {
+  .container-x { max-width: 1200px; padding: 0 1.5rem; }
+}
+@media (min-width: 1800px) {
+  .container-x { max-width: 1280px; padding: 0 2rem; }
+}
 
 /* Buttons */
 .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 999px; font-weight: 600; font-family: 'Inter',sans-serif; transition: all 0.2s ease; cursor: pointer; border: none; font-size: 0.95rem; }
@@ -271,25 +282,29 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
 .nav a.active { color: var(--brand-blue); }
 
 /* Hero */
-.hero { position: relative; overflow: hidden; background: linear-gradient(135deg, #FDFCF8 0%, #F5F0E1 50%, #E8EEF9 100%); padding: 4rem 0 6rem; }
+.hero { position: relative; overflow: hidden; background: linear-gradient(135deg, #FDFCF8 0%, #F5F0E1 50%, #E8EEF9 100%); padding: clamp(2.5rem, 5vw, 4rem) 0 clamp(3.5rem, 6vw, 5.5rem); }
 .hero::before { content:""; position:absolute; inset:0; background-image: radial-gradient(circle at 20% 20%, rgba(30,79,207,0.06) 0px, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34,197,94,0.06) 0px, transparent 50%); pointer-events:none; }
-.hero-grid { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; align-items: center; }
+.hero-grid { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(1.5rem, 3vw, 3rem); align-items: center; }
 /* Doogie hero mascot — scaled up on desktop for impact, but constrained on mobile
-   so he doesn't overlap the chips/pills below the search bar. */
+   so he doesn't overlap the chips/pills below the search bar. Cap at 1.5x
+   (was 1.9x) so browsers at Windows 125% display scaling don't render Doogie
+   at head-of-page-height. */
 .doogie-hero-wrap { text-align: center; overflow: visible; }
-.doogie-hero-img { width: 100%; max-width: none; transform: scale(1.9); transform-origin: center center; }
+.doogie-hero-img { width: 100%; max-width: 380px; margin: 0 auto; display: block; transform: scale(1.5); transform-origin: center center; }
 @media (max-width: 900px) {
-  .doogie-hero-img { transform: none; max-width: 420px; margin: 1rem auto 0; display: block; }
+  .doogie-hero-img { transform: none; max-width: 380px; margin: 1rem auto 0; display: block; }
 }
 @media (max-width: 380px) {
-  .doogie-hero-img { max-width: 360px; }
+  .doogie-hero-img { max-width: 300px; }
 }
 @media(max-width: 900px) { .hero-grid { grid-template-columns: 1fr; text-align: center; } }
-.hero h1 { font-size: clamp(2.5rem, 5.5vw, 4.75rem); line-height: 1.02; margin: 0 0 1.25rem; }
+/* H1 caps: 4rem (64px) instead of 4.75rem (76px). Prevents overflow on
+   Windows 125% scaling where a 4.75rem heading pushed past the container. */
+.hero h1 { font-size: clamp(2.25rem, 4.75vw, 4rem); line-height: 1.05; margin: 0 0 1.25rem; text-wrap: balance; }
 .hero h1 .accent { color: var(--brand-blue); font-style: italic; }
 .hero h1 .brand-blue { color: var(--brand-blue); }
 .hero h1 .green { color: #FDB813; }
-.hero p.lead { font-family: 'Inter',sans-serif; font-size: 1.15rem; color: var(--muted); max-width: 42rem; line-height: 1.6; margin: 0 0 2rem; }
+.hero p.lead { font-family: 'Inter',sans-serif; font-size: clamp(1rem, 1.4vw, 1.15rem); color: var(--muted); max-width: 42rem; line-height: 1.6; margin: 0 0 2rem; }
 
 /* Search bar */
 .search-bar { display: flex; gap: 0.5rem; background: white; padding: 0.5rem; border-radius: 999px; border: 2px solid rgba(15,42,91,0.1); box-shadow: 0 20px 40px rgba(15,42,91,0.08); align-items: center; max-width: 560px; }
@@ -298,10 +313,10 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
 .search-bar button { border-radius: 999px; padding: 0.85rem 1.5rem; }
 
 /* Sections */
-section.section { padding: 5rem 0; }
+section.section { padding: clamp(3rem, 5vw, 5rem) 0; }
 .eyebrow { font-family: 'Inter',sans-serif; font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--brand-blue); font-weight: 600; margin-bottom: 0.75rem; }
-.section-title { font-size: clamp(2rem, 3.5vw, 3rem); line-height: 1.1; margin: 0 0 1rem; }
-.section-sub { font-family: 'Inter',sans-serif; color: var(--muted); font-size: 1.1rem; max-width: 42rem; margin: 0 auto; line-height: 1.6; }
+.section-title { font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; margin: 0 0 1rem; text-wrap: balance; }
+.section-sub { font-family: 'Inter',sans-serif; color: var(--muted); font-size: clamp(0.98rem, 1.15vw, 1.1rem); max-width: 42rem; margin: 0 auto; line-height: 1.6; }
 
 /* Cards */
 .card { background: white; border-radius: 20px; overflow: hidden; border: 1px solid rgba(15,42,91,0.08); transition: all 0.3s ease; text-decoration: none; color: inherit; display: block; }

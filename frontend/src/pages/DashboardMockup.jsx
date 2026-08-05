@@ -150,34 +150,16 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // Lifted search state (previously local to SearchPanel). Enables the
   // FILTERS form to live in the Sidebar while map + results render in main.
   //
-  // Personalization: On mount we rehydrate the visitor's last dashboard
-  // search from localStorage — so a Kelowna condo hunter who left last week
-  // returns and lands straight on Kelowna condos. Runs entirely on-device;
-  // never sent to the server. Matches the /listings `ez_last_search` pattern
-  // and the site-wide PIPA localStorage strategy.
+  // NOTE (2026-02): The dashboard used to rehydrate the visitor's last
+  // search from localStorage on every mount. Per Doug's request, we now
+  // ALWAYS start with an empty filter set so every session begins as a
+  // fresh search — no leftover Kelowna condo filter from last week. The
+  // localStorage key is kept for potential future "Restore last search"
+  // opt-in prompt, but it is no longer read on mount.
   const DASH_FILTERS_LS_KEY = "ez_dashboard_filters";
   const DEFAULT_DASH_FILTERS = { q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" };
-  // Detect a returning visitor BEFORE hydrating filters so the welcome-back
-  // TTS greeting fires once per session. Compliance-safe: text is generated
-  // from the visitor's own on-device localStorage; the string sent to OpenAI
-  // TTS is filter-facts-only (no name / email / PII). Never plays if the
-  // Doogie mute preference is on.
   const wasRestoredRef = useRef(false);
-  const [filters, setFilters] = useState(() => {
-    try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem(DASH_FILTERS_LS_KEY) : null;
-      if (!raw) return DEFAULT_DASH_FILTERS;
-      const saved = JSON.parse(raw);
-      // Basic shape guard so a stale/corrupt entry doesn't crash the render.
-      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return DEFAULT_DASH_FILTERS;
-      const merged = { ...DEFAULT_DASH_FILTERS, ...saved };
-      // A "meaningful" restore = the visitor had at least one non-default
-      // filter set. Only then is a welcome-back greeting appropriate.
-      const meaningful = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (merged[k] || "").toString().trim() !== "");
-      if (meaningful) wasRestoredRef.current = true;
-      return merged;
-    } catch { return DEFAULT_DASH_FILTERS; }
-  });
+  const [filters, setFilters] = useState(() => ({ ...DEFAULT_DASH_FILTERS }));
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sync, setSync] = useState(null);         // Content Sync Engine payload
@@ -297,7 +279,19 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       )}
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <HomeComplianceBanner/>
-        <DashboardBackHomeBar/>
+        <DashboardBackHomeBar resetHome={() => {
+          // Clear filters + return to the visitor's landing section so tapping
+          // "Home" from any nested view feels like a true reset. Kicks
+          // runSearch() to refresh the empty listing/map state so the map
+          // recenters on the office anchor too.
+          setFilters({ ...DEFAULT_DASH_FILTERS });
+          setSyncQuery("");
+          setSync(null);
+          setSection(homeVariant === "dashboard" ? "home" : "search");
+          // Fire a fresh empty search so the listings + map reset visually.
+          try { runSearch({ ...DEFAULT_DASH_FILTERS }); } catch {}
+          try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+        }}/>
         {isMobile && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -1441,12 +1435,17 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
   );
 };
 
-// ── ListingsMap — interactive Leaflet map that (a) defaults to Doug LeMaire's
-//   Maple Ridge business address when no city filter is active, (b) recenters
-//   to the searched city, and (c) drops a price-tag marker for every listing
-//   returned by the CREA DDF® query that has valid lat/lon. Click a marker
-//   → opens the listing detail in a new tab.
-const DOUG_ADDRESS = { lat: 49.2124, lon: -122.5946, label: "Doug LeMaire · Maple Ridge" };
+// ── ListingsMap — interactive Leaflet map that (a) ALWAYS opens centered on
+//   the Fraser Property Management Realty Services Ltd. office in Maple Ridge
+//   (22374 Lougheed Hwy) as a persistent gold-star anchor, (b) smooth-flies
+//   to the searched city while KEEPING the office pin visible, and (c) drops
+//   a price-tag marker for every CREA DDF® listing with valid lat/lon.
+//   Click a marker → opens the listing detail in a new tab.
+const DOUG_ADDRESS = {
+  lat: 49.21957, lon: -122.59721,
+  label: "Fraser Property Management Realty Services Ltd.",
+  street: "22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5",
+};
 
 const _leafletCssInjected = { current: false };
 const ensureLeafletCss = () => {
@@ -1464,6 +1463,7 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const officeMarkerRef = useRef(null);       // persistent gold-star office pin
   const markerByKeyRef = useRef({});   // listing_key → Leaflet marker
   const centerCacheRef = useRef({});
 
@@ -1476,14 +1476,32 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
       if (mapRef.current) return; // already initialized
       const map = L.map(mapContainerRef.current, {
         center: [DOUG_ADDRESS.lat, DOUG_ADDRESS.lon],
-        zoom: 12, scrollWheelZoom: false,
+        zoom: 13, scrollWheelZoom: false,
       });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
       }).addTo(map);
-      L.marker([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], {
+      // Persistent gold-star office anchor — visible whether the map is on
+      // the office or has flown to a searched city.
+      const officeIcon = L.divIcon({
+        className: "eztofind-office-marker",
+        html: `<div style="background:${C.gold};color:${C.navy};border:3px solid #fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.45);font-family:Inter,system-ui,sans-serif;font-weight:900;font-size:20px;" title="${DOUG_ADDRESS.label}">★</div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+      });
+      const officeMarker = L.marker([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], {
         title: DOUG_ADDRESS.label,
-      }).addTo(map).bindPopup(`<strong>${DOUG_ADDRESS.label}</strong><br/><em>Doug LeMaire · REALTOR®</em>`);
+        icon: officeIcon,
+        zIndexOffset: 500,
+      }).addTo(map).bindPopup(
+        `<div style="min-width:200px;font-family:Inter,system-ui,sans-serif;font-size:12px;">
+           <div style="font-weight:800;color:#0F2A5B;font-size:13px;">${DOUG_ADDRESS.label}</div>
+           <div style="color:#374151;margin-top:2px;">${DOUG_ADDRESS.street}</div>
+           <div style="color:#6B7280;margin-top:2px;"><em>Doug LeMaire · REALTOR® · BCFSA #167790</em></div>
+           <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(DOUG_ADDRESS.street)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;color:#0A3D99;font-weight:700;">Get directions ↗</a>
+         </div>`
+      );
+      officeMarkerRef.current = officeMarker;
       markersLayerRef.current = L.layerGroup().addTo(map);
       mapRef.current = map;
     })();
@@ -1504,7 +1522,8 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
       const map = mapRef.current;
       if (!map) return;
       if (!city) {
-        map.setView([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 12);
+        // No city selected → return to the office anchor at friendly zoom.
+        map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 13, { animate: true, duration: 0.8 });
         return;
       }
       const key = city.toLowerCase().trim();
@@ -1514,7 +1533,7 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
         try {
           const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ", British Columbia, Canada")}&format=json&limit=1`);
           const j = await r.json();
-          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 12 };
+          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 13 };
         } catch { /* fall through */ }
       }
       if (!center) {
@@ -1522,15 +1541,15 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
         // actually matches the searched city (case-insensitive). Never use
         // a stale unrelated listing — that was the Osoyoos → Vancouver Island bug.
         const hit = (listings || []).find(l => l.lat && l.lon && l.city && l.city.toLowerCase().trim() === key);
-        if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 12 };
+        if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 13 };
       }
       if (center) {
         centerCacheRef.current[key] = center;
-        map.setView([center.lat, center.lon], center.zoom || 12);
+        map.flyTo([center.lat, center.lon], center.zoom || 13, { animate: true, duration: 0.9 });
       } else {
-        // Geocode failed and no matching listing — fall back to Doug's coords
-        // rather than leaving the map stranded on the previous city.
-        map.setView([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 8);
+        // Geocode failed and no matching listing — fall back to the office
+        // anchor rather than leaving the map stranded on the previous city.
+        map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 10, { animate: true, duration: 0.8 });
       }
     })();
   }, [city, listings]);
@@ -1574,8 +1593,13 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
         m._listPrice = l.list_price;
         markerByKeyRef.current[l.listing_key] = m;
       });
-      // Fit to markers (but don't override too aggressively — cap zoom)
-      if (pts.length > 1) {
+      // Fit to markers (but don't override too aggressively — cap zoom).
+      // Only fit when the city filter is active AND we have >1 listing;
+      // otherwise honor the recenter effect above (which flies to the city
+      // or back to the office). Include the office pin in the bounds only
+      // if the office is close enough to the listings that it wouldn't
+      // stretch the viewport into the ocean.
+      if (city && pts.length > 1) {
         const b = pts.reduce((acc, p) => { acc.push([p.lat, p.lon]); return acc; }, []);
         map.fitBounds(b, { maxZoom: 13, padding: [30, 30] });
       }
@@ -3714,8 +3738,19 @@ const AskDoogieDrawer = ({ open, onClose }) => {
 // ── DashboardBackHomeBar — matches the classic `<BackHomeBar/>` in App.js so
 //   the two navigation styles (dashboard shell + classic AppLayout) both
 //   surface "← Back" and "🏠 Home" in the SAME visual location on every page.
-const DashboardBackHomeBar = () => {
+//   The Home button ALWAYS returns the visitor to a clean starting state:
+//   clears filters, resets to the search section, and (if we're already on
+//   the dashboard) does not stack a duplicate route in browser history.
+const DashboardBackHomeBar = ({ resetHome }) => {
   const nav = useNavigate();
+  const goHome = (e) => {
+    if (typeof resetHome === "function") {
+      // We're already inside the dashboard — reset in-place so filters clear
+      // and the section returns to search without a wasted route change.
+      e.preventDefault();
+      resetHome();
+    }
+  };
   return (
     <div data-testid="dash-back-home-bar" style={{
       background: "#fff", borderBottom: "1px solid rgba(15,42,91,0.06)",
@@ -3726,7 +3761,7 @@ const DashboardBackHomeBar = () => {
         padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
         cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
       }}>← Back</button>
-      <Link to="/" data-testid="dash-btn-home" style={{
+      <Link to="/" onClick={goHome} data-testid="dash-btn-home" style={{
         background: "transparent", border: "1px solid #DDE6FA", color: C.navy,
         padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
         textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,

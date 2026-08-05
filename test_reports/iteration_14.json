@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 14 — tested Doug LeMaire's 5 fixes: (1) map anchor at Maple Ridge/22374 Lougheed Hwy with gold-star office pin and Google Maps directions link, (2) strata/Form B/Depreciation Report content ban for detached/acreage/equestrian searches, (3) homepage sizing consistency across 1920/1366/375 viewports, (4) filters start empty on every session (no localStorage restore), (5) Home & Back buttons work in both DashboardBackHomeBar and classic BackHomeBar. Backend: 4/4 new strata-ban pytest cases pass (test_strata_content_ban.py). Frontend: all 5 items verified via Playwright. No critical issues found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Search options (dashboard)", "issues": ["Pre-existing React hydration warning: <span> nested in <option> (from x-source instrumentation), not functional; already noted in iteration_12/13.", "Pre-existing DOM property warning: 'fetchpriority' should be 'fetchPriority'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_strata_content_ban.py",
+    "/app/test_reports/pytest/strata_ban.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: The review request referenced testids 'filter-panel' and 'filter-apply' — these do not exist. Actual testids are 'floating-filters' (container) and no dedicated testid on the Apply Filters button (uses role=button, name='Apply Filters'). Consider adding data-testid=\"filter-apply\" to the Apply Filters button (DashboardMockup.jsx L627) for test stability.",
+    "OPTIONAL: Add data-testid=\"filter-panel\" alias to the floating-filters container for external consistency.",
+    "OPTIONAL: Fix pre-existing 'fetchpriority' React DOM warning and hydration warning <span> inside <option>."
+  ],
+  "critical_code_review_comments": [
+    "server.py is now ~13k lines — content-ban logic is well isolated in _search_glossary/_search_faqs, but the file itself remains oversized (violates 700-line guideline). Recommend continuing the doogie_sync.py extraction started in iteration_12/13.",
+    "DashboardMockup.jsx is >3900 lines — Home button/back/map/filter code sits alongside intent flow and testimonials. Splitting into smaller components (SearchLanding, ListingsMap, FiltersPanel) would improve maintainability.",
+    "Content-ban implementation correctly honours user-intent: 'strata rules for detached house' (user explicitly says strata) still returns strata content — proper exclude_content_patterns override verified."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_strata_content_ban.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4 new + all prior)", "frontend": "100% (5/5 fixes verified)"},
+  "test_credentials": "not required for this iteration",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Findings from iteration_14: (a) Map initial center is Maple Ridge with gold-star office pin '.eztofind-office-marker' (1 instance persistent). Price pins use '.eztofind-price-marker' class. Office popup contains 'Fraser Property Management Realty Services Ltd.', '22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5', 'BCFSA #167790', and 'Get directions ↗' link. (b) Filter panel is 'floating-filters' (NOT filter-panel). Apply button has no dedicated testid — use role=button name='Apply Filters'. Community input uses placeholder-based selector: input[placeholder*='BC community']. (c) After reload, all filter inputs/selects reset to defaults (community='', property_type='', beds='', baths='', minPrice='', maxPrice='', keyword='', sort='newest'). localStorage restore has been disabled per Doug's request. (d) dash-btn-home resets filters in-place without URL change; dash-btn-back triggers history.back(). (e) Backend content-ban wired via _PROPERTY_CATEGORY_MAP.content_ban — banned substrings are 'strata', 'form b', 'depreciation report' when property_type ∈ {House, Acreage, Equestrian}. Banned terms leak through only if user's raw query contains that substring. (f) Listing card testid pattern is 'dash-listing-<listing_key>', focus button is 'dash-listing-focus-<key>' (not 'listing-card-<key>').",
+  "rca of the issue": "N/A — all 5 requested fixes verified working."
+}

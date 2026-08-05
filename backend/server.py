@@ -3430,7 +3430,7 @@ def _slug_from_query(q: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", q.lower()).strip("-")
 
 
-async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None):
+async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None, exclude_content_patterns: list | None = None):
     """Search glossary terms + definitions. Returns list of (score, item).
     Records `title_hits` separately so callers can gate quick-answer promotion
     on a real title match rather than pure body noise.
@@ -3440,12 +3440,19 @@ async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories
     the visitor searched a detached / acreage / equestrian property).
     `prefer_categories` — case-insensitive list of categories to boost 3x so
     the most relevant terms rise to the top (e.g. condo search prefers Strata).
+    `exclude_content_patterns` — case-insensitive substrings; if the term's
+    title or definition contains ANY of them, and the visitor's original query
+    does NOT contain the same term, the hit is dropped. Guards against
+    Property-Types glossary entries whose body copy discusses strata when the
+    visitor searched a detached / acreage property.
     """
     pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
     if not pattern:
         return []
     exclude_lower = {c.lower() for c in (exclude_categories or [])}
     prefer_lower = {c.lower() for c in (prefer_categories or [])}
+    q_lc = (q or "").lower()
+    content_bans = [p.lower() for p in (exclude_content_patterns or []) if p.lower() not in q_lc]
     hits = []
     async for d in db.glossary.find(
         {"$or": [
@@ -3456,6 +3463,9 @@ async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories
     ).limit(200):
         cat = (d.get("category") or "").strip()
         if cat.lower() in exclude_lower:
+            continue
+        blob_lc = ((d.get("term") or "") + " " + (d.get("definition") or "")).lower()
+        if content_bans and any(b in blob_lc for b in content_bans):
             continue
         title_hits = _score_match(d.get("term", ""), q_terms)
         body_hits = _score_match(d.get("definition", ""), q_terms)
@@ -3474,17 +3484,24 @@ async def _search_glossary(q: str, q_terms: list, limit: int, exclude_categories
     return hits[:limit]
 
 
-async def _search_faqs(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None):
+async def _search_faqs(q: str, q_terms: list, limit: int, exclude_categories: list | None = None, prefer_categories: list | None = None, exclude_content_patterns: list | None = None):
     """Search FAQs embedded on glossary terms. Returns list of (score, item).
 
     Same `exclude_categories` / `prefer_categories` semantics as
     `_search_glossary` so a detached-house search never surfaces strata FAQs.
+    `exclude_content_patterns` also drops individual FAQs whose Q or A text
+    contains any of the banned substrings (unless the visitor's original
+    query mentions that same substring). This is what catches the
+    Semi-Detached-House FAQ whose category is Property Types but whose body
+    is a strata-vs-freehold comparison.
     """
     pattern = "|".join(re.escape(t) for t in q_terms if len(t) >= 2)
     if not pattern:
         return []
     exclude_lower = {c.lower() for c in (exclude_categories or [])}
     prefer_lower = {c.lower() for c in (prefer_categories or [])}
+    q_lc = (q or "").lower()
+    content_bans = [p.lower() for p in (exclude_content_patterns or []) if p.lower() not in q_lc]
     hits = []
     async for d in db.glossary.find(
         {"faqs": {"$elemMatch": {"$or": [
@@ -3499,6 +3516,9 @@ async def _search_faqs(q: str, q_terms: list, limit: int, exclude_categories: li
         for faq in (d.get("faqs") or []):
             score = 3 * _score_match(faq.get("q", ""), q_terms) + _score_match(faq.get("a", ""), q_terms)
             if score <= 0:
+                continue
+            blob_lc = ((faq.get("q") or "") + " " + (faq.get("a") or "")).lower()
+            if content_bans and any(b in blob_lc for b in content_bans):
                 continue
             if cat.lower() in prefer_lower:
                 score *= 3
@@ -12562,15 +12582,20 @@ _PROPERTY_TYPE_KEYWORDS: list[tuple[str, re.Pattern]] = [
 # Property-type → glossary category filters. Strata categories are noise when
 # the visitor searched a detached / acreage / equestrian property, and vice
 # versa. `preferred` boosts the most-relevant category 3× so the top of the
-# panel always feels curated to the property class.
+# panel always feels curated to the property class. `content_ban` is a second
+# layer of protection: individual glossary/FAQ entries whose body copy
+# contains a banned substring are dropped, unless the visitor's original
+# query itself references that substring. This catches Property-Types glossary
+# entries (e.g. "Semi-Detached House") whose FAQs discuss strata-vs-freehold
+# even though the parent category isn't "Strata".
 _PROPERTY_CATEGORY_MAP: dict[str, dict[str, list[str]]] = {
-    "detached":         {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Property Types", "Title & Ownership", "Buying & Selling"]},
-    "acreage":          {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"]},
-    "equestrian":       {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"]},
-    "waterfront":       {"exclude": [],                                                "preferred": ["Land & Rural", "Insurance", "Land Use"]},
-    "condo":            {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo"]},
-    "townhouse":        {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo", "Property Types"]},
-    "new-construction": {"exclude": [],                                                "preferred": ["Presale & Development", "Building Code", "Taxation"]},
+    "detached":         {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Property Types", "Title & Ownership", "Buying & Selling"], "content_ban": ["strata", "form b", "depreciation report", "contingency reserve fund"]},
+    "acreage":          {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"], "content_ban": ["strata", "form b", "depreciation report", "contingency reserve fund"]},
+    "equestrian":       {"exclude": ["Strata", "Strata Documents", "Strata & Condo"], "preferred": ["Rural & Acreage", "Land & Rural", "Land Use"], "content_ban": ["strata", "form b", "depreciation report", "contingency reserve fund"]},
+    "waterfront":       {"exclude": [],                                                "preferred": ["Land & Rural", "Insurance", "Land Use"], "content_ban": []},
+    "condo":            {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo"], "content_ban": []},
+    "townhouse":        {"exclude": [],                                                "preferred": ["Strata", "Strata Documents", "Strata & Condo", "Property Types"], "content_ban": []},
+    "new-construction": {"exclude": [],                                                "preferred": ["Presale & Development", "Building Code", "Taxation"], "content_ban": []},
 }
 
 def _detect_property_intel(query: str, filters: dict | None) -> str | None:
@@ -12892,10 +12917,12 @@ async def doogie_sync_search(request: Request, body: SyncSearchIn):
         _search_glossary(query, q_terms, lim,
             exclude_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("exclude"),
             prefer_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("preferred"),
+            exclude_content_patterns=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("content_ban"),
         ) if q_terms else asyncio.sleep(0, result=[]),
         _search_faqs(query, q_terms, lim,
             exclude_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("exclude"),
             prefer_categories=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("preferred"),
+            exclude_content_patterns=(_PROPERTY_CATEGORY_MAP.get(intel_key or "", {}) or {}).get("content_ban"),
         ) if q_terms else asyncio.sleep(0, result=[]),
         _fetch_intel_glossary_cards(intel_key, lim) if intel_key else asyncio.sleep(0, result=[]),
         _fetch_related_searches(query, lim) if query else asyncio.sleep(0, result=[]),
