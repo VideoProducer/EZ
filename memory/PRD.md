@@ -2052,3 +2052,25 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `frontend/src/pages/DashboardMockup.jsx` — extended `SearchFiltersContext` with `sync/syncLoading/setSyncQuery`, parallel fetch in `runSearch`, new `SyncedResults` + `SyncSection` + `MarketInsightsBody` + `IntentInsightsBody` + `CommunityProfileBody` + `PropertyIntelBody` + `SyncCardGrid` components.
 
 **Testing**: Backend endpoint tested for 5 scenarios (buy/sell/browse × condo/waterfront/equestrian/new-construction). Frontend flow smoke-tested via Playwright — Kelowna filter surfaces all 8 sections. Ready for full testing_agent_v3_fork validation.
+
+---
+
+## Feb 05, 2026 — Sync-Panel Voice Summary (Doogie speaks the results)
+
+**Feature**: After every Doogie search, a compliance-safe spoken summary is now available via a Play button on the Content Synchronization panel. If the visitor triggered the search by voice, Doogie auto-plays the summary the moment results appear — making voice search feel truly conversational. Respects the existing "Doogie muted" preference from the sidebar toggle and the playback-speed slider.
+
+**Backend** (`server.py`):
+- Added `_humanize_price` and `_build_spoken_summary(intent, community, insights, intel_key, section_count)` helpers.
+- `POST /api/doogie/sync-search` response now includes `spoken_summary` — a ≤50-word factual sentence covering active listings, median price, avg DOM, buyer/seller resource hint, and property-type intelligence hint. Always ends with "Everything shown is informational only — not advice."
+- Never uses opinion words (no "hot market", "good time", "great deal") — verified by testing agent.
+
+**Frontend** (`DashboardMockup.jsx`):
+- Added `voiceTriggerNonce` + `bumpVoiceTrigger` to `SearchFiltersContext`. Voice-filter mic bumps the nonce right before `runSearch()` fires.
+- `SyncedResults` now imports `useDoogieMuted` + `getDoogieSpeed`, adds a `data-testid="sync-play-summary"` button that toggles between "▶ Play summary" and "■ Stop".
+- On click → POST to `/api/doogie/tts` (cached MP3, 30-day TTL), plays through a fresh `Audio` element at the user's saved playback speed.
+- When voice-triggered (mic used) AND not muted, auto-plays 250 ms after the summary arrives. Manual filter apply never auto-plays — visitor has to click.
+- Live caption (`data-testid="sync-summary-caption"`) shows the exact spoken text while playing, or an error message if TTS/playback fails.
+
+**Testing**: `iteration_13.json` — 4/4 new backend pytest cases + 7/7 prior sync tests still pass. Frontend E2E validated Play button rendering, click-to-play transitions, caption text, mic button preservation, and full compliance banner. No JS console errors.
+
+**Files touched**: `backend/server.py` (helpers + spoken_summary field). `frontend/src/pages/DashboardMockup.jsx` (context nonce, TTS button + caption + auto-play logic).
