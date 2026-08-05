@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ask Doogie · Voice Filter Mockup</title>
+  <meta name="viewport" content="width=1400, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --brand-navy: #0F2A5B;
+      --brand-gold: #F5A623;
+      --brand-cream: #F5F0E1;
+      --ink: #1F2937;
+      --muted: #6B7280;
+      --line: #E5E7EB;
+      --mist: #F5F8FF;
+      --success: #16A34A;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #F5F8FF 0%, var(--brand-cream) 100%);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 3rem 2rem 6rem;
+    }
+    header {
+      max-width: 1300px;
+      margin: 0 auto 2.5rem;
+      text-align: center;
+    }
+    header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      color: var(--brand-navy);
+      font-size: 2.25rem;
+      margin: 0 0 .5rem;
+      letter-spacing: -.01em;
+    }
+    header p {
+      color: var(--muted);
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.55;
+      font-size: .98rem;
+    }
+    header .badge {
+      display: inline-block;
+      background: var(--brand-gold);
+      color: var(--brand-navy);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .3rem .7rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1200px) {
+      .row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .row { grid-template-columns: 1fr; }
+    }
+
+    .state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .state-label {
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .state-label b {
+      color: var(--brand-navy);
+      font-weight: 800;
+    }
+
+    /* ─── Filter card (matches production FloatingFilters) ─── */
+    .card {
+      width: 290px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(15,42,91,.16);
+      overflow: hidden;
+      position: relative;
+    }
+    .card-head {
+      background: var(--brand-navy);
+      color: #ffffff;
+      padding: .55rem .7rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .18em;
+      border-top: 3px solid var(--brand-gold);
+    }
+    .drag { opacity: .72; letter-spacing: .22em; }
+    .head-actions { display: flex; gap: .4rem; align-items: center; }
+    .head-btn {
+      background: var(--brand-gold);
+      color: var(--brand-navy);
+      border: none;
+      border-radius: 999px;
+      padding: .3rem .7rem;
+      font-size: .65rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .head-btn.reset {
+      background: transparent;
+      border: 1px solid var(--brand-gold);
+      color: var(--brand-gold);
+    }
+
+    .card-body { padding: 1rem .95rem 1.05rem; }
+
+    .card-title {
+      font-weight: 800;
+      color: var(--brand-navy);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-size: .82rem;
+      margin: 0 0 .85rem;
+    }
+
+    .field { margin-bottom: .8rem; }
+    .field label {
+      display: block;
+      font-weight: 700;
+      color: var(--ink);
+      font-size: .8rem;
+      margin: 0 0 .3rem;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: .55rem .7rem;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .88rem;
+      color: var(--ink);
+      background: #fff;
+      appearance: none;
+    }
+    .field input::placeholder { color: #9CA3AF; }
+    .field.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin-bottom: .8rem; }
+    .field.row2 > div { margin: 0; }
+    .apply {
+      width: 100%;
+      background: var(--brand-navy);
+      color: #fff;
+      border: none;
+      padding: .8rem;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: .95rem;
+      margin-top: .3rem;
+    }
+
+    /* ─── State 2 · Listening ─── */
+    .listening {
+      background: linear-gradient(160deg, var(--brand-navy) 0%, #1a3a6f 100%);
+      color: #fff;
+      padding: 1.3rem 1.1rem 1.15rem;
+      text-align: center;
+    }
+    .listening .doogie-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: var(--brand-gold);
+      margin: 0 auto .7rem;
+      display: grid;
+      place-items: center;
+      font-size: 2.5rem;
+      box-shadow: 0 0 0 6px rgba(245,166,35,.25), 0 0 0 14px rgba(245,166,35,.12);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .listening .status {
+      font-weight: 800;
+      letter-spacing: .04em;
+      font-size: 1rem;
+      margin-bottom: .35rem;
+    }
+    .listening .wave {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin: .55rem 0 .9rem;
+      height: 26px;
+      align-items: center;
+    }
+    .listening .wave span {
+      display: block;
+      width: 4px;
+      background: var(--brand-gold);
+      border-radius: 2px;
+      animation: bar 1.1s ease-in-out infinite;
+    }
+    .listening .wave span:nth-child(1) { animation-delay: 0.0s; height: 8px; }
+    .listening .wave span:nth-child(2) { animation-delay: 0.1s; height: 16px; }
+    .listening .wave span:nth-child(3) { animation-delay: 0.2s; height: 22px; }
+    .listening .wave span:nth-child(4) { animation-delay: 0.3s; height: 18px; }
+    .listening .wave span:nth-child(5) { animation-delay: 0.4s; height: 12px; }
+    .listening .wave span:nth-child(6) { animation-delay: 0.3s; height: 20px; }
+    .listening .wave span:nth-child(7) { animation-delay: 0.2s; height: 24px; }
+    .listening .wave span:nth-child(8) { animation-delay: 0.1s; height: 14px; }
+    .listening .wave span:nth-child(9) { animation-delay: 0.0s; height: 10px; }
+    @keyframes bar {
+      0%, 100% { transform: scaleY(.6); opacity: .7; }
+      50% { transform: scaleY(1.2); opacity: 1; }
+    }
+    .listening .hint {
+      font-size: .78rem;
+      color: rgba(255,255,255,.72);
+      line-height: 1.5;
+      font-style: italic;
+      margin-bottom: 1rem;
+      padding: 0 .3rem;
+    }
+    .listening .stop-btn {
+      background: #DC2626;
+      color: #fff;
+      border: none;
+      padding: .55rem 1.4rem;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: .78rem;
+      letter-spacing: .08em;
+      cursor: pointer;
+      font-family: inherit;
+      text-transform: uppercase;
+    }
+
+    /* ─── State 3 · Thinking ─── */
+    .thinking { padding: 1.4rem 1.1rem; text-align: center; }
+    .thinking .doogie-mini {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--brand-cream);
+      margin: 0 auto .8rem;
+      display: grid; place-items: center;
+      font-size: 2rem;
+      border: 2px solid var(--brand-gold);
+    }
+    .thinking h4 {
+      font-family: 'Playfair Display', Georgia, serif;
+      color: var(--brand-navy);
+      margin: 0 0 .8rem;
+      font-size: 1.05rem;
+    }
+    .transcript {
+      background: var(--mist);
+      border-left: 4px solid var(--brand-navy);
+      padding: .7rem .85rem;
+      border-radius: 6px;
+      text-align: left;
+      font-size: .84rem;
+      line-height: 1.45;
+      color: var(--ink);
+      margin-bottom: .95rem;
+      font-style: italic;
+    }
+    .transcript::before { content: "\201C"; color: var(--brand-navy); font-size: 1.4rem; font-weight: 800; margin-right: .1rem; line-height: 0; vertical-align: -.2rem; }
+    .transcript::after { content: "\201D"; color: var(--brand-navy); font-size: 1.4rem; font-weight: 800; margin-left: .1rem; line-height: 0; vertical-align: -.2rem; }
+    .parsing {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: .88rem;
+      letter-spacing: .02em;
+    }
+    .dots { display: inline-flex; gap: 4px; }
+    .dots i {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--brand-gold);
+      display: block;
+      animation: dotpulse 1.2s ease-in-out infinite;
+    }
+    .dots i:nth-child(2) { animation-delay: .15s; }
+    .dots i:nth-child(3) { animation-delay: .3s; }
+    .dots i:nth-child(4) { animation-delay: .45s; background: var(--brand-navy); }
+    @keyframes dotpulse {
+      0%, 100% { opacity: .3; transform: scale(.7); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    /* ─── State 4 · Confirmation ─── */
+    .field.filled input {
+      background: linear-gradient(90deg, rgba(245,166,35,.16) 0%, rgba(245,166,35,.06) 100%);
+      border-color: var(--brand-gold);
+      color: var(--brand-navy);
+      font-weight: 700;
+    }
+    .field.filled label::after {
+      content: " ✓";
+      color: var(--success);
+      font-weight: 800;
+    }
+    .doogie-set {
+      background: var(--brand-cream);
+      border: 1px dashed var(--brand-gold);
+      border-radius: 8px;
+      padding: .6rem .75rem;
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      margin-bottom: .95rem;
+      font-size: .78rem;
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .doogie-set span.emoji { font-size: 1.5rem; line-height: 1; }
+    .doogie-set b { color: var(--brand-navy); font-weight: 800; }
+    .not-right {
+      display: flex;
+      gap: .4rem;
+      margin: .5rem 0 .75rem;
+      font-size: .74rem;
+    }
+    .not-right a {
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--brand-navy);
+      padding: .4rem .55rem;
+      border-radius: 999px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      font-weight: 600;
+    }
+    .not-right a:hover { border-color: var(--brand-gold); background: var(--brand-cream); }
+
+    /* ─── Idle state extras (state 1 header trigger) ─── */
+    .callout {
+      position: absolute;
+      top: 66px;
+      right: -110px;
+      background: var(--brand-navy);
+      color: #fff;
+      padding: .5rem .75rem;
+      border-radius: 8px;
+      font-size: .75rem;
+      max-width: 160px;
+      font-weight: 600;
+      line-height: 1.35;
+      box-shadow: 0 6px 16px rgba(0,0,0,.2);
+    }
+    .callout::before {
+      content: "";
+      position: absolute;
+      left: -8px;
+      top: 12px;
+      border: 8px solid transparent;
+      border-right-color: var(--brand-navy);
+      border-left: 0;
+    }
+
+    footer {
+      max-width: 1300px;
+      margin: 3rem auto 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.6;
+    }
+    footer strong { color: var(--brand-navy); }
+    kbd {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: .75rem;
+      font-family: 'Inter', sans-serif;
+      color: var(--brand-navy);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="badge">🎤 Mockup · Voice Search</div>
+    <h1>Ask Doogie — Voice Filter</h1>
+    <p>
+      Four UX states from tap-to-listen to filters-applied. Every state fits inside
+      the same 290 px floating filter card so users never lose context. Try saying:
+      <em>"Find me a 3-bed house in Salmon Arm with a pool under $1.5 million."</em>
+    </p>
+  </header>
+
+  <div class="row">
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- STATE 1 · IDLE                                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="state">
+      <div class="state-label">State <b>1</b> · Idle</div>
+      <div class="card" style="overflow: visible;">
+        <div class="card-head">
+          <span class="drag">••••••</span>
+          <div class="head-actions">
+            <button class="head-btn">
+              🎤 ASK DOOGIE
+            </button>
+            <button class="head-btn reset">RESET</button>
+          </div>
+        </div>
+        <div class="callout">
+          Tap 🎤 and Doogie will fill the filters for you
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Filter Listings</h3>
+          <div class="field">
+            <label>Community / City</label>
+            <input placeholder="Type any BC community" />
+          </div>
+          <div class="field">
+            <label>Property Type</label>
+            <select><option>Any</option></select>
+          </div>
+          <div class="field row2">
+            <div><label>Min beds</label><select><option>Any</option></select></div>
+            <div><label>Min baths</label><select><option>Any</option></select></div>
+          </div>
+          <div class="field">
+            <label>Minimum price ($)</label>
+            <input placeholder="$ Any" />
+          </div>
+          <div class="field">
+            <label>Maximum price ($)</label>
+            <input placeholder="$ Any" />
+          </div>
+          <div class="field">
+            <label>Keyword</label>
+            <input placeholder="e.g. suite, waterfront" />
+          </div>
+          <button class="apply">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- STATE 2 · LISTENING                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="state">
+      <div class="state-label">State <b>2</b> · Listening</div>
+      <div class="card">
+        <div class="card-head">
+          <span class="drag">••••••</span>
+          <div class="head-actions">
+            <button class="head-btn" style="background:#DC2626;color:#fff">🔴 LISTENING</button>
+            <button class="head-btn reset">RESET</button>
+          </div>
+        </div>
+        <div class="listening">
+          <div class="doogie-avatar">🐕</div>
+          <div class="status">Doogie is listening…</div>
+          <div class="wave">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="hint">
+            "Try: find me a 3-bed house<br/>in Salmon Arm with a pool<br/>under $1.5 million"
+          </div>
+          <button class="stop-btn">■ STOP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- STATE 3 · THINKING                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="state">
+      <div class="state-label">State <b>3</b> · Thinking</div>
+      <div class="card">
+        <div class="card-head">
+          <span class="drag">••••••</span>
+          <div class="head-actions">
+            <button class="head-btn">🎤 ASK DOOGIE</button>
+            <button class="head-btn reset">RESET</button>
+          </div>
+        </div>
+        <div class="thinking">
+          <div class="doogie-mini">🐾</div>
+          <h4>Doogie heard you…</h4>
+          <div class="transcript">
+            find me a 3-bed house in Salmon Arm with a pool under 1.5 million
+          </div>
+          <div class="parsing">
+            Parsing your request
+            <span class="dots"><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- STATE 4 · CONFIRMATION                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div class="state">
+      <div class="state-label">State <b>4</b> · Confirmed</div>
+      <div class="card">
+        <div class="card-head">
+          <span class="drag">••••••</span>
+          <div class="head-actions">
+            <button class="head-btn">🎤 ASK DOOGIE</button>
+            <button class="head-btn reset">RESET</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="doogie-set">
+            <span class="emoji">🐕</span>
+            <div>
+              <b>Doogie set your filters.</b><br/>
+              <span style="font-weight:500;color:var(--muted);font-size:.72rem">Review, edit, or apply below.</span>
+            </div>
+          </div>
+
+          <div class="field filled">
+            <label>Community / City</label>
+            <input value="Salmon Arm" />
+          </div>
+          <div class="field filled">
+            <label>Property Type</label>
+            <input value="House" />
+          </div>
+          <div class="field row2">
+            <div class="field filled" style="margin:0"><label>Min beds</label><input value="3" /></div>
+            <div><label>Min baths</label><select><option>Any</option></select></div>
+          </div>
+          <div class="field">
+            <label>Minimum price ($)</label>
+            <input placeholder="$ Any" />
+          </div>
+          <div class="field filled">
+            <label>Maximum price ($)</label>
+            <input value="$1,500,000" />
+          </div>
+          <div class="field filled">
+            <label>Keyword</label>
+            <input value="pool" />
+          </div>
+
+          <div class="not-right">
+            <a>🎤 Try again</a>
+            <a>✏️ Edit</a>
+          </div>
+
+          <button class="apply">✅ Apply These Filters</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      <strong>Tech under the hood:</strong>
+      OpenAI Whisper (transcription · Emergent LLM key · ~$0.006/query) →
+      Claude Haiku 4.5 (structured parse · Emergent LLM key · ~$0.0004/query) →
+      backend fuzzy-match against your <kbd>communities</kbd> Mongo collection →
+      React auto-fill with 500 ms staggered highlight animation.
+    </p>
+    <p>
+      <strong>Total per query:</strong> ≈ $0.007 · 140 voice searches for 1¢
+    </p>
+  </footer>
+</body>
+</html>
