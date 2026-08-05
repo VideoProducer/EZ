@@ -29,7 +29,7 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 
 ## Contact
 - General: info@eztofind.ca
-- REALTOR® network applications: realtors@eztofind.ca
+- REALTOR® network applications: realtor@eztofind.ca
 - Consumer referral leads: referrals@eztofind.ca
 
 ## Verified Identity Graph (sameAs)
