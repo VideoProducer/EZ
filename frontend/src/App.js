@@ -13,7 +13,6 @@ import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
-import { BuyingGuide, SellingGuide } from "./pages/BuyerSellerGuide";
 import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
