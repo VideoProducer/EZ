@@ -13,7 +13,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState, useContext, createContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { IMG, WhereShouldYouLive, Calculators } from "../App";
+import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
@@ -1680,7 +1680,13 @@ const SearchPanel = () => {
           persists across sessions via localStorage. */}
       <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       <SyncedResults/>
+      <IdleSaveSearchNudge/>
       <FloatingFilters/>
+      {/* Persistent Ask-Doogie pill — the site-wide FAB was retired in favour
+          of Visual Agent as the unified entry point. Here on the search view
+          it's back on purpose: visitors researching listings should always
+          have a 1-tap Q&A on the current results + community. */}
+      <DoogieChat mode="fab"/>
     </>
   );
 };
@@ -2024,6 +2030,38 @@ const SyncedResults = () => {
           </div>
         )}
       </header>
+      {sync?.out_of_area && (
+        <div
+          data-testid="sync-out-of-area-bridge"
+          style={{
+            marginBottom: 14, padding: "12px 16px",
+            background: "linear-gradient(90deg,#FEF3C7,#FDE68A)",
+            border: `1px solid ${C.brandGold}`, borderRadius: 10,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            gap: 12, flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 260px" }}>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: C.navy, fontSize: 15, fontWeight: 700, marginBottom: 3 }}>
+              🌉 Searching outside BC?
+            </div>
+            <div style={{ fontSize: 12, color: C.navy, lineHeight: 1.5 }}>
+              You mentioned <strong>{sync.out_of_area.city}</strong> — that's outside Doug's BCFSA licence area. He can introduce you to a local REALTOR® partner active in that market, then step aside so you work with them directly.
+            </div>
+          </div>
+          <Link
+            to={`/referral-request?city=${encodeURIComponent(sync.out_of_area.city)}`}
+            data-testid="sync-out-of-area-cta"
+            style={{
+              background: C.navy, color: "#fff", padding: "8px 16px", borderRadius: 999,
+              fontSize: 12, fontWeight: 800, letterSpacing: 0.3, textDecoration: "none",
+              display: "inline-block", whiteSpace: "nowrap",
+            }}
+          >
+            Get referred →
+          </Link>
+        </div>
+      )}
       <div style={{ display: "grid", gap: 14 }}>
         {sections.map((s, i) => (
           <SyncSection key={`${s.kind}-${i}`} section={s} palette={kindColor(s.kind)}/>
@@ -2039,6 +2077,112 @@ const SyncedResults = () => {
 };
 
 const _fmtMoney = (n) => (n == null ? "—" : `$${Number(n).toLocaleString()}`);
+
+// Idle save-search nudge — soft, dismissible prompt that appears 45 seconds
+// after the visitor stops interacting with the page. Respects a per-session
+// dismissed flag so it never re-appears in the same tab. CASL-safe: the CTA
+// links to /listings with `#save-search` which opens the SavedSearchModal
+// where the visitor grants CASL + PIPA consent BEFORE any email is stored.
+const IdleSaveSearchNudge = () => {
+  const ctx = useContext(SearchFiltersContext);
+  const [show, setShow] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return sessionStorage.getItem("ez_dash_idle_nudge_dismissed") === "1"; } catch { return false; }
+  });
+  const timerRef = useRef(null);
+  const resetTimer = () => {
+    if (dismissed || show) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShow(true), 45000);
+  };
+  useEffect(() => {
+    if (dismissed) return;
+    const evts = ["mousemove", "keydown", "scroll", "touchstart"];
+    evts.forEach(ev => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      evts.forEach(ev => window.removeEventListener(ev, resetTimer));
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissed, show]);
+
+  const dismiss = () => {
+    setShow(false);
+    setDismissed(true);
+    try { sessionStorage.setItem("ez_dash_idle_nudge_dismissed", "1"); } catch {}
+  };
+  const filters = ctx?.filters;
+  // Build a /listings query string that mirrors the current dashboard filters,
+  // then append #save-search so /listings auto-opens the alerts modal.
+  const savedSearchUrl = (() => {
+    const params = new URLSearchParams();
+    if (filters?.city) params.set("city", filters.city);
+    if (filters?.propertyType) params.set("property_type", filters.propertyType);
+    if (filters?.beds) params.set("beds_min", filters.beds);
+    if (filters?.baths) params.set("baths_min", filters.baths);
+    if (filters?.priceMin) params.set("price_min", filters.priceMin);
+    if (filters?.priceMax) params.set("price_max", filters.priceMax);
+    if (filters?.keyword) params.set("features", filters.keyword);
+    const qs = params.toString();
+    return `/listings${qs ? `?${qs}` : ""}#save-search`;
+  })();
+
+  if (!show || dismissed) return null;
+  return (
+    <div
+      data-testid="idle-save-search-nudge"
+      role="dialog"
+      aria-labelledby="idle-nudge-title"
+      style={{
+        position: "fixed", right: 20, bottom: 100, zIndex: 450,
+        background: "#fff", border: `2px solid ${C.brandGold}`, borderRadius: 14,
+        boxShadow: "0 16px 40px rgba(15,42,91,0.28)",
+        padding: "14px 16px 12px", maxWidth: 320,
+        animation: "doogie-fade-in 0.35s ease-out",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div id="idle-nudge-title" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: C.navy, fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>
+          🐾 Want me to save this search?
+        </div>
+        <button
+          type="button"
+          onClick={dismiss}
+          data-testid="idle-nudge-close"
+          aria-label="Dismiss"
+          style={{ background: "transparent", border: "none", color: C.muted, fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}
+        >×</button>
+      </div>
+      <div style={{ fontSize: 12, color: C.navy, marginTop: 6, lineHeight: 1.5 }}>
+        I can email you when new BC listings match — no spam, unsubscribe any time. You'll grant CASL + PIPA consent on the next screen.
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <Link
+          to={savedSearchUrl}
+          onClick={dismiss}
+          data-testid="idle-nudge-cta"
+          style={{
+            flex: 1, background: C.navy, color: "#fff", textAlign: "center",
+            padding: "8px 12px", borderRadius: 999, textDecoration: "none",
+            fontSize: 12, fontWeight: 800, letterSpacing: 0.3,
+          }}
+        >Yes, save it</Link>
+        <button
+          type="button"
+          onClick={dismiss}
+          data-testid="idle-nudge-later"
+          style={{
+            background: "transparent", border: `1px solid ${C.muted}`, color: C.muted,
+            padding: "8px 12px", borderRadius: 999, cursor: "pointer",
+            fontSize: 12, fontWeight: 700,
+          }}
+        >Not now</button>
+      </div>
+      <style>{`@keyframes doogie-fade-in { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: translateY(0);} }`}</style>
+    </div>
+  );
+};
 
 const SyncSection = ({ section, palette }) => {
   const [expanded, setExpanded] = useState(true);

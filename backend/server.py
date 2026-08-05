@@ -11288,6 +11288,71 @@ async def doogie_voice_filter(request: Request, audio: UploadFile = File(...), l
         raise HTTPException(500, "Voice filter unavailable — please try typing instead")
 
 
+# Non-BC / out-of-area city detector — surfaces the /referrals@ funnel when a
+# visitor asks about a city outside Doug's BCFSA licence area. Kept as a small
+# static list (fast, no LLM call) covering the top Canadian metros + major US
+# / international cities BC newcomers frequently mention.
+_OUT_OF_AREA_CITIES: dict[str, str] = {
+    # Canadian metros outside BC — offer referral to a local REALTOR®
+    "toronto": "Toronto, ON",
+    "mississauga": "Mississauga, ON",
+    "brampton": "Brampton, ON",
+    "ottawa": "Ottawa, ON",
+    "hamilton": "Hamilton, ON",
+    "kitchener": "Kitchener, ON",
+    "london": "London, ON",
+    "windsor": "Windsor, ON",
+    "montreal": "Montréal, QC",
+    "montréal": "Montréal, QC",
+    "quebec city": "Québec City, QC",
+    "québec": "Québec City, QC",
+    "gatineau": "Gatineau, QC",
+    "sherbrooke": "Sherbrooke, QC",
+    "laval": "Laval, QC",
+    "calgary": "Calgary, AB",
+    "edmonton": "Edmonton, AB",
+    "red deer": "Red Deer, AB",
+    "lethbridge": "Lethbridge, AB",
+    "winnipeg": "Winnipeg, MB",
+    "brandon": "Brandon, MB",
+    "regina": "Regina, SK",
+    "saskatoon": "Saskatoon, SK",
+    "halifax": "Halifax, NS",
+    "moncton": "Moncton, NB",
+    "fredericton": "Fredericton, NB",
+    "saint john": "Saint John, NB",
+    "st. john's": "St. John's, NL",
+    "charlottetown": "Charlottetown, PE",
+    "whitehorse": "Whitehorse, YT",
+    "yellowknife": "Yellowknife, NT",
+    "iqaluit": "Iqaluit, NU",
+    # US metros where BC newcomers often relocate/co-shop
+    "seattle": "Seattle, WA (US)",
+    "bellingham": "Bellingham, WA (US)",
+    "portland": "Portland, OR (US)",
+    "los angeles": "Los Angeles, CA (US)",
+    "san francisco": "San Francisco, CA (US)",
+    "new york": "New York, NY (US)",
+    "phoenix": "Phoenix, AZ (US)",
+    "scottsdale": "Scottsdale, AZ (US)",
+    "palm springs": "Palm Springs, CA (US)",
+}
+
+
+def _detect_out_of_area(query: str) -> dict | None:
+    """Return `{"city": <display>, "matched": <token>}` if the query mentions
+    a city outside BC that we recognize. Simple substring/word check — no LLM
+    round-trip. Used by the Sync engine to surface a friendly referral CTA."""
+    q = (query or "").lower()
+    if not q:
+        return None
+    for token, display in _OUT_OF_AREA_CITIES.items():
+        pat = re.compile(rf"(?<!\w){re.escape(token)}(?!\w)", re.I)
+        if pat.search(q):
+            return {"city": display, "matched": token}
+    return None
+
+
 async def _parse_doogie_filter_text(text: str, *, language: str = "en", source: str = "text",
                                      request_ip: str | None = None) -> dict:
     """Run the Claude-Haiku structured-parse + community fuzzy-match step on a
@@ -12911,6 +12976,7 @@ async def doogie_sync_search(request: Request, body: SyncSearchIn):
         "intent": intent,
         "property_intel": intel_key,
         "community": community_name or None,
+        "out_of_area": _detect_out_of_area(query),
         "sections": sections,
         "spoken_summary": _build_spoken_summary(intent, community_name or None, insights, intel_key, len(sections)) if sections else "",
         "compliance": {

@@ -2945,6 +2945,15 @@ const Listings = () => {
   const [params] = useSearchParams();
   const rawQ = params.get("q") || "";
   const [alertOpen, setAlertOpen] = useState(false);
+  // Auto-open the SavedSearchModal when we arrive with #save-search in the
+  // URL (e.g. from the idle nudge on the dashboard). Cleans the hash after
+  // opening so a manual close doesn't leave it stuck in browser history.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#save-search") {
+      setAlertOpen(true);
+      try { window.history.replaceState(null, "", window.location.pathname + window.location.search); } catch {}
+    }
+  }, []);
   const [filters, setFilters] = useState({
     q: rawQ,
     city: params.get("city") || params.get("community") || "",
@@ -4173,7 +4182,22 @@ const GlossaryTerm = () => {
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState({ category: "", items: [] });
   useEffect(()=>{ setLoading(true); axios.get(`${API}/glossary/${slug}`).then(r=>{setT(r.data);setLoading(false);}).catch(()=>setLoading(false)); axios.get(`${API}/glossary/${slug}/related`).then(r=>setRelated(r.data||{items:[]})).catch(()=>{}); },[slug]);
-  if(loading) return <div className="section container-x"><p>Loading…</p></div>;
+  // Slug-derived fallback title for the loading state — gives non-JS
+  // crawlers a real <h1> + descriptive paragraph even before the API
+  // returns, instead of a bare "Loading…". Fixes the AEO audit that
+  // flagged the initial HTML as missing unique body copy.
+  const humanSlug = (slug || "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  if(loading) return (
+    <section className="section container-x" data-testid="glossary-term-loading">
+      <h1 style={{fontFamily:"'Playfair Display', Georgia, serif",color:"var(--brand-navy)"}}>{humanSlug} — BC Real Estate Glossary</h1>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",maxWidth:"48rem",lineHeight:1.65}}>
+        Plain-language definition of <strong>{humanSlug}</strong> in the British Columbia real estate context, with related FAQs, governing statute references, and links to related BC terms. Published by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.). Loading full entry…
+      </p>
+      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.85rem",fontStyle:"italic"}}>
+        General information only — not legal, financial, tax, or real-estate advice. For advice specific to your situation, speak with a licensed BC REALTOR®, lawyer, notary, or accountant.
+      </p>
+    </section>
+  );
   if(!t) return <div className="section container-x"><h2>Term not found</h2><Link to="/glossary">← Back</Link></div>;
 
   const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact} lastReviewed={t.faqs_approved_at || t.last_curated_at || t.updated_at}/>;
@@ -6180,7 +6204,28 @@ const CommunityPage = () => {
 
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
-    </> : <><h1 className="section-title">Loading…</h1></>}
+    </> : <>
+      {/* SEO fallback while the /communities registry is still loading —
+          gives non-JS crawlers a real <h1> + descriptive paragraph unique
+          per slug instead of the bare "Loading…" it used to render. */}
+      {(() => {
+        const humanSlug = (slug || "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        return (
+          <div data-testid="community-page-fallback">
+            <h1 className="section-title">{humanSlug}, British Columbia — Community Profile</h1>
+            <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
+              Community profile for <strong>{humanSlug}, BC</strong> — geography, Environment Canada climate normals, lifestyle, live MLS® listings via CREA DDF®, and REALTOR® coverage for buyers and sellers. Published by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.).
+            </p>
+            <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem",lineHeight:1.65,marginTop:"1rem"}}>
+              Loading full community data… If {humanSlug} sits outside Doug's primary practice areas (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor), we'll connect you with a licensed local REALTOR® through Doug's referral network.
+            </p>
+            <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.82rem",fontStyle:"italic",marginTop:"1rem"}}>
+              General information only — not legal, financial, tax, or real-estate advice.
+            </p>
+          </div>
+        );
+      })()}
+    </>}
 
     {/* Phase B — cross-type "You may also be looking for" cards for community
         pages. Silent-hide if empty or on fetch error. */}

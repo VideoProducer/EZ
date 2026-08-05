@@ -2193,3 +2193,33 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 
 **Files touched**:
 - `frontend/src/pages/DashboardMockup.jsx` — new `wasRestoredRef`, `SearchFiltersContext.wasRestored`, greeting `useEffect` in `SyncedResults`.
+
+---
+
+## Feb 05, 2026 — 4-Feature Batch: Referral Bridge + Idle Nudge + Chat Pill + SEO Fallback
+
+**Feature 1 — Out-of-Area Referral Bridge**
+- Backend: `_OUT_OF_AREA_CITIES` dict covers 30+ Canadian metros outside BC + top US cities (Toronto, Calgary, Montreal, Seattle, Phoenix, etc.). New `_detect_out_of_area(query)` returns `{city, matched}` when the visitor's query mentions any of them. `/api/doogie/sync-search` now includes an `out_of_area` field.
+- Frontend: `SyncedResults` renders a warm gold banner (`data-testid="sync-out-of-area-bridge"`) with a "Get referred →" CTA linking to `/referral-request?city=…` when out-of-area is detected. Verified live: "You mentioned Toronto, ON — that's outside Doug's BCFSA licence area."
+
+**Feature 2 — Idle Save-Search Nudge**
+- New `IdleSaveSearchNudge` component in `DashboardMockup.jsx`. Fires 45s after last mouse/keyboard/scroll/touch event with a soft "🐾 Want me to save this search?" toast bottom-right (`data-testid="idle-save-search-nudge"`).
+- Dismissible ("Not now" + × close). Session-flagged so it never re-appears in the same tab.
+- CTA copy explicitly mentions CASL + PIPA consent on the next screen, then links to `/listings?…#save-search`. `Listings` now watches the hash and auto-opens `SavedSearchModal` on arrival. Full consent capture happens in that modal — the nudge itself never stores anything.
+
+**Feature 3 — Doogie Chat Handoff Pill**
+- Re-mounted the existing `<DoogieChat mode="fab"/>` component (previously retired site-wide) inside DashboardMockup only. Visitors researching listings now get a persistent 1-tap Q&A about the current results without visual clutter elsewhere on the site.
+- The unified Visual Agent at `/visual-agent-demo` remains the site-wide primary entry point.
+
+**Feature 4 — SEO Body Copy for /glossary and /community**
+- Replaced bare "Loading…" fallbacks with slug-derived semantic content:
+  - `GlossaryTerm` → `<h1>{Human Slug} — BC Real Estate Glossary</h1>` + full descriptive paragraph naming Doug + BCFSA #167790 + informational-only disclaimer (`data-testid="glossary-term-loading"`).
+  - `CommunityPage` → `<h1>{Human Slug}, British Columbia — Community Profile</h1>` + 3-paragraph fallback covering geography, MLS® listings, referral-network coverage, and disclaimer (`data-testid="community-page-fallback"`).
+- Full solution for non-JS LLM crawlers would need SSR/prerender at the ingress level; this fix gives JS-enabled crawlers a real body during the first-render window before hydration completes.
+
+**Files touched**:
+- `backend/server.py` — `_OUT_OF_AREA_CITIES`, `_detect_out_of_area`, `out_of_area` field on sync-search
+- `frontend/src/pages/DashboardMockup.jsx` — `SyncedResults` out-of-area banner, `IdleSaveSearchNudge` component, `<DoogieChat mode="fab"/>` remount
+- `frontend/src/App.js` — Listings hash-watcher for `#save-search`, `GlossaryTerm` slug-fallback, `CommunityPage` slug-fallback
+
+**Verified E2E**: Toronto query returns bridge + text confirmed. Doogie FAB visible bottom-right. Compilation clean.
