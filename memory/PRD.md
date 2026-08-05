@@ -2324,3 +2324,23 @@ Plus module-level constants: `_DOOGIE_LANG_INSTRUCT`, `_DOOGIE_LANG_CTA`, `_DOOG
 **Behaviour preserved**: no functional changes — every symbol re-imported unchanged. Verified all 5 panes render (Buyer Search / Virtual Tour / Neighbourhood / Buyer Insights / Seller Insights / Consultation Request) with no console errors. Dead code removed: `CHIPS`, `VoiceDots`, `Cursor` (defined but never referenced by the main component).
 
 **Follow-on candidates** (deferred, not needed for the current UX): further split the main `VisualAgentDemo` default component into `<Hero>`, `<VoiceControls>`, `<Transcript>`, and `<KioskOverlay>` sub-components. That would drop the main file to ~600 lines.
+
+---
+
+## Feb 05, 2026 — BCFSA Licence Number Removed Site-Wide
+
+Doug decided the BCFSA licence number (#167790) is not legally required by BCFSA (RESA Section 54) or CREA — only the licensee name + brokerage name are mandatory disclosures. All `#167790` references removed to keep advertising minimal.
+
+**Files updated** (all references replaced with `Fraser Property Management Realty Services Ltd.` where a disclosure was needed):
+- `/app/frontend/src/App.js` — footer, About trust badges, community/glossary/nhb bylines, JSON-LD `reviewedBy`, Compliance page, sitemap descriptions (13 spots).
+- `/app/frontend/src/pages/DashboardMockup.jsx` — Fraser Property office popup + Home tile trust badge (2 spots).
+- `/app/frontend/src/pages/VisualAgentDemo.jsx` — 3 scripted transcript lines + footer disclaimer.
+- `/app/frontend/src/pages/visual-agent/PaneQualify.jsx` — 4 form disclosures.
+- `/app/frontend/public/index.html` — SEO shell copy, JSON-LD `hasCredential.identifier`, ai.json title (4 spots).
+- `/app/frontend/public/.well-known/ai.json` — removed `"licence"` field from operator manifest.
+- `/app/backend/server.py` — English tools description + French translation prompt boilerplate (2 spots).
+- `/app/backend/.env` — removed unused `DOUG_BCFSA_LICENSE` env var (was never read by any code).
+
+**Also fixed**: cleaned up a corrupted 7-line tail on `/app/frontend/src/App.js` that had accumulated (`esist/>}/>` garbage after `export default App;`) — file now ends cleanly at line 9882.
+
+Verified via Playwright: `/about` renders 0 hits for `167790` and `BCFSA License/Licence #`, and 6 hits for the brokerage name across the page (footer, byline, trust badge, meta description, etc.).

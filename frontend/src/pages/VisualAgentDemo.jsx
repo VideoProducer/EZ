@@ -97,7 +97,7 @@ const SCENARIOS = [
     turns: [
       { who: "agent", text: "Ready when you are — this is a short, consent-first questionnaire that goes straight to Doug LeMaire, REALTOR®. Nothing is sent until you tick consent." },
       { who: "user", text: "Sure — I want to sell my Burnaby townhouse in the spring." },
-      { who: "agent", pose: "thinking", text: "Capturing timeline, property type, and preferred contact channel. Doug (BCFSA #167790) will personally review your request and reach out within 1 business day." },
+      { who: "agent", pose: "thinking", text: "Capturing timeline, property type, and preferred contact channel. Doug will personally review your request and reach out within 1 business day." },
       { who: "agent", pose: "celebrating", text: "Thanks! Your consultation request is on Doug's desk. ✓" },
     ],
   },
@@ -129,7 +129,7 @@ const VOICE_SCRIPT = {
   },
   qualify: {
     heard: "Book me a Thursday morning call, please.",
-    reply: "Noted — Thursday morning window, CASL consent captured. Doug (BCFSA #167790) will personally confirm within one business day. Nothing sent yet.",
+    reply: "Noted — Thursday morning window, CASL consent captured. Doug will personally confirm within one business day. Nothing sent yet.",
   },
 };
 
@@ -1747,7 +1747,7 @@ export default function VisualAgentDemo() {
 
             {/* Footer compliance line */}
             <div style={{ position: "relative", textAlign: "center", fontSize: 11, opacity: 0.75, letterSpacing: 0.3 }}>
-              Doug LeMaire, REALTOR® · BCFSA #167790 · Doogie is an educational retrieval tool — <strong>not advice</strong>.
+              Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · Doogie is an educational retrieval tool — <strong>not advice</strong>.
               For personalized guidance, request a <a href="/referral-request" style={{ color: C.gold }}>licensed BC REALTOR®</a>.
             </div>
           </motion.div>

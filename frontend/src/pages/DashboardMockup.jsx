@@ -1497,7 +1497,7 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
         `<div style="min-width:200px;font-family:Inter,system-ui,sans-serif;font-size:12px;">
            <div style="font-weight:800;color:#0F2A5B;font-size:13px;">${DOUG_ADDRESS.label}</div>
            <div style="color:#374151;margin-top:2px;">${DOUG_ADDRESS.street}</div>
-           <div style="color:#6B7280;margin-top:2px;"><em>Doug LeMaire · REALTOR® · BCFSA #167790</em></div>
+           <div style="color:#6B7280;margin-top:2px;"><em>Doug LeMaire · REALTOR® · Fraser Property Management Realty Services Ltd.</em></div>
            <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(DOUG_ADDRESS.street)}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;color:#0A3D99;font-weight:700;">Get directions ↗</a>
          </div>`
       );
@@ -3831,7 +3831,7 @@ const HomeExtras = () => {
     },
   ];
   const credentialStrip = [
-    { icon: "🛡️", label: "Licensed REALTOR®",  sub: "BCFSA License #167790" },
+    { icon: "🛡️", label: "Licensed REALTOR®",  sub: "Fraser Property Management Realty Services Ltd." },
     { icon: "📍", label: "Local Expert",       sub: "Greater Vancouver, Fraser Valley, Sea to Sky Corridor" },
     { icon: "⏱️", label: "13 Years",           sub: "BC Real Estate Experience" },
   ];

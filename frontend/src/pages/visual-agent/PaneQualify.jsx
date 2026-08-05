@@ -346,7 +346,7 @@ export const PaneQualify = () => {
           You'll get a confirmation email at <strong>{form.email}</strong> within a few minutes.
         </p>
         <div style={{ fontSize: 11, color: "#6B7280" }}>
-          Doug LeMaire, REALTOR® · BCFSA #167790 · Consent record retained per CASL (3 years).
+          Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · Consent record retained per CASL (3 years).
         </div>
       </div>
     );
@@ -359,7 +359,7 @@ export const PaneQualify = () => {
         <div>
           <strong style={{ color: C.navy, fontSize: 14 }}>Consultation Request Form</strong>
           <div style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
-            Short questionnaire · goes directly to Doug LeMaire, REALTOR® (BCFSA #167790)
+            Short questionnaire · goes directly to Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.
           </div>
         </div>
         <Pill tone="green"><ShieldCheck size={12}/> Consent-first · CASL</Pill>
@@ -581,7 +581,7 @@ export const PaneQualify = () => {
           <div style={{
             background: "#F8FAFF", border: "1px solid #DDE6FA", borderRadius: 10, padding: 12, fontSize: 12, color: "#374151", lineHeight: 1.55,
           }}>
-            Doug LeMaire, REALTOR® (<strong>BCFSA #167790</strong>) personally reviews every consultation request. He'll reach out within <strong>1 business day</strong>. Nothing here is a listing, offer, or contract (RESA). Doogie shares general information — not advice.
+            <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. personally reviews every consultation request. He'll reach out within <strong>1 business day</strong>. Nothing here is a listing, offer, or contract (RESA). Doogie shares general information — not advice.
           </div>
           <CheckboxField
             label={<>I consent to receive commercial electronic messages from EZtoFind.ca (<strong>CASL</strong>). I can unsubscribe any time.</>}
@@ -632,7 +632,7 @@ export const PaneQualify = () => {
         background: "linear-gradient(135deg, rgba(30,79,207,0.06), rgba(34,197,94,0.06))",
         border: "1px solid #DDE6FA", borderRadius: 12, padding: 10, fontSize: 11.5, color: C.navy,
       }}>
-        <strong>What happens next:</strong> Your responses go straight to Doug LeMaire, REALTOR® (BCFSA #167790). He personally reads every consultation request — no automated outreach. You'll hear from a real person within 1 business day. Doogie shares general information, not advice.
+        <strong>What happens next:</strong> Your responses go straight to Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. He personally reads every consultation request — no automated outreach. You'll hear from a real person within 1 business day. Doogie shares general information, not advice.
       </div>
     </div>
   );

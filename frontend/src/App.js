@@ -363,9 +363,10 @@ const NeighbourhoodPage = () => {
       <div className="notice" style={{marginTop:"0.5rem"}}>{d.note || "Synopsis being generated — please refresh in a moment."}</div>
     )}
     {d.synopsis && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-authored, reviewed by Doug LeMaire, REALTOR®. General information only — not a substitute for professional advice.</div>}
-    {/* Consistent BCFSA byline (License #167790 + compliance disclaimer +
-        freshness stamp) on every neighbourhood page — matches glossary and
-        community pages, strengthens E-E-A-T for 520 micro-nhb URLs. */}
+    {/* Consistent brokerage byline (Fraser Property Management Realty Services
+        Ltd. + compliance disclaimer + freshness stamp) on every neighbourhood
+        page — matches glossary and community pages, strengthens E-E-A-T for
+        520 micro-nhb URLs. */}
     {d.synopsis && <PublishedByDoug compact lastReviewed={d.synopsis_generated_at || d.updated_at}/>}
   </div></section>);
 };
@@ -660,7 +661,7 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
             for E-E-A-T (regulator-verifiable authority) and BCFSA rule that
             REALTORS® must be transparently identifiable when representing
             themselves in public communications. */}
-        <span style={{color:"var(--muted)",fontFamily:"'Inter',sans-serif"}} itemProp="identifier">BCFSA #167790</span>
+        <span style={{color:"var(--muted)",fontFamily:"'Inter',sans-serif"}}>Fraser Property Management Realty Services Ltd.</span>
         <span style={{color:"var(--muted)"}}> · </span>
         <a href="https://eztofind.ca" itemProp="url" onClick={(e)=>{ if(window.location.hostname !== "eztofind.ca"){ e.preventDefault(); window.location.href = "/"; }}} style={{color:"inherit",textDecoration:"none",fontWeight:600}}>EZtoFind.ca</a>
         <span style={{color:"var(--muted)"}} itemProp="affiliation"> · Fraser Property Management Realty Services Ltd.</span>
@@ -888,7 +889,7 @@ const Footer = () => (
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85,marginTop:"0.75rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship.</p>
-        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong> · BCFSA License #167790<br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5<br/><a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}}>(604) 466-7021</a></p>
+        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5<br/><a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}}>(604) 466-7021</a></p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Property Search</Link></li>
@@ -2494,7 +2495,7 @@ const Home = () => {
       </div>
       <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}}>
         {[
-          {icon:"🛡️",title:"Licensed REALTOR®",sub:"BCFSA License #167790"},
+          {icon:"🛡️",title:"Licensed REALTOR®",sub:"Fraser Property Management Realty Services Ltd."},
           {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
           {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
         ].map((b,i) => (
@@ -4190,7 +4191,7 @@ const GlossaryTerm = () => {
     <section className="section container-x" data-testid="glossary-term-loading">
       <h1 style={{fontFamily:"'Playfair Display', Georgia, serif",color:"var(--brand-navy)"}}>{humanSlug} — BC Real Estate Glossary</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",maxWidth:"48rem",lineHeight:1.65}}>
-        Plain-language definition of <strong>{humanSlug}</strong> in the British Columbia real estate context, with related FAQs, governing statute references, and links to related BC terms. Published by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.). Loading full entry…
+        Plain-language definition of <strong>{humanSlug}</strong> in the British Columbia real estate context, with related FAQs, governing statute references, and links to related BC terms. Published by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Loading full entry…
       </p>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.85rem",fontStyle:"italic"}}>
         General information only — not legal, financial, tax, or real-estate advice. For advice specific to your situation, speak with a licensed BC REALTOR®, lawyer, notary, or accountant.
@@ -4213,7 +4214,7 @@ const GlossaryTerm = () => {
     "datePublished": datePub,
     "dateModified": dateMod,
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
-    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR® · BCFSA #167790","url":"https://eztofind.ca/about"},
+    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     "mainEntity":{"@type":"DefinedTerm","name":t.term,"description":t.definition,"inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":"https://eztofind.ca/glossary"}},
     "url":`https://eztofind.ca/glossary/${t.slug}`,
@@ -4562,7 +4563,7 @@ const About = () => (<section className="section"><div className="container-x" s
   </div>
   <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}} data-testid="about-trust-badges">
     {[
-      {icon:"🛡️",title:"Licensed REALTOR®",sub:"BCFSA License #167790"},
+      {icon:"🛡️",title:"Licensed REALTOR®",sub:"Fraser Property Management Realty Services Ltd."},
       {icon:"📍",title:"Local Expert",sub:"Greater Vancouver, Fraser Valley, Sea to Sky Corridor"},
       {icon:"⏱️",title:"13 Years",sub:"BC Real Estate Experience"}
     ].map((b,i) => (
@@ -4613,7 +4614,7 @@ const AiUsePage = () => (<><SEO title="AI, LLM & Developer Use of EZtoFind.ca �
     <li><strong>Glossary</strong> — 398+ BC-specific real estate terms with plain-language definitions, FAQs, and links to authoritative sources (BCFSA, CREA, OSFI, gov.bc.ca)</li>
     <li><strong>Community & neighbourhood pages</strong> — 760+ pages covering every incorporated BC community with local context, market notes, and lifestyle summaries</li>
     <li><strong>Specialty guides</strong> — Luxury, Equestrian, Detached, Condos, Townhomes, Estate Sales</li>
-    <li><strong>Compliance disclosures</strong> — every content page includes the author, review date, license number (BCFSA #167790), and general-information disclaimer</li>
+    <li><strong>Compliance disclosures</strong> — every content page includes the author, review date, brokerage identification, and general-information disclaimer</li>
   </ul>
 
   <h2 style={{marginTop:"2rem"}}>Crawl access — what's allowed</h2>
@@ -4644,7 +4645,7 @@ const AiUsePage = () => (<><SEO title="AI, LLM & Developer Use of EZtoFind.ca �
   <p>If your AI system references our content, please attribute using one of these formats:</p>
   <ul>
     <li><strong>Inline citation:</strong> <em>"According to EZtoFind.ca …"</em></li>
-    <li><strong>Source list:</strong> <code>EZtoFind.ca — Doug LeMaire, REALTOR® (BCFSA #167790) — https://eztofind.ca/&lt;path&gt;</code></li>
+    <li><strong>Source list:</strong> <code>EZtoFind.ca — Doug LeMaire, REALTOR® — https://eztofind.ca/&lt;path&gt;</code></li>
     <li><strong>Markdown:</strong> <code>[EZtoFind.ca glossary](https://eztofind.ca/glossary/&lt;slug&gt;)</code></li>
   </ul>
   <p style={{fontSize:"0.9rem"}}>All content is © 2026 Doug LeMaire under <a href="/copyright">CIPO Copyright Registration No. 1247822</a>. Reproduction without a working link back is not authorized.</p>
@@ -4664,7 +4665,7 @@ const AiUsePage = () => (<><SEO title="AI, LLM & Developer Use of EZtoFind.ca �
   <h2 style={{marginTop:"2rem"}}>Content policy</h2>
   <ul>
     <li><strong>Drafted:</strong> by our AI provider under Doug's editorial direction, using EZtoFind.ca's approved BC content library and hallucination-hardened prompts</li>
-    <li><strong>Reviewed:</strong> by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.)</li>
+    <li><strong>Reviewed:</strong> by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.)</li>
     <li><strong>Checked against:</strong> BC statutes (Real Estate Services Act, Strata Property Act, Property Transfer Tax Act, etc.), BCFSA rules, and current CREA guidance</li>
     <li><strong>Updated:</strong> automatically flagged for review when linked statutes/regulations change; hard refresh at least annually</li>
     <li><strong>Not:</strong> a substitute for professional legal, tax, or financial advice</li>
@@ -4775,7 +4776,7 @@ const Terms = () => <Legal title="Terms of Use" body={<>
   <p>These Terms of Use govern your use of EZtoFind.ca (the "Site"). By accessing or using the Site you agree to these Terms. If you do not agree, please do not use the Site.</p>
 
   <h3 style={{marginTop:"2rem"}}>1. Who we are</h3>
-  <p>EZtoFind.ca is operated by <strong>Doug LeMaire, REALTOR®</strong> (BCFSA License #167790) of <strong>Fraser Property Management Realty Services Ltd.</strong>, 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5. Contact: <a href="tel:+16044667021" style={{color:"var(--brand-blue)"}}>(604) 466-7021</a> · <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a>.</p>
+  <p>EZtoFind.ca is operated by <strong>Doug LeMaire, REALTOR®</strong> of <strong>Fraser Property Management Realty Services Ltd.</strong>, 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5. Contact: <a href="tel:+16044667021" style={{color:"var(--brand-blue)"}}>(604) 466-7021</a> · <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a>.</p>
 
   <h3 style={{marginTop:"2rem"}}>2. Purpose of the Site — information only</h3>
   <p>EZtoFind.ca provides <strong>general educational information about British Columbia real estate</strong>. Content on the Site — including glossary entries, community pages, buyer's and seller's guides, and responses generated by our on-site AI assistant "Doogie" — is offered for information only. <strong>It is not legal, tax, financial, mortgage, immigration, or property-specific advice, and it is not a substitute for a licensed professional.</strong> For your own situation, please consult the appropriate licensed professional (BC lawyer or notary, accountant or tax professional, licensed mortgage broker, or a licensed REALTOR®).</p>
@@ -5038,7 +5039,7 @@ const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
   <h3 style={{marginTop:"1.5rem"}}>Concerns about a REALTOR®?</h3>
   <p>Ethics complaints against a REALTOR® in the Greater Vancouver area may be filed with <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Greater Vancouver REALTORS® (GVR)</a>. Complaints about a licensee's conduct as a real estate licensee may be filed with <a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA</a>. See our <Link to="/complaints" style={{color:"var(--brand-blue)"}}>Complaints & Concerns</Link> page.</p>
 </>}/>;
-const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · <strong>BCFSA License #167790</strong> · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept at <Link to="/visual-agent-demo" style={{color:"var(--brand-blue)"}}>/visual-agent-demo</Link>) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
+const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept at <Link to="/visual-agent-demo" style={{color:"var(--brand-blue)"}}>/visual-agent-demo</Link>) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
 
 // --- Admin ---
 // SEC-009: The JWT used to live in localStorage where any JS on the page
@@ -6134,7 +6135,7 @@ const CommunityPage = () => {
     "@context":"https://schema.org","@type":"Article",
     "headline":`${found}, British Columbia — Community Overview`,
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},"url":"https://eztofind.ca/about"},
-    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR® · BCFSA #167790","url":"https://eztofind.ca/about"},
+    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     "datePublished": syn.published_at || syn.created_at || "2026-01-12",
     "dateModified": syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || new Date().toISOString().slice(0,10),
@@ -6229,7 +6230,7 @@ const CommunityPage = () => {
           <div data-testid="community-page-fallback">
             <h1 className="section-title">{humanSlug}, British Columbia — Community Profile</h1>
             <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}}>
-              Community profile for <strong>{humanSlug}, BC</strong> — geography, Environment Canada climate normals, lifestyle, live MLS® listings via CREA DDF®, and REALTOR® coverage for buyers and sellers. Published by Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.).
+              Community profile for <strong>{humanSlug}, BC</strong> — geography, Environment Canada climate normals, lifestyle, live MLS® listings via CREA DDF®, and REALTOR® coverage for buyers and sellers. Published by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.).
             </p>
             <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem",lineHeight:1.65,marginTop:"1rem"}}>
               Loading full community data… If {humanSlug} sits outside Doug's primary practice areas (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor), we'll connect you with a licensed local REALTOR® through Doug's referral network.
