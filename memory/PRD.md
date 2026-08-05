@@ -2303,3 +2303,24 @@ Plus module-level constants: `_DOOGIE_LANG_INSTRUCT`, `_DOOGIE_LANG_CTA`, `_DOOG
 - P2: Submit Doogie to ChatGPT Store / WebMCP.
 - P3: Multilingual voice-overs (zh-Hant, zh-Hans, Punjabi, Farsi, Portuguese) — parked by user.
 - P3: Move "Coming Soon" uploaded files to CDN/Object Storage.
+
+---
+
+## Feb 05, 2026 — VisualAgentDemo Split (per-Pane extraction)
+
+**Delivered**: `/app/frontend/src/pages/VisualAgentDemo.jsx` reduced from **3,541 → 1,872 lines** (-47%) by extracting each Pane, shared constant, and form-field helper into `/app/frontend/src/pages/visual-agent/`.
+
+**New files**:
+- `visual-agent/constants.js` (231 lines) — `C` palette, `API`, `DOOGIE` mascot poses, `BC_REGIONS`, `MOCK_LISTINGS`, `MOCK_COMPS`, `TOUR_PROVIDERS`, `FOCUS_AREA_CITIES`, `isOutsideFocusArea`, `useRotatingRegion`.
+- `visual-agent/atoms.jsx` (110 lines) — `Pill`, `Waveform`, `VoiceDots`, `Cursor`, `OutsideFocusBump`.
+- `visual-agent/PaneSearch.jsx` (201 lines) — Live CREA DDF® listing carousel scoped to committed city.
+- `visual-agent/PaneTour.jsx` (187 lines) — Live Matterport/YouTube/Vimeo tour iframe.
+- `visual-agent/PaneNeighbourhood.jsx` (74 lines) — Illustrative Kits stats + live Google Maps.
+- `visual-agent/PaneBuyerInsights.jsx` (162 lines) — Inventory + median list + 90-day trend sparkline.
+- `visual-agent/PaneSellerLookup.jsx` (144 lines) — Comparable actives + Market Estimate CTA.
+- `visual-agent/PaneQualify.jsx` (639 lines) — 5-step BCFSA-compliant intake + `TextField`, `AddressAutocompleteField`, `SelectField`, `CheckboxField`, `FormNav` field helpers.
+- `visual-agent/index.js` (11 lines) — barrel export.
+
+**Behaviour preserved**: no functional changes — every symbol re-imported unchanged. Verified all 5 panes render (Buyer Search / Virtual Tour / Neighbourhood / Buyer Insights / Seller Insights / Consultation Request) with no console errors. Dead code removed: `CHIPS`, `VoiceDots`, `Cursor` (defined but never referenced by the main component).
+
+**Follow-on candidates** (deferred, not needed for the current UX): further split the main `VisualAgentDemo` default component into `<Hero>`, `<VoiceControls>`, `<Transcript>`, and `<KioskOverlay>` sub-components. That would drop the main file to ~600 lines.
