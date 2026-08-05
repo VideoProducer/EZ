@@ -2122,3 +2122,26 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Verified**: `/listings` renders with header=1, voice=1, reset=1, price-min=1, price-max=1. Visual matches the user's mockup pixel-for-pixel.
 
 **Action for user**: Fix lives on preview — redeploy to push to https://eztofind.ca.
+
+---
+
+## Feb 05, 2026 — Doogie Type Mode + Pivot Badge + PropMap Fix
+
+**New features**:
+
+1. **Typed Doogie queries** — Added `POST /api/doogie/parse-filter` that accepts a plain-text query and returns the same structured filter as `/voice-filter`. Refactored the parse logic into `_parse_doogie_filter_text` so both endpoints share one truth. `DoogieFilterHeader` now has a **⌨ TYPE / 🎤 VOICE mode toggle**; typing mode shows an inline text input + gold SEND button. Auto-switches to text mode when the browser has no mic. Great for desktop visitors without a working mic.
+
+2. **Clickable property-intel badge** — The `DETACHED / CONDO / ACREAGE / …` badge on the Sync panel is now a `<PropertyIntelPivotBadge>` button. Tap it → dropdown opens with 7 property classes (Detached, Condo, Townhome, Acreage, Waterfront, Equestrian, New Build). Picking one instantly pivots the entire panel: updates `filters.propertyType`, re-runs `runSearch` with the new filter, and every Sync section (Market Insights, Buyer Insights, Community Profile, Property Intel, Glossary, FAQs) re-hydrates to the new class.
+
+**Bug fix**:
+- `SidebarFilters.propertyType` uses backend-shape values (`House`, `Apartment`, `Row / Townhouse`, `Vacant Land`), but the old `propMap` in `runSearch` mapped `detached → House` and dropped every user-set property type on the way to sync-search. Removed the mapping and forward `filters.propertyType` verbatim. Extended backend `_detect_property_intel` to normalize `Apartment / Row / Townhouse / Vacant Land / Single Family` onto the correct intel keys.
+- Extended `runSearch(overrideFilters?)` — accepts a filter override so pivot-badge + voice-filter callers get fresh values without waiting for React re-render (fixes stale-closure bug).
+
+**Verified E2E (Playwright)**:
+- Kelowna + House → badge reads `DETACHED HOUSE ▼` → pivot to Condo → badge reads `CONDO ▼`, active listings 2,092 → 532, median $1,280,000 → $450,000, dropdown flips to "Condo / Apartment", listing cards swap to condos.
+- Type mode: typing "3 bedroom house in Kelowna under 900k" → SEND → filter fills community=Kelowna, beds=3+, max_price=$900k, results narrow from 43,399 to 156 listings.
+
+**Files touched**:
+- `backend/server.py` — added `_parse_doogie_filter_text` helper, `POST /api/doogie/parse-filter` endpoint, extended `_detect_property_intel` normalization.
+- `frontend/src/components/DoogieFilterHeader.jsx` — new type mode + mode toggle + typed input UI.
+- `frontend/src/pages/DashboardMockup.jsx` — new `PropertyIntelPivotBadge`, `_PROPERTY_INTEL_OPTIONS`, dropped buggy propMap, `runSearch(overrideFilters?)`.

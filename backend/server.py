@@ -11273,67 +11273,107 @@ async def doogie_voice_filter(request: Request, audio: UploadFile = File(...), l
         if not transcript:
             return {"transcript": "", "filter": None, "confidence": 0.0, "error": "No speech detected — try again."}
 
-        # Step 2 - Claude Haiku structured parse
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"vf-{uuid.uuid4().hex[:12]}",
-            system_message=_VOICE_FILTER_SYS,
-        ).with_model("anthropic", "claude-haiku-4-5-20251001")
-        parse_resp = await chat.send_message(UserMessage(text=transcript))
-        raw = (parse_resp if isinstance(parse_resp, str) else getattr(parse_resp, "text", str(parse_resp))).strip()
-        if raw.startswith("```"):
-            raw = raw.removeprefix("```").removeprefix("json").removesuffix("```").strip()
-        try:
-            parsed = json.loads(raw)
-        except Exception as je:
-            logger.warning(f"voice-filter: claude JSON invalid: {raw[:200]}")
-            raise HTTPException(502, f"Filter parse failed — please try again")
-
-        # Step 3 - Fuzzy-match community against known BC list
-        community_input = (parsed.get("community") or "").strip()
-        community_normalized = None
-        if community_input:
-            def _norm(s: str) -> str:
-                import unicodedata
-                s2 = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
-                return re.sub(r"[^a-z0-9]+", "", s2.lower())
-            target = _norm(community_input)
-            try:
-                all_docs = await db["community_pages"].find({}, {"community": 1, "slug": 1}).to_list(2000)
-            except Exception:
-                all_docs = []
-            for d in all_docs:
-                name = d.get("community") or ""
-                nn = _norm(name)
-                if nn == target or (target and (target in nn or nn in target)):
-                    community_normalized = {"community": name, "slug": d.get("slug")}
-                    break
-
-        # Step 4 - Analytics (transcript only, never audio)
-        try:
-            await db["voice_filter_events"].insert_one({
-                "_id": uuid.uuid4().hex,
-                "at": datetime.now(timezone.utc).isoformat(),
-                "ip": (request.client.host if request.client else None),
-                "transcript": transcript[:500],
-                "filter": parsed,
-                "community_matched": bool(community_normalized),
-                "language": language,
-            })
-        except Exception as le:
-            logger.debug(f"voice-filter log failed: {le}")
-
-        return {
-            "transcript": transcript,
-            "filter": parsed,
-            "community_normalized": community_normalized,
-            "confidence": float(parsed.get("confidence") or 0.0),
-        }
+        # Steps 2-4: reuse the shared text -> filter helper.
+        result = await _parse_doogie_filter_text(
+            transcript,
+            language=language,
+            source="voice",
+            request_ip=(request.client.host if request.client else None),
+        )
+        return {"transcript": transcript, **result}
     except HTTPException:
         raise
     except Exception as e:
         logger.warning(f"voice-filter pipeline failed: {e}")
         raise HTTPException(500, "Voice filter unavailable — please try typing instead")
+
+
+async def _parse_doogie_filter_text(text: str, *, language: str = "en", source: str = "text",
+                                     request_ip: str | None = None) -> dict:
+    """Run the Claude-Haiku structured-parse + community fuzzy-match step on a
+    free-text query. Extracted from `doogie_voice_filter` so the text-only
+    endpoint (typed queries when a mic isn't available or wanted) can reuse
+    the exact same parsing logic — one prompt, one JSON shape, one truth."""
+    text = (text or "").strip()
+    if not text:
+        raise HTTPException(422, "Empty text")
+
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"vf-{uuid.uuid4().hex[:12]}",
+        system_message=_VOICE_FILTER_SYS,
+    ).with_model("anthropic", "claude-haiku-4-5-20251001")
+    parse_resp = await chat.send_message(UserMessage(text=text))
+    raw = (parse_resp if isinstance(parse_resp, str) else getattr(parse_resp, "text", str(parse_resp))).strip()
+    if raw.startswith("```"):
+        raw = raw.removeprefix("```").removeprefix("json").removesuffix("```").strip()
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        logger.warning(f"parse-filter: claude JSON invalid: {raw[:200]}")
+        raise HTTPException(502, "Filter parse failed — please try again")
+
+    # Fuzzy-match community against known BC list
+    community_input = (parsed.get("community") or "").strip()
+    community_normalized = None
+    if community_input:
+        def _norm(s: str) -> str:
+            import unicodedata
+            s2 = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+            return re.sub(r"[^a-z0-9]+", "", s2.lower())
+        target = _norm(community_input)
+        try:
+            all_docs = await db["community_pages"].find({}, {"community": 1, "slug": 1}).to_list(2000)
+        except Exception:
+            all_docs = []
+        for d in all_docs:
+            name = d.get("community") or ""
+            nn = _norm(name)
+            if nn == target or (target and (target in nn or nn in target)):
+                community_normalized = {"community": name, "slug": d.get("slug")}
+                break
+
+    # Analytics
+    try:
+        await db["voice_filter_events"].insert_one({
+            "_id": uuid.uuid4().hex,
+            "at": datetime.now(timezone.utc).isoformat(),
+            "ip": request_ip,
+            "transcript": text[:500],
+            "filter": parsed,
+            "community_matched": bool(community_normalized),
+            "language": language,
+            "source": source,  # "voice" or "text"
+        })
+    except Exception as le:
+        logger.debug(f"parse-filter log failed: {le}")
+
+    return {
+        "filter": parsed,
+        "community_normalized": community_normalized,
+        "confidence": float(parsed.get("confidence") or 0.0),
+    }
+
+
+class DoogieParseFilterIn(BaseModel):
+    text: str
+    language: Optional[str] = "en"
+
+
+@app.post("/api/doogie/parse-filter", tags=["Doogie"])
+@_limiter.limit("30/minute")
+async def doogie_parse_filter(request: Request, body: DoogieParseFilterIn):
+    """Text-only alternative to `voice-filter`. Accepts a plain-text query
+    ("3 bedroom house in Kelowna under 900k") and returns the same structured
+    filter shape. Serves desktop visitors without a working mic, or anyone
+    who'd rather type than speak."""
+    result = await _parse_doogie_filter_text(
+        body.text,
+        language=body.language or "en",
+        source="text",
+        request_ip=(request.client.host if request.client else None),
+    )
+    return {"transcript": body.text, **result}
 
 
 
@@ -12425,16 +12465,23 @@ def _detect_property_intel(query: str, filters: dict | None) -> str | None:
     over query text because it's what the user actually applied."""
     ptype = ((filters or {}).get("property_type") or "").strip().lower()
     if ptype:
-        # Backend UI values -> intel keys. Keep aligned with _PROPERTY_TYPE_KEYWORDS.
+        # Backend UI values -> intel keys. Includes the SidebarFilters select
+        # values ("apartment", "row / townhouse", "vacant land") used by the
+        # dashboard sync flow, plus the specialty-page raw values.
         norm = {
             "acreage": "acreage",
             "land": "acreage",
+            "vacant land": "acreage",
             "house": "detached",
+            "single family": "detached",
             "detached": "detached",
             "condo": "condo",
             "apartment": "condo",
+            "condominium": "condo",
             "townhouse": "townhouse",
             "townhome": "townhouse",
+            "row / townhouse": "townhouse",
+            "row/townhouse": "townhouse",
         }.get(ptype)
         if norm:
             return norm

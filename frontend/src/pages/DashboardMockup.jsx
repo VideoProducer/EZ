@@ -161,33 +161,38 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // Bumped by the voice-filter mic handler right before runSearch() fires.
   // SyncedResults reads this once, auto-plays the spoken summary, then resets.
   const [voiceTriggerNonce, setVoiceTriggerNonce] = useState(0);
-  const runSearch = async () => {
+  const runSearch = async (overrideFilters) => {
+    // pivot-badge + voice-filter callers pass `overrideFilters` explicitly so
+    // we always run with fresh values even before React finishes re-rendering
+    // after their setFilters(). Falls back to the current state otherwise.
+    const f = overrideFilters ? { ...filters, ...overrideFilters } : filters;
     setLoading(true);
     setSyncLoading(true);
     try {
-      const p = new URLSearchParams({ limit: "24", sort: filters.sort || "newest" });
-      if (filters.q) p.set("q", filters.q);
-      if (filters.city) p.set("city", filters.city);
-      if (filters.beds) p.set("beds_min", filters.beds);
-      if (filters.baths) p.set("baths_min", filters.baths);
-      if (filters.priceMin) p.set("price_min", filters.priceMin);
-      if (filters.priceMax) p.set("price_max", filters.priceMax);
-      if (filters.propertyType) p.set("property_type", filters.propertyType);
-      if (filters.keyword) p.set("features", filters.keyword);
+      const p = new URLSearchParams({ limit: "24", sort: f.sort || "newest" });
+      if (f.q) p.set("q", f.q);
+      if (f.city) p.set("city", f.city);
+      if (f.beds) p.set("beds_min", f.beds);
+      if (f.baths) p.set("baths_min", f.baths);
+      if (f.priceMin) p.set("price_min", f.priceMin);
+      if (f.priceMax) p.set("price_max", f.priceMax);
+      if (f.propertyType) p.set("property_type", f.propertyType);
+      if (f.keyword) p.set("features", f.keyword);
       // Fire the listings + Content Sync Engine in parallel so the visitor
       // sees market insights + buyer/seller resources appear at the same
       // moment as the property cards.
-      const propMap = { detached: "House", condo: "Condo", townhouse: "Townhouse", acreage: "Acreage", land: "Land" };
+      // f.propertyType already stores the API-shape value (House,
+      // Apartment, Row / Townhouse, etc.) so we forward it verbatim.
       const syncBody = {
-        query: (syncQuery || filters.q || filters.keyword || filters.city || "").trim(),
+        query: (syncQuery || f.q || f.keyword || f.city || "").trim(),
         filter: {
-          community: filters.city || null,
-          property_type: propMap[filters.propertyType] || null,
-          min_beds: filters.beds ? Number(filters.beds) : null,
-          min_baths: filters.baths ? Number(filters.baths) : null,
-          min_price: filters.priceMin ? Number(filters.priceMin) : null,
-          max_price: filters.priceMax ? Number(filters.priceMax) : null,
-          keyword: filters.keyword || null,
+          community: f.city || null,
+          property_type: f.propertyType || null,
+          min_beds: f.beds ? Number(f.beds) : null,
+          min_baths: f.baths ? Number(f.baths) : null,
+          min_price: f.priceMin ? Number(f.priceMin) : null,
+          max_price: f.priceMax ? Number(f.priceMax) : null,
+          keyword: f.keyword || null,
         },
         limit: 6,
       };
@@ -645,7 +650,12 @@ const FloatingFilters = () => {
           const f = body.filter || {};
           // Map Claude's structured output onto SearchFiltersContext.filters shape.
           const normCity = body.community_normalized?.community || f.community || "";
-          const propMap = { House: "detached", Condo: "condo", Townhouse: "townhouse", Acreage: "acreage", Land: "land" };
+          // API property_type values map onto the SidebarFilters select values.
+          // The select uses "House" / "Apartment" / "Row / Townhouse" — same
+          // shape the voice-filter API returns — so no translation needed for
+          // House/Condo/Acreage. We only remap the ones with different labels.
+          const propMap = { Condo: "Apartment", Townhouse: "Row / Townhouse" };
+          const nextPropType = f.property_type ? (propMap[f.property_type] || f.property_type) : "";
           // Feed the transcript into the Content Sync Engine so intent
           // detection (buy vs. sell) picks up the visitor's actual words,
           // not just the filter dict.
@@ -657,7 +667,7 @@ const FloatingFilters = () => {
             ctx.setFilters(prev => ({
               ...prev,
               city: normCity || prev.city,
-              propertyType: propMap[f.property_type] || prev.propertyType,
+              propertyType: nextPropType || prev.propertyType,
               beds: f.min_beds != null ? String(f.min_beds) : prev.beds,
               baths: f.min_baths != null ? String(f.min_baths) : prev.baths,
               priceMin: f.min_price != null ? String(f.min_price) : prev.priceMin,
@@ -1668,6 +1678,112 @@ const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) =
 // Profile, Property-Type Intelligence, Glossary, FAQs, Tools, Communities,
 // Journey chapters, Related Searches. Every section carries a compliance
 // footer: informational only, never advice.
+
+// Clickable property-intel badge — tap the current class to open a small
+// popover with alternatives. Picking one pivots the whole Sync panel by
+// updating the filter's propertyType + re-running the search.
+// Pivot options — `filter` is the exact value set on filters.propertyType,
+// matching the SidebarFilters <select> options so the pivot round-trips
+// through /api/listings + /api/doogie/sync-search correctly.
+const _PROPERTY_INTEL_OPTIONS = [
+  { key: "detached",         label: "Detached House", filter: "House" },
+  { key: "condo",            label: "Condo",          filter: "Apartment" },
+  { key: "townhouse",        label: "Townhome",       filter: "Row / Townhouse" },
+  { key: "acreage",          label: "Acreage",        filter: "Vacant Land",   keyword: "acreage" },
+  { key: "waterfront",       label: "Waterfront",     filter: "",              keyword: "waterfront" },
+  { key: "equestrian",       label: "Equestrian",     filter: "",              keyword: "equestrian" },
+  { key: "new-construction", label: "New Build",      filter: "",              keyword: "new construction" },
+];
+
+const PropertyIntelPivotBadge = ({ intelKey }) => {
+  const ctx = useContext(SearchFiltersContext);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [open]);
+  const current = _PROPERTY_INTEL_OPTIONS.find(o => o.key === intelKey) || { label: intelKey.replace(/-/g, " ") };
+  const pivotTo = (opt) => {
+    if (!ctx?.setFilters) return;
+    const nextFilters = {
+      propertyType: opt.filter || "",
+      keyword: opt.keyword || (opt.filter ? "" : undefined),
+    };
+    ctx.setFilters(prev => ({
+      ...prev,
+      propertyType: nextFilters.propertyType,
+      keyword: nextFilters.keyword !== undefined ? nextFilters.keyword : prev.keyword,
+    }));
+    // Seed the sync engine's query with the new property class so intent
+    // detection lands on 'buy' and the correct intel pack loads.
+    try { ctx.setSyncQuery?.(opt.label.toLowerCase()); } catch {}
+    // Pass overrides directly to bypass the stale-closure issue — runSearch
+    // reads the current `filters` state which hasn't been updated yet.
+    setTimeout(() => { try { ctx.runSearch?.(nextFilters); } catch {} }, 30);
+    setOpen(false);
+  };
+  return (
+    <span ref={wrapRef} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        data-testid="sync-intel-badge"
+        title="Tap to pivot the panel to another property class"
+        style={{
+          background: C.brandGold, color: C.navy, fontSize: 10, fontWeight: 800,
+          padding: "3px 9px", borderRadius: 999, textTransform: "uppercase",
+          letterSpacing: 0.5, border: "none", cursor: "pointer",
+          display: "inline-flex", alignItems: "center", gap: 4,
+        }}
+      >
+        {current.label}
+        <span aria-hidden="true" style={{ fontSize: 8, opacity: 0.75, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▼</span>
+      </button>
+      {open && (
+        <div
+          data-testid="sync-intel-popover"
+          style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 500,
+            background: "#fff", border: `1px solid ${C.brandGold}`, borderRadius: 10,
+            boxShadow: "0 10px 24px rgba(15,42,91,0.18)", minWidth: 180, padding: 4,
+          }}
+        >
+          <div style={{ fontSize: 9, color: C.muted, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase", padding: "6px 10px 3px" }}>
+            Pivot to…
+          </div>
+          {_PROPERTY_INTEL_OPTIONS.map(opt => {
+            const active = opt.key === intelKey;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                disabled={active}
+                onClick={() => pivotTo(opt)}
+                data-testid={`sync-intel-option-${opt.key}`}
+                style={{
+                  display: "block", width: "100%", textAlign: "left",
+                  padding: "7px 10px", borderRadius: 6, border: "none",
+                  background: active ? C.mist : "transparent",
+                  color: active ? C.muted : C.navy,
+                  fontSize: 12, fontWeight: active ? 800 : 600,
+                  cursor: active ? "default" : "pointer",
+                }}
+                onMouseOver={(e) => { if (!active) e.currentTarget.style.background = C.mist; }}
+                onMouseOut={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {active ? "✓ " : ""}{opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
+};
+
 const SyncedResults = () => {
   const ctx = useContext(SearchFiltersContext);
   const sync = ctx?.sync;
@@ -1789,9 +1905,7 @@ const SyncedResults = () => {
               </button>
             )}
             {sync?.property_intel && (
-              <span data-testid="sync-intel-badge" style={{ background: C.brandGold, color: C.navy, fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                {sync.property_intel.replace(/-/g, " ")}
-              </span>
+              <PropertyIntelPivotBadge intelKey={sync.property_intel}/>
             )}
             {sync?.community && (
               <span data-testid="sync-community-badge" style={{ background: "#ECFDF5", color: "#047857", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5, border: "1px solid #A7F3D0" }}>
