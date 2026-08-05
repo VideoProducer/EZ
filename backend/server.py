@@ -11162,7 +11162,6 @@ async def admin_delete_asset(path: str, _=Depends(verify_admin)):
 
 app.include_router(api)
 
-
 @app.post("/api/doogie/transcribe")
 async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("en")):
     """Transcribe voice input via OpenAI Whisper — powered by the Emergent
@@ -11195,6 +11194,122 @@ async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("
     except Exception as e:
         logger.warning(f"Whisper transcribe failed: {e}")
         return {"text": "", "error": "Transcription failed. Please try typing your message."}
+
+
+# ---------- Doogie voice-search filter (Whisper + Claude Haiku → filter dict) ----------
+_VOICE_FILTER_SYS = """You extract British Columbia real-estate search filters from a spoken query.
+
+Return ONLY one valid JSON object with exactly these keys:
+  community      (string or null) — a BC city/community name
+  property_type  (one of "House", "Condo", "Townhouse", "Acreage", "Land", or null)
+  min_beds       (integer 1-8 or null)
+  min_baths      (number 1-8 allow .5 or null)
+  min_price      (integer CAD dollars or null)
+  max_price      (integer CAD dollars or null)
+  keyword        (comma-separated features like "pool, waterfront" or null)
+  confidence     (float 0.0-1.0)
+
+Rules:
+- "under X"/"less than X"/"up to X" -> max_price
+- "over X"/"at least X"/"starting at X" -> min_price
+- "between X and Y" -> both
+- "1.5 million" -> 1500000; "$800k" -> 800000
+- "3 bedroom"/"3-bed" -> min_beds 3
+- Do NOT invent unstated values — use null.
+- Features -> keyword: pool, waterfront, view, garage, acreage, suite, workshop, basement, gated, ocean, lake, shop.
+- If the transcript is a question (not a search), set confidence < 0.4.
+"""
+
+
+@app.post("/api/doogie/voice-filter")
+@_limiter.limit("15/minute")
+async def doogie_voice_filter(request: Request, audio: UploadFile = File(...), language: str = Form("en")):
+    """Full voice pipeline: browser audio -> Whisper -> Claude Haiku parse -> filter dict.
+    The frontend pipes `filter` straight into FloatingFilters + fires /doogie/mls-search.
+    Rate-limited 15/min per IP so a single visitor can't drain Doug's Universal Key."""
+    try:
+        data = await audio.read()
+        if not data:
+            raise HTTPException(422, "Empty audio")
+        if len(data) > 25 * 1024 * 1024:
+            raise HTTPException(413, "Audio must be under 25 MB (~1 minute of speech)")
+
+        # Step 1 - Whisper transcribe (same SDK path as /transcribe)
+        from emergentintegrations.llm.openai import OpenAISpeechToText
+        stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
+        buf = _io.BytesIO(data)
+        buf.name = audio.filename or "voice.webm"
+        stt_resp = await stt.transcribe(
+            file=buf, model="whisper-1", response_format="json",
+            language={"en": "en", "zh-Hant": "zh", "zh-Hans": "zh", "pa": "pa", "fa": "fa", "pt-PT": "pt"}.get(language, "en"),
+            temperature=0.0,
+        )
+        transcript = (getattr(stt_resp, "text", "") or "").strip()
+        if not transcript:
+            return {"transcript": "", "filter": None, "confidence": 0.0, "error": "No speech detected — try again."}
+
+        # Step 2 - Claude Haiku structured parse
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"vf-{uuid.uuid4().hex[:12]}",
+            system_message=_VOICE_FILTER_SYS,
+        ).with_model("anthropic", "claude-haiku-4-5-20251001")
+        parse_resp = await chat.send_message(UserMessage(text=transcript))
+        raw = (parse_resp if isinstance(parse_resp, str) else getattr(parse_resp, "text", str(parse_resp))).strip()
+        if raw.startswith("```"):
+            raw = raw.removeprefix("```").removeprefix("json").removesuffix("```").strip()
+        try:
+            parsed = json.loads(raw)
+        except Exception as je:
+            logger.warning(f"voice-filter: claude JSON invalid: {raw[:200]}")
+            raise HTTPException(502, f"Filter parse failed — please try again")
+
+        # Step 3 - Fuzzy-match community against known BC list
+        community_input = (parsed.get("community") or "").strip()
+        community_normalized = None
+        if community_input:
+            def _norm(s: str) -> str:
+                import unicodedata
+                s2 = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+                return re.sub(r"[^a-z0-9]+", "", s2.lower())
+            target = _norm(community_input)
+            try:
+                all_docs = await db["community_pages"].find({}, {"community": 1, "slug": 1}).to_list(2000)
+            except Exception:
+                all_docs = []
+            for d in all_docs:
+                name = d.get("community") or ""
+                nn = _norm(name)
+                if nn == target or (target and (target in nn or nn in target)):
+                    community_normalized = {"community": name, "slug": d.get("slug")}
+                    break
+
+        # Step 4 - Analytics (transcript only, never audio)
+        try:
+            await db["voice_filter_events"].insert_one({
+                "_id": uuid.uuid4().hex,
+                "at": datetime.now(timezone.utc).isoformat(),
+                "ip": (request.client.host if request.client else None),
+                "transcript": transcript[:500],
+                "filter": parsed,
+                "community_matched": bool(community_normalized),
+                "language": language,
+            })
+        except Exception as le:
+            logger.debug(f"voice-filter log failed: {le}")
+
+        return {
+            "transcript": transcript,
+            "filter": parsed,
+            "community_normalized": community_normalized,
+            "confidence": float(parsed.get("confidence") or 0.0),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"voice-filter pipeline failed: {e}")
+        raise HTTPException(500, "Voice filter unavailable — please try typing instead")
+
 
 
 # ---------- Doogie TTS (voice output) ----------
@@ -12183,6 +12298,476 @@ async def market_insights(city: str, property_type: str | None = None):
         "last_updated": datetime.now(timezone.utc).isoformat(),
         "source": "CREA DDF®",
         "compliance": "General information only — not advice. Not intended as a market valuation.",
+    }
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Content Synchronization Engine — /api/doogie/sync-search
+# One call from Doogie (voice or text) returns every EZtoFind.ca content type
+# that matches the intent, community, and property type — in priority order.
+# BCFSA / CREA / PIPA / CASL / GVR compliant: informational only, never advice.
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Property-type intelligence packs — curated glossary slugs per property class.
+# Every slug is expected to already exist as an approved glossary term. Missing
+# terms are silently skipped so the response degrades gracefully.
+_PROPERTY_INTEL_PACKS: dict[str, dict] = {
+    "equestrian": {
+        "label": "Equestrian / Acreage",
+        "why": "You're looking at rural property. These BC terms cover ALR restrictions, wells, and zoning that shape what you can do on the land.",
+        "slugs": ["agricultural-land-reserve", "alr", "zoning", "well", "septic-system", "riparian-area"],
+    },
+    "condo": {
+        "label": "Condominium / Strata",
+        "why": "Condos are strata-titled. These BC terms cover fees, reserves, bylaws, and depreciation reports every buyer should review.",
+        "slugs": ["strata", "strata-fees", "contingency-reserve-fund", "depreciation-report", "strata-bylaws", "form-b", "form-f"],
+    },
+    "townhouse": {
+        "label": "Townhome / Strata",
+        "why": "Townhomes are usually strata-titled with shared exterior maintenance. Review the strata basics before offering.",
+        "slugs": ["strata", "strata-fees", "strata-bylaws", "contingency-reserve-fund"],
+    },
+    "waterfront": {
+        "label": "Waterfront",
+        "why": "Waterfront property has extra BC rules around riparian setbacks, flood zones, and insurance.",
+        "slugs": ["riparian-area", "flood-zone", "foreshore-lease", "insurance"],
+    },
+    "acreage": {
+        "label": "Acreage / Rural",
+        "why": "Rural property means water, waste, and zoning are your responsibility. Verify each before subject removal.",
+        "slugs": ["well", "septic-system", "zoning", "agricultural-land-reserve", "alr"],
+    },
+    "new-construction": {
+        "label": "New Construction",
+        "why": "New builds trigger GST, home-warranty coverage, and separate occupancy rules from resale homes.",
+        "slugs": ["gst-on-new-homes", "home-warranty", "occupancy-permit", "new-home-warranty-2-5-10"],
+    },
+    "detached": {
+        "label": "Detached House",
+        "why": "Single-family purchases: title, PDS disclosure, and PTT are the headline items.",
+        "slugs": ["property-disclosure-statement", "property-transfer-tax-ptt", "title-insurance"],
+    },
+}
+
+_BUY_KEYWORDS = re.compile(r"\b(buy|buyer|buying|purchas\w*|find\s+(a\s+)?(home|house|place|condo)|shop\w*\s+for|first[-\s]?time|preapprov\w*|mortgage|afford|down\s?payment|fhsa|hbp)\b", re.I)
+_SELL_KEYWORDS = re.compile(r"\b(sell|seller|selling|list(ing)?\s+my|value\s+(of\s+)?my|worth|equity|move[-\s]?up|downsiz\w*|market\s+my|cma|appraisal|stag\w*|for\s+sale\s+by)\b", re.I)
+
+def _detect_intent(query: str, filters: dict | None) -> str:
+    """Return 'buy' | 'sell' | 'browse'. Buy is default when in doubt because
+    ~95% of EZtoFind visitors are consumers, and buyer copy is safer under
+    BCFSA (no unrepresented-seller risk)."""
+    q = (query or "").lower()
+    if _SELL_KEYWORDS.search(q):
+        return "sell"
+    if _BUY_KEYWORDS.search(q):
+        return "buy"
+    # If they specified purchase-side filters (beds, baths, price ceiling), lean buy.
+    if filters and any(filters.get(k) for k in ("min_beds", "min_baths", "max_price", "community", "property_type")):
+        return "buy"
+    # Any property-type keyword in the query itself also implies buying interest.
+    for _, pat in _PROPERTY_TYPE_KEYWORDS:
+        if pat.search(q):
+            return "buy"
+    return "browse"
+
+
+_PROPERTY_TYPE_KEYWORDS: list[tuple[str, re.Pattern]] = [
+    ("equestrian",       re.compile(r"\b(equestrian|horse|barn|paddock|stable|hobby\s?farm)\b", re.I)),
+    ("waterfront",       re.compile(r"\b(waterfront|oceanfront|lakefront|riverfront|beachfront|riparian|foreshore)\b", re.I)),
+    ("acreage",          re.compile(r"\b(acreage|acres?|rural|farm(land)?|ranch|country|alr)\b", re.I)),
+    ("new-construction", re.compile(r"\b(new\s?construction|new\s?build|pre[-\s]?sale|presale|assignment|brand[-\s]?new|new\s?home\s?warranty)\b", re.I)),
+    ("condo",            re.compile(r"\b(condo|condominium|apartment\s+style|apartment\s+unit|highrise|high[-\s]?rise|strata\s+unit)\b", re.I)),
+    ("townhouse",        re.compile(r"\b(townhouse|townhome|row\s?house|attached\s?home)\b", re.I)),
+    ("detached",         re.compile(r"\b(detached|single[-\s]?family|sfh|house)\b", re.I)),
+]
+
+def _detect_property_intel(query: str, filters: dict | None) -> str | None:
+    """Return a key from _PROPERTY_INTEL_PACKS, or None. Filter takes precedence
+    over query text because it's what the user actually applied."""
+    ptype = ((filters or {}).get("property_type") or "").strip().lower()
+    if ptype:
+        # Backend UI values -> intel keys. Keep aligned with _PROPERTY_TYPE_KEYWORDS.
+        norm = {
+            "acreage": "acreage",
+            "land": "acreage",
+            "house": "detached",
+            "detached": "detached",
+            "condo": "condo",
+            "apartment": "condo",
+            "townhouse": "townhouse",
+            "townhome": "townhouse",
+        }.get(ptype)
+        if norm:
+            return norm
+    q = (query or "")
+    for key, pat in _PROPERTY_TYPE_KEYWORDS:
+        if pat.search(q):
+            return key
+    return None
+
+
+async def _fetch_intel_glossary_cards(intel_key: str, limit: int = 6) -> list[dict]:
+    """Look up the curated glossary slugs for a property-intel pack and return
+    approved cards. Missing/unapproved slugs are silently skipped."""
+    pack = _PROPERTY_INTEL_PACKS.get(intel_key)
+    if not pack:
+        return []
+    slugs = pack.get("slugs") or []
+    cards: list[dict] = []
+    async for d in db.glossary.find(
+        {"slug": {"$in": slugs}},
+        {"_id": 0, "slug": 1, "term": 1, "definition": 1, "approved": 1}
+    ):
+        if d.get("approved") is False:
+            continue
+        blurb = (d.get("definition") or "").strip()
+        if len(blurb) > 200:
+            blurb = blurb[:200].rstrip() + "…"
+        cards.append({
+            "kind": "PropertyIntel",
+            "title": d.get("term") or d.get("slug"),
+            "blurb": blurb,
+            "href": f"/glossary/{d['slug']}",
+        })
+        if len(cards) >= limit:
+            break
+    return cards
+
+
+async def _fetch_related_searches(query: str, limit: int = 6) -> list[dict]:
+    """Return the top past search queries that share at least one token with
+    this query, ordered by frequency. Skips the current query."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    tokens = [t for t in re.split(r"[^a-z0-9]+", q) if len(t) >= 3]
+    if not tokens:
+        return []
+    from urllib.parse import quote_plus
+    pipeline = [
+        {"$match": {
+            "query_lower": {"$ne": q},
+            "tokens": {"$in": tokens},
+        }},
+        {"$group": {"_id": "$query_lower", "count": {"$sum": 1}, "sample": {"$first": "$query"}}},
+        {"$sort": {"count": -1}},
+        {"$limit": limit},
+    ]
+    items: list[dict] = []
+    try:
+        async for row in db.search_queries.aggregate(pipeline):
+            title = row.get("sample") or row.get("_id") or ""
+            if not title:
+                continue
+            items.append({
+                "kind": "RelatedSearch",
+                "title": title,
+                "blurb": f"{row.get('count', 0)} other visitor{'s' if row.get('count', 0) != 1 else ''} asked something similar.",
+                "href": f"/search?q={quote_plus(title)}",
+            })
+    except Exception as e:
+        logger.debug(f"related-searches failed: {e}")
+    return items
+
+
+def _buyer_bundle(insights: dict | None, community: str | None) -> dict:
+    """Static, compliance-safe buyer resources. Uses market_insights payload
+    to surface facts (never opinion) about affordability."""
+    from urllib.parse import quote_plus
+    stub = community or ""
+    tools = [
+        {"kind": "Tool", "title": "What Can I Afford?", "blurb": "Estimate your BC purchase ceiling using down payment, income, and current rates.", "href": "/tools/what-can-i-afford"},
+        {"kind": "Tool", "title": "Where Should I Live?", "blurb": "Answer six lifestyle questions and see suggested BC communities. Suggested, not recommended.", "href": "/where-should-i-live"},
+        {"kind": "Tool", "title": "Property Transfer Tax (PTT) — BC rates", "blurb": "Tiered 1% / 2% / 3% / 5% BC provincial transfer tax explained.", "href": "/glossary/property-transfer-tax-ptt"},
+        {"kind": "Guide", "title": "The Buying Journey — 9 steps", "blurb": "From pre-approval to key handover. Plain-language walkthrough of every BC step.", "href": "/buying-guide"},
+    ]
+    if stub:
+        tools.insert(0, {"kind": "Listings", "title": f"All active listings in {stub}", "blurb": "Full CREA DDF® feed — refreshed hourly.", "href": f"/listings?q={quote_plus(stub)}"})
+    facts = []
+    if insights and insights.get("active_count"):
+        facts.append(f"{insights['active_count']} active listing{'s' if insights['active_count'] != 1 else ''} in {stub or 'this area'} right now.")
+        if insights.get("median_list_price"):
+            facts.append(f"Median list price: ${int(insights['median_list_price']):,}.")
+        if insights.get("avg_days_on_market"):
+            facts.append(f"Average days on market: {int(round(insights['avg_days_on_market']))}.")
+    return {
+        "intent": "buy",
+        "headline": f"Buyer Insights{(' — ' + stub) if stub else ''}",
+        "facts": facts,
+        "tools": tools,
+        "compliance": "Informational only. Not financial, tax, or legal advice. Speak with your REALTOR® and lender for advice specific to your situation.",
+    }
+
+
+def _seller_bundle(insights: dict | None, community: str | None) -> dict:
+    """Static, compliance-safe seller resources. Never says 'good time to sell'
+    or interprets the market — only surfaces facts + tools."""
+    from urllib.parse import quote_plus
+    stub = community or ""
+    tools = [
+        {"kind": "Tool", "title": "Home Valuation Estimator", "blurb": "General educational estimate using MLS® comparables. Not an appraisal — Doug can prepare a full CMA.", "href": "/valuation"},
+        {"kind": "Guide", "title": "The Selling Journey — 9 steps", "blurb": "From CMA and staging to closing. Plain-language walkthrough of every BC step.", "href": "/selling-guide"},
+        {"kind": "Term",  "title": "Property Disclosure Statement (PDS)", "blurb": "The disclosure form most BC sellers complete before their home hits the market.", "href": "/glossary/property-disclosure-statement"},
+        {"kind": "Term",  "title": "Listing Agreement",                    "blurb": "The written agreement that appoints your REALTOR® — mandatory before marketing under BCFSA.", "href": "/glossary/listing-agreement"},
+    ]
+    if stub:
+        tools.insert(0, {"kind": "Listings", "title": f"See your competition in {stub}", "blurb": "Every active listing you'd be competing against — CREA DDF® feed.", "href": f"/listings?q={quote_plus(stub)}"})
+    facts = []
+    if insights and insights.get("active_count"):
+        facts.append(f"{insights['active_count']} home{'s' if insights['active_count'] != 1 else ''} currently active in {stub or 'this area'} — that's your competition.")
+        if insights.get("median_list_price"):
+            facts.append(f"Median list price of active competition: ${int(insights['median_list_price']):,}.")
+        if insights.get("avg_days_on_market"):
+            facts.append(f"Average days on market: {int(round(insights['avg_days_on_market']))}.")
+    return {
+        "intent": "sell",
+        "headline": f"Seller Insights{(' — ' + stub) if stub else ''}",
+        "facts": facts,
+        "tools": tools,
+        "compliance": "Informational only. Not a valuation or market opinion. Doug can prepare a full CMA and full listing disclosure under BCFSA rules.",
+    }
+
+
+class SyncSearchIn(BaseModel):
+    query: Optional[str] = ""
+    filter: Optional[dict] = None
+    intent_hint: Optional[str] = None  # "buy" | "sell" | "browse"
+    limit: Optional[int] = 6
+
+
+@app.post("/api/doogie/sync-search", tags=["Doogie"])
+@_limiter.limit("30/minute")
+async def doogie_sync_search(request: Request, body: SyncSearchIn):
+    """Content Synchronization Engine.
+
+    Given a Doogie query (text or already-parsed voice filter) + optional
+    filter dict + optional intent hint, returns EVERY related EZtoFind.ca
+    content type in priority order so the visitor never has to search again.
+
+    Priority order (per product spec):
+      1. Matching property listings (delivered separately via /doogie/mls-search)
+      2. Community Market Insights
+      3. Buyer OR Seller Insights (based on detected intent)
+      4. Community Profile
+      5. Related Glossary Terms
+      6. Related FAQs
+      7. Decision Tools
+      8. Related Communities
+      9. Related Searches
+
+    Compliance: BCFSA / CREA / PIPA / CASL / GVR-safe. No advice, no
+    recommendations, no market interpretation. Every fact is drawn from
+    approved EZtoFind.ca data + the live CREA DDF® feed."""
+    query = (body.query or "").strip()
+    filt = body.filter or {}
+    lim = max(3, min(int(body.limit or 6), 10))
+
+    # Intent + property-type detection
+    intent = (body.intent_hint or "").lower() if body.intent_hint in ("buy", "sell", "browse") else _detect_intent(query, filt)
+    intel_key = _detect_property_intel(query, filt)
+
+    # Resolve community: prefer explicit filter, fall back to query text.
+    community_name = (filt.get("community") or "").strip()
+    if not community_name and query:
+        # Try to match the query against known BC communities. Prefer exact
+        # whole-word matches over substring hits so a query like "new presale
+        # in Surrey" resolves to Surrey, not New Westminster.
+        raw_tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", query) if t]
+        q_terms = [t for t in raw_tokens if len(t) >= 3]
+        if q_terms:
+            hits = _search_communities(query, q_terms, 6)
+            # Filter to only communities whose name tokens are ALL present in
+            # the query (whole-word match). This keeps multi-word communities
+            # like "New Westminster" out of "brand new presale" queries.
+            def _all_words_present(name: str) -> bool:
+                name_tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", name) if t and len(t) >= 3]
+                return bool(name_tokens) and all(t in raw_tokens for t in name_tokens)
+            exact_hits = [(s, it) for (s, it) in hits if _all_words_present(it.get("title", ""))]
+            chosen = exact_hits[0] if exact_hits else (hits[0] if hits else None)
+            if chosen:
+                community_name = chosen[1].get("title", "")
+
+    # Tokenize once for reuse
+    raw_tokens = [t.lower() for t in re.split(r"[^a-zA-Z0-9]+", query) if t]
+    q_terms = [t for t in raw_tokens if len(t) >= 3] or [t for t in raw_tokens if len(t) >= 2]
+
+    # Property-type from filter for /api/insights call
+    ui_ptype = (filt.get("property_type") or "").strip() or None
+
+    # --- Fetch everything in parallel ------------------------------------
+    async def _fetch_insights():
+        if not community_name:
+            return None
+        try:
+            return await market_insights(city=community_name, property_type=ui_ptype)
+        except Exception as e:
+            logger.debug(f"sync-search insights failed: {e}")
+            return None
+
+    async def _fetch_community_profile():
+        if not community_name:
+            return None
+        slug = re.sub(r"[^a-z0-9]+", "-", community_name.lower()).strip("-")
+        try:
+            synopsis = await community_synopsis(slug)
+        except Exception:
+            synopsis = None
+        try:
+            stats = await community_stats(slug)
+        except Exception:
+            stats = None
+        if not synopsis and not stats:
+            return None
+        return {
+            "community": community_name,
+            "slug": slug,
+            "synopsis": (synopsis or {}).get("synopsis") if isinstance(synopsis, dict) else None,
+            "region": (stats or {}).get("region") if isinstance(stats, dict) else None,
+            "href": f"/community/{slug}",
+        }
+
+    (
+        insights, community_profile,
+        glossary_hits, faq_hits,
+        intel_cards, related_searches,
+    ) = await asyncio.gather(
+        _fetch_insights(),
+        _fetch_community_profile(),
+        _search_glossary(query, q_terms, lim) if q_terms else asyncio.sleep(0, result=[]),
+        _search_faqs(query, q_terms, lim) if q_terms else asyncio.sleep(0, result=[]),
+        _fetch_intel_glossary_cards(intel_key, lim) if intel_key else asyncio.sleep(0, result=[]),
+        _fetch_related_searches(query, lim) if query else asyncio.sleep(0, result=[]),
+        return_exceptions=False,
+    )
+
+    community_hits = _search_communities(query, q_terms, lim) if q_terms else []
+    tools_hits = _search_tools(query, q_terms, lim) if q_terms else []
+    journey_hits = _search_journey(query, q_terms, lim) if q_terms else []
+
+    # --- Build intent panel ---------------------------------------------
+    if intent == "sell":
+        intent_bundle = _seller_bundle(insights, community_name or None)
+    elif intent == "buy":
+        intent_bundle = _buyer_bundle(insights, community_name or None)
+    else:
+        intent_bundle = None
+
+    # Strip internal scoring fields
+    def _strip(pairs):
+        out = []
+        for _, it in pairs or []:
+            it.pop("title_hits", None)
+            out.append(it)
+        return out
+
+    # --- Assemble sections in priority order ----------------------------
+    sections: list[dict] = []
+
+    # 2. Community Market Insights
+    if insights and insights.get("active_count"):
+        # Derive a simple market-type label from DOM. Uses BC industry rule-of-thumb
+        # thresholds (<30d = seller's, 30-60 = balanced, >60 = buyer's). Presented
+        # as a factual observation, not advice.
+        dom = insights.get("avg_days_on_market")
+        if dom is not None:
+            if dom < 30:
+                market_type = "Seller's market conditions"
+            elif dom <= 60:
+                market_type = "Balanced market conditions"
+            else:
+                market_type = "Buyer's market conditions"
+        else:
+            market_type = None
+        sections.append({
+            "kind": "MarketInsights",
+            "headline": f"Community Market Insights{(' — ' + community_name) if community_name else ''}",
+            "insights": {
+                **insights,
+                "market_type_label": market_type,
+                "market_type_note": "Observation only, based on current active-listing days-on-market. Not a market forecast or investment opinion.",
+            },
+        })
+
+    # 3. Buyer or Seller Insights
+    if intent_bundle:
+        sections.append({"kind": "IntentInsights", **intent_bundle})
+
+    # 4. Community Profile
+    if community_profile and (community_profile.get("synopsis") or community_profile.get("region")):
+        sections.append({
+            "kind": "CommunityProfile",
+            "headline": f"Community Profile — {community_profile.get('community') or community_name}",
+            **community_profile,
+        })
+
+    # Property-type intelligence (equestrian/condo/etc.) — insert directly after
+    # community profile so it's above generic related-terms.
+    if intel_cards:
+        pack = _PROPERTY_INTEL_PACKS.get(intel_key) or {}
+        sections.append({
+            "kind": "PropertyIntel",
+            "headline": f"About {pack.get('label') or intel_key}",
+            "why": pack.get("why"),
+            "items": intel_cards,
+        })
+
+    # 5. Related Glossary Terms
+    g_items = _strip(glossary_hits)
+    if g_items:
+        sections.append({"kind": "Glossary", "headline": "Related Glossary Terms", "items": g_items})
+
+    # 6. Related FAQs
+    f_items = _strip(faq_hits)
+    if f_items:
+        sections.append({"kind": "FAQs", "headline": "Related FAQs", "items": f_items})
+
+    # 7. Decision Tools
+    t_items = _strip(tools_hits)
+    if t_items:
+        sections.append({"kind": "Tools", "headline": "Decision Tools", "items": t_items})
+
+    # 8. Related Communities
+    c_items = _strip(community_hits)
+    if c_items:
+        sections.append({"kind": "Communities", "headline": "Related Communities", "items": c_items})
+
+    # Journey anchors (buyer/seller step-by-step guide chapters) — only include
+    # if aligned with detected intent, so buyer queries don't surface seller steps.
+    j_items = [it for _, it in (journey_hits or []) if (intent == "browse") or (it.get("role") == intent)]
+    if j_items:
+        sections.append({"kind": "Journey", "headline": f"{'Buying' if intent == 'buy' else 'Selling' if intent == 'sell' else 'Journey'} Guide Chapters", "items": j_items})
+
+    # 9. Related Searches
+    if related_searches:
+        sections.append({"kind": "RelatedSearches", "headline": "Related Searches", "items": related_searches})
+
+    # --- Analytics -------------------------------------------------------
+    try:
+        await db["sync_search_events"].insert_one({
+            "_id": uuid.uuid4().hex,
+            "at": datetime.now(timezone.utc).isoformat(),
+            "query": query[:500],
+            "filter": filt,
+            "intent": intent,
+            "intel_key": intel_key,
+            "community": community_name or None,
+            "section_kinds": [s["kind"] for s in sections],
+            "section_count": len(sections),
+        })
+    except Exception as e:
+        logger.debug(f"sync-search log failed: {e}")
+
+    return {
+        "query": query,
+        "intent": intent,
+        "property_intel": intel_key,
+        "community": community_name or None,
+        "sections": sections,
+        "compliance": {
+            "role": "Doogie is an informational assistant only — not a licensed REALTOR® and cannot give real-estate, financial, mortgage, tax, or legal advice.",
+            "scope": "Every fact shown is drawn from approved EZtoFind.ca content or the live CREA DDF® feed.",
+            "frameworks": ["BCFSA", "CREA", "PIPA", "CASL", "GVR"],
+        },
     }
 
 

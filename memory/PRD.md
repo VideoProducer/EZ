@@ -2010,3 +2010,45 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 - `frontend/src/pages/DashboardMockup.jsx` — tour badges + WebP references
 - `frontend/src/pages/VisualAgentDemo.jsx` — 4x Canada Post → OpenStreetMap strings
 - `backend/server.py` — `_sanitize_listing` now emits `tour_kinds`
+
+---
+
+## Feb 05, 2026 — Content Synchronization Engine (Ask Doogie unified search)
+
+**Feature**: Every Doogie search (voice or text) now automatically synchronizes every EZtoFind.ca content collection and returns them in the priority order specified in the product spec — one search, complete picture. Fully BCFSA / CREA / PIPA / CASL / GVR compliant (informational only, never advice or market interpretation).
+
+**Backend — `POST /api/doogie/sync-search`** (`server.py`, ~350 lines added after `market_insights`):
+- Accepts `{ query, filter, intent_hint, limit }`.
+- Detects intent (`buy` / `sell` / `browse`) from keywords + filter presence + property-type mentions.
+- Detects property-type intelligence pack: `equestrian`, `condo`, `townhouse`, `waterfront`, `acreage`, `new-construction`, `detached`.
+- Runs 6 lookups in parallel (`market_insights`, community synopsis + stats, glossary, FAQs, intel-pack glossary cards, related searches from `search_queries` history) plus 3 sync helpers (communities, tools, journey).
+- Assembles sections in priority order: **MarketInsights → IntentInsights (Buyer OR Seller) → CommunityProfile → PropertyIntel → Glossary → FAQs → Tools → Communities → Journey → RelatedSearches**.
+- Adds derived `market_type_label` (Buyer's / Balanced / Seller's) from DOM only — presented as observation, never advice.
+- Community fallback prefers whole-word matches (fixes "brand new presale in Surrey" → Surrey, not New Westminster).
+- Logs to `sync_search_events` (query, intent, section_kinds) for admin analytics.
+
+**Frontend — `DashboardMockup.jsx` (`SyncedResults` + `SyncSection` + 4 body renderers)**:
+- `runSearch()` now fires listings + sync-search in parallel via `Promise.allSettled` — visitors see everything appear at once.
+- Voice-filter transcript is fed into `setSyncQuery()` so intent detection works from the visitor's actual words.
+- New `<SyncedResults/>` component rendered below `<ResultsGrid/>` in `SearchPanel`.
+- Each section is a coloured left-bordered accordion (defaults expanded) with per-kind icon + palette.
+- `MarketInsightsBody`: 6 KPI cells (Active, Median, Avg, DOM, Range, Inventory Signal) + observation note.
+- `IntentInsightsBody`: Facts list + tool cards (What Can I Afford, Where Should I Live, PTT, Buying/Selling Journey, listings shortcut, valuation for sellers).
+- `CommunityProfileBody`: Synopsis + region + full-profile deep link.
+- `PropertyIntelBody`: Curated glossary card grid (ALR for equestrian, strata for condo/townhome, riparian for waterfront, well/septic for acreage, GST/warranty for new construction).
+- Compliance footer surfaces role + scope + framework list.
+- Every card is a `data-testid`-tagged Link for accessibility + testing.
+
+**Voice / text UX**:
+- No behaviour change to the mic button — the existing "🎤 Doogie" pill in the FloatingFilters header still records → sends to `/api/doogie/voice-filter` → applies filters → triggers `runSearch()`. Now `runSearch()` additionally hydrates the Content Sync panel.
+
+**Compliance guardrails**:
+- Doogie never recommends buying/selling, never interprets the market, never gives legal/financial/tax advice.
+- Every section body ends with an italic compliance line drawn from approved copy.
+- Response payload includes `compliance.role`, `compliance.scope`, `compliance.frameworks = ["BCFSA","CREA","PIPA","CASL","GVR"]`.
+
+**Files touched**:
+- `backend/server.py` — new `_PROPERTY_INTEL_PACKS`, `_detect_intent`, `_detect_property_intel`, `_fetch_intel_glossary_cards`, `_fetch_related_searches`, `_buyer_bundle`, `_seller_bundle`, `SyncSearchIn`, `doogie_sync_search` endpoint.
+- `frontend/src/pages/DashboardMockup.jsx` — extended `SearchFiltersContext` with `sync/syncLoading/setSyncQuery`, parallel fetch in `runSearch`, new `SyncedResults` + `SyncSection` + `MarketInsightsBody` + `IntentInsightsBody` + `CommunityProfileBody` + `PropertyIntelBody` + `SyncCardGrid` components.
+
+**Testing**: Backend endpoint tested for 5 scenarios (buy/sell/browse × condo/waterfront/equestrian/new-construction). Frontend flow smoke-tested via Playwright — Kelowna filter surfaces all 8 sections. Ready for full testing_agent_v3_fork validation.

@@ -152,8 +152,15 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const [filters, setFilters] = useState({ q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" });
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sync, setSync] = useState(null);         // Content Sync Engine payload
+  const [syncLoading, setSyncLoading] = useState(false);
+  // Free-text query (voice transcript or filter keyword) used to seed the
+  // Content Synchronization Engine. Voice-filter writes this from the
+  // transcript so buyer/seller intent is detected even before filters apply.
+  const [syncQuery, setSyncQuery] = useState("");
   const runSearch = async () => {
     setLoading(true);
+    setSyncLoading(true);
     try {
       const p = new URLSearchParams({ limit: "24", sort: filters.sort || "newest" });
       if (filters.q) p.set("q", filters.q);
@@ -164,9 +171,36 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       if (filters.priceMax) p.set("price_max", filters.priceMax);
       if (filters.propertyType) p.set("property_type", filters.propertyType);
       if (filters.keyword) p.set("features", filters.keyword);
-      const r = await fetch(`${API}/listings?${p}`);
-      setResults(await r.json());
-    } finally { setLoading(false); }
+      // Fire the listings + Content Sync Engine in parallel so the visitor
+      // sees market insights + buyer/seller resources appear at the same
+      // moment as the property cards.
+      const propMap = { detached: "House", condo: "Condo", townhouse: "Townhouse", acreage: "Acreage", land: "Land" };
+      const syncBody = {
+        query: (syncQuery || filters.q || filters.keyword || filters.city || "").trim(),
+        filter: {
+          community: filters.city || null,
+          property_type: propMap[filters.propertyType] || null,
+          min_beds: filters.beds ? Number(filters.beds) : null,
+          min_baths: filters.baths ? Number(filters.baths) : null,
+          min_price: filters.priceMin ? Number(filters.priceMin) : null,
+          max_price: filters.priceMax ? Number(filters.priceMax) : null,
+          keyword: filters.keyword || null,
+        },
+        limit: 6,
+      };
+      const [listResp, syncResp] = await Promise.allSettled([
+        fetch(`${API}/listings?${p}`).then(r => r.json()),
+        fetch(`${API}/doogie/sync-search`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(syncBody),
+        }).then(r => r.ok ? r.json() : null),
+      ]);
+      if (listResp.status === "fulfilled") setResults(listResp.value);
+      if (syncResp.status === "fulfilled") setSync(syncResp.value);
+    } finally {
+      setLoading(false);
+      setSyncLoading(false);
+    }
   };
   // First-load fetch (no filters).
   useEffect(() => { runSearch(); /* eslint-disable-next-line */ }, []);
@@ -185,7 +219,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     setShowToast(false);
   };
   return (
-    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch }}>
+    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery }}>
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh",
       display: isMobile ? "block" : "grid",
@@ -564,6 +598,83 @@ const FLOATING_POS_KEY = "ez_floating_filters_pos_v4";
 const FLOATING_DEFAULT = { x: 24, y: 320 };
 const FloatingFilters = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
+  const ctx = useContext(SearchFiltersContext);
+  const [voiceState, setVoiceState] = useState("idle"); // idle | listening | thinking
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceError, setVoiceError] = useState("");
+  const mediaRef = useRef(null);
+  const chunksRef = useRef([]);
+  const streamRef = useRef(null);
+
+  // Start / stop the mic. On stop → POST to /api/doogie/voice-filter,
+  // pipe the returned filter dict into SearchFiltersContext, then trigger runSearch().
+  const stopVoice = () => {
+    try { mediaRef.current?.stop(); } catch {}
+    try { streamRef.current?.getTracks().forEach(t => t.stop()); } catch {}
+  };
+  const startVoice = async () => {
+    setVoiceError("");
+    setVoiceTranscript("");
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setVoiceError("Mic not supported in this browser — please type your filter.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        setVoiceState("thinking");
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mime });
+        const form = new FormData();
+        form.append("audio", blob, "voice.webm");
+        form.append("language", "en");
+        try {
+          const backendUrl = process.env.REACT_APP_BACKEND_URL;
+          const resp = await fetch(`${backendUrl}/api/doogie/voice-filter`, { method: "POST", body: form });
+          const body = await resp.json();
+          if (!resp.ok) throw new Error(body.detail || "Voice filter failed");
+          setVoiceTranscript(body.transcript || "");
+          const f = body.filter || {};
+          // Map Claude's structured output onto SearchFiltersContext.filters shape.
+          const normCity = body.community_normalized?.community || f.community || "";
+          const propMap = { House: "detached", Condo: "condo", Townhouse: "townhouse", Acreage: "acreage", Land: "land" };
+          // Feed the transcript into the Content Sync Engine so intent
+          // detection (buy vs. sell) picks up the visitor's actual words,
+          // not just the filter dict.
+          try { ctx.setSyncQuery?.(body.transcript || ""); } catch {}
+          if (ctx?.setFilters) {
+            ctx.setFilters(prev => ({
+              ...prev,
+              city: normCity || prev.city,
+              propertyType: propMap[f.property_type] || prev.propertyType,
+              beds: f.min_beds != null ? String(f.min_beds) : prev.beds,
+              baths: f.min_baths != null ? String(f.min_baths) : prev.baths,
+              priceMin: f.min_price != null ? String(f.min_price) : prev.priceMin,
+              priceMax: f.max_price != null ? String(f.max_price) : prev.priceMax,
+              keyword: f.keyword || prev.keyword,
+            }));
+            setTimeout(() => { try { ctx.runSearch?.(); } catch {} }, 100);
+          }
+          setVoiceState("idle");
+        } catch (err) {
+          setVoiceError(String(err.message || err));
+          setVoiceState("idle");
+        }
+      };
+      mediaRef.current = rec;
+      rec.start();
+      setVoiceState("listening");
+    } catch (e) {
+      setVoiceError("Mic permission denied — enable it in your browser settings.");
+      setVoiceState("idle");
+    }
+  };
+
   const [pos, setPos] = useState(() => {
     if (typeof window === "undefined") return FLOATING_DEFAULT;
     try {
@@ -686,17 +797,35 @@ const FloatingFilters = () => {
           </span>
           Drag filter here
         </span>
-        <button
-          type="button"
-          onClick={resetPos}
-          data-testid="floating-filters-reset"
-          title="Reset filter card to default position"
-          style={{
-            background: "transparent", color: C.brandGold, border: "1px solid rgba(249,189,0,0.5)",
-            borderRadius: 999, padding: "1px 7px", fontSize: 9, fontWeight: 800, cursor: "pointer",
-            letterSpacing: 0.5, textTransform: "uppercase",
-          }}
-        >Reset</button>
+        <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={voiceState === "listening" ? stopVoice : startVoice}
+            data-testid="floating-filters-voice"
+            title={voiceState === "listening" ? "Stop listening" : "Ask Doogie by voice"}
+            style={{
+              background: voiceState === "listening" ? "#DC2626" : C.brandGold,
+              color: voiceState === "listening" ? "#fff" : C.navy,
+              border: "none", borderRadius: 999, padding: "2px 8px",
+              fontSize: 9, fontWeight: 800, cursor: "pointer",
+              letterSpacing: 0.5, textTransform: "uppercase",
+              display: "inline-flex", alignItems: "center", gap: 3,
+            }}
+          >
+            {voiceState === "listening" ? "● Rec" : "🎤 Doogie"}
+          </button>
+          <button
+            type="button"
+            onClick={resetPos}
+            data-testid="floating-filters-reset"
+            title="Reset filter card to default position"
+            style={{
+              background: "transparent", color: C.brandGold, border: "1px solid rgba(249,189,0,0.5)",
+              borderRadius: 999, padding: "1px 7px", fontSize: 9, fontWeight: 800, cursor: "pointer",
+              letterSpacing: 0.5, textTransform: "uppercase",
+            }}
+          >Reset</button>
+        </span>
       </div>
       <div style={{
         background: "#fff",
@@ -708,10 +837,50 @@ const FloatingFilters = () => {
         {/* SidebarFilters already renders its own white card + shadow; wrap so
             the drag header attaches flush on top. Inner wrapper scrolls when
             the viewport is too short to show the whole form — Apply button
-            stays reachable via touchpad / trackpad scroll. */}
-        <div style={{ margin: "-18px 0 0", overflowY: "auto", flex: "1 1 auto", minHeight: 0 }}>
-          <SidebarFilters/>
-        </div>
+            stays reachable via touchpad / trackpad scroll.
+            When Doogie is listening/thinking, we swap the body for a small
+            navy takeover with a live-recording indicator + transcript preview.
+            The filter card's outer dimensions never change. */}
+        {voiceState === "idle" && (
+          <div style={{ margin: "-18px 0 0", overflowY: "auto", flex: "1 1 auto", minHeight: 0 }}>
+            <SidebarFilters/>
+            {voiceTranscript && (
+              <div data-testid="voice-last-heard" style={{padding:"8px 12px",fontSize:11,color:C.navy,background:C.mist,borderTop:`1px solid ${C.brandGold}`}}>
+                🐕 Doogie heard: <em>"{voiceTranscript}"</em>
+              </div>
+            )}
+            {voiceError && (
+              <div data-testid="voice-error" style={{padding:"8px 12px",fontSize:11,color:"#DC2626",background:"#FEE2E2"}}>
+                {voiceError}
+              </div>
+            )}
+          </div>
+        )}
+        {voiceState === "listening" && (
+          <div data-testid="voice-listening" style={{background:"linear-gradient(160deg,#1a3a6f,"+C.navy+")",color:"#fff",padding:"18px 14px 16px",textAlign:"center",minHeight:260}}>
+            <div style={{width:74,height:74,borderRadius:"50%",background:C.brandGold,margin:"4px auto 10px",display:"grid",placeItems:"center",boxShadow:"0 0 0 6px rgba(245,166,35,0.22),0 0 0 14px rgba(245,166,35,0.11)",overflow:"hidden",animation:"doogie-pulse 1.5s ease-in-out infinite"}}>
+              <img src="/doogie/celebrating.webp" alt="Doogie" style={{width:"105%",height:"105%",objectFit:"cover"}} onError={(e)=>{e.currentTarget.style.display="none"}}/>
+            </div>
+            <div style={{fontFamily:"Playfair Display, Georgia, serif",fontWeight:800,fontSize:16,marginBottom:4}}>I'm all ears!</div>
+            <div style={{fontSize:11,opacity:0.78,marginBottom:10,lineHeight:1.4,padding:"0 6px"}}>
+              Location, beds, price, features — I'll fill it all in.
+            </div>
+            <div style={{display:"flex",justifyContent:"center",gap:3,height:22,alignItems:"center",marginBottom:12}}>
+              {[6,14,20,16,22,12,18,8].map((h,i)=>(
+                <span key={i} style={{display:"block",width:3,height:h,background:C.brandGold,borderRadius:2,animation:`doogie-bar 1s ease-in-out ${i*0.08}s infinite`}}/>
+              ))}
+            </div>
+            <button type="button" onClick={stopVoice} data-testid="voice-stop" style={{background:"#DC2626",color:"#fff",border:"none",padding:"7px 16px",borderRadius:999,fontWeight:800,fontSize:11,letterSpacing:0.5,cursor:"pointer",width:"100%"}}>■ SEND TO DOOGIE</button>
+            <style>{`@keyframes doogie-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}@keyframes doogie-bar{0%,100%{transform:scaleY(0.5)}50%{transform:scaleY(1.2)}}`}</style>
+          </div>
+        )}
+        {voiceState === "thinking" && (
+          <div data-testid="voice-thinking" style={{background:C.mist,padding:"18px 14px",textAlign:"center",minHeight:180}}>
+            <div style={{fontSize:32,marginBottom:6}}>🐾</div>
+            <div style={{fontFamily:"Playfair Display, Georgia, serif",color:C.navy,fontWeight:800,fontSize:15,marginBottom:6}}>Doogie is thinking…</div>
+            <div style={{fontSize:11,color:C.muted}}>Transcribing + searching CREA DDF®</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1456,6 +1625,7 @@ const SearchPanel = () => {
           move it anywhere on screen. Default position: top-left. Position
           persists across sessions via localStorage. */}
       <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+      <SyncedResults/>
       <FloatingFilters/>
     </>
   );
@@ -1483,6 +1653,212 @@ const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) =
         ))}
       </div>
     </>
+  );
+};
+
+// ── Content Synchronization Engine — /api/doogie/sync-search renderer ─────
+// Renders every content type EZtoFind.ca has for the current search in
+// priority order: Community Market Insights, Buyer/Seller Insights, Community
+// Profile, Property-Type Intelligence, Glossary, FAQs, Tools, Communities,
+// Journey chapters, Related Searches. Every section carries a compliance
+// footer: informational only, never advice.
+const SyncedResults = () => {
+  const ctx = useContext(SearchFiltersContext);
+  const sync = ctx?.sync;
+  const loading = ctx?.syncLoading;
+  if (!sync && !loading) return null;
+  const sections = sync?.sections || [];
+  if (loading && sections.length === 0) {
+    return (
+      <div data-testid="synced-results-loading" style={{ marginTop: 32, padding: 20, background: "#fff", borderRadius: 12, border: `1px dashed ${C.brandGold}`, color: C.muted, textAlign: "center", fontSize: 13 }}>
+        Doogie is gathering everything else on EZtoFind.ca that matches your search…
+      </div>
+    );
+  }
+  if (!sections.length) return null;
+  const kindColor = (k) => ({
+    MarketInsights:   { bg: "#FFF8E1", accent: C.brandGold, ico: "📊" },
+    IntentInsights:   { bg: "#EEF2FF", accent: C.navy,      ico: sync.intent === "sell" ? "🏷️" : "🔑" },
+    CommunityProfile: { bg: "#ECFDF5", accent: "#059669",   ico: "🗺️" },
+    PropertyIntel:    { bg: "#FEF3C7", accent: "#B45309",   ico: "🧭" },
+    Glossary:         { bg: "#F3F4F6", accent: C.navy,      ico: "📖" },
+    FAQs:             { bg: "#F3F4F6", accent: C.navy,      ico: "❓" },
+    Tools:            { bg: "#F5F3FF", accent: "#6D28D9",   ico: "🛠️" },
+    Communities:      { bg: "#ECFDF5", accent: "#047857",   ico: "🏘️" },
+    Journey:          { bg: "#FEF2F2", accent: "#B91C1C",   ico: "🧭" },
+    RelatedSearches:  { bg: "#F9FAFB", accent: C.muted,     ico: "🔎" },
+  }[k] || { bg: "#F9FAFB", accent: C.navy, ico: "•" });
+  return (
+    <section data-testid="synced-results" style={{ marginTop: 36 }}>
+      <header style={{ marginBottom: 14, borderTop: `1px dashed ${C.brandGold}`, paddingTop: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <strong style={{ color: C.navy, fontSize: 16 }}>Everything else on EZtoFind.ca matching your search</strong>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>
+              Doogie searched every content library on EZtoFind.ca — one search, complete picture.
+            </div>
+          </div>
+          <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+            {sync?.intent && sync.intent !== "browse" && (
+              <span data-testid="sync-intent-badge" style={{ background: sync.intent === "sell" ? "#DC2626" : C.navy, color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Intent · {sync.intent === "sell" ? "Selling" : "Buying"}
+              </span>
+            )}
+            {sync?.property_intel && (
+              <span data-testid="sync-intel-badge" style={{ background: C.brandGold, color: C.navy, fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                {sync.property_intel.replace(/-/g, " ")}
+              </span>
+            )}
+            {sync?.community && (
+              <span data-testid="sync-community-badge" style={{ background: "#ECFDF5", color: "#047857", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5, border: "1px solid #A7F3D0" }}>
+                📍 {sync.community}
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
+      <div style={{ display: "grid", gap: 14 }}>
+        {sections.map((s, i) => (
+          <SyncSection key={`${s.kind}-${i}`} section={s} palette={kindColor(s.kind)}/>
+        ))}
+      </div>
+      {sync?.compliance && (
+        <div data-testid="sync-compliance" style={{ marginTop: 14, padding: "10px 14px", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 10, fontSize: 11, color: C.muted, lineHeight: 1.55 }}>
+          <strong style={{ color: C.navy }}>Compliance:</strong> {sync.compliance.role} {sync.compliance.scope} Reviewed against {sync.compliance.frameworks?.join(" · ")}.
+        </div>
+      )}
+    </section>
+  );
+};
+
+const _fmtMoney = (n) => (n == null ? "—" : `$${Number(n).toLocaleString()}`);
+
+const SyncSection = ({ section, palette }) => {
+  const [expanded, setExpanded] = useState(true);
+  const bar = palette || { bg: "#F9FAFB", accent: C.navy, ico: "•" };
+  const testId = `sync-section-${section.kind.toLowerCase()}`;
+  return (
+    <div data-testid={testId} style={{ background: "#fff", border: "1px solid #E5E7EB", borderLeft: `4px solid ${bar.accent}`, borderRadius: 10, overflow: "hidden" }}>
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        data-testid={`${testId}-toggle`}
+        style={{
+          width: "100%", textAlign: "left", cursor: "pointer",
+          background: bar.bg, border: "none", padding: "10px 14px",
+          display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10,
+        }}
+        aria-expanded={expanded}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: C.navy, fontWeight: 800, fontSize: 13 }}>
+          <span aria-hidden="true" style={{ fontSize: 15 }}>{bar.ico}</span>
+          {section.headline || section.kind}
+        </span>
+        <span style={{ color: bar.accent, fontSize: 12, fontWeight: 700 }}>{expanded ? "−" : "+"}</span>
+      </button>
+      {expanded && (
+        <div style={{ padding: "12px 14px" }}>
+          {section.kind === "MarketInsights" && <MarketInsightsBody insights={section.insights}/>}
+          {section.kind === "IntentInsights" && <IntentInsightsBody bundle={section}/>}
+          {section.kind === "CommunityProfile" && <CommunityProfileBody profile={section}/>}
+          {section.kind === "PropertyIntel" && <PropertyIntelBody section={section}/>}
+          {["Glossary", "FAQs", "Tools", "Communities", "Journey", "RelatedSearches"].includes(section.kind) && (
+            <SyncCardGrid items={section.items || []}/>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MarketInsightsBody = ({ insights }) => {
+  if (!insights) return null;
+  const cells = [
+    { label: "Active Listings",   value: insights.active_count != null ? insights.active_count.toLocaleString() : "—" },
+    { label: "Median List Price", value: _fmtMoney(insights.median_list_price) },
+    { label: "Average List Price",value: _fmtMoney(insights.avg_list_price) },
+    { label: "Avg Days on Market",value: insights.avg_days_on_market != null ? `${Math.round(insights.avg_days_on_market)} days` : "—" },
+    { label: "Price Range",       value: (insights.min_price != null && insights.max_price != null) ? `${_fmtMoney(insights.min_price)} – ${_fmtMoney(insights.max_price)}` : "—" },
+    { label: "Inventory Signal",  value: insights.market_type_label || "—" },
+  ];
+  return (
+    <>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+        {cells.map((c, i) => (
+          <div key={i} style={{ background: "#F9FAFB", padding: "8px 10px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>{c.label}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.navy, marginTop: 2 }}>{c.value}</div>
+          </div>
+        ))}
+      </div>
+      {insights.market_type_note && (
+        <div style={{ marginTop: 10, fontSize: 11, color: C.muted, fontStyle: "italic" }}>{insights.market_type_note}</div>
+      )}
+      <div style={{ marginTop: 8, fontSize: 10, color: C.muted }}>Source: {insights.source || "CREA DDF®"} · Updated {insights.last_updated ? new Date(insights.last_updated).toLocaleDateString() : "recently"}</div>
+    </>
+  );
+};
+
+const IntentInsightsBody = ({ bundle }) => {
+  return (
+    <>
+      {(bundle.facts || []).length > 0 && (
+        <ul style={{ margin: "0 0 12px 18px", padding: 0, color: C.navy, fontSize: 13, lineHeight: 1.55 }}>
+          {bundle.facts.map((f, i) => (<li key={i}>{f}</li>))}
+        </ul>
+      )}
+      <SyncCardGrid items={bundle.tools || []}/>
+      {bundle.compliance && (
+        <div style={{ marginTop: 10, fontSize: 11, color: C.muted, fontStyle: "italic" }}>{bundle.compliance}</div>
+      )}
+    </>
+  );
+};
+
+const CommunityProfileBody = ({ profile }) => (
+  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {profile.synopsis && (
+      <p style={{ margin: 0, color: C.navy, fontSize: 13, lineHeight: 1.6 }}>{profile.synopsis}</p>
+    )}
+    {profile.region && (
+      <div style={{ fontSize: 11, color: C.muted }}>Region: <strong style={{ color: C.navy }}>{profile.region}</strong></div>
+    )}
+    <Link to={profile.href} style={{ color: C.blue, fontWeight: 700, fontSize: 12, textDecoration: "none" }} data-testid="sync-community-profile-link">
+      Open the full {profile.community} community profile →
+    </Link>
+  </div>
+);
+
+const PropertyIntelBody = ({ section }) => (
+  <>
+    {section.why && (
+      <p style={{ margin: "0 0 10px 0", color: C.muted, fontSize: 12, fontStyle: "italic", lineHeight: 1.5 }}>{section.why}</p>
+    )}
+    <SyncCardGrid items={section.items || []}/>
+  </>
+);
+
+const SyncCardGrid = ({ items }) => {
+  if (!items || items.length === 0) return <div style={{ fontSize: 12, color: C.muted }}>Nothing to show.</div>;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+      {items.map((it, i) => (
+        <Link key={`${it.href}-${i}`} to={it.href || "#"} data-testid={`sync-item-${(it.href || i).toString().replace(/[^a-z0-9]/gi, "-").slice(0, 40)}`}
+          style={{
+            display: "block", background: "#F9FAFB", border: "1px solid #E5E7EB",
+            padding: "10px 12px", borderRadius: 8, color: C.navy, textDecoration: "none",
+            transition: "border-color 0.15s, transform 0.15s",
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.borderColor = C.brandGold; }}
+          onMouseOut={(e) => { e.currentTarget.style.borderColor = "#E5E7EB"; }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 800, color: C.navy, marginBottom: 3 }}>{it.title}</div>
+          {it.blurb && (
+            <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.5 }}>{it.blurb}</div>
+          )}
+        </Link>
+      ))}
+    </div>
   );
 };
 
