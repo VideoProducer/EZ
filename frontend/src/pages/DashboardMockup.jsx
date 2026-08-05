@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useRef, useState, useContext, createContext 
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators } from "../App";
 import DoogieTour from "../components/DoogieTour";
-import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted } from "../components/voicePref";
+import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
@@ -158,6 +158,9 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // Content Synchronization Engine. Voice-filter writes this from the
   // transcript so buyer/seller intent is detected even before filters apply.
   const [syncQuery, setSyncQuery] = useState("");
+  // Bumped by the voice-filter mic handler right before runSearch() fires.
+  // SyncedResults reads this once, auto-plays the spoken summary, then resets.
+  const [voiceTriggerNonce, setVoiceTriggerNonce] = useState(0);
   const runSearch = async () => {
     setLoading(true);
     setSyncLoading(true);
@@ -219,7 +222,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     setShowToast(false);
   };
   return (
-    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery }}>
+    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery, voiceTriggerNonce, bumpVoiceTrigger: () => setVoiceTriggerNonce(n => n + 1) }}>
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh",
       display: isMobile ? "block" : "grid",
@@ -647,6 +650,9 @@ const FloatingFilters = () => {
           // detection (buy vs. sell) picks up the visitor's actual words,
           // not just the filter dict.
           try { ctx.setSyncQuery?.(body.transcript || ""); } catch {}
+          // Flag this run as voice-initiated so SyncedResults auto-plays
+          // Doogie's spoken summary once the payload arrives.
+          try { ctx.bumpVoiceTrigger?.(); } catch {}
           if (ctx?.setFilters) {
             ctx.setFilters(prev => ({
               ...prev,
@@ -1666,6 +1672,70 @@ const SyncedResults = () => {
   const ctx = useContext(SearchFiltersContext);
   const sync = ctx?.sync;
   const loading = ctx?.syncLoading;
+  const voiceNonce = ctx?.voiceTriggerNonce || 0;
+  const muted = useDoogieMuted();
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsError, setTtsError] = useState("");
+  const lastAutoPlayedNonce = useRef(-1);
+  const summary = sync?.spoken_summary || "";
+
+  // Fetch + play the TTS summary. Cached server-side per SHA(text|voice|model)
+  // so replays and repeated searches are free after the first call.
+  const speakSummary = async () => {
+    if (!summary) return;
+    setTtsError("");
+    if (audioRef.current) {
+      try { audioRef.current.pause(); } catch {}
+      audioRef.current = null;
+    }
+    setTtsLoading(true);
+    try {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL;
+      const resp = await fetch(`${backendUrl}/api/doogie/tts`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: summary, voice: "ash" }),
+      });
+      if (!resp.ok) throw new Error(`TTS failed (${resp.status})`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      try { audio.playbackRate = getDoogieSpeed(); } catch {}
+      audio.onplay = () => setPlaying(true);
+      audio.onended = () => { setPlaying(false); URL.revokeObjectURL(url); };
+      audio.onerror = () => { setPlaying(false); setTtsError("Playback failed."); };
+      audioRef.current = audio;
+      await audio.play();
+    } catch (e) {
+      setTtsError(e.message || "TTS unavailable.");
+      setPlaying(false);
+    } finally {
+      setTtsLoading(false);
+    }
+  };
+  const stopSummary = () => {
+    try { audioRef.current?.pause(); } catch {}
+    setPlaying(false);
+  };
+
+  // Auto-play once per voice-triggered search, when the payload has actually
+  // populated with a summary AND the user has not muted Doogie in the
+  // sidebar toggle. Manual filter applies (no voice) never auto-play.
+  useEffect(() => {
+    if (!summary) return;
+    if (!voiceNonce || voiceNonce === lastAutoPlayedNonce.current) return;
+    if (muted) return;
+    lastAutoPlayedNonce.current = voiceNonce;
+    // Tiny delay lets the panel finish mounting before audio starts.
+    const t = setTimeout(() => { speakSummary(); }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, voiceNonce, muted]);
+
+  // Cleanup on unmount — never leave audio playing after nav away.
+  useEffect(() => () => { try { audioRef.current?.pause(); } catch {} }, []);
+
   if (!sync && !loading) return null;
   const sections = sync?.sections || [];
   if (loading && sections.length === 0) {
@@ -1698,7 +1768,26 @@ const SyncedResults = () => {
               Doogie searched every content library on EZtoFind.ca — one search, complete picture.
             </div>
           </div>
-          <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {summary && (
+              <button
+                type="button"
+                onClick={playing ? stopSummary : speakSummary}
+                disabled={ttsLoading}
+                data-testid="sync-play-summary"
+                title={playing ? "Stop Doogie's summary" : "Hear Doogie summarize these results"}
+                style={{
+                  background: playing ? "#DC2626" : C.navy, color: "#fff",
+                  border: "none", borderRadius: 999, padding: "5px 11px",
+                  fontSize: 10.5, fontWeight: 800, cursor: ttsLoading ? "wait" : "pointer",
+                  letterSpacing: 0.5, textTransform: "uppercase",
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  opacity: ttsLoading ? 0.6 : 1,
+                }}
+              >
+                {ttsLoading ? "…" : playing ? "■ Stop" : "▶ Play summary"}
+              </button>
+            )}
             {sync?.intent && sync.intent !== "browse" && (
               <span data-testid="sync-intent-badge" style={{ background: sync.intent === "sell" ? "#DC2626" : C.navy, color: "#fff", fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5 }}>
                 Intent · {sync.intent === "sell" ? "Selling" : "Buying"}
@@ -1716,6 +1805,11 @@ const SyncedResults = () => {
             )}
           </div>
         </div>
+        {(playing || ttsError) && (
+          <div data-testid="sync-summary-caption" style={{ marginTop: 10, padding: "8px 12px", background: playing ? "#F5F9FF" : "#FEF2F2", border: `1px solid ${playing ? "#DBEAFE" : "#FECACA"}`, borderRadius: 8, fontSize: 12, color: playing ? C.navy : "#B91C1C", lineHeight: 1.5 }}>
+            {playing ? <><strong>Doogie:</strong> {summary}</> : ttsError}
+          </div>
+        )}
       </header>
       <div style={{ display: "grid", gap: 14 }}>
         {sections.map((s, i) => (

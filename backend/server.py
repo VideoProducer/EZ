@@ -12528,6 +12528,63 @@ def _seller_bundle(insights: dict | None, community: str | None) -> dict:
     }
 
 
+def _humanize_price(n) -> str:
+    """Turn a number into TTS-friendly copy ('$799,900' → '$799,900')."""
+    if n is None:
+        return ""
+    try:
+        return f"${int(round(float(n))):,}"
+    except Exception:
+        return ""
+
+
+def _build_spoken_summary(intent: str, community: str | None, insights: dict | None,
+                           intel_key: str | None, section_count: int) -> str:
+    """Compose a compliance-safe TTS summary of the sync-search result.
+
+    Rules per BCFSA / CREA / PIPA / CASL / GVR:
+      - Read only facts already surfaced in the panel
+      - No opinion words ("good time", "hot market", "great deal")
+      - Never recommend a property, community, or timing
+      - Cap ~50 words so TTS stays under ~15 seconds
+    """
+    parts: list[str] = []
+    where = community or "British Columbia"
+    if insights and insights.get("active_count"):
+        n = int(insights["active_count"])
+        parts.append(f"I found {n:,} active listing{'s' if n != 1 else ''} in {where} right now.")
+        if insights.get("median_list_price"):
+            parts.append(f"Median list price is {_humanize_price(insights['median_list_price'])}.")
+        if insights.get("avg_days_on_market"):
+            dom = int(round(insights["avg_days_on_market"]))
+            parts.append(f"Average days on market is {dom}.")
+    elif community:
+        parts.append(f"Here's what I have for {where}.")
+    else:
+        parts.append("Here's what I found across EZtoFind.")
+
+    if intent == "buy":
+        parts.append("I've also pulled buyer resources — what you can afford, the buying journey, and Property Transfer Tax.")
+    elif intent == "sell":
+        parts.append("I've also pulled seller resources — the home valuation estimator and the selling journey.")
+
+    if intel_key:
+        friendly = {
+            "equestrian": "For an equestrian property, review Agricultural Land Reserve rules and rural zoning.",
+            "condo":      "For a condo, review strata fees, the depreciation report, and the contingency reserve fund.",
+            "townhouse":  "For a townhome, review strata bylaws and shared maintenance.",
+            "waterfront": "For waterfront, review riparian setbacks and flood-zone information.",
+            "acreage":    "For acreage, review well, septic, and zoning.",
+            "new-construction": "For a new build, review GST on new homes and the new-home warranty.",
+            "detached":   "For a detached home, review the property disclosure statement and Property Transfer Tax.",
+        }.get(intel_key)
+        if friendly:
+            parts.append(friendly)
+
+    parts.append("Everything shown is informational only — not advice.")
+    return " ".join(parts)
+
+
 class SyncSearchIn(BaseModel):
     query: Optional[str] = ""
     filter: Optional[dict] = None
@@ -12763,6 +12820,7 @@ async def doogie_sync_search(request: Request, body: SyncSearchIn):
         "property_intel": intel_key,
         "community": community_name or None,
         "sections": sections,
+        "spoken_summary": _build_spoken_summary(intent, community_name or None, insights, intel_key, len(sections)) if sections else "",
         "compliance": {
             "role": "Doogie is an informational assistant only — not a licensed REALTOR® and cannot give real-estate, financial, mortgage, tax, or legal advice.",
             "scope": "Every fact shown is drawn from approved EZtoFind.ca content or the live CREA DDF® feed.",

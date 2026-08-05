@@ -1,0 +1,31 @@
+{
+  "summary": "Validated the new spoken_summary field on /api/doogie/sync-search and the /api/doogie/tts endpoint plus the frontend Play Summary button in DashboardMockup SyncedResults. All 4 new backend pytest cases passed (spoken_summary shape/compliance/no-opinion/Kelowna/active_count, empty body → empty summary, seller intent contains 'seller resources', TTS returns audio/mpeg > 10KB with X-EZ-TTS-Cache MISS then HIT). Frontend E2E: Play Summary button absent before search, present with text '▶ PLAY SUMMARY' after applying Kelowna filter, clicking flips to '■ STOP' and renders sync-summary-caption with the exact compliance-safe summary ('I found 2,092 active listings in Kelowna right now. Median list price is $799,900... Everything shown is informational only — not advice.'). Mic button (floating-filters-voice) present. Compliance banner + all 7 sync-section-* keys (marketinsights, intentinsights, communityprofile, glossary, faqs, communities, relatedsearches) still render. 0 JS console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SearchPanel", "issues": ["Console warnings about preloaded Google fonts (Inter/Playfair) not used within window load — cosmetic only; existed before this iteration."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_doogie_spoken_summary_tts.py",
+    "/app/test_reports/pytest/spoken_summary_tts.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "spoken_summary compliance guard is well implemented — verified no opinion words (hot/great/deal/opportunity/good time/buyer's market/seller's market) appear even when MarketInsights market_type_label is 'Buyer's market conditions' (the summary correctly excludes the label wording).",
+    "TTS cache header (X-EZ-TTS-Cache) works as advertised (MISS → HIT on repeat). Rate limit 30/min not hit by tests.",
+    "Play button UX solid: idle='▶ PLAY SUMMARY', playing='■ STOP', caption renders live. Absent on initial load (correct).",
+    "Reminder from iter 12 still stands: server.py is ~13k lines; consider splitting sync/tts helpers into doogie_sync.py + doogie_tts.py."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_doogie_spoken_summary_tts.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4 new + 7/7 prior)", "frontend": "100% (all data-testids and behaviors verified)"},
+  "test_credentials": "not required",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New response field: sync-search returns 'spoken_summary' (string, possibly empty). Compliance tail is EXACTLY 'Everything shown is informational only — not advice.' (em dash). Seller intent triggers 'seller resources' phrase. TTS endpoint POST /api/doogie/tts accepts {text} and returns audio/mpeg + X-EZ-TTS-Cache header. Frontend Play button testid='sync-play-summary' toggles between '▶ PLAY SUMMARY' and '■ STOP'; caption testid='sync-summary-caption'. Auto-play is bound to voiceTriggerNonce bumped by the mic (not tested — real audio required)."
+}
