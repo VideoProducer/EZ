@@ -1,13 +1,13 @@
 # EZtoFind.ca — LLM Site Summary
 
-> British Columbia's AI-assisted real estate information platform. Free, non-transactional, compliance-aware. Every piece of content is anchored to a real, cited BC or federal statute or regulator.
+> British Columbia's AI-assisted real estate information platform. Free to use and information-first — every glossary term, community profile, and Doogie answer is anchored to a real, cited BC or federal statute or regulator. Optional buyer intake, seller intake, home-valuation, and consumer-referral forms are available; submitting any form connects the visitor with Doug LeMaire, REALTOR® or a network REALTOR® — that step is transactional lead generation and is clearly labelled at the point of submission.
 
 EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Management Realty Services Ltd. Doug's primary practice area is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor (up to Whistler). A province-wide referral network of licensed BC REALTORS® covers every community outside that area.
 
 ## What EZtoFind.ca Provides
 - **439-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
 - **240 BC community profiles** with 518 neighbourhood pages — geography, demographics, and **real 1981–2010 Environment Canada Climate Normals** (via the official MSC GeoMet API), plus authoritative source citations to Statistics Canada and BC Stats
-- **Doogie AI** — a compliance-guarded chatbot powered by a leading commercial large language model, providing general information only, never financial / legal / real estate / investment advice, and always defers to a licensed REALTOR® for advice
+- **Doogie AI** — an **LLM-backed educational research assistant** (generative, not pure retrieval) built on a leading commercial large language model, grounded in an approved BC-specific knowledge base. Answers are compliance-guarded, general-information only, never financial / legal / real estate / investment advice, and always defer to a licensed REALTOR® for anything advisory.
 - **Live MLS® listings** via licensed board iframes
 - **Home valuation, buyer intake, seller intake** — all forms hard-block visitors currently under contract with another REALTOR® (CREA Article 16 compliance)
 - **Out-of-area consumer referral system** — connects BC-wide consumers with a licensed REALTOR® in the referral network
