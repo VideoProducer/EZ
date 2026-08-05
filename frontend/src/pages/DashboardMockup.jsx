@@ -560,7 +560,7 @@ const SidebarFilters = () => {
 // User can drag it by the header grip to reposition anywhere on the page.
 // Position persists in localStorage so it stays where they left it. On mobile
 // (<900px) it degrades to a static block at the top of the results area.
-const FLOATING_POS_KEY = "ez_floating_filters_pos_v3";
+const FLOATING_POS_KEY = "ez_floating_filters_pos_v4";
 const FLOATING_DEFAULT = { x: 24, y: 320 };
 const FloatingFilters = () => {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
@@ -610,10 +610,30 @@ const FloatingFilters = () => {
   };
 
   const resetPos = () => {
-    const next = { ...FLOATING_DEFAULT };
+    // Clamp default so the card + Apply button always fit in the current
+    // viewport (short laptops with viewport height ~640-800 were clipping
+    // the Apply Filters button, making the filter unusable). Keep the card
+    // at least 40px from top and ensure the bottom edge stays inside the
+    // viewport minus a 60px safe area.
+    const cardHeight = 640; // approx full-form height incl. drag header
+    const maxY = Math.max(60, window.innerHeight - cardHeight - 20);
+    const y = Math.min(FLOATING_DEFAULT.y, maxY);
+    const next = { ...FLOATING_DEFAULT, y };
     setPos(next);
     try { localStorage.setItem(FLOATING_POS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
+
+  // On mount, if the saved/default y would push the Apply button below the
+  // fold, re-clamp it. This runs once per session and only when the current
+  // pos.y is too low for the viewport.
+  useEffect(() => {
+    const cardHeight = 640;
+    const maxY = Math.max(60, window.innerHeight - cardHeight - 20);
+    if (pos.y > maxY) {
+      setPos(prev => ({ ...prev, y: maxY }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isMobile) {
     return (
@@ -632,6 +652,12 @@ const FloatingFilters = () => {
         cursor: dragging ? "grabbing" : "default",
         filter: dragging ? "drop-shadow(0 12px 24px rgba(15,42,91,0.35))" : "drop-shadow(0 6px 16px rgba(15,42,91,0.20))",
         transition: dragging ? "none" : "filter 0.18s",
+        // Never let the card grow past the viewport — on short laptops
+        // (viewport height ~640-800) the Apply button was getting clipped.
+        // Cap max-height and enable internal scroll as a safety net so
+        // Apply Filters is always reachable regardless of screen size.
+        maxHeight: `calc(100vh - ${pos.y + 20}px)`,
+        display: "flex", flexDirection: "column",
       }}
     >
       <div
@@ -672,10 +698,18 @@ const FloatingFilters = () => {
           }}
         >Reset</button>
       </div>
-      <div style={{ background: "#fff", borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: "hidden" }}>
+      <div style={{
+        background: "#fff",
+        borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
+        overflow: "hidden",
+        flex: "1 1 auto", minHeight: 0,      // allow flexbox to shrink
+        display: "flex", flexDirection: "column",
+      }}>
         {/* SidebarFilters already renders its own white card + shadow; wrap so
-            the drag header attaches flush on top. */}
-        <div style={{ margin: "-18px 0 0" }}>
+            the drag header attaches flush on top. Inner wrapper scrolls when
+            the viewport is too short to show the whole form — Apply button
+            stays reachable via touchpad / trackpad scroll. */}
+        <div style={{ margin: "-18px 0 0", overflowY: "auto", flex: "1 1 auto", minHeight: 0 }}>
           <SidebarFilters/>
         </div>
       </div>
