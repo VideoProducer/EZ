@@ -245,7 +245,7 @@ export default function DoogieTour() {
       <div style={cardStyle} data-testid="doogie-tour-card">
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           <img
-            src="/doogie/thinking.png"
+            src="/doogie/thinking.webp"
             alt="Doogie"
             data-testid="doogie-tour-mascot"
             className={playing ? "doogie-talking" : ""}

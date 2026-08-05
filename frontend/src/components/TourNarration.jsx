@@ -105,7 +105,7 @@ export default function TourNarration({ listing }) {
         boxShadow: "0 6px 18px rgba(15,42,91,0.25)",
       }}>
         <img
-          src="/doogie/thinking.png"
+          src="/doogie/thinking.webp"
           alt="Doogie"
           data-testid="tour-narration-mascot"
           className={state === "playing" ? "doogie-talking" : ""}

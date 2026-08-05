@@ -318,7 +318,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
         padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
       }}>
         <img
-          src="/doogie/thinking.png"
+          src="/doogie/thinking.webp"
           alt="Doogie"
           data-testid="listing-narration-mascot"
           className={state === "playing" ? "doogie-talking" : ""}
@@ -472,7 +472,7 @@ const DoogieReelFullscreen = ({ listing, photo, photoIdx, photoCount, progress, 
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img
-            src="/doogie/thinking.png"
+            src="/doogie/thinking.webp"
             alt="Doogie"
             className={isPlaying ? "doogie-talking" : ""}
             style={{ width: 40, height: 40, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}

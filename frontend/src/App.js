@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unescaped-entities, no-empty */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import "./App.css";
 import { Helmet } from "react-helmet-async";
@@ -18,8 +18,21 @@ import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
-import VisualAgentDemo from "./pages/VisualAgentDemo";
 import DashboardMockup from "./pages/DashboardMockup";
+// Route-lazy the multi-step intake form. VisualAgentDemo is a heavy chunk
+// (~28 KB gzipped) that's embedded below-the-fold on the homepage plus
+// standalone at /visual-agent-demo. Splitting it out means the initial
+// homepage bundle stays lean and LCP hits sooner — the intake UI loads
+// as the user scrolls / navigates. DashboardMockup stays eager because
+// it drives the homepage itself, so lazy-loading it would delay LCP.
+const VisualAgentDemo = lazy(() => import("./pages/VisualAgentDemo"));
+// Reserve a bare loading state used by the Suspense fallback below —
+// same navy background as the shell so users don't see a white flash.
+const RouteFallback = () => (
+  <div data-testid="route-fallback" style={{minHeight:"60vh",display:"grid",placeItems:"center",background:"var(--brand-cream)",color:"var(--brand-navy)",fontFamily:"Inter,sans-serif",fontSize:14,letterSpacing:0.4}}>
+    Loading…
+  </div>
+);
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
@@ -195,9 +208,9 @@ const DOOGIE_LAPTOP = "/images/doogie/laptop.png";
 const DOOGIE_POINT_R = "/images/doogie/pointing-right.png";
 const DOOGIE_POINT_L = "/images/doogie/pointing-left.jpg";
 const DOOGIE_CELEBRATE = "/images/doogie/celebrating.png";
-const DOOGIE_THINKING = "/images/doogie/thinking.png";
+const DOOGIE_THINKING = "/images/doogie/thinking.webp";
 const DOOGIE_MAGNIFY = "/images/doogie/magnifying.png";
-const DOOGIE_POINT_L_T = "/images/doogie/pointing-left-transparent.png";
+const DOOGIE_POINT_L_T = "/images/doogie/pointing-left-transparent.webp";
 const DOUG_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg";
 
 // Shared "Authoritative Sources" block — used on glossary + community pages
@@ -680,8 +693,8 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
 // Real BC imagery (Unsplash, free-to-use)
 export const IMG = {
   vancouver: "https://images.unsplash.com/photo-1559511260-66a654ae982a?w=1200&q=80",
-  fraserValley: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/gs9v7w9f_EZ%20Fraser%20Valley.webp",
-  seaToSky: "https://customer-assets.emergentagent.com/job_proptech-hub-111/artifacts/kdomoatd_EZ%20Sea%20to%20Sky.webp",
+  fraserValley: "/images/regions/fraser-valley.webp",
+  seaToSky: "/images/regions/sea-to-sky.webp",
   detached: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80",
   luxury: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&q=80",
   equestrian: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800&q=80",
@@ -2427,7 +2440,9 @@ const Home = () => {
         experience (search, chat, voice, tours, insights, consultation) without
         having to click through to /visual-agent-demo. */}
     <section data-testid="home-visual-agent-embed" style={{background:"#F5F8FF",padding:"0 0 2rem"}}>
-      <VisualAgentDemo/>
+      <Suspense fallback={<RouteFallback/>}>
+        <VisualAgentDemo/>
+      </Suspense>
     </section>
 
     <section className="section"><div className="container-x">
@@ -6309,7 +6324,7 @@ const AffordabilityCalculator = () => {
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem",alignItems:"center"}}>
         <FieldBox label="Property type" prefix="🏡" hint="">
-          <select value={propType} onChange={e=>setPropType(e.target.value)} data-testid="afford-type" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
+          <select value={propType} onChange={e=>setPropType(e.target.value)} data-testid="afford-type" aria-label="Property type" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
             <option>Any</option>
             <option>Detached</option>
             <option>Condo</option>
@@ -6318,7 +6333,7 @@ const AffordabilityCalculator = () => {
           </select>
         </FieldBox>
         <FieldBox label="Contract interest rate (%)" prefix="%" hint={`Stress-tested at ${qualRate.toFixed(2)}% (OSFI B-20)`}>
-          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="afford-rate" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
+          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="afford-rate" aria-label="Contract interest rate percent" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
         </FieldBox>
       </div>
       <div style={{marginTop:"1rem",display:"flex",gap:"1.25rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",alignItems:"center"}}>
@@ -9674,7 +9689,7 @@ function App() {
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/my-journey/:token" element={<MyJourney/>}/>
-      <Route path="/visual-agent-demo" element={<VisualAgentDemo/>}/>
+      <Route path="/visual-agent-demo" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemo/></Suspense>}/>
       <Route path="/dashboard-mockup" element={<DashboardMockup/>}/>
       <Route path="/preview/coming-soon" element={<AppLayout><section className="section" style={{padding:0}}><ComingSoonHero mode="preview"/></section></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>

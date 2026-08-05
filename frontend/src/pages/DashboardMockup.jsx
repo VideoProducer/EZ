@@ -28,10 +28,10 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const DOOGIE = {
   laptop:       "/doogie/laptop.png",         // hero on Search panel
   celebrating:  "/doogie/celebrating.png",    // success screens
-  thinking:     "/doogie/thinking.png",       // empty states / Ask drawer welcome
+  thinking:     "/doogie/thinking.webp",      // empty states / Ask drawer welcome
   pointingLeft: "/doogie/pointing_left.png",  // form guidance / REALTOR® gate
   pointingRight:"/doogie/pointing_right.png", // CTA nudges
-  head:         "/doogie/head.png",           // avatar / toast / admin table row
+  head:         "/doogie/head.webp",          // avatar / toast / admin table row
 };
 const DOOGIE_LAPTOP_URL = DOOGIE.laptop;
 const SAVED_HOMES_KEY = "ez_saved_homes";

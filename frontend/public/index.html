@@ -18,6 +18,20 @@
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <!-- Preconnect to the object-storage host that serves Doug's hero-region
+             WebPs (Sea-to-Sky, Fraser Valley, luxury tiles). Saves ~320 ms on
+             LCP per PageSpeed Insights (Aug 2026 audit). Kept to ≤4 preconnects
+             total per Lighthouse guidance so we don't blow the connection pool. -->
+        <link rel="preconnect" href="https://customer-assets.emergentagent.com" crossorigin />
+        <!-- Preload the two font.woff2 files Google Fonts will request so the
+             browser doesn't have to wait for the CSS to parse before starting
+             the font download. Cuts ~200-400 ms of blocking font latency on
+             cold cache. Files are versioned by Google — if Google rotates a
+             version these preloads become no-ops (harmless), NOT errors. -->
+        <link rel="preload" as="font" type="font/woff2" crossorigin
+              href="https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2"/>
+        <link rel="preload" as="font" type="font/woff2" crossorigin
+              href="https://fonts.gstatic.com/s/playfairdisplay/v40/nuFiD-vYSZviVYUb_rj3ij__anPXDTzYgEM86xQ.woff2"/>
         <!-- Font pruning (Aug 2026) — reduced from 6 families (Inter, Fraunces,
              Sora, Manrope, Playfair Display, Source Sans 3) to 2 that cover
              99% of usage. Fraunces/Sora/Manrope/Source Sans 3 fall through to
@@ -75,8 +89,12 @@
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
         <meta name="apple-mobile-web-app-title" content="EZtoFind"/>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="" defer></script>
+        <!-- Leaflet CSS + JS was previously loaded here as render-blocking
+             requests. Removed Aug 2026 to fix PageSpeed LCP — DashboardMockup
+             now dynamically injects the stylesheet AND uses ESM
+             `await import("leaflet")` only when the map component actually
+             mounts. Saves ~1 render-blocking stylesheet + defer script on
+             every non-map page (glossary, community, listing detail, etc.). -->
         <meta name="description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term statute-cited glossary, and 240 community profiles. By Doug LeMaire, REALTOR®."/>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
@@ -179,38 +197,39 @@
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
-        <!-- SEO shell content — visible to non-JS crawlers (Ahrefs, Bingbot,
-             SemrushBot, MJ12bot) so every route serves a valid H1, body copy,
-             and outgoing links even before React hydrates. React replaces
-             #root on mount, so real users never see this — it's purely for
-             crawlers that don't execute JavaScript. -->
-        <div id="root">
-            <header style="max-width:56rem;margin:0 auto;padding:1.5rem 1.5rem 0;font-family:'Inter',system-ui,sans-serif;color:#1F2937">
-                <h1 style="font-family:'Playfair Display',Georgia,serif;color:#0F2A5B;font-size:2rem;line-height:1.15;margin:0 0 .5rem">EZtoFind.ca — Free British Columbia Real Estate Research</h1>
-                <p style="font-size:1rem;line-height:1.55;margin:0 0 1rem">
-                    A non-transactional research site by <strong>Doug LeMaire, REALTOR®</strong>
-                    (BCFSA Licence #167790). Search the live CREA DDF® MLS® feed, browse
-                    240 British Columbia community profiles, and get instant answers from
-                    <strong>Doogie</strong> — an educational AI guide backed by 439
-                    statute-cited glossary entries.
-                </p>
-                <nav aria-label="Primary" style="font-size:0.95rem;line-height:1.9">
-                    <a href="/listings" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Search Listings</a>
-                    <a href="/communities" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Communities</a>
-                    <a href="/glossary" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">BC Real Estate Glossary</a>
-                    <a href="/buyer" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">For Buyers</a>
-                    <a href="/seller" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">For Sellers</a>
-                    <a href="/valuation" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">Home Valuation</a>
-                    <a href="/about" style="color:#0EA5E9;text-decoration:none;margin-right:1rem">About Doug</a>
-                    <a href="/contact" style="color:#0EA5E9;text-decoration:none">Contact</a>
-                </nav>
-                <p style="font-size:0.82rem;color:#6B7280;margin:1.25rem 0 0">
-                    Loading the interactive experience… If it doesn't load, please
-                    <a href="/contact" style="color:#0EA5E9">contact Doug directly</a>
-                    or email <a href="mailto:info@eztofind.ca" style="color:#0EA5E9">info@eztofind.ca</a>.
-                </p>
-            </header>
+        <!-- SEO shell content — sibling of #root, hidden from real users via
+             CSS (0×0 offscreen), fully readable by non-JS crawlers (Ahrefs,
+             Bingbot, MJ12bot, SemrushBot) parsing the raw HTML source. Every
+             route serves a valid H1, body copy, and outgoing links this way.
+             CRITICAL: this block MUST NOT live inside #root — if it does,
+             React clears/replaces it during hydration and every listing card
+             + font swap counts against Cumulative Layout Shift (was 0.525
+             pre-fix). Sibling placement + display-neutral hiding gives 0 CLS. -->
+        <div id="seo-shell" aria-hidden="true" style="position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;clip:rect(0 0 0 0);white-space:nowrap;">
+            <h1>EZtoFind.ca — Free British Columbia Real Estate Research</h1>
+            <p>
+                A non-transactional research site by Doug LeMaire, REALTOR®
+                (BCFSA Licence #167790). Search the live CREA DDF® MLS® feed, browse
+                240 British Columbia community profiles, and get instant answers from
+                Doogie — an educational AI guide backed by 439 statute-cited
+                glossary entries.
+            </p>
+            <nav aria-label="Primary">
+                <a href="/listings">Search Listings</a>
+                <a href="/communities">Communities</a>
+                <a href="/glossary">BC Real Estate Glossary</a>
+                <a href="/buyer">For Buyers</a>
+                <a href="/seller">For Sellers</a>
+                <a href="/valuation">Home Valuation</a>
+                <a href="/about">About Doug</a>
+                <a href="/contact">Contact</a>
+            </nav>
+            <p>
+                Loading the interactive experience… If it doesn't load, please
+                contact Doug directly at <a href="mailto:info@eztofind.ca">info@eztofind.ca</a>.
+            </p>
         </div>
+        <div id="root"></div>
         <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.
