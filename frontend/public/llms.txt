@@ -57,7 +57,7 @@ Robots: /robots.txt
 - [Home Valuation — affordability + stress-test](https://eztofind.ca/valuation)
 - [Ask Doug for a Referral](https://eztofind.ca/referral-request)
 - [AI Use Policy](https://eztofind.ca/ai-use)
-- [Copyright & CIPO Reg. TMA 1247822](https://eztofind.ca/copyright)
+- [Copyright & CIPO Copyright Registration No. 1247822](https://eztofind.ca/copyright)
 - [Privacy Policy (BC PIPA + Canada PIPEDA)](https://eztofind.ca/privacy)
 - [Terms of Service](https://eztofind.ca/terms)
 - [Sitemap XML — 1,232 URLs](https://eztofind.ca/sitemap.xml)
