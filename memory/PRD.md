@@ -2167,3 +2167,29 @@ Read-only security audit returned **CONDITIONAL PASS** with 4 MEDIUM + 4 P3 find
 **Files touched**:
 - `frontend/src/pages/DashboardMockup.jsx` — `useState(() => loadPersistedFilters())`, persist inside `runSearch()` after successful fetch.
 - `frontend/src/App.js` — extended `resetPersonalization()` + `hasPersonalization()` with new key.
+
+---
+
+## Feb 05, 2026 — Doogie Welcome-Back Voice Greeting
+
+**Feature**: Returning visitors whose filters were rehydrated from localStorage now hear a short spoken greeting from Doogie the moment the Sync panel finishes loading — "Welcome back. I've reloaded your Kelowna condo search. Take another look — everything shown is informational only." Fires exactly once per browser session and only if the visitor is not muted.
+
+**Compliance guardrails**:
+- **CASL**: TTS audio played on-device in response to visitor's own action (returning to their dashboard) is NOT a Commercial Electronic Message. No promotional language — pure factual restore + informational disclaimer.
+- **PIPA**: Text sent to OpenAI TTS is filter facts only (community name + property class). NO name, email, phone, IP or other PII. Cross-border transfer surface identical to the existing TTS pipeline — no new PIPA impact.
+- **BCFSA**: Greeting never recommends, never interprets the market, never advises. Always ends with the "informational only" disclaimer.
+
+**Guard chain** (all must pass to trigger):
+1. `ctx.wasRestored` — filters were rehydrated from localStorage on this mount
+2. `sync` payload arrived — greeting content matches what's on screen
+3. `useDoogieMuted()` = false — visitor has voice on in the sidebar
+4. `voiceNonce` = 0 — no voice/text search has fired this mount (avoids audio overlap)
+5. `sessionStorage.ez_dash_return_greeted` not set — enforces once-per-session
+
+**Verified E2E (Playwright)**:
+- Seeded `{Kelowna + Apartment + 2+ beds + $900k}` in localStorage → reload → captured POST to `/api/doogie/tts` with body: `{"text":"Welcome back. I've reloaded your Kelowna condo search. Take another look — everything shown is informational only.","voice":"ash"}`
+- Session flag set to "1" after greeting
+- Second reload does not re-fire (respects session limit)
+
+**Files touched**:
+- `frontend/src/pages/DashboardMockup.jsx` — new `wasRestoredRef`, `SearchFiltersContext.wasRestored`, greeting `useEffect` in `SyncedResults`.

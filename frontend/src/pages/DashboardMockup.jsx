@@ -157,6 +157,12 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // and the site-wide PIPA localStorage strategy.
   const DASH_FILTERS_LS_KEY = "ez_dashboard_filters";
   const DEFAULT_DASH_FILTERS = { q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" };
+  // Detect a returning visitor BEFORE hydrating filters so the welcome-back
+  // TTS greeting fires once per session. Compliance-safe: text is generated
+  // from the visitor's own on-device localStorage; the string sent to OpenAI
+  // TTS is filter-facts-only (no name / email / PII). Never plays if the
+  // Doogie mute preference is on.
+  const wasRestoredRef = useRef(false);
   const [filters, setFilters] = useState(() => {
     try {
       const raw = typeof window !== "undefined" ? localStorage.getItem(DASH_FILTERS_LS_KEY) : null;
@@ -164,7 +170,12 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       const saved = JSON.parse(raw);
       // Basic shape guard so a stale/corrupt entry doesn't crash the render.
       if (!saved || typeof saved !== "object" || Array.isArray(saved)) return DEFAULT_DASH_FILTERS;
-      return { ...DEFAULT_DASH_FILTERS, ...saved };
+      const merged = { ...DEFAULT_DASH_FILTERS, ...saved };
+      // A "meaningful" restore = the visitor had at least one non-default
+      // filter set. Only then is a welcome-back greeting appropriate.
+      const meaningful = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (merged[k] || "").toString().trim() !== "");
+      if (meaningful) wasRestoredRef.current = true;
+      return merged;
     } catch { return DEFAULT_DASH_FILTERS; }
   });
   const [results, setResults] = useState(null);
@@ -254,7 +265,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     setShowToast(false);
   };
   return (
-    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery, voiceTriggerNonce, bumpVoiceTrigger: () => setVoiceTriggerNonce(n => n + 1) }}>
+    <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery, voiceTriggerNonce, bumpVoiceTrigger: () => setVoiceTriggerNonce(n => n + 1), wasRestored: wasRestoredRef.current }}>
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh",
       display: isMobile ? "block" : "grid",
@@ -1878,6 +1889,72 @@ const SyncedResults = () => {
 
   // Cleanup on unmount — never leave audio playing after nav away.
   useEffect(() => () => { try { audioRef.current?.pause(); } catch {} }, []);
+
+  // Welcome-back greeting for returning visitors. Fires once per browser
+  // session (sessionStorage flag) when ALL of these are true:
+  //   • ctx.wasRestored — the current filters were rehydrated from
+  //     localStorage on this mount (not manually typed or voice-set)
+  //   • sync payload has arrived — so what Doogie says matches what's on
+  //     screen (community + property class)
+  //   • useDoogieMuted() is false — the visitor has voice on in the sidebar
+  //   • voiceNonce is 0 — no voice/text search has fired yet this mount
+  //     (avoids two clips playing over each other)
+  // Compliance:
+  //   • CASL — TTS on-device audio in response to visitor action is NOT a
+  //     commercial electronic message; no consent needed. Copy is factual,
+  //     no promotion.
+  //   • PIPA — text sent to OpenAI TTS is filter facts only (community,
+  //     property class). No name, email, phone, IP or PII. Cross-border
+  //     transfer is the SAME as the existing TTS pipeline (no new surface).
+  //   • BCFSA — text never recommends buying/selling, never interprets the
+  //     market, ends with the informational-only disclaimer.
+  useEffect(() => {
+    if (!sync || !ctx?.wasRestored) return;
+    if (muted) return;
+    if (voiceNonce) return;
+    let alreadyGreeted = false;
+    try { alreadyGreeted = sessionStorage.getItem("ez_dash_return_greeted") === "1"; } catch {}
+    if (alreadyGreeted) return;
+
+    // Compose a compliance-safe greeting from the current sync payload.
+    const community = sync.community || "";
+    const intelLabel = (_PROPERTY_INTEL_OPTIONS.find(o => o.key === sync.property_intel) || {}).label || "";
+    const bits = [];
+    if (community && intelLabel) {
+      bits.push(`Welcome back. I've reloaded your ${community} ${intelLabel.toLowerCase()} search.`);
+    } else if (community) {
+      bits.push(`Welcome back. I've reloaded your ${community} search.`);
+    } else if (intelLabel) {
+      bits.push(`Welcome back. I've reloaded your ${intelLabel.toLowerCase()} search.`);
+    } else {
+      bits.push("Welcome back. I've reloaded your last EZtoFind search.");
+    }
+    bits.push("Take another look — everything shown is informational only.");
+    const greeting = bits.join(" ");
+
+    try { sessionStorage.setItem("ez_dash_return_greeted", "1"); } catch {}
+
+    // Play through the same TTS pipeline as the summary. We fetch a fresh
+    // clip rather than reusing summary audio so the wording is right.
+    const t = setTimeout(async () => {
+      try {
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        const resp = await fetch(`${backendUrl}/api/doogie/tts`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: greeting, voice: "ash" }),
+        });
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        try { audio.playbackRate = getDoogieSpeed(); } catch {}
+        audio.onended = () => URL.revokeObjectURL(url);
+        await audio.play();
+      } catch { /* silently swallow — greeting is a nice-to-have, never blocking */ }
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sync, muted, voiceNonce]);
 
   if (!sync && !loading) return null;
   const sections = sync?.sections || [];
