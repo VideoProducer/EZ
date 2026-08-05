@@ -6051,11 +6051,65 @@ const CommunityPage = () => {
       ]
     })}</script></Helmet>}
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
+    {/* Out-of-area referral banner — Aug 2026 (Claude audit fix).
+        Doug LeMaire is licensed to practise in Greater Vancouver, Fraser
+        Valley, and Sea-to-Sky. Every other BC community rendered here is
+        published for research/education only, with transactions served via
+        Doug's referral network on the appropriate local real estate board.
+        RESA "holding out" mitigation: this banner sits ABOVE the map, the
+        listings CTA, and the H1 so no consumer can miss it before engaging.
+        The visible banner + the SEO-shell disclosure together cover JS and
+        non-JS crawlers and every human viewer. */}
+    {found && !isFocus && (
+      <div
+        role="note"
+        data-testid={`community-out-of-area-banner-${slug}`}
+        style={{
+          marginTop:"1rem", marginBottom:"1.25rem",
+          background:"#FFFBEB", border:"1px solid #F59E0B",
+          borderLeft:"6px solid #B45309",
+          borderRadius:"0.5rem", padding:"0.9rem 1.1rem",
+          display:"flex", gap:"0.9rem", alignItems:"flex-start",
+          fontFamily:"Inter,sans-serif",
+        }}
+      >
+        <div aria-hidden="true" style={{fontSize:"1.5rem",lineHeight:1,flexShrink:0}}>🤝</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:800,color:"#78350F",fontSize:"0.9rem",letterSpacing:"0.02em",textTransform:"uppercase",marginBottom:"0.3rem"}}>
+            Referral only — outside Doug's practice area
+          </div>
+          <div style={{color:"#1F2937",fontSize:"0.95rem",lineHeight:1.55}}>
+            <strong>{found}</strong> sits in {region || "an area"} outside Doug LeMaire's
+            personal practice area (Greater Vancouver, Fraser Valley, and Sea-to-Sky).
+            Doug <em>does not personally represent transactions</em> here — this page
+            is published for research only. If you'd like to buy or sell in {found},
+            Doug will connect you with a licensed local REALTOR® on the appropriate
+            board (VIREB, IAR, KAR, BCNREB or CADREB, depending on the area).
+          </div>
+          <div style={{marginTop:"0.65rem",display:"flex",flexWrap:"wrap",gap:"0.6rem"}}>
+            <Link
+              to={`/referral-request?city=${encodeURIComponent(found)}`}
+              className="btn btn-primary"
+              data-testid={`community-referral-cta-${slug}`}
+              style={{fontSize:"0.85rem",padding:"0.5rem 1rem",background:"#B45309",borderColor:"#B45309"}}
+            >
+              Request a {found} REALTOR® referral →
+            </Link>
+            <Link
+              to="/realtor-network"
+              style={{fontSize:"0.85rem",padding:"0.5rem 0.75rem",color:"#78350F",textDecoration:"underline",alignSelf:"center"}}
+            >
+              About the referral network
+            </Link>
+          </div>
+        </div>
+      </div>
+    )}
     {found ? <>
       {found && <CommunityMap name={found} region={region}/>}
       <div style={{display:"flex",justifyContent:"center",marginBottom:"1.75rem"}}>
         <Link to={`/listings?city=${encodeURIComponent(found)}`} className="btn btn-primary" data-testid={`view-listings-in-${slug}`} style={{padding:"0.85rem 1.75rem",fontSize:"1rem"}}>
-          🏡 View Active Listings in {found}
+          🏡 View Active Listings in {found}{!isFocus && " (Referral)"}
         </Link>
       </div>
       {slug && found && <VibeScore slug={slug} community={found}/>}
@@ -6067,9 +6121,7 @@ const CommunityPage = () => {
         </p>
       ) : (
         <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}} data-testid="community-referral-copy">
-          {`As a smaller BC community, ${found} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?`}
-          {" "}
-          <Link to={`/referral-request?city=${encodeURIComponent(found)}`} style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}} data-testid="community-referral-link">Referral REALTOR® link</Link>.
+          {`${found} is published on EZtoFind.ca as an educational community profile. As noted in the referral banner above, transactions in this area are served exclusively through Doug's licensed referral network — the profile itself remains a free, non-transactional research resource for anyone researching a move to ${found}.`}
         </p>
       )}
       <div style={{marginTop:"2rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
