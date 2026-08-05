@@ -6900,6 +6900,19 @@ def _sanitize_listing(doc: dict) -> dict:
     doc.setdefault("brokerage_name", "Listing Brokerage (see REALTOR.ca)")
     # Do NOT default listing_agent — that field is only populated from real DDF feed data.
     doc.setdefault("realtor_ca_url", f"https://www.realtor.ca/real-estate/{doc.get('listing_key','')}")
+    # tour_kinds — coarse per-listing classification so the UI can badge
+    # Matterport 3D walk-throughs distinctly from linear video walk-throughs
+    # (YouTube/Vimeo/other). Preserves insertion order. Never returns
+    # "other" — anything not in the recognised whitelist rolls into "video".
+    tours = doc.get("virtual_tour_urls") or []
+    kinds: list[str] = []
+    for t in tours:
+        u = (t or {}).get("url") if isinstance(t, dict) else str(t or "")
+        fam = _tour_host_family(u)
+        kind = "matterport" if fam == "matterport" else "video"
+        if kind not in kinds:
+            kinds.append(kind)
+    doc["tour_kinds"] = kinds
     return doc
 
 

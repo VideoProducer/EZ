@@ -20,7 +20,7 @@ import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
   Mic, Send, ChevronRight, ExternalLink, X, Sparkles, Building2,
-  Plane, DollarSign,
+  Plane, DollarSign, Box, Play,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -1544,12 +1544,6 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
         height: 140, background: cover ? `url(${cover}) center/cover` : C.mist,
         position: "relative",
       }}>
-        {l.has_virtual_tour && (
-          <div style={{
-            position: "absolute", left: 8, top: 8, background: "rgba(15,42,91,0.85)",
-            color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 999,
-          }}><Video size={9} style={{verticalAlign:"-1px"}}/> Virtual tour</div>
-        )}
         <button
           type="button"
           onClick={toggleSave}
@@ -1584,23 +1578,56 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
             <MapPin size={16} color={C.navy}/>
           </button>
         )}
-        {l.has_virtual_tour && (
-          <div
-            data-testid={`dash-listing-vr-${l.listing_key}`}
-            aria-label="Video / virtual tour available"
-            title="Video / virtual tour available"
-            style={{
-              position: "absolute", right: hasPin && onFocusMap ? 88 : 48, top: 8, height: 32,
-              padding: "0 10px", borderRadius: 999, border: "none",
-              background: C.brandGold || "#F5A623", color: "#0F2A5B",
-              display: "inline-flex", alignItems: "center", gap: 4,
-              fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-            }}
-          >
-            <Video size={12} strokeWidth={2.5}/> VR
-          </div>
-        )}
+        {/* Tour kind badges — distinct pills for Matterport 3D vs linear
+            video walk-throughs. Anchored to the LEFT of the heart / map-pin
+            cluster so the row reads: [3D] [Video] [MapPin] [Heart].
+            Backend classifies via _tour_host_family; UI just renders
+            l.tour_kinds. Falls back to has_virtual_tour on legacy payloads
+            where the backend hasn't been redeployed yet. */}
+        {(() => {
+          const kinds = Array.isArray(l.tour_kinds) && l.tour_kinds.length
+            ? l.tour_kinds
+            : (l.has_virtual_tour ? ["video"] : []);
+          if (!kinds.length) return null;
+          const pinOffset = (hasPin && onFocusMap) ? 88 : 48;
+          // Build in order: Matterport first (rarer + higher signal), then Video.
+          const badges = [];
+          if (kinds.includes("matterport")) badges.push({
+            key: "3d",
+            label: "3D",
+            title: "Matterport 3D walk-through",
+            bg: "#312E81", // indigo-900 — signals interactive/immersive
+            fg: "#FFFFFF",
+            Icon: Box,
+          });
+          if (kinds.includes("video")) badges.push({
+            key: "video",
+            label: "Video",
+            title: "Video walk-through (YouTube / Vimeo)",
+            bg: C.brandGold || "#F5A623",
+            fg: "#0F2A5B",
+            Icon: Play,
+          });
+          return badges.map((b, i) => (
+            <div
+              key={b.key}
+              data-testid={`dash-listing-tour-${b.key}-${l.listing_key}`}
+              aria-label={b.title}
+              title={b.title}
+              style={{
+                position: "absolute", right: pinOffset + i * 62, top: 8, height: 32,
+                padding: "0 10px", borderRadius: 999, border: "none",
+                background: b.bg, color: b.fg,
+                display: "inline-flex", alignItems: "center", gap: 4,
+                fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <b.Icon size={12} strokeWidth={2.5}/> {b.label}
+            </div>
+          ));
+        })()}
       </div>
       <div style={{ padding: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 15 }}>{price}</div>

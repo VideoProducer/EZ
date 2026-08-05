@@ -26,6 +26,7 @@ import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
 import TourNarration from "./components/TourNarration";
+import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -2596,6 +2597,54 @@ const ListingCard = ({ listing }) => {
       <div style={{position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#F5F0E1"}}>
         <img src={photo} alt={`${listing.street_address}, ${listing.city}`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} loading="lazy"/>
         <div style={{position:"absolute",top:"0.75rem",left:"0.75rem",background:"var(--brand-navy)",color:"#fff",padding:"0.25rem 0.7rem",borderRadius:999,fontSize:"0.72rem",fontFamily:"Inter,sans-serif",fontWeight:600,letterSpacing:"0.03em"}}>{listing.property_type}</div>
+        {/* Tour kind badges — anchored to the LEFT of the heart (which sits
+            top-right at 0.75rem) so the row reads: [3D] [Video] [♥].
+            Backend `_sanitize_listing` computes `tour_kinds` from the
+            per-listing `virtual_tour_urls` array (Matterport → "3D",
+            YouTube/Vimeo/other → "Video"). Falls back to has_virtual_tour
+            for legacy payloads. */}
+        {(() => {
+          const kinds = Array.isArray(listing.tour_kinds) && listing.tour_kinds.length
+            ? listing.tour_kinds
+            : (listing.has_virtual_tour ? ["video"] : []);
+          if (!kinds.length) return null;
+          const badges = [];
+          if (kinds.includes("matterport")) badges.push({
+            key: "3d", label: "3D",
+            title: "Matterport 3D walk-through",
+            bg: "#312E81", fg: "#FFFFFF", Icon: CubeIcon,
+          });
+          if (kinds.includes("video")) badges.push({
+            key: "video", label: "Video",
+            title: "Video walk-through (YouTube / Vimeo)",
+            bg: "#F5A623", fg: "#0F2A5B", Icon: PlayIcon,
+          });
+          // Heart button width ≈ 40px + 0.75rem gap; each badge ~60px wide + 6px gap
+          return badges.map((b, i) => (
+            <div
+              key={b.key}
+              data-testid={`listing-card-tour-${b.key}-${listing.listing_key}`}
+              aria-label={b.title}
+              title={b.title}
+              style={{
+                position:"absolute",
+                top:"0.75rem",
+                right:`calc(0.75rem + 40px + 6px + ${i * 66}px)`,
+                height:28, padding:"0 10px", borderRadius:999,
+                background:b.bg, color:b.fg,
+                display:"inline-flex", alignItems:"center", gap:4,
+                fontSize:11, fontWeight:800, letterSpacing:0.4,
+                boxShadow:"0 2px 8px rgba(0,0,0,0.18)",
+                fontFamily:"Inter,sans-serif",
+                pointerEvents:"none",
+                whiteSpace:"nowrap",
+                zIndex:2,
+              }}
+            >
+              <b.Icon size={12} strokeWidth={2.5}/> {b.label}
+            </div>
+          ));
+        })()}
       </div>
       <div style={{padding:"1rem 1.15rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.35rem",fontWeight:700,color:"var(--brand-navy)"}}>${price}</div>
