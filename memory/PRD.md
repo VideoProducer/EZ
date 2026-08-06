@@ -2390,3 +2390,27 @@ E1 can't log into Doug's ChatGPT Plus account for him, but every asset is now fu
 - Includes progress bar, Pause toggle, dismiss ×, and silent-hide fallback if TTS fails (e.g. Universal Key balance low).
 - Added `@keyframes eztofind-pulse-gold` to `/app/frontend/src/index.css` for the polite gold-ring pulse effect.
 - Verified via Playwright on `/community/whistler`: sizzle-reel card renders, Play button clickable, Play → Pause state swap confirmed.
+
+---
+
+## Feb 06, 2026 — A/B Analytics + 20-Community Sizzle Reels + Weekly Digest
+
+### 1. A/B Test — Whistler Sizzle Reel funnel tracking
+- New public event endpoint `POST /api/sizzle/event` (server.py ~L2207) — logs `view` / `play` / `dismiss` / `complete` beacons per slug+session_id. IP-hashed for PIPA compliance.
+- New admin endpoint `GET /api/admin/sizzle/analytics` aggregates the funnel per community + cross-references leads whose `sizzle_source` matches the slug.
+- New `sizzle_source` field on `BuyerLead` + `SellerLead` Pydantic models. Frontend attaches it from `sessionStorage.ez_sizzle_last_played_slug` on every consultation submission.
+- New "🎬 Community Sizzle Reel A/B · FUNNEL" widget on `/admin/dashboard` showing Views → Plays → Play% → Completes → Completion% → Leads → Lead% per slug.
+
+### 2. Rollout Sizzle Reels — top 20 BC communities
+- Refactored `WhistlerSizzleReel` → generic `CommunitySizzleReel` (App.js ~L6178). Accepts a `slug` prop and pulls its curated 40-45 word script from a new `COMMUNITY_SIZZLE_SCRIPTS` map.
+- **20 scripts written**: whistler · kelowna · vancouver · kitsilano · victoria · squamish · burnaby · richmond · surrey · maple-ridge · langley · coquitlam · north-vancouver · west-vancouver · pitt-meadows · port-coquitlam · new-westminster · abbotsford · chilliwack · mission. Each script mentions Doug's specific relationship to that community (in-service vs. referral partner).
+- Each reel logs its own funnel to `/api/sizzle/event` so Doug can compare directly against the Whistler control.
+- Verified via Playwright: Kelowna page shows *"Doogie's 15-second welcome to Kelowna"* — reel auto-fetches, plays, and logs a `view` event.
+
+### 3. Weekly Digest email — ChatGPT Doogie Monday recap
+- New background task `_weekly_digest_loop` (server.py ~L5891) sleeps to next-Monday-16:00-UTC (≈ 08:00 PST / 09:00 PDT) and runs `_run_weekly_doogie_digest()`.
+- Digest email includes: total ChatGPT Doogie leads this week (buyer/seller/referral broken out), newest 10 rows per kind, and Top 5 Community Sizzle Reels by views (with plays + completes columns).
+- Idempotent — `digest_log` collection stores `{kind: chatgpt_doogie_weekly, day: 2026-02-09}` markers so restarts never double-send.
+- Fires via existing `services.email_sender.send_email` (Resend). Send target = `DOUG_DIGEST_EMAIL` env var, defaults to `doug@eztofind.ca`.
+- One-click **"📧 Send digest now"** button in the attribution widget lets Doug preview the layout on-demand without waiting for Monday — endpoint `POST /admin/attribution/chatgpt-doogie/send-digest-now` clears today's idempotency marker and re-fires.
+- Verified end-to-end via curl: `{"ok": true}` returned, `digest_log` entry created, email queued in Resend.

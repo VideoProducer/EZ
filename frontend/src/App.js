@@ -4359,7 +4359,7 @@ const BuyerForm = () => {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
+  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google surfaces this as a rich card for "how to buy a house in BC" queries. */}
@@ -4412,7 +4412,7 @@ const SellerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
+  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
@@ -5159,6 +5159,10 @@ const AdminDash = () => {
   // / last-30 counts + the newest 5 rows. Silent-hides if the endpoint 404s
   // (fresh install pre-publication).
   const [gptAttr, setGptAttr] = useState(null);
+  // Community Sizzle Reel A/B analytics — view→play→complete→lead funnel by
+  // slug. Silent-hides when there's no activity yet. Powers the roll-out
+  // decision (Whistler wins → light up the top 20).
+  const [sizzleAB, setSizzleAB] = useState(null);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -5171,6 +5175,9 @@ const AdminDash = () => {
     axios.get(`${API}/admin/attribution/chatgpt-doogie`, {headers})
       .then(r => setGptAttr(r.data))
       .catch(() => setGptAttr(null));
+    axios.get(`${API}/admin/sizzle/analytics`, {headers})
+      .then(r => setSizzleAB(r.data?.communities || null))
+      .catch(() => setSizzleAB(null));
   },[]);
   return <AdminShell active="dash">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
@@ -5228,6 +5235,21 @@ const AdminDash = () => {
             background: "var(--brand-navy)", color: "#fff", padding: "8px 16px", borderRadius: 99,
             fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
           }} data-testid="dash-attr-preview-link">Store Preview →</a>
+          <button
+            type="button"
+            data-testid="dash-attr-send-digest"
+            onClick={async () => {
+              try {
+                await axios.post(`${API}/admin/attribution/chatgpt-doogie/send-digest-now`, {}, {headers});
+                alert("Weekly digest email fired — check your inbox at doug@eztofind.ca in a moment.");
+              } catch { alert("Send failed. Check backend logs."); }
+            }}
+            style={{
+              background: "transparent", color: "var(--brand-navy)",
+              padding: "8px 14px", borderRadius: 99, fontSize: 12, fontWeight: 700,
+              border: "1px solid #DDE6FA", cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >📧 Send digest now</button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: "1rem" }}>
@@ -5276,6 +5298,63 @@ const AdminDash = () => {
             No ChatGPT Doogie leads yet — this widget lights up the moment the first buyer submits through the GPT Store tile.
           </div>
         )}
+      </div>
+    )}
+
+    {sizzleAB && sizzleAB.length > 0 && (
+      <div data-testid="dash-sizzle-ab" style={{
+        marginTop: "1.25rem", background: "#fff",
+        border: "1px solid #E5E7EB", borderRadius: 16, padding: "1.5rem",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: "0.5rem" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 22 }} aria-hidden>🎬</span>
+              <h2 style={{ margin: 0, fontSize: "1.35rem", color: "var(--brand-navy)" }}>Community Sizzle Reel A/B</h2>
+              <span style={{ background: "rgba(34,197,94,0.12)", color: "#15803D", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>Funnel</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "Inter,sans-serif", maxWidth: 640, lineHeight: 1.55 }}>
+              Views → Plays → Completes → Lead conversions per community. Compare Whistler (control) against Kelowna, Vancouver, Kits, Victoria, Squamish and 14 more to prove which sizzle reels drive real consultation submissions.
+            </div>
+          </div>
+        </div>
+        <div style={{ overflowX: "auto", marginTop: "1rem" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: "#F8FAFF" }}>
+                <th style={{ padding: "8px 10px", textAlign: "left", color: "var(--brand-navy)", fontWeight: 700 }}>Community</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Views</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Plays</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Play %</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Completes</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Completion %</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Leads</th>
+                <th style={{ padding: "8px 10px", textAlign: "right", color: "var(--brand-navy)", fontWeight: 700 }}>Lead %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sizzleAB.map(r => (
+                <tr key={r.slug} data-testid={`sizzle-row-${r.slug}`} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                  <td style={{ padding: "8px 10px" }}>
+                    <a href={`/community/${r.slug}`} target="_blank" rel="noreferrer" style={{ color: "var(--brand-blue)", fontWeight: 700, textDecoration: "none" }}>
+                      {r.slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                    </a>
+                  </td>
+                  <td style={{ padding: "8px 10px", textAlign: "right" }}>{r.views}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right" }}>{r.plays}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: r.play_rate >= 30 ? "#15803D" : "var(--muted)" }}>{r.play_rate}%</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right" }}>{r.completes}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: r.completion_rate >= 50 ? "#15803D" : "var(--muted)" }}>{r.completion_rate}%</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: r.leads > 0 ? "#B45309" : "var(--muted)", fontWeight: r.leads > 0 ? 700 : 400 }}>{r.leads}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: r.lead_conversion > 0 ? "#B45309" : "var(--muted)", fontWeight: r.lead_conversion > 0 ? 700 : 400 }}>{r.lead_conversion}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{ marginTop: "1rem", fontSize: 11, color: "var(--muted)", fontStyle: "italic", lineHeight: 1.5 }}>
+          <strong>How to read:</strong> Play % = plays ÷ views. Completion % = full-listen completes ÷ plays. Lead % = unique play-sessions that submitted a consultation on the same visit. All 20 top-BC communities are already scripted — reels light up automatically as visitors land on those pages.
+        </div>
       </div>
     )}
 
@@ -6175,54 +6254,101 @@ const Communities = () => {
   </div></section>);
 };
 
-// ── WhistlerSizzleReel ──────────────────────────────────────────────────
-// A 15-second Doogie voice-over that appears at the top of the Whistler
-// community page ONLY. Purpose: test how buyers respond to full-narration
-// TTS on a marquee community. Browsers block audio autoplay-with-sound by
-// default (Chrome/Safari/Edge policy since 2018), so we auto-fetch the
-// audio blob on mount but require a single tap on the pulsing "Play"
-// button to start playback. Session-scoped: sessionStorage flag suppresses
-// the pill after the visitor has played it once so we're not naggy on
-// repeat page views. If TTS fails (e.g. Universal Key balance low) the
-// component silent-hides — the page still reads fine without it.
-const WhistlerSizzleReel = ({ community }) => {
+// ── CommunitySizzleReel ─────────────────────────────────────────────────
+// A 15-second Doogie voice-over pill that mounts on the community page for
+// every slug in COMMUNITY_SIZZLE_SCRIPTS. Started with Whistler-only (Feb
+// 06 2026) — once Whistler's conversion lift is proven, the top-20 BC
+// communities are already scripted and will light up the moment their slug
+// appears in the map. Auto-fetches TTS on mount but requires a tap on the
+// pulsing "▶ Play" pill (browsers block autoplay-with-sound). Session-scoped
+// so it doesn't nag on repeat page views. Logs view / play / dismiss /
+// complete events to /api/sizzle/event for A/B analytics against
+// consultation conversions on the same slug.
+const COMMUNITY_SIZZLE_SCRIPTS = {
+  "whistler":         "Woof! Doogie here. Whistler is Doug LeMaire's favourite Sea-to-Sky community — a world-class ski village, alpine chalets from under a million, and one of the strongest year-round rental markets in British Columbia. Scroll down for the full profile — I'm all ears if you want to chat.",
+  "kelowna":          "Woof! Doogie here. Kelowna is Okanagan wine country — 300 days of sunshine, lakefront homes, and family-friendly neighbourhoods. Doug maintains a licensed referral partner in Kelowna so buyers get a Doogie-vetted local expert. Scroll down for climate, listings, and lifestyle.",
+  "vancouver":        "Woof! Doogie here. Vancouver is Canada's most vibrant coastal city — ocean, mountains, and one of the world's most diverse condo markets. Doug LeMaire personally represents buyers across the West Side, East Side, and Downtown. Scroll down for live MLS® listings.",
+  "kitsilano":        "Woof! Doogie here. Kits is Vancouver's west-side beach community — walking distance to English Bay, top-rated schools, and a vibrant café strip on 4th Avenue. Doug specializes in Kits condos and detached homes. Scroll down for live listings and neighbourhood facts.",
+  "victoria":         "Woof! Doogie here. Victoria is BC's capital and Vancouver Island's crown jewel — Inner Harbour, mild winters, and heritage character homes. Doug has a Doogie-vetted referral partner in Victoria for buyers exploring the island. Scroll down for live listings.",
+  "squamish":         "Woof! Doogie here. Squamish is the outdoor-recreation capital of Canada — halfway between Vancouver and Whistler, granite cliffs, and a booming young-family community. Doug LeMaire personally represents buyers and sellers here. Scroll down for the full Squamish profile.",
+  "burnaby":          "Woof! Doogie here. Burnaby sits right beside Vancouver with SkyTrain access, Metrotown shopping, and Burnaby Mountain trails. Great value for buyers priced out of Vancouver proper. Doug LeMaire represents transactions across all of Burnaby. Scroll down for live listings.",
+  "richmond":         "Woof! Doogie here. Richmond is a multicultural community south of Vancouver — flat cycling paths, world-class Asian cuisine, and quick YVR airport access. Doug LeMaire represents Richmond buyers and sellers directly. Scroll down for live MLS® listings and community facts.",
+  "surrey":           "Woof! Doogie here. Surrey is one of British Columbia's fastest-growing cities — from South Surrey's ocean views to Fleetwood's family neighbourhoods. Doug LeMaire personally represents Surrey buyers and sellers. Scroll down for live MLS® listings and neighbourhood profiles.",
+  "maple-ridge":      "Woof! Doogie here. Maple Ridge is Doug LeMaire's home community — Golden Ears park at the doorstep, acreage properties, and a genuine small-town feel. Doug's office is right here on Lougheed Highway. Scroll down for live listings across every Maple Ridge neighbourhood.",
+  "langley":          "Woof! Doogie here. Langley combines suburban comfort with wine-country charm — Willowbrook shopping, Fort Langley heritage, and equestrian acreages. Doug specializes in Langley detached and acreage properties. Scroll down for live MLS® listings and community stats.",
+  "coquitlam":        "Woof! Doogie here. Coquitlam offers SkyTrain access, Burke Mountain new-builds, and family-friendly neighbourhoods like Westwood Plateau. Doug LeMaire personally represents Coquitlam buyers and sellers. Scroll down for live listings and community insights.",
+  "north-vancouver":  "Woof! Doogie here. North Vancouver is North Shore living — Grouse Mountain, Deep Cove, and craft breweries on Lonsdale. Doug LeMaire represents buyers across every North Van neighbourhood. Scroll down for live listings, market stats, and profile details.",
+  "west-vancouver":   "Woof! Doogie here. West Vancouver is British Columbia's most prestigious oceanfront community — British Properties, Ambleside, and Whytecliff Park. Doug LeMaire specializes in luxury West Van real estate. Scroll down for live MLS® listings and market snapshots.",
+  "pitt-meadows":     "Woof! Doogie here. Pitt Meadows is small-town Fraser Valley — cranberry farms, river dyke trails, and quick West Coast Express service to Vancouver. Doug LeMaire personally represents Pitt Meadows buyers and sellers. Scroll down for live listings and community facts.",
+  "port-coquitlam":   "Woof! Doogie here. Port Coquitlam is family-first Tri-Cities — the PoCo Trail, riverside parks, and consistent value. Doug LeMaire represents PoCo buyers and sellers directly. Scroll down for live MLS® listings and community insights.",
+  "new-westminster":  "Woof! Doogie here. New Westminster is Metro Vancouver's historic river city — SkyTrain, Queen's Park heritage homes, and the Quay waterfront. Doug LeMaire represents New West buyers and sellers directly. Scroll down for live listings and community details.",
+  "abbotsford":       "Woof! Doogie here. Abbotsford is the Fraser Valley's largest city — a real airport, family neighbourhoods, and blueberry-and-berry country. Doug LeMaire represents Abbotsford buyers and sellers directly. Scroll down for live MLS® listings and community stats.",
+  "chilliwack":       "Woof! Doogie here. Chilliwack sits at the base of the Cascade Mountains — great value, quiet neighbourhoods, and stunning hiking. Doug maintains a Doogie-vetted referral partner in Chilliwack. Scroll down for live listings and community insights.",
+  "mission":          "Woof! Doogie here. Mission offers Fraser Valley affordability with West Coast Express service to Vancouver — perfect for commuters seeking more space. Doug LeMaire represents Mission buyers and sellers directly. Scroll down for live MLS® listings and community facts.",
+};
+
+const CommunitySizzleReel = ({ slug, community }) => {
   const [audioUrl, setAudioUrl] = React.useState(null);
   const [playing, setPlaying] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   const [hidden, setHidden] = React.useState(false);
   const audioRef = React.useRef(null);
-  // 15-second script (target ~40-45 words at OpenAI TTS 1.0x speed).
-  const SCRIPT = `Woof! Doogie here. Whistler is Doug LeMaire's favourite Sea-to-Sky community — a world-class ski village, alpine chalets from under a million, and one of the strongest year-round rental markets in British Columbia. Scroll down for the full profile — I'm all ears if you want to chat.`;
+  const script = COMMUNITY_SIZZLE_SCRIPTS[slug];
+  const storageKey = `ez_sizzle_played_${slug}`;
+  // Ship an event to backend analytics. Silent-fail so a beacon hiccup
+  // never breaks playback.
+  const logEvent = React.useCallback((event) => {
+    try {
+      const sessionId = (() => {
+        let sid = sessionStorage.getItem("ez_sizzle_session");
+        if (!sid) { sid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("ez_sizzle_session", sid); }
+        return sid;
+      })();
+      // Remember last-played slug so consultation submissions can attribute back
+      if (event === "play") sessionStorage.setItem("ez_sizzle_last_played_slug", slug);
+      fetch(`${API}/sizzle/event`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, event, session_id: sessionId }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
+  }, [slug]);
   React.useEffect(() => {
-    // Suppress after the first successful play this session
-    try { if (sessionStorage.getItem("ez_whistler_sizzle_played") === "1") { setHidden(true); return; } } catch {}
+    if (!script) { setHidden(true); return; }
+    try { if (sessionStorage.getItem(storageKey) === "1") { setHidden(true); return; } } catch {}
     let revoke = null;
     (async () => {
       try {
         const r = await fetch(`${API}/doogie/tts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: SCRIPT, voice: "ash" }),
+          body: JSON.stringify({ text: script, voice: "ash" }),
         });
         if (!r.ok) throw new Error("tts failed");
         const blob = await r.blob();
         const url = URL.createObjectURL(blob);
         revoke = url;
         setAudioUrl(url);
+        logEvent("view");
       } catch { setHidden(true); }
     })();
     return () => { if (revoke) URL.revokeObjectURL(revoke); };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
   const play = () => {
     const a = audioRef.current; if (!a) return;
     a.play().catch(() => setHidden(true));
     setPlaying(true);
-    try { sessionStorage.setItem("ez_whistler_sizzle_played", "1"); } catch {}
+    logEvent("play");
+    try { sessionStorage.setItem(storageKey, "1"); } catch {}
   };
   const pause = () => { const a = audioRef.current; if (a) { a.pause(); setPlaying(false); } };
+  const dismiss = () => { pause(); setHidden(true); logEvent("dismiss"); try { sessionStorage.setItem(storageKey, "1"); } catch {} };
   if (hidden || !audioUrl) return null;
+  const communityLabel = community || (slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " "));
   return (
-    <div data-testid="whistler-sizzle-reel" style={{
+    <div data-testid="community-sizzle-reel" data-slug={slug} style={{
       background: "linear-gradient(135deg, rgba(30,79,207,0.08) 0%, rgba(245,166,35,0.08) 100%)",
       border: "1px solid #DDE6FA", borderRadius: 14, padding: "1rem 1.1rem",
       marginBottom: "1.25rem", display: "flex", gap: 14, alignItems: "center",
@@ -6235,10 +6361,10 @@ const WhistlerSizzleReel = ({ community }) => {
       }} aria-hidden>🐾</div>
       <div style={{ flex: "1 1 220px", fontFamily: "Inter, system-ui, sans-serif" }}>
         <div style={{ fontWeight: 700, color: "var(--brand-navy)", fontSize: "0.95rem" }}>
-          Doogie's 15-second welcome to Whistler
+          Doogie's 15-second welcome to {communityLabel}
         </div>
         <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
-          Tap play to hear why Whistler is Doug's favourite Sea-to-Sky community.
+          Tap play to hear why {communityLabel} matters — narrated by Doug LeMaire's AI assistant.
         </div>
         <div style={{
           height: 4, background: "#EEF2FB", borderRadius: 99, overflow: "hidden", marginTop: 8,
@@ -6252,20 +6378,19 @@ const WhistlerSizzleReel = ({ community }) => {
       <button
         type="button"
         onClick={playing ? pause : play}
-        data-testid={playing ? "whistler-sizzle-pause" : "whistler-sizzle-play"}
+        data-testid={playing ? "sizzle-pause" : "sizzle-play"}
         style={{
           background: "var(--brand-navy)", color: "#fff", border: "none",
           padding: "10px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13,
           cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
-          boxShadow: playing ? "none" : "0 0 0 0 rgba(245,166,35,0.6)",
           animation: playing ? "none" : "eztofind-pulse-gold 2s ease-out infinite",
         }}
-        aria-label={playing ? "Pause Doogie's welcome" : "Play Doogie's welcome"}
+        aria-label={playing ? "Pause welcome" : "Play welcome"}
       >{playing ? "❚❚ Pause" : "▶ Play"}</button>
       <button
         type="button"
-        onClick={() => { pause(); setHidden(true); try { sessionStorage.setItem("ez_whistler_sizzle_played", "1"); } catch {} }}
-        data-testid="whistler-sizzle-dismiss"
+        onClick={dismiss}
+        data-testid="sizzle-dismiss"
         aria-label="Dismiss welcome"
         style={{
           background: "transparent", border: "none", color: "var(--muted)",
@@ -6276,7 +6401,7 @@ const WhistlerSizzleReel = ({ community }) => {
         ref={audioRef}
         src={audioUrl}
         preload="auto"
-        onEnded={() => { setPlaying(false); setProgress(100); }}
+        onEnded={() => { setPlaying(false); setProgress(100); logEvent("complete"); }}
         onTimeUpdate={(e) => {
           const a = e.target;
           if (a.duration) setProgress(Math.min(100, (a.currentTime / a.duration) * 100));
@@ -6335,7 +6460,7 @@ const CommunityPage = () => {
     "articleBody":syn.synopsis
   } : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
-    {found && slug === "whistler" && <WhistlerSizzleReel community={found}/>}
+    {found && COMMUNITY_SIZZLE_SCRIPTS[slug] && <CommunitySizzleReel slug={slug} community={found}/>}
     {found && <SEO
       title={`What is it like to live in ${found}, BC? Community Profile, Climate & Real Estate | EZtoFind.ca`}
       description={syn?.synopsis ? syn.synopsis.substring(0, 200) : `Everything about ${found}, British Columbia (${region}) — geography, Environment Canada climate normals, lifestyle, and REALTOR® coverage for buyers and sellers.`}

@@ -294,6 +294,7 @@ class BuyerLead(BaseModel):
     status: str = "new"
     form_lang: Optional[str] = "en"
     notes_en: Optional[str] = ""
+    sizzle_source: Optional[str] = None      # Community-slug attribution — set when the visitor played a sizzle-reel on a community page before submitting
     turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token (validated + stripped server-side)
     created_at: str = Field(default_factory=now_iso)
 
@@ -315,6 +316,7 @@ class SellerLead(BaseModel):
     status: str = "new"
     form_lang: Optional[str] = "en"
     reason_en: Optional[str] = ""
+    sizzle_source: Optional[str] = None      # Community-slug attribution
     turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token
     created_at: str = Field(default_factory=now_iso)
 
@@ -2195,6 +2197,229 @@ async def chatgpt_doogie_attribution(_=Depends(verify_admin)):
         },
         "leads": combined[:50],  # cap the payload; admin can drill via CRM tabs
     }
+
+
+# ── Community Sizzle Reel — A/B analytics ──────────────────────────────────
+# Public event endpoint. The React component fires POST /sizzle/event on
+# each of the 4 lifecycle moments (view, play, dismiss, complete).
+# No auth, minimal payload, generous rate-limit tolerance — this is a
+# lightweight beacon, not a lead. Events are aggregated by
+# /admin/sizzle/analytics (see below) for A/B decision-making.
+class SizzleEvent(BaseModel):
+    slug:       str
+    event:      str        # view | play | dismiss | complete
+    session_id: str = ""
+
+
+@api.post("/sizzle/event")
+async def log_sizzle_event(body: SizzleEvent, request: Request):
+    if body.event not in {"view", "play", "dismiss", "complete"}:
+        raise HTTPException(400, "invalid event")
+    if not body.slug or len(body.slug) > 60:
+        raise HTTPException(400, "invalid slug")
+    doc = {
+        "slug": body.slug.lower().strip(),
+        "event": body.event,
+        "session_id": (body.session_id or "")[:60],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "ip_hash": _hash_ip(request.client.host if request.client else ""),
+    }
+    try:
+        await db.sizzle_events.insert_one(doc)
+    except Exception as e:
+        logger.error(f"sizzle event insert failed: {e}")
+    return {"ok": True}
+
+
+@api.get("/admin/sizzle/analytics")
+async def sizzle_analytics(_=Depends(verify_admin)):
+    """Aggregate sizzle-reel funnel per community slug, plus cross-reference
+    against consultation submissions to prove (or disprove) conversion lift.
+
+    Funnel: views → plays → completes → leads.
+    A `lead` for the purpose of this widget = any buyer/seller/referral
+    submitted while the visitor had a `sizzle_source` matching the slug.
+    """
+    # Pull all events grouped by slug + event type
+    pipeline = [
+        {"$group": {"_id": {"slug": "$slug", "event": "$event"}, "n": {"$sum": 1}, "sessions": {"$addToSet": "$session_id"}}},
+    ]
+    rows = await db.sizzle_events.aggregate(pipeline).to_list(1000)
+    by_slug: dict = {}
+    for r in rows:
+        slug = r["_id"]["slug"]; ev = r["_id"]["event"]
+        by_slug.setdefault(slug, {"views": 0, "plays": 0, "completes": 0, "dismisses": 0, "unique_play_sessions": set(), "leads": 0})
+        by_slug[slug][{"view": "views", "play": "plays", "complete": "completes", "dismiss": "dismisses"}[ev]] = r["n"]
+        if ev == "play":
+            by_slug[slug]["unique_play_sessions"] = set(s for s in (r.get("sessions") or []) if s)
+    # Attribute leads. A lead counts if its `sizzle_source` field matches a slug.
+    lead_pipeline = [
+        {"$match": {"sizzle_source": {"$exists": True, "$nin": [None, ""]}}},
+        {"$group": {"_id": "$sizzle_source", "n": {"$sum": 1}}},
+    ]
+    for coll in ("buyer_leads", "seller_leads", "referral_requests"):
+        try:
+            async for lr in db[coll].aggregate(lead_pipeline):
+                slug = (lr["_id"] or "").lower().strip()
+                if not slug: continue
+                by_slug.setdefault(slug, {"views": 0, "plays": 0, "completes": 0, "dismisses": 0, "unique_play_sessions": set(), "leads": 0})
+                by_slug[slug]["leads"] = by_slug[slug].get("leads", 0) + lr["n"]
+        except Exception:
+            continue
+    # Compute rates + shape response
+    out = []
+    for slug, s in by_slug.items():
+        views = s["views"]; plays = s["plays"]; completes = s["completes"]; leads = s["leads"]
+        unique_plays = len(s["unique_play_sessions"])
+        out.append({
+            "slug": slug,
+            "views": views,
+            "plays": plays,
+            "unique_plays": unique_plays,
+            "completes": completes,
+            "dismisses": s["dismisses"],
+            "leads": leads,
+            "play_rate":       round((plays / views) * 100, 1) if views else 0,
+            "completion_rate": round((completes / plays) * 100, 1) if plays else 0,
+            "lead_conversion": round((leads / unique_plays) * 100, 1) if unique_plays else 0,
+        })
+    out.sort(key=lambda r: r["views"], reverse=True)
+    return {"communities": out}
+
+
+def _hash_ip(ip: str) -> str:
+    if not ip: return ""
+    import hashlib
+    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+
+async def _run_weekly_doogie_digest():
+    """Compose + send Doug's Monday-morning digest email covering the last
+    7 days of ChatGPT Doogie GPT Store leads AND the community sizzle-reel
+    A/B funnel. Sends via existing services.email_sender.send_email (Resend).
+    Silent-no-op if the digest was already delivered today (idempotent so
+    concurrent restarts don't double-send)."""
+    from datetime import datetime, timedelta, timezone
+    from services.email_sender import send_email as _send
+    now = datetime.now(timezone.utc)
+    today_key = now.strftime("%Y-%m-%d")
+    # Idempotency guard
+    already = await db.digest_log.find_one({"kind": "chatgpt_doogie_weekly", "day": today_key})
+    if already:
+        logger.info("weekly_digest: already sent today, skipping")
+        return
+    week_ago = (now - timedelta(days=7)).isoformat()
+    # ChatGPT Doogie leads in the last 7 days
+    q = {"source": {"$regex": r"^chatgpt-doogie", "$options": "i"}, "created_at": {"$gte": week_ago}}
+    buyers  = await db.buyer_leads.find(q, {"_id": 0, "full_name": 1, "email": 1, "city": 1, "areas": 1, "created_at": 1}).sort("created_at", -1).to_list(50)
+    sellers = await db.seller_leads.find(q, {"_id": 0, "full_name": 1, "email": 1, "city": 1, "property_address": 1, "created_at": 1}).sort("created_at", -1).to_list(50)
+    try:
+        referrals = await db.referral_requests.find(q, {"_id": 0, "full_name": 1, "email": 1, "target_area": 1, "created_at": 1}).sort("created_at", -1).to_list(50)
+    except Exception:
+        referrals = []
+    total = len(buyers) + len(sellers) + len(referrals)
+    # Sizzle-reel funnel in the last 7 days
+    sizzle_pipeline = [
+        {"$match": {"created_at": {"$gte": week_ago}}},
+        {"$group": {"_id": {"slug": "$slug", "event": "$event"}, "n": {"$sum": 1}}},
+    ]
+    by_slug_ev = await db.sizzle_events.aggregate(sizzle_pipeline).to_list(1000)
+    slug_funnel: dict = {}
+    for r in by_slug_ev:
+        slug = r["_id"]["slug"]; ev = r["_id"]["event"]
+        slug_funnel.setdefault(slug, {"views": 0, "plays": 0, "completes": 0, "dismisses": 0})
+        slug_funnel[slug][{"view": "views", "play": "plays", "complete": "completes", "dismiss": "dismisses"}[ev]] = r["n"]
+    top_reels = sorted(slug_funnel.items(), key=lambda kv: kv[1]["views"], reverse=True)[:5]
+    # Build HTML
+    def _row(name, city, email, when):
+        return (
+            f"<tr><td style='padding:6px 8px;border-bottom:1px solid #F1F5F9'><strong>{name or '—'}</strong></td>"
+            f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9'>{city or '—'}</td>"
+            f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9;font-size:12px;color:#6B7280'>{email or ''}</td>"
+            f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9;font-size:11px;color:#9CA3AF'>{when[:10] if when else ''}</td></tr>"
+        )
+    buyer_rows = "".join(_row(b.get("full_name"), b.get("city") or (b.get("areas") or [None])[0], b.get("email"), b.get("created_at","")) for b in buyers[:10]) or "<tr><td colspan='4' style='padding:10px;color:#9CA3AF;font-style:italic'>No buyer leads via ChatGPT Doogie this week.</td></tr>"
+    seller_rows = "".join(_row(s.get("full_name"), s.get("city") or s.get("property_address"), s.get("email"), s.get("created_at","")) for s in sellers[:10]) or "<tr><td colspan='4' style='padding:10px;color:#9CA3AF;font-style:italic'>No seller leads via ChatGPT Doogie this week.</td></tr>"
+    referral_rows = "".join(_row(rr.get("full_name"), rr.get("target_area"), rr.get("email"), rr.get("created_at","")) for rr in referrals[:10]) or "<tr><td colspan='4' style='padding:10px;color:#9CA3AF;font-style:italic'>No referrals via ChatGPT Doogie this week.</td></tr>"
+    reel_rows = "".join(
+        f"<tr><td style='padding:6px 8px;border-bottom:1px solid #F1F5F9'><strong>{slug}</strong></td>"
+        f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9;text-align:right'>{d['views']}</td>"
+        f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9;text-align:right'>{d['plays']}</td>"
+        f"<td style='padding:6px 8px;border-bottom:1px solid #F1F5F9;text-align:right'>{d['completes']}</td></tr>"
+        for slug, d in top_reels
+    ) or "<tr><td colspan='4' style='padding:10px;color:#9CA3AF;font-style:italic'>No sizzle-reel activity this week.</td></tr>"
+    subject = f"Doogie Weekly · {total} lead{'s' if total != 1 else ''} + sizzle-reel funnel"
+    html = f"""
+<div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;color:#111">
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:1.6rem;font-weight:800;color:#0F2A5B">EZtoFind.ca</div>
+    <div style="font-size:0.9rem;color:#0F2A5B;font-weight:600;margin-top:2px">Doogie Weekly Digest 🐾</div>
+    <div style="font-size:0.8rem;color:#6b7280;margin-top:2px">Week ending {now.strftime('%b %d, %Y')}</div>
+  </div>
+  <div style="background:linear-gradient(135deg,#F8FAFF 0%,#FEF7E6 100%);border:1px solid #DDE6FA;border-radius:14px;padding:16px;margin-bottom:20px;text-align:center">
+    <div style="font-size:2.5rem;font-weight:800;color:#1E4FCF;line-height:1">{total}</div>
+    <div style="font-size:0.9rem;color:#0F2A5B;margin-top:4px">total ChatGPT Doogie leads this week</div>
+    <div style="font-size:0.75rem;color:#6B7280;margin-top:6px">
+      Buyers: <strong>{len(buyers)}</strong> · Sellers: <strong>{len(sellers)}</strong> · Referrals: <strong>{len(referrals)}</strong>
+    </div>
+  </div>
+  <h3 style="color:#0F2A5B;margin-top:24px">🛒 Buyer leads from ChatGPT Store</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">{buyer_rows}</table>
+  <h3 style="color:#0F2A5B;margin-top:24px">🏠 Seller leads from ChatGPT Store</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">{seller_rows}</table>
+  <h3 style="color:#0F2A5B;margin-top:24px">🌎 Referrals from ChatGPT Store</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">{referral_rows}</table>
+  <h3 style="color:#0F2A5B;margin-top:24px">🎬 Community Sizzle Reels · Top 5 by views</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="background:#F8FAFF"><th style="padding:6px 8px;text-align:left">Community</th><th style="padding:6px 8px;text-align:right">Views</th><th style="padding:6px 8px;text-align:right">Plays</th><th style="padding:6px 8px;text-align:right">Completes</th></tr>
+    </thead>
+    <tbody>{reel_rows}</tbody>
+  </table>
+  <p style="margin-top:28px;font-size:12px;color:#6B7280;line-height:1.6">
+    Automated digest from EZtoFind.ca · Runs Monday mornings.<br/>
+    See the full attribution widget on <a href="https://eztofind.ca/admin/dashboard" style="color:#1E4FCF">the admin dashboard</a>.
+  </p>
+</div>
+"""
+    text = f"""EZtoFind.ca — Doogie Weekly Digest — week ending {now.strftime('%b %d, %Y')}
+
+TOTAL CHATGPT DOOGIE LEADS THIS WEEK: {total}
+  Buyers: {len(buyers)}  Sellers: {len(sellers)}  Referrals: {len(referrals)}
+
+See the full attribution widget on https://eztofind.ca/admin/dashboard
+"""
+    to_email = os.environ.get("DOUG_DIGEST_EMAIL", "doug@eztofind.ca")
+    try:
+        await _send(db,
+            to=to_email,
+            subject=subject,
+            html=html,
+            text=text,
+            kind="transactional",
+            related_id="chatgpt_doogie_weekly",
+        )
+        await db.digest_log.insert_one({
+            "kind": "chatgpt_doogie_weekly", "day": today_key,
+            "total_leads": total, "created_at": now.isoformat(),
+        })
+        logger.info(f"weekly_digest: sent to {to_email} — {total} leads")
+    except Exception as e:
+        logger.error(f"weekly_digest send failed: {e}")
+
+
+@api.post("/admin/attribution/chatgpt-doogie/send-digest-now")
+async def send_digest_now(_=Depends(verify_admin)):
+    """Fire the weekly digest email immediately — useful for previewing the
+    layout the first time Doug wants to see it before Monday rolls around.
+    Also handy after the tile goes live: run once to confirm delivery, then
+    the scheduled Monday-morning job takes over. Idempotency guard skips if
+    already sent today, but this endpoint clears that guard first so you
+    always get a fresh preview."""
+    from datetime import datetime, timezone
+    await db.digest_log.delete_one({"kind": "chatgpt_doogie_weekly", "day": datetime.now(timezone.utc).strftime("%Y-%m-%d")})
+    await _run_weekly_doogie_digest()
+    return {"ok": True}
 
 
 # --- Lead Triage Dashboard — combined buyer + seller leads with triage scores
@@ -5790,6 +6015,34 @@ async def startup():
             await _a.sleep(24 * 3600)  # daily
     asyncio.create_task(asyncio.sleep(60)).add_done_callback(lambda _: asyncio.create_task(_retention_loop()))
     # Amenity warm-up disabled per user request
+
+    # ChatGPT Doogie weekly digest — every Monday at 08:00 America/Vancouver
+    # we email Doug a recap of the past week's leads that came in through
+    # the ChatGPT Store Doogie GPT tile PLUS the community sizzle-reel
+    # funnel (views → plays → conversions per slug). Loop sleeps until the
+    # next Monday-08:00 rather than a fixed 7-day cadence so a restart
+    # doesn't shift the delivery window off Monday morning.
+    async def _weekly_digest_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        # America/Vancouver is UTC-8 (PST) most of the year; PDT (UTC-7) mid-March→early-Nov.
+        # For a Monday-morning delivery target, we sleep to the next UTC 16:00 on a Monday
+        # which lands at 08:00 PST or 09:00 PDT — close enough for a friendly digest.
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Days until next Monday
+                days = (7 - now.weekday()) % 7
+                if days == 0 and now.hour >= 16:
+                    days = 7
+                nxt = (now + _td(days=days)).replace(hour=16, minute=0, second=0, microsecond=0)
+                delay = max(60, int((nxt - now).total_seconds()))
+                await _a.sleep(delay)
+                await _run_weekly_doogie_digest()
+            except Exception as e:
+                logger.error(f"weekly_digest_loop iteration failed: {e}")
+                await _a.sleep(3600)  # back off an hour on error, then retry
+    asyncio.create_task(asyncio.sleep(120)).add_done_callback(lambda _: asyncio.create_task(_weekly_digest_loop()))
 
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
