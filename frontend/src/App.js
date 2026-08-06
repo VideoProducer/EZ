@@ -5154,6 +5154,11 @@ const AdminDash = () => {
   const {headers} = useAdmin();
   const [rem, setRem] = useState([]); const [stats, setStats] = useState({buyers:0,sellers:0,realtors:0});
   const [gapClusters, setGapClusters] = useState([]);
+  // Attribution widget — leads that came in through the ChatGPT Doogie GPT
+  // Store tile (source begins with 'chatgpt-doogie'). Shows all-time / last-7
+  // / last-30 counts + the newest 5 rows. Silent-hides if the endpoint 404s
+  // (fresh install pre-publication).
+  const [gptAttr, setGptAttr] = useState(null);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -5163,6 +5168,9 @@ const AdminDash = () => {
     axios.get(`${API}/admin/search-analytics/clusters?days=30&kind=no_results&limit=3`, {headers})
       .then(r => setGapClusters(r.data?.clusters || []))
       .catch(() => setGapClusters([]));
+    axios.get(`${API}/admin/attribution/chatgpt-doogie`, {headers})
+      .then(r => setGptAttr(r.data))
+      .catch(() => setGptAttr(null));
   },[]);
   return <AdminShell active="dash">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
@@ -5199,6 +5207,77 @@ const AdminDash = () => {
     <div className="grid-3" style={{marginTop:"1.5rem"}}>
       {[["Buyer Leads",stats.buyers],["Seller Leads",stats.sellers],["REALTORS® Applied",stats.realtors]].map(([l,n])=><div key={l} className="paper" style={{textAlign:"center"}}><div style={{fontSize:"3rem",fontWeight:700,color:"var(--brand-blue)"}}>{n}</div><div style={{color:"var(--muted)"}}>{l}</div></div>)}
     </div>
+
+    {gptAttr && (
+      <div data-testid="dash-chatgpt-attribution" style={{
+        marginTop: "2rem", background: "linear-gradient(135deg, #F8FAFF 0%, #FEF7E6 100%)",
+        border: "1px solid #DDE6FA", borderRadius: 16, padding: "1.5rem",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: "1rem" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 22 }} aria-hidden>🐾</span>
+              <h2 style={{ margin: 0, fontSize: "1.35rem", color: "var(--brand-navy)" }}>Leads from ChatGPT Doogie</h2>
+              <span style={{ background: "rgba(30,79,207,0.10)", color: "var(--brand-blue)", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>Attribution</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "Inter,sans-serif", maxWidth: 640, lineHeight: 1.55 }}>
+              Every consultation submitted through the ChatGPT Store Doogie GPT is tagged <code>chatgpt-doogie-store</code>. This widget shows how many buyers have come from that channel — measure the tile's ROI from day 1.
+            </div>
+          </div>
+          <a href="/doogie-gpt-preview" target="_blank" rel="noreferrer" style={{
+            background: "var(--brand-navy)", color: "#fff", padding: "8px 16px", borderRadius: 99,
+            fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap",
+          }} data-testid="dash-attr-preview-link">Store Preview →</a>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: "1rem" }}>
+          {[
+            { label: "All-time", n: gptAttr.total_all_time },
+            { label: "Last 30 days", n: gptAttr.last_30_days },
+            { label: "Last 7 days", n: gptAttr.last_7_days },
+            { label: "Buyers", n: gptAttr.by_kind?.buyer || 0 },
+            { label: "Sellers", n: gptAttr.by_kind?.seller || 0 },
+            { label: "Referrals", n: gptAttr.by_kind?.referral || 0 },
+          ].map(s => (
+            <div key={s.label} className="paper" style={{ textAlign: "center", padding: "0.9rem 0.6rem" }}>
+              <div style={{ fontSize: "1.85rem", fontWeight: 700, color: "var(--brand-blue)", lineHeight: 1 }}>{s.n}</div>
+              <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {gptAttr.leads && gptAttr.leads.length > 0 ? (
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--brand-navy)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.3 }}>
+              Newest 5 ChatGPT Doogie leads
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {gptAttr.leads.slice(0, 5).map((l, i) => (
+                <div key={l.id || i} data-testid={`dash-attr-lead-${i}`} style={{
+                  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 8,
+                  padding: "8px 12px", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", fontSize: 12.5,
+                }}>
+                  <span style={{
+                    background: l.kind === "buyer" ? "rgba(30,79,207,0.12)" : l.kind === "seller" ? "rgba(34,197,94,0.12)" : "rgba(245,166,35,0.12)",
+                    color:      l.kind === "buyer" ? "var(--brand-blue)"    : l.kind === "seller" ? "#15803D"                    : "#B45309",
+                    padding: "2px 8px", borderRadius: 99, fontWeight: 700, textTransform: "capitalize", fontSize: 11,
+                  }}>{l.kind}</span>
+                  <span style={{ fontWeight: 700, color: "var(--brand-navy)" }}>{l.full_name || l.email || "—"}</span>
+                  <span style={{ color: "var(--muted)" }}>{l.headline}</span>
+                  <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 11 }}>
+                    {l.created_at ? new Date(l.created_at).toLocaleDateString("en-CA") : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic", padding: "8px 0" }}>
+            No ChatGPT Doogie leads yet — this widget lights up the moment the first buyer submits through the GPT Store tile.
+          </div>
+        )}
+      </div>
+    )}
 
     {gapClusters && gapClusters.length > 0 && (
       <div data-testid="dash-gap-cards" style={{marginTop:"2.5rem"}}>
@@ -6096,6 +6175,117 @@ const Communities = () => {
   </div></section>);
 };
 
+// ── WhistlerSizzleReel ──────────────────────────────────────────────────
+// A 15-second Doogie voice-over that appears at the top of the Whistler
+// community page ONLY. Purpose: test how buyers respond to full-narration
+// TTS on a marquee community. Browsers block audio autoplay-with-sound by
+// default (Chrome/Safari/Edge policy since 2018), so we auto-fetch the
+// audio blob on mount but require a single tap on the pulsing "Play"
+// button to start playback. Session-scoped: sessionStorage flag suppresses
+// the pill after the visitor has played it once so we're not naggy on
+// repeat page views. If TTS fails (e.g. Universal Key balance low) the
+// component silent-hides — the page still reads fine without it.
+const WhistlerSizzleReel = ({ community }) => {
+  const [audioUrl, setAudioUrl] = React.useState(null);
+  const [playing, setPlaying] = React.useState(false);
+  const [progress, setProgress] = React.useState(0);
+  const [hidden, setHidden] = React.useState(false);
+  const audioRef = React.useRef(null);
+  // 15-second script (target ~40-45 words at OpenAI TTS 1.0x speed).
+  const SCRIPT = `Woof! Doogie here. Whistler is Doug LeMaire's favourite Sea-to-Sky community — a world-class ski village, alpine chalets from under a million, and one of the strongest year-round rental markets in British Columbia. Scroll down for the full profile — I'm all ears if you want to chat.`;
+  React.useEffect(() => {
+    // Suppress after the first successful play this session
+    try { if (sessionStorage.getItem("ez_whistler_sizzle_played") === "1") { setHidden(true); return; } } catch {}
+    let revoke = null;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/doogie/tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: SCRIPT, voice: "ash" }),
+        });
+        if (!r.ok) throw new Error("tts failed");
+        const blob = await r.blob();
+        const url = URL.createObjectURL(blob);
+        revoke = url;
+        setAudioUrl(url);
+      } catch { setHidden(true); }
+    })();
+    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+  }, []);
+  const play = () => {
+    const a = audioRef.current; if (!a) return;
+    a.play().catch(() => setHidden(true));
+    setPlaying(true);
+    try { sessionStorage.setItem("ez_whistler_sizzle_played", "1"); } catch {}
+  };
+  const pause = () => { const a = audioRef.current; if (a) { a.pause(); setPlaying(false); } };
+  if (hidden || !audioUrl) return null;
+  return (
+    <div data-testid="whistler-sizzle-reel" style={{
+      background: "linear-gradient(135deg, rgba(30,79,207,0.08) 0%, rgba(245,166,35,0.08) 100%)",
+      border: "1px solid #DDE6FA", borderRadius: 14, padding: "1rem 1.1rem",
+      marginBottom: "1.25rem", display: "flex", gap: 14, alignItems: "center",
+      flexWrap: "wrap", boxShadow: "0 4px 16px rgba(15,42,91,0.06)",
+    }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: "50%", background: "#FFF4D9",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        border: "2px solid var(--brand-gold)", flexShrink: 0, fontSize: 32,
+      }} aria-hidden>🐾</div>
+      <div style={{ flex: "1 1 220px", fontFamily: "Inter, system-ui, sans-serif" }}>
+        <div style={{ fontWeight: 700, color: "var(--brand-navy)", fontSize: "0.95rem" }}>
+          Doogie's 15-second welcome to Whistler
+        </div>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.5 }}>
+          Tap play to hear why Whistler is Doug's favourite Sea-to-Sky community.
+        </div>
+        <div style={{
+          height: 4, background: "#EEF2FB", borderRadius: 99, overflow: "hidden", marginTop: 8,
+        }}>
+          <div style={{
+            width: `${progress}%`, height: "100%", background: "var(--brand-blue)",
+            transition: "width 250ms linear",
+          }}/>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={playing ? pause : play}
+        data-testid={playing ? "whistler-sizzle-pause" : "whistler-sizzle-play"}
+        style={{
+          background: "var(--brand-navy)", color: "#fff", border: "none",
+          padding: "10px 20px", borderRadius: 999, fontWeight: 700, fontSize: 13,
+          cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8,
+          boxShadow: playing ? "none" : "0 0 0 0 rgba(245,166,35,0.6)",
+          animation: playing ? "none" : "eztofind-pulse-gold 2s ease-out infinite",
+        }}
+        aria-label={playing ? "Pause Doogie's welcome" : "Play Doogie's welcome"}
+      >{playing ? "❚❚ Pause" : "▶ Play"}</button>
+      <button
+        type="button"
+        onClick={() => { pause(); setHidden(true); try { sessionStorage.setItem("ez_whistler_sizzle_played", "1"); } catch {} }}
+        data-testid="whistler-sizzle-dismiss"
+        aria-label="Dismiss welcome"
+        style={{
+          background: "transparent", border: "none", color: "var(--muted)",
+          fontSize: 20, cursor: "pointer", padding: "4px 8px",
+        }}
+      >×</button>
+      <audio
+        ref={audioRef}
+        src={audioUrl}
+        preload="auto"
+        onEnded={() => { setPlaying(false); setProgress(100); }}
+        onTimeUpdate={(e) => {
+          const a = e.target;
+          if (a.duration) setProgress(Math.min(100, (a.currentTime / a.duration) * 100));
+        }}
+      />
+    </div>
+  );
+};
+
 const CommunityPage = () => {
   const {slug} = useParams();
   const [data, setData] = useState({});
@@ -6145,6 +6335,7 @@ const CommunityPage = () => {
     "articleBody":syn.synopsis
   } : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
+    {found && slug === "whistler" && <WhistlerSizzleReel community={found}/>}
     {found && <SEO
       title={`What is it like to live in ${found}, BC? Community Profile, Climate & Real Estate | EZtoFind.ca`}
       description={syn?.synopsis ? syn.synopsis.substring(0, 200) : `Everything about ${found}, British Columbia (${region}) — geography, Environment Canada climate normals, lifestyle, and REALTOR® coverage for buyers and sellers.`}

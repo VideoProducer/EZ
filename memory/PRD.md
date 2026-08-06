@@ -2368,3 +2368,25 @@ Three public files, one preview page. Zero backend changes needed (all actions r
 
 ### Follow-up when Doug is ready
 Doug just needs to (1) paste `https://eztofind.ca/doogie-gpt-openapi.json` into GPT Builder → Actions, (2) paste `doogie-gpt-persona.txt` into Instructions, (3) upload his professional headshot as the icon, and (4) hit Publish. OpenAI review takes 1-3 business days.
+
+---
+
+## Feb 06, 2026 — Attribution Widget + Whistler Sizzle Reel + Publish Recipe
+
+### 1. Publish Doogie GPT Live — recipe (Doug's manual step)
+E1 can't log into Doug's ChatGPT Plus account for him, but every asset is now fully paste-ready:
+- Publish recipe lives at **/doogie-gpt-preview** (Section 5 "Publish checklist").
+- Doug needs to: (a) sign in at chat.openai.com/gpts/editor, (b) upload his headshot, (c) paste the fields from Section 3 of the preview, (d) paste the Actions spec URL `https://eztofind.ca/doogie-gpt-openapi.json`, (e) paste the persona from `/doogie-gpt-persona.txt` into Instructions, (f) set Auth = None + Privacy = `https://eztofind.ca/privacy`, (g) Save → Publish → Everyone. OpenAI review is 1-3 business days.
+
+### 2. Attribution Widget — "Leads from ChatGPT Doogie"
+- New backend endpoint `GET /api/admin/attribution/chatgpt-doogie` (server.py L2148 area) — matches leads whose `source` starts with `chatgpt-doogie` across `buyer_leads`, `seller_leads`, and `referral_requests` collections. Returns All-time / Last-30 / Last-7 counts + kind breakdown + newest 50 leads.
+- New widget on `/admin/dashboard` (App.js AdminDash, ~L5153) — 6 stat tiles + newest-5 lead rows + a "Store Preview →" quick link back to `/doogie-gpt-preview`. Silent-hides empty (before the first lead arrives, "No ChatGPT Doogie leads yet — this widget lights up the moment the first buyer submits" copy shows).
+- Verified via Playwright: widget renders, all 6 counters show 0, empty-state copy is friendly.
+
+### 3. Whistler Sizzle Reel — 15-second Doogie voice-over
+- New `WhistlerSizzleReel` component (App.js above CommunityPage, ~L6178) — mounts ONLY when `slug === "whistler"`.
+- Auto-fetches TTS blob from existing `/api/doogie/tts` (voice = `ash`, script = a curated 45-word Whistler pitch) on mount.
+- Browser autoplay-with-sound policies block instant playback, so we render a **pulsing gold "▶ Play" button** that gets the user's attention — session-scoped: after one play, we suppress the pill for the rest of the session (sessionStorage `ez_whistler_sizzle_played`).
+- Includes progress bar, Pause toggle, dismiss ×, and silent-hide fallback if TTS fails (e.g. Universal Key balance low).
+- Added `@keyframes eztofind-pulse-gold` to `/app/frontend/src/index.css` for the polite gold-ring pulse effect.
+- Verified via Playwright on `/community/whistler`: sizzle-reel card renders, Play button clickable, Play → Pause state swap confirmed.

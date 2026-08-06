@@ -2154,6 +2154,49 @@ async def list_seller_leads(_=Depends(verify_admin)):
     return await db.seller_leads.find({}, {"_id":0}).sort("created_at", -1).to_list(1000)
 
 
+@api.get("/admin/attribution/chatgpt-doogie")
+async def chatgpt_doogie_attribution(_=Depends(verify_admin)):
+    """Return leads that came in through the ChatGPT Doogie GPT Store tile.
+    Any lead whose `source` starts with `chatgpt-doogie` counts — includes
+    buyer, seller, and referral requests. Sorted newest first. Used by the
+    admin dashboard widget so Doug can measure the store's conversion rate
+    from day 1 of publication.
+    """
+    q = {"source": {"$regex": r"^chatgpt-doogie", "$options": "i"}}
+    proj = {"_id": 0, "id": 1, "full_name": 1, "email": 1, "phone": 1, "created_at": 1, "source": 1, "notes": 1, "reason": 1, "city": 1, "areas": 1, "property_address": 1, "target_area": 1}
+    buyers  = await db.buyer_leads.find(q, proj).sort("created_at", -1).to_list(500)
+    sellers = await db.seller_leads.find(q, proj).sort("created_at", -1).to_list(500)
+    referrals = await db.referral_requests.find(q, proj).sort("created_at", -1).to_list(500) if "referral_requests" in await db.list_collection_names() else []
+    def _norm(rows, kind):
+        for r in rows:
+            r["kind"] = kind
+            r["headline"] = r.get("city") or (r.get("areas") or [None])[0] or r.get("target_area") or r.get("property_address") or "—"
+        return rows
+    combined = _norm(buyers, "buyer") + _norm(sellers, "seller") + _norm(referrals, "referral")
+    combined.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    total = len(combined)
+    # Aggregate stats — last 7 days, last 30 days, all-time.
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    def _iso(days):
+        return (now - timedelta(days=days)).isoformat()
+    cutoff_7  = _iso(7)
+    cutoff_30 = _iso(30)
+    last_7  = sum(1 for r in combined if (r.get("created_at") or "") >= cutoff_7)
+    last_30 = sum(1 for r in combined if (r.get("created_at") or "") >= cutoff_30)
+    return {
+        "total_all_time": total,
+        "last_7_days":  last_7,
+        "last_30_days": last_30,
+        "by_kind": {
+            "buyer":    sum(1 for r in combined if r["kind"] == "buyer"),
+            "seller":   sum(1 for r in combined if r["kind"] == "seller"),
+            "referral": sum(1 for r in combined if r["kind"] == "referral"),
+        },
+        "leads": combined[:50],  # cap the payload; admin can drill via CRM tabs
+    }
+
+
 # --- Lead Triage Dashboard — combined buyer + seller leads with triage scores
 # and follow-up checklists. Used by /admin/lead-triage to give Doug a single
 # priority-sorted view of every open lead across the platform.
