@@ -25,6 +25,7 @@ import DashboardMockup from "./pages/DashboardMockup";
 // as the user scrolls / navigates. DashboardMockup stays eager because
 // it drives the homepage itself, so lazy-loading it would delay LCP.
 const VisualAgentDemo = lazy(() => import("./pages/VisualAgentDemo"));
+const DoogieGPTPreview = lazy(() => import("./pages/DoogieGPTPreview"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -9826,6 +9827,7 @@ function App() {
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/my-journey/:token" element={<MyJourney/>}/>
       <Route path="/visual-agent-demo" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemo/></Suspense>}/>
+      <Route path="/doogie-gpt-preview" element={<Suspense fallback={<RouteFallback/>}><DoogieGPTPreview/></Suspense>}/>
       <Route path="/dashboard-mockup" element={<DashboardMockup/>}/>
       <Route path="/preview/coming-soon" element={<AppLayout><section className="section" style={{padding:0}}><ComingSoonHero mode="preview"/></section></AppLayout>}/>
       <Route path="/privacy/data-request" element={<AppLayout><DataRequest/></AppLayout>}/>

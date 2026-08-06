@@ -2344,3 +2344,27 @@ Doug decided the BCFSA licence number (#167790) is not legally required by BCFSA
 **Also fixed**: cleaned up a corrupted 7-line tail on `/app/frontend/src/App.js` that had accumulated (`esist/>}/>` garbage after `export default App;`) — file now ends cleanly at line 9882.
 
 Verified via Playwright: `/about` renders 0 hits for `167790` and `BCFSA License/Licence #`, and 6 hits for the brokerage name across the page (footer, byline, trust badge, meta description, etc.).
+
+---
+
+## Feb 06, 2026 — Doogie GPT Assets + Store Preview + Restore-Last-Search Pill
+
+### 1. Doogie GPT — ChatGPT Store submission assets (ready to publish)
+Three public files, one preview page. Zero backend changes needed (all actions reuse existing `/api/*` endpoints).
+
+- **`/app/frontend/public/doogie-gpt-openapi.json`** — OpenAPI 3.1 spec with 7 actions: `search_listings`, `get_listing`, `market_insights`, `glossary_lookup`, `create_buyer_lead`, `create_seller_lead`, `create_referral_request`. All source-tagged with `chatgpt-doogie-store` for attribution.
+- **`/app/frontend/public/doogie-gpt-persona.txt`** — Full system prompt: BCFSA-safe identity (Doogie = *Doug's assistant*, never claims to be a REALTOR®), REALTOR® Code of Ethics Art. 16 gate, CASL + PIPA consent walkthrough, in-service-area vs. referral-network routing, tone + formatting rules, canned responses.
+- **`/app/frontend/public/doogie-gpt-store-copy.txt`** — Every GPT-Builder field prewritten: tile name, publisher, description, keywords, conversation starter chips, capability toggles.
+- **`/app/frontend/src/pages/DoogieGPTPreview.jsx`** + route `/doogie-gpt-preview` — internal review page (noindex) with a live tile mockup using Doug's headshot + a dark chat-bubble mockup showing Doogie's greeting with Doug's reply-header identity. One-click download links for the three raw asset files. Publish checklist walks Doug through GPT Builder step-by-step.
+
+### 2. Restore-Last-Search Pill
+- New `restoreNudge` state in `DashboardMockup.jsx` (~L162) computes a friendly, human-readable label from the visitor's last saved filters (e.g. *"Kelowna · detached · 3bd · under $900k"*) and only surfaces if:
+  - a meaningful filter set was saved,
+  - the user hasn't already started a new search this session,
+  - the pill hasn't been dismissed in the last 7 days (`ez_dashboard_restore_dismissed_at` localStorage).
+- Renders as a soft blue-to-gold gradient pill above the sidebar layout with 🐾 emoji, **Restore →** button, and dismiss ×. Verified via Playwright: label renders correctly + Restore accepts and hides pill on click.
+
+**No auto-load** — the visitor still starts with an empty filter panel; the pill is purely opt-in.
+
+### Follow-up when Doug is ready
+Doug just needs to (1) paste `https://eztofind.ca/doogie-gpt-openapi.json` into GPT Builder → Actions, (2) paste `doogie-gpt-persona.txt` into Instructions, (3) upload his professional headshot as the icon, and (4) hit Publish. OpenAI review takes 1-3 business days.

@@ -157,9 +157,57 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // localStorage key is kept for potential future "Restore last search"
   // opt-in prompt, but it is no longer read on mount.
   const DASH_FILTERS_LS_KEY = "ez_dashboard_filters";
+  const DASH_FILTERS_DISMISS_KEY = "ez_dashboard_restore_dismissed_at";
   const DEFAULT_DASH_FILTERS = { q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" };
   const wasRestoredRef = useRef(false);
   const [filters, setFilters] = useState(() => ({ ...DEFAULT_DASH_FILTERS }));
+  // "Pick up where you left off" restore-nudge pill. We compute this ONCE
+  // on mount and only surface if:
+  //   (a) the visitor has a meaningful saved filter set in localStorage,
+  //   (b) they haven't dismissed the pill in the last 7 days,
+  //   (c) the current filter state is still the default (i.e. they haven't
+  //       already started a new search this session).
+  // Clicking Restore fills the filters + kicks runSearch; clicking × sets a
+  // 7-day dismissal so it doesn't nag on every visit.
+  const [restoreNudge, setRestoreNudge] = useState(null);
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(DASH_FILTERS_LS_KEY) : null;
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
+      const merged = { ...DEFAULT_DASH_FILTERS, ...saved };
+      const parts = [];
+      if (merged.city) parts.push(merged.city);
+      if (merged.propertyType) parts.push(merged.propertyType.toLowerCase().replace(/single family/i, "detached"));
+      if (merged.beds) parts.push(`${merged.beds}bd`);
+      if (merged.priceMax) {
+        const n = parseInt(merged.priceMax, 10);
+        if (!isNaN(n)) parts.push(n >= 1_000_000 ? `under $${(n/1_000_000).toFixed(1).replace(/\.0$/, "")}M` : `under $${Math.round(n/1000)}k`);
+      } else if (merged.priceMin) {
+        const n = parseInt(merged.priceMin, 10);
+        if (!isNaN(n)) parts.push(n >= 1_000_000 ? `from $${(n/1_000_000).toFixed(1).replace(/\.0$/, "")}M` : `from $${Math.round(n/1000)}k`);
+      }
+      if (merged.keyword) parts.push(`"${merged.keyword}"`);
+      if (parts.length === 0) return;
+      // 7-day dismissal
+      const dismissedAt = parseInt(localStorage.getItem(DASH_FILTERS_DISMISS_KEY) || "0", 10);
+      if (dismissedAt && (Date.now() - dismissedAt) < 7 * 24 * 60 * 60 * 1000) return;
+      setRestoreNudge({ filters: merged, label: parts.join(" · ") });
+    } catch { /* localStorage may be disabled */ }
+  }, []);
+  const acceptRestore = () => {
+    if (!restoreNudge) return;
+    setFilters(restoreNudge.filters);
+    try { runSearch(restoreNudge.filters); } catch {}
+    setRestoreNudge(null);
+    wasRestoredRef.current = true;
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+  };
+  const dismissRestore = () => {
+    try { localStorage.setItem(DASH_FILTERS_DISMISS_KEY, String(Date.now())); } catch {}
+    setRestoreNudge(null);
+  };
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sync, setSync] = useState(null);         // Content Sync Engine payload
@@ -292,6 +340,45 @@ export default function DashboardMockup({ homeVariant = "search" }) {
           try { runSearch({ ...DEFAULT_DASH_FILTERS }); } catch {}
           try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
         }}/>
+        {restoreNudge && (
+          <div
+            data-testid="dash-restore-nudge"
+            style={{
+              margin: "10px 24px 0", padding: "10px 14px",
+              background: "linear-gradient(90deg, rgba(30,79,207,0.10) 0%, rgba(245,166,35,0.10) 100%)",
+              border: "1px solid rgba(30,79,207,0.25)",
+              borderRadius: 999,
+              display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+              boxShadow: "0 4px 14px rgba(15,42,91,0.06)",
+              fontFamily: "'Inter', system-ui, sans-serif",
+            }}
+          >
+            <span style={{ fontSize: 18, lineHeight: 1 }} aria-hidden>🐾</span>
+            <div style={{ flex: "1 1 260px", fontSize: 13, color: C.navy, lineHeight: 1.4 }}>
+              <strong>Pick up where you left off</strong> — {restoreNudge.label}
+            </div>
+            <button
+              type="button"
+              onClick={acceptRestore}
+              data-testid="dash-restore-accept"
+              style={{
+                background: C.navy, color: "#fff", border: "none", cursor: "pointer",
+                padding: "7px 16px", borderRadius: 999, fontWeight: 700, fontSize: 12.5,
+                fontFamily: "inherit",
+              }}
+            >Restore →</button>
+            <button
+              type="button"
+              onClick={dismissRestore}
+              data-testid="dash-restore-dismiss"
+              aria-label="Dismiss restore prompt"
+              style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                color: "#6B7280", fontSize: 18, lineHeight: 1, padding: "4px 8px",
+              }}
+            >×</button>
+          </div>
+        )}
         {isMobile && (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",

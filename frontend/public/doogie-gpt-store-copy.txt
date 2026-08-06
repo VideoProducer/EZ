@@ -1,0 +1,117 @@
+EZtoFind.ca — Doogie GPT Store Copy
+Approved by Doug LeMaire · Feb 2026
+
+
+──────────────────────────────────────────────────────────
+TILE (visible in ChatGPT Store search results)
+──────────────────────────────────────────────────────────
+
+Icon        : Doug's headshot (professional dark-blazer photo)
+Name        : Doug LeMaire — REALTOR® · Fraser Property Management Realty Services Ltd.
+Publisher   : Doug LeMaire — REALTOR®
+Category    : Lifestyle (OpenAI's fixed taxonomy — no dedicated Real Estate bucket)
+
+
+──────────────────────────────────────────────────────────
+DESCRIPTION (first line — appears under the tile name)
+──────────────────────────────────────────────────────────
+
+Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.
+Live British Columbia MLS® listings, plain-English answers.
+
+
+──────────────────────────────────────────────────────────
+FULL DESCRIPTION (expandable)
+──────────────────────────────────────────────────────────
+
+Meet Doogie 🐾 — my golden-retriever assistant. I'm Doug LeMaire, a REALTOR®
+with Fraser Property Management Realty Services Ltd. in Maple Ridge, BC.
+
+Ask Doogie anything about British Columbia real estate:
+
+  • Find active MLS® listings — Vancouver, Fraser Valley, Sea-to-Sky,
+    Interior, Vancouver Island, or the whole province.
+  • Get plain-English explanations of BC terms — strata, PTT, RESA, HBRP,
+    subject-free offers, Form B, First-Time Buyers program, and 400+ more.
+  • See live market stats — inventory, median list price, days-on-market —
+    for any BC city or community.
+  • Browse Doug's specialties: detached homes, acreages & equestrian
+    properties, luxury real estate, residential strata, and probate/estate
+    sales.
+
+When you're ready to take the next step, Doogie will hand you off to Doug
+personally — no automated outreach, no pressure, no obligation.
+
+Doogie shares general information only. Advice-giving is handled by Doug
+directly, always. MLS® listings sourced from CREA DDF®; verify against
+realtor.ca before making decisions.
+
+
+──────────────────────────────────────────────────────────
+KEYWORDS / DISCOVERY TAGS (searchable inside ChatGPT)
+──────────────────────────────────────────────────────────
+
+british columbia · bc real estate · vancouver · fraser valley · sea-to-sky
+whistler · maple ridge · burnaby · surrey · richmond · langley · coquitlam
+port coquitlam · abbotsford · new westminster · north vancouver
+west vancouver · pitt meadows · squamish · mls · realtor · realtor bc
+mls listings · bc mls · crea · homes for sale · house for sale · condo
+detached · townhouse · acreage · equestrian · luxury real estate
+first time home buyer · property transfer tax · strata · form b
+market estimate · home valuation · new listings · virtual tour
+metro vancouver · lower mainland
+
+
+──────────────────────────────────────────────────────────
+CONVERSATION STARTER CHIPS (shown when the tile opens)
+──────────────────────────────────────────────────────────
+
+1. Show me 2-bed condos in Kitsilano under $1.5M
+2. What's a strata Form B and why should I care?
+3. Homes for sale in Maple Ridge under $900K
+4. What's the property transfer tax on a $1.2M home?
+
+
+──────────────────────────────────────────────────────────
+FIRST-MESSAGE (Doogie's greeting)
+──────────────────────────────────────────────────────────
+
+Woof! 🐾 I'm Doogie, Doug LeMaire's BC real-estate helper. Doug is a
+REALTOR® with Fraser Property Management Realty Services Ltd. — I look
+things up, he handles the transactions.
+
+Where in British Columbia are you looking, or is there a term you'd
+like me to explain?
+
+
+──────────────────────────────────────────────────────────
+CAPABILITIES ENABLED
+──────────────────────────────────────────────────────────
+
+✓ Web Browsing        — OFF (all data comes from Doug's OpenAPI actions)
+✓ DALL·E              — OFF (no image generation)
+✓ Code Interpreter    — OFF
+✓ Actions             — 7 endpoints (see doogie-gpt-openapi.json)
+
+
+──────────────────────────────────────────────────────────
+ACTIONS SPEC URL (paste into GPT Builder)
+──────────────────────────────────────────────────────────
+
+https://eztofind.ca/doogie-gpt-openapi.json
+
+
+──────────────────────────────────────────────────────────
+PRIVACY POLICY URL (required by OpenAI)
+──────────────────────────────────────────────────────────
+
+https://eztofind.ca/privacy
+
+
+──────────────────────────────────────────────────────────
+AUTHENTICATION
+──────────────────────────────────────────────────────────
+
+None (all endpoints are read-only or consent-gated writes; anti-abuse is
+handled server-side via rate-limits and Cloudflare Turnstile on the
+lead-creation actions).

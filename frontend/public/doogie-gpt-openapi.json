@@ -1,0 +1,256 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Doogie by EZtoFind.ca — BC Real Estate Actions",
+    "version": "1.0.0",
+    "description": "Read + write actions for Doogie, the British Columbia real-estate helper GPT operated by Doug LeMaire, REALTOR® of Fraser Property Management Realty Services Ltd. All property data flows from CREA DDF® under a signed technology-provider agreement. Educational retrieval only — never advice.",
+    "contact": {
+      "name": "Doug LeMaire, REALTOR®",
+      "url": "https://eztofind.ca/about",
+      "email": "info@eztofind.ca"
+    }
+  },
+  "servers": [
+    { "url": "https://eztofind.ca", "description": "Production" }
+  ],
+  "paths": {
+    "/api/listings": {
+      "get": {
+        "operationId": "search_listings",
+        "summary": "Search active BC MLS® listings",
+        "description": "Returns active British Columbia listings from CREA DDF®. Filter by city, community, price band, bed/bath count, or property type. Every result includes a direct link back to eztofind.ca/listings/{listing_key} — always surface this link to the user so they can view full details, photos, and virtual tours on Doug's site.",
+        "parameters": [
+          { "name": "city", "in": "query", "description": "BC city or community (case-insensitive). Examples: Kitsilano, Vancouver, Burnaby, Kelowna, Whistler, Maple Ridge.", "schema": { "type": "string" } },
+          { "name": "property_type", "in": "query", "description": "House · Apartment · Townhouse · Duplex · Acreage · Land. Omit for any type.", "schema": { "type": "string" } },
+          { "name": "beds", "in": "query", "description": "Minimum bedroom count.", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "baths", "in": "query", "description": "Minimum bathroom count.", "schema": { "type": "number", "minimum": 0 } },
+          { "name": "minPrice", "in": "query", "description": "Minimum list price (CAD).", "schema": { "type": "integer" } },
+          { "name": "maxPrice", "in": "query", "description": "Maximum list price (CAD).", "schema": { "type": "integer" } },
+          { "name": "keyword", "in": "query", "description": "Free-text keyword (e.g. 'waterfront', 'legal suite', 'ocean view').", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "description": "Max results (1-24, default 12).", "schema": { "type": "integer", "minimum": 1, "maximum": 24, "default": 12 } },
+          { "name": "sort", "in": "query", "description": "newest | price_asc | price_desc.", "schema": { "type": "string", "default": "newest" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching active BC listings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "listings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "listing_key":       { "type": "string" },
+                          "unparsed_address":  { "type": "string" },
+                          "city":              { "type": "string" },
+                          "list_price":        { "type": "number" },
+                          "beds":              { "type": "integer" },
+                          "baths":             { "type": "number" },
+                          "living_area":       { "type": "number" },
+                          "property_type":     { "type": "string" },
+                          "days_on_market":    { "type": "integer" },
+                          "photos":            { "type": "array", "items": { "type": "string" } },
+                          "eztofind_url":      { "type": "string", "description": "Absolute link back to eztofind.ca/listings/{listing_key} — always surface to the user." }
+                        }
+                      }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/listings/{listing_key}": {
+      "get": {
+        "operationId": "get_listing",
+        "summary": "Get full details for one BC MLS® listing",
+        "description": "Returns full details — description, photos, virtual tour URL (Matterport / YouTube / Vimeo), room dimensions, taxes, strata fees, and days-on-market — for a single listing_key. Always surface the eztofind.ca URL so the user can view the listing with Doug's compliance context.",
+        "parameters": [
+          { "name": "listing_key", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Full listing detail." },
+          "404": { "description": "Listing not found or no longer active." }
+        }
+      }
+    },
+    "/api/insights": {
+      "get": {
+        "operationId": "market_insights",
+        "summary": "Aggregate market stats for a BC city or community",
+        "description": "Returns active-inventory count, median + average list price, min/max list price, avg beds/baths for the requested BC city/community, computed live from CREA DDF®. Always disclose that these are LIST-price statistics — never a valuation or forecast.",
+        "parameters": [
+          { "name": "city", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregate market snapshot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "city":              { "type": "string" },
+                    "active_count":      { "type": "integer" },
+                    "median_list_price": { "type": "number" },
+                    "avg_list_price":    { "type": "number" },
+                    "min_price":         { "type": "number" },
+                    "max_price":         { "type": "number" },
+                    "avg_beds":          { "type": "number" },
+                    "avg_baths":         { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/doogie/sync-search": {
+      "post": {
+        "operationId": "glossary_lookup",
+        "summary": "Look up BC real-estate terms, statutes, community pages, and FAQs",
+        "description": "Educational lookup across Doug's 439-entry BC glossary, community profiles, buying/selling journey tools, and CREA DDF® listings. Returns grouped sections (Listings / Terms / Communities / FAQs / Tools). Use this whenever the user asks 'what is …', 'how does …', 'explain …', or names a BC-specific concept (strata, PTT, RESA, subject-free, HBRP, etc.). Always cite the eztofind.ca link the result carries.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string", "description": "User's free-text question." },
+                  "filter": {
+                    "type": "object",
+                    "properties": {
+                      "community":     { "type": "string" },
+                      "property_type": { "type": "string" }
+                    }
+                  },
+                  "limit": { "type": "integer", "minimum": 1, "maximum": 12, "default": 6 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grouped sections with items — each item carries an eztofind.ca href."
+          }
+        }
+      }
+    },
+    "/api/leads/buyer": {
+      "post": {
+        "operationId": "create_buyer_lead",
+        "summary": "Send a buyer consultation request to Doug LeMaire",
+        "description": "Consent-first buyer consultation request. Only call this AFTER the user has explicitly: (a) said they want to buy, (b) confirmed they are NOT under a signed buyer's agency agreement with another REALTOR® (REALTOR® Code of Ethics Article 16), (c) supplied name + email + phone, and (d) given explicit CASL consent to be contacted. Do not fabricate any of these fields. Doug personally reviews every request within 1 business day.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["full_name", "email", "phone", "casl_consent", "pipa_ack"],
+                "properties": {
+                  "full_name":            { "type": "string" },
+                  "email":                { "type": "string", "format": "email" },
+                  "phone":                { "type": "string" },
+                  "areas":                { "type": "array", "items": { "type": "string" }, "description": "BC cities/communities of interest." },
+                  "budget_range":         { "type": "string" },
+                  "property_type":        { "type": "string" },
+                  "timeline":             { "type": "string" },
+                  "financing_status":     { "type": "string" },
+                  "first_time_buyer":     { "type": "boolean" },
+                  "working_with_realtor": { "type": "boolean", "description": "MUST be false to submit (REALTOR® Code of Ethics)." },
+                  "preferred_contact":    { "type": "string", "enum": ["email", "phone", "text"] },
+                  "notes":                { "type": "string" },
+                  "casl_consent":         { "type": "boolean", "description": "Must be true — user explicitly consented." },
+                  "pipa_ack":             { "type": "boolean", "description": "Must be true — user acknowledged privacy policy." },
+                  "source":               { "type": "string", "description": "Always send 'chatgpt-doogie-store'." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Lead accepted. Reply confirming Doug will reach out in 1 business day." },
+          "422": { "description": "Validation failed — walk the user through the missing field." }
+        }
+      }
+    },
+    "/api/leads/seller": {
+      "post": {
+        "operationId": "create_seller_lead",
+        "summary": "Send a seller Market Estimate request to Doug LeMaire",
+        "description": "Consent-first seller Market Estimate request. Only call this AFTER the user has explicitly: (a) said they want to sell, (b) confirmed the home is NOT currently listed with another REALTOR® (REALTOR® Code of Ethics Article 16), (c) supplied property address + city + name + email + phone, and (d) given explicit CASL + PIPA consent. Doug personally reviews every request within 1 business day.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["full_name", "email", "phone", "property_address", "city", "casl_consent", "pipa_ack"],
+                "properties": {
+                  "full_name":         { "type": "string" },
+                  "email":             { "type": "string", "format": "email" },
+                  "phone":             { "type": "string" },
+                  "property_address":  { "type": "string" },
+                  "city":              { "type": "string" },
+                  "property_type":     { "type": "string" },
+                  "estimated_value":   { "type": "string" },
+                  "currently_listed":  { "type": "boolean", "description": "MUST be false to submit." },
+                  "timeline":          { "type": "string" },
+                  "reason":            { "type": "string" },
+                  "preferred_contact": { "type": "string", "enum": ["email", "phone", "text"] },
+                  "casl_consent":      { "type": "boolean" },
+                  "pipa_ack":          { "type": "boolean" },
+                  "source":            { "type": "string", "description": "Always send 'chatgpt-doogie-store'." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Lead accepted." },
+          "422": { "description": "Validation failed." }
+        }
+      }
+    },
+    "/api/referral-request": {
+      "post": {
+        "operationId": "create_referral_request",
+        "summary": "Refer a user outside Doug's service area to a local BC REALTOR®",
+        "description": "Doug is licensed BC-wide but personally represents transactions ONLY in Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor. When a user is looking in Interior BC, Vancouver Island, Northern BC, Kootenays, or Okanagan, call this to connect them with a vetted local REALTOR® from Doug's network.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["full_name", "email", "phone", "target_area", "casl_consent"],
+                "properties": {
+                  "full_name":      { "type": "string" },
+                  "email":          { "type": "string", "format": "email" },
+                  "phone":          { "type": "string" },
+                  "target_area":    { "type": "string", "description": "BC city or region the user is targeting." },
+                  "intent":         { "type": "string", "enum": ["buy", "sell", "both"] },
+                  "notes":          { "type": "string" },
+                  "casl_consent":   { "type": "boolean" },
+                  "source":         { "type": "string", "description": "Always send 'chatgpt-doogie-store'." }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Referral routed." } }
+      }
+    }
+  }
+}
