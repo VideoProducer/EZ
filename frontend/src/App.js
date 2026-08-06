@@ -2371,6 +2371,25 @@ const Home = () => {
         ],
         "knowsAbout":["Detached homes","Luxury real estate","Equestrian and acreage properties","Residential strata's","Probate and estate sales"],
         "inLanguage":"en-CA",
+        // hasCredential — machine-readable professional licensing signal.
+        // Points AI answer engines (Google AI Overviews, Perplexity,
+        // ChatGPT, Claude) at the authoritative BCFSA public registry so
+        // they can independently verify Doug's REALTOR® credential when
+        // deciding whether to cite EZtoFind.ca as an authoritative BC real
+        // estate source. Added Feb 2026 for FIX-03 (Entity Trust).
+        "hasCredential":[
+          {
+            "@type":"EducationalOccupationalCredential",
+            "name":"BCFSA Real Estate Trading Services Licence",
+            "credentialCategory":"license",
+            "recognizedBy":{
+              "@type":"Organization",
+              "name":"BC Financial Services Authority",
+              "url":"https://www.bcfsa.ca"
+            },
+            "url":"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search"
+          }
+        ],
         // sameAs — canonical cross-platform identity graph. Tells Google,
         // Bing, Perplexity, ChatGPT, and Claude that all of these profiles
         // point to the same real-world entity (Doug LeMaire / EZtoFind).
@@ -4388,10 +4407,47 @@ const GlossaryTerm = () => {
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
     "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
-    "mainEntity":{"@type":"DefinedTerm","name":t.term,"description":t.definition,"inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":"https://eztofind.ca/glossary"}},
+    "mainEntity":{
+      "@type":"DefinedTerm",
+      "name":t.term,
+      "description":t.definition,
+      "inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":"https://eztofind.ca/glossary"},
+      // FIX-05 (Semantic Links, Feb 2026): every DefinedTerm gets a sameAs
+      // pointing at the governing BC statute on bclaws.gov.bc.ca (or the
+      // relevant BC government authority) when one is present in this
+      // term's `sources` list. Machine-readable link between the term and
+      // the primary law source — huge for AI citation grading and lets
+      // Perplexity/Claude jump straight to the statute.
+      "sameAs":(t.sources || [])
+        .map(s => s?.url)
+        .filter(u => u && (
+          u.includes("bclaws.gov.bc.ca") ||
+          u.includes("gov.bc.ca") ||
+          u.includes("bcfsa.ca") ||
+          u.includes("cra-arc.gc.ca") ||
+          u.includes("canada.ca")
+        ))
+        .slice(0, 5),
+    },
     "url":`https://eztofind.ca/glossary/${t.slug}`,
     "inLanguage":"en-CA",
-    "about":{"@type":"Place","name":"British Columbia, Canada"}
+    "about":{"@type":"Place","name":"British Columbia, Canada"},
+    // FIX-01 (Voice AI, Feb 2026): SpeakableSpecification tells Google
+    // Assistant / Alexa / Siri exactly which chunks of the page to read
+    // aloud when a user asks a voice query. We include the AEO answer
+    // heading + the definition body — but INTENTIONALLY exclude the
+    // scope-of-licence disclaimer boxes so voice assistants don't
+    // accidentally read out "Not legal advice" as if it's the answer.
+    // The site-level "general information only" disclaimer is added at
+    // the bottom of the speakable range so it always follows the answer.
+    "speakable":{
+      "@type":"SpeakableSpecification",
+      "cssSelector":[
+        "[data-testid='glossary-answer-question']",
+        "[itemprop='articleBody']",
+        "[data-testid='glossary-speakable-disclaimer']"
+      ]
+    }
   };
   const breadcrumbSchema = {
     "@context":"https://schema.org",
@@ -4464,6 +4520,14 @@ const GlossaryTerm = () => {
     </h2>
 
     <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",lineHeight:1.75,color:"var(--ink)"}} itemProp="articleBody">{t.definition}</p>
+
+    {/* FIX-01 speakable disclaimer — bundled into the SpeakableSpecification
+        cssSelector so voice assistants ALWAYS append the compliance
+        disclaimer when reading the definition aloud. Visually rendered as
+        a small subtle line so the page still looks clean. */}
+    <p data-testid="glossary-speakable-disclaimer" style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",fontStyle:"italic",marginTop:"0.75rem",lineHeight:1.55}}>
+      General information only — not legal, financial, tax, or real-estate advice. For your situation consult a licensed BC REALTOR®, lawyer, notary, or accountant.
+    </p>
 
     <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>Frequently Asked Questions</h2>
     {(t.faqs && t.faqs.length>0) ? <div className="faq">{t.faqs.map((f,i)=><details key={i}>
@@ -6635,7 +6699,17 @@ const CommunityPage = () => {
     "dateModified": syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || new Date().toISOString().slice(0,10),
     "about":{"@type":"Place","name":`${found}, British Columbia`},
     "inLanguage":"en-CA",
-    "articleBody":syn.synopsis
+    "articleBody":syn.synopsis,
+    // FIX-01 Speakable (Feb 2026): voice assistants read the synopsis body
+    // + the community-level disclaimer. Weather/climate blocks and lead
+    // CTAs are intentionally excluded so a voice answer stays concise.
+    "speakable":{
+      "@type":"SpeakableSpecification",
+      "cssSelector":[
+        "[data-testid='community-synopsis']",
+        "[data-testid='community-speakable-disclaimer']"
+      ]
+    }
   } : null;
 
   // FAQPage schema — auto-generated common Q&A patterns that mirror the
@@ -6673,6 +6747,29 @@ const CommunityPage = () => {
     "spatialCoverage":{"@type":"Place","name":`${found}, British Columbia, Canada`},
     "temporalCoverage":`2026/..`,
     "citation":`Doug LeMaire, REALTOR®. "${found}, BC — Community Profile." EZtoFind.ca. https://eztofind.ca/community/${slug}`,
+    // FIX-02 attribution (Feb 2026): explicitly cite Environment Canada
+    // (climate normals) and Statistics Canada (demographic aggregates) as
+    // the primary sources per CREA / Environment Canada licensing.
+    "isBasedOn":[
+      {
+        "@type":"Dataset",
+        "name":"Canadian Climate Normals 1991–2020",
+        "creator":{"@type":"Organization","name":"Environment and Climate Change Canada"},
+        "url":"https://climate.weather.gc.ca/climate_normals/"
+      },
+      {
+        "@type":"Dataset",
+        "name":"Statistics Canada Census Profile",
+        "creator":{"@type":"Organization","name":"Statistics Canada"},
+        "url":"https://www12.statcan.gc.ca/census-recensement/"
+      },
+      {
+        "@type":"Dataset",
+        "name":"CREA Data Distribution Facility (DDF®)",
+        "creator":{"@type":"Organization","name":"Canadian Real Estate Association"},
+        "url":"https://www.crea.ca/"
+      }
+    ],
     "distribution":[
       {"@type":"DataDownload","encodingFormat":"application/json","contentUrl":`https://eztofind.ca/api/community/${slug}/stats`,"name":"Live listing statistics"},
       {"@type":"DataDownload","encodingFormat":"application/json","contentUrl":`https://eztofind.ca/api/community/${slug}/climate-normals`,"name":"Environment Canada climate normals"},
@@ -6735,6 +6832,9 @@ const CommunityPage = () => {
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
       {!loading && syn?.synopsis && <>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: safeHtml(syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>'))}}></div>
+        <p data-testid="community-speakable-disclaimer" style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",fontStyle:"italic",marginTop:"0.5rem",lineHeight:1.55}}>
+          General information only — not legal, tax, financial, or real-estate advice. For your specific situation consult a licensed BC professional.
+        </p>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
         {syn.sources && syn.sources.length>0 && <SourcesBlock title="Authoritative Sources — Community Data" intro={`Verify official demographic, economic, and municipal information for ${found} directly with the governing authority:`} sources={syn.sources} testid="community-sources"/>}
         <PublishedByDoug compact/>
