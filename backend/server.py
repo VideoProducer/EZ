@@ -1995,15 +1995,23 @@ async def verify_favorites(token: str, request: Request):
 
 
 @api.get("/favorites/list")
-async def list_favorites(email: str):
+async def list_favorites(email: str, token: str):
     """Fetch the current server-saved favorites for an email address (used to
-    restore on a new device after they've already verified their email)."""
+    restore on a new device after they've already verified their email).
+
+    PIPA / BOLA fix: caller MUST present the verification_token issued in the
+    confirmation email — knowing the email alone is not enough to read another
+    user's saved favourites (SEC-001, fixed 2026-02).
+    """
     email = (email or "").lower().strip()
     if not email or "@" not in email:
         raise HTTPException(400, "Valid email required.")
-    rec = await db.user_favorites.find_one({"email": email, "status": "verified"})
+    if not token or len(token) < 8:
+        raise HTTPException(401, "Verification token required.")
+    rec = await db.user_favorites.find_one({"email": email, "verification_token": token, "status": "verified"})
     if not rec:
-        return {"listing_keys": [], "found": False}
+        # Same response for wrong-token and no-record to avoid email enumeration.
+        raise HTTPException(401, "Invalid email or verification token.")
     return {"listing_keys": rec.get("listing_keys", []), "found": True, "updated_at": rec.get("updated_at") or rec.get("verified_at")}
 
 
@@ -11563,11 +11571,14 @@ async def admin_delete_asset(path: str, _=Depends(verify_admin)):
 app.include_router(api)
 
 @app.post("/api/doogie/transcribe")
-async def transcribe_voice(audio: UploadFile = File(...), language: str = Form("en")):
+@_limiter.limit("15/minute")
+async def transcribe_voice(request: Request, audio: UploadFile = File(...), language: str = Form("en")):
     """Transcribe voice input via OpenAI Whisper — powered by the Emergent
     Universal LLM Key so Doug doesn't need to plug in a separate OpenAI key.
     Frontend sends a webm/opus blob (browser MediaRecorder default).
     Language hint maps our chat codes → Whisper's ISO-639-1 codes.
+    Rate-limited 15/min per IP (SEC-003, fixed 2026-02) so a single visitor
+    can't drain Doug's Universal Key balance.
     """
     lang_map = {"en": "en", "zh-Hant": "zh", "zh-Hans": "zh", "pa": "pa", "fa": "fa", "pt-PT": "pt"}
     try:
@@ -12645,6 +12656,18 @@ async def admin_export_consultations_csv(
     if role in ("buyer", "seller"):
         q["role"] = role
     docs = await db.consultation_requests.find(q, {"_id": 0}).sort("created_at", -1).limit(5000).to_list(5000)
+
+    def _csv_safe(v):
+        """Prevent CSV formula injection (SEC-002): prefix a leading formula
+        trigger with a single quote so spreadsheet apps treat it as text.
+        See OWASP CSV Injection guidance / CWE-1236."""
+        if v is None:
+            return ""
+        s = str(v)
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow([
@@ -12658,14 +12681,14 @@ async def admin_export_consultations_csv(
         ca = d.get("created_at")
         ca_str = ca.isoformat() if hasattr(ca, "isoformat") else (ca or "")
         writer.writerow([
-            ca_str, d.get("id", ""), d.get("role", ""),
+            _csv_safe(ca_str), _csv_safe(d.get("id", "")), _csv_safe(d.get("role", "")),
             "yes" if d.get("is_referral") else "no",
-            d.get("status", ""),
-            d.get("name", ""), d.get("email", ""), d.get("phone", ""),
-            d.get("preferred_contact", ""), d.get("preferred_time", ""), d.get("city", ""),
+            _csv_safe(d.get("status", "")),
+            _csv_safe(d.get("name", "")), _csv_safe(d.get("email", "")), _csv_safe(d.get("phone", "")),
+            _csv_safe(d.get("preferred_contact", "")), _csv_safe(d.get("preferred_time", "")), _csv_safe(d.get("city", "")),
             "yes" if d.get("working_with_realtor") else "no",
-            d.get("casl_consent_at", ""), d.get("pipa_ack_at", ""),
-            d.get("ip", "") or "", d.get("user_agent", "") or "",
+            _csv_safe(d.get("casl_consent_at", "")), _csv_safe(d.get("pipa_ack_at", "")),
+            _csv_safe(d.get("ip", "")), _csv_safe(d.get("user_agent", "")),
         ])
     csv_bytes = buf.getvalue().encode("utf-8")
     filename = f"eztofind-consultations-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}.csv"
