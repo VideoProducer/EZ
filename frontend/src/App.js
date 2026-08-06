@@ -4299,9 +4299,6 @@ const RealtorNetwork = () => (
       <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
         <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
         <h1 className="section-title" style={{marginBottom:"0.5rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
-        <p style={{maxWidth:"46rem",margin:"0 auto",color:"var(--muted)",fontFamily:"Inter,sans-serif",lineHeight:1.65}}>
-          Doug LeMaire, REALTOR® partners with licensed REALTORS® across British Columbia and every other Canadian province, plus international agents, under the standard CREA Inter-Board Referral Agreement. If a client of Doug's is buying or selling in your area, he'll refer directly to you. Standard 25% referral fee paid by the receiving REALTOR® at closing.
-        </p>
       </div>
     </div>
     {/* BC REALTORS® — top */}
