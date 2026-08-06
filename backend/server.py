@@ -6052,6 +6052,51 @@ async def startup():
                 await _a.sleep(3600)  # back off an hour on error, then retry
     asyncio.create_task(asyncio.sleep(120)).add_done_callback(lambda _: asyncio.create_task(_weekly_digest_loop()))
 
+    # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
+    # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community
+    # profiles, and MLS listings from the day's CREA DDF® sync show up in
+    # Bing / Yandex / Naver instantly and are queued for Google's next
+    # crawl. First run fires 15 min after boot so the sitemap is always
+    # fresh even after a redeploy.
+    async def _nightly_sitemap_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Target next 04:00 UTC — 8pm Pacific standard / 9pm Pacific daylight
+                target = now.replace(hour=4, minute=0, second=0, microsecond=0)
+                if target <= now:
+                    target = target + _td(days=1)
+                delay = max(60, int((target - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from sitemap_generator import generate_sitemap
+                    from indexnow import notify_indexnow, HOST
+                    result = await generate_sitemap(db)
+                    # Push the freshest URLs to IndexNow — top-level pages plus
+                    # the 200 most recently curated glossary terms and the 200
+                    # most recently reviewed community synopses.
+                    priority = [
+                        f"https://{HOST}/",
+                        f"https://{HOST}/communities",
+                        f"https://{HOST}/glossary",
+                        f"https://{HOST}/listings",
+                        f"https://{HOST}/sitemap.xml",
+                    ]
+                    recent_terms = await db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(200).to_list(200)
+                    priority += [f"https://{HOST}/glossary/{t['slug']}" for t in recent_terms if t.get("slug")]
+                    recent_syn = await db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(200).to_list(200)
+                    priority += [f"https://{HOST}/community/{s['slug']}" for s in recent_syn if s.get("slug")]
+                    idx = await notify_indexnow(priority)
+                    logger.info(f"nightly_sitemap: regen ok ({result.get('total')} urls) · indexnow: {idx.get('count')} pushed / status {idx.get('status_code')}")
+                except Exception as e:
+                    logger.error(f"nightly_sitemap: task failed: {e}")
+            except Exception as e:
+                logger.error(f"nightly_sitemap_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(15 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_sitemap_loop()))
+
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
     # /admin/listings/sync-log the manual sync uses. First run fires 10 min
