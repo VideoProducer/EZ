@@ -231,17 +231,46 @@ class PrerenderService:
             try:
                 from playwright.async_api import async_playwright
                 self._pw = await async_playwright().start()
-                self._browser = await self._pw.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--no-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-gpu",
-                        "--disable-background-networking",
-                        "--disable-features=TranslateUI",
-                        "--mute-audio",
-                    ],
-                )
+                try:
+                    self._browser = await self._pw.chromium.launch(
+                        headless=True,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-gpu",
+                            "--disable-background-networking",
+                            "--disable-features=TranslateUI",
+                            "--mute-audio",
+                        ],
+                    )
+                except Exception as launch_err:
+                    # First-run on a fresh pod (production deploy) — the browser
+                    # binary isn't downloaded yet. Auto-install once and retry.
+                    if "Executable doesn't exist" in str(launch_err) or "playwright install" in str(launch_err).lower():
+                        logger.info("prerender: chromium binary missing, running `playwright install chromium` (first-boot, ~100MB, ~90s)…")
+                        import subprocess
+                        proc = await asyncio.create_subprocess_exec(
+                            "playwright", "install", "chromium",
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        )
+                        stdout, stderr = await proc.communicate()
+                        if proc.returncode != 0:
+                            logger.error(f"prerender: playwright install failed rc={proc.returncode}: {stderr.decode()[:500]}")
+                            raise launch_err
+                        logger.info("prerender: chromium installed, retrying launch")
+                        self._browser = await self._pw.chromium.launch(
+                            headless=True,
+                            args=[
+                                "--no-sandbox",
+                                "--disable-dev-shm-usage",
+                                "--disable-gpu",
+                                "--disable-background-networking",
+                                "--disable-features=TranslateUI",
+                                "--mute-audio",
+                            ],
+                        )
+                    else:
+                        raise
                 self._ready = True
                 logger.info("prerender: chromium browser launched")
             except Exception as e:
@@ -324,7 +353,16 @@ class PrerenderService:
                 return cached
 
         if not self._ready:
-            await self.start()
+            try:
+                await asyncio.wait_for(self.start(), timeout=8.0)
+            except (asyncio.TimeoutError, Exception) as e:
+                # Still initialising (e.g. chromium being downloaded on
+                # production's first boot) — return a fast BYPASS so the
+                # ingress falls back to the SPA instead of hanging.
+                return RenderResult(
+                    path=path, html="", status=503, kind=_path_kind(path),
+                    cache="BYPASS", took_ms=0, reason=f"not_ready:{str(e)[:80]}",
+                )
 
         kind = _path_kind(path)
         target = urljoin(TARGET_BASE + "/", path.lstrip("/"))
