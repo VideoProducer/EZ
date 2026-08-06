@@ -3447,12 +3447,9 @@ const VirtualTourFrame = ({ listing }) => {
   const hoveredRef = React.useRef(false);
   const claimedRef = React.useRef(false);
 
-  // Detect provider and build an "enhanced" src that enables JS-API control.
-  // • YouTube supports the IFrame Player API when enablejsapi=1 is set —
-  //   then postMessage `{"event":"command","func":"pauseVideo"}` pauses.
-  // • Vimeo has always been postMessage-controllable (no query param needed).
-  // • Matterport / Kuula / iGuide etc. don't offer a public pause API, so we
-  //   simply skip the pause for them.
+  // Provider detection so we can pause the correct iframe via postMessage
+  // when Doogie takes the audio floor. Only YouTube + Vimeo expose a
+  // public pause API — Matterport / Kuula don't, so we skip for those.
   const provider = React.useMemo(() => {
     const u = (embed.url || "").toLowerCase();
     if (u.includes("youtube.com/embed") || u.includes("youtube-nocookie.com/embed")) return "youtube";
@@ -3460,12 +3457,12 @@ const VirtualTourFrame = ({ listing }) => {
     return "other";
   }, [embed.url]);
 
+  // Add enablejsapi=1 for YouTube so postMessage pause works. This does
+  // NOT affect playback for the visitor — it only unlocks the IFrame API.
   const enhancedSrc = React.useMemo(() => {
     if (!embed.url) return "";
     if (provider === "youtube") {
-      const hasQuery = embed.url.includes("?");
-      const sep = hasQuery ? "&" : "?";
-      // enablejsapi=1 unlocks postMessage control (safe to add per YouTube docs)
+      const sep = embed.url.includes("?") ? "&" : "?";
       return `${embed.url}${sep}enablejsapi=1`;
     }
     return embed.url;
@@ -3480,7 +3477,7 @@ const VirtualTourFrame = ({ listing }) => {
       } else if (provider === "vimeo") {
         win.postMessage(JSON.stringify({ method: "pause" }), "*");
       }
-    } catch { /* ignore cross-origin errors */ }
+    } catch { /* cross-origin blocked — ignore */ }
   }, [provider]);
 
   React.useEffect(() => {
@@ -3492,12 +3489,11 @@ const VirtualTourFrame = ({ listing }) => {
   }, []);
 
   // Cross-origin video-play detection (Doug reported overlapping voices,
-  // Feb 2026): YouTube / Vimeo / Matterport iframes are cross-origin, so we
-  // use the classic `window.blur` + "mouse over the iframe" heuristic to
-  // detect the user clicking Play. We then take the audio floor via
-  // mediaBus so Doogie's TTS narration auto-pauses. Reverse direction
-  // (Doogie plays → video pauses) uses postMessage — non-destructive so
-  // the YouTube pipeline never re-buffers.
+  // Feb 2026): iframes are cross-origin so we can't hook their play event.
+  // Instead we watch parent-window blur while the mouse is over the iframe
+  // wrapper — the classic browser tell that the user just clicked into the
+  // iframe. We take the audio floor via mediaBus so Doogie's TTS pauses.
+  // Reverse (Doogie plays → video pauses) uses non-destructive postMessage.
   React.useEffect(() => {
     let mediaBus;
     let unsub;
@@ -3511,15 +3507,12 @@ const VirtualTourFrame = ({ listing }) => {
       const onEnter = () => { hoveredRef.current = true; };
       const onLeave = () => { hoveredRef.current = false; };
       const onBlur = () => {
-        if (!hoveredRef.current) return;   // ignore alt-tab / dev-tools blurs
-        if (claimedRef.current) return;    // already claimed — don't re-fire
+        if (!hoveredRef.current) return;
+        if (claimedRef.current) return;
         claimedRef.current = true;
         mediaBus.claim("virtual-tour-video", { pause: () => { claimedRef.current = false; pauseIframe(); } });
       };
       const onFocus = () => {
-        // Visitor clicked outside the iframe. Release the claim so a later
-        // Doogie play doesn't try to postMessage-pause a video that's
-        // already stopped by the user.
         if (!claimedRef.current) return;
         claimedRef.current = false;
         try { mediaBus.release("virtual-tour-video"); } catch {}
