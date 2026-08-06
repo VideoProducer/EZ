@@ -4831,12 +4831,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/invermere/n/invermere</loc>
-    <lastmod>2026-08-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/keremeos/n/keremeos</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
@@ -4844,6 +4838,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/nelson/n/nelson-west-south-slocan</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/invermere/n/invermere</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5701,6 +5701,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/kelowna/n/kelowna-north</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/nelson/n/north-nelson-to-kokanee-creek</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
@@ -5708,12 +5714,6 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/lantzville/n/lower-lantzville</loc>
-    <lastmod>2026-08-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kelowna/n/kelowna-north</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
