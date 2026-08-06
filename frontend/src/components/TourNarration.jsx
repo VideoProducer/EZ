@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, StopCircle, VolumeX, Film } from "lucide-react";
 import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
+import mediaBus from "../lib/mediaBus";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -54,8 +55,12 @@ export default function TourNarration({ listing }) {
 
   const play = async () => {
     if (muted) return;
-    if (state === "playing") { audioRef.current?.pause(); setState("paused"); return; }
-    if (state === "paused")  { audioRef.current?.play();  setState("playing"); return; }
+    if (state === "playing") { audioRef.current?.pause(); setState("paused"); mediaBus.release("doogie-tour"); return; }
+    if (state === "paused")  {
+      audioRef.current?.play(); setState("playing");
+      mediaBus.claim("doogie-tour", { pause: () => { try { audioRef.current?.pause(); setState("paused"); } catch {} } });
+      return;
+    }
     setState("loading");
     try {
       const script = await _resolveScript();
@@ -74,6 +79,8 @@ export default function TourNarration({ listing }) {
         audioRef.current.playbackRate = speed;
         await audioRef.current.play();
         setState("playing");
+        // Take the audio floor so any playing video gets auto-stopped.
+        mediaBus.claim("doogie-tour", { pause: () => { try { audioRef.current?.pause(); setState("paused"); } catch {} } });
       }
     } catch {
       setState("idle");
@@ -85,6 +92,7 @@ export default function TourNarration({ listing }) {
       audioRef.current.currentTime = 0;
     }
     setState("idle");
+    mediaBus.release("doogie-tour");
   };
 
   const label = muted            ? "Voice muted — click the header speaker to unmute"
@@ -119,7 +127,7 @@ export default function TourNarration({ listing }) {
           <div style={{ fontSize: 12, marginTop: 2, opacity: 0.85, lineHeight: 1.45 }}>
             Play me alongside the virtual tour — I'll walk you through the home while you spin around.
             <span style={{ display: "block", opacity: 0.75, fontStyle: "italic", marginTop: 2 }}>
-              Tip: mute the tour's own audio (if any) so we don't talk over each other.
+              Tip: press Play on either the video or Doogie — the other will automatically pause so voices don't overlap.
             </span>
           </div>
         </div>

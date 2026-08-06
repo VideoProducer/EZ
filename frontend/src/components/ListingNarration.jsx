@@ -11,6 +11,7 @@ import { Play, Pause, StopCircle, VolumeX, Maximize2, X, Share2, Check } from "l
 import { Link } from "react-router-dom";
 import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
+import mediaBus from "../lib/mediaBus";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -288,8 +289,14 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
 
   const play = async () => {
     if (muted) return;
-    if (state === "playing") { audioRef.current?.pause(); setState("paused"); return; }
-    if (state === "paused")  { audioRef.current?.play(); setState("playing"); return; }
+    if (state === "playing") { audioRef.current?.pause(); setState("paused"); mediaBus.release("doogie-listing"); return; }
+    if (state === "paused")  {
+      audioRef.current?.play();
+      setState("playing");
+      // Re-claim the audio floor — pauses any video/other narration.
+      mediaBus.claim("doogie-listing", { pause: () => { try { audioRef.current?.pause(); setState("paused"); } catch {} } });
+      return;
+    }
     // Fresh play — resolve script (LLM walk-through with fallback), then TTS.
     setState("loading");
     try {
@@ -309,6 +316,9 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
         audioRef.current.playbackRate = speed;
         await audioRef.current.play();
         setState("playing");
+        // Claim the audio floor so the virtual-tour iframe (or TourNarration)
+        // gets auto-paused. Fixes Doug's report of overlapping voice-overs.
+        mediaBus.claim("doogie-listing", { pause: () => { try { audioRef.current?.pause(); setState("paused"); } catch {} } });
       }
     } catch {
       setState("idle");
@@ -321,6 +331,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
       audioRef.current.currentTime = 0;
     }
     setState("idle");
+    mediaBus.release("doogie-listing");
   };
 
   if (!listing) return null;

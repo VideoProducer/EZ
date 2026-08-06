@@ -3441,7 +3441,12 @@ const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
 const VirtualTourFrame = ({ listing }) => {
   const embed = listing.virtual_tour_embed || {};
   const [status, setStatus] = React.useState("loading"); // loading | ok | blocked
+  const [srcNonce, setSrcNonce] = React.useState(0);      // bump to force iframe reload = stop video
   const timerRef = React.useRef(null);
+  const wrapRef = React.useRef(null);
+  const iframeRef = React.useRef(null);
+  const hoveredRef = React.useRef(false);
+  const claimedRef = React.useRef(false);
   React.useEffect(() => {
     timerRef.current = setTimeout(() => {
       // If we haven't marked it OK in 7 seconds assume the embed is blocked.
@@ -3449,6 +3454,56 @@ const VirtualTourFrame = ({ listing }) => {
     }, 7000);
     return () => clearTimeout(timerRef.current);
   }, []);
+
+  // Cross-origin video-play detection (fixes Doug's overlapping-voice bug,
+  // Feb 2026): YouTube / Vimeo / Matterport iframes are cross-origin so we
+  // can't hook their `play` event directly. Instead we watch the parent
+  // window for a `blur` event that fires _while the mouse is over the
+  // iframe_ — that's the browser's tell that the user just clicked into
+  // the iframe (which happens the moment they hit Play). We then take the
+  // audio floor via mediaBus so Doogie's TTS narration auto-pauses.
+  React.useEffect(() => {
+    let mediaBus;
+    let unsub;
+    let mounted = true;
+    (async () => {
+      try {
+        mediaBus = (await import("./lib/mediaBus")).default;
+      } catch { return; }
+      if (!mounted) return;
+      const el = wrapRef.current;
+      const onEnter = () => { hoveredRef.current = true; };
+      const onLeave = () => { hoveredRef.current = false; };
+      const onBlur = () => {
+        if (!hoveredRef.current) return;   // ignore alt-tab / dev-tools blurs
+        if (claimedRef.current) return;    // already claimed — don't re-fire
+        claimedRef.current = true;
+        mediaBus.claim("virtual-tour-video", {
+          pause: () => {
+            // Cross-origin iframes can't be paused via JS — reload with a
+            // new nonce param so the src re-mounts and playback stops.
+            claimedRef.current = false;
+            setSrcNonce(n => n + 1);
+          },
+        });
+      };
+      if (el) {
+        el.addEventListener("mouseenter", onEnter);
+        el.addEventListener("mouseleave", onLeave);
+      }
+      window.addEventListener("blur", onBlur);
+      unsub = () => {
+        if (el) {
+          el.removeEventListener("mouseenter", onEnter);
+          el.removeEventListener("mouseleave", onLeave);
+        }
+        window.removeEventListener("blur", onBlur);
+        try { mediaBus.release("virtual-tour-video"); } catch {}
+      };
+    })();
+    return () => { mounted = false; if (unsub) unsub(); };
+  }, [embed.url]);
+
   const onFrameLoad = () => {
     clearTimeout(timerRef.current);
     setStatus("ok");
@@ -3531,12 +3586,14 @@ const VirtualTourFrame = ({ listing }) => {
   }
 
   return (
-    <div style={{
+    <div ref={wrapRef} style={{
       position: "relative", width: "100%", paddingBottom: "56.25%",
       borderRadius: 12, overflow: "hidden", border: "1px solid rgba(15,42,91,0.15)",
       background: "#0F2A5B",
     }}>
       <iframe
+        ref={iframeRef}
+        key={srcNonce}
         title={`Virtual tour — ${listing.street_address || "listing"}`}
         src={embed.url}
         loading="lazy"
