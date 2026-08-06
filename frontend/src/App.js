@@ -5406,6 +5406,11 @@ const AdminDash = () => {
   // slug. Silent-hides when there's no activity yet. Powers the roll-out
   // decision (Whistler wins → light up the top 20).
   const [sizzleAB, setSizzleAB] = useState(null);
+  // BCFSA compliance widget — surfaces AI-generated community synopses
+  // containing forecast / investment / guarantee language so Doug can
+  // acknowledge each one during his quarterly review.
+  const [bcfsaReview, setBcfsaReview] = useState(null);
+  const [bcfsaAcking, setBcfsaAcking] = useState({});
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -5421,7 +5426,18 @@ const AdminDash = () => {
     axios.get(`${API}/admin/sizzle/analytics`, {headers})
       .then(r => setSizzleAB(r.data?.communities || null))
       .catch(() => setSizzleAB(null));
+    axios.get(`${API}/admin/bcfsa/synopsis-review`, {headers})
+      .then(r => setBcfsaReview(r.data))
+      .catch(() => setBcfsaReview(null));
   },[]);
+  const ackBcfsa = async (slug) => {
+    setBcfsaAcking(prev => ({...prev, [slug]: true}));
+    try {
+      await axios.post(`${API}/admin/bcfsa/synopsis-review/${slug}/ack`, {}, {headers});
+      setBcfsaReview(prev => prev ? { ...prev, flagged: (prev.flagged || []).filter(r => r.slug !== slug), flagged_count: Math.max(0, (prev.flagged_count || 1) - 1) } : prev);
+    } catch { alert("Could not save review — try again."); }
+    finally { setBcfsaAcking(prev => { const c = {...prev}; delete c[slug]; return c; }); }
+  };
   return <AdminShell active="dash">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
       <h1 className="font-display" style={{fontSize:"2rem",marginTop:0,marginBottom:0}}>Welcome back, Doug 🐾</h1>
@@ -5541,6 +5557,80 @@ const AdminDash = () => {
             No ChatGPT Doogie leads yet — this widget lights up the moment the first buyer submits through the GPT Store tile.
           </div>
         )}
+      </div>
+    )}
+
+    {bcfsaReview && (bcfsaReview.flagged_count > 0) && (
+      <div data-testid="dash-bcfsa-review" style={{
+        marginTop: "1.25rem", background: "#fff",
+        border: "1px solid #E5E7EB", borderRadius: 16, padding: "1.5rem",
+        borderLeft: "4px solid #F5A623",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: "0.75rem" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 22 }} aria-hidden>🛡️</span>
+              <h2 style={{ margin: 0, fontSize: "1.35rem", color: "var(--brand-navy)" }}>BCFSA Compliance Review</h2>
+              <span style={{ background: "#FEF3C7", color: "#92400E", padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase" }}>
+                {bcfsaReview.flagged_count} to review
+              </span>
+            </div>
+            <p style={{ margin: 0, color: "#6B7280", fontSize: "0.85rem" }}>
+              AI-generated community synopses flagged for phrases BCFSA Real Estate Rules restrict (price prediction, guaranteed returns, investment timing). Scanned {bcfsaReview.total_synopses} synopses.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {bcfsaReview.flagged.slice(0, 10).map(row => {
+            const sevColor = row.severity === "high" ? "#DC2626" : row.severity === "medium" ? "#F59E0B" : "#6B7280";
+            const sevBg = row.severity === "high" ? "#FEE2E2" : row.severity === "medium" ? "#FEF3C7" : "#F3F4F6";
+            const isAcking = !!bcfsaAcking[row.slug];
+            return (
+              <div key={row.slug} data-testid={`bcfsa-review-${row.slug}`} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", background: "#F9FAFB",
+                border: "1px solid #E5E7EB", borderRadius: 10, gap: 12, flexWrap: "wrap",
+              }}>
+                <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2, flexWrap: "wrap" }}>
+                    <span style={{ background: sevBg, color: sevColor, padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: 0.4, textTransform: "uppercase" }}>
+                      {row.severity}
+                    </span>
+                    <a href={`/community/${row.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand-navy)", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+                      {row.city} ↗
+                    </a>
+                    <span style={{ color: "#6B7280", fontSize: 11 }}>{row.match_count} phrase{row.match_count === 1 ? "" : "s"}</span>
+                  </div>
+                  <div style={{ color: "#374151", fontSize: 12, marginBottom: 4 }}>
+                    Matched: {row.matches.slice(0, 4).map((m, i) => (
+                      <code key={i} style={{ background: "#FFF7ED", color: "#9A3412", padding: "1px 5px", borderRadius: 4, fontSize: 11, marginRight: 4 }}>{m}</code>
+                    ))}
+                    {row.matches.length > 4 && <span style={{ color: "#9CA3AF" }}>+{row.matches.length - 4} more</span>}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  data-testid={`bcfsa-ack-${row.slug}`}
+                  onClick={() => ackBcfsa(row.slug)}
+                  disabled={isAcking}
+                  style={{
+                    background: isAcking ? "#9CA3AF" : "var(--brand-navy)", color: "#fff",
+                    border: "none", borderRadius: 999, padding: "6px 14px",
+                    fontSize: 12, fontWeight: 700, cursor: isAcking ? "wait" : "pointer",
+                    whiteSpace: "nowrap",
+                  }}>
+                  {isAcking ? "Saving…" : "✓ Mark Reviewed"}
+                </button>
+              </div>
+            );
+          })}
+          {bcfsaReview.flagged.length > 10 && (
+            <div style={{ color: "#6B7280", fontSize: 12, textAlign: "center", padding: "4px 0" }}>
+              …and {bcfsaReview.flagged.length - 10} more. Ack the top 10, refresh the page for the next batch.
+            </div>
+          )}
+        </div>
       </div>
     )}
 

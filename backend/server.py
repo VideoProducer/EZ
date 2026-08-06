@@ -9226,6 +9226,119 @@ async def export_audit_trail(_=Depends(verify_admin)):
     )
 
 
+# =========================================================================
+# BCFSA SYNOPSIS COMPLIANCE REVIEW  (Feb 2026)
+# =========================================================================
+# Doug requested a quarterly spot-check tool for the AI-generated community
+# synopses. BCFSA's Real Estate Rules (Part 5) prohibit licensees from
+# making price predictions, guaranteed returns, or investment
+# recommendations. Because every synopsis is published under Doug's name,
+# he needs a way to catch any risky phrasing that slipped through the LLM.
+
+BCFSA_RISK_PATTERNS = {
+    "high": [
+        r"\b(will|are going to|is going to|expected to|projected to|predicted to)\s+(rise|climb|increase|surge|soar|jump|spike|drop|fall|decrease|decline)\b",
+        r"\b(prices?|market|values?)\s+(will|are)\s+(rise|climb|increase|surge|soar|jump|spike|drop|fall|decrease|decline)",
+        r"\b(guaranteed?|assured?|certain)\s+(returns?|gains?|appreciation|growth|profit)",
+        r"\bguaranteed\s+(to\s+)?(sell|appreciate|increase|return)",
+        r"\bbest time to (buy|invest|purchase)\b",
+        r"\bnow is the (best|perfect|right)\s+time\b",
+        r"\bbuy now\b(?!\s+pay)",
+        r"\bdon['\u2019]?t\s+wait\b",
+        r"\bact\s+(now|fast|quickly)\b",
+        r"\breturn\s+on\s+investment\b|\bROI\b",
+        r"\bhigh\s+(return|yield|appreciation)\b",
+    ],
+    "medium": [
+        r"\b(poised|set|ready)\s+for\s+(growth|appreciation|gains?)",
+        r"\btrending\s+(upward|higher|up)\b",
+        r"\bhot\s+market\b",
+        r"\bseller['\u2019]?s\s+market\b",
+        r"\bbuyer['\u2019]?s\s+market\b",
+        r"\bappreciation\s+(rate|potential)\b",
+        r"\b(great|smart|solid|safe)\s+investment\b",
+        r"\binvestment\s+opportunity\b",
+        r"\b(the\s+best|number\s+one|#1|top|premier)\s+(place|community|city|neighbourhood|neighborhood|town)\s+(to|for)\s+(invest|buy)\b",
+    ],
+    "low": [
+        r"\bforecast\b",
+        r"\bprojection\b",
+        r"\bprediction\b",
+        r"\bappreciate\b",
+        r"\bappreciation\b",
+    ],
+}
+
+
+@api.get("/admin/bcfsa/synopsis-review")
+async def bcfsa_synopsis_review(_=Depends(verify_admin)):
+    """Scan every AI-generated community synopsis for BCFSA-risky phrasing
+    (price prediction, guaranteed returns, investment timing advice) and
+    return a list of docs that need Doug's spot-review."""
+    import re as _re
+    from datetime import datetime as _dt, timezone as _tz
+    compiled = { sev: [_re.compile(p, _re.IGNORECASE) for p in pats] for sev, pats in BCFSA_RISK_PATTERNS.items() }
+    reviews = {}
+    async for r in db.synopsis_reviews.find({}, {"_id": 0}):
+        reviews[r.get("slug")] = r
+    flagged = []
+    total = 0
+    async for doc in db.community_synopses.find({}, {"_id": 0}):
+        total += 1
+        synopsis = doc.get("synopsis") or ""
+        if not synopsis: continue
+        matches_by_sev = {"high": [], "medium": [], "low": []}
+        for sev, regexes in compiled.items():
+            for rx in regexes:
+                for m in rx.finditer(synopsis):
+                    matches_by_sev[sev].append(m.group(0))
+        severity = None
+        all_matches = []
+        for sev in ("high", "medium", "low"):
+            if matches_by_sev[sev]:
+                severity = severity or sev
+                all_matches.extend(matches_by_sev[sev])
+        if not severity: continue
+        slug = doc.get("slug", "")
+        review = reviews.get(slug) or {}
+        rev_at = review.get("reviewed_at")
+        upd_at = doc.get("last_reviewed_at") or doc.get("updated_at") or doc.get("reviewed_at")
+        if rev_at and upd_at and rev_at >= upd_at and severity != "high":
+            continue
+        flagged.append({
+            "slug": slug,
+            "city": doc.get("city") or slug.replace("-", " ").title(),
+            "severity": severity,
+            "matches": sorted(set(all_matches))[:15],
+            "match_count": len(all_matches),
+            "preview": synopsis[:280] + ("…" if len(synopsis) > 280 else ""),
+            "last_reviewed_at": rev_at,
+            "last_reviewed_by": review.get("reviewed_by"),
+            "updated_at": upd_at,
+        })
+    severity_order = {"high": 0, "medium": 1, "low": 2}
+    flagged.sort(key=lambda r: (severity_order.get(r["severity"], 3), -r["match_count"]))
+    return {
+        "flagged": flagged, "total_synopses": total, "flagged_count": len(flagged),
+        "review_window_days": 90,
+        "scanned_at": _dt.now(_tz.utc).isoformat(),
+    }
+
+
+@api.post("/admin/bcfsa/synopsis-review/{slug}/ack")
+async def bcfsa_synopsis_ack(slug: str, admin: dict = Depends(verify_admin)):
+    """Mark a synopsis as spot-reviewed by Doug. Idempotent."""
+    from datetime import datetime as _dt, timezone as _tz
+    reviewer_email = (admin or {}).get("email") if isinstance(admin, dict) else None
+    now = _dt.now(_tz.utc).isoformat()
+    await db.synopsis_reviews.update_one(
+        {"slug": slug},
+        {"$set": {"slug": slug, "reviewed_at": now, "reviewed_by": reviewer_email or "admin"}},
+        upsert=True,
+    )
+    return {"ok": True, "slug": slug, "reviewed_at": now}
+
+
 @api.get("/admin/casl-consent-log.csv")
 async def export_casl_consent_log(_=Depends(verify_admin)):
     """CSV export of every CASL express-consent event across every list.
