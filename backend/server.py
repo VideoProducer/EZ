@@ -6097,6 +6097,64 @@ async def startup():
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(15 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_sitemap_loop()))
 
+    # ---- Bot Prerender Service (headless Chromium + Mongo TTL cache) ----
+    # Renders SPA pages to static HTML for LLM/search-engine crawlers with
+    # BCFSA + CREA/GVR + PIPA + CASL guardrails. Warmer runs nightly at 03:15 UTC
+    # (≈19:15 PST) and pre-renders top-priority URLs so bots always get cache HIT.
+    try:
+        from services.prerender_service import init_service as _init_prerender
+        _init_prerender(db)
+        # Boot chromium in background so it never blocks startup.
+        async def _boot_prerender():
+            try:
+                from services.prerender_service import get_service as _gp
+                await _gp().start()
+            except Exception as e:
+                logger.error(f"prerender: startup failed: {e}")
+        asyncio.create_task(_boot_prerender())
+        logger.info("prerender service initialised (chromium warming up)")
+    except Exception as e:
+        logger.error(f"prerender init failed: {e}")
+
+    async def _nightly_prerender_warm_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                target = now.replace(hour=3, minute=15, second=0, microsecond=0)
+                if target <= now:
+                    target = target + _td(days=1)
+                delay = max(60, int((target - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services.prerender_service import get_service as _gp
+                    # Build the priority list: home + core static + top 50 glossary +
+                    # top 50 communities + top 100 listings (by recency).
+                    paths = [
+                        "/", "/communities", "/glossary", "/listings", "/about",
+                        "/valuation", "/relocating", "/realtor-network",
+                        "/regions/greater-vancouver",
+                    ]
+                    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(50):
+                        if t.get("slug"):
+                            paths.append(f"/glossary/{t['slug']}")
+                    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(50):
+                        if s.get("slug"):
+                            paths.append(f"/community/{s['slug']}")
+                    async for l in db.listings.find({"status": "Active"}, {"listing_key": 1}).sort("modification_ts", -1).limit(100):
+                        if l.get("listing_key"):
+                            paths.append(f"/listing/{l['listing_key']}")
+                    result = await _gp().warm(paths)
+                    logger.info(f"nightly_prerender_warm: {result}")
+                except Exception as e:
+                    logger.error(f"nightly_prerender_warm: task failed: {e}")
+            except Exception as e:
+                logger.error(f"nightly_prerender_warm_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    # First warm fires 30 min after boot (after chromium is fully up).
+    asyncio.create_task(asyncio.sleep(30 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_prerender_warm_loop()))
+
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
     # /admin/listings/sync-log the manual sync uses. First run fires 10 min
@@ -6300,6 +6358,113 @@ async def admin_regen_sitemap(_=Depends(verify_admin)):
         logger.warning(f"admin sitemap regen: IndexNow push failed (silent-fail): {e}")
         result["indexnow"] = {"ok": False, "error": str(e)}
     return result
+
+
+# =============== BOT PRERENDER — headless-Chromium runtime SSR ===============
+# LLM/search-engine crawlers (Googlebot, GPTBot, ClaudeBot, Perplexity, etc.)
+# hit /api/bot/{path} — the ingress layer (Cloudflare Worker or nginx) rewrites
+# their request to this endpoint after User-Agent detection.  See
+#   /app/cloudflare_worker_prerender.js  and
+#   /app/nginx_prerender.conf
+# for the ingress snippets that pair with these endpoints.
+#
+# Compliance guardrails (baked into services/prerender_service.py):
+#   • PIPA blocklist: /api, /admin, /favorites, /my-account, /auth, /uploads…
+#   • BCFSA: every served HTML page must contain the site-wide disclosure.
+#   • CREA/GVR: listing pages must additionally carry MLS® attribution.
+#   • CASL: renders run in incognito context — no cookies, no form state cached.
+#   • Audit log: every bot hit is written to `prerender_log` (30-day TTL).
+
+@api.get("/bot/{path:path}", include_in_schema=False)
+async def bot_prerender(path: str, request: Request):
+    """Serve prerendered HTML to declared crawlers. Falls back to a plain 404
+    for any path that can't be safely prerendered (PIPA blocklist)."""
+    from services.prerender_service import (
+        get_service as _gp, is_prerenderable as _pr, is_bot as _ib,
+    )
+    ua = request.headers.get("user-agent", "")
+    # Full path incl. leading slash (FastAPI strips it for {path:path}).
+    full_path = "/" + path if not path.startswith("/") else path
+    # Also carry the querystring so bots crawling faceted URLs get cached HTML.
+    qs = request.url.query
+    cache_key = full_path + (("?" + qs) if qs else "")
+
+    # PIPA blocklist — never serve prerendered HTML for these paths.
+    if not _pr(full_path):
+        try:
+            await _gp().log_hit(cache_key, ua, "BYPASS", 204, 0, "blocklisted_path")
+        except Exception:
+            pass
+        return Response(status_code=204, headers={"X-Prerender-Cache": "BYPASS"})
+
+    # Only serve prerendered HTML to declared bots. Humans get a 404 here so
+    # they use the SPA path directly (no cloaking, no accidental caching).
+    if not _ib(ua):
+        return Response(status_code=404, headers={"X-Prerender-Cache": "BYPASS"})
+
+    try:
+        svc = _gp()
+        result = await svc.render(cache_key)
+        await svc.log_hit(cache_key, ua, result.cache, result.status, result.took_ms, result.reason)
+        headers = {
+            "X-Prerender-Cache": result.cache,
+            "X-Prerender-Kind": result.kind,
+            "X-Prerender-TookMs": str(result.took_ms),
+            "Cache-Control": "public, max-age=300, s-maxage=600",
+            "Content-Type": "text/html; charset=utf-8",
+        }
+        if not result.html:
+            return Response(status_code=502, headers=headers)
+        return Response(content=result.html, status_code=result.status, headers=headers)
+    except Exception as e:
+        logger.error(f"bot_prerender error path={cache_key} err={e}")
+        return Response(status_code=502, headers={"X-Prerender-Cache": "ERROR"})
+
+
+@api.post("/admin/prerender/warm")
+async def admin_prerender_warm(_=Depends(verify_admin)):
+    """Force-refresh the prerender cache for top-priority URLs."""
+    from services.prerender_service import get_service as _gp
+    paths = ["/", "/communities", "/glossary", "/listings", "/about",
+             "/valuation", "/relocating", "/realtor-network",
+             "/regions/greater-vancouver"]
+    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(50):
+        if t.get("slug"):
+            paths.append(f"/glossary/{t['slug']}")
+    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(50):
+        if s.get("slug"):
+            paths.append(f"/community/{s['slug']}")
+    async for l in db.listings.find({"status": "Active"}, {"listing_key": 1}).sort("modification_ts", -1).limit(100):
+        if l.get("listing_key"):
+            paths.append(f"/listing/{l['listing_key']}")
+    return await _gp().warm(paths)
+
+
+@api.post("/admin/prerender/render")
+async def admin_prerender_render(path: str, _=Depends(verify_admin)):
+    """Force-render a single path (bypasses cache)."""
+    from services.prerender_service import get_service as _gp, is_prerenderable as _pr
+    if not _pr(path):
+        raise HTTPException(400, "path is blocklisted (PIPA)")
+    r = await _gp().render(path, force=True)
+    return {
+        "path": r.path, "cache": r.cache, "status": r.status, "kind": r.kind,
+        "took_ms": r.took_ms, "html_bytes": len(r.html), "reason": r.reason,
+    }
+
+
+@api.get("/admin/prerender/stats")
+async def admin_prerender_stats(_=Depends(verify_admin)):
+    """Cache size, breakdown by kind, bot hits in last 24h."""
+    from services.prerender_service import get_service as _gp
+    return await _gp().stats()
+
+
+@api.post("/admin/prerender/purge")
+async def admin_prerender_purge(_=Depends(verify_admin)):
+    """Clear the entire prerender cache (forces MISS on next crawl)."""
+    r = await db.prerender_cache.delete_many({})
+    return {"deleted": r.deleted_count}
 
 
 # =============== RECORDS RETENTION (BCFSA / PIPA / CASL) ===============
@@ -12894,7 +13059,13 @@ async def doogie_ai_plugin_manifest():
 
 
 @app.on_event("shutdown")
-async def shutdown(): mongo_client.close()
+async def shutdown():
+    try:
+        from services.prerender_service import get_service as _gp
+        await _gp().stop()
+    except Exception:
+        pass
+    mongo_client.close()
 
 
 # ═════════════════════════════════════════════════════════════════════════════

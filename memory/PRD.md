@@ -10,6 +10,20 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **SSR / Bot Prerender Service (Feb 6)** — headless-Chromium runtime SSR shipped
+  - `services/prerender_service.py`: Playwright singleton + Mongo TTL cache (`prerender_cache`) + 30-day audit log (`prerender_log`)
+  - `/api/bot/{path}` — public endpoint bots hit via ingress rewrite; 404 to humans (no cloaking)
+  - `/api/admin/prerender/{warm,render,stats,purge}` — admin control
+  - Nightly warmer at 03:15 UTC pre-renders top 200 URLs (9 static + 50 glossary + 50 communities + 100 listings)
+  - Per-path TTLs: listings 6h · communities 12h · glossary 24h · other 24h
+  - PIPA blocklist: `/api /admin /my-account /favorites /dashboard /login /auth /consultation-status /uploads /snapshot`
+  - Compliance guardrail: `compliance_check()` rejects renders missing BCFSA disclosure, and for listings also rejects missing CREA/MLS attribution
+  - CASL: renders run in incognito context (no cookies, no form state cached)
+  - Provenance stamp injected before `</body>` for auditor traceability
+  - Ingress snippets shipped: `/app/cloudflare_worker_prerender.js` + `/app/nginx_prerender.conf` (paired UA-detect regex, PIPA blocklist mirrored)
+  - Tests: `backend/tests/test_prerender.py` — **49 passed** (bot UA detection, PIPA blocklist, TTL routing, compliance check)
+  - Env: `PLAYWRIGHT_BROWSERS_PATH=/pw-browsers`, `PRERENDER_TARGET_URL=http://localhost:3000`
+  - Verified E2E: bot UA on `/glossary` → 200 MISS 1.5s, then 0ms HIT. Bot UA on `/admin` → 204 BYPASS. Listing pages render with CREA/MLS + BCFSA present in 1.27s.
 - Deployment health check PASS after quoting RESEND_FROM/RESEND_REPLY_TO in backend/.env
 - Security audit fixes:
   - SEC-001: `/api/favorites/list` requires verification_token (BOLA / PIPA)
@@ -34,7 +48,8 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - P1: Community Trailer Video (15-sec shareable per sizzle reel)
 - P1: Feature-Sheet Narrator (PDF/image upload + Doogie reads with highlight cursor)
 - P1: Real Luxury/Horse Photos (swap placeholders once URLs provided)
-- P2: SSR SEO — User-Agent detection at ingress/nginx for bot snapshots
+- P1: Wire Google Review link (`/app/memory/review_links.md`) into consultation confirmation emails + admin dashboard widget
+- P1: Deploy — paste `/app/cloudflare_worker_prerender.js` into Cloudflare Workers (or `/app/nginx_prerender.conf` at ingress) to activate bot prerender routing on eztofind.ca
 - P3: Move "Coming Soon" uploads to CDN/Object storage
 - P3: Nightly narration regression cron
 - P3: Rotate JWT_SECRET, RESEND_API_KEY, CREA DDF, Turnstile, Lovable to high-entropy values
