@@ -6866,6 +6866,7 @@ const CommunityPage = () => {
           url={`https://eztofind.ca/community/${slug}`}
           dateModified={syn?.last_reviewed_at || syn?.updated_at || syn?.reviewed_at}
           entryType="profile"
+          hidden
         />
       )}
     </> : <>

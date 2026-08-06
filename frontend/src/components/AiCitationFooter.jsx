@@ -48,6 +48,7 @@ export const AiCitationFooter = ({
   author = "Doug LeMaire, REALTOR®",
   publisher = "EZtoFind.ca",
   entryType = "web",   // "web" | "definition" | "profile"
+  hidden = false,      // when true → machine-readable only (invisible to visitors, still crawlable by AI + LLMs)
 }) => {
   const [copied, setCopied] = useState("");
   const year = (dateModified ? new Date(dateModified) : new Date()).getFullYear();
@@ -88,6 +89,75 @@ export const AiCitationFooter = ({
       setCopied("");
     }
   };
+
+  // Machine-readable citation payload — emitted whether the visible UI is
+  // rendered or hidden. Includes a CreativeWork schema with the full APA /
+  // MLA / Chicago / Inline / BibTeX strings so AI answer engines can pull
+  // citations directly from JSON-LD without needing to parse the DOM.
+  const citationLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    "@id": `${url}#citation`,
+    name: title,
+    url,
+    author: { "@type": "Person", name: author },
+    publisher: { "@type": "Organization", name: publisher, url: "https://eztofind.ca" },
+    dateModified: dateModified || new Date().toISOString(),
+    license: "https://eztofind.ca/ai-use",
+    citation: [apa, mla, chicago, inline],
+  };
+
+  // Hidden variant — visible to crawlers and JS-executing AI clients, but
+  // NOT to human visitors. Doug's request Feb 2026: keep the community /
+  // glossary pages visually clean while still handing every AI engine a
+  // pre-formatted citation string. Two channels:
+  //  1. JSON-LD script tag → parsed by Google, Perplexity, ChatGPT Search
+  //  2. Off-screen microdata block → parsed by non-JS crawlers (Bytespider,
+  //     older ClaudeBot fetches, plain curl-based scrapers)
+  if (hidden) {
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          data-testid="ai-citation-hidden-jsonld"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(citationLd) }}
+        />
+        <div
+          data-testid="ai-citation-hidden"
+          itemScope
+          itemType="https://schema.org/CreativeWork"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+            whiteSpace: "nowrap",
+            border: 0,
+          }}
+        >
+          <meta itemProp="url" content={url}/>
+          <meta itemProp="name" content={title}/>
+          <meta itemProp="dateModified" content={dateModified || new Date().toISOString()}/>
+          <meta itemProp="license" content="https://eztofind.ca/ai-use"/>
+          <span itemProp="author" itemScope itemType="https://schema.org/Person">
+            <meta itemProp="name" content={author}/>
+          </span>
+          <span itemProp="publisher" itemScope itemType="https://schema.org/Organization">
+            <meta itemProp="name" content={publisher}/>
+            <meta itemProp="url" content="https://eztofind.ca"/>
+          </span>
+          <span itemProp="citation">Cite as (APA): {apa}</span>
+          <span itemProp="citation">Cite as (MLA): {mla}</span>
+          <span itemProp="citation">Cite as (Chicago): {chicago}</span>
+          <span itemProp="citation">Cite as (Inline): {inline}</span>
+        </div>
+      </>
+    );
+  }
 
   return (
     <aside
