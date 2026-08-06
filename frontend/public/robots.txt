@@ -49,6 +49,88 @@ Allow: /
 Disallow: /listings
 Disallow: /listing/
 
+# --- Explicitly welcomed AI answer engines (added Feb 2026 per Doug's ask) ---
+# All the following bots return citations back to eztofind.ca, so they
+# get the same educational-content Allow policy as GPTBot/ClaudeBot above.
+User-agent: xAI-Bot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: Grokbot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: MistralAI-User
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: MistralAI-Bot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: YouBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: You.com
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: KagiBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: Neevabot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: ManusBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: BingBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: Bingbot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: msnbot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: AdsBot-Google
+Allow: /
+User-agent: AmazonQBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: Amazonbot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: FacebookBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: GitHub-Copilot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: GitHubCopilotChat
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /listings
+Disallow: /listing/
+
 # LLM training corpora — mixed policy.
 # Google-Extended controls citation in Google AI Overviews / Gemini / Bard.
 # For AEO reach, we explicitly Allow it on educational content while keeping
@@ -64,15 +146,15 @@ Allow: /
 Disallow: /listings
 Disallow: /listing/
 User-agent: FacebookBot
-Disallow: /
+Disallow: /admin/
 User-agent: Meta-ExternalFetcher
-Disallow: /
+Disallow: /admin/
 User-agent: Applebot-Extended
 Disallow: /
 User-agent: cohere-training-data-crawler
 Disallow: /
 User-agent: Amazonbot
-Disallow: /
+Disallow: /admin/
 User-agent: ImagesiftBot
 Disallow: /
 User-agent: PetalBot
@@ -84,9 +166,9 @@ Disallow: /
 
 # Block SEO scrapers and data brokers (not search / AI)
 User-agent: Bytespider
-Disallow: /
+Disallow: /admin/
 User-agent: Meta-ExternalAgent
-Disallow: /
+Disallow: /admin/
 User-agent: Diffbot
 Disallow: /
 User-agent: MJ12bot

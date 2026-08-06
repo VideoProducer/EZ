@@ -5,16 +5,25 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 
 ## Architecture
 - Backend: FastAPI monolith at `/app/backend/server.py` (~13.5k lines)
-- Frontend: React 19 at `/app/frontend/src/App.js` (~10k lines) + extracted panes in `/app/frontend/src/pages/visual-agent/`
+- Frontend: React 19 at `/app/frontend/src/App.js` (~10k lines) + `/app/frontend/src/pages/DashboardMockup.jsx` + extracted panes in `/app/frontend/src/pages/visual-agent/`
 - DB: MongoDB (motor)
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
-## Recent Changes
-- 2026-02: Deployment health check PASS after quoting RESEND_FROM/RESEND_REPLY_TO in backend/.env
-- 2026-02: Security audit fixes applied:
-  - SEC-001: `/api/favorites/list` now requires verification_token (BOLA / PIPA)
+## Recent Changes (Feb 2026)
+- Deployment health check PASS after quoting RESEND_FROM/RESEND_REPLY_TO in backend/.env
+- Security audit fixes:
+  - SEC-001: `/api/favorites/list` requires verification_token (BOLA / PIPA)
   - SEC-002: CSV formula-injection escape on `/api/admin/consultations.csv`
-  - SEC-003: Rate limit `15/min` added to `/api/doogie/transcribe`
+  - SEC-003: Rate limit `15/min` on `/api/doogie/transcribe`
+- Root URL `/` now renders `<DashboardMockup/>` (classic marketing home moved to `/classic-home`)
+- Duplicate Doogie/Reset pills removed from outer `FloatingFilters` drag strip
+- **AEO / SEO expansion (Feb 6)**:
+  - Community page: added `FAQPage` schema (5 auto-generated Q&A patterns) + `Dataset` schema with distribution URLs for climate + stats + synopsis APIs
+  - New reusable `AiCitationFooter` component wired into GlossaryTerm + CommunityPage — APA / MLA / Chicago / Inline / BibTeX copyable citations for AI engines
+  - `robots.txt` explicitly welcomes xAI-Bot, Grokbot, MistralAI (User + Bot), YouBot, You.com, KagiBot, Neevabot, ManusBot, BingBot, msnbot, AdsBot-Google, AmazonQBot, GitHub-Copilot, GitHubCopilotChat, DuckDuckBot. Amazonbot + FacebookBot + Meta-ExternalAgent switched from Disallow to Allow (educational corpus only)
+- **Responsive fixes (Feb 6)**:
+  - Mobile compliance banner shortened (11px font, 8px padding, terse copy under 600px)
+  - Back/Home/REALTOR® Net buttons downsized on mobile (12px font, 10px padding, "REALTOR® Net" abbreviation)
 
 ## Test Credentials
 - Admin: `doug@eztofind.ca` / `Doug2026Login!`

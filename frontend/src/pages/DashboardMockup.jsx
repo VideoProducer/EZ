@@ -3837,6 +3837,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
 //   the dashboard) does not stack a duplicate route in browser history.
 const DashboardBackHomeBar = ({ resetHome }) => {
   const nav = useNavigate();
+  const isMobile = useIsMobile(600);
   const goHome = (e) => {
     if (typeof resetHome === "function") {
       // We're already inside the dashboard — reset in-place so filters clear
@@ -3848,39 +3849,55 @@ const DashboardBackHomeBar = ({ resetHome }) => {
   return (
     <div data-testid="dash-back-home-bar" style={{
       background: "#fff", borderBottom: "1px solid rgba(15,42,91,0.06)",
-      padding: "8px 32px", display: "flex", gap: 8, alignItems: "center",
+      padding: isMobile ? "6px 12px" : "8px 32px",
+      display: "flex", gap: isMobile ? 6 : 8, alignItems: "center",
+      flexWrap: "wrap",
     }}>
       <button onClick={() => nav(-1)} data-testid="dash-btn-back" style={{
         background: "transparent", border: "1px solid #DDE6FA", color: C.navy,
-        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+        padding: isMobile ? "4px 10px" : "5px 14px", borderRadius: 999,
+        fontSize: isMobile ? 12 : 13, fontWeight: 700,
         cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4,
       }}>← Back</button>
       <Link to="/" onClick={goHome} data-testid="dash-btn-home" style={{
         background: "transparent", border: "1px solid #DDE6FA", color: C.navy,
-        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+        padding: isMobile ? "4px 10px" : "5px 14px", borderRadius: 999,
+        fontSize: isMobile ? 12 : 13, fontWeight: 700,
         textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
       }}>🏠 Home</Link>
       <Link to="/realtor-network" data-testid="dash-btn-realtor-network" style={{
         marginLeft: "auto",
         color: C.gold, background: C.navy,
-        padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 800,
+        padding: isMobile ? "4px 10px" : "5px 14px", borderRadius: 999,
+        fontSize: isMobile ? 11 : 13, fontWeight: 800,
         textDecoration: "none", display: "inline-flex", alignItems: "center",
         letterSpacing: 0.3,
-      }}>REALTOR® Network</Link>
+      }}>{isMobile ? "REALTOR® Net" : "REALTOR® Network"}</Link>
     </div>
   );
 };
 
 
-const HomeComplianceBanner = () => (
-  <div data-testid="dash-home-compliance-banner" style={{
-    background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
-    padding: "10px 32px", fontFamily: "'Inter', system-ui, sans-serif",
-    color: C.ink, fontSize: 12.5, lineHeight: 1.5, textAlign: "center",
-  }}>
-    <strong style={{ color: C.navy }}>EZtoFind.ca</strong> provides general educational information about BC real estate — <em>not</em> legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.
-  </div>
-);
+const HomeComplianceBanner = () => {
+  const isMobile = useIsMobile(600);
+  return (
+    <div data-testid="dash-home-compliance-banner" style={{
+      background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
+      padding: isMobile ? "8px 12px" : "10px 32px",
+      fontFamily: "'Inter', system-ui, sans-serif",
+      color: C.ink, fontSize: isMobile ? 11 : 12.5,
+      lineHeight: isMobile ? 1.4 : 1.5, textAlign: "center",
+    }}>
+      {isMobile ? (
+        <>
+          <strong style={{ color: C.navy }}>EZtoFind.ca</strong> — general BC real estate info only. <em>Not</em> legal, tax, or financial advice.
+        </>
+      ) : (
+        <><strong style={{ color: C.navy }}>EZtoFind.ca</strong> provides general educational information about BC real estate — <em>not</em> legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.</>
+      )}
+    </div>
+  );
+};
 
 // ── HomeExtras — the five classic-home cards Doug wants preserved on the
 //   dashboard homepage in their original order and card layout:

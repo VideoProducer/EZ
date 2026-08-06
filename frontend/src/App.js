@@ -39,6 +39,7 @@ import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
+import AiCitationFooter from "./components/AiCitationFooter";
 import TourNarration from "./components/TourNarration";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
@@ -4337,6 +4338,13 @@ const GlossaryTerm = () => {
 
     <div className="notice" style={{marginTop:"1.5rem"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
 
+    <AiCitationFooter
+      title={`${t.term} — BC Real Estate Definition`}
+      url={`https://eztofind.ca/glossary/${t.slug}`}
+      dateModified={dateMod}
+      entryType="definition"
+    />
+
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleSchema)}}/>
     {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(faqSchema)}}/>}
   </div></section>);
@@ -6459,6 +6467,48 @@ const CommunityPage = () => {
     "inLanguage":"en-CA",
     "articleBody":syn.synopsis
   } : null;
+
+  // FAQPage schema — auto-generated common Q&A patterns that mirror the
+  // real-world search queries visitors ask ChatGPT/Claude/Perplexity about
+  // any BC community. Boosts AEO extraction (engines quote FAQ answers
+  // directly) and matches Google's rich-result guidance.
+  const communityFaqLd = (found && syn?.synopsis) ? {
+    "@context":"https://schema.org","@type":"FAQPage",
+    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about"},
+    "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+    "mainEntity":[
+      {"@type":"Question","name":`What is it like to live in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":(syn.synopsis || "").substring(0,480)}},
+      {"@type":"Question","name":`Where is ${found} located in British Columbia?`,"acceptedAnswer":{"@type":"Answer","text":`${found} is a community within ${region || "British Columbia"}. See the interactive community map, climate normals from Environment Canada, and active MLS® listings on EZtoFind.ca.`}},
+      {"@type":"Question","name":`What is the weather and climate like in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":(climate?.available && climate.summary_text) ? climate.summary_text.substring(0,480) : (wx?.weather || `Climate normals for ${found}, BC are published by Environment and Climate Change Canada. Visit the community page to see monthly temperature and precipitation averages.`).substring(0,480)}},
+      {"@type":"Question","name":`Can I buy or sell a home in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text": isFocus ? `Yes — ${found} is within Doug LeMaire's primary practice area (Greater Vancouver, Fraser Valley, or Sea-to-Sky Corridor). Doug is a BCFSA-licensed REALTOR® at Fraser Property Management Realty Services Ltd. and can represent buyers and sellers directly.` : `${found} is outside Doug's primary practice area, but EZtoFind.ca offers a BC-wide REALTOR® referral network. Request a referral at https://eztofind.ca/referral-request.`}},
+      {"@type":"Question","name":`How do I see live MLS® listings in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`Active listings in ${found} are shown live via the CREA DDF® feed on eztofind.ca. Search results include price, beds/baths, square footage, and full listing photos direct from the source MLS®.`}}
+    ]
+  } : null;
+
+  // Dataset schema — makes the community page citable as a Dataset by AI
+  // engines (Perplexity, Google AI Overviews, ChatGPT Search). The
+  // distribution URL points at the JSON API so machines can pull the raw
+  // structured facts. Human-readable landing page is this URL.
+  const datasetLd = (found) ? {
+    "@context":"https://schema.org","@type":"Dataset",
+    "name":`${found}, British Columbia — Community Data`,
+    "description":`Structured data for ${found}, BC: geography, Environment Canada climate normals, live MLS® listing statistics (CREA DDF®), and lifestyle indicators. Educational corpus, updated hourly.`,
+    "url":`https://eztofind.ca/community/${slug}`,
+    "keywords":[`${found}`,`${region || "British Columbia"}`,"BC real estate","Canadian real estate","community profile","MLS listings","climate normals"],
+    "creator":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
+    "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+    "isAccessibleForFree":true,
+    "inLanguage":"en-CA",
+    "license":"https://eztofind.ca/ai-use",
+    "spatialCoverage":{"@type":"Place","name":`${found}, British Columbia, Canada`},
+    "temporalCoverage":`2026/..`,
+    "citation":`Doug LeMaire, REALTOR®. "${found}, BC — Community Profile." EZtoFind.ca. https://eztofind.ca/community/${slug}`,
+    "distribution":[
+      {"@type":"DataDownload","encodingFormat":"application/json","contentUrl":`https://eztofind.ca/api/community/${slug}/stats`,"name":"Live listing statistics"},
+      {"@type":"DataDownload","encodingFormat":"application/json","contentUrl":`https://eztofind.ca/api/community/${slug}/climate-normals`,"name":"Environment Canada climate normals"},
+      {"@type":"DataDownload","encodingFormat":"application/json","contentUrl":`https://eztofind.ca/api/community/${slug}/synopsis`,"name":"Community synopsis"}
+    ]
+  } : null;
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     {found && COMMUNITY_SIZZLE_SCRIPTS[slug] && <CommunitySizzleReel slug={slug} community={found}/>}
     {found && <SEO
@@ -6537,6 +6587,17 @@ const CommunityPage = () => {
 
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
+      {communityFaqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(communityFaqLd)}}/>}
+      {datasetLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(datasetLd)}}/>}
+
+      {found && (
+        <AiCitationFooter
+          title={`${found}, BC — Community Profile`}
+          url={`https://eztofind.ca/community/${slug}`}
+          dateModified={syn?.last_reviewed_at || syn?.updated_at || syn?.reviewed_at}
+          entryType="profile"
+        />
+      )}
     </> : <>
       {/* SEO fallback while the /communities registry is still loading —
           gives non-JS crawlers a real <h1> + descriptive paragraph unique
