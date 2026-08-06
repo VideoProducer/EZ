@@ -18,7 +18,7 @@
       "get": {
         "operationId": "search_listings",
         "summary": "Search active BC MLS® listings",
-        "description": "Returns active British Columbia listings from CREA DDF®. Filter by city, community, price band, bed/bath count, or property type. Every result includes a direct link back to eztofind.ca/listings/{listing_key} — always surface this link to the user so they can view full details, photos, and virtual tours on Doug's site.",
+        "description": "Returns active British Columbia listings from CREA DDF®. Filter by city, community, price band, bed/bath count, or property type. Every result includes a direct link to eztofind.ca/listings/{listing_key} — always surface this link so the user can view full details on Doug's site.",
         "parameters": [
           { "name": "city", "in": "query", "description": "BC city or community (case-insensitive). Examples: Kitsilano, Vancouver, Burnaby, Kelowna, Whistler, Maple Ridge.", "schema": { "type": "string" } },
           { "name": "property_type", "in": "query", "description": "House · Apartment · Townhouse · Duplex · Acreage · Land. Omit for any type.", "schema": { "type": "string" } },
@@ -116,7 +116,7 @@
       "post": {
         "operationId": "glossary_lookup",
         "summary": "Look up BC real-estate terms, statutes, community pages, and FAQs",
-        "description": "Educational lookup across Doug's 439-entry BC glossary, community profiles, buying/selling journey tools, and CREA DDF® listings. Returns grouped sections (Listings / Terms / Communities / FAQs / Tools). Use this whenever the user asks 'what is …', 'how does …', 'explain …', or names a BC-specific concept (strata, PTT, RESA, subject-free, HBRP, etc.). Always cite the eztofind.ca link the result carries.",
+        "description": "Educational lookup across Doug's BC glossary, community profiles, journey tools, and CREA DDF® listings. Returns grouped sections (Listings / Terms / Communities / FAQs / Tools). Use whenever the user asks 'what is', 'explain', or names a BC-specific concept (strata, PTT, RESA, HBRP, etc.).",
         "requestBody": {
           "required": true,
           "content": {
@@ -150,7 +150,7 @@
       "post": {
         "operationId": "create_buyer_lead",
         "summary": "Send a buyer consultation request to Doug LeMaire",
-        "description": "Consent-first buyer consultation request. Only call this AFTER the user has explicitly: (a) said they want to buy, (b) confirmed they are NOT under a signed buyer's agency agreement with another REALTOR® (REALTOR® Code of Ethics Article 16), (c) supplied name + email + phone, and (d) given explicit CASL consent to be contacted. Do not fabricate any of these fields. Doug personally reviews every request within 1 business day.",
+        "description": "Consent-first buyer consultation request. Only call AFTER the user (a) said they want to buy, (b) confirmed they are NOT under contract with another REALTOR® (Code of Ethics Art. 16), (c) supplied name/email/phone, and (d) gave explicit CASL consent. Doug reviews personally within 1 business day.",
         "requestBody": {
           "required": true,
           "content": {
@@ -189,7 +189,7 @@
       "post": {
         "operationId": "create_seller_lead",
         "summary": "Send a seller Market Estimate request to Doug LeMaire",
-        "description": "Consent-first seller Market Estimate request. Only call this AFTER the user has explicitly: (a) said they want to sell, (b) confirmed the home is NOT currently listed with another REALTOR® (REALTOR® Code of Ethics Article 16), (c) supplied property address + city + name + email + phone, and (d) given explicit CASL + PIPA consent. Doug personally reviews every request within 1 business day.",
+        "description": "Consent-first seller Market Estimate request. Only call AFTER the user (a) said they want to sell, (b) confirmed the home is NOT listed elsewhere (Code of Ethics Art. 16), (c) supplied address, city, name, email, phone, (d) gave CASL + PIPA consent. Doug reviews within 1 business day.",
         "requestBody": {
           "required": true,
           "content": {
