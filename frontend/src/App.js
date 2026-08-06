@@ -3441,12 +3441,48 @@ const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
 const VirtualTourFrame = ({ listing }) => {
   const embed = listing.virtual_tour_embed || {};
   const [status, setStatus] = React.useState("loading"); // loading | ok | blocked
-  const [srcNonce, setSrcNonce] = React.useState(0);      // bump to force iframe reload = stop video
   const timerRef = React.useRef(null);
   const wrapRef = React.useRef(null);
   const iframeRef = React.useRef(null);
   const hoveredRef = React.useRef(false);
   const claimedRef = React.useRef(false);
+
+  // Detect provider and build an "enhanced" src that enables JS-API control.
+  // • YouTube supports the IFrame Player API when enablejsapi=1 is set —
+  //   then postMessage `{"event":"command","func":"pauseVideo"}` pauses.
+  // • Vimeo has always been postMessage-controllable (no query param needed).
+  // • Matterport / Kuula / iGuide etc. don't offer a public pause API, so we
+  //   simply skip the pause for them.
+  const provider = React.useMemo(() => {
+    const u = (embed.url || "").toLowerCase();
+    if (u.includes("youtube.com/embed") || u.includes("youtube-nocookie.com/embed")) return "youtube";
+    if (u.includes("player.vimeo.com")) return "vimeo";
+    return "other";
+  }, [embed.url]);
+
+  const enhancedSrc = React.useMemo(() => {
+    if (!embed.url) return "";
+    if (provider === "youtube") {
+      const hasQuery = embed.url.includes("?");
+      const sep = hasQuery ? "&" : "?";
+      // enablejsapi=1 unlocks postMessage control (safe to add per YouTube docs)
+      return `${embed.url}${sep}enablejsapi=1`;
+    }
+    return embed.url;
+  }, [embed.url, provider]);
+
+  const pauseIframe = React.useCallback(() => {
+    const win = iframeRef.current?.contentWindow;
+    if (!win) return;
+    try {
+      if (provider === "youtube") {
+        win.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: "" }), "*");
+      } else if (provider === "vimeo") {
+        win.postMessage(JSON.stringify({ method: "pause" }), "*");
+      }
+    } catch { /* ignore cross-origin errors */ }
+  }, [provider]);
+
   React.useEffect(() => {
     timerRef.current = setTimeout(() => {
       // If we haven't marked it OK in 7 seconds assume the embed is blocked.
@@ -3455,13 +3491,13 @@ const VirtualTourFrame = ({ listing }) => {
     return () => clearTimeout(timerRef.current);
   }, []);
 
-  // Cross-origin video-play detection (fixes Doug's overlapping-voice bug,
-  // Feb 2026): YouTube / Vimeo / Matterport iframes are cross-origin so we
-  // can't hook their `play` event directly. Instead we watch the parent
-  // window for a `blur` event that fires _while the mouse is over the
-  // iframe_ — that's the browser's tell that the user just clicked into
-  // the iframe (which happens the moment they hit Play). We then take the
-  // audio floor via mediaBus so Doogie's TTS narration auto-pauses.
+  // Cross-origin video-play detection (Doug reported overlapping voices,
+  // Feb 2026): YouTube / Vimeo / Matterport iframes are cross-origin, so we
+  // use the classic `window.blur` + "mouse over the iframe" heuristic to
+  // detect the user clicking Play. We then take the audio floor via
+  // mediaBus so Doogie's TTS narration auto-pauses. Reverse direction
+  // (Doogie plays → video pauses) uses postMessage — non-destructive so
+  // the YouTube pipeline never re-buffers.
   React.useEffect(() => {
     let mediaBus;
     let unsub;
@@ -3478,31 +3514,34 @@ const VirtualTourFrame = ({ listing }) => {
         if (!hoveredRef.current) return;   // ignore alt-tab / dev-tools blurs
         if (claimedRef.current) return;    // already claimed — don't re-fire
         claimedRef.current = true;
-        mediaBus.claim("virtual-tour-video", {
-          pause: () => {
-            // Cross-origin iframes can't be paused via JS — reload with a
-            // new nonce param so the src re-mounts and playback stops.
-            claimedRef.current = false;
-            setSrcNonce(n => n + 1);
-          },
-        });
+        mediaBus.claim("virtual-tour-video", { pause: () => { claimedRef.current = false; pauseIframe(); } });
+      };
+      const onFocus = () => {
+        // Visitor clicked outside the iframe. Release the claim so a later
+        // Doogie play doesn't try to postMessage-pause a video that's
+        // already stopped by the user.
+        if (!claimedRef.current) return;
+        claimedRef.current = false;
+        try { mediaBus.release("virtual-tour-video"); } catch {}
       };
       if (el) {
         el.addEventListener("mouseenter", onEnter);
         el.addEventListener("mouseleave", onLeave);
       }
       window.addEventListener("blur", onBlur);
+      window.addEventListener("focus", onFocus);
       unsub = () => {
         if (el) {
           el.removeEventListener("mouseenter", onEnter);
           el.removeEventListener("mouseleave", onLeave);
         }
         window.removeEventListener("blur", onBlur);
+        window.removeEventListener("focus", onFocus);
         try { mediaBus.release("virtual-tour-video"); } catch {}
       };
     })();
     return () => { mounted = false; if (unsub) unsub(); };
-  }, [embed.url]);
+  }, [embed.url, pauseIframe]);
 
   const onFrameLoad = () => {
     clearTimeout(timerRef.current);
@@ -3593,9 +3632,8 @@ const VirtualTourFrame = ({ listing }) => {
     }}>
       <iframe
         ref={iframeRef}
-        key={srcNonce}
         title={`Virtual tour — ${listing.street_address || "listing"}`}
-        src={embed.url}
+        src={enhancedSrc}
         loading="lazy"
         allow="fullscreen; xr-spatial-tracking; accelerometer; gyroscope; autoplay; encrypted-media"
         allowFullScreen
