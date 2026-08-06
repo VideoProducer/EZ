@@ -225,7 +225,7 @@
         }
         </script>
     </head>
-    <body>
+    <body style="margin:0;background:#FAF7F0;color:#0F2A5B;">
         <noscript>You need to enable JavaScript to run this app.</noscript>
         <!-- SEO shell content — sibling of #root, hidden from real users via
              CSS (0×0 offscreen), fully readable by non-JS crawlers (Ahrefs,
@@ -235,7 +235,7 @@
              React clears/replaces it during hydration and every listing card
              + font swap counts against Cumulative Layout Shift (was 0.525
              pre-fix). Sibling placement + display-neutral hiding gives 0 CLS. -->
-        <div id="seo-shell" aria-hidden="true" style="position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;clip:rect(0 0 0 0);white-space:nowrap;">
+        <div id="seo-shell" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none;clip:rect(0 0 0 0);white-space:nowrap;">
             <h1>EZtoFind.ca — Free British Columbia Real Estate Research</h1>
             <p>
                 A non-transactional research site by Doug LeMaire, REALTOR®
@@ -303,20 +303,6 @@
                 </p>
             </footer>
         </div>
-        <div id="root"></div>
-        <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-    </body>
-</html>
-e, use `npm run build` or `yarn build`.
-    -->
+        <div id="root" style="min-height:100vh;background:#FAF7F0;"></div>
     </body>
 </html>
