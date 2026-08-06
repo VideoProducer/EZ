@@ -3446,6 +3446,8 @@ const VirtualTourFrame = ({ listing }) => {
   const iframeRef = React.useRef(null);
   const hoveredRef = React.useRef(false);
   const claimedRef = React.useRef(false);
+  const playAckRef = React.useRef(false);      // set true when YouTube confirms playback started
+  const watchdogRef = React.useRef(null);
 
   // Provider detection so we can pause the correct iframe via postMessage
   // when Doogie takes the audio floor. Only YouTube + Vimeo expose a
@@ -3480,6 +3482,26 @@ const VirtualTourFrame = ({ listing }) => {
     } catch { /* cross-origin blocked — ignore */ }
   }, [provider]);
 
+  // When the user actually clicks Play (detected via the blur-while-hovered
+  // heuristic), kick off a 5-second watchdog. If YouTube never posts a
+  // playerState update in that window, the "Video unavailable" page is
+  // showing inside the iframe — flip to our own fallback UI so the visitor
+  // gets Doug's "Open in new tab" or "Ask Doug for a private tour" CTAs.
+  const armWatchdog = React.useCallback(() => {
+    if (provider !== "youtube" && provider !== "vimeo") return;
+    playAckRef.current = false;
+    if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    try {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+        "*"
+      );
+    } catch { /* cross-origin — ignore */ }
+    watchdogRef.current = setTimeout(() => {
+      if (!playAckRef.current) setStatus("blocked");
+    }, 5000);
+  }, [provider]);
+
   React.useEffect(() => {
     timerRef.current = setTimeout(() => {
       // If we haven't marked it OK in 7 seconds assume the embed is blocked.
@@ -3511,6 +3533,10 @@ const VirtualTourFrame = ({ listing }) => {
         if (claimedRef.current) return;
         claimedRef.current = true;
         mediaBus.claim("virtual-tour-video", { pause: () => { claimedRef.current = false; pauseIframe(); } });
+        // User just clicked into the iframe — arm the "did playback start?"
+        // watchdog so we can flip to the fallback if YouTube quietly renders
+        // the "Video unavailable" page instead of the real player.
+        armWatchdog();
       };
       const onFocus = () => {
         if (!claimedRef.current) return;
@@ -3534,11 +3560,66 @@ const VirtualTourFrame = ({ listing }) => {
       };
     })();
     return () => { mounted = false; if (unsub) unsub(); };
-  }, [embed.url, pauseIframe]);
+  }, [embed.url, pauseIframe, armWatchdog]);
+
+  // Listen for YouTube / Vimeo error messages so we can flip to the
+  // "Video didn't load" fallback INSTANTLY when the video's owner has
+  // disabled embedding (YT error 101 / 150). Beats waiting for the 7s
+  // timeout, and — critically — the iframe DOES fire onLoad even when the
+  // content is a "Video unavailable" error page, so the load timeout
+  // never catches that case on its own. Doug reported this Feb 2026 for
+  // a Cochrane / Duncan listing whose realtor's YouTube blocked embeds.
+  React.useEffect(() => {
+    const onMessage = (e) => {
+      // Only trust messages from the player origins we know about
+      const ok = e.origin === "https://www.youtube.com"
+              || e.origin === "https://www.youtube-nocookie.com"
+              || e.origin === "https://player.vimeo.com";
+      if (!ok) return;
+      try {
+        const data = typeof e.data === "string" ? JSON.parse(e.data) : e.data;
+        if (!data) return;
+        // YouTube posts { event: "onError", info: 101, id: 1 }
+        if (data.event === "onError" || data.info?.errorCode !== undefined) {
+          const raw = data.info?.errorCode ?? data.info ?? data.data;
+          const code = Number(raw);
+          if (code === 100 || code === 101 || code === 150 || code === 2) {
+            setStatus("blocked");
+          }
+        }
+        // YouTube posts state updates in infoDelivery — playerState 1=playing,
+        // 3=buffering, 5=cued. Any of those means the player initialised
+        // successfully, so cancel the watchdog.
+        const state = data.info?.playerState;
+        if (data.event === "infoDelivery" && (state === 1 || state === 3 || state === 5 || state === 2)) {
+          playAckRef.current = true;
+          if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null; }
+        }
+        // Vimeo posts { event: "error", data: { name: "PrivacyError" } }
+        if (data.event === "error" && (data.data?.name || "").toLowerCase().includes("privacy")) {
+          setStatus("blocked");
+        }
+      } catch { /* ignore non-JSON messages */ }
+    };
+    window.addEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    };
+  }, []);
 
   const onFrameLoad = () => {
     clearTimeout(timerRef.current);
     setStatus("ok");
+    // Ask YouTube's IFrame API to start posting state / error events back.
+    if (provider === "youtube") {
+      try {
+        iframeRef.current?.contentWindow?.postMessage(
+          JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+          "*"
+        );
+      } catch { /* cross-origin — ignore */ }
+    }
   };
   const openInNewTab = embed.url_raw || embed.url;
 
@@ -3561,13 +3642,14 @@ const VirtualTourFrame = ({ listing }) => {
         <h3 style={{
           margin: "0 0 0.5rem", color: "var(--brand-navy, #0F2A5B)",
           fontSize: "1.1rem", fontFamily: '"Playfair Display", serif',
-        }}>Some tours are licensed only for Canadian playback.</h3>
+        }}>This video is set to "no external embeds" by its owner.</h3>
         <p style={{
           margin: "0 0 1.1rem", fontFamily: "Inter, sans-serif",
           color: "#334155", fontSize: "0.92rem", lineHeight: 1.55,
         }}>
-          The listing brokerage or a VPN may be blocking this embed on your
-          current network. You can still see this home in three ways:
+          The listing brokerage's YouTube channel (or a strict network / VPN)
+          is blocking playback inside eztofind.ca. It plays fine on YouTube
+          directly — you can also request a private in-person tour with Doug:
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1rem" }}>
           <a
