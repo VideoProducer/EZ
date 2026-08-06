@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useRef, useState, useContext, createContext 
 import { Link, useNavigate } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
+import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -592,16 +593,32 @@ const SidebarFilters = () => {
   return (
     <form onSubmit={applyFilters} data-testid="dash-search-form"
       style={{
-        marginTop: 18, padding: 20,
+        marginTop: 18, padding: 0,
         background: "#fff", borderRadius: 14,
         border: "1px solid #E5E7EB",
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
         color: C.navy,
+        overflow: "hidden",
       }}>
-      <div style={{
-        fontSize: 13, fontWeight: 800, letterSpacing: 1.2,
-        color: C.brandBlue, textTransform: "uppercase", marginBottom: 4,
-      }}>Filter Listings</div>
+      <DoogieFilterHeader
+        onVoiceFilter={(f) => {
+          // Map the voice-filter payload into SidebarFilters state.
+          const propMap = { Condo: "Apartment", Townhouse: "Row / Townhouse" };
+          if (f.community) set("city", f.community);
+          if (f.property_type) set("propertyType", propMap[f.property_type] || f.property_type);
+          if (f.beds) set("beds", String(f.beds));
+          if (f.baths) set("baths", String(f.baths));
+          if (f.price_min) set("priceMin", String(f.price_min));
+          if (f.price_max) set("priceMax", String(f.price_max));
+          if (f.keyword) set("keyword", f.keyword);
+          // Give React one tick to flush, then submit the search.
+          setTimeout(() => runSearch(), 60);
+        }}
+        onReset={() => {
+          ["city","propertyType","beds","baths","priceMin","priceMax","keyword"].forEach(k => set(k, ""));
+        }}
+      />
+      <div style={{ padding: "16px 20px 20px" }}>
       <label style={sLabel} htmlFor="dash-f-city">Community / City</label>
       <input
         id="dash-f-city"
@@ -713,6 +730,7 @@ const SidebarFilters = () => {
       >
         {loading ? "Applying…" : "Apply Filters"}
       </button>
+      </div>
     </form>
   );
 };
@@ -882,11 +900,11 @@ const FloatingFilters = () => {
   }, []);
 
   if (isMobile) {
-    return (
-      <div style={{ marginTop: 16 }} data-testid="floating-filters-mobile">
-        <SidebarFilters/>
-      </div>
-    );
+    // On mobile the SidebarFilters is already mounted inline within the
+    // sidebar drawer — rendering it again here duplicated the whole filter
+    // panel (Doug spotted this on his iPhone Feb 06). Return null so we
+    // don't stack a second copy below the first.
+    return null;
   }
 
   return (

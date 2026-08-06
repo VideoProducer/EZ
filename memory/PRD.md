@@ -2434,3 +2434,19 @@ Doug reported both from Edge on production (someone else's laptop):
 **Fix**: call `_spell_out_money_in_script(script)` BEFORE the cue-validation loop, AND run the same rewrite on each `cue.sentence` before comparing. Result — all cues now match the final script character-for-character. Verified end-to-end via curl: `listing 30106073` returns 7 cues, 7/7 match the script, photo indices 0→7→10→8→15→12→18 will advance in real time with the narration.
 
 Both fixes are in PREVIEW. Doug needs to redeploy production for them to take effect at eztofind.ca.
+
+---
+
+## Feb 06, 2026 — Homepage-first route swap + Doogie filter header on dashboard
+
+**Doug's report** (production, iPhone Safari Private mode confirmed): No Doogie mic button anywhere on the filter panel he saw. Diagnosis: he was on the DashboardMockup's `SidebarFilters`, which was intentionally excluded from `DoogieFilterHeader` when built — that decision was fine for desktop drag-to-move but left mobile visitors with no Doogie hook.
+
+**Two changes**:
+1. **Route swap**: `/` now renders the classic marketing `<Home/>` component (with mascot hero, testimonials, community pins) instead of `<DashboardMockup/>`. The old dashboard moves to `/dashboard`. `/classic-home` now `<Navigate to="/">` for backwards compat.
+2. **Filter header wired**: Imported `DoogieFilterHeader` into `DashboardMockup.jsx` and mounted it inside `SidebarFilters` above the "Community / City" field. Wired `onVoiceFilter` to translate Claude's structured payload into `set(key, val)` calls (property_type remapping handled) and `onReset` to clear all 7 filter keys. Same widget visitors see on `/listings` now appears on `/dashboard` too.
+
+**Verified via Playwright at 390px iPhone width**:
+- `/` H1 = "EZtoFind.ca — Free British Columbia Real Estate Research" (marketing home confirmed as landing page)
+- `/dashboard` `data-testid="doogie-filter-header"` count = 1 (Doogie header confirmed present)
+
+Both fixes are in PREVIEW — Doug's next production redeploy pushes them live to eztofind.ca.
