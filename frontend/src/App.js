@@ -10100,10 +10100,10 @@ function App() {
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home
           for reference or quick rollback via a single-line route swap. */}
-      <Route path="/" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
+      <Route path="/" element={<DashboardMockup/>}/>
       <Route path="/dashboard" element={<DashboardMockup/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
-      <Route path="/classic-home" element={<Navigate to="/" replace/>}/>
+      <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       {/* Alias — the dashboard ListingCard + shared URLs use the plural form. */}
