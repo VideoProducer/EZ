@@ -4297,13 +4297,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/mckinley-landing</loc>
+    <loc>https://eztofind.ca/community/nanaimo/n/cedar</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/cedar</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/mckinley-landing</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4465,13 +4465,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/university-district</loc>
+    <loc>https://eztofind.ca/community/kamloops/n/barriere</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/barriere</loc>
+    <loc>https://eztofind.ca/community/nanaimo/n/university-district</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4729,12 +4729,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/barriere/n/barriere</loc>
-    <lastmod>2026-08-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
@@ -4742,6 +4736,12 @@
   </url>
   <url>
     <loc>https://eztofind.ca/community/kimberley/n/marysville</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/barriere/n/barriere</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4777,13 +4777,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/cherryville</loc>
+    <loc>https://eztofind.ca/community/nanaimo/n/uplands</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/rutland-south</loc>
+    <loc>https://eztofind.ca/community/vernon/n/cherryville</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -4795,13 +4795,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/uplands</loc>
+    <loc>https://eztofind.ca/community/sooke/n/john-muir</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/john-muir</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/rutland-south</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5047,13 +5047,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/n/rockland</loc>
+    <loc>https://eztofind.ca/community/kamloops/n/sahali</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/sahali</loc>
+    <loc>https://eztofind.ca/community/victoria/n/rockland</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5623,13 +5623,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/creston/n/wynndel-lakeview</loc>
+    <loc>https://eztofind.ca/community/vernon/n/mission-hill</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/mission-hill</loc>
+    <loc>https://eztofind.ca/community/creston/n/wynndel-lakeview</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6043,13 +6043,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/shannon-lake</loc>
+    <loc>https://eztofind.ca/community/spallumcheen/n/north-bx</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/spallumcheen/n/north-bx</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/shannon-lake</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6577,13 +6577,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/departure-bay</loc>
+    <loc>https://eztofind.ca/community/ucluelet/n/salmon-beach</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/ucluelet/n/salmon-beach</loc>
+    <loc>https://eztofind.ca/community/nanaimo/n/departure-bay</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6907,13 +6907,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/enderby/n/ashton-crk-mabel-lk</loc>
+    <loc>https://eztofind.ca/community/port-mcneill/n/port-mcneill</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-mcneill/n/port-mcneill</loc>
+    <loc>https://eztofind.ca/community/enderby/n/ashton-crk-mabel-lk</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6985,13 +6985,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/salmon-arm/n/nw-salmon-arm</loc>
+    <loc>https://eztofind.ca/community/salmo/n/nelson-south-salmo-rural</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/salmo/n/nelson-south-salmo-rural</loc>
+    <loc>https://eztofind.ca/community/salmon-arm/n/nw-salmon-arm</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -7327,13 +7327,13 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/okanagan-landing</loc>
+    <loc>https://eztofind.ca/community/ladysmith/n/ladysmith</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/ladysmith/n/ladysmith</loc>
+    <loc>https://eztofind.ca/community/vernon/n/okanagan-landing</loc>
     <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

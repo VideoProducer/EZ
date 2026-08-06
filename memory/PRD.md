@@ -2414,3 +2414,23 @@ E1 can't log into Doug's ChatGPT Plus account for him, but every asset is now fu
 - Fires via existing `services.email_sender.send_email` (Resend). Send target = `DOUG_DIGEST_EMAIL` env var, defaults to `doug@eztofind.ca`.
 - One-click **"📧 Send digest now"** button in the attribution widget lets Doug preview the layout on-demand without waiting for Monday — endpoint `POST /admin/attribution/chatgpt-doogie/send-digest-now` clears today's idempotency marker and re-fires.
 - Verified end-to-end via curl: `{"ok": true}` returned, `digest_log` entry created, email queued in Resend.
+
+---
+
+## Feb 06, 2026 — Two Doogie Narration Bugs (production live-report)
+
+Doug reported both from Edge on production (someone else's laptop):
+1. Playing narration on Listing A, navigating to Listing B, and hitting Play → old audio of A plays again instead of B's fresh narration.
+2. Photos don't sync with the spoken narration.
+
+### Bug 1 — Stale audio across listing navigation
+**File**: `/app/frontend/src/components/ListingNarration.jsx` L76-105.
+**Cause**: `useEffect` on `listing?.listing_key` change only reset `scriptCacheRef`, `scriptText`, and `cues` — it did NOT stop the `<audio>` element, clear its `src`, revoke the previous blob URL, or reset the `state` machine. So `state="playing"` persisted; clicking Play again just paused/resumed the old audio via lines 270-271.
+**Fix**: on listing_key change, `audioRef.current.pause()` + `removeAttribute('src')` + `audio.load()` + `URL.revokeObjectURL(objectUrlRef.current)` + reset `state → idle`, `progress → 0`, `photoIdx → 0`, `autoOpenedRef → false`.
+
+### Bug 2 — Narration doesn't sync with photos
+**File**: `/app/backend/server.py` `_generate_listing_narration()` around L8189.
+**Cause**: money-rewrite happened AFTER cue validation. Haiku returned cues like `{"sentence": "This home is listed at $500,000.", "photo_idx": 3}` — the sentence PASSED `sent in script` because raw `script` still had `$500,000`. Then `_spell_out_money_in_script()` rewrote `script` (but not the cue sentences) to `"five hundred thousand dollars"`. On the frontend, `scriptText.indexOf(cue.sentence)` failed for every cue containing a price → all cues fell back to `pos = searchFrom` → they bunched at char position 0. Photos would show cue[0]'s photo_idx for 90% of the audio then flash through the rest at the very end.
+**Fix**: call `_spell_out_money_in_script(script)` BEFORE the cue-validation loop, AND run the same rewrite on each `cue.sentence` before comparing. Result — all cues now match the final script character-for-character. Verified end-to-end via curl: `listing 30106073` returns 7 cues, 7/7 match the script, photo indices 0→7→10→8→15→12→18 will advance in real time with the narration.
+
+Both fixes are in PREVIEW. Doug needs to redeploy production for them to take effect at eztofind.ca.

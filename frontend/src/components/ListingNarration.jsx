@@ -73,11 +73,32 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   const muted = useDoogieMuted();
   const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
-  // Reset any cached LLM narration when the user navigates to a new listing.
+  // Reset EVERYTHING when the user navigates to a new listing. Previously
+  // we only cleared the script cache — the audio element kept the old blob
+  // URL and state="playing"/"paused" persisted, so the next click of Play
+  // just resumed the previous listing's audio instead of fetching a fresh
+  // TTS blob for the new listing. Reported live by Doug on production
+  // (Edge browser, Aug 2026). Fix: on listing_key change, stop playback,
+  // clear the <audio> src, revoke the blob URL, and reset state → "idle".
   React.useEffect(() => {
     scriptCacheRef.current = null;
     setScriptText("");
     setCues([]);
+    setProgress(0);
+    setLocalPhotoIdx(0);
+    setState("idle");
+    if (audioRef.current) {
+      try { audioRef.current.pause(); } catch {}
+      try { audioRef.current.removeAttribute("src"); audioRef.current.load(); } catch {}
+    }
+    if (objectUrlRef.current) {
+      try { URL.revokeObjectURL(objectUrlRef.current); } catch {}
+      objectUrlRef.current = null;
+    }
+    // Also reset the "auto-open reel" latch so a share-link with ?reel=1
+    // still fires exactly once per listing rather than never firing again
+    // after a same-tab navigation.
+    autoOpenedRef.current = false;
   }, [listing?.listing_key]);
 
   // Re-apply speed if the user drags the slider mid-narration.

@@ -8169,6 +8169,15 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> dict:
         script = str(parsed.get("script") or "").strip().strip('"')
         if len(script) < 40:
             raise ValueError("script too short")
+        # Rewrite money BEFORE cue validation so cue sentences match the final
+        # script character-for-character. Doug reported (Aug 2026) photos
+        # sticking on cue 1 during playback — the root cause was `sent in
+        # script` passing on the raw script and then indexOf() failing after
+        # `_spell_out_money_in_script` replaced "$500,000" with "five hundred
+        # thousand dollars". All subsequent cues then defaulted to
+        # `searchFrom = 0`, bunching them at the start and making photos
+        # advance in one big lump at the end.
+        script = _spell_out_money_in_script(script)
         raw_cues = parsed.get("cues") or []
         clean_cues = []
         for c in raw_cues:
@@ -8177,6 +8186,9 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> dict:
                 idx = int(c.get("photo_idx"))
                 if not sent:
                     continue
+                # Rewrite the same money strings in cue sentences too so they
+                # match the post-rewrite script.
+                sent = _spell_out_money_in_script(sent)
                 if photo_count > 0:
                     idx = max(0, min(photo_count - 1, idx))
                 else:
@@ -8186,7 +8198,6 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> dict:
                     clean_cues.append({"sentence": sent, "photo_idx": idx})
             except Exception:
                 continue
-        script = _spell_out_money_in_script(script)
         # If Haiku returned no valid cues, generate them from an even split.
         if not clean_cues:
             return _fallback_result(script)
