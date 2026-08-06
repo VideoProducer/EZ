@@ -40,6 +40,7 @@ import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
+import { autoGlossaryLink } from "./lib/autoGlossaryLink";
 import TourNarration from "./components/TourNarration";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
@@ -4372,6 +4373,11 @@ const GlossaryTerm = () => {
   const [t, setT] = useState(null);
   const [loading, setLoading] = useState(true);
   const [related, setRelated] = useState({ category: "", items: [] });
+  // Full glossary list — used to auto-cross-link known terms inside the
+  // current definition body (feature "a" from Doug's internal-linking ask,
+  // Feb 2026). Excludes the current slug so we never self-link.
+  const [glossaryTerms, setGlossaryTerms] = useState([]);
+  useEffect(()=>{ axios.get(`${API}/glossary`).then(r => setGlossaryTerms(r.data || [])).catch(() => {}); },[]);
   useEffect(()=>{ setLoading(true); axios.get(`${API}/glossary/${slug}`).then(r=>{setT(r.data);setLoading(false);}).catch(()=>setLoading(false)); axios.get(`${API}/glossary/${slug}/related`).then(r=>setRelated(r.data||{items:[]})).catch(()=>{}); },[slug]);
   // Slug-derived fallback title for the loading state — gives non-JS
   // crawlers a real <h1> + descriptive paragraph even before the API
@@ -4519,7 +4525,7 @@ const GlossaryTerm = () => {
       What is {t.term} in British Columbia?
     </h2>
 
-    <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",lineHeight:1.75,color:"var(--ink)"}} itemProp="articleBody">{t.definition}</p>
+    <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",lineHeight:1.75,color:"var(--ink)"}} itemProp="articleBody" dangerouslySetInnerHTML={{__html: autoGlossaryLink(t.definition, glossaryTerms, {currentSlug: t.slug})}}></p>
 
     {/* FIX-01 speakable disclaimer — bundled into the SpeakableSpecification
         cssSelector so voice assistants ALWAYS append the compliance
@@ -6752,7 +6758,13 @@ const CommunityPage = () => {
   const [climate, setClimate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingWx, setLoadingWx] = useState(true);
+  // Full glossary list — used to auto-link known BC-real-estate terms inside
+  // the synopsis body (feature "a" from Doug's internal-linking ask, Feb 2026).
+  // Cached in module-level memo inside autoGlossaryLink so 240 community
+  // pages don't each rebuild the regex table.
+  const [glossaryTerms, setGlossaryTerms] = useState([]);
   useEffect(() => { axios.get(`${API}/communities`).then(r => setData(r.data)); }, []);
+  useEffect(() => { axios.get(`${API}/glossary`).then(r => setGlossaryTerms(r.data || [])).catch(() => setGlossaryTerms([])); }, []);
   useEffect(() => {
     setLoading(true); setSyn(null); setLoadingWx(true); setWx(null); setClimate(null);
     axios.get(`${API}/community/${slug}/synopsis`, {timeout: 90000}).then(r => { setSyn(r.data); setLoading(false); }).catch(() => setLoading(false));
@@ -6922,7 +6934,7 @@ const CommunityPage = () => {
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
       {loading && <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",padding:"1rem",background:"#F8F6EF",borderRadius:10,marginTop:"0.5rem"}}>🐾 Doogie is writing a synopsis of {found}… (first visit takes ~10 seconds, then instant forever)</div>}
       {!loading && syn?.synopsis && <>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: safeHtml(syn.synopsis.replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>'))}}></div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"1.02rem",lineHeight:1.75,color:"var(--ink)",whiteSpace:"pre-wrap"}} data-testid="community-synopsis" dangerouslySetInnerHTML={{__html: autoGlossaryLink(syn.synopsis, glossaryTerms).replace(/Referral REALTOR® link/gi,'<a href="/referral-request" style="color:var(--brand-blue);text-decoration:underline;">Referral REALTOR® link</a>')}}></div>
         <p data-testid="community-speakable-disclaimer" style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",fontStyle:"italic",marginTop:"0.5rem",lineHeight:1.55}}>
           General information only — not legal, tax, financial, or real-estate advice. For your specific situation consult a licensed BC professional.
         </p>
