@@ -4577,6 +4577,7 @@ const GlossaryTerm = () => {
       url={`https://eztofind.ca/glossary/${t.slug}`}
       dateModified={dateMod}
       entryType="definition"
+      hidden
     />
 
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleSchema)}}/>
