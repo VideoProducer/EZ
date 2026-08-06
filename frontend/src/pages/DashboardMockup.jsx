@@ -951,22 +951,11 @@ const FloatingFilters = () => {
           Drag filter here
         </span>
         <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={voiceState === "listening" ? stopVoice : startVoice}
-            data-testid="floating-filters-voice"
-            title={voiceState === "listening" ? "Stop listening" : "Ask Doogie by voice"}
-            style={{
-              background: voiceState === "listening" ? "#DC2626" : C.brandGold,
-              color: voiceState === "listening" ? "#fff" : C.navy,
-              border: "none", borderRadius: 999, padding: "2px 8px",
-              fontSize: 9, fontWeight: 800, cursor: "pointer",
-              letterSpacing: 0.5, textTransform: "uppercase",
-              display: "inline-flex", alignItems: "center", gap: 3,
-            }}
-          >
-            {voiceState === "listening" ? "● Rec" : "🎤 Doogie"}
-          </button>
+          {/* DOOGIE + RESET pills removed here (Feb 2026) — they duplicated the
+              controls already rendered by the inner DoogieFilterHeader inside
+              SidebarFilters. Doug spotted the double stack on iPhone.
+              Kept a single "Reset position" chevron so the drag anchor can
+              still be recentred without cluttering the strip. */}
           <button
             type="button"
             onClick={resetPos}
@@ -977,7 +966,7 @@ const FloatingFilters = () => {
               borderRadius: 999, padding: "1px 7px", fontSize: 9, fontWeight: 800, cursor: "pointer",
               letterSpacing: 0.5, textTransform: "uppercase",
             }}
-          >Reset</button>
+          >⤺</button>
         </span>
       </div>
       <div style={{
