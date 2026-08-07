@@ -45,6 +45,12 @@ TARGET_BASE = (
     or os.environ.get("PUBLIC_APP_URL")
     or "http://localhost:3000"
 ).rstrip("/")
+
+# Fallback target used if TARGET_BASE turns out to be unreachable (e.g. the
+# preview env var `PRERENDER_TARGET_URL=http://localhost:3000` accidentally
+# propagates to production where port 3000 isn't in use).  Resolved during
+# `start()` via a quick TCP probe.
+FALLBACK_TARGET = (os.environ.get("PUBLIC_APP_URL") or "").rstrip("/")
 RENDER_TIMEOUT_MS = int(os.environ.get("PRERENDER_TIMEOUT_MS", "20000"))
 RENDER_WAIT_UNTIL = os.environ.get("PRERENDER_WAIT_UNTIL", "networkidle")  # networkidle | load | domcontentloaded
 MAX_CONCURRENCY = int(os.environ.get("PRERENDER_MAX_CONCURRENCY", "2"))
@@ -219,6 +225,26 @@ class PrerenderService:
         async with self._start_lock:
             if self._ready:
                 return
+            # ---- Resolve TARGET_BASE with a fast TCP probe ----
+            # If the configured TARGET_BASE isn't reachable (common on
+            # production if the preview localhost:3000 env var propagated),
+            # fall back to PUBLIC_APP_URL.  Rewrites the module-level constant
+            # so all subsequent renders use the working target.
+            global TARGET_BASE
+            probe_url = TARGET_BASE
+            reachable = False
+            try:
+                import aiohttp
+                async with aiohttp.ClientSession() as _s:
+                    async with _s.get(probe_url, timeout=aiohttp.ClientTimeout(total=3)) as r:
+                        reachable = r.status < 500
+            except Exception:
+                reachable = False
+            if not reachable and FALLBACK_TARGET and FALLBACK_TARGET != TARGET_BASE:
+                logger.warning(f"prerender: primary target {TARGET_BASE} unreachable, falling back to {FALLBACK_TARGET}")
+                TARGET_BASE = FALLBACK_TARGET
+            else:
+                logger.info(f"prerender: using target {TARGET_BASE} (reachable={reachable})")
             # Mongo indexes: TTL on expires_at + unique on path.
             try:
                 await self.db[CACHE_COLL].create_index(
