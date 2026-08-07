@@ -1805,6 +1805,8 @@ const SearchPanel = () => {
       <SyncedResults/>
       <IdleSaveSearchNudge/>
       <FloatingFilters/>
+      {/* Floating "Compare (N)" tray — appears when ≥2 listings are selected. */}
+      <CompareTray/>
       {/* Persistent Ask-Doogie pill — the site-wide FAB was retired in favour
           of Visual Agent as the unified entry point. Here on the search view
           it's back on purpose: visitors researching listings should always
@@ -1875,6 +1877,66 @@ const AddressMlsSearch = () => {
     </form>
   );
 };
+
+// ── Floating "Compare (N)" tray ────────────────────────────────────────────
+// Shows a fixed bottom-right pill whenever the user has ≥1 listing in the
+// compare set. Tapping it opens /compare (which reads the same
+// localStorage key). Listens to the `ez-compare-changed` window event fired
+// by ListingCard's toggle so the count updates instantly without polling.
+const CompareTray = () => {
+  const navigate = useNavigate();
+  const [keys, setKeys] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("ez_compare_keys") || "[]"); }
+    catch { return []; }
+  });
+  useEffect(() => {
+    const onChange = (e) => setKeys(Array.isArray(e.detail) ? e.detail : []);
+    window.addEventListener("ez-compare-changed", onChange);
+    return () => window.removeEventListener("ez-compare-changed", onChange);
+  }, []);
+  if (!keys.length) return null;
+  const clear = (e) => {
+    e.stopPropagation();
+    localStorage.setItem("ez_compare_keys", "[]");
+    setKeys([]);
+    window.dispatchEvent(new CustomEvent("ez-compare-changed", { detail: [] }));
+  };
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate("/compare")}
+      onKeyDown={(e) => { if (e.key === "Enter") navigate("/compare"); }}
+      data-testid="dash-compare-tray"
+      style={{
+        position: "fixed", right: 20, bottom: 84, zIndex: 85,
+        background: C.navy, color: "#fff",
+        padding: "10px 14px 10px 16px", borderRadius: 999,
+        boxShadow: "0 10px 24px rgba(15,42,91,0.35)",
+        cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif",
+        display: "inline-flex", alignItems: "center", gap: 12,
+        fontSize: 13, fontWeight: 700,
+        border: `2px solid ${C.gold}`,
+      }}
+    >
+      <span aria-hidden>⇄</span>
+      <span>Compare <strong>{keys.length}</strong> listing{keys.length === 1 ? "" : "s"}</span>
+      <button
+        onClick={clear}
+        aria-label="Clear comparison"
+        data-testid="dash-compare-tray-clear"
+        style={{
+          background: "rgba(255,255,255,0.15)", color: "#fff",
+          border: "none", width: 22, height: 22, borderRadius: 999,
+          cursor: "pointer", display: "grid", placeItems: "center",
+          fontSize: 12, lineHeight: 1,
+        }}
+      >×</button>
+    </div>
+  );
+};
+
+
 
 const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) => {
   if (loading && !results) return <SkeletonGrid/>;
@@ -2546,6 +2608,36 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
     e.stopPropagation();
     if (onFocusMap) onFocusMap(l.listing_key);
   };
+  // Compare selection — mirrors localStorage state used by CompareListings page.
+  const [inCompare, setInCompare] = useState(false);
+  useEffect(() => {
+    try {
+      const keys = JSON.parse(localStorage.getItem("ez_compare_keys") || "[]");
+      setInCompare(Array.isArray(keys) && keys.includes(l.listing_key));
+    } catch {}
+  }, [l.listing_key]);
+  const toggleCompare = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const keys = JSON.parse(localStorage.getItem("ez_compare_keys") || "[]");
+      const has = keys.includes(l.listing_key);
+      let next;
+      if (has) {
+        next = keys.filter(k => k !== l.listing_key);
+      } else {
+        if (keys.length >= 5) {
+          alert("You can compare up to 5 listings at a time. Remove one first.");
+          return;
+        }
+        next = [...keys, l.listing_key];
+      }
+      localStorage.setItem("ez_compare_keys", JSON.stringify(next));
+      setInCompare(!has);
+      // Broadcast to the floating tray so it re-reads without polling.
+      window.dispatchEvent(new CustomEvent("ez-compare-changed", { detail: next }));
+    } catch {}
+  };
   const notify = (key) => { if (onHoverKey) onHoverKey(key); };
   return (
     <Link to={`/listings/${l.listing_key}`} data-testid={`dash-listing-${l.listing_key}`}
@@ -2566,6 +2658,24 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
         height: 140, background: cover ? `url(${cover}) center/cover` : C.mist,
         position: "relative",
       }}>
+        <button
+          type="button"
+          onClick={toggleCompare}
+          data-testid={`dash-listing-compare-${l.listing_key}`}
+          aria-label={inCompare ? "Remove from comparison" : "Add to comparison (up to 5)"}
+          title={inCompare ? "In comparison · click to remove" : "Add to comparison"}
+          style={{
+            position: "absolute", left: 8, top: 8,
+            padding: "4px 10px", borderRadius: 999, border: "none", cursor: "pointer",
+            background: inCompare ? C.navy : "rgba(255,255,255,0.95)",
+            color: inCompare ? "#fff" : C.navy,
+            fontSize: 11, fontWeight: 700,
+            display: "inline-flex", alignItems: "center", gap: 4,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+          }}
+        >
+          {inCompare ? "✓ Compare" : "+ Compare"}
+        </button>
         <button
           type="button"
           onClick={toggleSave}

@@ -19,6 +19,7 @@ import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
 import DashboardMockup from "./pages/DashboardMockup";
 import MarketReport from "./pages/MarketReport";
+import CompareListings from "./pages/CompareListings";
 // Route-lazy the multi-step intake form. VisualAgentDemo is a heavy chunk
 // (~28 KB gzipped) that's embedded below-the-fold on the homepage plus
 // standalone at /visual-agent-demo. Splitting it out means the initial
@@ -10649,6 +10650,9 @@ function App() {
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       {/* Alias — the dashboard ListingCard + shared URLs use the plural form. */}
       <Route path="/listings/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
+      {/* Side-by-side comparison of up to 5 MLS® listings. `?demo=1` seeds
+          the page with real listings so Doug can preview the mockup. */}
+      <Route path="/compare" element={<CompareListings/>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
