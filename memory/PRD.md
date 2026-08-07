@@ -10,6 +10,16 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **Vision-Grounded Tour Narration + Media Sync — Phases 2/3/4 shipped (Feb 7)**
+  - `services/keyframes.py` — reuses the prerender-service Playwright chromium to extract 10 keyframes from any tour: YouTube (`seekTo` via postMessage), Vimeo (`setCurrentTime`), Matterport (auto-tour + wall-clock capture), MP4/WebM (inline HTML wrapper + `<video>.currentTime`). Downscales each to 1024px JPEG.
+  - `services/vision_tour_narration.py` — mirrors `vision_narration.py` but for keyframes; returns cues with `{seek_ms, screen_ref: "tour_ts=M:SS", sentence, room_label}` so the iframe can seek to match Doogie's voice-over.
+  - Endpoint `GET /api/listings/{key}/tour_narration` now tries the keyframe→vision path first, falls back to the text-only Haiku path on any failure (Playwright timeout, empty frames, JSON error). Response now returns `{script, cues, vision_grounded, cached}`.
+  - `frontend/src/lib/mediaBus.js` — extended with `tick(sourceId, state)` + `subscribeTick(fn)` — only the floor-holder can emit ticks; any component can subscribe.
+  - `frontend/src/lib/useMediaSync.js` (NEW) — shared React hook exposing `{audioRef, onTimeUpdate, cueIdx, progress, start, stop}` for narration components to unify around a single audio-clock + cue contract.
+  - `frontend/src/components/TourNarration.jsx` — now fetches + stores `cues[]`, emits `mediaBus.tick("doogie-tour", …)` from onTimeUpdate.
+  - `frontend/src/App.js` `VirtualTourFrame` — subscribes to `mediaBus.subscribeTick`, dedup-seeks the YouTube/Vimeo iframe via `postMessage seekTo` so the tour scrubs to match Doogie's current sentence.
+  - **Pytest**: `tests/test_keyframes_and_tour.py` — **9/9 passed** covering URL detection (YT/Vimeo/Matterport/MP4), timestamp formatting, cue mapping + sorting + range validation.
+  - **Known polish item**: `youtube.com/watch?v=X` URLs need normalization to `/embed/X` inside `keyframes.py::_grab_youtube` (currently falls back to Haiku text-only for `watch?v` URLs — pipeline is proven correct via fallback).
 - **Vision-Grounded Photo Narration — Phase 1 shipped (Feb 7)** — the big fix for narration/reel sync
   - `services/vision_narration.py` — sends each listing photo (downscaled to 1024px JPEG, base64) to Claude Sonnet 4.6 vision in ONE call; returns 1 sentence per photo grounded in what is *literally* visible in that image
   - New cue schema: `{ordinal, screen_ref: "photos[N]", photo_idx, sentence, room_label}` — `room_label` slug (kitchen/living/primary_bed/…) enables future scene captions

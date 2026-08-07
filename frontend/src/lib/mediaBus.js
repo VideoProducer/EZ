@@ -15,6 +15,7 @@
 
 const _controls = new Map();   // sourceId -> { pause?: () => void }
 const _listeners = new Set();  // callback(event)
+const _tickListeners = new Set(); // callback(sourceId, state)
 
 let _current = null;           // the sourceId currently claiming the audio floor
 
@@ -45,6 +46,21 @@ export const subscribe = (fn) => {
   return () => _listeners.delete(fn);
 };
 
+// Broadcast progress + current cue so any subscribed media element can sync
+// its visual to the current narration position.  Only the current floor-
+// holder can tick.  Payload shape: {t_ms, duration_ms, cue_idx, cue}.
+export const tick = (sourceId, state) => {
+  if (!sourceId || _current !== sourceId) return;
+  _tickListeners.forEach(fn => {
+    try { fn(sourceId, state); } catch { /* ignore */ }
+  });
+};
+
+export const subscribeTick = (fn) => {
+  _tickListeners.add(fn);
+  return () => _tickListeners.delete(fn);
+};
+
 export const current = () => _current;
 
-export default { claim, release, subscribe, current };
+export default { claim, release, subscribe, tick, subscribeTick, current };

@@ -18,6 +18,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export default function TourNarration({ listing }) {
   const [state, setState] = useState("idle"); // idle | loading | playing | paused
   const [available, setAvailable] = useState(true); // 404 flips this false
+  const [cues, setCues] = useState([]);       // vision-grounded seek cues
   const audioRef = useRef(null);
   const scriptCacheRef = useRef(null);
   const objectUrlRef = useRef(null);
@@ -33,6 +34,7 @@ export default function TourNarration({ listing }) {
   // Reset cache when navigating to a different listing.
   useEffect(() => {
     scriptCacheRef.current = null;
+    setCues([]);
     setState("idle");
     setAvailable(!!(listing?.virtual_tour_embed?.url));
   }, [listing?.listing_key, listing?.virtual_tour_embed?.url]);
@@ -47,10 +49,46 @@ export default function TourNarration({ listing }) {
     const j = await r.json();
     const script = (j?.script || "").trim();
     if (script.length < 40) throw new Error("script too short");
+    // Persist cues so onTimeUpdate can seek the iframe as Doogie moves through
+    // rooms.  Sonnet vision tour narration returns `{seek_ms, screen_ref,
+    // sentence, room_label, ordinal}` — we only need `seek_ms` for the tick.
+    if (Array.isArray(j?.cues) && j.cues.length > 0) {
+      setCues(j.cues);
+    } else {
+      setCues([]);
+    }
     // Append compliance outro so the tour narration matches Doogie's overall tone.
     const outro = " This is general information only, not advice. Enjoy the tour!";
     scriptCacheRef.current = script + outro;
     return scriptCacheRef.current;
+  };
+
+  // Broadcast the current cue over mediaBus so VirtualTourFrame can seek the
+  // iframe to the timestamp Doogie is describing.  Fires on every audio
+  // timeupdate (~4-8 Hz).
+  const _onTimeUpdate = () => {
+    const a = audioRef.current;
+    if (!a || !cues.length || !isFinite(a.duration) || !a.duration) return;
+    const cur_ms = a.currentTime * 1000;
+    const dur_ms = a.duration * 1000;
+    // Total script duration doesn't include the outro cue-wise, so we assume
+    // the last cue's seek_ms is roughly at (last-cue-ratio * duration).
+    let idx = 0;
+    // Cues carry `seek_ms` which is the TOUR time we want to be at; we need
+    // to map audio-time → cue index proportionally to cue count (since audio
+    // pace ≠ tour pace).  Use even-distribution: (currentTime / duration) *
+    // cues.length.
+    const ratio = Math.max(0, Math.min(1, cur_ms / dur_ms));
+    idx = Math.min(cues.length - 1, Math.floor(ratio * cues.length));
+    const cue = cues[idx];
+    if (cue) {
+      try {
+        mediaBus.tick && mediaBus.tick("doogie-tour", {
+          t_ms: cur_ms, duration_ms: dur_ms,
+          cue_idx: idx, cue,
+        });
+      } catch { /* ignore */ }
+    }
   };
 
   const play = async () => {
@@ -170,6 +208,7 @@ export default function TourNarration({ listing }) {
       <audio
         ref={audioRef}
         preload="none"
+        onTimeUpdate={_onTimeUpdate}
         onEnded={() => setState("idle")}
         onError={() => setState("idle")}
         data-testid="tour-narration-audio"

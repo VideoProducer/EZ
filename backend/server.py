@@ -8739,29 +8739,70 @@ async def get_listing_tour_narration(request: Request, listing_key: str):
     cache_key = str(l.get("modified_at") or l.get("_id"))
     cached = (l.get("doogie_tour_narration") or {})
     if cached.get("cache_key") == cache_key and cached.get("script"):
-        return {"script": cached["script"], "cached": True}
+        return {
+            "script": cached["script"],
+            "cues": cached.get("cues") or [],
+            "vision_grounded": bool(cached.get("vision_grounded")),
+            "cached": True,
+        }
     l = _sanitize_listing(l)
     # Attach a synthetic virtual_tour_embed so the prompt's fact sheet can
     # mention host + branded/unbranded (used by _generate_tour_narration).
     first = next((t for t in tours if isinstance(t, dict) and (t.get("url") or "").strip()), {})
+    tour_url = (first.get("url") or "").strip() if first else ""
     if first:
         l["virtual_tour_embed"] = {
             "host": (first.get("category") or "video tour").lower(),
             "is_branded": bool(first.get("is_branded", False)),
         }
-    script = await _generate_tour_narration(l, session_id=f"tour-{listing_key}")
+
+    # Vision-grounded tour path (primary): extract 10 keyframes from the tour
+    # via Playwright, then Sonnet vision writes one sentence per keyframe.
+    # Falls back to the text-only Haiku path on any failure so the pill
+    # never breaks.  Cost: ~$0.01 per tour one-time (cached forever).
+    vision_result = None
+    if tour_url:
+        try:
+            from services.keyframes import extract_keyframes, _detect_kind
+            from services.vision_tour_narration import generate_tour_narration_from_keyframes as _gvt
+            kind = _detect_kind(tour_url)
+            frames = await extract_keyframes(tour_url, kind=kind, count=10)
+            if frames:
+                vision_result = await _gvt(l, frames, EMERGENT_LLM_KEY)
+        except Exception as e:
+            logger.warning(f"vision_tour_narration failed for {listing_key}: {e}")
+
+    if vision_result and vision_result.get("cues"):
+        script = _spell_out_money_in_script(vision_result["script"])
+        cues = []
+        for c in vision_result["cues"]:
+            cues.append({
+                "sentence": _spell_out_money_in_script(c["sentence"]),
+                "seek_ms": c.get("seek_ms"),
+                "screen_ref": c.get("screen_ref"),
+                "room_label": c.get("room_label"),
+                "ordinal": c.get("ordinal"),
+            })
+        vision_grounded = True
+    else:
+        script = await _generate_tour_narration(l, session_id=f"tour-{listing_key}")
+        cues = []
+        vision_grounded = False
+
     try:
         await db.listings.update_one(
             {"listing_key": listing_key},
             {"$set": {"doogie_tour_narration": {
                 "script": script,
+                "cues": cues,
                 "cache_key": cache_key,
+                "vision_grounded": vision_grounded,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }}},
         )
     except Exception as e:
         logger.warning(f"Failed to cache tour narration for {listing_key}: {e}")
-    return {"script": script, "cached": False}
+    return {"script": script, "cues": cues, "vision_grounded": vision_grounded, "cached": False}
 
 
 # ── Doogie Handoff Tracking ─────────────────────────────────────────────────

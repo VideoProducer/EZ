@@ -3628,6 +3628,44 @@ const VirtualTourFrame = ({ listing }) => {
     };
   }, []);
 
+  // Subscribe to Doogie tour narration cue ticks — when the vision-grounded
+  // narration returns cues with seek_ms timestamps, we seek the tour iframe
+  // to the matching timestamp so what's on screen matches what Doogie is
+  // describing.  YouTube + Vimeo only (Matterport has no seek API).
+  React.useEffect(() => {
+    if (provider !== "youtube" && provider !== "vimeo") return;
+    let lastSeekMs = -1;
+    let mediaBusModule;
+    let unsub;
+    (async () => {
+      try { mediaBusModule = (await import("./lib/mediaBus")).default; }
+      catch { return; }
+      unsub = mediaBusModule.subscribeTick((sid, state) => {
+        if (sid !== "doogie-tour") return;
+        const target = state?.cue?.seek_ms;
+        if (typeof target !== "number") return;
+        // De-duplicate: only seek when the cue changed (avoid seeking every
+        // 250ms during the same cue window).
+        if (Math.abs(target - lastSeekMs) < 500) return;
+        lastSeekMs = target;
+        const win = iframeRef.current?.contentWindow;
+        if (!win) return;
+        try {
+          if (provider === "youtube") {
+            win.postMessage(JSON.stringify({
+              event: "command", func: "seekTo", args: [target / 1000, true],
+            }), "*");
+          } else if (provider === "vimeo") {
+            win.postMessage(JSON.stringify({
+              method: "setCurrentTime", value: target / 1000,
+            }), "*");
+          }
+        } catch { /* cross-origin — ignore */ }
+      });
+    })();
+    return () => { if (unsub) unsub(); };
+  }, [provider]);
+
   const onFrameLoad = () => {
     clearTimeout(timerRef.current);
     setStatus("ok");
