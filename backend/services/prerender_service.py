@@ -40,7 +40,11 @@ logger = logging.getLogger(__name__)
 
 # --- Config ------------------------------------------------------------
 
-TARGET_BASE = os.environ.get("PRERENDER_TARGET_URL", "http://localhost:3000").rstrip("/")
+TARGET_BASE = (
+    os.environ.get("PRERENDER_TARGET_URL")
+    or os.environ.get("PUBLIC_APP_URL")
+    or "http://localhost:3000"
+).rstrip("/")
 RENDER_TIMEOUT_MS = int(os.environ.get("PRERENDER_TIMEOUT_MS", "20000"))
 RENDER_WAIT_UNTIL = os.environ.get("PRERENDER_WAIT_UNTIL", "networkidle")  # networkidle | load | domcontentloaded
 MAX_CONCURRENCY = int(os.environ.get("PRERENDER_MAX_CONCURRENCY", "2"))
