@@ -1,3 +1,10 @@
+# EZtoFind.ca — Product Requirements (append-only log)
+
+## 2026-02 (latest)
+- **Social share preview fixed**: Root-cause was missing `/images/og-default.png` fallback used by React `SEO` component + backend prerender pages. Copied new "Doogie holding laptop" 1024×1024 asset to both `/images/doogie-laptop.png` and `/images/og-default.png`. Updated `index.html` meta with correct dimensions + `?v=2` cache-buster.
+- **Doogie TTS price mispronunciation fixed**: Root-cause was raw currency strings like "$2,100,000.00" being sent to OpenAI TTS, which read it as "twenty-one thousand". Added `backend/services/price_speech.py` (uses `num2words`) that normalizes every dollar amount into speakable English (millions/thousands/cents/shorthand `$2.1M` `$500K`) BEFORE the TTS call in `/api/doogie/tts`. Locked with 18 pytest cases in `backend/tests/test_price_speech.py`.
+
+
 # EZtoFind.ca — PRD
 
 ## Original Problem Statement

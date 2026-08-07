@@ -12566,6 +12566,13 @@ async def doogie_tts(request: Request, body: DoogieTTSIn):
         # OpenAI TTS caps at 4096 chars; also protects the bill.
         text = text[:4000]
 
+    # Normalize any "$2,100,000" style dollar amounts so TTS never
+    # mispronounces a listing price (e.g. as "twenty-one thousand").
+    # Runs BEFORE the cache-key hash so cache hits stay deterministic
+    # and every synthesized clip is speech-safe.
+    from services.price_speech import normalize_prices_for_speech
+    text = normalize_prices_for_speech(text)
+
     voice = (body.voice or "ash").lower()
     if voice not in _TTS_ALLOWED_VOICES:
         voice = "ash"
