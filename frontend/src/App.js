@@ -5505,6 +5505,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/copycat-detector")} className={active==="copycat"?"active":""} data-testid="admin-nav-copycat">🕵️ Copycat Detector</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/cease-desist")} className={active==="cease-desist"?"active":""} data-testid="admin-nav-cease-desist">⚡ Cease & Desist</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/password")} className={active==="settings-password"?"active":""} data-testid="admin-nav-password">🔑 Change Password</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/seo-coverage")} className={active==="seo-coverage"?"active":""} data-testid="admin-nav-seo-coverage">🔍 SEO Coverage</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/settings/reset")} className={active==="reset"?"active":""} data-testid="admin-nav-reset" style={{color:"#DC2626"}}>🧹 Fresh Launch Reset</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>_adminSignOut(nav)} style={{marginTop:"2rem",color:"#F5A623",cursor:"pointer"}}>← Sign out</a>
     </aside>
@@ -7880,6 +7881,140 @@ const ComplianceStrip = () => (
 
 
 // --- Admin AI Content Approvals ---
+
+// ── SEO Coverage admin card ───────────────────────────────────────────────
+// Read-only dashboard powered by /api/admin/coverage. Surfaces:
+//   • Per-section URL counts + one-tap `site:URL` links on Google + Bing
+//     so Doug can spot AEO gaps without leaving the admin
+//   • Deep-link CTAs to submit the sitemap in GSC + BWT (pre-fills value)
+//   • Ready-to-copy IndexNow ping URL (sitemap-level recrawl)
+//   • "Regenerate sitemap + push IndexNow" one-click button
+const AdminSEOCoverage = () => {
+  const { headers } = useAdmin();
+  const [data, setData] = useState(null);
+  const [regen, setRegen] = useState(null);
+  const [regenBusy, setRegenBusy] = useState(false);
+  const [copied, setCopied] = useState(null);
+
+  const load = React.useCallback(() => {
+    if (!headers) return;
+    axios.get(`${API}/admin/coverage`, { headers })
+      .then(r => setData(r.data))
+      .catch(() => setData({ error: "Coverage endpoint unavailable." }));
+  }, [headers]);
+  useEffect(() => { load(); }, [load]);
+
+  const doRegen = async () => {
+    setRegenBusy(true); setRegen(null);
+    try {
+      const r = await axios.post(`${API}/admin/regenerate-sitemap`, {}, { headers });
+      setRegen(r.data);
+      load();
+    } catch (e) {
+      setRegen({ error: String(e?.response?.data?.detail || e?.message || e) });
+    } finally { setRegenBusy(false); }
+  };
+
+  const copy = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1500);
+    } catch {}
+  };
+
+  if (!data) {
+    return <div style={{ padding: 20 }}>Loading SEO coverage…</div>;
+  }
+  if (data.error) {
+    return <div style={{ padding: 20, color: "#B91C1C" }}>{data.error}</div>;
+  }
+
+  const btn = { background: "#0F2A5B", color: "#fff", border: "none", padding: "8px 14px", borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: "pointer", textDecoration: "none", display: "inline-block" };
+  const btnLight = { ...btn, background: "#fff", color: "#0F2A5B", border: "1px solid #E5E7EB" };
+
+  return (
+    <div style={{ padding: 24, fontFamily: "Inter,sans-serif", color: "#1F2937" }} data-testid="admin-seo-coverage">
+      <h1 style={{ margin: 0, fontFamily: "'Playfair Display',serif", color: "#0F2A5B" }}>SEO Coverage Watchlist</h1>
+      <p style={{ color: "#6B7280", marginTop: 4 }}>
+        Sitemap sections and one-tap indexation checks on Google + Bing. Data pulled live from MongoDB every time you open this page.
+      </p>
+
+      {/* Actions row */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0 24px" }}>
+        <button
+          onClick={doRegen}
+          disabled={regenBusy}
+          data-testid="admin-seo-regen"
+          style={{ ...btn, background: regenBusy ? "#9CA3AF" : "#0F2A5B", cursor: regenBusy ? "wait" : "pointer" }}
+        >{regenBusy ? "Regenerating…" : "⚡ Regenerate sitemap + IndexNow push"}</button>
+        <a href={data.gsc_url} target="_blank" rel="noopener noreferrer" data-testid="admin-seo-gsc" style={btnLight}>Open Google Search Console ↗</a>
+        <a href={data.bwt_url} target="_blank" rel="noopener noreferrer" data-testid="admin-seo-bwt" style={btnLight}>Open Bing Webmaster Tools ↗</a>
+        <a href={data.indexnow_ping_sitemap} target="_blank" rel="noopener noreferrer" data-testid="admin-seo-indexnow-ping" style={btnLight}>Ping sitemap via IndexNow ↗</a>
+      </div>
+
+      {regen && (
+        <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: regen.error ? "#FEE2E2" : "#DCFCE7", color: regen.error ? "#B91C1C" : "#166534", fontSize: 13 }}>
+          {regen.error
+            ? <>Regeneration failed: {regen.error}</>
+            : <>✅ Sitemap regenerated · {regen.total} URLs · IndexNow HTTP {regen.indexnow?.status_code || "—"}.</>}
+        </div>
+      )}
+
+      {/* Sub-sitemap URLs to submit into GSC + BWT */}
+      <section style={{ marginBottom: 24, background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 }}>
+        <h3 style={{ margin: "0 0 12px", fontFamily: "'Playfair Display',serif", color: "#0F2A5B", fontSize: "1.1rem" }}>Sitemap files (submit each in GSC + BWT for per-section coverage stats)</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {data.sub_sitemaps.map(url => (
+            <div key={url} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <code style={{ background: "#F5F0E1", padding: "4px 8px", borderRadius: 6, fontSize: 12 }}>{url}</code>
+              <button onClick={() => copy(url, url)} data-testid={`admin-seo-copy-${url.split('/').pop()}`} style={{ ...btnLight, padding: "4px 10px", fontSize: 11 }}>
+                {copied === url ? "✓ Copied" : "Copy"}
+              </button>
+              <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#0EA5E9", fontSize: 12, fontWeight: 600 }}>Preview XML ↗</a>
+            </div>
+          ))}
+        </div>
+        <p style={{ marginTop: 12, fontSize: 12, color: "#6B7280" }}>
+          <strong>GSC:</strong> paste each URL under Sitemaps → Add a new sitemap.
+          <br/>
+          <strong>BWT:</strong> paste each URL under Sitemaps → Submit sitemap.
+        </p>
+      </section>
+
+      {/* Per-section coverage cards */}
+      <section style={{ marginBottom: 24 }}>
+        <h3 style={{ margin: "0 0 12px", fontFamily: "'Playfair Display',serif", color: "#0F2A5B", fontSize: "1.1rem" }}>Per-section spot-check</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+          {data.sections.map(s => (
+            <div key={s.key} data-testid={`admin-seo-section-${s.key}`} style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
+              <div style={{ fontSize: 11, color: "#6B7280", fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>{s.key}</div>
+              <div style={{ marginTop: 4, color: "#0F2A5B", fontWeight: 700 }}>{s.label}</div>
+              <div style={{ marginTop: 8, fontSize: 24, fontFamily: "Sora,sans-serif", fontWeight: 800, color: "#0F2A5B" }}>
+                {s.count == null ? "—" : s.count.toLocaleString()}
+              </div>
+              <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <a href={s.google_site} target="_blank" rel="noopener noreferrer" style={{ ...btnLight, padding: "4px 10px", fontSize: 11 }}>site: Google ↗</a>
+                <a href={s.bing_site} target="_blank" rel="noopener noreferrer" style={{ ...btnLight, padding: "4px 10px", fontSize: 11 }}>site: Bing ↗</a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* IndexNow key */}
+      <section style={{ background: "#F5F0E1", border: "1px solid #F5B301", borderRadius: 12, padding: 14 }}>
+        <div style={{ fontSize: 11, color: "#0F2A5B", fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>IndexNow key file</div>
+        <a href={data.indexnow_key_url} target="_blank" rel="noopener noreferrer" style={{ color: "#0EA5E9", fontWeight: 700, fontSize: 13 }}>{data.indexnow_key_url}</a>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B7280" }}>
+          Bing / Yandex / Naver / Seznam auto-fetch this key file each time you push a URL. Must resolve on eztofind.ca or IndexNow rejects the push.
+        </p>
+      </section>
+    </div>
+  );
+};
+
+
 const AdminGrowth = () => {
   const nav = useNavigate();
   // SEC-009: auth via HttpOnly cookie — no token in JS.  We still gate the
@@ -10718,6 +10853,8 @@ function App() {
       <Route path="/admin/login" element={<AdminLogin/>}/>
       <Route path="/admin" element={<AdminDash/>}/>
       <Route path="/admin/growth" element={<AdminGrowth/>}/>
+      <Route path="/admin/seo-coverage" element={<AdminShell active="seo-coverage"><AdminSEOCoverage/></AdminShell>}/>
+
       <Route path="/admin/client-journeys" element={<AdminClientJourneys/>}/>
       <Route path="/admin/coming-soon" element={<AdminShell active="coming-soon"><AdminComingSoonWrapper/></AdminShell>}/>
       <Route path="/admin/relations" element={<AdminShell active="relations"><AdminContentRelationsWrapper/></AdminShell>}/>

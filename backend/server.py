@@ -6429,6 +6429,27 @@ async def startup():
                             r = await _ddf_sync(db)
                             await db.ddf_sync_log.update_one({"_id": ins.inserted_id}, {"$set": {"status": "done", "finished_at": now_iso(), **r}})
                             logger.info(f"DDF auto-sync: pulled={r.get('pulled',0)} upserted={r.get('upserted',0)} removed={r.get('removed',0)}")
+                            # ── IndexNow push for freshly-upserted listings ──
+                            # Any listing whose `synced_at` landed in the last
+                            # 10 minutes is new-or-changed. Push its /listing/
+                            # URL to Bing / Yandex / Naver / Seznam so it hits
+                            # the index the same day. Silent-fail — the sync
+                            # itself must never block on this.
+                            try:
+                                from indexnow import notify_indexnow
+                                from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+                                cutoff = (_dt.now(_tz.utc) - _td(minutes=10)).isoformat()
+                                fresh = await db.listings.find(
+                                    {"synced_at": {"$gte": cutoff}, "status": "Active"},
+                                    {"listing_key": 1, "_id": 0},
+                                ).limit(500).to_list(500)
+                                urls = [f"https://eztofind.ca/listing/{d['listing_key']}"
+                                        for d in fresh if d.get("listing_key")]
+                                if urls:
+                                    inr = await notify_indexnow(urls)
+                                    logger.info(f"IndexNow auto-push after DDF sync: {len(urls)} urls, result={inr}")
+                            except Exception as e:
+                                logger.warning(f"IndexNow auto-push after DDF sync failed (silent): {e}")
                             # Fire saved-search alerts for any newly-matched properties
                             try:
                                 from services.alert_matcher import run_matcher
@@ -6612,6 +6633,74 @@ async def admin_regen_sitemap(_=Depends(verify_admin)):
         logger.warning(f"admin sitemap regen: IndexNow push failed (silent-fail): {e}")
         result["indexnow"] = {"ok": False, "error": str(e)}
     return result
+
+
+@api.get("/admin/coverage")
+async def admin_coverage(_=Depends(verify_admin)):
+    """Coverage watchlist card — returns per-section URL counts, sub-sitemap
+    URLs, and one-tap "site:" spot-check links so Doug can quickly see which
+    sections are indexed on Google / Bing without leaving the admin UI."""
+    from urllib.parse import quote_plus
+    HOST = "eztofind.ca"
+
+    def _spot(path: str = "") -> dict:
+        target = f"https://{HOST}{path}"
+        # `site:` operator on Google + Bing to see indexed pages instantly.
+        return {
+            "url": target,
+            "google_site": f"https://www.google.com/search?q={quote_plus('site:' + target)}",
+            "bing_site":   f"https://www.bing.com/search?q={quote_plus('site:' + target)}",
+        }
+
+    # Live counts (fresh — recomputed on every open so we never lie).
+    glossary_ct = await db.glossary.count_documents({})
+    listings_ct = await db.listings.count_documents({"status": "Active"})
+    reports_ct  = await db.market_reports.count_documents({})
+
+    sections = [
+        {"key": "static",         "label": "Static pages (home + regions + specialties + legal)",
+         "count": 37, **_spot("")},
+        {"key": "glossary",       "label": "Glossary terms",
+         "count": glossary_ct, **_spot("/glossary")},
+        {"key": "communities",    "label": "BC community pages",
+         "count": 240, **_spot("/community")},
+        {"key": "neighbourhoods", "label": "Micro-neighbourhoods",
+         "count": None, **_spot("/community")},   # derived — count in sitemap file
+        {"key": "market_reports", "label": "Monthly BC market reports",
+         "count": reports_ct + 1, **_spot("/market-report")},
+    ]
+
+    sub_sitemaps = [
+        f"https://{HOST}/sitemap.xml",             # index
+        f"https://{HOST}/sitemap-static.xml",
+        f"https://{HOST}/sitemap-glossary.xml",
+        f"https://{HOST}/sitemap-communities.xml",
+        f"https://{HOST}/sitemap-neighbourhoods.xml",
+        f"https://{HOST}/sitemap-market-reports.xml",
+    ]
+
+    return {
+        "host": HOST,
+        "sections": sections,
+        "sub_sitemaps": sub_sitemaps,
+        "gsc_url": "https://search.google.com/search-console",
+        "bwt_url": "https://www.bing.com/webmasters",
+        # Copy-paste helpers for the two dashboards.
+        "gsc_paste_value": "sitemap.xml",
+        "bwt_paste_value": f"https://{HOST}/sitemap.xml",
+        "indexnow_key_url": f"https://{HOST}/681eb028ce26ba1b13c9175df2fe917e.txt",
+        "indexnow_ping_sitemap": (
+            "https://api.indexnow.org/indexnow"
+            "?url=https%3A%2F%2Feztofind.ca%2Fsitemap.xml"
+            "&key=681eb028ce26ba1b13c9175df2fe917e"
+            "&keyLocation=https%3A%2F%2Feztofind.ca%2F681eb028ce26ba1b13c9175df2fe917e.txt"
+        ),
+        "live_counts": {
+            "glossary": glossary_ct,
+            "active_listings": listings_ct,
+            "market_reports": reports_ct,
+        },
+    }
 
 
 # =============== BOT PRERENDER — headless-Chromium runtime SSR ===============

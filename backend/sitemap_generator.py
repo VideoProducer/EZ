@@ -1,36 +1,43 @@
 """
-Generate a real sitemap.xml for eztofind.ca from live MongoDB data.
+Generate a sitemap INDEX (+ split sub-sitemaps) for eztofind.ca.
 
-Writes to: /app/frontend/public/sitemap.xml
+Writes to /app/frontend/public/:
+    sitemap.xml              — the INDEX (references the sub-sitemaps below)
+    sitemap-static.xml       — 37 static / brand / regional / specialty URLs
+    sitemap-glossary.xml     — one URL per curated glossary term
+    sitemap-communities.xml  — one URL per BC community
+    sitemap-neighbourhoods.xml — micro-neighbourhood pages derived from live listings
+    sitemap-market-reports.xml — the monthly BC market report snapshots
 
-Ping-friendly: search engines expect the sitemap to be reachable at
-https://eztofind.ca/sitemap.xml — which robots.txt already points to.
+Why split?
+    Search engines re-crawl SMALLER sub-sitemaps more aggressively than one giant
+    file, and Google Search Console + Bing Webmaster Tools display coverage
+    stats per sub-sitemap so we can spot AEO gaps quickly.
 
-Run on backend startup and after any admin update (via /api/admin/regenerate-sitemap).
+Ping-friendly: the ROOT sitemap is still at https://eztofind.ca/sitemap.xml —
+robots.txt already points to it. Every sub-sitemap URL is listed inside the
+index, so a single GET on the root gives a crawler the full picture.
 
---- Image Sitemap Extension (added Feb 2026) ---
-The sitemap now includes Google's `xmlns:image` namespace and emits
-<image:image> entries on:
-  • The home page — Doug's Doogie mascot artwork (brand recognition)
-  • Each of the 5 region pages — hero photography
-  • Each community page (240) — tied to a `<image:geo_location>` string
-    (city + BC + Canada) so AI visual-search engines connect images of a
-    given town to eztofind.ca
+--- Image Sitemap Extension ---
+The static + community + neighbourhood + region sub-sitemaps include
+Google's `xmlns:image` namespace with <image:image> entries for Doug-owned
+artwork so AI visual-search engines (Gemini / ChatGPT Vision / Perplexity
+Images) can attribute the imagery back to eztofind.ca.
 
 We DO NOT include MLS® listing photos here — CREA DDF® terms forbid bulk
 photo redistribution. Only Doug-owned artwork ships in the sitemap.
 """
 from __future__ import annotations
 import re
+import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, List, Dict, Optional
+from typing import List, Dict, Optional
 
 BASE_URL = "https://eztofind.ca"
+PUBLIC_DIR = Path("/app/frontend/public")
 
-# Global brand imagery — hosted directly on eztofind.ca so we don't rely on
-# any customer-assets CDN that might rotate. If Doug swaps the mascot art,
-# update the URLs here.
+# ── Brand imagery ─────────────────────────────────────────────────────────
 BRAND_IMAGES = {
     "home": [
         {
@@ -44,7 +51,6 @@ BRAND_IMAGES = {
             "title": "Doogie Pointing — EZtoFind.ca",
         },
     ],
-    # Region hero photography (baked in the /public/regions folder)
     "regions/greater-vancouver": [{
         "loc": f"{BASE_URL}/images/regions/greater-vancouver.webp",
         "caption": "Greater Vancouver skyline — BC real estate market covered by Doug LeMaire",
@@ -77,7 +83,6 @@ BRAND_IMAGES = {
     }],
 }
 
-
 STATIC_URLS = [
     ("/",                  "1.0", "daily"),
     ("/listings",          "0.9", "daily"),
@@ -92,14 +97,12 @@ STATIC_URLS = [
     ("/buyer",             "0.7", "monthly"),
     ("/seller",            "0.7", "monthly"),
     ("/contact",           "0.6", "yearly"),
-    # Regions index + corridor pages (Doug's focus areas)
     ("/regions",                    "0.85", "monthly"),
     ("/regions/greater-vancouver",  "0.85", "monthly"),
     ("/regions/fraser-valley",      "0.85", "monthly"),
     ("/regions/sea-to-sky",         "0.85", "monthly"),
     ("/regions/vancouver-island",   "0.85", "monthly"),
     ("/regions/okanagan",           "0.85", "monthly"),
-    # Specialty pages
     ("/specialties",               "0.8", "monthly"),
     ("/specialties/detached",      "0.75", "monthly"),
     ("/specialties/luxury",        "0.75", "monthly"),
@@ -107,7 +110,6 @@ STATIC_URLS = [
     ("/specialties/estate-sales",  "0.75", "monthly"),
     ("/specialties/condos",        "0.75", "monthly"),
     ("/specialties/townhomes",     "0.75", "monthly"),
-    # Legal / compliance
     ("/privacy",           "0.4", "yearly"),
     ("/terms",             "0.4", "yearly"),
     ("/compliance",        "0.5", "yearly"),
@@ -122,27 +124,21 @@ STATIC_URLS = [
 ]
 
 
+# ── XML helpers ───────────────────────────────────────────────────────────
 def _xml_escape(s: str) -> str:
     return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-
 def _image_block(images: List[Dict]) -> str:
-    """Render one or more <image:image> children for a <url> entry."""
     out = []
     for img in images:
         out.append("    <image:image>\n")
         out.append(f"      <image:loc>{_xml_escape(img['loc'])}</image:loc>\n")
-        if img.get("caption"):
-            out.append(f"      <image:caption>{_xml_escape(img['caption'])}</image:caption>\n")
-        if img.get("title"):
-            out.append(f"      <image:title>{_xml_escape(img['title'])}</image:title>\n")
-        if img.get("geo"):
-            out.append(f"      <image:geo_location>{_xml_escape(img['geo'])}</image:geo_location>\n")
-        if img.get("license"):
-            out.append(f"      <image:license>{_xml_escape(img['license'])}</image:license>\n")
+        if img.get("caption"): out.append(f"      <image:caption>{_xml_escape(img['caption'])}</image:caption>\n")
+        if img.get("title"):   out.append(f"      <image:title>{_xml_escape(img['title'])}</image:title>\n")
+        if img.get("geo"):     out.append(f"      <image:geo_location>{_xml_escape(img['geo'])}</image:geo_location>\n")
+        if img.get("license"): out.append(f"      <image:license>{_xml_escape(img['license'])}</image:license>\n")
         out.append("    </image:image>\n")
     return "".join(out)
-
 
 def _url_tag(loc: str, lastmod: str, changefreq: str, priority: str,
              images: Optional[List[Dict]] = None) -> str:
@@ -159,63 +155,70 @@ def _url_tag(loc: str, lastmod: str, changefreq: str, priority: str,
     parts.append("  </url>\n")
     return "".join(parts)
 
+def _wrap_urlset(url_tags: List[str], with_image_ns: bool = False) -> str:
+    header = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    if with_image_ns:
+        header += (
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n'
+            '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n'
+        )
+    else:
+        header += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    return header + "".join(url_tags) + "</urlset>\n"
 
-async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.xml") -> dict:
-    """Regenerate sitemap.xml from live DB. Returns stats dict."""
+def _write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+# ── Sub-sitemap builders ──────────────────────────────────────────────────
+def _build_static() -> str:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    parts: list[str] = [
-        '<?xml version="1.0" encoding="UTF-8"?>\n',
-        # Google image sitemap extension — enables AI visual-search citation
-        # (Gemini, ChatGPT Vision, Perplexity Images) to find and attribute
-        # our imagery back to eztofind.ca.
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n',
-        '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n',
-        '        xmlns:xhtml="http://www.w3.org/1999/xhtml">\n',
-    ]
-
-    # Static pages — inject brand / regional imagery where we have it
-    static_count = 0
+    tags = []
     for path, priority, changefreq in STATIC_URLS:
         key = path.lstrip("/") or "home"
         images = BRAND_IMAGES.get(key)
-        parts.append(_url_tag(f"{BASE_URL}{path}", today, changefreq, priority, images))
-        static_count += 1
+        tags.append(_url_tag(f"{BASE_URL}{path}", today, changefreq, priority, images))
+    return _wrap_urlset(tags, with_image_ns=True)
 
-    # Glossary terms (no per-term imagery yet — brand-only pages)
+async def _build_glossary(db) -> tuple[str, int]:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     gterms = await db.glossary.find({}, {"slug": 1, "last_curated_at": 1, "_id": 0}).to_list(2000)
+    tags = []
     for t in gterms:
         slug = t.get("slug")
         if not slug: continue
         lastmod = (t.get("last_curated_at") or today)[:10]
-        parts.append(_url_tag(f"{BASE_URL}/glossary/{slug}", lastmod, "monthly", "0.8"))
+        tags.append(_url_tag(f"{BASE_URL}/glossary/{slug}", lastmod, "monthly", "0.8"))
+    return _wrap_urlset(tags), len(tags)
 
-    # Community pages — tag each with the Doogie mascot image + an
-    # image:geo_location string so AI visual-search engines link photos of
-    # the community back to eztofind.ca as an authoritative source.
-    import json
+def _build_communities() -> tuple[str, int, dict]:
+    """Returns (xml, count, community_slug_by_name_lower)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     community_seed = Path("/app/backend/data/communities_seed.json")
-    community_count = 0
-    community_slug_by_name = {}
+    slug_by_name = {}
+    tags = []
     if community_seed.exists():
         comms = json.loads(community_seed.read_text())
         for region, names in comms.items():
             for name in names:
                 slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-                community_slug_by_name[name.lower()] = (slug, region)
+                slug_by_name[name.lower()] = (slug, region)
                 community_img = [{
                     "loc": f"{BASE_URL}/images/doogie-pointing-right.png",
                     "caption": f"{name}, British Columbia — community profile with live MLS® listings, climate normals, and neighbourhood detail on EZtoFind.ca",
                     "title": f"{name}, BC — Real Estate & Community Profile",
                     "geo": f"{name}, British Columbia, Canada",
                 }]
-                parts.append(_url_tag(
+                tags.append(_url_tag(
                     f"{BASE_URL}/community/{slug}", today, "weekly", "0.7",
                     images=community_img,
                 ))
-                community_count += 1
+    return _wrap_urlset(tags, with_image_ns=True), len(tags), slug_by_name
 
-    # Micro-neighbourhood pages
-    neighbourhood_count = 0
+async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    tags = []
     try:
         pipeline = [
             {"$match": {"status":"Active","region":{"$nin":["", None]}}},
@@ -224,7 +227,7 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
         async for row in db.listings.aggregate(pipeline):
             city = (row["_id"].get("city") or "").strip()
             n_name = (row["_id"].get("region") or "").strip()
-            hit = community_slug_by_name.get(city.lower())
+            hit = slug_by_name.get(city.lower())
             if not hit or not n_name:
                 continue
             c_slug, region = hit
@@ -239,47 +242,93 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
                 "title": f"{n_name}, {city} — BC Neighbourhood",
                 "geo": f"{n_name}, {city}, British Columbia, Canada",
             }]
-            parts.append(_url_tag(
+            tags.append(_url_tag(
                 f"{BASE_URL}/community/{c_slug}/n/{n_slug}", today, "weekly", "0.6",
                 images=neighbourhood_img,
             ))
-            neighbourhood_count += 1
     except Exception:
         pass
+    return _wrap_urlset(tags, with_image_ns=True), len(tags)
 
-    # Market Report pages (one per snapshotted month + the /market-report index).
-    # LLM crawlers love citation-stable URLs — every historic month becomes a
-    # fixed AEO-primed page with schema.org Dataset + FAQPage markup.
-    market_report_count = 0
+async def _build_market_reports(db) -> tuple[str, int]:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    tags = [_url_tag(f"{BASE_URL}/market-report", today, "weekly", "0.85")]
     try:
-        # Always include the /market-report landing page.
-        parts.append(_url_tag(f"{BASE_URL}/market-report", today, "weekly", "0.85"))
-        market_report_count += 1
         async for mr in db.market_reports.find({}, {"ym": 1, "generated_at": 1, "_id": 0}).sort("ym", -1).limit(120):
             ym = mr.get("ym")
             if not ym: continue
             gen = mr.get("generated_at") or today
             lastmod = gen[:10] if isinstance(gen, str) else today
-            parts.append(_url_tag(f"{BASE_URL}/market-report/{ym}", lastmod, "monthly", "0.80"))
-            market_report_count += 1
+            tags.append(_url_tag(f"{BASE_URL}/market-report/{ym}", lastmod, "monthly", "0.80"))
     except Exception:
         pass
+    return _wrap_urlset(tags), len(tags)
 
-    parts.append("</urlset>\n")
-    xml = "".join(parts)
 
-    out = Path(output_path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(xml, encoding="utf-8")
+# ── Main entry point ──────────────────────────────────────────────────────
+async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
+    """Regenerate the sitemap INDEX + all sub-sitemaps.
+
+    `output_path` is kept for backwards compatibility with the old signature
+    but is now interpreted as the ROOT sitemap.xml (index) path. Sub-sitemaps
+    are always written to the same directory alongside it.
+    """
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    root_path = Path(output_path) if output_path else (PUBLIC_DIR / "sitemap.xml")
+    out_dir = root_path.parent
+
+    # --- Build each sub-sitemap ---
+    static_xml = _build_static()
+    _write(out_dir / "sitemap-static.xml", static_xml)
+    static_count = len(STATIC_URLS)
+
+    glossary_xml, glossary_count = await _build_glossary(db)
+    _write(out_dir / "sitemap-glossary.xml", glossary_xml)
+
+    communities_xml, community_count, slug_by_name = _build_communities()
+    _write(out_dir / "sitemap-communities.xml", communities_xml)
+
+    neighbourhoods_xml, neighbourhood_count = await _build_neighbourhoods(db, slug_by_name)
+    _write(out_dir / "sitemap-neighbourhoods.xml", neighbourhoods_xml)
+
+    market_xml, market_count = await _build_market_reports(db)
+    _write(out_dir / "sitemap-market-reports.xml", market_xml)
+
+    # --- Sitemap INDEX ---
+    subs = [
+        ("sitemap-static.xml",         static_count),
+        ("sitemap-glossary.xml",       glossary_count),
+        ("sitemap-communities.xml",    community_count),
+        ("sitemap-neighbourhoods.xml", neighbourhood_count),
+        ("sitemap-market-reports.xml", market_count),
+    ]
+    index_parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>\n',
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n',
+    ]
+    for name, count in subs:
+        # Skip completely empty sub-sitemaps so we never confuse crawlers.
+        if count <= 0:
+            continue
+        index_parts.append("  <sitemap>\n")
+        index_parts.append(f"    <loc>{BASE_URL}/{name}</loc>\n")
+        index_parts.append(f"    <lastmod>{today}</lastmod>\n")
+        index_parts.append("  </sitemap>\n")
+    index_parts.append("</sitemapindex>\n")
+    _write(root_path, "".join(index_parts))
+
+    total = static_count + glossary_count + community_count + neighbourhood_count + market_count
 
     return {
         "static": static_count,
-        "glossary": len(gterms),
+        "glossary": glossary_count,
         "communities": community_count,
         "neighbourhoods": neighbourhood_count,
-        "market_reports": market_report_count,
-        "total": static_count + len(gterms) + community_count + neighbourhood_count + market_report_count,
-        "path": str(out),
+        "market_reports": market_count,
+        "total": total,
+        "path": str(root_path),
+        "sub_sitemaps": [f"{BASE_URL}/{name}" for name, count in subs if count > 0],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "image_extension": "enabled",
+        "sitemap_index": "enabled",
     }
