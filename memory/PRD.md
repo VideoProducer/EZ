@@ -10,6 +10,12 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **AEO Citation Checker (Feb 7)** — nightly audit against Claude Sonnet 4.6 + GPT-4o-mini via Emergent LLM key
+  - `services/aeo_checker.py` — runs structured citation-audit prompt returning JSON, stores per-model score + questions + recommendations
+  - Nightly cron at 04:30 UTC persists results to `aeo_citation_log` collection
+  - Admin endpoints: `POST /api/admin/aeo/run-now`, `GET /api/admin/aeo/latest`, `GET /api/admin/aeo/history?days=30`
+  - Cost: ~$0.005 per audit × 2 models × 30 nights = **~$0.30/month** on Emergent LLM key
+  - Verified live: Claude returned 5 recommendations (schema markup, dedicated Doogie page, BC backlinks, original data reports); GPT returned 5 broader recommendations. Both correctly reported known=False since site is new — score baseline established for tracking growth.
 - **SSR / Bot Prerender — DISCOVERY (Feb 7)**: Emergent's platform already has a built-in bot-render layer (`x-rendered-by: crawler-cache` header). GPTBot / Googlebot / ClaudeBot / Perplexity hitting `eztofind.ca` receive fully-rendered HTML (162 KB glossary, 25 KB listings) with BCFSA, Schema.org JSON-LD, CREA/MLS attribution — no custom Worker needed. Custom prerender infra we built (below) remains deployed and functional but dormant. **User opted "leave as-is" (Option A)** — Emergent's crawler-cache is doing the job.
 - **SSR / Bot Prerender Service (Feb 6)** — headless-Chromium runtime SSR shipped (dormant but functional)
   - `services/prerender_service.py`: Playwright singleton + Mongo TTL cache (`prerender_cache`) + 30-day audit log (`prerender_log`)

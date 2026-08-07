@@ -6185,6 +6185,39 @@ async def startup():
     # First warm fires 30 min after boot (after chromium is fully up).
     asyncio.create_task(asyncio.sleep(30 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_prerender_warm_loop()))
 
+    # ---- Nightly AEO Citation Audit (04:30 UTC = 20:30 PST) ----
+    # Runs a structured "are you citing eztofind.ca?" prompt against Claude
+    # + GPT via the Emergent LLM key, so we can track citation-readiness
+    # score over time.  Sits behind the prerender warmer so the site is
+    # cache-warm before we ask an LLM to browse it.
+    try:
+        await db.aeo_citation_log.create_index("ts")
+        await db.aeo_citation_log.create_index([("model", 1), ("ts", -1)])
+    except Exception as e:
+        logger.warning(f"aeo: index creation warning: {e}")
+
+    async def _nightly_aeo_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                target = now.replace(hour=4, minute=30, second=0, microsecond=0)
+                if target <= now:
+                    target = target + _td(days=1)
+                delay = max(60, int((target - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services import aeo_checker as _aeo
+                    result = await _aeo.run_audit(db)
+                    logger.info(f"nightly_aeo_audit: models_run={result.get('models_run')}")
+                except Exception as e:
+                    logger.error(f"nightly_aeo_audit: task failed: {e}")
+            except Exception as e:
+                logger.error(f"nightly_aeo_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(60 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_aeo_loop()))
+
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
     # /admin/listings/sync-log the manual sync uses. First run fires 10 min
@@ -6552,6 +6585,47 @@ async def admin_prerender_purge(_=Depends(verify_admin)):
     """Clear the entire prerender cache (forces MISS on next crawl)."""
     r = await db.prerender_cache.delete_many({})
     return {"deleted": r.deleted_count}
+
+
+# =============== AEO CITATION CHECKER ===============
+# Runs a structured citation-audit prompt against multiple LLMs
+# (Claude + GPT via Emergent LLM key) nightly and stores a 0-10
+# score per model per day, so the admin can track citation growth
+# over time. Auth-gated; no PII involved (query is about the site
+# itself, not users).
+
+@api.post("/admin/aeo/run-now")
+async def admin_aeo_run_now(_=Depends(verify_admin)):
+    """Trigger an on-demand AEO audit right now."""
+    from services import aeo_checker
+    return await aeo_checker.run_audit(db)
+
+
+@api.get("/admin/aeo/latest")
+async def admin_aeo_latest(_=Depends(verify_admin)):
+    """Latest audit per model + a plain-English summary."""
+    from services import aeo_checker
+    per_model = await aeo_checker.latest(db)
+    if not per_model:
+        return {"has_data": False, "models": {}, "summary": "No audits have run yet — trigger one from /admin/aeo/run-now."}
+    total_score = sum(m.get("score") or 0 for m in per_model.values())
+    avg = round(total_score / len(per_model), 1)
+    any_cited = any(m.get("cited_any") for m in per_model.values())
+    any_known = any(m.get("known") for m in per_model.values())
+    return {
+        "has_data": True,
+        "avg_score": avg,
+        "any_cited": any_cited,
+        "any_known": any_known,
+        "models": per_model,
+    }
+
+
+@api.get("/admin/aeo/history")
+async def admin_aeo_history(days: int = 30, _=Depends(verify_admin)):
+    """Score trend over the last N days (default 30) — one row per audit."""
+    from services import aeo_checker
+    return {"days": days, "rows": await aeo_checker.history(db, days=days)}
 
 
 # =============== RECORDS RETENTION (BCFSA / PIPA / CASL) ===============
