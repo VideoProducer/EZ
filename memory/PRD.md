@@ -10,6 +10,16 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **Vision-Grounded Photo Narration — Phase 1 shipped (Feb 7)** — the big fix for narration/reel sync
+  - `services/vision_narration.py` — sends each listing photo (downscaled to 1024px JPEG, base64) to Claude Sonnet 4.6 vision in ONE call; returns 1 sentence per photo grounded in what is *literally* visible in that image
+  - New cue schema: `{ordinal, screen_ref: "photos[N]", photo_idx, sentence, room_label}` — `room_label` slug (kitchen/living/primary_bed/…) enables future scene captions
+  - Endpoint `GET /api/listings/{key}/narration` now tries vision path first, falls back to text-only Haiku on any failure (network, JSON parse, empty response) — the pill never breaks
+  - Cached on the listing doc (`doogie_narration.vision_grounded=true`) keyed by `modified_at`; repeat calls are ~20ms
+  - Verified live on 20-photo Burnaby listing: Sonnet correctly identified exterior stucco house with tulips, marble fireplace, terracotta tile kitchen, garden fountain, bathroom double-vanity — content impossible to know from DDF text alone
+  - Cost: ~$0.03/listing one-time. Latency: ~25s for 20 photos, ~6s for 3 photos
+  - Pytest: `backend/tests/test_vision_narration.py` — **9/9 passed** (cue mapping, subset-to-original index remap, out-of-range/empty rejection, dedupe, sort order, fact sheet)
+  - Frontend needs zero changes — existing `ListingNarration.jsx` already consumes `photo_idx` from cues, and vision path writes both `photo_idx` AND `screen_ref` for forward compat
+  - Remaining phases (2-6): frontend `useMediaSync` hook + `mediaBus.tick`; virtual-tour keyframe extraction (Matterport/YT/Vimeo); MP4 keyframes; DoogieTour joins mediaBus; backend outro merge — carried over to next session
 - **AEO Citation Checker (Feb 7)** — nightly audit against Claude Sonnet 4.6 + GPT-4o-mini via Emergent LLM key
   - `services/aeo_checker.py` — runs structured citation-audit prompt returning JSON, stores per-model score + questions + recommendations
   - Nightly cron at 04:30 UTC persists results to `aeo_citation_log` collection

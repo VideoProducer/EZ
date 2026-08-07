@@ -6067,18 +6067,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/windermere/n/invermere</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Invermere, Windermere, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Invermere, Windermere — BC Neighbourhood</image:title>
-      <image:geo_location>Invermere, Windermere, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vernon/n/adventure-bay</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -6088,6 +6076,18 @@
       <image:caption>Adventure Bay, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Adventure Bay, Vernon — BC Neighbourhood</image:title>
       <image:geo_location>Adventure Bay, Vernon, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Tahsis/Zeballos, Tahsis, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Tahsis/Zeballos, Tahsis — BC Neighbourhood</image:title>
+      <image:geo_location>Tahsis/Zeballos, Tahsis, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -6103,15 +6103,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
+    <loc>https://eztofind.ca/community/windermere/n/invermere</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Tahsis/Zeballos, Tahsis, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Tahsis/Zeballos, Tahsis — BC Neighbourhood</image:title>
-      <image:geo_location>Tahsis/Zeballos, Tahsis, British Columbia, Canada</image:geo_location>
+      <image:caption>Invermere, Windermere, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Invermere, Windermere — BC Neighbourhood</image:title>
+      <image:geo_location>Invermere, Windermere, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7615,6 +7615,30 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/kelowna/n/kelowna-north</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Kelowna North, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Kelowna North, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Kelowna North, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/summerland/n/main-town</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Main Town, Summerland, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Main Town, Summerland — BC Neighbourhood</image:title>
+      <image:geo_location>Main Town, Summerland, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/vernon/n/predator-ridge</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7639,18 +7663,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/kelowna-north</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Kelowna North, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Kelowna North, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Kelowna North, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/sun-peaks/n/heffley</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7672,18 +7684,6 @@
       <image:caption>Nakusp Rural, Nakusp, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Nakusp Rural, Nakusp — BC Neighbourhood</image:title>
       <image:geo_location>Nakusp Rural, Nakusp, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/summerland/n/main-town</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Main Town, Summerland, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Main Town, Summerland — BC Neighbourhood</image:title>
-      <image:geo_location>Main Town, Summerland, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -8467,18 +8467,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Port Alice, Port Alice, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Port Alice, Port Alice — BC Neighbourhood</image:title>
-      <image:geo_location>Port Alice, Port Alice, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/balfour/n/kokanee-creek-to-balfour</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -8488,6 +8476,18 @@
       <image:caption>Kokanee Creek to Balfour, Balfour, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Kokanee Creek to Balfour, Balfour — BC Neighbourhood</image:title>
       <image:geo_location>Kokanee Creek to Balfour, Balfour, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Port Alice, Port Alice, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Port Alice, Port Alice — BC Neighbourhood</image:title>
+      <image:geo_location>Port Alice, Port Alice, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -9967,6 +9967,30 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/kelowna/n/south-east-kelowna</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>South East Kelowna, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>South East Kelowna, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>South East Kelowna, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/tofino/n/tofino</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Tofino, Tofino, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Tofino, Tofino — BC Neighbourhood</image:title>
+      <image:geo_location>Tofino, Tofino, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/gold-river/n/gold-river</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -9988,30 +10012,6 @@
       <image:caption>Jordan River, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Jordan River, Sooke — BC Neighbourhood</image:title>
       <image:geo_location>Jordan River, Sooke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/tofino/n/tofino</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Tofino, Tofino, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Tofino, Tofino — BC Neighbourhood</image:title>
-      <image:geo_location>Tofino, Tofino, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kelowna/n/south-east-kelowna</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>South East Kelowna, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>South East Kelowna, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>South East Kelowna, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11851,6 +11851,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/sooke/n/sunriver</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Sunriver, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Sunriver, Sooke — BC Neighbourhood</image:title>
+      <image:geo_location>Sunriver, Sooke, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/lantzville/n/upper-lantzville</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11872,18 +11884,6 @@
       <image:caption>Fintry, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Fintry, Kelowna — BC Neighbourhood</image:title>
       <image:geo_location>Fintry, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/sooke/n/sunriver</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Sunriver, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Sunriver, Sooke — BC Neighbourhood</image:title>
-      <image:geo_location>Sunriver, Sooke, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

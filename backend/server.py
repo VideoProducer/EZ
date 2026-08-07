@@ -8601,9 +8601,42 @@ async def get_listing_narration(request: Request, listing_key: str):
     cache_key = str(l.get("modified_at") or l.get("_id"))
     cached = (l.get("doogie_narration") or {})
     if cached.get("cache_key") == cache_key and cached.get("script") and cached.get("cues"):
-        return {"script": cached["script"], "cues": cached["cues"], "cached": True}
+        return {"script": cached["script"], "cues": cached["cues"], "cached": True,
+                "vision_grounded": bool(cached.get("vision_grounded"))}
     l = _sanitize_listing(l)  # gives us the same shape as get_listing
-    result = await _generate_listing_narration(l, session_id=f"narr-{listing_key}")
+
+    # Vision-grounded path (primary): Claude Sonnet 4.6 with the actual photos
+    # attached — each cue's sentence describes what is literally on that
+    # specific photo, guaranteeing 1:1 sync between narration and reel.
+    # Falls back to the text-only Haiku path if vision fails for any reason
+    # (network hiccup, empty photos, JSON parse error), so the pill is never
+    # broken.
+    result = None
+    vision_grounded = False
+    try:
+        from services.vision_narration import generate_photo_narration as _vpn
+        vresult = await _vpn(l, EMERGENT_LLM_KEY)
+        if vresult and vresult.get("cues"):
+            # Rewrite prices in words for TTS safety (same pattern as fallback).
+            script = _spell_out_money_in_script(vresult["script"])
+            clean_cues = []
+            for c in vresult["cues"]:
+                sent = _spell_out_money_in_script(c["sentence"])
+                clean_cues.append({
+                    "sentence": sent,
+                    "photo_idx": int(c["photo_idx"]),
+                    "screen_ref": c.get("screen_ref"),
+                    "room_label": c.get("room_label"),
+                    "ordinal": c.get("ordinal"),
+                })
+            result = {"script": script, "cues": clean_cues}
+            vision_grounded = True
+    except Exception as e:
+        logger.warning(f"vision_narration path failed for {listing_key}: {e} — falling back to Haiku")
+
+    if not result:
+        result = await _generate_listing_narration(l, session_id=f"narr-{listing_key}")
+
     script = result.get("script", "")
     cues = result.get("cues", [])
     try:
@@ -8613,12 +8646,13 @@ async def get_listing_narration(request: Request, listing_key: str):
                 "script": script,
                 "cues": cues,
                 "cache_key": cache_key,
+                "vision_grounded": vision_grounded,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }}},
         )
     except Exception as e:
         logger.warning(f"Failed to cache narration for {listing_key}: {e}")
-    return {"script": script, "cues": cues, "cached": False}
+    return {"script": script, "cues": cues, "cached": False, "vision_grounded": vision_grounded}
 
 
 # ── Virtual-tour narration (audio voice-over for the tour iframe) ─────────
