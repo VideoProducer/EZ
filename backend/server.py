@@ -6278,6 +6278,40 @@ async def startup():
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(2 * 60 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_narration_warm_loop()))
 
+    # ---- Monthly Market Report snapshot (1st of month, 06:00 UTC) ----
+    # Freezes the aggregation for the previous month so AEO / LLM crawlers
+    # can cite stable URLs like /market-report/2026-07 forever.
+    async def _monthly_market_report_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Next 1st-of-month at 06:00 UTC.
+                if now.month == 12:
+                    nxt = _dt(now.year + 1, 1, 1, 6, 0, 0, tzinfo=_tz.utc)
+                else:
+                    nxt = _dt(now.year, now.month + 1, 1, 6, 0, 0, tzinfo=_tz.utc)
+                delay = max(60, int((nxt - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services import market_report as _mr
+                    # Snapshot the just-completed prior month.
+                    prev = _dt.now(_tz.utc) - _td(days=2)
+                    ym = f"{prev.year:04d}-{prev.month:02d}"
+                    snap = await _mr.save_snapshot(db, ym)
+                    logger.info(f"monthly_market_report: snapshotted {ym} — "
+                                f"{len(snap.get('cities',[]))} cities, "
+                                f"{snap.get('totals',{}).get('active_listings')} listings")
+                    # Also refresh current month.
+                    await _mr.save_snapshot(db)
+                except Exception as e:
+                    logger.error(f"monthly_market_report: task failed: {e}")
+            except Exception as e:
+                logger.error(f"monthly_market_report_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(_monthly_market_report_loop())
+
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
     # /admin/listings/sync-log the manual sync uses. First run fires 10 min
@@ -6686,6 +6720,54 @@ async def admin_aeo_history(days: int = 30, _=Depends(verify_admin)):
     """Score trend over the last N days (default 30) — one row per audit."""
     from services import aeo_checker
     return {"days": days, "rows": await aeo_checker.history(db, days=days)}
+
+
+# =============== MONTHLY BC MARKET REPORT (public, AEO-primed) ===============
+# `/api/market-report/{yyyy-mm}` returns aggregated CREA DDF listing stats
+# by city for the given month.  Snapshotted on the 1st of each month so LLM
+# crawlers can cite fixed URLs (a "critical AEO differentiator" per our
+# citation audit).  Current month generates on-the-fly on first request.
+
+@api.get("/market-report/{ym}")
+async def market_report_get(ym: str):
+    """Public — returns the snapshotted market report for the given month.
+    Accepts `YYYY-MM` (e.g. `2026-08`).  Returns 404 if the month is not
+    covered yet (nothing generated + not the current month)."""
+    if not re.match(r"^\d{4}-\d{2}$", ym):
+        raise HTTPException(400, "expected YYYY-MM")
+    from services import market_report as _mr
+    snap = await _mr.get_snapshot(db, ym)
+    if not snap:
+        raise HTTPException(404, f"no report for {ym}")
+    return snap
+
+
+@api.get("/market-report")
+async def market_report_latest():
+    """Public — returns the most recent available month + a list of all
+    available months (for the frontend index)."""
+    from services import market_report as _mr
+    months = await _mr.list_months(db)
+    if not months:
+        # Nothing generated yet — synthesise current month.
+        snap = await _mr.get_snapshot(db)
+        months = [snap["ym"]] if snap else []
+    else:
+        snap = await _mr.get_snapshot(db, months[0])
+    return {"available_months": months, "latest": snap}
+
+
+@api.post("/admin/market-report/generate")
+async def admin_market_report_generate(ym: Optional[str] = None, _=Depends(verify_admin)):
+    """Manually snapshot a given month (or current if omitted)."""
+    from services import market_report as _mr
+    snap = await _mr.save_snapshot(db, ym)
+    return {
+        "ym": snap["ym"],
+        "cities": len(snap.get("cities", [])),
+        "active_listings": snap.get("totals", {}).get("active_listings"),
+        "median_price": snap.get("totals", {}).get("median_price"),
+    }
 
 
 # =============== RECORDS RETENTION (BCFSA / PIPA / CASL) ===============

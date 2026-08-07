@@ -10,6 +10,12 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **Monthly BC Market Report shipped (Feb 7)** — Claude's flagged "critical AEO differentiator"
+  - Backend: `services/market_report.py` aggregates all 39,795 active MLS® listings by city → median price, P25/P75, median $/sqft, median beds/baths/year_built, top property types, listed-this-month count. 60 cities meet the ≥20 listings threshold; province-wide median = $810K, median $/sqft = $555.
+  - Public endpoints: `GET /api/market-report` (latest + available months list), `GET /api/market-report/{yyyy-mm}` (specific month). Admin `POST /api/admin/market-report/generate` for manual snapshotting.
+  - Monthly cron: 1st of month at 06:00 UTC snapshots the previous month + refreshes current month to Mongo collection `market_reports`.
+  - Frontend: `pages/MarketReport.jsx` at `/market-report` + `/market-report/:ym` — hero + 4 stat cards + 5 highlight bullets + sortable city table (7 columns) + methodology footer.
+  - AEO: JSON-LD `Dataset` schema (CC-BY 4.0) + `FAQPage` schema (4 auto-generated Q&A) + `Speakable` schema all injected into `<head>` per page. Sitemap now includes `/market-report` + one entry per snapshotted month. IndexNow ping fired to Bing/Yandex immediately (218 URLs, status 200).
 - **Sync Polish Round 2 (Feb 7)**
   - `services/keyframes.py::_normalize_youtube_url` — `youtube.com/watch?v=X` and `youtu.be/X` now rewrite to `youtube-nocookie.com/embed/X?enablejsapi=1&autoplay=1&mute=1&controls=0` so listings with watch-page URLs also get vision-grounded tour narration
   - `frontend/src/components/RoomLabelPill.jsx` (NEW) — floating pill above photo reel + virtual tour showing current room ("🍳 Kitchen", "🛏 Primary Bedroom") driven by `mediaBus.subscribeTick`; 20-slug enum synced with backend `room_label` output

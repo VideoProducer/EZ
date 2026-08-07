@@ -247,6 +247,24 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
     except Exception:
         pass
 
+    # Market Report pages (one per snapshotted month + the /market-report index).
+    # LLM crawlers love citation-stable URLs — every historic month becomes a
+    # fixed AEO-primed page with schema.org Dataset + FAQPage markup.
+    market_report_count = 0
+    try:
+        # Always include the /market-report landing page.
+        parts.append(_url_tag(f"{BASE_URL}/market-report", today, "weekly", "0.85"))
+        market_report_count += 1
+        async for mr in db.market_reports.find({}, {"ym": 1, "generated_at": 1, "_id": 0}).sort("ym", -1).limit(120):
+            ym = mr.get("ym")
+            if not ym: continue
+            gen = mr.get("generated_at") or today
+            lastmod = gen[:10] if isinstance(gen, str) else today
+            parts.append(_url_tag(f"{BASE_URL}/market-report/{ym}", lastmod, "monthly", "0.80"))
+            market_report_count += 1
+    except Exception:
+        pass
+
     parts.append("</urlset>\n")
     xml = "".join(parts)
 
@@ -259,7 +277,8 @@ async def generate_sitemap(db, output_path: str = "/app/frontend/public/sitemap.
         "glossary": len(gterms),
         "communities": community_count,
         "neighbourhoods": neighbourhood_count,
-        "total": static_count + len(gterms) + community_count + neighbourhood_count,
+        "market_reports": market_report_count,
+        "total": static_count + len(gterms) + community_count + neighbourhood_count + market_report_count,
         "path": str(out),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "image_extension": "enabled",

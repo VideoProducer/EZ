@@ -18,6 +18,7 @@ import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
 import DashboardMockup from "./pages/DashboardMockup";
+import MarketReport from "./pages/MarketReport";
 // Route-lazy the multi-step intake form. VisualAgentDemo is a heavy chunk
 // (~28 KB gzipped) that's embedded below-the-fold on the homepage plus
 // standalone at /visual-agent-demo. Splitting it out means the initial
@@ -10666,6 +10667,8 @@ function App() {
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
+      <Route path="/market-report" element={<AppLayout><MarketReport/></AppLayout>}/>
+      <Route path="/market-report/:ym" element={<AppLayout><MarketReport/></AppLayout>}/>
       <Route path="/buyer" element={<AppLayout><BuyerForm/></AppLayout>}/>
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/buying-guide" element={<Navigate to="/buyer" replace/>}/>
