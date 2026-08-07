@@ -85,6 +85,14 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - **Responsive fixes (Feb 6)**:
   - Mobile compliance banner shortened (11px font, 8px padding, terse copy under 600px)
   - Back/Home/REALTOR® Net buttons downsized on mobile (12px font, 10px padding, "REALTOR® Net" abbreviation)
+- **Neighborhood Market Heatmap — LIVE (Feb 7)**:
+  - New service `/app/backend/services/neighborhood_heatmap.py` — top 32 BC sub-areas ranked hottest → coldest by composite temperature (DOM · Months of Supply · absorption trend · MoM price)
+  - Endpoints: `GET /api/admin/heatmap/neighborhoods` · `POST /api/admin/heatmap/recompute` · `GET /api/admin/heatmap/history/{slug}`
+  - Daily snapshot loop + Monday 07:00 PT weekly-digest loop wired into `startup`
+  - Warming→Hot crossing auto-emails doug@eztofind.ca via Resend (deduped 7 days per neighborhood, CASL-safe footer)
+  - Frontend page `/admin/heatmap` — 32-row ranked table with temperature badges (Hot/Warming/Cool/Cold), Buyer's (blue) / Seller's (yellow) / Balanced flags, 3mo/6mo/12mo composite arrows, "learning" placeholder for windows without enough snapshot history yet
+  - 25 pytest unit tests cover scoring, classification, market-type thresholds, arrow logic, and neighborhood key/label helpers — all passing
+  - Live-verified: 451 sub-areas analyzed, 32 rendered · Warming→Hot alert delivered to Resend outbox on synthetic crossing · dedup confirmed on repeat run
 
 ## Test Credentials
 - Admin: `doug@eztofind.ca` / `Doug2026Login!`
@@ -96,7 +104,9 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - P1: Feature-Sheet Narrator (PDF/image upload + Doogie reads with highlight cursor)
 - P1: Real Luxury/Horse Photos (swap placeholders once URLs provided)
 - P1: Wire Google Review link (`/app/memory/review_links.md`) into consultation confirmation emails + admin dashboard widget
-- P1: Deploy — paste `/app/cloudflare_worker_prerender.js` into Cloudflare Workers (or `/app/nginx_prerender.conf` at ingress) to activate bot prerender routing on eztofind.ca **← SUPERSEDED. Emergent's built-in `crawler-cache` layer already serves prerendered HTML to bots. Cloudflare Worker exists (Hello World placeholder) but not needed. Skip unless we want custom BCFSA compliance guardrails.**
+- P1: Heatmap — click-through neighborhood drill-down page (sparkline history, listing lookup, "Alert me when this neighborhood turns Hot" toggle)
+- P1: Heatmap — public "Market Pulse" widget on `/market-report` embedding the top 5 hottest sub-areas (AEO signal)
+- P1: Deploy — paste `/app/cloudflare_worker_prerender.js` into Cloudflare Workers (or `/app/nginx_prerender.conf` at ingress) to activate bot prerender routing on eztofind.ca **← SUPERSEDED. Emergent's built-in `crawler-cache` layer already serves prerendered HTML to bots.**
 - P3: Move "Coming Soon" uploads to CDN/Object storage
 - P3: Nightly narration regression cron
 - P3: Rotate JWT_SECRET, RESEND_API_KEY, CREA DDF, Turnstile, Lovable to high-entropy values

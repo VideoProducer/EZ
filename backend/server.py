@@ -6591,6 +6591,51 @@ async def startup():
     except Exception as e:
         logger.error(f"Reminder module setup failed: {e}")
 
+    # ── Neighborhood Heatmap — daily snapshot + Warming→Hot alert loop ─────
+    # Compiles the top 32 BC neighborhoods (hottest → coldest) once per day,
+    # persists a snapshot into `neighborhood_heat_snapshots`, and fires an
+    # instant Resend email to doug@eztofind.ca for any neighborhood that
+    # crosses from Warming into Hot (deduped 7 days per neighborhood).  A
+    # Monday 07:00 PT digest recaps weekly temperature moves.  See
+    # /app/backend/services/neighborhood_heatmap.py for the scoring model.
+    try:
+        from services.neighborhood_heatmap import ensure_indices as _hm_ensure
+        await _hm_ensure(db)
+    except Exception as e:
+        logger.error(f"neighborhood_heatmap index setup failed: {e}")
+
+    async def _neighborhood_heatmap_loop():
+        import asyncio as _a
+        from services.neighborhood_heatmap import snapshot_and_alert
+        # First run 20 min after boot so the initial DDF sync has a chance to land.
+        await _a.sleep(20 * 60)
+        while True:
+            try:
+                r = await snapshot_and_alert(db, base_url="https://eztofind.ca")
+                logger.info(f"neighborhood_heatmap snapshot: {r}")
+            except Exception as e:
+                logger.error(f"neighborhood_heatmap loop iteration failed: {e}")
+            await _a.sleep(24 * 3600)  # every 24 h
+    asyncio.create_task(_neighborhood_heatmap_loop())
+
+    async def _neighborhood_heatmap_weekly_digest_loop():
+        """Fires the digest email every Monday at ~07:00 PT (15:00 UTC).
+        Naive loop that wakes hourly and dispatches when the hour+weekday
+        match — good enough for a weekly cadence."""
+        import asyncio as _a
+        from services.neighborhood_heatmap import send_weekly_digest
+        while True:
+            try:
+                now_utc = datetime.now(timezone.utc)
+                # Monday = weekday 0; 15:00 UTC = 07:00 PT (PST) / 08:00 PDT.
+                if now_utc.weekday() == 0 and now_utc.hour == 15:
+                    r = await send_weekly_digest(db, base_url="https://eztofind.ca")
+                    logger.info(f"neighborhood_heatmap weekly_digest: {r}")
+            except Exception as e:
+                logger.error(f"neighborhood_heatmap weekly digest loop failed: {e}")
+            await _a.sleep(3600)  # check hourly
+    asyncio.create_task(_neighborhood_heatmap_weekly_digest_loop())
+
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
@@ -6906,6 +6951,55 @@ async def admin_aeo_history(days: int = 30, _=Depends(verify_admin)):
     """Score trend over the last N days (default 30) — one row per audit."""
     from services import aeo_checker
     return {"days": days, "rows": await aeo_checker.history(db, days=days)}
+
+
+# =============== NEIGHBORHOOD HEATMAP (admin-only) ===========================
+# Top 32 BC neighborhoods, hottest → coldest, with 3mo/6mo/12mo trajectory
+# arrows and Buyer's/Seller's market flags derived from DDF Active-only
+# signals (list price, DOM, absorption proxy, MoS).  See
+# /app/backend/services/neighborhood_heatmap.py for the scoring model.
+
+@api.get("/admin/heatmap/neighborhoods")
+async def admin_heatmap_neighborhoods(_=Depends(verify_admin)):
+    from services.neighborhood_heatmap import compute_heatmap
+    return await compute_heatmap(db)
+
+
+@api.post("/admin/heatmap/recompute")
+async def admin_heatmap_recompute(_=Depends(verify_admin)):
+    """Recompute the heatmap, persist a snapshot, dispatch any Warming→Hot
+    alerts (deduped 7 days per neighborhood).  Manual trigger for the same
+    logic the daily background loop runs."""
+    from services.neighborhood_heatmap import snapshot_and_alert
+    return await snapshot_and_alert(db, base_url="https://eztofind.ca")
+
+
+@api.get("/admin/heatmap/history/{slug}")
+async def admin_heatmap_history(slug: str, days: int = 365, _=Depends(verify_admin)):
+    """Snapshot timeline for a single neighborhood — powers the drill-down
+    sparkline / trajectory chart in the admin UI."""
+    from datetime import timedelta as _td
+    cutoff = (datetime.now(timezone.utc) - _td(days=max(1, min(int(days), 730)))).isoformat()
+    rows: list[dict] = []
+    cursor = db.neighborhood_heat_snapshots.find(
+        {"generated_at": {"$gte": cutoff}},
+        {"_id": 0, "generated_at": 1, "rows": 1},
+    ).sort("generated_at", 1)
+    async for snap in cursor:
+        for r in snap.get("rows", []):
+            if r.get("slug") == slug:
+                rows.append({
+                    "generated_at": snap["generated_at"],
+                    "temperature": r.get("temperature"),
+                    "temperature_score": r.get("temperature_score"),
+                    "market_type": r.get("market_type"),
+                    "median_list_price": r.get("median_list_price"),
+                    "median_dom": r.get("median_dom"),
+                    "actives": r.get("actives"),
+                    "months_of_supply": r.get("months_of_supply"),
+                })
+                break
+    return {"slug": slug, "days": days, "count": len(rows), "rows": rows}
 
 
 # =============== MONTHLY BC MARKET REPORT (public, AEO-primed) ===============

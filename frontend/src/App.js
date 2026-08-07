@@ -39,6 +39,7 @@ import DoogieRelatedChips from "./components/DoogieRelatedChips";
 import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
+import AdminHeatmap from "./pages/AdminHeatmap";
 import ListingNarration from "./components/ListingNarration";
 import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
@@ -5478,6 +5479,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin")} className={active==="dash"?"active":""} data-testid="admin-nav-dash">📊 Dashboard</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/growth")} className={active==="growth"?"active":""} data-testid="admin-nav-growth">📈 Growth</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/reel-analytics")} className={active==="reel-analytics"?"active":""} data-testid="admin-nav-reel-analytics">🎬 Reel Analytics</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/heatmap")} className={active==="heatmap"?"active":""} data-testid="admin-nav-heatmap">🌡️ Market Heatmap</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/client-journeys")} className={active==="client-journeys"?"active":""} data-testid="admin-nav-client-journeys">🧭 Client Journeys</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/coming-soon")} className={active==="coming-soon"?"active":""} data-testid="admin-nav-coming-soon">🏛️ Coming Soon</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
@@ -10870,6 +10872,7 @@ function App() {
       <Route path="/admin/email-log" element={<AdminEmailLog/>}/>
       <Route path="/admin/consultations" element={<AdminConsultations/>}/>
       <Route path="/admin/reel-analytics" element={<AdminReelAnalytics/>}/>
+      <Route path="/admin/heatmap" element={<AdminHeatmap AdminShell={AdminShell}/>}/>
       <Route path="/admin/email-outbox" element={<AdminEmailOutbox/>}/>
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
