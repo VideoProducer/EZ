@@ -6472,6 +6472,42 @@ async def bot_prerender(path: str, request: Request):
         return Response(status_code=502, headers={"X-Prerender-Cache": "ERROR"})
 
 
+@api.get("/prerender/debug", include_in_schema=False)
+async def prerender_debug():
+    """Public diagnostic — safe info only, no PII, no HTML content.
+    Used to troubleshoot production without admin auth."""
+    from services.prerender_service import get_service as _gp, TARGET_BASE as _tb
+    try:
+        svc = _gp()
+        # Cache stats
+        total = await db.prerender_cache.count_documents({})
+        by_kind = {}
+        async for d in db.prerender_cache.aggregate([
+            {"$group": {"_id": "$kind", "n": {"$sum": 1}}}
+        ]):
+            by_kind[d["_id"]] = d["n"]
+        # Recent log entries (last 20, no UA/IP for privacy)
+        recent = []
+        async for entry in db.prerender_log.find({}, {"path": 1, "cache": 1, "status": 1, "took_ms": 1, "reason": 1, "ts": 1}).sort("ts", -1).limit(20):
+            recent.append({
+                "path": entry.get("path", "")[:80],
+                "cache": entry.get("cache"),
+                "status": entry.get("status"),
+                "took_ms": entry.get("took_ms"),
+                "reason": (entry.get("reason") or "")[:100],
+                "ts": entry.get("ts").isoformat() if entry.get("ts") else None,
+            })
+        return {
+            "ready": svc._ready,
+            "target_base": _tb,
+            "cache_total": total,
+            "by_kind": by_kind,
+            "recent_hits": recent,
+        }
+    except Exception as e:
+        return {"error": str(e)[:300], "ready": False}
+
+
 @api.post("/admin/prerender/warm")
 async def admin_prerender_warm(_=Depends(verify_admin)):
     """Force-refresh the prerender cache for top-priority URLs."""
