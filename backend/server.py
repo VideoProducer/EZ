@@ -6104,13 +6104,43 @@ async def startup():
     try:
         from services.prerender_service import init_service as _init_prerender
         _init_prerender(db)
-        # Boot chromium in background so it never blocks startup.
+        # Robust boot: on cold start the production pod doesn't have chromium
+        # installed. Kick off the install subprocess ONCE (detached from the
+        # request path so no bot request ever blocks), then retry `start()`
+        # every 30s for up to 10 minutes.  Once ready, later bot hits get real
+        # renders; before then all hits fast-fail BYPASS so the Cloudflare
+        # Worker falls through to the SPA (same as pre-prerender behaviour).
         async def _boot_prerender():
-            try:
-                from services.prerender_service import get_service as _gp
-                await _gp().start()
-            except Exception as e:
-                logger.error(f"prerender: startup failed: {e}")
+            import subprocess as _sp
+            import sys as _sys
+            from services.prerender_service import get_service as _gp
+            install_launched = False
+            for attempt in range(20):  # 20 × 30s = 10 min
+                try:
+                    await _gp().start()
+                    logger.info(f"prerender: ready after attempt {attempt + 1}")
+                    return
+                except Exception as e:
+                    err_txt = str(e)[:200]
+                    needs_install = (
+                        "Executable" in err_txt
+                        or "playwright install" in err_txt.lower()
+                        or "doesn't exist" in err_txt.lower()
+                    )
+                    if needs_install and not install_launched:
+                        logger.info("prerender: launching detached `python -m playwright install chromium` subprocess")
+                        try:
+                            _sp.Popen(
+                                [_sys.executable, "-m", "playwright", "install", "chromium"],
+                                stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+                                start_new_session=True,
+                            )
+                            install_launched = True
+                        except Exception as pe:
+                            logger.error(f"prerender: install subprocess spawn failed: {pe}")
+                    logger.warning(f"prerender: boot attempt {attempt + 1} failed ({err_txt[:120]}), retrying in 30s")
+                    await asyncio.sleep(30)
+            logger.error("prerender: gave up after 20 boot attempts — bots will get SPA fallback")
         asyncio.create_task(_boot_prerender())
         logger.info("prerender service initialised (chromium warming up)")
     except Exception as e:
