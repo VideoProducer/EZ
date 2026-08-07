@@ -8459,6 +8459,27 @@ async def search_listings(
     Returns { total, count, offset, limit, listings: [...], compliance }.
     """
     query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
+    # ── Detect Canadian postal codes and street-address-like queries ──────
+    # Mongo `$text` tokenises on word boundaries and matches ANY token — so
+    # "930 Josephine Rd" matches every listing whose street contains "Rd".
+    # That's why "930 Josephine" returned 0 usable rows on the live search.
+    # Route these two intents around $text with targeted regex matches
+    # against street_address / unparsed_address / postal_code.
+    _addr_regex = None
+    _postal_regex = None
+    if q:
+        q_stripped = q.strip()
+        # Canadian postal code: A1A 1A1 or A1A1A1 (case-insensitive).
+        pc_match = re.match(r'^([A-Za-z]\d[A-Za-z])\s*(\d[A-Za-z]\d)$', q_stripped)
+        if pc_match:
+            # Stored postal codes may or may not include the mid-space, so
+            # tolerate both forms in the regex we hand to Mongo.
+            _postal_regex = f"^{pc_match.group(1).upper()}\\s*{pc_match.group(2).upper()}$"
+        else:
+            # Street-address heuristic: starts with a digit AND has ≥1 space.
+            # Catches "930 Josephine Rd", "22374 Lougheed Hwy", "#4 - 123 Main".
+            if re.match(r'^\s*#?\s*\d', q_stripped) and ' ' in q_stripped:
+                _addr_regex = re.escape(q_stripped)
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
@@ -8592,23 +8613,34 @@ async def search_listings(
             sort = nl_extracted["sort"]
 
     if q and not (city or region or nl_extracted.get("city")):
-        loc = await _resolve_bc_locality(q)
-        if loc:
-            neighbourhood = loc.pop("neighbourhood", None)
-            for k, v in loc.items():
-                query[k] = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
-            # If we resolved via a Vancouver/Metro neighbourhood, tighten the
-            # results to only listings whose description/address mentions that hood.
-            if neighbourhood:
-                query.setdefault("$and", []).append({
-                    "$or": [
-                        {"description": {"$regex": re.escape(neighbourhood), "$options": "i"}},
-                        {"unparsed_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
-                        {"street_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
-                    ],
-                })
+        # Postal-code or street-address queries win over locality/text — we
+        # know exactly what field to hit, so use it and skip $text entirely.
+        if _postal_regex:
+            query["postal_code"] = {"$regex": _postal_regex, "$options": "i"}
+        elif _addr_regex:
+            query.setdefault("$or", [])
+            query["$or"] = [
+                {"street_address":   {"$regex": _addr_regex, "$options": "i"}},
+                {"unparsed_address": {"$regex": _addr_regex, "$options": "i"}},
+            ]
         else:
-            query["$text"] = {"$search": q}
+            loc = await _resolve_bc_locality(q)
+            if loc:
+                neighbourhood = loc.pop("neighbourhood", None)
+                for k, v in loc.items():
+                    query[k] = {"$regex": f"^{re.escape(v)}$", "$options": "i"}
+                # If we resolved via a Vancouver/Metro neighbourhood, tighten the
+                # results to only listings whose description/address mentions that hood.
+                if neighbourhood:
+                    query.setdefault("$and", []).append({
+                        "$or": [
+                            {"description": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                            {"unparsed_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                            {"street_address": {"$regex": re.escape(neighbourhood), "$options": "i"}},
+                        ],
+                    })
+            else:
+                query["$text"] = {"$search": q}
     elif q and nl_extracted.get("city") and not city:
         # LLM extracted a city — but its output can be noisy ("West Vancouver
         # Under" instead of "West Vancouver"). Cross-check against the curated
@@ -8630,8 +8662,18 @@ async def search_listings(
             })
     elif q:
         # City/region already set explicitly — still let q filter within that
-        # scope (e.g. city=Vancouver & q="ocean view")
-        query["$text"] = {"$search": q}
+        # scope. Postal-code / street-address get regex; otherwise $text.
+        if _postal_regex:
+            query["postal_code"] = {"$regex": _postal_regex, "$options": "i"}
+        elif _addr_regex:
+            query.setdefault("$and", []).append({
+                "$or": [
+                    {"street_address":   {"$regex": _addr_regex, "$options": "i"}},
+                    {"unparsed_address": {"$regex": _addr_regex, "$options": "i"}},
+                ],
+            })
+        else:
+            query["$text"] = {"$search": q}
 
     sort_key = [("created_at", -1)]
     if sort == "price_asc":  sort_key = [("list_price", 1)]

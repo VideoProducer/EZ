@@ -1901,8 +1901,8 @@ const UnifiedSearchBar = () => {
           value={val}
           onChange={(e) => setVal(e.target.value)}
           data-testid="dash-address-mls-search-input"
-          placeholder="Search by address or MLS® number (e.g. 123 Main St, Kelowna · R2812345)"
-          aria-label="Search by address or MLS number"
+          placeholder="Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)"
+          aria-label="Search by address, postal code, or MLS number"
           style={{
             flex: 1, minWidth: 0, border: "none", outline: "none",
             fontSize: 14, color: C.ink, background: "transparent",

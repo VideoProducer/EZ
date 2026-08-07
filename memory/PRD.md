@@ -93,6 +93,15 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
   - Frontend page `/admin/heatmap` — 32-row ranked table with temperature badges (Hot/Warming/Cool/Cold), Buyer's (blue) / Seller's (yellow) / Balanced flags, 3mo/6mo/12mo composite arrows, "learning" placeholder for windows without enough snapshot history yet
   - 25 pytest unit tests cover scoring, classification, market-type thresholds, arrow logic, and neighborhood key/label helpers — all passing
   - Live-verified: 451 sub-areas analyzed, 32 rendered · Warming→Hot alert delivered to Resend outbox on synthetic crossing · dedup confirmed on repeat run
+- **Search bar upgrade — Address / Postal code (Feb 7)**:
+  - Root cause: `/api/listings?q=930 Josephine` returned 0 rows because Mongo `$text` tokenises words and matches ANY token (so "930 Josephine Rd" matched every listing with "Rd" in the description)
+  - Added targeted routing in `search_listings`: Canadian postal-code regex (`A1A 1A1` or `A1A1A1`) hits `postal_code` field with a tolerant space regex; street-address heuristic (starts with a digit + space) hits `street_address` + `unparsed_address` with a case-insensitive regex
+  - Placeholder updated: `Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)`
+  - Verified live: `930 Josephine Rd` → 2 correct Central Saanich listings; `V6B1X9` / `V6B 1X9` / lowercase `v0c 2c0` all return the right postal-code matches
+- **New Doogie OG image (Feb 7)**:
+  - Swapped iMessage / Facebook / LinkedIn / Slack link-preview image to the new "Doogie holding magnifying glass + laptop with EZtoFind.ca + DOOGIE wordmark" logo
+  - `/app/frontend/public/images/doogie-og.png` (1200×630 OG spec on white) + updated `doogie-laptop.png` (1024² square) — both composited from the transparent-PNG source
+  - `index.html` OG + Twitter tags now point at `/images/doogie-og.png?v=3` — the `?v=3` cache-bust forces re-fetch on FB/LinkedIn/iMessage caches
 
 ## Test Credentials
 - Admin: `doug@eztofind.ca` / `Doug2026Login!`

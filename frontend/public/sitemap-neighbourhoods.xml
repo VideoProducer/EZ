@@ -254,18 +254,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/courtenay/n/courtenay-north</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Courtenay North, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Courtenay North, Courtenay — BC Neighbourhood</image:title>
-      <image:geo_location>Courtenay North, Courtenay, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -275,6 +263,18 @@
       <image:caption>Village of Slocan, Slocan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Village of Slocan, Slocan — BC Neighbourhood</image:title>
       <image:geo_location>Village of Slocan, Slocan, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/courtenay/n/courtenay-north</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Courtenay North, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Courtenay North, Courtenay — BC Neighbourhood</image:title>
+      <image:geo_location>Courtenay North, Courtenay, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2378,18 +2378,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/joe-rich</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Joe Rich, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Joe Rich, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Joe Rich, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tappen/n/tappen-sunnybrae</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -2402,15 +2390,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/cobble-hill/n/cobble-hill</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/joe-rich</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Cobble Hill, Cobble Hill, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Cobble Hill, Cobble Hill — BC Neighbourhood</image:title>
-      <image:geo_location>Cobble Hill, Cobble Hill, British Columbia, Canada</image:geo_location>
+      <image:caption>Joe Rich, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Joe Rich, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Joe Rich, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2426,6 +2414,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/cobble-hill/n/cobble-hill</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Cobble Hill, Cobble Hill, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Cobble Hill, Cobble Hill — BC Neighbourhood</image:title>
+      <image:geo_location>Cobble Hill, Cobble Hill, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/cumberland/n/cumberland</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -2435,18 +2435,6 @@
       <image:caption>Cumberland, Cumberland, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Cumberland, Cumberland — BC Neighbourhood</image:title>
       <image:geo_location>Cumberland, Cumberland, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kamloops/n/sahali</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Sahali, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Sahali, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Sahali, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2471,6 +2459,18 @@
       <image:caption>Brocklehurst, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Brocklehurst, Kamloops — BC Neighbourhood</image:title>
       <image:geo_location>Brocklehurst, Kamloops, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/sahali</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Sahali, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Sahali, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Sahali, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4490,18 +4490,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/windermere/n/invermere</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Invermere, Windermere, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Invermere, Windermere — BC Neighbourhood</image:title>
-      <image:geo_location>Invermere, Windermere, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vernon/n/mun-of-coldstream</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -4511,6 +4499,18 @@
       <image:caption>Mun of Coldstream, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Mun of Coldstream, Vernon — BC Neighbourhood</image:title>
       <image:geo_location>Mun of Coldstream, Vernon, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/windermere/n/invermere</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Invermere, Windermere, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Invermere, Windermere — BC Neighbourhood</image:title>
+      <image:geo_location>Invermere, Windermere, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5726,15 +5726,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/n/james-bay</loc>
+    <loc>https://eztofind.ca/community/nanoose-bay/n/nanoose</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>James Bay, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>James Bay, Victoria — BC Neighbourhood</image:title>
-      <image:geo_location>James Bay, Victoria, British Columbia, Canada</image:geo_location>
+      <image:caption>Nanoose, Nanoose Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Nanoose, Nanoose Bay — BC Neighbourhood</image:title>
+      <image:geo_location>Nanoose, Nanoose Bay, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5750,15 +5750,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanoose-bay/n/nanoose</loc>
+    <loc>https://eztofind.ca/community/victoria/n/james-bay</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Nanoose, Nanoose Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Nanoose, Nanoose Bay — BC Neighbourhood</image:title>
-      <image:geo_location>Nanoose, Nanoose Bay, British Columbia, Canada</image:geo_location>
+      <image:caption>James Bay, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>James Bay, Victoria — BC Neighbourhood</image:title>
+      <image:geo_location>James Bay, Victoria, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5990,18 +5990,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/parksville/n/parksville</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Parksville, Parksville, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Parksville, Parksville — BC Neighbourhood</image:title>
-      <image:geo_location>Parksville, Parksville, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kaslo/n/kaslo-north-to-gerrard</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -6011,6 +5999,18 @@
       <image:caption>Kaslo North to Gerrard, Kaslo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Kaslo North to Gerrard, Kaslo — BC Neighbourhood</image:title>
       <image:geo_location>Kaslo North to Gerrard, Kaslo, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/parksville/n/parksville</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Parksville, Parksville, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Parksville, Parksville — BC Neighbourhood</image:title>
+      <image:geo_location>Parksville, Parksville, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -6098,15 +6098,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/golden/n/kicking-horse-resort-area</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/rutland-north</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Kicking Horse Resort Area, Golden, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Kicking Horse Resort Area, Golden — BC Neighbourhood</image:title>
-      <image:geo_location>Kicking Horse Resort Area, Golden, British Columbia, Canada</image:geo_location>
+      <image:caption>Rutland North, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Rutland North, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Rutland North, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -6122,15 +6122,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/rutland-north</loc>
+    <loc>https://eztofind.ca/community/golden/n/kicking-horse-resort-area</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Rutland North, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Rutland North, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Rutland North, Kelowna, British Columbia, Canada</image:geo_location>
+      <image:caption>Kicking Horse Resort Area, Golden, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Kicking Horse Resort Area, Golden — BC Neighbourhood</image:title>
+      <image:geo_location>Kicking Horse Resort Area, Golden, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
