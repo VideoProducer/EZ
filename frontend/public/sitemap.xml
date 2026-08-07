@@ -7135,18 +7135,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nanoose-bay/n/nanoose</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Nanoose, Nanoose Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Nanoose, Nanoose Bay — BC Neighbourhood</image:title>
-      <image:geo_location>Nanoose, Nanoose Bay, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kelowna/n/ellison</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7156,6 +7144,18 @@
       <image:caption>Ellison, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Ellison, Kelowna — BC Neighbourhood</image:title>
       <image:geo_location>Ellison, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/nanoose-bay/n/nanoose</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Nanoose, Nanoose Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Nanoose, Nanoose Bay — BC Neighbourhood</image:title>
+      <image:geo_location>Nanoose, Nanoose Bay, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7267,18 +7267,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kaslo/n/balfour-to-kaslo-west</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Balfour to Kaslo West, Kaslo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Balfour to Kaslo West, Kaslo — BC Neighbourhood</image:title>
-      <image:geo_location>Balfour to Kaslo West, Kaslo, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7288,6 +7276,18 @@
       <image:caption>Eastern Highlands, Highlands, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Eastern Highlands, Highlands — BC Neighbourhood</image:title>
       <image:geo_location>Eastern Highlands, Highlands, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kaslo/n/balfour-to-kaslo-west</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Balfour to Kaslo West, Kaslo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Balfour to Kaslo West, Kaslo — BC Neighbourhood</image:title>
+      <image:geo_location>Balfour to Kaslo West, Kaslo, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7435,18 +7435,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Village of Slocan, Slocan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Village of Slocan, Slocan — BC Neighbourhood</image:title>
-      <image:geo_location>Village of Slocan, Slocan, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/hedley/n/hedley</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7456,6 +7444,18 @@
       <image:caption>Hedley, Hedley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Hedley, Hedley — BC Neighbourhood</image:title>
       <image:geo_location>Hedley, Hedley, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Village of Slocan, Slocan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Village of Slocan, Slocan — BC Neighbourhood</image:title>
+      <image:geo_location>Village of Slocan, Slocan, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7939,18 +7939,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/cherryville</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Cherryville, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Cherryville, Vernon — BC Neighbourhood</image:title>
-      <image:geo_location>Cherryville, Vernon, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vernon/n/swan-lake-west</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7960,6 +7948,18 @@
       <image:caption>Swan Lake West, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Swan Lake West, Vernon — BC Neighbourhood</image:title>
       <image:geo_location>Swan Lake West, Vernon, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/vernon/n/cherryville</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Cherryville, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Cherryville, Vernon — BC Neighbourhood</image:title>
+      <image:geo_location>Cherryville, Vernon, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -10579,18 +10579,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/enderby/n/enderby-grindrod</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Enderby / Grindrod, Enderby, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Enderby / Grindrod, Enderby — BC Neighbourhood</image:title>
-      <image:geo_location>Enderby / Grindrod, Enderby, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/keremeos/n/keremeos</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -10600,6 +10588,18 @@
       <image:caption>Keremeos, Keremeos, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Keremeos, Keremeos — BC Neighbourhood</image:title>
       <image:geo_location>Keremeos, Keremeos, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/enderby/n/enderby-grindrod</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Enderby / Grindrod, Enderby, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Enderby / Grindrod, Enderby — BC Neighbourhood</image:title>
+      <image:geo_location>Enderby / Grindrod, Enderby, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -10711,18 +10711,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/vernon/n/north-bx</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>North BX, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>North BX, Vernon — BC Neighbourhood</image:title>
-      <image:geo_location>North BX, Vernon, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kelowna/n/kelowna-south</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -10732,6 +10720,18 @@
       <image:caption>Kelowna South, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Kelowna South, Kelowna — BC Neighbourhood</image:title>
       <image:geo_location>Kelowna South, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/vernon/n/north-bx</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>North BX, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>North BX, Vernon — BC Neighbourhood</image:title>
+      <image:geo_location>North BX, Vernon, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11407,18 +11407,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/clearwater/n/clearwater</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Clearwater, Clearwater, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Clearwater, Clearwater — BC Neighbourhood</image:title>
-      <image:geo_location>Clearwater, Clearwater, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/salmon-arm/n/ne-salmon-arm</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11428,6 +11416,18 @@
       <image:caption>NE Salmon Arm, Salmon Arm, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>NE Salmon Arm, Salmon Arm — BC Neighbourhood</image:title>
       <image:geo_location>NE Salmon Arm, Salmon Arm, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/clearwater/n/clearwater</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Clearwater, Clearwater, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Clearwater, Clearwater — BC Neighbourhood</image:title>
+      <image:geo_location>Clearwater, Clearwater, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11479,18 +11479,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Tahsis/Zeballos, Tahsis, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Tahsis/Zeballos, Tahsis — BC Neighbourhood</image:title>
-      <image:geo_location>Tahsis/Zeballos, Tahsis, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanaimo/n/chase-river</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11524,6 +11512,18 @@
       <image:caption>Royal Bay, Colwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Royal Bay, Colwood — BC Neighbourhood</image:title>
       <image:geo_location>Royal Bay, Colwood, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Tahsis/Zeballos, Tahsis, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Tahsis/Zeballos, Tahsis — BC Neighbourhood</image:title>
+      <image:geo_location>Tahsis/Zeballos, Tahsis, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11779,6 +11779,30 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/saanich/n/blenkinsop</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Blenkinsop, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Blenkinsop, Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>Blenkinsop, Saanich, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/north-saanich/n/dean-park</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Dean Park, North Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Dean Park, North Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>Dean Park, North Saanich, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/penticton/n/penticton-rural</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11803,30 +11827,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/north-saanich/n/dean-park</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Dean Park, North Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Dean Park, North Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>Dean Park, North Saanich, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/courtenay/n/courtenay-east</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Courtenay East, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Courtenay East, Courtenay — BC Neighbourhood</image:title>
-      <image:geo_location>Courtenay East, Courtenay, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/duncan/n/cowichan-station-glenora</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11839,15 +11839,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/saanich/n/blenkinsop</loc>
+    <loc>https://eztofind.ca/community/courtenay/n/courtenay-east</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Blenkinsop, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Blenkinsop, Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>Blenkinsop, Saanich, British Columbia, Canada</image:geo_location>
+      <image:caption>Courtenay East, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Courtenay East, Courtenay — BC Neighbourhood</image:title>
+      <image:geo_location>Courtenay East, Courtenay, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

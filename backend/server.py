@@ -6434,23 +6434,39 @@ async def bot_prerender(path: str, request: Request):
 
     try:
         svc = _gp()
-        result = await svc.render(cache_key)
-        await svc.log_hit(cache_key, ua, result.cache, result.status, result.took_ms, result.reason)
-        headers = {
-            "X-Prerender-Cache": result.cache,
-            "X-Prerender-Kind": result.kind,
-            "X-Prerender-TookMs": str(result.took_ms),
-            "Cache-Control": "public, max-age=300, s-maxage=600",
-            "Content-Type": "text/html; charset=utf-8",
-        }
-        # BYPASS or ERROR → return a small, fast, non-cacheable response the
-        # Cloudflare Worker recognises (!resp.ok triggers its SPA fallback).
-        if result.cache in ("BYPASS", "ERROR") or not result.html:
-            headers["Cache-Control"] = "no-store"
-            if result.reason:
-                headers["X-Prerender-Reason"] = result.reason[:120]
-            return Response(status_code=503, headers=headers)
-        return Response(content=result.html, status_code=result.status, headers=headers)
+        # Fast path: cache lookup only.  Never trigger a synchronous render on
+        # the request path — Cloudflare kills the connection at ~2s and cold
+        # renders take 3-6s.  On cache miss we schedule a background render
+        # that fills the cache for the NEXT crawler visit (stale-while-
+        # revalidate).  All BCFSA/CREA/PIPA guardrails still apply because
+        # compliance_check() runs inside render() before anything is stored.
+        cached = await svc.get_cached(cache_key)
+        if cached:
+            await svc.log_hit(cache_key, ua, "HIT", cached.status, 0)
+            headers = {
+                "X-Prerender-Cache": "HIT",
+                "X-Prerender-Kind": cached.kind,
+                "X-Prerender-TookMs": "0",
+                "Cache-Control": "public, max-age=300, s-maxage=600",
+                "Content-Type": "text/html; charset=utf-8",
+            }
+            return Response(content=cached.html, status_code=cached.status, headers=headers)
+
+        # Cache miss → schedule background render (fills cache within ~5s so
+        # the next bot hit is a HIT) and return fast BYPASS.  The Cloudflare
+        # Worker sees non-2xx and falls back to the SPA for this request.
+        async def _bg_render():
+            try:
+                await svc.render(cache_key, force=True)
+            except Exception as e:
+                logger.warning(f"bot_prerender bg render failed path={cache_key}: {e}")
+        asyncio.create_task(_bg_render())
+        await svc.log_hit(cache_key, ua, "BYPASS", 503, 0, "warming_cache")
+        return Response(status_code=503, headers={
+            "X-Prerender-Cache": "BYPASS",
+            "X-Prerender-Reason": "warming_cache",
+            "Cache-Control": "no-store",
+        })
     except Exception as e:
         logger.error(f"bot_prerender error path={cache_key} err={e}")
         return Response(status_code=502, headers={"X-Prerender-Cache": "ERROR"})
