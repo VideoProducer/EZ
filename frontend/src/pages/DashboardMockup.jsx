@@ -409,7 +409,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       {showToast && <FirstVisitToast onDismiss={dismissToast} setSection={setSection}/>}
       {/* Doogie's guided site tour — auto-plays on first visit, then becomes
           a "Take the Doogie tour" replay pill in the bottom-right. */}
-      <DoogieTour/>
+      <DoogieTour firstVisitToastOpen={showToast}/>
       {/* Shared "talking bounce" keyframes for every Doogie mascot */}
       <DoogieTalkingStyle/>
     </div>
@@ -1792,6 +1792,11 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
+      {/* Quick address / MLS® number lookup — sits between the map and the
+          listings grid. MLS-format inputs open the listing directly; anything
+          else runs through /listings?q=... which does an address text-search
+          via Mongo $text. */}
+      <AddressMlsSearch/>
       {/* Listings run full-width. The FILTERS card is a floating, draggable
           panel (rendered separately as <FloatingFilters/>) so the user can
           move it anywhere on screen. Default position: top-left. Position
@@ -1806,6 +1811,68 @@ const SearchPanel = () => {
           have a 1-tap Q&A on the current results + community. */}
       <DoogieChat mode="fab"/>
     </>
+  );
+};
+
+// ── Address / MLS® number quick-lookup ────────────────────────────────────
+// A single input above the results grid. Two exit branches:
+//   1. Input matches an MLS-number pattern (e.g. "R2812345", "12345678") ─→
+//      navigate straight to /listing/{key}. The detail page handles 404.
+//   2. Anything else (a street address, postal code, keyword) ─→
+//      /listings?q=... which routes through the existing $text address
+//      search + NL extraction on the backend.
+const _MLS_PATTERN = /^[A-Z]{0,2}\s?\d{6,10}$/i;
+
+const AddressMlsSearch = () => {
+  const navigate = useNavigate();
+  const [val, setVal] = useState("");
+  const submit = (e) => {
+    e && e.preventDefault && e.preventDefault();
+    const v = val.trim();
+    if (!v) return;
+    if (_MLS_PATTERN.test(v)) {
+      // Strip whitespace, upper-case — matches CREA DDF® key format.
+      const key = v.replace(/\s+/g, "").toUpperCase();
+      navigate(`/listing/${encodeURIComponent(key)}`);
+      return;
+    }
+    navigate(`/listings?q=${encodeURIComponent(v)}`);
+  };
+  return (
+    <form
+      onSubmit={submit}
+      data-testid="dash-address-mls-search"
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+        padding: "10px 12px", marginBottom: 16,
+        boxShadow: "0 1px 3px rgba(15,42,91,0.04)",
+      }}
+    >
+      <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
+      <input
+        type="text"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        data-testid="dash-address-mls-search-input"
+        placeholder="Search by address or MLS® number (e.g. 123 Main St, Kelowna · R2812345)"
+        aria-label="Search by address or MLS number"
+        style={{
+          flex: 1, minWidth: 0, border: "none", outline: "none",
+          fontSize: 14, color: C.ink, background: "transparent",
+          fontFamily: "'Inter', system-ui, sans-serif",
+        }}
+      />
+      <button
+        type="submit"
+        data-testid="dash-address-mls-search-submit"
+        style={{
+          background: C.navy, color: "#fff", border: "none",
+          padding: "8px 16px", borderRadius: 8, fontWeight: 700,
+          fontSize: 13, cursor: "pointer", flexShrink: 0,
+        }}
+      >Search</button>
+    </form>
   );
 };
 

@@ -63,7 +63,7 @@ const _boxOf = (el) => {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 };
 
-export default function DoogieTour() {
+export default function DoogieTour({ firstVisitToastOpen = false } = {}) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -168,6 +168,13 @@ export default function DoogieTour() {
 
   if (!open) {
     if (!alreadySeen) return null;
+    // On narrow mobile viewports the FirstVisitToast pins to the full width
+    // at bottom:16 with a "Got it — let's explore" CTA. Our replay pill sat
+    // right on top of that button. When the parent tells us the toast is
+    // still visible AND we're on mobile, hide the pill until the toast is
+    // dismissed. (Prop-driven so we don't race the sibling DOM commit.)
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 900;
+    if (isMobile && firstVisitToastOpen) return null;
     return (
       <button
         onClick={() => setOpen(true)}
