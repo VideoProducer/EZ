@@ -1883,6 +1883,75 @@ async def listings_by_keys(keys: str = "", limit: int = 100):
     return {"count": len(ordered), "listings": ordered}
 
 
+@api.get("/listings/{key}/similar")
+async def similar_listings(key: str, limit: int = 3):
+    """Return 2-3 comparable active listings in the SAME area for the compare
+    widget on /listing/:key. Matches on:
+        * same city (falls back to same region if the city has too few)
+        * same property_type
+        * price ±25%
+        * beds ±1 (soft — dropped if the strict filter returns <2 hits)
+        * status = Active, list_price > 0
+    Excludes the source listing itself. Ordered by absolute price delta from
+    the source so the closest comps come first."""
+    limit = max(2, min(5, int(limit or 3)))
+    src = await db.listings.find_one({"listing_key": key}, {"_id": 0})
+    if not src:
+        raise HTTPException(404, "Listing not found.")
+    city = src.get("city")
+    region = src.get("region")
+    ptype = src.get("property_type")
+    price = float(src.get("list_price") or 0)
+    beds = src.get("beds")
+    if not (city and ptype and price > 0):
+        return {"count": 0, "listings": [], "reason": "insufficient_source_data"}
+
+    price_lo, price_hi = price * 0.75, price * 1.25
+    base_filter = {
+        "listing_key": {"$ne": key},
+        "status": "Active",
+        "property_type": ptype,
+        "list_price": {"$gt": 0, "$gte": price_lo, "$lte": price_hi},
+        "property_type_ne_excluded": {"$exists": False},  # noop guard
+    }
+    # Remove the noop guard properly — we still want the standard exclusion
+    # list to apply.
+    base_filter.pop("property_type_ne_excluded", None)
+    base_filter["property_type"] = {"$eq": ptype, "$nin": list(EXCLUDED_PROPERTY_TYPES)}
+
+    async def _search(match: dict):
+        return await db.listings.find(match, {"_id": 0}) \
+            .sort("list_price", 1) \
+            .limit(50) \
+            .to_list(50)
+
+    # Attempt 1 — same city + beds ±1
+    match = {**base_filter, "city": city}
+    if isinstance(beds, (int, float)) and beds > 0:
+        match["beds"] = {"$gte": max(0, int(beds) - 1), "$lte": int(beds) + 1}
+    docs = await _search(match)
+
+    # Attempt 2 — same city, drop beds constraint
+    if len(docs) < limit:
+        match = {**base_filter, "city": city}
+        docs = await _search(match)
+
+    # Attempt 3 — fall back to same region so we still return something
+    if len(docs) < limit and region:
+        match = {**base_filter, "region": region}
+        docs = await _search(match)
+
+    # Rank by absolute price delta from the source so the closest comps come first.
+    docs.sort(key=lambda d: abs(float(d.get("list_price") or 0) - price))
+    picked = [_sanitize_listing(d) for d in docs[:limit]]
+    return {
+        "count": len(picked),
+        "listings": picked,
+        "source_key": key,
+        "source_city": city,
+    }
+
+
 @api.get("/compare/summary")
 async def compare_summary(keys: str = ""):
     """Compliance-locked AI factual-delta summary for up to 5 MLS® listings.

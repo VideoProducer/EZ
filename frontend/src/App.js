@@ -40,6 +40,7 @@ import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import ListingNarration from "./components/ListingNarration";
+import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
 import { autoGlossaryLink } from "./lib/autoGlossaryLink";
@@ -3993,6 +3994,11 @@ const ListingDetail = () => {
           )}
         </div>
       </div>
+      {/* "Compare with a similar home" — server picks 2–3 active MLS® comps
+          in the same city (falls back to region if the city is thin). One-tap
+          adds each comp + the current listing to `ez_compare_keys` and routes
+          to /compare. Silent-fail if no comparable listings exist. */}
+      <SimilarListingsWidget sourceKey={listing.listing_key} sourceCity={listing.city}/>
     </div></section>
     </TermsGate>
   );
