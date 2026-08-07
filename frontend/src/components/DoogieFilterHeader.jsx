@@ -16,6 +16,24 @@ import React, { useEffect, useRef, useState } from "react";
 const NAVY = "#0F2A5B";
 const GOLD = "#F5A623";
 
+// Safely parse a fetch Response — if the server returned HTML (e.g. a
+// Cloudflare 524 timeout page or an SPA fallback), we DO NOT let the raw
+// "Unexpected token '<', '<!DOCTYPE'" parse error leak into the UI.
+// Instead, throw a user-friendly error. Called by both the voice and text
+// paths inside this component.
+async function _safeReadJson(resp, fallbackMsg = "Doogie couldn't reach the server. Please try again in a moment.") {
+  const ct = (resp.headers.get("content-type") || "").toLowerCase();
+  if (!ct.includes("application/json")) {
+    try { const t = await resp.text(); console.warn("Doogie non-JSON response", resp.status, t.slice(0, 120)); } catch {}
+    throw new Error(fallbackMsg);
+  }
+  let body;
+  try { body = await resp.json(); }
+  catch { throw new Error(fallbackMsg); }
+  if (!resp.ok) throw new Error(body?.detail || fallbackMsg);
+  return body;
+}
+
 export const DoogieFilterHeader = ({ onVoiceFilter, onReset }) => {
   const [voiceState, setVoiceState] = useState("idle"); // idle | listening | thinking | error | typing
   const [transcript, setTranscript] = useState("");
@@ -67,8 +85,10 @@ export const DoogieFilterHeader = ({ onVoiceFilter, onReset }) => {
         try {
           const backendUrl = process.env.REACT_APP_BACKEND_URL;
           const resp = await fetch(`${backendUrl}/api/doogie/voice-filter`, { method: "POST", body: form });
-          const body = await resp.json();
-          if (!resp.ok) throw new Error(body.detail || "Voice filter failed");
+          const body = await _safeReadJson(
+            resp,
+            "Doogie couldn't hear that clearly — please try again or tap DOOGIE to type."
+          );
           setTranscript(body.transcript || "");
           // Preferred: the community_normalized wraps the model's raw city into a
           // known-good BC community name.
@@ -103,8 +123,10 @@ export const DoogieFilterHeader = ({ onVoiceFilter, onReset }) => {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, language: "en" }),
       });
-      const body = await resp.json();
-      if (!resp.ok) throw new Error(body.detail || "Parse failed");
+      const body = await _safeReadJson(
+        resp,
+        "Doogie couldn't parse that — please try rephrasing or use the Filters button."
+      );
       setTranscript(text);
       const normCity = body.community_normalized?.community || body.filter?.community || "";
       onVoiceFilter?.({ ...(body.filter || {}), community: normCity, transcript: text });
