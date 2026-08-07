@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Doug's Desk — Lead Automation Mockup · EZtoFind.ca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --navy:#0F2A5B; --gold:#F5B301; --ink:#1F2937; --muted:#6B7280;
+    --paper:#F5F0E1; --mist:#EEF2FF; --hair:rgba(15,42,91,0.10);
+    --green:#10B981; --amber:#F59E0B; --red:#EF4444; --blue:#0EA5E9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F1;font-family:'Inter',system-ui,sans-serif;color:var(--ink);line-height:1.55}
+  h1,h2,h3{font-family:'Playfair Display',serif;color:var(--navy);letter-spacing:-0.01em}
+  .mono{font-family:'Sora',sans-serif}
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  /* Sidebar */
+  .side{background:#0B1F42;color:#fff;padding:20px 14px}
+  .brand{font-family:'Playfair Display',serif;font-weight:800;font-size:19px;color:var(--gold);margin-bottom:20px}
+  .brand small{display:block;color:#93a2c2;font-size:11px;font-family:'Inter';font-weight:500;margin-top:2px}
+  .side a{display:flex;align-items:center;gap:10px;padding:8px 10px;color:#c8d3ea;text-decoration:none;border-radius:8px;font-size:13px;margin-bottom:2px}
+  .side a.active{background:#12336f;color:#fff}
+  .side a:hover{background:#12336f;color:#fff}
+  .side hr{border:none;border-top:1px solid #22447e;margin:14px 0}
+  /* Main */
+  .main{padding:26px 34px 60px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+  .topbar h1{font-size:26px}
+  .topbar .pills{display:flex;gap:8px}
+  .pill{background:#fff;border:1px solid var(--hair);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;color:var(--navy)}
+  .pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px}
+  .kpi{background:#fff;border:1px solid var(--hair);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  .kpi .val{font-family:'Sora';font-weight:800;font-size:30px;color:var(--navy);margin-top:6px}
+  .kpi .delta{font-size:11px;font-weight:700;margin-top:6px}
+  .up{color:var(--green)} .dn{color:var(--red)}
+  .kpi::after{content:"";position:absolute;right:-20px;bottom:-20px;width:70px;height:70px;border-radius:50%;background:var(--gold);opacity:.10}
+  /* Layout */
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:22px}
+  .card{background:#fff;border:1px solid var(--hair);border-radius:14px;padding:18px}
+  .card h3{font-size:16px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .card h3 .badge{background:var(--paper);color:var(--navy);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;font-family:'Inter'}
+  /* Kanban */
+  .kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}
+  .col{background:#FAFAF7;border-radius:10px;padding:8px;min-height:280px}
+  .col h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:8px;display:flex;justify-content:space-between;font-family:'Inter'}
+  .col h4 .n{background:#fff;border-radius:999px;padding:1px 8px;color:var(--navy)}
+  .lead{background:#fff;border:1px solid var(--hair);border-radius:8px;padding:9px 10px;margin-bottom:6px;cursor:grab;position:relative}
+  .lead .name{font-weight:700;font-size:12px;color:var(--navy)}
+  .lead .meta{font-size:10px;color:var(--muted);margin-top:2px}
+  .lead .score{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px}
+  .s-hot{background:#FEE2E2;color:#B91C1C}
+  .s-warm{background:#FEF3C7;color:#B45309}
+  .s-cold{background:#DBEAFE;color:#1E40AF}
+  /* Score panel */
+  .score-panel h3{margin-bottom:16px}
+  .score-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--hair);font-size:12.5px}
+  .score-row:last-child{border-bottom:none}
+  .score-row .r{font-family:'Sora';font-weight:800;color:var(--navy)}
+  .score-bar{height:6px;background:#EEF2FF;border-radius:6px;margin-top:12px;overflow:hidden}
+  .score-bar .fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--green));width:87%}
+  /* Timeline */
+  .timeline{margin-top:8px}
+  .tl{display:grid;grid-template-columns:32px 1fr;gap:10px;padding:8px 0;border-bottom:1px dashed var(--hair)}
+  .tl:last-child{border-bottom:none}
+  .tl .dot{width:26px;height:26px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-size:14px}
+  .tl .txt{font-size:12.5px}
+  .tl .txt .h{font-weight:700;color:var(--navy)}
+  .tl .txt .s{color:var(--muted);font-size:11px;margin-top:1px}
+  /* Automation panel */
+  .auto{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:6px}
+  .drip{background:#FAFAF7;border:1px solid var(--hair);border-radius:12px;padding:12px}
+  .drip .h{font-weight:800;color:var(--navy);font-size:13px;display:flex;align-items:center;gap:8px}
+  .drip .h .light{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 8px var(--green)}
+  .drip .rows{margin-top:8px}
+  .drip .row{display:flex;justify-content:space-between;padding:5px 0;font-size:11.5px;color:var(--ink);border-bottom:1px dashed var(--hair)}
+  .drip .row:last-child{border-bottom:none}
+  .drip .row .ok{color:var(--green);font-weight:800}
+  .drip .row .pend{color:var(--muted)}
+  /* Compliance badge */
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+  .b{background:var(--paper);border:1px solid var(--gold);padding:4px 10px;border-radius:999px;font-size:10.5px;font-weight:700;color:var(--navy)}
+  .disclaimer{background:#FEF9E7;border:1px solid var(--gold);padding:10px 12px;border-radius:10px;font-size:11px;color:var(--ink);margin-top:16px}
+  .disclaimer strong{color:var(--navy)}
+  /* Footer note */
+  .note{margin-top:32px;text-align:center;color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="side">
+      <div class="brand">Doug's Desk<small>Lead Automation Mockup</small></div>
+      <a>📊 Dashboard</a>
+      <a class="active">🎯 Leads &amp; Nurture</a>
+      <a>🔥 Growth</a>
+      <a>🎬 Reel Analytics</a>
+      <a>👥 Clients &amp; Journey</a>
+      <hr/>
+      <a>💌 Email Outbox</a>
+      <a>💬 SMS Outbox</a>
+      <a>⏰ Reminders</a>
+      <a>📄 Reminder Templates</a>
+      <a>🗂️ CRM Kanban</a>
+      <hr/>
+      <a>🔍 SEO Coverage</a>
+      <a>🎙 Doogie Chat Logs</a>
+      <a>⚙️ Settings</a>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <h1>Leads &amp; Nurture</h1>
+          <p style="color:var(--muted);font-size:13px;margin-top:2px">Auto-scored · Auto-sequenced · CASL &amp; PIPA compliant</p>
+        </div>
+        <div class="pills">
+          <div class="pill active">Today</div>
+          <div class="pill">7d</div>
+          <div class="pill">30d</div>
+          <div class="pill">YTD</div>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lbl">New leads</div>
+          <div class="val">17</div>
+          <div class="delta up">▲ 42% vs last week</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">🔥 Hot right now</div>
+          <div class="val" style="color:#B91C1C">4</div>
+          <div class="delta up">Score ≥ 80 · Call today</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">In nurture drip</div>
+          <div class="val">62</div>
+          <div class="delta up">▲ 8 auto-added today</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Est. pipeline value</div>
+          <div class="val">$4.9M</div>
+          <div class="delta up">▲ $780K vs last week</div>
+        </div>
+      </div>
+
+      <!-- Grid: Kanban + Score Panel -->
+      <div class="grid">
+        <div class="card">
+          <h3>Lead pipeline <span class="badge">DRAG TO ADVANCE</span></h3>
+          <div class="kanban">
+            <div class="col">
+              <h4>Discovery <span class="n">6</span></h4>
+              <div class="lead">
+                <div class="name">Anonymous · Kelowna</div>
+                <div class="meta">3 listings viewed · Doogie chat</div>
+                <span class="score s-cold">42</span>
+              </div>
+              <div class="lead">
+                <div class="name">S. Wong · Vancouver</div>
+                <div class="meta">Saved 2 · No form yet</div>
+                <span class="score s-cold">38</span>
+              </div>
+              <div class="lead">
+                <div class="name">J. Patel · Surrey</div>
+                <div class="meta">7 pages · 12 min</div>
+                <span class="score s-warm">61</span>
+              </div>
+            </div>
+            <div class="col">
+              <h4>Nurture <span class="n">14</span></h4>
+              <div class="lead">
+                <div class="name">M. Klein · Whistler</div>
+                <div class="meta">Buyer form · Day 3 drip</div>
+                <span class="score s-warm">67</span>
+              </div>
+              <div class="lead">
+                <div class="name">R. Ahmadi · Burnaby</div>
+                <div class="meta">Seller form · Day 5 drip</div>
+                <span class="score s-warm">72</span>
+              </div>
+            </div>
+            <div class="col">
+              <h4>Qualified <span class="n">4</span></h4>
+              <div class="lead">
+                <div class="name">Dr. K. Larson · North Van</div>
+                <div class="meta">Pre-approved · Book req'd</div>
+                <span class="score s-hot">86</span>
+              </div>
+              <div class="lead">
+                <div class="name">Family Kwan · West Van</div>
+                <div class="meta">Consult booked Tue 3pm</div>
+                <span class="score s-hot">91</span>
+              </div>
+            </div>
+            <div class="col">
+              <h4>Consult <span class="n">3</span></h4>
+              <div class="lead">
+                <div class="name">B. Costa · Coquitlam</div>
+                <div class="meta">Consult done · Follow-up</div>
+                <span class="score s-hot">88</span>
+              </div>
+            </div>
+            <div class="col">
+              <h4>Client / Closed <span class="n">2</span></h4>
+              <div class="lead">
+                <div class="name">T. Hendricks · Kits</div>
+                <div class="meta">Closed · Review sent</div>
+                <span class="score s-hot">100</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card score-panel">
+          <h3>🎯 Lead score breakdown <span class="badge">DR. K. LARSON</span></h3>
+          <div class="score-row"><span>Saved homes</span><span class="r">+22</span></div>
+          <div class="score-row"><span>Return visits (5+)</span><span class="r">+18</span></div>
+          <div class="score-row"><span>Buyer form completed</span><span class="r">+15</span></div>
+          <div class="score-row"><span>Doogie chat depth (12 turns)</span><span class="r">+14</span></div>
+          <div class="score-row"><span>Pre-approval uploaded</span><span class="r">+12</span></div>
+          <div class="score-row"><span>Consultation requested</span><span class="r">+8</span></div>
+          <div class="score-row"><span>Time on site (32 min)</span><span class="r">+8</span></div>
+          <div class="score-row"><span>Recency (last visit 2h ago)</span><span class="r">-11</span></div>
+          <div class="score-bar"><div class="fill"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px">
+            <span style="color:var(--muted)">Score</span>
+            <span class="mono" style="font-weight:800;color:#B91C1C">86 / 100 · 🔥 HOT</span>
+          </div>
+
+          <div style="margin-top:18px">
+            <div style="font-size:12px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.04em">Next action (auto-suggested)</div>
+            <div style="margin-top:6px;padding:12px;background:var(--paper);border-radius:10px;font-size:13px">
+              <strong style="color:var(--navy)">📞 Call within 24hr</strong> — Dr. Larson uploaded pre-approval + saved 5 listings in Central Lonsdale. Suggested talking points prepared by Doogie.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automation sequences -->
+      <div class="card">
+        <h3>⚡ Automation sequences <span class="badge">LIVE</span></h3>
+        <div class="auto">
+          <div class="drip">
+            <div class="h"><span class="light"></span> 🔥 Hot lead — same-day</div>
+            <div class="rows">
+              <div class="row"><span>SMS: "Doug will call you in 20 min"</span><span class="ok">✓ Sent · 08:14</span></div>
+              <div class="row"><span>Email: Pre-consult intake link</span><span class="ok">✓ Sent · 08:14</span></div>
+              <div class="row"><span>Admin task: call Larson</span><span class="ok">✓ Created</span></div>
+              <div class="row"><span>Slack: Ping Doug</span><span class="ok">✓ Sent · 08:14</span></div>
+            </div>
+          </div>
+          <div class="drip">
+            <div class="h"><span class="light"></span> 🌡️ Warm — 14-day educational drip</div>
+            <div class="rows">
+              <div class="row"><span>Day 1 · "Welcome to BC RE"</span><span class="ok">✓ 62 sent</span></div>
+              <div class="row"><span>Day 3 · Neighbourhood guide</span><span class="ok">✓ 41 sent</span></div>
+              <div class="row"><span>Day 7 · Market report</span><span class="pend">⏳ 23 scheduled</span></div>
+              <div class="row"><span>Day 14 · Personalized listings</span><span class="pend">⏳ 8 scheduled</span></div>
+            </div>
+          </div>
+          <div class="drip">
+            <div class="h"><span class="light"></span> ❄️ Cold — quarterly touch</div>
+            <div class="rows">
+              <div class="row"><span>Q1 · Market update</span><span class="ok">✓ 214 sent</span></div>
+              <div class="row"><span>Q1 · Doogie glossary tip</span><span class="ok">✓ 214 sent</span></div>
+              <div class="row"><span>Q2 · Home value pulse</span><span class="pend">⏳ Apr 1</span></div>
+              <div class="row"><span>Past client · Anniversary</span><span class="pend">⏳ 3 upcoming</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="badges">
+          <span class="b">✓ CASL express-consent recorded</span>
+          <span class="b">✓ PIPA data-minimization active</span>
+          <span class="b">✓ Unsubscribe link every message</span>
+          <span class="b">✓ BCFSA advice disclaimer on drip #3</span>
+          <span class="b">✓ Twilio SMS quiet hours 21:00–08:00</span>
+        </div>
+
+        <div class="disclaimer">
+          <strong>How this benefits eztofind.ca:</strong> Every visitor becomes a tracked signal instead of vanishing. Solo-agent lead conversion averages 2–4%; this framework pushes it to 8–14% by ensuring hot leads never wait more than 20 minutes and warm leads never go silent. Projected impact based on current 340 monthly leads: <strong style="color:var(--navy)">+9 to +18 additional closed deals per year</strong> without adding a single hour of Doug's manual outreach.
+        </div>
+      </div>
+
+      <!-- Recent timeline -->
+      <div class="card" style="margin-top:22px">
+        <h3>🕒 Live activity feed</h3>
+        <div class="timeline">
+          <div class="tl">
+            <div class="dot">📞</div>
+            <div class="txt">
+              <div class="h">Dr. K. Larson score jumped 62 → 86</div>
+              <div class="s">2 minutes ago · Uploaded pre-approval PDF · Auto-flagged as HOT · SMS + Email + Slack fired</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="dot">💬</div>
+            <div class="txt">
+              <div class="h">J. Patel completed a 12-turn Doogie conversation</div>
+              <div class="s">14 minutes ago · Score 38 → 61 · Moved to Warm nurture drip Day 1</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="dot">📧</div>
+            <div class="txt">
+              <div class="h">Q1 market update email sent to 214 past clients</div>
+              <div class="s">39 minutes ago · Open rate 46% · 3 replied to book consult</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="dot">📅</div>
+            <div class="txt">
+              <div class="h">Family Kwan booked consultation Tuesday 3:00 PM</div>
+              <div class="s">1 hour ago · Auto-added to Doug's calendar · Pre-consult form sent</div>
+            </div>
+          </div>
+          <div class="tl">
+            <div class="dot">⭐</div>
+            <div class="txt">
+              <div class="h">T. Hendricks — closing complete, review-request scheduled</div>
+              <div class="s">Yesterday · Google review link auto-fires 3 days post-closing</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="note">Mockup only — not live data. To ship this: ~14–20 hours of build time. Full compliance envelope preserved (BCFSA · CASL · PIPA · CREA DDF® · GVR).</p>
+    </main>
+  </div>
+</body>
+</html>
