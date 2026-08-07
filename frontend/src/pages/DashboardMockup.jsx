@@ -3400,8 +3400,13 @@ const ForYouPanel = () => {
 };
 
 const SavedPanel = () => {
+  const navigate = useNavigate();
   const [homes, setHomes] = useState([]);
   const [searches, setSearches] = useState([]);
+  // Bulk-select set for the "Compare selected" action. Capped at 5 to mirror
+  // the CompareListings page — the UI blocks the 6th click so it's impossible
+  // to overshoot before hitting Compare.
+  const [selected, setSelected] = useState(() => new Set());
   const reload = () => {
     try { setHomes(JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]")); } catch { setHomes([]); }
     try { setSearches(JSON.parse(localStorage.getItem("ez_saved_searches") || "[]")); } catch { setSearches([]); }
@@ -3412,21 +3417,100 @@ const SavedPanel = () => {
       const list = JSON.parse(localStorage.getItem(SAVED_HOMES_KEY) || "[]").filter(h => h.listing_key !== key);
       localStorage.setItem(SAVED_HOMES_KEY, JSON.stringify(list));
       setHomes(list);
+      setSelected(prev => { const n = new Set(prev); n.delete(key); return n; });
     } catch {}
+  };
+  const toggleSelect = (key) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) { next.delete(key); return next; }
+      if (next.size >= 5) {
+        alert("You can compare up to 5 homes at a time. Deselect one first.");
+        return prev;
+      }
+      next.add(key);
+      return next;
+    });
+  };
+  const selectAllForCompare = () => {
+    // Grab the first 5 saved keys (max compare) and route to /compare.
+    const keys = homes.slice(0, 5).map(h => h.listing_key);
+    if (!keys.length) return;
+    setSelected(new Set(keys));
+    localStorage.setItem("ez_compare_keys", JSON.stringify(keys));
+    window.dispatchEvent(new CustomEvent("ez-compare-changed", { detail: keys }));
+    navigate("/compare");
+  };
+  const compareSelected = () => {
+    const keys = Array.from(selected);
+    if (keys.length < 2) {
+      alert("Pick at least 2 saved homes to compare.");
+      return;
+    }
+    localStorage.setItem("ez_compare_keys", JSON.stringify(keys));
+    window.dispatchEvent(new CustomEvent("ez-compare-changed", { detail: keys }));
+    navigate("/compare");
   };
   return (
     <div>
       <PanelIntro title="Saved Homes & Searches" blurb="Tap the ❤ on any listing card to save it here. Search chips you starred on the Visual Agent also live in this dashboard."/>
 
-      <h3 style={{ color: C.navy, marginTop: 24, marginBottom: 10 }}>Saved homes ({homes.length})</h3>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginTop: 24, marginBottom: 10 }}>
+        <h3 style={{ color: C.navy, margin: 0, flex: "1 1 auto" }}>Saved homes ({homes.length})</h3>
+        {homes.length >= 2 && (
+          <>
+            <button
+              onClick={selectAllForCompare}
+              data-testid="dash-saved-compare-all"
+              title="Select the first 5 saved homes and open comparison"
+              style={{
+                background: "#fff", color: C.navy, border: `1px solid ${C.gold}`,
+                padding: "8px 14px", borderRadius: 999, cursor: "pointer",
+                fontSize: 12, fontWeight: 700,
+              }}
+            >Select all to compare</button>
+            <button
+              onClick={compareSelected}
+              disabled={selected.size < 2}
+              data-testid="dash-saved-compare-selected"
+              style={{
+                background: selected.size >= 2 ? C.navy : "#9CA3AF",
+                color: "#fff", border: "none",
+                padding: "8px 14px", borderRadius: 999,
+                cursor: selected.size >= 2 ? "pointer" : "not-allowed",
+                fontSize: 12, fontWeight: 700,
+              }}
+            >⇄ Compare selected ({selected.size})</button>
+          </>
+        )}
+      </div>
       {homes.length === 0
         ? <EmptyBox>Nothing saved yet — tap the ❤ on any listing card to add it here.</EmptyBox>
         : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14 }}>
-            {homes.map(h => (
+            {homes.map(h => {
+              const isSel = selected.has(h.listing_key);
+              return (
               <div key={h.listing_key} data-testid={`dash-saved-home-${h.listing_key}`} style={{
-                background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB", overflow: "hidden", position: "relative",
+                background: "#fff", borderRadius: 12,
+                border: isSel ? `2px solid ${C.gold}` : "1px solid #E5E7EB",
+                overflow: "hidden", position: "relative",
               }}>
                 <div style={{ height: 140, background: h.cover ? `url(${h.cover}) center/cover` : C.mist }}/>
+                {/* Bulk-compare checkbox — top-left so it doesn't collide
+                    with the existing remove button (top-right). */}
+                <button
+                  onClick={() => toggleSelect(h.listing_key)}
+                  data-testid={`dash-saved-select-${h.listing_key}`}
+                  aria-label={isSel ? "Deselect from comparison" : "Select for comparison"}
+                  style={{
+                    position: "absolute", left: 8, top: 8,
+                    padding: "3px 9px", borderRadius: 999, border: "none",
+                    background: isSel ? C.navy : "rgba(255,255,255,0.95)",
+                    color: isSel ? "#fff" : C.navy,
+                    fontSize: 11, fontWeight: 700, cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  }}
+                >{isSel ? "✓ Selected" : "+ Select"}</button>
                 <button onClick={() => remove(h.listing_key)} title="Remove"
                   style={{ position: "absolute", right: 8, top: 8, width: 30, height: 30, borderRadius: "50%",
                     background: "#DC2626", color: "#fff", border: "none", cursor: "pointer",
@@ -3443,7 +3527,8 @@ const SavedPanel = () => {
                   <Link to={`/listings/${h.listing_key}`} style={{ color: C.blue, fontWeight: 700, textDecoration: "none", fontSize: 12, marginTop: 6, display: "inline-block" }}>View full listing →</Link>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
       }
 

@@ -255,6 +255,13 @@ export default function CompareListings() {
           <CompareTable listings={rows} onRemove={removeOne}/>
         )}
 
+        {/* AI factual-delta summary — compliance guardrails handled server-side
+            in services/compare_summary.py. Frontend renders the always-on
+            disclaimer below every summary. */}
+        {rows.length >= 2 && (
+          <CompareSummary keys={rows.map(r => r.listing_key)}/>
+        )}
+
         {/* Compliance footer — same tone as other results pages */}
         <p style={{ marginTop: 32, color: C.muted, fontSize: 11, lineHeight: 1.6 }}>
           Comparison data sourced from CREA DDF® — MLS® listings are provided by the Canadian Real Estate Association
@@ -375,6 +382,99 @@ const ListingHeader = ({ l, onRemove }) => {
     </div>
   );
 };
+
+
+// ── Doogie AI Compare Summary ─────────────────────────────────────────────
+// Compliance guardrails live on the server (services/compare_summary.py).
+// This component just fetches, renders, and shows the mandatory disclaimer.
+// If guardrails trip server-side, `guardrails_triggered` comes back true and
+// the server sends a safe fallback string — no client-side branching needed.
+const CompareSummary = ({ keys }) => {
+  const [state, setState] = useState({ loading: true, summary: "", guardrails: false, error: null });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setState({ loading: true, summary: "", guardrails: false, error: null });
+      try {
+        const r = await fetch(`${API}/compare/summary?keys=${encodeURIComponent(keys.join(","))}`);
+        const d = await r.json();
+        if (cancelled) return;
+        setState({
+          loading: false,
+          summary: d.summary || "",
+          guardrails: !!d.guardrails_triggered,
+          error: r.ok ? null : (d.detail || "Failed to load summary."),
+        });
+      } catch (e) {
+        if (!cancelled) setState({ loading: false, summary: "", guardrails: true, error: String(e) });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [keys.join(",")]);
+  return (
+    <section
+      data-testid="compare-summary"
+      style={{
+        marginTop: 24,
+        background: "#fff",
+        border: `1px solid ${C.hair}`,
+        borderRadius: 16,
+        padding: "18px 22px",
+        boxShadow: "0 2px 10px rgba(15,42,91,0.05)",
+      }}
+    >
+      <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <span style={{
+          background: C.navy, color: "#fff",
+          padding: "3px 10px", borderRadius: 999,
+          fontSize: 11, fontWeight: 800, letterSpacing: "0.04em",
+        }}>DOOGIE</span>
+        <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", color: C.navy, fontSize: 18 }}>
+          The biggest factual tradeoffs
+        </h3>
+      </header>
+      {state.loading && (
+        <p data-testid="compare-summary-loading" style={{ color: C.muted, margin: 0 }}>
+          Doogie is comparing the specs…
+        </p>
+      )}
+      {!state.loading && state.summary && (
+        <p data-testid="compare-summary-text" style={{
+          margin: 0, fontSize: 15, lineHeight: 1.65, color: C.ink,
+        }}>{state.summary}</p>
+      )}
+      {/* Always-on compliance disclaimer (guardrail #5). Rendered whether or
+          not the LLM output was blocked so the user always sees the
+          "information, not advice" framing. */}
+      <p
+        data-testid="compare-summary-disclaimer"
+        style={{
+          marginTop: 12,
+          padding: "10px 12px",
+          background: "#FEF9E7",
+          border: "1px solid #F5B301",
+          borderRadius: 10,
+          color: C.ink,
+          fontSize: 11,
+          lineHeight: 1.55,
+        }}
+      >
+        <strong>General information only. Not real estate advice.</strong>{" "}
+        This summary describes factual differences between listings; it does not
+        recommend a specific property. Always verify details with a licensed
+        REALTOR® before making an offer. Data source: CREA DDF®.
+        {state.guardrails && (
+          <>
+            {" "}
+            <span style={{ color: C.muted }}>(An automated compliance filter
+            adjusted this summary to keep it strictly factual.)</span>
+          </>
+        )}
+      </p>
+    </section>
+  );
+};
+
 
 // ── Cell styles (module constants) ───────────────────────────────────────
 const thLabel = { textAlign: "left", padding: "12px 16px", borderBottom: `1px solid ${C.hair}`, width: 200, background: "#fff", position: "sticky", left: 0, zIndex: 1 };

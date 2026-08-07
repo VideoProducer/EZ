@@ -1883,6 +1883,34 @@ async def listings_by_keys(keys: str = "", limit: int = 100):
     return {"count": len(ordered), "listings": ordered}
 
 
+@api.get("/compare/summary")
+async def compare_summary(keys: str = ""):
+    """Compliance-locked AI factual-delta summary for up to 5 MLS® listings.
+    Guardrails live in services.compare_summary (forbidden-word regex, PIPA
+    data minimization, factual-delta-only prompt). If any guardrail trips
+    the client receives a safe static fallback with `guardrails_triggered`
+    set so the frontend can log it."""
+    from services.compare_summary import generate_compare_summary
+    key_list = [k.strip() for k in (keys or "").split(",") if k.strip()][:5]
+    if len(key_list) < 2:
+        raise HTTPException(400, "Provide 2 to 5 comma-separated listing keys.")
+    docs = await db.listings.find(
+        {
+            "listing_key": {"$in": key_list},
+            "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        },
+        {"_id": 0},
+    ).to_list(len(key_list))
+    if len(docs) < 2:
+        return {
+            "summary": "One or more selected listings could not be loaded. "
+                       "Please refresh and try again.",
+            "guardrails_triggered": True,
+            "listing_count": len(docs),
+        }
+    return await generate_compare_summary(docs)
+
+
 @api.post("/favorites")
 async def sync_favorites(body: FavoritesSyncIn, request: Request):
     """Save a user's favorite listings to the server. Double-opt-in CASL flow —
