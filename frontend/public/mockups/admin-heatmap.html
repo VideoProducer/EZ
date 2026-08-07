@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Market Heatmap · Doug's Desk (Admin Mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#0A0F1E; --panel:#101830; --panel2:#1A2447; --hair:rgba(255,255,255,0.08);
+    --ink:#E8EEFC; --muted:#8896B4; --gold:#F5B301;
+    --hot:#EF4444; --warming:#F97316; --neutral:#EAB308;
+    --cooling:#22C55E; --cold:#0EA5E9;
+    --grad-water:#0B1A3D;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;overflow:hidden;height:100vh}
+  h1,h2,h3{font-family:'Playfair Display',serif;letter-spacing:-.01em}
+  .mono{font-family:'JetBrains Mono',monospace}
+  /* Shell */
+  .app{display:grid;grid-template-columns:80px 260px 1fr 340px;height:100vh}
+  /* Icon rail */
+  .rail{background:var(--panel);border-right:1px solid var(--hair);padding:16px 0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .rail .logo{font-family:'Playfair Display',serif;font-weight:800;font-size:20px;color:var(--gold);margin-bottom:20px;line-height:1}
+  .rail .logo small{display:block;font-family:'JetBrains Mono';font-size:8px;color:var(--muted);letter-spacing:.15em;margin-top:2px;text-transform:uppercase;font-weight:600}
+  .rail a{width:44px;height:44px;display:grid;place-items:center;border-radius:10px;color:var(--muted);text-decoration:none;font-size:18px;transition:.2s}
+  .rail a:hover{background:var(--panel2);color:var(--ink)}
+  .rail a.active{background:linear-gradient(135deg,var(--hot),var(--warming));color:#fff}
+  .rail hr{border:none;border-top:1px solid var(--hair);width:36px;margin:8px 0}
+
+  /* Filter sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--hair);padding:20px 18px;overflow-y:auto}
+  .side h2{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:4px}
+  .side .sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono';letter-spacing:.06em;margin-bottom:22px}
+  .side .grp{margin-bottom:22px}
+  .side .lbl{font-size:10px;color:var(--gold);font-family:'JetBrains Mono';font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--panel2);border:1px solid var(--hair);color:var(--muted);padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:.2s}
+  .chip:hover{color:var(--ink)}
+  .chip.on{background:var(--gold);color:#0A0F1E;border-color:var(--gold);font-weight:800}
+  .side .range{display:flex;align-items:center;gap:8px}
+  .side input[type=number]{background:var(--panel2);border:1px solid var(--hair);color:var(--ink);padding:7px 10px;border-radius:6px;font-family:'JetBrains Mono';font-size:11.5px;width:100%;font-weight:600}
+  .side .sldr{margin-top:10px;height:5px;background:var(--panel2);border-radius:5px;position:relative}
+  .side .sldr::after{content:"";position:absolute;left:20%;right:15%;top:0;bottom:0;background:linear-gradient(90deg,var(--cooling),var(--gold),var(--hot));border-radius:5px}
+  .side .knob{position:absolute;width:14px;height:14px;background:var(--gold);border-radius:50%;top:-4px;border:2px solid var(--ink)}
+  /* Legend */
+  .legend{background:var(--panel2);border-radius:10px;padding:12px 14px;border:1px solid var(--hair)}
+  .legend .row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+  .legend .row:last-child{margin-bottom:0}
+  .legend .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+  .legend .v{color:var(--muted);font-family:'JetBrains Mono';font-size:10px;margin-left:auto}
+  /* Live pulse */
+  .live-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(239,68,68,0.15);border:1px solid var(--hot);border-radius:999px;font-size:10px;font-weight:800;color:var(--hot);letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono'}
+  .live-tag::before{content:"";width:6px;height:6px;background:var(--hot);border-radius:50%;animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* Map area */
+  .map{position:relative;background:radial-gradient(circle at 60% 40%,#132043 0%,#0A0F1E 70%);overflow:hidden}
+  .map-top{position:absolute;top:20px;left:24px;right:24px;display:flex;justify-content:space-between;align-items:flex-start;z-index:20}
+  .map-top .title h1{color:var(--ink);font-size:22px;font-weight:800}
+  .map-top .title p{color:var(--muted);font-size:12.5px;margin-top:4px;font-family:'JetBrains Mono';letter-spacing:.02em}
+  .map-top .actions{display:flex;gap:8px}
+  .map-top .btn{background:var(--panel2);border:1px solid var(--hair);color:var(--ink);padding:8px 14px;border-radius:8px;font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer}
+  .map-top .btn:hover{border-color:var(--gold);color:var(--gold)}
+  .map-top .btn.act{background:var(--gold);color:#0A0F1E;border-color:var(--gold)}
+
+  /* Zoom / pan controls */
+  .zoom{position:absolute;bottom:24px;right:24px;display:flex;flex-direction:column;background:var(--panel2);border:1px solid var(--hair);border-radius:10px;z-index:20;overflow:hidden}
+  .zoom button{background:transparent;border:none;color:var(--ink);width:38px;height:38px;font-size:18px;cursor:pointer;border-bottom:1px solid var(--hair);font-weight:700}
+  .zoom button:last-child{border-bottom:none}
+  .zoom button:hover{background:var(--panel)}
+  .breadcrumb{position:absolute;bottom:24px;left:24px;background:var(--panel2);border:1px solid var(--hair);padding:8px 14px;border-radius:8px;z-index:20;font-family:'JetBrains Mono';font-size:11px;color:var(--muted);letter-spacing:.04em}
+  .breadcrumb b{color:var(--ink);font-weight:700}
+
+  /* SVG map styling */
+  svg.map-svg{width:100%;height:100%;display:block}
+  .region-lbl{font-family:'Playfair Display',serif;font-weight:700;fill:rgba(232,238,252,0.18);font-size:34px;letter-spacing:.02em;pointer-events:none}
+  .neigh{cursor:pointer;transition:.2s}
+  .neigh:hover circle.bubble{stroke:var(--ink);stroke-width:2.5}
+  .neigh text{font-family:'Inter',sans-serif;font-weight:700;fill:#fff;font-size:9.5px;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,0.9)}
+  .bubble{transition:.2s}
+  .arrow{stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .trend-hot{stroke:var(--hot)}
+  .trend-warm{stroke:var(--warming)}
+  .trend-cool{stroke:var(--cooling)}
+  .trend-flat{stroke:var(--neutral)}
+  .coast{fill:var(--grad-water);stroke:rgba(56,89,163,0.35);stroke-width:1;stroke-dasharray:2 4}
+  .road{stroke:rgba(255,255,255,0.08);stroke-width:1;fill:none;stroke-dasharray:3 3}
+  .compass{fill:var(--muted);font-family:'JetBrains Mono';font-size:9px;letter-spacing:.15em;font-weight:600}
+
+  /* Detail panel */
+  .detail{background:var(--panel);border-left:1px solid var(--hair);padding:22px 20px;overflow-y:auto}
+  .detail .hood{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+  .detail .hood h2{color:var(--ink);font-size:22px;font-weight:800}
+  .detail .hood .sub{color:var(--muted);font-size:11px;font-family:'JetBrains Mono';margin-top:3px;letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+  .temp-badge{padding:7px 14px;border-radius:999px;font-family:'JetBrains Mono';font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .temp-hot{background:rgba(239,68,68,0.15);color:var(--hot);border:1px solid var(--hot)}
+  /* KPI cards */
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  .kpi{background:var(--panel2);border:1px solid var(--hair);border-radius:10px;padding:12px}
+  .kpi .l{font-size:9.5px;color:var(--muted);font-family:'JetBrains Mono';letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .kpi .v{font-family:'Sora';font-weight:800;color:var(--ink);font-size:19px;margin-top:4px}
+  .kpi .d{font-size:10.5px;margin-top:3px;font-weight:700}
+  .up{color:var(--hot)}.dn{color:var(--cooling)}
+  /* Sparkline */
+  .spark{background:var(--panel2);border-radius:10px;padding:14px;border:1px solid var(--hair);margin-bottom:14px}
+  .spark .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .spark .head b{color:var(--ink);font-size:12px;font-weight:700}
+  .spark .head span{font-family:'JetBrains Mono';font-size:10px;color:var(--muted);font-weight:600}
+  /* Forecast */
+  .fc{background:linear-gradient(135deg,rgba(239,68,68,0.10),rgba(249,115,22,0.10));border:1px solid var(--hot);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .fc h3{font-family:'Playfair Display',serif;font-size:14px;color:var(--ink);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .fc h3 .pill{background:var(--hot);color:#fff;padding:2px 8px;border-radius:999px;font-family:'JetBrains Mono';font-size:9px;letter-spacing:.1em;font-weight:800;text-transform:uppercase}
+  .fc .rows{margin-top:8px}
+  .fc .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.06);font-size:12px}
+  .fc .row:last-child{border-bottom:none}
+  .fc .row span:last-child{font-family:'JetBrains Mono';font-weight:700;color:var(--gold)}
+  /* Comparable */
+  .compare{background:var(--panel2);border-radius:10px;padding:14px;border:1px solid var(--hair);margin-bottom:14px}
+  .compare h3{font-size:12px;color:var(--ink);font-weight:800;margin-bottom:10px;font-family:'Inter';letter-spacing:.02em}
+  .compare .r{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:12px;border-bottom:1px dashed rgba(255,255,255,0.06)}
+  .compare .r:last-child{border-bottom:none}
+  .compare .r .l{color:var(--muted)}
+  .compare .r .n{font-family:'JetBrains Mono';font-weight:700;color:var(--ink)}
+  .compare .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
+  /* Compliance */
+  .comp{background:var(--panel2);border-radius:10px;padding:12px 14px;border:1px solid var(--gold);font-size:11px;color:var(--muted);line-height:1.55}
+  .comp strong{color:var(--gold)}
+
+  /* MOCK badge */
+  .badge-mock{position:fixed;bottom:14px;right:16px;background:var(--gold);color:#0A0F1E;padding:6px 12px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;z-index:100;border-radius:6px}
+
+  /* Tooltip */
+  .tt{position:fixed;background:rgba(10,15,30,0.96);backdrop-filter:blur(8px);border:1px solid var(--hair);padding:12px 14px;border-radius:10px;pointer-events:none;z-index:50;min-width:220px;box-shadow:0 12px 28px rgba(0,0,0,0.5);opacity:0;transition:opacity .15s}
+  .tt.on{opacity:1}
+  .tt h4{font-family:'Playfair Display',serif;color:var(--ink);font-size:15px;font-weight:800;margin-bottom:2px}
+  .tt .k{color:var(--muted);font-size:10px;font-family:'JetBrains Mono';letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase;font-weight:600}
+  .tt .row{display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px}
+  .tt .row span:last-child{font-family:'JetBrains Mono';font-weight:700;color:var(--ink)}
+  .tt .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-family:'JetBrains Mono';font-size:9px;letter-spacing:.1em;font-weight:800;text-transform:uppercase;margin-top:6px}
+
+  /* Top-of-map KPI ribbon */
+  .ribbon{position:absolute;top:80px;left:24px;right:24px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;z-index:15}
+  .rb{background:rgba(16,24,48,0.85);backdrop-filter:blur(10px);border:1px solid var(--hair);border-radius:10px;padding:11px 14px}
+  .rb .l{font-size:9.5px;color:var(--muted);font-family:'JetBrains Mono';letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .rb .v{font-family:'Sora';font-weight:800;color:var(--ink);font-size:18px;margin-top:3px}
+  .rb .v small{font-size:11px;color:var(--muted);font-weight:600;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Icon rail -->
+  <aside class="rail">
+    <div class="logo">🐾<small>DESK</small></div>
+    <a>📊</a>
+    <a>🎯</a>
+    <a class="active" title="Market Heatmap">🌡️</a>
+    <a>👥</a>
+    <a>🎬</a>
+    <hr/>
+    <a>🔍</a>
+    <a>💬</a>
+    <a>⚙️</a>
+  </aside>
+
+  <!-- Filter sidebar -->
+  <aside class="side">
+    <h2>Market Heatmap</h2>
+    <div class="sub">CREA DDF® · Updated 2h ago</div>
+
+    <div style="margin-bottom:20px"><span class="live-tag">Live · DDF sync 09:12 PST</span></div>
+
+    <div class="grp">
+      <div class="lbl">Region</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Gtr Van</div>
+        <div class="chip">Fraser Vly</div>
+        <div class="chip">Sea-to-Sky</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Property type</div>
+      <div class="chips">
+        <div class="chip on">All</div>
+        <div class="chip">Detached</div>
+        <div class="chip">Townhouse</div>
+        <div class="chip">Condo</div>
+        <div class="chip">Acreage</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Time period</div>
+      <div class="chips">
+        <div class="chip">7d</div>
+        <div class="chip on">30d</div>
+        <div class="chip">90d</div>
+        <div class="chip">YTD</div>
+        <div class="chip">12mo</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Price range</div>
+      <div class="range">
+        <input type="number" value="500000"/>
+        <input type="number" value="5000000"/>
+      </div>
+      <div class="sldr"><div class="knob" style="left:calc(20% - 7px)"></div><div class="knob" style="left:calc(85% - 7px)"></div></div>
+      <div class="mono" style="color:var(--muted);font-size:10px;margin-top:8px;letter-spacing:.06em">$500K → $5M · covers 82% of active</div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Overlay</div>
+      <div class="chips">
+        <div class="chip on">Temperature</div>
+        <div class="chip on">Forecast arrows</div>
+        <div class="chip">Sales density</div>
+        <div class="chip">DOM heatmap</div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">Legend</div>
+      <div class="legend">
+        <div class="row"><div class="dot" style="background:var(--hot)"></div>Hot · seller's market<div class="v">≥ 70</div></div>
+        <div class="row"><div class="dot" style="background:var(--warming)"></div>Warming<div class="v">55 – 69</div></div>
+        <div class="row"><div class="dot" style="background:var(--neutral)"></div>Balanced<div class="v">45 – 54</div></div>
+        <div class="row"><div class="dot" style="background:var(--cooling)"></div>Cooling<div class="v">30 – 44</div></div>
+        <div class="row"><div class="dot" style="background:var(--cold)"></div>Cold · buyer's market<div class="v">&lt; 30</div></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--hair);color:var(--muted);font-size:10.5px;font-family:'JetBrains Mono';letter-spacing:.02em;line-height:1.5">
+          Score = sales/list × price momentum ÷ DOM decay
+        </div>
+      </div>
+    </div>
+
+    <div class="grp" style="margin-bottom:0">
+      <div class="comp"><strong>Compliance:</strong> Market data displayed from CREA DDF® under REBGV / FVREB / BCREA license. General information only, not real estate advice.</div>
+    </div>
+  </aside>
+
+  <!-- MAP -->
+  <section class="map">
+    <div class="map-top">
+      <div class="title">
+        <h1>Live Market Heatmap</h1>
+        <p>Greater Vancouver · Fraser Valley · Sea-to-Sky · 43,399 listings · 2,847 sold last 30 days</p>
+      </div>
+      <div class="actions">
+        <button class="btn">Export CSV</button>
+        <button class="btn act">📅 Snapshot →</button>
+      </div>
+    </div>
+
+    <!-- KPI ribbon -->
+    <div class="ribbon">
+      <div class="rb"><div class="l">Regional temp</div><div class="v">63<small>/100 · warming</small></div></div>
+      <div class="rb"><div class="l">Sales (30d)</div><div class="v">2,847<small>▲ 14%</small></div></div>
+      <div class="rb"><div class="l">Median price</div><div class="v">$1.36M<small>▲ 4.2%</small></div></div>
+      <div class="rb"><div class="l">Avg days on market</div><div class="v">21<small>▼ 8 days</small></div></div>
+      <div class="rb"><div class="l">🔥 Hottest hood</div><div class="v" style="color:var(--hot)">Squamish<small>score 87</small></div></div>
+    </div>
+
+    <!-- SVG map -->
+    <svg class="map-svg" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet">
+      <!-- Coastline / water shapes -->
+      <path class="coast" d="M0,300 Q80,285 160,300 T290,310 L290,640 L0,640 Z"/>
+      <path class="coast" d="M0,180 Q50,200 90,180 Q120,150 150,180 Q200,220 180,270 L0,270 Z"/>
+      <path class="coast" d="M700,0 Q680,60 720,120 Q780,150 820,140 Q900,120 1000,150 L1000,0 Z" style="opacity:.55"/>
+      <!-- Mountain ranges (soft polys) -->
+      <path d="M300,50 L360,20 L440,60 L520,30 L600,80 L680,50 L740,100 L820,80 L900,120 L1000,90 L1000,200 L300,200 Z" fill="rgba(15,25,55,0.6)" stroke="rgba(56,89,163,0.15)"/>
+
+      <!-- Road hints -->
+      <path class="road" d="M180,320 Q250,340 320,335 T480,340 T650,345 T900,360"/>
+      <path class="road" d="M480,340 Q495,270 510,200 T540,100 T580,20"/>
+      <path class="road" d="M320,335 Q290,400 300,470 T340,600"/>
+
+      <!-- Region labels -->
+      <text class="region-lbl" x="330" y="380" text-anchor="middle">Greater Vancouver</text>
+      <text class="region-lbl" x="740" y="380" text-anchor="middle">Fraser Valley</text>
+      <text class="region-lbl" x="510" y="150" text-anchor="middle">Sea-to-Sky</text>
+
+      <!-- Compass -->
+      <g transform="translate(945,80)">
+        <circle r="26" fill="rgba(16,24,48,0.7)" stroke="rgba(255,255,255,0.12)"/>
+        <text class="compass" text-anchor="middle" y="-16">N</text>
+        <text class="compass" text-anchor="middle" y="20">S</text>
+        <text class="compass" text-anchor="start" x="14" y="4">E</text>
+        <text class="compass" text-anchor="end" x="-14" y="4">W</text>
+        <path d="M0,-10 L4,4 L0,0 L-4,4 Z" fill="var(--gold)"/>
+      </g>
+
+      <!-- NEIGHBOURHOODS (data-driven positions/colors) -->
+      <!-- Sea-to-Sky -->
+      <g class="neigh" data-name="Whistler" data-region="Sea-to-Sky" data-temp="82" data-median="$2.45M" data-sales="46" data-dom="18" data-active="211" data-change="+7.8%" data-forecast="hot">
+        <circle class="bubble" cx="490" cy="90" r="22" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="490" y="93" text-anchor="middle">Whistler</text>
+      </g>
+      <g class="neigh" data-name="Squamish" data-region="Sea-to-Sky" data-temp="87" data-median="$1.24M" data-sales="72" data-dom="14" data-active="188" data-change="+9.4%" data-forecast="hot">
+        <circle class="bubble" cx="440" cy="175" r="24" fill="var(--hot)"/>
+        <text x="440" y="178" text-anchor="middle">Squamish</text>
+      </g>
+      <g class="neigh" data-name="Pemberton" data-region="Sea-to-Sky" data-temp="73" data-median="$1.08M" data-sales="18" data-dom="24" data-active="52" data-change="+5.1%" data-forecast="warming">
+        <circle class="bubble" cx="540" cy="55" r="16" fill="var(--hot)" fill-opacity="0.80"/>
+        <text x="540" y="58" text-anchor="middle">Pemberton</text>
+      </g>
+      <g class="neigh" data-name="Lions Bay" data-region="Sea-to-Sky" data-temp="61" data-median="$3.10M" data-sales="4" data-dom="42" data-active="19" data-change="+2.4%" data-forecast="warming">
+        <circle class="bubble" cx="385" cy="235" r="12" fill="var(--warming)"/>
+        <text x="385" y="238" text-anchor="middle">Lions Bay</text>
+      </g>
+
+      <!-- North Van / West Van -->
+      <g class="neigh" data-name="West Vancouver" data-region="Greater Vancouver" data-temp="49" data-median="$3.85M" data-sales="61" data-dom="38" data-active="342" data-change="+1.1%" data-forecast="flat">
+        <circle class="bubble" cx="290" cy="280" r="22" fill="var(--neutral)"/>
+        <text x="290" y="283" text-anchor="middle">West Van</text>
+      </g>
+      <g class="neigh" data-name="North Vancouver" data-region="Greater Vancouver" data-temp="66" data-median="$1.79M" data-sales="128" data-dom="22" data-active="384" data-change="+3.9%" data-forecast="warming">
+        <circle class="bubble" cx="380" cy="290" r="24" fill="var(--warming)"/>
+        <text x="380" y="293" text-anchor="middle">North Van</text>
+      </g>
+      <g class="neigh" data-name="Deep Cove" data-region="Greater Vancouver" data-temp="71" data-median="$2.14M" data-sales="14" data-dom="19" data-active="42" data-change="+5.6%" data-forecast="warming">
+        <circle class="bubble" cx="450" cy="270" r="13" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="450" y="273" text-anchor="middle">Deep Cove</text>
+      </g>
+
+      <!-- Vancouver core -->
+      <g class="neigh" data-name="Downtown Vancouver" data-region="Greater Vancouver" data-temp="58" data-median="$888K" data-sales="184" data-dom="26" data-active="612" data-change="+2.7%" data-forecast="warming">
+        <circle class="bubble" cx="330" cy="360" r="26" fill="var(--warming)" fill-opacity="0.85"/>
+        <text x="330" y="363" text-anchor="middle">Downtown</text>
+      </g>
+      <g class="neigh" data-name="Kitsilano" data-region="Greater Vancouver" data-temp="67" data-median="$1.62M" data-sales="82" data-dom="17" data-active="203" data-change="+4.3%" data-forecast="warming">
+        <circle class="bubble" cx="270" cy="380" r="18" fill="var(--warming)"/>
+        <text x="270" y="383" text-anchor="middle">Kits</text>
+      </g>
+      <g class="neigh" data-name="Point Grey" data-region="Greater Vancouver" data-temp="72" data-median="$4.20M" data-sales="24" data-dom="21" data-active="88" data-change="+5.9%" data-forecast="warming">
+        <circle class="bubble" cx="215" cy="378" r="15" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="215" y="381" text-anchor="middle">Pt Grey</text>
+      </g>
+      <g class="neigh" data-name="Kerrisdale" data-region="Greater Vancouver" data-temp="54" data-median="$2.45M" data-sales="41" data-dom="34" data-active="139" data-change="+2.1%" data-forecast="flat">
+        <circle class="bubble" cx="285" cy="418" r="15" fill="var(--neutral)"/>
+        <text x="285" y="421" text-anchor="middle">Kerrisdale</text>
+      </g>
+      <g class="neigh" data-name="Mount Pleasant" data-region="Greater Vancouver" data-temp="70" data-median="$1.31M" data-sales="66" data-dom="16" data-active="188" data-change="+5.2%" data-forecast="warming">
+        <circle class="bubble" cx="368" cy="390" r="17" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="368" y="393" text-anchor="middle">Mt Pleasant</text>
+      </g>
+      <g class="neigh" data-name="East Vancouver" data-region="Greater Vancouver" data-temp="62" data-median="$1.42M" data-sales="112" data-dom="19" data-active="298" data-change="+3.5%" data-forecast="warming">
+        <circle class="bubble" cx="420" cy="405" r="20" fill="var(--warming)"/>
+        <text x="420" y="408" text-anchor="middle">East Van</text>
+      </g>
+      <g class="neigh" data-name="Oakridge" data-region="Greater Vancouver" data-temp="46" data-median="$1.98M" data-sales="34" data-dom="41" data-active="182" data-change="-0.4%" data-forecast="cooling">
+        <circle class="bubble" cx="335" cy="435" r="14" fill="var(--neutral)" fill-opacity="0.75"/>
+        <text x="335" y="438" text-anchor="middle">Oakridge</text>
+      </g>
+      <g class="neigh" data-name="Shaughnessy" data-region="Greater Vancouver" data-temp="38" data-median="$5.20M" data-sales="18" data-dom="52" data-active="112" data-change="-1.8%" data-forecast="cooling">
+        <circle class="bubble" cx="308" cy="410" r="14" fill="var(--cooling)" fill-opacity="0.85"/>
+        <text x="308" y="413" text-anchor="middle">Shaughnessy</text>
+      </g>
+
+      <!-- Burnaby / New West / Coquitlam -->
+      <g class="neigh" data-name="Burnaby" data-region="Greater Vancouver" data-temp="64" data-median="$1.28M" data-sales="146" data-dom="20" data-active="418" data-change="+3.7%" data-forecast="warming">
+        <circle class="bubble" cx="490" cy="400" r="22" fill="var(--warming)"/>
+        <text x="490" y="403" text-anchor="middle">Burnaby</text>
+      </g>
+      <g class="neigh" data-name="Metrotown" data-region="Greater Vancouver" data-temp="69" data-median="$798K" data-sales="94" data-dom="17" data-active="278" data-change="+4.6%" data-forecast="warming">
+        <circle class="bubble" cx="480" cy="437" r="16" fill="var(--warming)" fill-opacity="0.9"/>
+        <text x="480" y="440" text-anchor="middle">Metrotown</text>
+      </g>
+      <g class="neigh" data-name="New Westminster" data-region="Greater Vancouver" data-temp="58" data-median="$1.05M" data-sales="52" data-dom="24" data-active="188" data-change="+2.8%" data-forecast="warming">
+        <circle class="bubble" cx="540" cy="445" r="15" fill="var(--warming)" fill-opacity="0.85"/>
+        <text x="540" y="448" text-anchor="middle">New West</text>
+      </g>
+      <g class="neigh" data-name="Coquitlam" data-region="Greater Vancouver" data-temp="65" data-median="$1.31M" data-sales="88" data-dom="22" data-active="284" data-change="+3.8%" data-forecast="warming">
+        <circle class="bubble" cx="580" cy="380" r="19" fill="var(--warming)"/>
+        <text x="580" y="383" text-anchor="middle">Coquitlam</text>
+      </g>
+      <g class="neigh" data-name="Port Moody" data-region="Greater Vancouver" data-temp="60" data-median="$1.42M" data-sales="34" data-dom="26" data-active="128" data-change="+2.9%" data-forecast="warming">
+        <circle class="bubble" cx="558" cy="345" r="14" fill="var(--warming)" fill-opacity="0.85"/>
+        <text x="558" y="348" text-anchor="middle">Port Moody</text>
+      </g>
+      <g class="neigh" data-name="Port Coquitlam" data-region="Greater Vancouver" data-temp="63" data-median="$1.19M" data-sales="48" data-dom="21" data-active="164" data-change="+3.4%" data-forecast="warming">
+        <circle class="bubble" cx="620" cy="410" r="15" fill="var(--warming)"/>
+        <text x="620" y="413" text-anchor="middle">Port Coq</text>
+      </g>
+
+      <!-- Richmond / Delta -->
+      <g class="neigh" data-name="Richmond" data-region="Greater Vancouver" data-temp="55" data-median="$1.16M" data-sales="132" data-dom="27" data-active="512" data-change="+2.2%" data-forecast="flat">
+        <circle class="bubble" cx="290" cy="480" r="22" fill="var(--neutral)"/>
+        <text x="290" y="483" text-anchor="middle">Richmond</text>
+      </g>
+      <g class="neigh" data-name="Steveston" data-region="Greater Vancouver" data-temp="66" data-median="$1.79M" data-sales="22" data-dom="19" data-active="72" data-change="+4.4%" data-forecast="warming">
+        <circle class="bubble" cx="245" cy="510" r="12" fill="var(--warming)"/>
+        <text x="245" y="513" text-anchor="middle">Steveston</text>
+      </g>
+      <g class="neigh" data-name="Ladner (Delta)" data-region="Greater Vancouver" data-temp="52" data-median="$1.32M" data-sales="28" data-dom="32" data-active="118" data-change="+1.6%" data-forecast="flat">
+        <circle class="bubble" cx="360" cy="510" r="14" fill="var(--neutral)"/>
+        <text x="360" y="513" text-anchor="middle">Ladner</text>
+      </g>
+      <g class="neigh" data-name="Tsawwassen" data-region="Greater Vancouver" data-temp="47" data-median="$1.48M" data-sales="18" data-dom="38" data-active="104" data-change="+0.9%" data-forecast="cooling">
+        <circle class="bubble" cx="320" cy="565" r="13" fill="var(--neutral)" fill-opacity="0.75"/>
+        <text x="320" y="568" text-anchor="middle">Tsawwassen</text>
+      </g>
+
+      <!-- Surrey / Langley / White Rock -->
+      <g class="neigh" data-name="Surrey" data-region="Greater Vancouver" data-temp="71" data-median="$1.24M" data-sales="286" data-dom="18" data-active="912" data-change="+5.4%" data-forecast="hot">
+        <circle class="bubble" cx="500" cy="500" r="26" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="500" y="503" text-anchor="middle">Surrey</text>
+      </g>
+      <g class="neigh" data-name="South Surrey" data-region="Greater Vancouver" data-temp="64" data-median="$1.68M" data-sales="88" data-dom="21" data-active="342" data-change="+3.8%" data-forecast="warming">
+        <circle class="bubble" cx="455" cy="555" r="17" fill="var(--warming)"/>
+        <text x="455" y="558" text-anchor="middle">S Surrey</text>
+      </g>
+      <g class="neigh" data-name="Cloverdale" data-region="Greater Vancouver" data-temp="68" data-median="$1.42M" data-sales="52" data-dom="17" data-active="188" data-change="+4.7%" data-forecast="warming">
+        <circle class="bubble" cx="555" cy="530" r="15" fill="var(--warming)" fill-opacity="0.9"/>
+        <text x="555" y="533" text-anchor="middle">Cloverdale</text>
+      </g>
+      <g class="neigh" data-name="White Rock" data-region="Greater Vancouver" data-temp="53" data-median="$1.28M" data-sales="34" data-dom="31" data-active="182" data-change="+2.0%" data-forecast="flat">
+        <circle class="bubble" cx="418" cy="590" r="12" fill="var(--neutral)"/>
+        <text x="418" y="593" text-anchor="middle">White Rock</text>
+      </g>
+      <g class="neigh" data-name="Langley" data-region="Fraser Valley" data-temp="72" data-median="$1.34M" data-sales="164" data-dom="16" data-active="512" data-change="+5.8%" data-forecast="hot">
+        <circle class="bubble" cx="620" cy="480" r="22" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="620" y="483" text-anchor="middle">Langley</text>
+      </g>
+      <g class="neigh" data-name="Willoughby" data-region="Fraser Valley" data-temp="75" data-median="$1.12M" data-sales="94" data-dom="14" data-active="288" data-change="+6.6%" data-forecast="hot">
+        <circle class="bubble" cx="670" cy="470" r="16" fill="var(--hot)"/>
+        <text x="670" y="473" text-anchor="middle">Willoughby</text>
+      </g>
+      <g class="neigh" data-name="Fort Langley" data-region="Fraser Valley" data-temp="66" data-median="$1.68M" data-sales="18" data-dom="18" data-active="72" data-change="+4.1%" data-forecast="warming">
+        <circle class="bubble" cx="660" cy="415" r="13" fill="var(--warming)" fill-opacity="0.9"/>
+        <text x="660" y="418" text-anchor="middle">Ft Langley</text>
+      </g>
+      <g class="neigh" data-name="Aldergrove" data-region="Fraser Valley" data-temp="70" data-median="$1.24M" data-sales="42" data-dom="17" data-active="152" data-change="+5.3%" data-forecast="warming">
+        <circle class="bubble" cx="720" cy="510" r="15" fill="var(--hot)" fill-opacity="0.85"/>
+        <text x="720" y="513" text-anchor="middle">Aldergrove</text>
+      </g>
+
+      <!-- Abbotsford / Mission / Chilliwack / Hope -->
+      <g class="neigh" data-name="Abbotsford" data-region="Fraser Valley" data-temp="61" data-median="$1.02M" data-sales="128" data-dom="23" data-active="482" data-change="+3.1%" data-forecast="warming">
+        <circle class="bubble" cx="770" cy="470" r="22" fill="var(--warming)"/>
+        <text x="770" y="473" text-anchor="middle">Abbotsford</text>
+      </g>
+      <g class="neigh" data-name="Mission" data-region="Fraser Valley" data-temp="59" data-median="$948K" data-sales="52" data-dom="24" data-active="212" data-change="+2.8%" data-forecast="warming">
+        <circle class="bubble" cx="770" cy="400" r="16" fill="var(--warming)" fill-opacity="0.85"/>
+        <text x="770" y="403" text-anchor="middle">Mission</text>
+      </g>
+      <g class="neigh" data-name="Maple Ridge" data-region="Fraser Valley" data-temp="65" data-median="$1.16M" data-sales="88" data-dom="19" data-active="298" data-change="+4.2%" data-forecast="warming">
+        <circle class="bubble" cx="685" cy="360" r="18" fill="var(--warming)"/>
+        <text x="685" y="363" text-anchor="middle">Maple Ridge</text>
+      </g>
+      <g class="neigh" data-name="Pitt Meadows" data-region="Fraser Valley" data-temp="56" data-median="$1.08M" data-sales="24" data-dom="27" data-active="102" data-change="+2.4%" data-forecast="flat">
+        <circle class="bubble" cx="645" cy="345" r="12" fill="var(--warming)" fill-opacity="0.75"/>
+        <text x="645" y="348" text-anchor="middle">Pitt Mdws</text>
+      </g>
+      <g class="neigh" data-name="Chilliwack" data-region="Fraser Valley" data-temp="63" data-median="$862K" data-sales="152" data-dom="22" data-active="512" data-change="+3.4%" data-forecast="warming">
+        <circle class="bubble" cx="870" cy="470" r="22" fill="var(--warming)"/>
+        <text x="870" y="473" text-anchor="middle">Chilliwack</text>
+      </g>
+      <g class="neigh" data-name="Sardis" data-region="Fraser Valley" data-temp="67" data-median="$942K" data-sales="42" data-dom="18" data-active="148" data-change="+4.5%" data-forecast="warming">
+        <circle class="bubble" cx="855" cy="510" r="14" fill="var(--warming)" fill-opacity="0.9"/>
+        <text x="855" y="513" text-anchor="middle">Sardis</text>
+      </g>
+      <g class="neigh" data-name="Cultus Lake" data-region="Fraser Valley" data-temp="52" data-median="$1.24M" data-sales="8" data-dom="34" data-active="52" data-change="+1.8%" data-forecast="flat">
+        <circle class="bubble" cx="875" cy="555" r="11" fill="var(--neutral)"/>
+        <text x="875" y="558" text-anchor="middle">Cultus Lk</text>
+      </g>
+      <g class="neigh" data-name="Hope" data-region="Fraser Valley" data-temp="41" data-median="$618K" data-sales="24" data-dom="42" data-active="118" data-change="-0.6%" data-forecast="cooling">
+        <circle class="bubble" cx="950" cy="425" r="13" fill="var(--cooling)" fill-opacity="0.85"/>
+        <text x="950" y="428" text-anchor="middle">Hope</text>
+      </g>
+
+      <!-- FORECAST ARROWS (6-12mo trend vectors) -->
+      <defs>
+        <marker id="arH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--hot)"/></marker>
+        <marker id="arW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--warming)"/></marker>
+        <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="var(--cooling)"/></marker>
+      </defs>
+      <!-- Hot forecast arrows -->
+      <path class="arrow trend-hot" d="M440,205 Q460,195 480,175" marker-end="url(#arH)"/>
+      <path class="arrow trend-hot" d="M500,530 Q535,510 565,485" marker-end="url(#arH)"/>
+      <path class="arrow trend-hot" d="M620,510 Q680,490 720,470" marker-end="url(#arH)"/>
+      <path class="arrow trend-hot" d="M490,120 Q470,100 465,85" marker-end="url(#arH)"/>
+      <!-- Warming -->
+      <path class="arrow trend-warm" d="M330,390 Q360,380 380,370" marker-end="url(#arW)"/>
+      <path class="arrow trend-warm" d="M770,500 Q830,485 855,470" marker-end="url(#arW)"/>
+      <path class="arrow trend-warm" d="M685,390 Q705,395 720,410" marker-end="url(#arW)"/>
+      <!-- Cooling -->
+      <path class="arrow trend-cool" d="M308,440 Q305,455 315,472" marker-end="url(#arC)"/>
+      <path class="arrow trend-cool" d="M950,455 Q948,470 942,480" marker-end="url(#arC)"/>
+      <path class="arrow trend-cool" d="M290,300 Q285,320 285,340" marker-end="url(#arC)"/>
+    </svg>
+
+    <div class="breadcrumb">Region · <b>All BC</b> · Property · <b>All</b> · Period · <b>30d</b></div>
+
+    <div class="zoom">
+      <button title="Zoom in">＋</button>
+      <button title="Zoom out">－</button>
+      <button title="Fit to bounds">◱</button>
+      <button title="Reset">⟲</button>
+    </div>
+  </section>
+
+  <!-- Detail panel (Squamish is pre-selected) -->
+  <aside class="detail">
+    <div class="hood">
+      <div>
+        <h2>Squamish</h2>
+        <div class="sub">Sea-to-Sky · Selected</div>
+      </div>
+      <div class="temp-badge temp-hot">🔥 Hot · 87</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="l">Median price</div><div class="v">$1.24M</div><div class="d up">▲ 9.4% (30d)</div></div>
+      <div class="kpi"><div class="l">Sales volume</div><div class="v">72</div><div class="d up">▲ 26% vs 30d prior</div></div>
+      <div class="kpi"><div class="l">Days on market</div><div class="v">14</div><div class="d dn">▼ 8 days · faster</div></div>
+      <div class="kpi"><div class="l">Active listings</div><div class="v">188</div><div class="d dn">▼ 22 · tighter</div></div>
+    </div>
+
+    <div class="spark">
+      <div class="head"><b>Median price · trailing 12mo</b><span>+18.7% YoY</span></div>
+      <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none">
+        <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#EF4444" stop-opacity="0.4"/><stop offset="100%" stop-color="#EF4444" stop-opacity="0"/></linearGradient></defs>
+        <path d="M0,50 L25,45 L50,48 L75,42 L100,38 L125,40 L150,32 L175,30 L200,26 L225,22 L250,18 L275,15 L300,10 L300,60 L0,60 Z" fill="url(#grad)"/>
+        <path d="M0,50 L25,45 L50,48 L75,42 L100,38 L125,40 L150,32 L175,30 L200,26 L225,22 L250,18 L275,15 L300,10" stroke="#EF4444" stroke-width="2" fill="none"/>
+        <!-- forecast dashed -->
+        <path d="M300,10 L340,4 L380,0" stroke="#F5B301" stroke-width="2" fill="none" stroke-dasharray="4 3"/>
+      </svg>
+    </div>
+
+    <div class="fc">
+      <h3>Forecast <span class="pill">6-12 mo</span></h3>
+      <div class="rows">
+        <div class="row"><span>Trajectory (12-mo)</span><span style="color:var(--hot)">▲ Hot · continued</span></div>
+        <div class="row"><span>Projected median (6mo)</span><span>$1.31M · +5.6%</span></div>
+        <div class="row"><span>Projected median (12mo)</span><span>$1.38M · +11.3%</span></div>
+        <div class="row"><span>Projected DOM (6mo)</span><span>11 days · tighter</span></div>
+        <div class="row"><span>Confidence</span><span style="color:var(--gold)">78% · High</span></div>
+        <div class="row"><span>Model</span><span>ARIMA + Prophet ensemble</span></div>
+      </div>
+    </div>
+
+    <div class="compare">
+      <h3>Compare vs neighbours</h3>
+      <div class="r"><div><span class="dot" style="background:var(--hot)"></span><span class="l">Whistler</span></div><div class="n">82 · $2.45M</div></div>
+      <div class="r"><div><span class="dot" style="background:var(--warming)"></span><span class="l">Lions Bay</span></div><div class="n">61 · $3.10M</div></div>
+      <div class="r"><div><span class="dot" style="background:var(--hot)"></span><span class="l">Pemberton</span></div><div class="n">73 · $1.08M</div></div>
+      <div class="r"><div><span class="dot" style="background:var(--warming)"></span><span class="l">West Van</span></div><div class="n">49 · $3.85M</div></div>
+    </div>
+
+    <div class="compare" style="margin-bottom:0">
+      <h3>Drill-down actions</h3>
+      <div class="r"><div class="l">📋 View 188 active MLS® listings</div><div class="n" style="color:var(--gold)">→</div></div>
+      <div class="r"><div class="l">📊 Export 12-mo Squamish CSV</div><div class="n" style="color:var(--gold)">→</div></div>
+      <div class="r"><div class="l">📮 Email report to me</div><div class="n" style="color:var(--gold)">→</div></div>
+      <div class="r"><div class="l">🎯 Add to Doogie watchlist</div><div class="n" style="color:var(--gold)">→</div></div>
+    </div>
+  </aside>
+</div>
+
+<!-- tooltip -->
+<div class="tt" id="tt"></div>
+<div class="badge-mock">MOCKUP</div>
+
+<script>
+  const tt = document.getElementById('tt');
+  const tempClass = (t) => {
+    const n = Number(t);
+    if(n>=70) return {c:'var(--hot)', lbl:'🔥 Hot'};
+    if(n>=55) return {c:'var(--warming)', lbl:'🌡️ Warming'};
+    if(n>=45) return {c:'var(--neutral)', lbl:'⚖️ Balanced'};
+    if(n>=30) return {c:'var(--cooling)', lbl:'❄️ Cooling'};
+    return {c:'var(--cold)', lbl:'🧊 Cold'};
+  };
+  document.querySelectorAll('.neigh').forEach(g => {
+    g.addEventListener('mousemove', (e) => {
+      const d = g.dataset;
+      const t = tempClass(d.temp);
+      tt.innerHTML = `
+        <h4>${d.name}</h4>
+        <div class="k">${d.region}</div>
+        <div class="row"><span>Temperature</span><span style="color:${t.c}">${d.temp} · ${t.lbl}</span></div>
+        <div class="row"><span>Median price</span><span>${d.median}</span></div>
+        <div class="row"><span>Price change (30d)</span><span>${d.change}</span></div>
+        <div class="row"><span>Sales (30d)</span><span>${d.sales}</span></div>
+        <div class="row"><span>Days on market</span><span>${d.dom}</span></div>
+        <div class="row"><span>Active listings</span><span>${d.active}</span></div>
+        <span class="badge" style="background:${t.c}20;color:${t.c};border:1px solid ${t.c}">Forecast · ${d.forecast}</span>
+      `;
+      tt.classList.add('on');
+      tt.style.left = Math.min(window.innerWidth - 260, e.clientX + 16) + 'px';
+      tt.style.top = Math.min(window.innerHeight - 260, e.clientY + 16) + 'px';
+    });
+    g.addEventListener('mouseleave', () => tt.classList.remove('on'));
+  });
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', function(){
+    // Simple visual toggle within same group
+    const grp = this.parentElement;
+    if(!this.classList.contains('on') && grp.querySelectorAll('.on').length){
+      grp.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+    }
+    this.classList.toggle('on');
+  }));
+</script>
+</body>
+</html>
