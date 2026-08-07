@@ -353,16 +353,17 @@ class PrerenderService:
                 return cached
 
         if not self._ready:
-            try:
-                await asyncio.wait_for(self.start(), timeout=8.0)
-            except (asyncio.TimeoutError, Exception) as e:
-                # Still initialising (e.g. chromium being downloaded on
-                # production's first boot) — return a fast BYPASS so the
-                # ingress falls back to the SPA instead of hanging.
-                return RenderResult(
-                    path=path, html="", status=503, kind=_path_kind(path),
-                    cache="BYPASS", took_ms=0, reason=f"not_ready:{str(e)[:80]}",
-                )
+            # Fast-BYPASS: never block the request path.  Emergent/Cloudflare's
+            # ingress kills connections at ~2s, so we can't afford to wait for
+            # the browser to boot (or for the one-time `playwright install`
+            # download).  The `_boot_prerender` startup task handles launch in
+            # the background — subsequent requests get real renders once
+            # `_ready == True`.  Cloudflare Worker fall-through means bots see
+            # the SPA (same as today) during this brief window.
+            return RenderResult(
+                path=path, html="", status=503, kind=_path_kind(path),
+                cache="BYPASS", took_ms=0, reason="browser_not_ready",
+            )
 
         kind = _path_kind(path)
         target = urljoin(TARGET_BASE + "/", path.lstrip("/"))

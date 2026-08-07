@@ -6413,8 +6413,13 @@ async def bot_prerender(path: str, request: Request):
             "Cache-Control": "public, max-age=300, s-maxage=600",
             "Content-Type": "text/html; charset=utf-8",
         }
-        if not result.html:
-            return Response(status_code=502, headers=headers)
+        # BYPASS or ERROR → return a small, fast, non-cacheable response the
+        # Cloudflare Worker recognises (!resp.ok triggers its SPA fallback).
+        if result.cache in ("BYPASS", "ERROR") or not result.html:
+            headers["Cache-Control"] = "no-store"
+            if result.reason:
+                headers["X-Prerender-Reason"] = result.reason[:120]
+            return Response(status_code=503, headers=headers)
         return Response(content=result.html, status_code=result.status, headers=headers)
     except Exception as e:
         logger.error(f"bot_prerender error path={cache_key} err={e}")
