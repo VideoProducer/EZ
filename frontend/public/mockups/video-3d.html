@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Video / 3D Studio Mockup · EZtoFind.ca</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#0A0E1A; --panel:#12192B; --panel2:#1A2341;
+    --ink:#EEF2FF; --muted:#8A96B4; --hair:rgba(255,255,255,0.10);
+    --red:#EF4444; --green:#10B981; --purple:#8B5CF6;
+    --gold:#F5B301; --pink:#EC4899;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  aside{background:var(--panel);padding:22px 14px;border-right:1px solid var(--hair)}
+  .brand{font-family:'Playfair Display',serif;font-weight:800;font-size:18px;color:var(--gold);margin-bottom:18px}
+  .brand small{display:block;color:var(--muted);font-size:10px;font-family:'JetBrains Mono';letter-spacing:.15em;text-transform:uppercase;margin-top:2px;font-weight:500}
+  aside a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;color:#c8d3ea;text-decoration:none;font-size:13px;margin-bottom:2px}
+  aside a.active{background:linear-gradient(90deg,var(--purple),var(--pink));color:#fff;font-weight:700}
+  aside hr{border:none;border-top:1px solid var(--hair);margin:16px 0}
+  main{padding:26px 34px 60px}
+  h1{font-family:'Playfair Display',serif;font-weight:800;font-size:26px;letter-spacing:-.01em}
+  h2{font-family:'Playfair Display',serif;font-weight:700;font-size:20px;color:var(--ink)}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
+  .top .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .top button{background:linear-gradient(90deg,var(--purple),var(--pink));border:none;color:#fff;padding:11px 20px;border-radius:10px;font-family:'Inter';font-weight:700;font-size:12.5px;cursor:pointer;letter-spacing:.02em}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+  .kpi .lbl{font-size:10.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-weight:700;font-family:'JetBrains Mono'}
+  .kpi .val{font-family:'Sora';font-weight:800;font-size:28px;color:var(--ink);margin-top:6px}
+  .kpi .val small{font-size:14px;color:var(--muted);font-weight:600;margin-left:6px}
+  .kpi .glyph{position:absolute;right:-10px;bottom:-14px;font-size:80px;opacity:.06}
+
+  /* Grid layout */
+  .row{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:18px}
+  .card h3{font-family:'Playfair Display',serif;font-weight:700;font-size:17px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+  .card h3 .tag{font-family:'JetBrains Mono';background:linear-gradient(90deg,var(--purple),var(--pink));padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.08em}
+
+  /* Reel gallery */
+  .reels{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .reel{aspect-ratio:9/16;background:var(--panel2);border-radius:12px;border:1px solid var(--hair);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:10px;background-size:cover;background-position:center}
+  .reel .status{position:absolute;top:8px;left:8px;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);padding:3px 8px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono'}
+  .reel .status.done{background:rgba(16,185,129,0.85);color:#fff}
+  .reel .status.gen{background:rgba(139,92,246,0.85);color:#fff}
+  .reel .status.q{background:rgba(107,114,128,0.85);color:#fff}
+  .reel .status.live{background:rgba(239,68,68,0.85);color:#fff}
+  .reel .status.live::before{content:"● ";animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:0}}
+  .reel .duration{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);padding:3px 8px;border-radius:999px;font-size:10px;font-weight:600;font-family:'JetBrains Mono'}
+  .reel .txt{position:relative;z-index:2}
+  .reel .price{font-family:'Sora';font-weight:800;font-size:15px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.8)}
+  .reel .addr{font-size:10px;color:rgba(255,255,255,0.85);text-shadow:0 1px 4px rgba(0,0,0,0.8);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .reel .cta{margin-top:6px;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);padding:4px 8px;border-radius:6px;font-size:9.5px;font-weight:700;text-align:center;letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono'}
+  .reel::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,0.75) 100%)}
+  /* Fake photo colors for reels */
+  .r1{background:linear-gradient(135deg,#065F46 0%,#10B981 60%,#6EE7B7 100%)}
+  .r2{background:linear-gradient(135deg,#7C2D12 0%,#EA580C 60%,#FED7AA 100%)}
+  .r3{background:linear-gradient(135deg,#312E81 0%,#6366F1 60%,#C7D2FE 100%)}
+  .r4{background:linear-gradient(135deg,#831843 0%,#EC4899 60%,#FBCFE8 100%)}
+  .r5{background:linear-gradient(135deg,#164E63 0%,#0891B2 60%,#A5F3FC 100%)}
+  .r6{background:linear-gradient(135deg,#365314 0%,#84CC16 60%,#D9F99D 100%)}
+  .r7{background:linear-gradient(135deg,#4C1D95 0%,#8B5CF6 60%,#DDD6FE 100%)}
+  .r8{background:linear-gradient(135deg,#78350F 0%,#F59E0B 60%,#FEF3C7 100%)}
+
+  /* 3D Doogie preview */
+  .doogie3d{display:flex;justify-content:center;align-items:center;min-height:290px;background:radial-gradient(circle at center,#1E2A4A 0%,#0A0E1A 70%);border-radius:10px;position:relative;overflow:hidden}
+  .doogie3d::before{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,transparent,rgba(139,92,246,0.15),transparent 30%);animation:spin 8s linear infinite}
+  @keyframes spin{100%{transform:rotate(360deg)}}
+  .dog-avatar{position:relative;font-size:120px;filter:drop-shadow(0 20px 40px rgba(139,92,246,0.5));animation:float 3s ease-in-out infinite;z-index:2}
+  @keyframes float{50%{transform:translateY(-14px)}}
+  .doogieMeta{padding:18px 4px 4px}
+  .doogieMeta .r{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--hair);font-size:12.5px}
+  .doogieMeta .r:last-child{border:none}
+  .doogieMeta .r span:last-child{font-family:'Sora';font-weight:700;color:var(--gold)}
+
+  /* Pipeline */
+  .pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+  .stage{background:var(--panel2);border-radius:10px;padding:14px;border:1px solid var(--hair);position:relative}
+  .stage .num{font-family:'JetBrains Mono';font-size:10px;color:var(--purple);letter-spacing:.14em;font-weight:700}
+  .stage .name{font-family:'Playfair Display',serif;font-weight:700;font-size:15px;margin:4px 0 8px}
+  .stage .desc{font-size:11.5px;color:var(--muted);line-height:1.5}
+  .stage .status{margin-top:10px;font-size:10px;font-family:'JetBrains Mono';color:var(--green);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .stage:not(:last-child)::after{content:"→";position:absolute;right:-14px;top:50%;transform:translateY(-50%);font-size:20px;color:var(--purple);z-index:2}
+
+  /* YouTube publish list */
+  .yt{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--panel2);border-radius:10px;margin-bottom:8px}
+  .yt .thumb{width:72px;height:48px;border-radius:6px;background:linear-gradient(135deg,#EF4444,#F59E0B);flex-shrink:0;position:relative}
+  .yt .thumb::after{content:"▶";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:16px}
+  .yt .info{flex:1;min-width:0}
+  .yt .title{font-size:12.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .yt .subs{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono';letter-spacing:.04em}
+  .yt .stat{text-align:right;font-family:'Sora';font-size:14px;font-weight:800;color:var(--gold)}
+  .yt .stat small{display:block;font-size:9px;color:var(--muted);font-family:'JetBrains Mono';letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+
+  /* Floor plan 3D */
+  .floor{aspect-ratio:16/9;background:radial-gradient(circle at 30% 40%,#1E2A4A,#0A0E1A);border-radius:12px;border:1px solid var(--hair);position:relative;display:grid;place-items:center;overflow:hidden}
+  .fp-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(139,92,246,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.15) 1px,transparent 1px);background-size:30px 30px;transform:perspective(700px) rotateX(60deg);transform-origin:center bottom}
+  .fp-rooms{position:relative;z-index:2;font-family:'JetBrains Mono';font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;text-align:center}
+  .fp-rooms .fpb{font-family:'Playfair Display',serif;font-weight:800;color:var(--ink);font-size:26px;letter-spacing:0;text-transform:none;margin-bottom:6px}
+  .fp-rooms .fpc{color:var(--gold);margin-top:8px;letter-spacing:.15em;font-family:'JetBrains Mono';font-size:10px;text-transform:uppercase;font-weight:700}
+  .fp-controls{position:absolute;bottom:12px;left:12px;display:flex;gap:6px;z-index:3}
+  .fp-controls span{background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:5px 10px;border-radius:6px;font-family:'JetBrains Mono';font-size:10px;color:#fff;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--hair)}
+
+  .compliance{background:linear-gradient(90deg,rgba(139,92,246,0.15),rgba(236,72,153,0.15));border:1px solid var(--purple);border-radius:10px;padding:12px 16px;margin-top:12px;font-size:11.5px;color:var(--ink);line-height:1.55}
+  .compliance strong{color:var(--gold)}
+
+  .note{position:fixed;bottom:14px;right:16px;background:linear-gradient(90deg,var(--purple),var(--pink));color:#fff;padding:6px 12px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;z-index:20;border-radius:6px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">Doug's Studio<small>Video · 3D · YouTube</small></div>
+      <a>📊 Dashboard</a>
+      <a class="active">🎬 Reel Studio</a>
+      <a>🎭 3D Doogie</a>
+      <a>🏠 Floor Plan Explorer</a>
+      <a>📺 YouTube Auto-Publish</a>
+      <a>🎧 Voice Cloning</a>
+      <hr/>
+      <a>🎥 Vertical Sizzle Reels</a>
+      <a>🌆 Community Trailers</a>
+      <a>🎤 Doogie Voice Lab</a>
+      <hr/>
+      <a>🎯 Leads &amp; Nurture</a>
+      <a>⚙️ Settings</a>
+    </aside>
+
+    <main>
+      <div class="top">
+        <div><h1>Reel Studio</h1><div class="sub">Auto-generated cinematic listing content · Vision AI powered</div></div>
+        <button>+ Generate reel batch</button>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Reels published this month</div><div class="val">147 <small>+ 22 today</small></div><div class="glyph">🎬</div></div>
+        <div class="kpi"><div class="lbl">YouTube views (30d)</div><div class="val">184,320</div><div class="glyph">📺</div></div>
+        <div class="kpi"><div class="lbl">TikTok / Reels shares</div><div class="val">12.4K</div><div class="glyph">📱</div></div>
+        <div class="kpi"><div class="lbl">Leads from video (30d)</div><div class="val">63</div><div class="glyph">🎯</div></div>
+      </div>
+
+      <!-- Reel gallery -->
+      <div class="card">
+        <h3>Vertical listing reels <span class="tag">AUTO-GENERATED · 30-60s</span></h3>
+        <div class="reels">
+          <div class="reel r1"><span class="status live">LIVE</span><span class="duration">0:42</span>
+            <div class="txt"><div class="price">$2,100,000</div><div class="addr">1234 Marine Dr · West Van</div><div class="cta">Ask Doogie ▸</div></div>
+          </div>
+          <div class="reel r2"><span class="status done">Published</span><span class="duration">0:38</span>
+            <div class="txt"><div class="price">$899,000</div><div class="addr">508 – 1234 Bernard · Kelowna</div><div class="cta">Book tour ▸</div></div>
+          </div>
+          <div class="reel r3"><span class="status done">Published</span><span class="duration">0:55</span>
+            <div class="txt"><div class="price">$1,650,000</div><div class="addr">42 Salish Trail · Squamish</div><div class="cta">Ask Doogie ▸</div></div>
+          </div>
+          <div class="reel r4"><span class="status gen">Generating</span><span class="duration">0:47</span>
+            <div class="txt"><div class="price">$4,890,000</div><div class="addr">Waterfront estate · Whistler</div><div class="cta">Rendering ▸</div></div>
+          </div>
+          <div class="reel r5"><span class="status done">Published</span><span class="duration">0:33</span>
+            <div class="txt"><div class="price">$725,000</div><div class="addr">205 – 88 Cordova · Yaletown</div><div class="cta">Ask Doogie ▸</div></div>
+          </div>
+          <div class="reel r6"><span class="status done">Published</span><span class="duration">0:59</span>
+            <div class="txt"><div class="price">$3,299,000</div><div class="addr">Equestrian · Aldergrove 5-acre</div><div class="cta">Ask Doogie ▸</div></div>
+          </div>
+          <div class="reel r7"><span class="status q">Queued</span><span class="duration">—</span>
+            <div class="txt"><div class="price">$1,479,000</div><div class="addr">6821 Central Ave · Burnaby</div><div class="cta">In queue ▸</div></div>
+          </div>
+          <div class="reel r8"><span class="status q">Queued</span><span class="duration">—</span>
+            <div class="txt"><div class="price">$549,000</div><div class="addr">304 – 8 Kingsway · Chinatown</div><div class="cta">In queue ▸</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px">
+        <div class="card">
+          <h3>Cinematic pipeline <span class="tag">7 min per reel</span></h3>
+          <div class="pipe">
+            <div class="stage">
+              <div class="num">/ 01</div>
+              <div class="name">Photos in</div>
+              <div class="desc">Pull top 8 MLS® photos + any drone / floor plan. Auto-select best composition scored by Vision AI.</div>
+              <div class="status">✓ Automatic</div>
+            </div>
+            <div class="stage">
+              <div class="num">/ 02</div>
+              <div class="name">Doogie script</div>
+              <div class="desc">Claude Sonnet Vision writes a 60-second neighbourhood + property narration keyed to each photo.</div>
+              <div class="status">✓ Automatic</div>
+            </div>
+            <div class="stage">
+              <div class="num">/ 03</div>
+              <div class="name">Ken Burns render</div>
+              <div class="desc">FFmpeg zooms + pans on each photo, synced to Doogie's voice cues (48kHz WAV → H.264 MP4).</div>
+              <div class="status">✓ Automatic</div>
+            </div>
+            <div class="stage">
+              <div class="num">/ 04</div>
+              <div class="name">YouTube + IG</div>
+              <div class="desc">Auto-publishes 9:16 vertical + 16:9 landscape with SEO title, description, timestamps &amp; MLS® link.</div>
+              <div class="status">✓ Automatic</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>3D Doogie <span class="tag">THREE.js</span></h3>
+          <div class="doogie3d"><div class="dog-avatar">🐾</div></div>
+          <div class="doogieMeta">
+            <div class="r"><span>Head tracking</span><span>ON</span></div>
+            <div class="r"><span>Lip-sync accuracy</span><span>96%</span></div>
+            <div class="r"><span>Gestures library</span><span>14</span></div>
+            <div class="r"><span>File size</span><span>1.4 MB</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <h3>Interactive 3D floor plan <span class="tag">THREE.js · pinch-to-zoom</span></h3>
+          <div class="floor">
+            <div class="fp-grid"></div>
+            <div class="fp-rooms">
+              <div class="fpb">2,340 sq ft · 3 bed · 2.5 bath</div>
+              <div>Living · Kitchen · Dining · Ensuite · Deck</div>
+              <div class="fpc">Drag to rotate · Scroll to zoom</div>
+            </div>
+            <div class="fp-controls">
+              <span>▶ Play walkthrough</span>
+              <span>🔎 Zoom</span>
+              <span>🔦 Sun path</span>
+            </div>
+          </div>
+          <p style="color:var(--muted);font-size:12px;margin-top:12px;line-height:1.55">
+            When a listing lacks a Matterport tour, we auto-generate an interactive floor plan viewer from the MLS® measurements — buyers can rotate, zoom, and preview sun path throughout the day.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>YouTube auto-publish <span class="tag">LIVE</span></h3>
+          <div class="yt">
+            <div class="thumb"></div>
+            <div class="info"><div class="title">$2.1M West Van · Ocean-view estate</div><div class="subs">Published 3h ago · SEO score 94</div></div>
+            <div class="stat">7.4K<small>views</small></div>
+          </div>
+          <div class="yt">
+            <div class="thumb"></div>
+            <div class="info"><div class="title">Kelowna condo tour · $899K · Downtown</div><div class="subs">Published Mon · SEO score 91</div></div>
+            <div class="stat">14K<small>views</small></div>
+          </div>
+          <div class="yt">
+            <div class="thumb"></div>
+            <div class="info"><div class="title">Whistler waterfront · Extraordinary</div><div class="subs">Published last week · SEO score 96</div></div>
+            <div class="stat">42K<small>views</small></div>
+          </div>
+          <div class="yt">
+            <div class="thumb"></div>
+            <div class="info"><div class="title">Fraser Valley 5-acre equestrian estate</div><div class="subs">Published Fri · SEO score 89</div></div>
+            <div class="stat">8.9K<small>views</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compliance">
+        <strong>How this benefits eztofind.ca:</strong> YouTube is the second-largest search engine on earth. Every auto-published listing reel is an SEO magnet + a shareable moment. 3D Doogie + floor plan viewer are competitive moats no other BC REALTOR® website has. Projected impact: <strong>+40% site traffic within 90 days</strong> and a new inbound channel (IG / TikTok / YouTube Shorts) that competing agent sites simply cannot match.
+      </div>
+
+      <p style="margin-top:24px;text-align:center;color:var(--muted);font-size:11px;font-family:'JetBrains Mono';letter-spacing:.06em">MOCKUP · Track C — Video / 3D Content Production · ~20-30 hrs build + ~$200-400 voice-clone budget · not live data</p>
+    </main>
+  </div>
+  <div class="note">MOCKUP</div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>EZtoFind Mockups Index</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--navy:#0F2A5B;--gold:#F5B301;--paper:#F5F0E1;--ink:#1F2937;--muted:#6B7280;--hair:rgba(15,42,91,0.10)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:linear-gradient(180deg,#FAF8F1 0%,var(--paper) 100%);color:var(--ink);font-family:'Inter',sans-serif;min-height:100vh;padding:60px 32px}
+  .wrap{max-width:1200px;margin:0 auto}
+  header{text-align:center;margin-bottom:50px}
+  .kicker{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin-bottom:14px}
+  h1{font-family:'Playfair Display',serif;font-weight:900;font-size:clamp(42px,5.5vw,68px);color:var(--navy);letter-spacing:-.02em;line-height:1.05;margin-bottom:18px}
+  h1 em{color:var(--gold);font-style:normal}
+  header p{color:var(--muted);max-width:680px;margin:0 auto;font-size:16px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:24px}
+  .card{background:#fff;border:1px solid var(--hair);border-radius:18px;padding:32px;position:relative;overflow:hidden;text-decoration:none;color:inherit;transition:transform .3s,box-shadow .3s;display:block}
+  .card:hover{transform:translateY(-6px);box-shadow:0 24px 48px rgba(15,42,91,0.14)}
+  .card .num{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.24em;color:var(--gold);font-weight:700}
+  .card h3{font-family:'Playfair Display',serif;font-weight:800;font-size:28px;color:var(--navy);margin:12px 0 8px;letter-spacing:-.01em}
+  .card .lead{color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:18px}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .meta span{background:var(--paper);color:var(--navy);padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700}
+  .cta{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;padding:11px 22px;border-radius:999px;font-family:'JetBrains Mono';font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+  .cta::after{content:"→";transition:transform .3s}
+  .card:hover .cta::after{transform:translateX(6px)}
+  .badge{position:absolute;top:18px;right:18px;background:var(--gold);color:var(--navy);padding:4px 10px;border-radius:999px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:.14em;font-weight:800;text-transform:uppercase}
+  .card.recommend{border-color:var(--gold);border-width:2px;background:linear-gradient(180deg,#fff 0%,rgba(245,179,1,0.06) 100%)}
+  footer{margin-top:60px;text-align:center;color:var(--muted);font-size:12px;font-family:'JetBrains Mono';letter-spacing:.06em}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">Strategic mockups · EZtoFind.ca</div>
+      <h1>Four ways to <em>level up</em> the site.</h1>
+      <p>Each mockup is a static, no-code preview of what shipping that track would look like. Pick the one you want to build first, or ship them in whatever order you like — they layer cleanly.</p>
+    </header>
+
+    <div class="grid">
+      <a class="card recommend" href="/mockups/lead-automation.html">
+        <div class="badge">Recommended</div>
+        <div class="num">/ TRACK B</div>
+        <h3>Lead Automation<br/>&amp; CRM Depth</h3>
+        <p class="lead">Turn every visitor into a tracked, scored, auto-nurtured signal. Hot leads get SMS + Slack in 20 min; warm leads run through a 14-day drip; past clients get quarterly touches on autopilot.</p>
+        <div class="meta">
+          <span>~14–20 hrs</span>
+          <span>Highest ROI</span>
+          <span>+9 to +18 deals/yr</span>
+          <span>CASL + PIPA safe</span>
+        </div>
+        <span class="cta">Open mockup</span>
+      </a>
+
+      <a class="card" href="/mockups/design-polish.html">
+        <div class="num">/ TRACK A</div>
+        <h3>Pure Design<br/>Polish</h3>
+        <p class="lead">Dark, cinematic, distinctive. Pacific-dusk palette, grain texture, glassmorphism, custom cursor, staggered motion. A visual language no other BC agent site has.</p>
+        <div class="meta">
+          <span>~6–10 hrs</span>
+          <span>Perceived quality +25%</span>
+          <span>Better AEO CTR</span>
+        </div>
+        <span class="cta">Open mockup</span>
+      </a>
+
+      <a class="card" href="/mockups/video-3d.html">
+        <div class="num">/ TRACK C</div>
+        <h3>Video / 3D<br/>Content Production</h3>
+        <p class="lead">Auto-generated vertical listing reels, 3D Three.js Doogie, interactive floor plans, YouTube auto-publish. A moat competitors physically cannot copy.</p>
+        <div class="meta">
+          <span>~20–30 hrs</span>
+          <span>+ ~$200-400 voice-clone</span>
+          <span>+40% traffic (est.)</span>
+        </div>
+        <span class="cta">Open mockup</span>
+      </a>
+
+      <a class="card" href="/mockups/team-presentation.html">
+        <div class="num">/ TRACK D</div>
+        <h3>Multi-Agent<br/>Team Presentation</h3>
+        <p class="lead">/team page, per-agent landing pages, 15-min onboarding wizard, RealEstateAgent JSON-LD schema for LLM answer engines. Positions Doug as a team leader before he hires.</p>
+        <div class="meta">
+          <span>~8–12 hrs</span>
+          <span>LLM answer-layer play</span>
+          <span>Referral agent hub</span>
+        </div>
+        <span class="cta">Open mockup</span>
+      </a>
+    </div>
+
+    <footer>MOCKUPS ONLY · NOT LIVE DATA · Every track preserves the BCFSA · CASL · PIPA · CREA DDF® · GVR compliance envelope</footer>
+  </div>
+</body>
+</html>

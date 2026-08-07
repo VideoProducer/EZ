@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Design Polish Mockup · EZtoFind.ca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#0B0F1A;
+    --bg2:#131A2E;
+    --ink:#E8EEFC;
+    --muted:#8A93A6;
+    --gold:#FFD166;
+    --evergreen:#3FA07A;
+    --coral:#EF6E5F;
+    --violet:#8B7BE8;
+    --hair:rgba(255,255,255,0.08);
+    --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;overflow-x:hidden;cursor:none}
+  body::before{content:"";position:fixed;inset:0;background:var(--grain);opacity:.6;pointer-events:none;mix-blend-mode:overlay;z-index:99}
+  /* Custom cursor */
+  .cursor{position:fixed;left:50%;top:50%;width:20px;height:20px;border:1.5px solid var(--gold);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);transition:transform .15s ease-out;z-index:100;mix-blend-mode:difference}
+  /* Ambient orbs */
+  .orb{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;pointer-events:none;z-index:0}
+  .orb1{width:400px;height:400px;background:var(--gold);top:-100px;right:-80px;opacity:.15}
+  .orb2{width:520px;height:520px;background:var(--evergreen);bottom:-160px;left:-100px;opacity:.2}
+  .orb3{width:280px;height:280px;background:var(--coral);top:40%;left:38%;opacity:.09}
+
+  header{position:relative;padding:22px 48px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+  .logo{font-family:'Playfair Display',serif;font-weight:900;font-size:22px;letter-spacing:-.5px}
+  .logo em{color:var(--gold);font-style:normal}
+  nav{display:flex;gap:32px}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.02em;position:relative}
+  nav a::after{content:"";position:absolute;left:0;bottom:-4px;width:0;height:1px;background:var(--gold);transition:width .28s ease}
+  nav a:hover{color:var(--ink)}
+  nav a:hover::after{width:100%}
+  .cta{background:transparent;border:1px solid var(--gold);color:var(--gold);padding:9px 22px;border-radius:0;font-family:'JetBrains Mono';font-size:12px;letter-spacing:.15em;text-transform:uppercase}
+
+  /* Hero — left-aligned, asymmetric */
+  .hero{position:relative;padding:60px 48px 40px;display:grid;grid-template-columns:1.35fr 1fr;gap:60px;align-items:center;min-height:70vh;z-index:5}
+  .kicker{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase;margin-bottom:26px;display:inline-block;padding:5px 12px;border:1px solid var(--hair);border-radius:2px}
+  .kicker .dot{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;margin-right:8px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  h1{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(48px,7vw,88px);line-height:.98;letter-spacing:-.03em;margin-bottom:24px}
+  h1 .grad{background:linear-gradient(180deg,var(--gold) 0%,var(--coral) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:italic}
+  .lead{color:var(--muted);font-size:17px;max-width:520px;line-height:1.55;margin-bottom:36px}
+  .heroBtns{display:flex;gap:14px;align-items:center}
+  .btnPrimary{background:var(--gold);color:#0B0F1A;padding:14px 26px;border:none;font-family:'JetBrains Mono';font-size:12px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;cursor:none;position:relative;overflow:hidden;transition:transform .3s}
+  .btnPrimary::after{content:"→";margin-left:10px;transition:transform .3s}
+  .btnPrimary:hover::after{transform:translateX(6px)}
+  .btnGhost{color:var(--ink);text-decoration:none;font-family:'JetBrains Mono';font-size:12px;letter-spacing:.15em;text-transform:uppercase;padding:14px 20px;border:1px solid var(--hair)}
+
+  /* Doogie glass card */
+  .heroCard{position:relative}
+  .glass{background:rgba(255,255,255,0.04);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--hair);border-radius:0;padding:32px;position:relative;overflow:hidden}
+  .glass::before{content:"";position:absolute;top:0;left:0;width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+  .glass::after{content:"";position:absolute;bottom:0;right:0;width:1px;height:60%;background:linear-gradient(180deg,transparent,var(--gold))}
+  .doogieChip{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--coral));display:grid;place-items:center;font-size:22px}
+  .doogieName{font-family:'Fraunces',serif;font-weight:600;font-size:20px}
+  .doogieName small{display:block;color:var(--muted);font-family:'JetBrains Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;margin-top:2px}
+  .chatLine{padding:10px 14px;background:rgba(255,255,255,0.03);border-left:2px solid var(--gold);margin:8px 0;font-size:14px;color:var(--ink)}
+  .chatLine.user{border-left-color:var(--evergreen);color:var(--muted);font-style:italic}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+  .metric{padding:16px;background:rgba(255,255,255,0.02);border:1px solid var(--hair)}
+  .metric .n{font-family:'Fraunces',serif;font-size:26px;font-weight:700;color:var(--gold)}
+  .metric .l{font-family:'JetBrains Mono';font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+
+  /* Trust strip */
+  .trust{border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);padding:22px 48px;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);position:relative;z-index:5}
+  .trust .label{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+  .trust .marks{display:flex;gap:36px;color:var(--ink);font-family:'Fraunces',serif;font-size:15px;font-weight:600}
+  .trust .marks span{opacity:.75;letter-spacing:.05em}
+
+  /* Feature grid */
+  .grid3{padding:80px 48px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative;z-index:5}
+  .feat{padding:32px;border:1px solid var(--hair);position:relative;background:rgba(255,255,255,0.02);transition:background .4s}
+  .feat:hover{background:rgba(255,255,255,0.05)}
+  .feat .num{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.25em;color:var(--gold)}
+  .feat h3{font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin:16px 0 12px;letter-spacing:-.01em}
+  .feat p{color:var(--muted);font-size:14px;line-height:1.6}
+  .feat .icon{font-size:32px;margin-bottom:20px;display:inline-block;filter:hue-rotate(340deg)}
+
+  /* Section header */
+  .sec-h{padding:60px 48px 30px;position:relative;z-index:5}
+  .sec-h .kicker{margin-bottom:14px}
+  .sec-h h2{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(36px,4.5vw,56px);letter-spacing:-.02em;max-width:820px;line-height:1.05}
+
+  /* Design tokens showcase */
+  .tokens{padding:20px 48px 80px;display:grid;grid-template-columns:repeat(6,1fr);gap:12px;position:relative;z-index:5}
+  .tok{padding:18px;border:1px solid var(--hair);background:rgba(255,255,255,0.02)}
+  .tok .sw{width:100%;height:60px;margin-bottom:12px}
+  .tok .hex{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.05em;color:var(--muted)}
+  .tok .nm{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink);margin-top:2px}
+
+  /* Motion samples */
+  .motion{padding:40px 48px;display:grid;grid-template-columns:1fr 1fr;gap:32px;position:relative;z-index:5}
+  .card{padding:28px;border:1px solid var(--hair);background:rgba(255,255,255,0.02)}
+  .card h4{font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin-bottom:16px}
+  .card ul{list-style:none;color:var(--muted);font-size:13.5px;line-height:1.9}
+  .card ul li::before{content:"→ ";color:var(--gold);font-weight:700;margin-right:6px}
+
+  /* Bottom CTA */
+  .cta-band{margin:60px 48px 80px;padding:64px 48px;background:linear-gradient(135deg,var(--bg2) 0%,rgba(255,209,102,0.08) 100%);border:1px solid var(--hair);text-align:center;position:relative;overflow:hidden;z-index:5}
+  .cta-band::before{content:"";position:absolute;inset:0;background:var(--grain);opacity:.4;pointer-events:none}
+  .cta-band h2{font-family:'Fraunces',serif;font-weight:700;font-size:44px;letter-spacing:-.02em;margin-bottom:14px;position:relative}
+  .cta-band p{color:var(--muted);font-size:16px;max-width:640px;margin:0 auto 26px;position:relative}
+  .cta-band .row{display:flex;gap:16px;justify-content:center;position:relative}
+
+  footer{padding:32px 48px;border-top:1px solid var(--hair);font-family:'JetBrains Mono';font-size:11px;color:var(--muted);letter-spacing:.1em;text-align:center;position:relative;z-index:5}
+
+  .note{position:fixed;bottom:14px;right:16px;background:var(--gold);color:#0B0F1A;padding:6px 12px;font-family:'JetBrains Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;z-index:20}
+</style>
+</head>
+<body>
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+  <div class="cursor" id="cursor"></div>
+
+  <header>
+    <div class="logo">EZtoFind<em>.ca</em></div>
+    <nav>
+      <a>Search</a><a>Communities</a><a>Glossary</a><a>Market Reports</a><a>Doogie</a>
+    </nav>
+    <button class="cta">Ask Doogie →</button>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="kicker"><span class="dot"></span>British Columbia · 43,399 active MLS® listings</div>
+      <h1>Real estate,<br/>made <span class="grad">EZ to&nbsp;find.</span></h1>
+      <p class="lead">A visual AI companion for buying, selling, and understanding British Columbia real estate. Doogie remembers what you love. He speaks 12 languages. He does not sell.</p>
+      <div class="heroBtns">
+        <button class="btnPrimary">Talk to Doogie</button>
+        <a class="btnGhost" href="#">Browse listings</a>
+      </div>
+    </div>
+    <div class="heroCard">
+      <div class="glass">
+        <div class="doogieChip">
+          <div class="avatar">🐾</div>
+          <div class="doogieName">Doogie<small>Vision · Voice · Multilingual</small></div>
+        </div>
+        <div class="chatLine user">"3 bed condo in Kelowna under $850K?"</div>
+        <div class="chatLine">Found 42 matches. The closest to Kelowna General is <strong>#508 – 1234 Bernard Ave</strong> at $739,000 · walk-score 91.</div>
+        <div class="chatLine user">"How much are property transfer taxes on that?"</div>
+        <div class="chatLine">On $739,000, BC PTT is <strong>$12,780</strong>. First-time-buyer exemption may apply — I can walk you through Section 5 of the Property Transfer Tax Act.</div>
+        <div class="metrics">
+          <div class="metric"><div class="n">12</div><div class="l">Languages</div></div>
+          <div class="metric"><div class="n">1.4s</div><div class="l">Avg reply</div></div>
+          <div class="metric"><div class="n">24/7</div><div class="l">Always on</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="trust">
+    <div class="label">Certified & compliant</div>
+    <div class="marks">
+      <span>BCFSA-licensed</span>
+      <span>CREA DDF®</span>
+      <span>PIPA</span>
+      <span>CASL</span>
+      <span>GVR</span>
+    </div>
+    <div class="label">Live · updated hourly</div>
+  </div>
+
+  <section class="grid3">
+    <div class="feat">
+      <span class="icon">◐</span>
+      <div class="num">/ 01 · SEARCH</div>
+      <h3>Visual, spatial,<br/>and voice-first.</h3>
+      <p>Talk, tap, or drop a photo. Doogie parses natural language, understands neighbourhoods, and returns MLS® listings that actually match what you meant — not just what you typed.</p>
+    </div>
+    <div class="feat">
+      <span class="icon">◑</span>
+      <div class="num">/ 02 · UNDERSTAND</div>
+      <h3>Vision-grounded<br/>listing tours.</h3>
+      <p>Every listing narration is generated from the actual photos + Matterport keyframes. Doogie describes what he sees, syncs to the image on screen, and switches languages mid-tour.</p>
+    </div>
+    <div class="feat">
+      <span class="icon">◒</span>
+      <div class="num">/ 03 · TRUST</div>
+      <h3>Information,<br/>never advice.</h3>
+      <p>Every response is compliance-locked to BCFSA §60. Doogie provides facts and definitions. The only person who gives advice is a licensed REALTOR® — and there's only ever one call between you.</p>
+    </div>
+  </section>
+
+  <div class="sec-h">
+    <div class="kicker">Design system</div>
+    <h2>A color story built around <em>Pacific dusk</em>, gold rush, and evergreen — grounded in grain.</h2>
+  </div>
+  <div class="tokens">
+    <div class="tok"><div class="sw" style="background:#0B0F1A"></div><div class="nm">Ink</div><div class="hex">#0B0F1A</div></div>
+    <div class="tok"><div class="sw" style="background:#131A2E"></div><div class="nm">Dusk</div><div class="hex">#131A2E</div></div>
+    <div class="tok"><div class="sw" style="background:#FFD166"></div><div class="nm">Gold</div><div class="hex">#FFD166</div></div>
+    <div class="tok"><div class="sw" style="background:#3FA07A"></div><div class="nm">Evergreen</div><div class="hex">#3FA07A</div></div>
+    <div class="tok"><div class="sw" style="background:#EF6E5F"></div><div class="nm">Coral</div><div class="hex">#EF6E5F</div></div>
+    <div class="tok"><div class="sw" style="background:#8B7BE8"></div><div class="nm">Violet</div><div class="hex">#8B7BE8</div></div>
+  </div>
+
+  <div class="sec-h">
+    <div class="kicker">Motion + interaction</div>
+    <h2>Every hover is deliberate. Every transition tells the browser you meant it.</h2>
+  </div>
+  <div class="motion">
+    <div class="card">
+      <h4>Interactions</h4>
+      <ul>
+        <li>Custom navy-on-gold difference cursor with 20px lag ring</li>
+        <li>Nav underline swipes left→right on hover (280ms cubic-bezier)</li>
+        <li>Buttons arrow-shift 6px on hover, no whole-element scale</li>
+        <li>Focus rings match the primary CTA colour, not blue browser default</li>
+        <li>Every card entrance staggered by 60ms (Motion library)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Materials</h4>
+      <ul>
+        <li>SVG noise grain overlay at 6% opacity, mix-blend overlay</li>
+        <li>Glassmorphism: 20px backdrop-blur, 4% white fill, gradient edge lines</li>
+        <li>Ambient orbs behind hero — 60px blur, mixed hues, drift 30s</li>
+        <li>Sharp corners (0px radius) on primary surfaces — luxury signal</li>
+        <li>Solid dark backgrounds (never gradients on dark — that muddies)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cta-band">
+    <h2>Ready to see it live?</h2>
+    <p>This is a mockup. To ship the real thing across every page of eztofind.ca requires ~6–10 hours of engineering — no new backend logic, purely a design-token + motion system swap.</p>
+    <div class="row">
+      <button class="btnPrimary">Approve design polish →</button>
+      <a class="btnGhost" href="/mockups/index.html">See all mockups</a>
+    </div>
+  </div>
+
+  <footer>MOCKUP · NOT LIVE · EZtoFind.ca is BCFSA-licensed and CREA DDF® compliant · © 2026 Fraser Property Management Realty Services Ltd.</footer>
+
+  <div class="note">MOCKUP</div>
+
+  <script>
+    // Custom cursor
+    const c = document.getElementById('cursor');
+    document.addEventListener('mousemove', e => { c.style.left = e.clientX + 'px'; c.style.top = e.clientY + 'px'; });
+    document.querySelectorAll('a, button, .feat, .tok, .metric, .chatLine').forEach(el => {
+      el.addEventListener('mouseenter', () => c.style.transform = 'translate(-50%,-50%) scale(2.4)');
+      el.addEventListener('mouseleave', () => c.style.transform = 'translate(-50%,-50%) scale(1)');
+    });
+  </script>
+</body>
+</html>
