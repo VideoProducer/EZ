@@ -1838,24 +1838,18 @@ const UnifiedSearchBar = () => {
   const navigate = useNavigate();
   const ctx = useContext(SearchFiltersContext);
   const [val, setVal] = useState("");
-  const [openPanel, setOpenPanel] = useState(null); // "filters" | "doogie" | null
-  const wrapRef = useRef(null);
 
-  // Click-outside closes any open popover.
-  useEffect(() => {
-    if (!openPanel) return;
-    const onDown = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpenPanel(null);
-    };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [openPanel]);
+  const set = (k, v) => ctx?.setFilters && ctx.setFilters(prev => ({ ...prev, [k]: v }));
+  const digitsOnly = (s) => String(s || "").replace(/[^\d]/g, "");
+  const formatMoney = (raw) => {
+    const d = digitsOnly(raw);
+    return d ? "$" + Number(d).toLocaleString("en-CA") : "";
+  };
 
   const submit = (e) => {
     e && e.preventDefault && e.preventDefault();
     const v = val.trim();
     if (!v) {
-      // Empty submit → just re-run the current filter set.
       if (ctx?.runSearch) ctx.runSearch();
       return;
     }
@@ -1864,10 +1858,7 @@ const UnifiedSearchBar = () => {
       navigate(`/listing/${encodeURIComponent(key)}`);
       return;
     }
-    // Treat as address/keyword. Push it into the filter context's `city`
-    // (which the existing search pipeline also uses for locality resolution)
-    // and run the search inline. This keeps the results, map, and chips row
-    // in sync without a full-page navigation.
+    // Treat as address/keyword → push into context's `city` and re-run.
     if (ctx?.setFilters && ctx?.runSearch) {
       ctx.setFilters(prev => ({ ...prev, city: v }));
       setTimeout(() => ctx.runSearch(), 40);
@@ -1877,16 +1868,31 @@ const UnifiedSearchBar = () => {
     navigate(`/listings?q=${encodeURIComponent(v)}`);
   };
 
+  // If the SearchFiltersContext isn't mounted (e.g. rendered outside the
+  // Search section), collapse to a plain address-only bar so nothing throws.
+  const hasCtx = !!ctx;
+  const filters = ctx?.filters || {};
+
   return (
-    <div ref={wrapRef} style={{ marginBottom: 16, position: "relative" }}>
+    <section
+      data-testid="dash-unified-search-card"
+      style={{
+        marginBottom: 16,
+        background: "#fff",
+        border: "1px solid #E5E7EB",
+        borderRadius: 14,
+        boxShadow: "0 2px 8px rgba(15,42,91,0.06)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Row 1 — address / MLS input + Search button */}
       <form
         onSubmit={submit}
         data-testid="dash-address-mls-search"
         style={{
           display: "flex", alignItems: "center", gap: 8,
-          background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-          padding: "8px 8px 8px 12px",
-          boxShadow: "0 1px 3px rgba(15,42,91,0.04)",
+          padding: "10px 12px",
+          borderBottom: hasCtx ? "1px solid #F1F5F9" : "none",
         }}
       >
         <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
@@ -1905,34 +1911,6 @@ const UnifiedSearchBar = () => {
         />
         <ActiveFilterCount/>
         <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setOpenPanel(openPanel === "filters" ? null : "filters"); }}
-          data-testid="dash-search-filters-toggle"
-          style={_iconBtn(openPanel === "filters")}
-          aria-expanded={openPanel === "filters"}
-          aria-controls="dash-search-filters-panel"
-        >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            Filters <span style={{ fontSize: 10 }}>▾</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setOpenPanel(openPanel === "doogie" ? null : "doogie"); }}
-          data-testid="dash-search-doogie-toggle"
-          title="Ask Doogie to filter by voice or plain English"
-          style={{
-            ..._iconBtn(openPanel === "doogie"),
-            background: openPanel === "doogie" ? C.gold : "#FFF7D6",
-            color: C.navy, borderColor: C.gold,
-          }}
-          aria-expanded={openPanel === "doogie"}
-        >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <span aria-hidden style={{ fontSize: 14 }}>🐾</span> Doogie
-          </span>
-        </button>
-        <button
           type="submit"
           data-testid="dash-address-mls-search-submit"
           style={{
@@ -1943,62 +1921,165 @@ const UnifiedSearchBar = () => {
         >Search</button>
       </form>
 
-      {/* Active-filter chips row — removable badges for every non-default
-          filter, so users always know what's applied without opening the
-          Filters popover. */}
-      <ActiveFilterChips/>
+      {/* Row 2 — Doogie voice / type / reset strip. Uses the shared
+          DoogieFilterHeader so the mic behaviour + safe error handling
+          is identical to /listings. */}
+      {hasCtx && (
+        <DoogieFilterHeader
+          onVoiceFilter={(f) => {
+            const propMap = { Condo: "Apartment", Townhouse: "Row / Townhouse" };
+            ctx.setFilters(prev => ({
+              ...prev,
+              city:         f.community || prev.city,
+              propertyType: f.property_type ? (propMap[f.property_type] || f.property_type) : prev.propertyType,
+              beds:         f.beds ? String(f.beds) : prev.beds,
+              baths:        f.baths ? String(f.baths) : prev.baths,
+              priceMin:     f.price_min ? String(f.price_min) : prev.priceMin,
+              priceMax:     f.price_max ? String(f.price_max) : prev.priceMax,
+              keyword:      f.keyword || prev.keyword,
+            }));
+            setTimeout(() => ctx.runSearch && ctx.runSearch(), 60);
+          }}
+          onReset={() => {
+            ctx.setFilters(prev => ({
+              ...prev,
+              city: "", propertyType: "", beds: "", baths: "",
+              priceMin: "", priceMax: "", keyword: "",
+            }));
+          }}
+        />
+      )}
 
-      {/* Filters popover — hosts the full SidebarFilters form. `hideDoogie`
-          removes the embedded Doogie header since we already surface Doogie
-          as a separate button in this bar. */}
-      {openPanel === "filters" && (
+      {/* Row 3 — inline filter fields. Everything visible, wraps naturally on
+          narrow viewports; no popover. Same SearchFiltersContext as the
+          old vertical FILTERS card. */}
+      {hasCtx && (
         <div
-          id="dash-search-filters-panel"
-          data-testid="dash-search-filters-panel"
-          style={_popoverStyle}
+          data-testid="dash-inline-filters"
+          style={{
+            display: "flex", flexWrap: "wrap", gap: 10,
+            padding: "12px 14px",
+            alignItems: "flex-end",
+            background: "#FDFCF7",
+          }}
         >
-          <SidebarFilters hideDoogie/>
+          <_Field label="Community / City" flex="1 1 200px">
+            <input
+              value={filters.city || ""}
+              onChange={e => set("city", e.target.value)}
+              placeholder="Any BC community"
+              data-testid="dash-search-city"
+              style={_inp}
+            />
+          </_Field>
+          <_Field label="Property Type" flex="1 1 150px">
+            <select
+              value={filters.propertyType || ""}
+              onChange={e => set("propertyType", e.target.value)}
+              data-testid="dash-search-property-type"
+              style={_sel}
+            >
+              <option value="">Any</option>
+              <option value="House">House</option>
+              <option value="Apartment">Condo / Apartment</option>
+              <option value="Row / Townhouse">Townhouse</option>
+              <option value="Duplex">Duplex</option>
+              <option value="Manufactured Home">Manufactured Home</option>
+              <option value="Single Family">Single Family</option>
+              <option value="Vacant Land">Vacant Land</option>
+            </select>
+          </_Field>
+          <_Field label="Min beds" flex="0 0 92px">
+            <select value={filters.beds || ""} onChange={e => set("beds", e.target.value)} data-testid="dash-search-beds" style={_sel}>
+              <option value="">Any</option>
+              {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
+            </select>
+          </_Field>
+          <_Field label="Min baths" flex="0 0 92px">
+            <select value={filters.baths || ""} onChange={e => set("baths", e.target.value)} data-testid="dash-search-baths" style={_sel}>
+              <option value="">Any</option>
+              {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
+            </select>
+          </_Field>
+          <_Field label="Min price" flex="1 1 130px">
+            <input
+              type="text" inputMode="numeric"
+              value={formatMoney(filters.priceMin)}
+              onChange={e => set("priceMin", digitsOnly(e.target.value))}
+              placeholder="$ Any"
+              data-testid="dash-search-price-min"
+              style={_inp}
+            />
+          </_Field>
+          <_Field label="Max price" flex="1 1 130px">
+            <input
+              type="text" inputMode="numeric"
+              value={formatMoney(filters.priceMax)}
+              onChange={e => set("priceMax", digitsOnly(e.target.value))}
+              placeholder="$ Any"
+              data-testid="dash-search-price-max"
+              style={_inp}
+            />
+          </_Field>
+          <_Field label="Keyword" flex="1 1 150px">
+            <input
+              value={filters.keyword || ""}
+              onChange={e => set("keyword", e.target.value)}
+              placeholder="e.g. waterfront"
+              data-testid="dash-search-keyword"
+              style={_inp}
+            />
+          </_Field>
+          <_Field label="Sort by" flex="0 0 140px">
+            <select
+              value={filters.sort || "newest"}
+              onChange={e => set("sort", e.target.value)}
+              data-testid="dash-search-sort"
+              style={_sel}
+            >
+              <option value="newest">Newest</option>
+              <option value="price_asc">Price ↑</option>
+              <option value="price_desc">Price ↓</option>
+            </select>
+          </_Field>
+          <button
+            type="button"
+            onClick={() => ctx.runSearch && ctx.runSearch()}
+            data-testid="dash-inline-filters-apply"
+            style={{
+              background: C.gold, color: C.navy, border: "none",
+              padding: "9px 18px", borderRadius: 8, fontWeight: 800,
+              fontSize: 13, cursor: "pointer", flex: "0 0 auto",
+              marginBottom: 2,
+            }}
+          >Apply filters</button>
         </div>
       )}
 
-      {/* Doogie popover — the same voice + text NL filter helper that used
-          to live inside the FILTERS card header. */}
-      {openPanel === "doogie" && (
-        <div
-          data-testid="dash-search-doogie-panel"
-          style={{ ..._popoverStyle, padding: 0, overflow: "hidden" }}
-        >
-          <DoogieFilterHeader
-            onVoiceFilter={(f) => {
-              if (!ctx?.setFilters) return;
-              const propMap = { Condo: "Apartment", Townhouse: "Row / Townhouse" };
-              ctx.setFilters(prev => ({
-                ...prev,
-                city:         f.community || prev.city,
-                propertyType: f.property_type ? (propMap[f.property_type] || f.property_type) : prev.propertyType,
-                beds:         f.beds ? String(f.beds) : prev.beds,
-                baths:        f.baths ? String(f.baths) : prev.baths,
-                priceMin:     f.price_min ? String(f.price_min) : prev.priceMin,
-                priceMax:     f.price_max ? String(f.price_max) : prev.priceMax,
-                keyword:      f.keyword || prev.keyword,
-              }));
-              setTimeout(() => ctx.runSearch && ctx.runSearch(), 60);
-              setOpenPanel(null);
-            }}
-            onReset={() => {
-              if (!ctx?.setFilters) return;
-              ctx.setFilters(prev => ({
-                ...prev,
-                city: "", propertyType: "", beds: "", baths: "",
-                priceMin: "", priceMax: "", keyword: "",
-              }));
-            }}
-          />
-        </div>
-      )}
-    </div>
+      {/* Row 4 — active-filter chips (removable). Same behaviour as before. */}
+      <div style={{ padding: "0 14px 12px" }}>
+        <ActiveFilterChips/>
+      </div>
+    </section>
   );
 };
+
+// Compact label + child wrapper used by the inline filter row. Kept inline
+// so we can pass a `flex` value per field to control wrapping.
+const _Field = ({ label, flex, children }) => (
+  <label style={{ flex, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+    <span style={{ fontSize: 11, fontWeight: 700, color: C.navy, letterSpacing: 0.2 }}>{label}</span>
+    {children}
+  </label>
+);
+
+const _inp = {
+  width: "100%", padding: "8px 10px", borderRadius: 8,
+  border: "1px solid #D1D5DB", background: "#fff", color: C.ink,
+  fontSize: 13, fontWeight: 500, outline: "none", boxSizing: "border-box",
+  fontFamily: "'Inter', system-ui, sans-serif",
+};
+const _sel = { ..._inp, appearance: "auto", cursor: "pointer" };
 
 // Small pill that shows a numeric badge next to the Filters button when
 // any non-default filter is active.
@@ -2069,22 +2150,6 @@ const ActiveFilterChips = () => {
 };
 
 // Shared button style for Filters + Doogie in the unified bar.
-const _iconBtn = (active) => ({
-  background: active ? C.paper || "#F5F0E1" : "#fff",
-  color: C.navy, border: `1px solid ${active ? C.gold : "#E5E7EB"}`,
-  padding: "8px 12px", borderRadius: 8, fontWeight: 700, fontSize: 13,
-  cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
-  fontFamily: "'Inter', system-ui, sans-serif",
-});
-
-const _popoverStyle = {
-  position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 25,
-  width: "min(360px, 92vw)",
-  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-  boxShadow: "0 12px 32px rgba(15,42,91,0.18)",
-  padding: 0, overflow: "hidden",
-};
-
 const _countActiveFilters = (f) => {
   if (!f) return 0;
   const keys = ["city", "propertyType", "beds", "baths", "priceMin", "priceMax", "keyword"];
