@@ -6218,6 +6218,66 @@ async def startup():
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(60 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_aeo_loop()))
 
+    # ---- Nightly Doogie narration warmer (05:15 UTC ≈ 21:15 PST) ----
+    # Pre-generates vision-grounded photo + tour narration for the top 200
+    # most-recently-modified active listings so first-time visitors get a
+    # cache HIT (~20ms) instead of a cold render (~25-60s).  Uses the same
+    # endpoints as human traffic — no duplication of logic.
+    async def _nightly_narration_warm_loop():
+        import asyncio as _a
+        import aiohttp as _ah
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        base = os.environ.get("PUBLIC_APP_URL") or "http://localhost:8001"
+        base = base.rstrip("/")
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                target = now.replace(hour=5, minute=15, second=0, microsecond=0)
+                if target <= now:
+                    target = target + _td(days=1)
+                delay = max(60, int((target - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    keys = []
+                    async for l in db.listings.find(
+                        {"status": "Active"},
+                        {"listing_key": 1, "virtual_tour_urls": 1, "photos": 1},
+                    ).sort("modification_ts", -1).limit(200):
+                        keys.append({
+                            "key": l.get("listing_key"),
+                            "has_photos": bool(l.get("photos")),
+                            "has_tour": bool(l.get("virtual_tour_urls")),
+                        })
+                    ok = fail = 0
+                    async with _ah.ClientSession() as sess:
+                        # Sequential — Sonnet vision is expensive, don't fan out.
+                        for k in keys:
+                            if not k["key"]:
+                                continue
+                            if k["has_photos"]:
+                                try:
+                                    async with sess.get(f"{base}/api/listings/{k['key']}/narration",
+                                                        timeout=_ah.ClientTimeout(total=90)) as r:
+                                        if r.status < 400: ok += 1
+                                        else: fail += 1
+                                except Exception:
+                                    fail += 1
+                            if k["has_tour"]:
+                                try:
+                                    async with sess.get(f"{base}/api/listings/{k['key']}/tour_narration",
+                                                        timeout=_ah.ClientTimeout(total=120)) as r:
+                                        if r.status < 400: ok += 1
+                                        else: fail += 1
+                                except Exception:
+                                    fail += 1
+                    logger.info(f"nightly_narration_warm: ok={ok} fail={fail} listings={len(keys)}")
+                except Exception as e:
+                    logger.error(f"nightly_narration_warm: task failed: {e}")
+            except Exception as e:
+                logger.error(f"nightly_narration_warm_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(2 * 60 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_narration_warm_loop()))
+
     # CREA DDF® auto-sync — pulls the latest BC MLS® feed every 4 hours in the
     # background. Writes each run to `ddf_sync_log` so it shows up in the same
     # /admin/listings/sync-log the manual sync uses. First run fires 10 min

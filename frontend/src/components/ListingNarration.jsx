@@ -180,18 +180,32 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     if (!a || !a.duration || !isFinite(a.duration)) return;
     const ratio = Math.max(0, Math.min(1, a.currentTime / a.duration));
     setProgress(ratio);
+    let cueIdx = 0;
     if (photoCount > 1) {
       let idx;
       if (cueOffsets.length && scriptText.length > 0) {
         const charProgress = ratio * scriptText.length;
-        const cueIdx = _cueIndexAt(charProgress);
+        cueIdx = _cueIndexAt(charProgress);
         idx = Math.max(0, Math.min(photoCount - 1, cueOffsets[cueIdx].photo_idx | 0));
       } else {
         idx = Math.min(photoCount - 1, Math.floor(ratio * photoCount));
+        cueIdx = Math.min(cues.length - 1, Math.floor(ratio * Math.max(1, cues.length)));
       }
       setLocalPhotoIdx(idx);
       if (onAdvancePhoto) onAdvancePhoto(idx);
+    } else if (cues.length) {
+      cueIdx = Math.min(cues.length - 1, Math.floor(ratio * cues.length));
     }
+    // Broadcast the current cue so RoomLabelPill (and any future subscriber)
+    // can render the room name Doogie is describing right now.
+    try {
+      mediaBus.tick && mediaBus.tick("doogie-listing", {
+        t_ms: a.currentTime * 1000,
+        duration_ms: a.duration * 1000,
+        cue_idx: cueIdx,
+        cue: cues && cues[cueIdx] ? cues[cueIdx] : null,
+      });
+    } catch { /* ignore */ }
   };
 
   // Fetch (or reuse) the LLM narration script from the backend, then fall

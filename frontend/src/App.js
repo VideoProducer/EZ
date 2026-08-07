@@ -42,6 +42,7 @@ import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
 import { autoGlossaryLink } from "./lib/autoGlossaryLink";
 import TourNarration from "./components/TourNarration";
+import RoomLabelPill from "./components/RoomLabelPill";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
@@ -3476,8 +3477,28 @@ const VirtualTourFrame = ({ listing }) => {
     const u = (embed.url || "").toLowerCase();
     if (u.includes("youtube.com/embed") || u.includes("youtube-nocookie.com/embed")) return "youtube";
     if (u.includes("player.vimeo.com")) return "vimeo";
+    if (u.includes("my.matterport.com") || u.includes("matterport.com/show")) return "matterport";
     return "other";
   }, [embed.url]);
+
+  // Doogie-tour-active state — used to show the Matterport scrim overlay
+  // (since Matterport has no pause API, we prevent user interaction so the
+  // tour doesn't drift ahead of Doogie's voice-over).
+  const [doogieTourActive, setDoogieTourActive] = React.useState(false);
+  React.useEffect(() => {
+    let unsub;
+    (async () => {
+      try {
+        const mb = (await import("./lib/mediaBus")).default;
+        unsub = mb.subscribe((ev) => {
+          if (ev?.sourceId === "doogie-tour") {
+            setDoogieTourActive(ev.type === "claim");
+          }
+        });
+      } catch { /* ignore */ }
+    })();
+    return () => { if (unsub) unsub(); };
+  }, []);
 
   // Add enablejsapi=1 for YouTube so postMessage pause works. This does
   // NOT affect playback for the visitor — it only unlocks the IFrame API.
@@ -3776,6 +3797,45 @@ const VirtualTourFrame = ({ listing }) => {
         data-testid="listing-virtual-tour-iframe"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
       />
+      {/* Matterport scrim — appears only when Doogie's tour voice-over is
+          claiming the audio floor.  Matterport has no public pause API, so
+          we prevent user interaction while Doogie narrates, and give them
+          an obvious tap-to-explore escape.  YouTube / Vimeo don't need this
+          because they respect the postMessage pause we already send. */}
+      {provider === "matterport" && doogieTourActive && (
+        <div
+          onClick={async () => {
+            try {
+              const mb = (await import("./lib/mediaBus")).default;
+              mb.release("doogie-tour");
+            } catch { /* ignore */ }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Doogie is narrating — tap to explore the tour"
+          data-testid="matterport-scrim"
+          style={{
+            position: "absolute", inset: 0, cursor: "pointer",
+            background: "linear-gradient(180deg, rgba(15,42,91,0.35), rgba(15,42,91,0.15) 40%, rgba(15,42,91,0.35))",
+            backdropFilter: "blur(2px)",
+            display: "flex", alignItems: "flex-end", justifyContent: "center",
+            padding: "1.25rem",
+            color: "#fff", fontFamily: "Inter, sans-serif",
+            fontSize: "0.9rem", fontWeight: 500,
+            textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+            zIndex: 4,
+          }}
+        >
+          <div style={{
+            background: "rgba(15,42,91,0.85)", padding: "0.75rem 1.1rem",
+            borderRadius: 999, display: "inline-flex", alignItems: "center",
+            gap: 8, boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+          }}>
+            <span style={{fontSize: "1.1rem"}}>🐕</span>
+            <span>Doogie's narrating — tap to explore the tour yourself</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -3797,7 +3857,12 @@ const ListingDetail = () => {
     <section className="section"><div className="container-x">
       <Link to="/listings" data-testid="back-to-listings" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",fontSize:"0.9rem"}}>← All listings</Link>
       {/* Photo gallery — big hero with arrows, counter, thumbnail strip, and click-to-fullscreen lightbox */}
-      <ListingGallery photos={listing.photos||[]} address={listing.street_address||""} photoIdx={photoIdx} setPhotoIdx={setPhotoIdx}/>
+      <div style={{position:"relative"}}>
+        <ListingGallery photos={listing.photos||[]} address={listing.street_address||""} photoIdx={photoIdx} setPhotoIdx={setPhotoIdx}/>
+        <div style={{position:"absolute",top:"0.75rem",left:"0.75rem",zIndex:5,pointerEvents:"none"}}>
+          <RoomLabelPill sourceId="doogie-listing"/>
+        </div>
+      </div>
       <div className="listing-detail-layout" style={{marginTop:"2rem",alignItems:"start"}}>
         {/* Main column */}
         <div>
@@ -3835,7 +3900,12 @@ const ListingDetail = () => {
               {/* Doogie voice-over pill — sits above the iframe so it's the
                   first thing the user sees when the tour section loads. */}
               <TourNarration listing={listing}/>
-              <VirtualTourFrame listing={listing}/>
+              <div style={{position:"relative"}}>
+                <VirtualTourFrame listing={listing}/>
+                <div style={{position:"absolute",top:"0.75rem",left:"0.75rem",zIndex:5,pointerEvents:"none"}}>
+                  <RoomLabelPill sourceId="doogie-tour"/>
+                </div>
+              </div>
               <div style={{marginTop:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.5}}>
                 {listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D walk-through" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}.
                 {" "}If the tour doesn't load above (some browsers block third-party embeds), tap <strong>Play full-screen</strong> to open it in a new tab.

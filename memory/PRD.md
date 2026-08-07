@@ -10,6 +10,13 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
+- **Sync Polish Round 2 (Feb 7)**
+  - `services/keyframes.py::_normalize_youtube_url` — `youtube.com/watch?v=X` and `youtu.be/X` now rewrite to `youtube-nocookie.com/embed/X?enablejsapi=1&autoplay=1&mute=1&controls=0` so listings with watch-page URLs also get vision-grounded tour narration
+  - `frontend/src/components/RoomLabelPill.jsx` (NEW) — floating pill above photo reel + virtual tour showing current room ("🍳 Kitchen", "🛏 Primary Bedroom") driven by `mediaBus.subscribeTick`; 20-slug enum synced with backend `room_label` output
+  - `frontend/src/components/ListingNarration.jsx` — `onTimeUpdate` now also broadcasts `mediaBus.tick("doogie-listing", {cue, cue_idx, t_ms, duration_ms})` so RoomLabelPill (and future subscribers) can react to Doogie's current cue
+  - `frontend/src/App.js` `VirtualTourFrame` — new `doogieTourActive` state via `mediaBus.subscribe`; when `provider==="matterport"` + Doogie tour narration is playing, mounts a translucent scrim overlay ("🐕 Doogie's narrating — tap to explore the tour yourself") that releases the mediaBus floor on tap. Solves the un-pausable-Matterport problem cleanly
+  - `backend/server.py` startup — nightly narration warmer at 05:15 UTC iterates top 200 most-recently-modified active listings and pre-populates both `/api/listings/{key}/narration` and `/api/listings/{key}/tour_narration` caches so human + bot first-time visitors get instant 20ms HITs instead of 25-60s cold renders
+  - Pytest: +4 URL normalization tests → **22/22 vision + keyframe tests passing**
 - **Vision-Grounded Tour Narration + Media Sync — Phases 2/3/4 shipped (Feb 7)**
   - `services/keyframes.py` — reuses the prerender-service Playwright chromium to extract 10 keyframes from any tour: YouTube (`seekTo` via postMessage), Vimeo (`setCurrentTime`), Matterport (auto-tour + wall-clock capture), MP4/WebM (inline HTML wrapper + `<video>.currentTime`). Downscales each to 1024px JPEG.
   - `services/vision_tour_narration.py` — mirrors `vision_narration.py` but for keyframes; returns cues with `{seek_ms, screen_ref: "tour_ts=M:SS", sentence, room_label}` so the iframe can seek to match Doogie's voice-over.

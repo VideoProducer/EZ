@@ -49,6 +49,26 @@ SCREENSHOT_MAX_EDGE = 1024
 JPEG_QUALITY = 78
 
 
+def _normalize_youtube_url(url: str) -> str:
+    """Convert youtube.com/watch?v=X or youtu.be/X into an embed URL that
+    Playwright can render as a bare iframe with the IFrame API."""
+    if not url:
+        return url
+    # youtube.com/watch?v=<id>&…  →  /embed/<id>?enablejsapi=1
+    m = re.search(r"youtube(?:-nocookie)?\.com/watch\?[^\s]*[?&]?v=([A-Za-z0-9_-]{6,15})", url)
+    if m:
+        return f"https://www.youtube-nocookie.com/embed/{m.group(1)}?enablejsapi=1&autoplay=1&mute=1&controls=0&modestbranding=1"
+    # youtu.be/<id>?…  →  /embed/<id>
+    m = re.search(r"youtu\.be/([A-Za-z0-9_-]{6,15})", url)
+    if m:
+        return f"https://www.youtube-nocookie.com/embed/{m.group(1)}?enablejsapi=1&autoplay=1&mute=1&controls=0&modestbranding=1"
+    # Already an embed URL — ensure enablejsapi is on so seekTo works.
+    if "youtube" in url and "/embed/" in url and "enablejsapi" not in url:
+        sep = "&" if "?" in url else "?"
+        return url + f"{sep}enablejsapi=1&autoplay=1&mute=1"
+    return url
+
+
 def _detect_kind(url: str) -> str:
     u = (url or "").lower()
     if "youtube.com/embed" in u or "youtu.be" in u or "youtube-nocookie" in u:
@@ -198,6 +218,9 @@ async def extract_keyframes(url: str, kind: Optional[str] = None, count: int = D
     if kind == "other":
         logger.info(f"keyframes: unknown provider for {url[:80]}")
         return []
+    # Normalize YouTube watch pages → embed URLs so the IFrame API works.
+    if kind == "youtube":
+        url = _normalize_youtube_url(url)
 
     # Reuse the same chromium instance as the prerender service — cheap.
     try:
