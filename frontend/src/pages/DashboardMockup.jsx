@@ -59,6 +59,10 @@ const SECTIONS = [
   { key: "search",    label: "Search",         icon: Search },
   { key: "foryou",    label: "For You",        icon: Sparkles },
   { key: "saved",     label: "Saved Homes",    icon: Heart },
+  // Curated specialty listing feeds — both link to pre-filtered /listings URLs.
+  // Luxury goes above Equestrian (broader audience first).
+  { key: "luxury",     label: "Luxury Listings",     icon: Star,     href: "/listings?price_min=3000000&sort=price_desc" },
+  { key: "equestrian", label: "Equestrian Listings", icon: Building2, href: "/listings?property_type=Equestrian" },
   { key: "buyer",     label: "Buyer Insights", icon: BarChart3 },
   { key: "seller",    label: "Seller Insights",icon: TrendingUp },
   { key: "value",     label: "Home Value",     icon: DollarSign, href: "/valuation" },
@@ -548,7 +552,7 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
 // below the "Ask Doogie" nav row, and only appears on the Search view. Uses
 // the shared SearchFiltersContext so both this form and the main-area map +
 // results panel are driven by the same state.
-const SidebarFilters = () => {
+const SidebarFilters = ({ hideDoogie = false } = {}) => {
   const ctx = useContext(SearchFiltersContext);
   if (!ctx) return null;
   const { filters, setFilters, runSearch, loading } = ctx;
@@ -600,6 +604,7 @@ const SidebarFilters = () => {
         color: C.navy,
         overflow: "hidden",
       }}>
+      {!hideDoogie && (
       <DoogieFilterHeader
         onVoiceFilter={(f) => {
           // Map the voice-filter payload into SidebarFilters state.
@@ -618,6 +623,7 @@ const SidebarFilters = () => {
           ["city","propertyType","beds","baths","priceMin","priceMax","keyword"].forEach(k => set(k, ""));
         }}
       />
+      )}
       <div style={{ padding: "16px 20px 20px" }}>
       <label style={sLabel} htmlFor="dash-f-city">Community / City</label>
       <input
@@ -1792,19 +1798,15 @@ const SearchPanel = () => {
           >Open in Google Maps ↗</a>
         </div>
       </div>
-      {/* Quick address / MLS® number lookup — sits between the map and the
-          listings grid. MLS-format inputs open the listing directly; anything
-          else runs through /listings?q=... which does an address text-search
-          via Mongo $text. */}
-      <AddressMlsSearch/>
-      {/* Listings run full-width. The FILTERS card is a floating, draggable
-          panel (rendered separately as <FloatingFilters/>) so the user can
-          move it anywhere on screen. Default position: top-left. Position
-          persists across sessions via localStorage. */}
+      {/* Unified search + filters + Doogie NL bar. Replaces the old floating
+          FILTERS card and the address-only lookup — one row sits between the
+          map and the listings grid with:
+             [🔍 address/MLS input]  [Filters ▾]  [🐾 Doogie]  [Search]
+          Active filters render as removable chips right below. */}
+      <UnifiedSearchBar/>
       <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       <SyncedResults/>
       <IdleSaveSearchNudge/>
-      <FloatingFilters/>
       {/* Floating "Compare (N)" tray — appears when ≥2 listings are selected. */}
       <CompareTray/>
       {/* Persistent Ask-Doogie pill — the site-wide FAB was retired in favour
@@ -1816,67 +1818,302 @@ const SearchPanel = () => {
   );
 };
 
-// ── Address / MLS® number quick-lookup ────────────────────────────────────
-// A single input above the results grid. Two exit branches:
+// ── Unified Search + Filters + Doogie NL bar ─────────────────────────────
+// One row between the map and the listings grid:
+//   [🔍 address/MLS input]  [Filters ▾]  [🐾 Doogie]  [Search]
+// The old vertical FloatingFilters card is retired — same fields now live
+// inside the Filters popover. The Doogie popover exposes the same voice /
+// text natural-language filter helper Doogie has always used.
+//
+// Submit heuristics on the input:
 //   1. Input matches an MLS-number pattern (e.g. "R2812345", "12345678") ─→
 //      navigate straight to /listing/{key}. The detail page handles 404.
 //   2. Anything else (a street address, postal code, keyword) ─→
-//      /listings?q=... which routes through the existing $text address
-//      search + NL extraction on the backend.
+//      route through SearchFiltersContext by setting `city` then runSearch()
+//      so results land inline without a full-page nav. (Falls back to
+//      /listings?q=... if context isn't available.)
 const _MLS_PATTERN = /^[A-Z]{0,2}\s?\d{6,10}$/i;
 
-const AddressMlsSearch = () => {
+const UnifiedSearchBar = () => {
   const navigate = useNavigate();
+  const ctx = useContext(SearchFiltersContext);
   const [val, setVal] = useState("");
+  const [openPanel, setOpenPanel] = useState(null); // "filters" | "doogie" | null
+  const wrapRef = useRef(null);
+
+  // Click-outside closes any open popover.
+  useEffect(() => {
+    if (!openPanel) return;
+    const onDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpenPanel(null);
+    };
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [openPanel]);
+
   const submit = (e) => {
     e && e.preventDefault && e.preventDefault();
     const v = val.trim();
-    if (!v) return;
+    if (!v) {
+      // Empty submit → just re-run the current filter set.
+      if (ctx?.runSearch) ctx.runSearch();
+      return;
+    }
     if (_MLS_PATTERN.test(v)) {
-      // Strip whitespace, upper-case — matches CREA DDF® key format.
       const key = v.replace(/\s+/g, "").toUpperCase();
       navigate(`/listing/${encodeURIComponent(key)}`);
       return;
     }
+    // Treat as address/keyword. Push it into the filter context's `city`
+    // (which the existing search pipeline also uses for locality resolution)
+    // and run the search inline. This keeps the results, map, and chips row
+    // in sync without a full-page navigation.
+    if (ctx?.setFilters && ctx?.runSearch) {
+      ctx.setFilters(prev => ({ ...prev, city: v }));
+      setTimeout(() => ctx.runSearch(), 40);
+      setVal("");
+      return;
+    }
     navigate(`/listings?q=${encodeURIComponent(v)}`);
   };
+
   return (
-    <form
-      onSubmit={submit}
-      data-testid="dash-address-mls-search"
-      style={{
-        display: "flex", alignItems: "center", gap: 10,
-        background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
-        padding: "10px 12px", marginBottom: 16,
-        boxShadow: "0 1px 3px rgba(15,42,91,0.04)",
-      }}
-    >
-      <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
-      <input
-        type="text"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        data-testid="dash-address-mls-search-input"
-        placeholder="Search by address or MLS® number (e.g. 123 Main St, Kelowna · R2812345)"
-        aria-label="Search by address or MLS number"
+    <div ref={wrapRef} style={{ marginBottom: 16, position: "relative" }}>
+      <form
+        onSubmit={submit}
+        data-testid="dash-address-mls-search"
         style={{
-          flex: 1, minWidth: 0, border: "none", outline: "none",
-          fontSize: 14, color: C.ink, background: "transparent",
-          fontFamily: "'Inter', system-ui, sans-serif",
+          display: "flex", alignItems: "center", gap: 8,
+          background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+          padding: "8px 8px 8px 12px",
+          boxShadow: "0 1px 3px rgba(15,42,91,0.04)",
         }}
-      />
-      <button
-        type="submit"
-        data-testid="dash-address-mls-search-submit"
-        style={{
-          background: C.navy, color: "#fff", border: "none",
-          padding: "8px 16px", borderRadius: 8, fontWeight: 700,
-          fontSize: 13, cursor: "pointer", flexShrink: 0,
-        }}
-      >Search</button>
-    </form>
+      >
+        <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
+        <input
+          type="text"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          data-testid="dash-address-mls-search-input"
+          placeholder="Search by address or MLS® number (e.g. 123 Main St, Kelowna · R2812345)"
+          aria-label="Search by address or MLS number"
+          style={{
+            flex: 1, minWidth: 0, border: "none", outline: "none",
+            fontSize: 14, color: C.ink, background: "transparent",
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}
+        />
+        <ActiveFilterCount/>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setOpenPanel(openPanel === "filters" ? null : "filters"); }}
+          data-testid="dash-search-filters-toggle"
+          style={_iconBtn(openPanel === "filters")}
+          aria-expanded={openPanel === "filters"}
+          aria-controls="dash-search-filters-panel"
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            Filters <span style={{ fontSize: 10 }}>▾</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setOpenPanel(openPanel === "doogie" ? null : "doogie"); }}
+          data-testid="dash-search-doogie-toggle"
+          title="Ask Doogie to filter by voice or plain English"
+          style={{
+            ..._iconBtn(openPanel === "doogie"),
+            background: openPanel === "doogie" ? C.gold : "#FFF7D6",
+            color: C.navy, borderColor: C.gold,
+          }}
+          aria-expanded={openPanel === "doogie"}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span aria-hidden style={{ fontSize: 14 }}>🐾</span> Doogie
+          </span>
+        </button>
+        <button
+          type="submit"
+          data-testid="dash-address-mls-search-submit"
+          style={{
+            background: C.navy, color: "#fff", border: "none",
+            padding: "9px 18px", borderRadius: 8, fontWeight: 700,
+            fontSize: 13, cursor: "pointer", flexShrink: 0,
+          }}
+        >Search</button>
+      </form>
+
+      {/* Active-filter chips row — removable badges for every non-default
+          filter, so users always know what's applied without opening the
+          Filters popover. */}
+      <ActiveFilterChips/>
+
+      {/* Filters popover — hosts the full SidebarFilters form. `hideDoogie`
+          removes the embedded Doogie header since we already surface Doogie
+          as a separate button in this bar. */}
+      {openPanel === "filters" && (
+        <div
+          id="dash-search-filters-panel"
+          data-testid="dash-search-filters-panel"
+          style={_popoverStyle}
+        >
+          <SidebarFilters hideDoogie/>
+        </div>
+      )}
+
+      {/* Doogie popover — the same voice + text NL filter helper that used
+          to live inside the FILTERS card header. */}
+      {openPanel === "doogie" && (
+        <div
+          data-testid="dash-search-doogie-panel"
+          style={{ ..._popoverStyle, padding: 0, overflow: "hidden" }}
+        >
+          <DoogieFilterHeader
+            onVoiceFilter={(f) => {
+              if (!ctx?.setFilters) return;
+              const propMap = { Condo: "Apartment", Townhouse: "Row / Townhouse" };
+              ctx.setFilters(prev => ({
+                ...prev,
+                city:         f.community || prev.city,
+                propertyType: f.property_type ? (propMap[f.property_type] || f.property_type) : prev.propertyType,
+                beds:         f.beds ? String(f.beds) : prev.beds,
+                baths:        f.baths ? String(f.baths) : prev.baths,
+                priceMin:     f.price_min ? String(f.price_min) : prev.priceMin,
+                priceMax:     f.price_max ? String(f.price_max) : prev.priceMax,
+                keyword:      f.keyword || prev.keyword,
+              }));
+              setTimeout(() => ctx.runSearch && ctx.runSearch(), 60);
+              setOpenPanel(null);
+            }}
+            onReset={() => {
+              if (!ctx?.setFilters) return;
+              ctx.setFilters(prev => ({
+                ...prev,
+                city: "", propertyType: "", beds: "", baths: "",
+                priceMin: "", priceMax: "", keyword: "",
+              }));
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
+
+// Small pill that shows a numeric badge next to the Filters button when
+// any non-default filter is active.
+const ActiveFilterCount = () => {
+  const ctx = useContext(SearchFiltersContext);
+  const n = _countActiveFilters(ctx?.filters);
+  if (!n) return null;
+  return (
+    <span
+      data-testid="dash-active-filter-count"
+      style={{
+        background: C.gold, color: C.navy,
+        borderRadius: 999, padding: "2px 8px",
+        fontSize: 11, fontWeight: 800, flexShrink: 0,
+      }}
+    >{n} active</span>
+  );
+};
+
+// Chips row — one removable chip per active filter. Clicking × clears the
+// specific filter (or resets sort to "newest"), then re-runs the search.
+const ActiveFilterChips = () => {
+  const ctx = useContext(SearchFiltersContext);
+  if (!ctx) return null;
+  const { filters, setFilters, runSearch } = ctx;
+  const chips = _describeActiveFilters(filters);
+  if (!chips.length) return null;
+  const clear = (keys) => {
+    setFilters(prev => {
+      const next = { ...prev };
+      keys.forEach(k => { next[k] = k === "sort" ? "newest" : ""; });
+      return next;
+    });
+    setTimeout(() => runSearch && runSearch(), 40);
+  };
+  return (
+    <div
+      data-testid="dash-active-filter-chips"
+      style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}
+    >
+      {chips.map(c => (
+        <button
+          key={c.keys.join(",")}
+          onClick={() => clear(c.keys)}
+          data-testid={`dash-filter-chip-${c.keys[0]}`}
+          style={{
+            background: "#fff", border: `1px solid ${C.gold}`,
+            color: C.navy, borderRadius: 999,
+            padding: "4px 10px 4px 12px", fontSize: 12, fontWeight: 600,
+            cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+          }}
+        >
+          {c.label}
+          <span aria-hidden style={{ color: C.muted, fontWeight: 800 }}>×</span>
+        </button>
+      ))}
+      <button
+        onClick={() => clear(["city", "propertyType", "beds", "baths", "priceMin", "priceMax", "keyword", "sort"])}
+        data-testid="dash-filter-chip-clear-all"
+        style={{
+          background: "transparent", border: "none", color: C.muted,
+          fontSize: 12, cursor: "pointer", textDecoration: "underline",
+          padding: "4px 6px",
+        }}
+      >Clear all</button>
+    </div>
+  );
+};
+
+// Shared button style for Filters + Doogie in the unified bar.
+const _iconBtn = (active) => ({
+  background: active ? C.paper || "#F5F0E1" : "#fff",
+  color: C.navy, border: `1px solid ${active ? C.gold : "#E5E7EB"}`,
+  padding: "8px 12px", borderRadius: 8, fontWeight: 700, fontSize: 13,
+  cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
+  fontFamily: "'Inter', system-ui, sans-serif",
+});
+
+const _popoverStyle = {
+  position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 25,
+  width: "min(360px, 92vw)",
+  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12,
+  boxShadow: "0 12px 32px rgba(15,42,91,0.18)",
+  padding: 0, overflow: "hidden",
+};
+
+const _countActiveFilters = (f) => {
+  if (!f) return 0;
+  const keys = ["city", "propertyType", "beds", "baths", "priceMin", "priceMax", "keyword"];
+  let n = 0;
+  for (const k of keys) if (f[k]) n += 1;
+  if (f.sort && f.sort !== "newest") n += 1;
+  return n;
+};
+
+const _describeActiveFilters = (f) => {
+  if (!f) return [];
+  const out = [];
+  if (f.city)         out.push({ keys: ["city"],         label: `📍 ${f.city}` });
+  if (f.propertyType) out.push({ keys: ["propertyType"], label: `🏠 ${f.propertyType}` });
+  if (f.beds)         out.push({ keys: ["beds"],         label: `${f.beds}+ beds` });
+  if (f.baths)        out.push({ keys: ["baths"],        label: `${f.baths}+ baths` });
+  if (f.priceMin || f.priceMax) {
+    const lo = f.priceMin ? `$${Number(f.priceMin).toLocaleString()}` : "$0";
+    const hi = f.priceMax ? `$${Number(f.priceMax).toLocaleString()}` : "any";
+    out.push({ keys: ["priceMin", "priceMax"], label: `${lo} – ${hi}` });
+  }
+  if (f.keyword)      out.push({ keys: ["keyword"],      label: `“${f.keyword}”` });
+  if (f.sort && f.sort !== "newest") {
+    const sortLabel = { price_asc: "Price ↑", price_desc: "Price ↓" }[f.sort] || f.sort;
+    out.push({ keys: ["sort"], label: `Sort: ${sortLabel}` });
+  }
+  return out;
+};
+
 
 // ── Floating "Compare (N)" tray ────────────────────────────────────────────
 // Shows a fixed bottom-right pill whenever the user has ≥1 listing in the
