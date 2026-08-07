@@ -6475,18 +6475,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>New Denver Area, New Denver, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>New Denver Area, New Denver — BC Neighbourhood</image:title>
-      <image:geo_location>New Denver Area, New Denver, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kimberley/n/kimberley</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -6496,6 +6484,18 @@
       <image:caption>Kimberley, Kimberley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Kimberley, Kimberley — BC Neighbourhood</image:title>
       <image:geo_location>Kimberley, Kimberley, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/new-denver/n/new-denver-area</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>New Denver Area, New Denver, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>New Denver Area, New Denver — BC Neighbourhood</image:title>
+      <image:geo_location>New Denver Area, New Denver, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7135,18 +7135,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/ellison</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Ellison, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Ellison, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Ellison, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanoose-bay/n/nanoose</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7156,6 +7144,18 @@
       <image:caption>Nanoose, Nanoose Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Nanoose, Nanoose Bay — BC Neighbourhood</image:title>
       <image:geo_location>Nanoose, Nanoose Bay, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kelowna/n/ellison</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Ellison, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Ellison, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Ellison, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7267,18 +7267,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kaslo/n/balfour-to-kaslo-west</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Balfour to Kaslo West, Kaslo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Balfour to Kaslo West, Kaslo — BC Neighbourhood</image:title>
-      <image:geo_location>Balfour to Kaslo West, Kaslo, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7288,6 +7276,18 @@
       <image:caption>Eastern Highlands, Highlands, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Eastern Highlands, Highlands — BC Neighbourhood</image:title>
       <image:geo_location>Eastern Highlands, Highlands, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kaslo/n/balfour-to-kaslo-west</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Balfour to Kaslo West, Kaslo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Balfour to Kaslo West, Kaslo — BC Neighbourhood</image:title>
+      <image:geo_location>Balfour to Kaslo West, Kaslo, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7435,18 +7435,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Village of Slocan, Slocan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Village of Slocan, Slocan — BC Neighbourhood</image:title>
-      <image:geo_location>Village of Slocan, Slocan, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/hedley/n/hedley</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7456,6 +7444,18 @@
       <image:caption>Hedley, Hedley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Hedley, Hedley — BC Neighbourhood</image:title>
       <image:geo_location>Hedley, Hedley, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/slocan/n/village-of-slocan</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Village of Slocan, Slocan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Village of Slocan, Slocan — BC Neighbourhood</image:title>
+      <image:geo_location>Village of Slocan, Slocan, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -7759,18 +7759,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/castlegar/n/thrums-tarrys-glade</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Thrums/Tarrys/Glade, Castlegar, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Thrums/Tarrys/Glade, Castlegar — BC Neighbourhood</image:title>
-      <image:geo_location>Thrums/Tarrys/Glade, Castlegar, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanaimo/n/diver-lake</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -7780,6 +7768,18 @@
       <image:caption>Diver Lake, Nanaimo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Diver Lake, Nanaimo — BC Neighbourhood</image:title>
       <image:geo_location>Diver Lake, Nanaimo, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/castlegar/n/thrums-tarrys-glade</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Thrums/Tarrys/Glade, Castlegar, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Thrums/Tarrys/Glade, Castlegar — BC Neighbourhood</image:title>
+      <image:geo_location>Thrums/Tarrys/Glade, Castlegar, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -10699,18 +10699,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/revelstoke/n/revelstoke</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Revelstoke, Revelstoke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Revelstoke, Revelstoke — BC Neighbourhood</image:title>
-      <image:geo_location>Revelstoke, Revelstoke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kelowna/n/kelowna-south</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -10723,18 +10711,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/nelson/n/harrop-procter</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Harrop/Procter, Nelson, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Harrop/Procter, Nelson — BC Neighbourhood</image:title>
-      <image:geo_location>Harrop/Procter, Nelson, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/vernon/n/north-bx</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -10744,6 +10720,30 @@
       <image:caption>North BX, Vernon, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>North BX, Vernon — BC Neighbourhood</image:title>
       <image:geo_location>North BX, Vernon, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/revelstoke/n/revelstoke</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Revelstoke, Revelstoke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Revelstoke, Revelstoke — BC Neighbourhood</image:title>
+      <image:geo_location>Revelstoke, Revelstoke, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/nelson/n/harrop-procter</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Harrop/Procter, Nelson, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Harrop/Procter, Nelson — BC Neighbourhood</image:title>
+      <image:geo_location>Harrop/Procter, Nelson, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11203,6 +11203,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/victoria/n/songhees</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Songhees, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Songhees, Victoria — BC Neighbourhood</image:title>
+      <image:geo_location>Songhees, Victoria, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/kelowna/n/springfield-spall</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11224,18 +11236,6 @@
       <image:caption>Nakusp Rural, Nakusp, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Nakusp Rural, Nakusp — BC Neighbourhood</image:title>
       <image:geo_location>Nakusp Rural, Nakusp, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/victoria/n/songhees</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Songhees, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Songhees, Victoria — BC Neighbourhood</image:title>
-      <image:geo_location>Songhees, Victoria, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11491,18 +11491,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/pouce-coupe/n/pouce-coupe</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Pouce Coupe, Pouce Coupe, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Pouce Coupe, Pouce Coupe — BC Neighbourhood</image:title>
-      <image:geo_location>Pouce Coupe, Pouce Coupe, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/colwood/n/royal-bay</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11512,6 +11500,18 @@
       <image:caption>Royal Bay, Colwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Royal Bay, Colwood — BC Neighbourhood</image:title>
       <image:geo_location>Royal Bay, Colwood, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/pouce-coupe/n/pouce-coupe</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Pouce Coupe, Pouce Coupe, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Pouce Coupe, Pouce Coupe — BC Neighbourhood</image:title>
+      <image:geo_location>Pouce Coupe, Pouce Coupe, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -11791,18 +11791,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/penticton/n/penticton-rural</loc>
-    <lastmod>2026-08-07</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Penticton Rural, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Penticton Rural, Penticton — BC Neighbourhood</image:title>
-      <image:geo_location>Penticton Rural, Penticton, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/lake-country/n/lake-country-south-west</loc>
     <lastmod>2026-08-07</lastmod>
     <changefreq>weekly</changefreq>
@@ -11812,6 +11800,18 @@
       <image:caption>Lake Country South West, Lake Country, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Lake Country South West, Lake Country — BC Neighbourhood</image:title>
       <image:geo_location>Lake Country South West, Lake Country, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/penticton/n/penticton-rural</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Penticton Rural, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Penticton Rural, Penticton — BC Neighbourhood</image:title>
+      <image:geo_location>Penticton Rural, Penticton, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

@@ -10,7 +10,8 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - Integrations: Emergent LLM key (Claude, Whisper, OpenAI TTS), Resend, Cloudflare Turnstile, CREA DDF IDX
 
 ## Recent Changes (Feb 2026)
-- **SSR / Bot Prerender Service (Feb 6)** — headless-Chromium runtime SSR shipped
+- **SSR / Bot Prerender — DISCOVERY (Feb 7)**: Emergent's platform already has a built-in bot-render layer (`x-rendered-by: crawler-cache` header). GPTBot / Googlebot / ClaudeBot / Perplexity hitting `eztofind.ca` receive fully-rendered HTML (162 KB glossary, 25 KB listings) with BCFSA, Schema.org JSON-LD, CREA/MLS attribution — no custom Worker needed. Custom prerender infra we built (below) remains deployed and functional but dormant. **User opted "leave as-is" (Option A)** — Emergent's crawler-cache is doing the job.
+- **SSR / Bot Prerender Service (Feb 6)** — headless-Chromium runtime SSR shipped (dormant but functional)
   - `services/prerender_service.py`: Playwright singleton + Mongo TTL cache (`prerender_cache`) + 30-day audit log (`prerender_log`)
   - `/api/bot/{path}` — public endpoint bots hit via ingress rewrite; 404 to humans (no cloaking)
   - `/api/admin/prerender/{warm,render,stats,purge}` — admin control
@@ -49,7 +50,7 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
 - P1: Feature-Sheet Narrator (PDF/image upload + Doogie reads with highlight cursor)
 - P1: Real Luxury/Horse Photos (swap placeholders once URLs provided)
 - P1: Wire Google Review link (`/app/memory/review_links.md`) into consultation confirmation emails + admin dashboard widget
-- P1: Deploy — paste `/app/cloudflare_worker_prerender.js` into Cloudflare Workers (or `/app/nginx_prerender.conf` at ingress) to activate bot prerender routing on eztofind.ca
+- P1: Deploy — paste `/app/cloudflare_worker_prerender.js` into Cloudflare Workers (or `/app/nginx_prerender.conf` at ingress) to activate bot prerender routing on eztofind.ca **← SUPERSEDED. Emergent's built-in `crawler-cache` layer already serves prerendered HTML to bots. Cloudflare Worker exists (Hello World placeholder) but not needed. Skip unless we want custom BCFSA compliance guardrails.**
 - P3: Move "Coming Soon" uploads to CDN/Object storage
 - P3: Nightly narration regression cron
 - P3: Rotate JWT_SECRET, RESEND_API_KEY, CREA DDF, Turnstile, Lovable to high-entropy values
