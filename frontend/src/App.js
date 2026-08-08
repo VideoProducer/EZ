@@ -2461,7 +2461,7 @@ const Home = () => {
         </div>
       </div>
       <div className="doogie-hero-wrap" style={{textAlign:"center",overflow:"visible"}}>
-        <img loading="lazy" decoding="async" className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+        <img loading="lazy" decoding="async" className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie, the EZtoFind.ca golden retriever AI mascot, holding a magnifying glass over a British Columbia MLS® listing — the AI research guide for BC real estate on EZtoFind.ca" itemProp="image" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 
@@ -2480,11 +2480,11 @@ const Home = () => {
         <p className="section-sub">Doug LeMaire serves clients across three of British Columbia's most desirable real estate corridors.</p>
       </div>
       <div className="grid-3">
-        {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,d:"From downtown highrises to West Van estates — 22 communities covered."},
-          {s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,d:"Langley, Abbotsford, Chilliwack and beyond — where space meets city convenience."},
-          {s:"sea-to-sky",t:"Sea-to-Sky",i:IMG.seaToSky,d:"Squamish, Whistler, Pemberton — mountain lifestyle real estate."}].map(r =>
+        {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,alt:"Greater Vancouver skyline at dusk — 22 municipalities from downtown high-rises to West Vancouver waterfront estates, one of Canada's most valuable residential real estate markets",d:"From downtown highrises to West Van estates — 22 communities covered."},
+          {s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,alt:"Fraser Valley aerial view — Langley, Abbotsford, Chilliwack farmland, acreage and equestrian properties in BC's fastest-growing residential region",d:"Langley, Abbotsford, Chilliwack and beyond — where space meets city convenience."},
+          {s:"sea-to-sky",t:"Sea-to-Sky",i:IMG.seaToSky,alt:"Sea-to-Sky Corridor mountain landscape — Squamish, Whistler, Pemberton alpine and lakeside real estate along BC Highway 99",d:"Squamish, Whistler, Pemberton — mountain lifestyle real estate."}].map(r =>
           <Link to={`/regions/${r.s}`} key={r.s} className="card" data-testid={`region-${r.s}`}>
-            <img loading="lazy" decoding="async" src={r.i} alt={r.t} className="card-img"/>
+            <img loading="lazy" decoding="async" src={r.i} alt={r.alt} className="card-img" width="800" height="480" itemProp="image"/>
             <div className="card-body"><h3 className="card-title">{r.t}</h3><p className="card-desc">{r.d}</p></div>
           </Link>)}
       </div>
@@ -4017,12 +4017,12 @@ const RegionsIndex = () => (
   <section className="section"><div className="container-x">
     <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Focus Areas</div><h1 className="section-title">Where Doug works.</h1></div>
     <div className="grid-3">
-      {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky}].map(r =>
-        <Link to={`/regions/${r.s}`} key={r.s} className="card"><img loading="lazy" decoding="async" src={r.i} className="card-img" alt={r.t}/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
+      {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,alt:"Greater Vancouver skyline at dusk — 22 municipalities from downtown high-rises to West Vancouver waterfront estates, one of Canada's most valuable residential real estate markets"},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,alt:"Fraser Valley aerial view — Langley, Abbotsford, Chilliwack farmland, acreage and equestrian properties in BC's fastest-growing residential region"},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky,alt:"Sea-to-Sky Corridor mountain landscape — Squamish, Whistler, Pemberton alpine and lakeside real estate along BC Highway 99"}].map(r =>
+        <Link to={`/regions/${r.s}`} key={r.s} className="card"><img loading="lazy" decoding="async" src={r.i} className="card-img" alt={r.alt} width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
     </div>
     <div style={{textAlign:"center",marginTop:"3.5rem",marginBottom:"2rem"}}><div className="eyebrow">Referral Network</div><h2 className="section-title" style={{fontSize:"1.8rem"}}>Covered by our REALTORS® across BC</h2></div>
     <div className="grid-3">
-      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img loading="lazy" decoding="async" src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
+      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img loading="lazy" decoding="async" src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island coastal cliffs and Pacific ocean view — 51 communities from Victoria's heritage character to Tofino's surf coast and the Gulf Islands, served by EZtoFind's licensed BC REALTOR® referral network" width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
     </div>
   </div></section>
 );
@@ -4042,7 +4042,7 @@ const RegionPage = () => {
   if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/regions">Back</Link></div>;
   const list = communities[d.key] || [];
   return (<section className="section"><div className="container-x">
-    <img loading="lazy" decoding="async" src={d.img} alt={d.title} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={d.img} alt={`${d.title} — ${d.copy.slice(0,140)}`} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}} width="1200" height="400" itemProp="image"/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">{d.referral ? "Referral Network Coverage" : "Focus Area"}</div>
       <h1 className="section-title">{d.title}</h1>
@@ -4061,16 +4061,16 @@ const RegionPage = () => {
 
 // --- Specialties ---
 const SPECIALTIES = {
-  "detached":{t:"Detached Homes",i:IMG.detached,c:"Freehold, single-family homes across Greater Vancouver, the Fraser Valley, and Sea-to-Sky. From starter homes to executive estates — no strata fees, no shared walls, full title and land ownership."},
-  "luxury":{t:"Luxury Real Estate",i:IMG.luxury,c:"BC's luxury tier — waterfront estates in West Van, mountain chalets in Whistler, custom-built homes on private acreages. Discreet, professional representation for high-net-worth buyers and sellers."},
-  "equestrian":{t:"Equestrian & Acreage",i:IMG.equestrian,c:"Horse properties, hobby farms, and rural acreage — from Langley's ALR to Sea-to-Sky's ranch country. Deep knowledge of ALR rules, water rights, well/septic considerations, and equestrian facility valuation."},
-  "estate-sales":{t:"Estate Sales / Probate",i:IMG.estate,c:"Sensitive, compliant representation for executors administering a BC estate under WESA. Coordination with legal counsel, understanding of Grant of Probate timelines, and 'as-is' sale expertise."},
-  "condos":{t:"Condos",i:IMG.condo,c:"Strata-lot expertise across BC — Form B, Form F, depreciation reports, contingency reserve funds, bylaw review. Metro Vancouver, Fraser Valley, and resort condos."},
-  "townhomes":{t:"Townhomes",i:IMG.townhomes,c:"Townhome expertise across the Lower Mainland — strata townhouse complexes, freehold row homes, half-duplexes. Understanding of restrictive covenants, shared-amenity fees, bareland strata, and unit-entitlement calculations."}
+  "detached":{t:"Detached Homes",i:IMG.detached,alt:"Detached single-family home in Greater Vancouver with landscaped front yard and driveway — freehold residential real estate expertise across BC",c:"Freehold, single-family homes across Greater Vancouver, the Fraser Valley, and Sea-to-Sky. From starter homes to executive estates — no strata fees, no shared walls, full title and land ownership."},
+  "luxury":{t:"Luxury Real Estate",i:IMG.luxury,alt:"BC luxury waterfront estate with panoramic ocean and mountain views — Doug LeMaire specializes in $3M+ homes across West Vancouver, Whistler, and private acreages",c:"BC's luxury tier — waterfront estates in West Van, mountain chalets in Whistler, custom-built homes on private acreages. Discreet, professional representation for high-net-worth buyers and sellers."},
+  "equestrian":{t:"Equestrian & Acreage",i:IMG.equestrian,alt:"Horse grazing on a Fraser Valley equestrian acreage with barn and fenced paddocks — Doug LeMaire specializes in ALR farmland, hobby farms, and horse properties across BC",c:"Horse properties, hobby farms, and rural acreage — from Langley's ALR to Sea-to-Sky's ranch country. Deep knowledge of ALR rules, water rights, well/septic considerations, and equestrian facility valuation."},
+  "estate-sales":{t:"Estate Sales / Probate",i:IMG.estate,alt:"Traditional BC family home representing an estate sale under WESA — professional probate real estate representation by Doug LeMaire, coordinating with legal counsel for executors",c:"Sensitive, compliant representation for executors administering a BC estate under WESA. Coordination with legal counsel, understanding of Grant of Probate timelines, and 'as-is' sale expertise."},
+  "condos":{t:"Condos",i:IMG.condo,alt:"Modern Vancouver condo tower interior with city views — BC strata-lot expertise including Form B, Form F, and depreciation report review across Metro Vancouver and Fraser Valley",c:"Strata-lot expertise across BC — Form B, Form F, depreciation reports, contingency reserve funds, bylaw review. Metro Vancouver, Fraser Valley, and resort condos."},
+  "townhomes":{t:"Townhomes",i:IMG.townhomes,alt:"Row of BC townhomes with private entrances and garages — Lower Mainland townhouse and half-duplex expertise from Doug LeMaire",c:"Townhome expertise across the Lower Mainland — strata townhouse complexes, freehold row homes, half-duplexes. Understanding of restrictive covenants, shared-amenity fees, bareland strata, and unit-entitlement calculations."}
 };
 const SpecialtiesIndex = () => (<section className="section"><div className="container-x">
   <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Doug's Specialties</div><h1 className="section-title">Five focused expertises.</h1></div>
-  <div className="grid-3">{Object.entries(SPECIALTIES).map(([s,d])=><Link key={s} to={`/specialties/${s}`} className="card"><img loading="lazy" decoding="async" src={d.i} className="card-img" alt={d.t}/><div className="card-body"><h3 className="card-title">{d.t}</h3><p className="card-desc">{d.c.slice(0,120)}...</p></div></Link>)}</div>
+  <div className="grid-3">{Object.entries(SPECIALTIES).map(([s,d])=><Link key={s} to={`/specialties/${s}`} className="card"><img loading="lazy" decoding="async" src={d.i} className="card-img" alt={d.alt||d.t} width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">{d.t}</h3><p className="card-desc">{d.c.slice(0,120)}...</p></div></Link>)}</div>
 </div></section>);
 const SpecialtyPage = () => {
   const {slug} = useParams(); const d = SPECIALTIES[slug];
@@ -4084,7 +4084,7 @@ const SpecialtyPage = () => {
   const SPECIALTY_TYPE_MAP = { "detached":"Detached", "condos":"Condo", "townhomes":"Townhouse" };
   const lockedType = SPECIALTY_TYPE_MAP[slug];
   return (<section className="section"><div className="container-x">
-    <img loading="lazy" decoding="async" src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={d.i} alt={d.alt || `${d.t} — ${d.c.slice(0,120)}`} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}} width="1200" height="400" itemProp="image"/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">Specialty</div><h1 className="section-title">{d.t}</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.c}</p>

@@ -6288,17 +6288,27 @@ async def startup():
                 await _a.sleep(delay)
                 try:
                     from services.prerender_service import get_service as _gp
-                    # Build the priority list: home + core static + top 50 glossary +
-                    # top 50 communities + top 100 listings (by recency).
+                    # Build the priority list: home + core static + region +
+                    # specialty pages + ALL glossary + ALL community synopses +
+                    # top 100 listings (by recency).  Full coverage ensures
+                    # LLM/search crawlers land on prerendered HTML no matter
+                    # which page they hit — no more "SPA-only" gaps.
                     paths = [
                         "/", "/communities", "/glossary", "/listings", "/about",
-                        "/valuation", "/relocating", "/realtor-network",
-                        "/regions/greater-vancouver",
+                        "/valuation", "/relocating", "/realtor-network", "/buyer",
+                        "/seller", "/contact",
+                        # Region pages
+                        "/regions", "/regions/greater-vancouver", "/regions/fraser-valley",
+                        "/regions/sea-to-sky", "/regions/vancouver-island",
+                        # Specialty pages
+                        "/specialties", "/specialties/detached", "/specialties/luxury",
+                        "/specialties/equestrian", "/specialties/estate-sales",
+                        "/specialties/condos", "/specialties/townhomes",
                     ]
-                    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(50):
+                    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1):
                         if t.get("slug"):
                             paths.append(f"/glossary/{t['slug']}")
-                    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(50):
+                    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1):
                         if s.get("slug"):
                             paths.append(f"/community/{s['slug']}")
                     async for l in db.listings.find({"status": "Active"}, {"listing_key": 1}).sort("modification_ts", -1).limit(100):
@@ -6933,15 +6943,31 @@ async def prerender_debug():
 
 @api.post("/admin/prerender/warm")
 async def admin_prerender_warm(_=Depends(verify_admin)):
-    """Force-refresh the prerender cache for top-priority URLs."""
+    """Force-refresh the prerender cache for top-priority URLs.
+
+    Coverage (Aug 2026 expansion — Grok/Perplexity SSR audit):
+      • All core pages, region pages, and specialty pages
+      • ALL glossary terms (~440) — so LLM/crawler citations always
+        land on prerendered HTML with schema and disclosures.
+      • ALL community synopses (~245) — same rationale.
+      • Top 100 Active listings by recency."""
     from services.prerender_service import get_service as _gp
-    paths = ["/", "/communities", "/glossary", "/listings", "/about",
-             "/valuation", "/relocating", "/realtor-network",
-             "/regions/greater-vancouver"]
-    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(50):
+    paths = [
+        "/", "/communities", "/glossary", "/listings", "/about",
+        "/valuation", "/relocating", "/realtor-network", "/buyer",
+        "/seller", "/contact",
+        # Region pages
+        "/regions", "/regions/greater-vancouver", "/regions/fraser-valley",
+        "/regions/sea-to-sky", "/regions/vancouver-island",
+        # Specialty pages
+        "/specialties", "/specialties/detached", "/specialties/luxury",
+        "/specialties/equestrian", "/specialties/estate-sales",
+        "/specialties/condos", "/specialties/townhomes",
+    ]
+    async for t in db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1):
         if t.get("slug"):
             paths.append(f"/glossary/{t['slug']}")
-    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(50):
+    async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1):
         if s.get("slug"):
             paths.append(f"/community/{s['slug']}")
     async for l in db.listings.find({"status": "Active"}, {"listing_key": 1}).sort("modification_ts", -1).limit(100):
@@ -7070,13 +7096,19 @@ async def admin_weekly_refresh_run(_=Depends(verify_admin)):
 
 
 @api.get("/admin/heatmap/history/{slug}")
-async def admin_heatmap_history(slug: str, days: int = 365, _=Depends(verify_admin)):
+async def admin_heatmap_history(slug: str, days: int = 365, segment: Optional[str] = None, _=Depends(verify_admin)):
     """Snapshot timeline for a single neighborhood — powers the drill-down
-    sparkline / trajectory chart in the admin UI."""
+    sparkline / trajectory chart in the admin UI.
+
+    `segment` accepts "luxury" or "equestrian" to pull history from the
+    matching per-segment snapshot collection so the sparkline reflects
+    that market slice only (no dilution from the broader BC market)."""
     from datetime import timedelta as _td
+    from services.neighborhood_heatmap import _snapshot_coll
     cutoff = (datetime.now(timezone.utc) - _td(days=max(1, min(int(days), 730)))).isoformat()
     rows: list[dict] = []
-    cursor = db.neighborhood_heat_snapshots.find(
+    seg = segment if segment in ("luxury", "equestrian") else None
+    cursor = db[_snapshot_coll(seg)].find(
         {"generated_at": {"$gte": cutoff}},
         {"_id": 0, "generated_at": 1, "rows": 1},
     ).sort("generated_at", 1)
@@ -7094,7 +7126,7 @@ async def admin_heatmap_history(slug: str, days: int = 365, _=Depends(verify_adm
                     "months_of_supply": r.get("months_of_supply"),
                 })
                 break
-    return {"slug": slug, "days": days, "count": len(rows), "rows": rows}
+    return {"slug": slug, "days": days, "segment": seg or "all", "count": len(rows), "rows": rows}
 
 
 # =============== MONTHLY BC MARKET REPORT (public, AEO-primed) ===============

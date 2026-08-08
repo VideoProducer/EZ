@@ -209,13 +209,28 @@ def _arrow_from_delta(delta_pct: Optional[float]) -> str:
 
 
 # ── Snapshot ↔ Mongo ───────────────────────────────────────────────────────
-async def _prior_snapshot(db, days_ago: int) -> Optional[dict]:
+def _snapshot_coll(segment: Optional[str]) -> str:
+    """Return the Mongo collection name for a segment's daily snapshots.
+    Full BC uses the canonical `neighborhood_heat_snapshots`; segments
+    (luxury/equestrian) get their own sibling collections so trajectory
+    arrows compare like-for-like without polluting the base series."""
+    if segment in ("luxury", "equestrian"):
+        return f"neighborhood_heat_snapshots_{segment}"
+    return "neighborhood_heat_snapshots"
+
+
+async def _prior_snapshot(db, days_ago: int, segment: Optional[str] = None) -> Optional[dict]:
     """Return the snapshot doc closest to (today - days_ago), within a
-    ±7-day tolerance. None if history isn't old enough yet."""
+    ±7-day tolerance. None if history isn't old enough yet.
+
+    Segment-aware: luxury/equestrian arrows read from their own sibling
+    collections so metrics like median list price aren't diluted by the
+    broader market."""
     target = datetime.now(timezone.utc) - timedelta(days=days_ago)
     lo = (target - timedelta(days=7)).isoformat()
     hi = (target + timedelta(days=7)).isoformat()
-    return await db.neighborhood_heat_snapshots.find_one(
+    coll = db[_snapshot_coll(segment)]
+    return await coll.find_one(
         {"generated_at": {"$gte": lo, "$lte": hi}},
         sort=[("generated_at", -1)],
     )
@@ -321,7 +336,7 @@ async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
         # Real absorption will fill in once daily snapshots have run 30+ days.
         absorption_30d = max(0, b["new_prior_30d"] - 0)  # placeholder
         # If we have a prior snapshot, we can compute real absorption:
-        prior_day = await _prior_snapshot(db, days_ago=30)
+        prior_day = await _prior_snapshot(db, days_ago=30, segment=segment)
         prior_row = _pick_prior(prior_day.get("rows", []) if prior_day else [], slug)
         if prior_row:
             # absorption ≈ prior actives + new_30d − current actives
@@ -331,7 +346,7 @@ async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
 
         # Absorption trend: current 30d absorption vs prior 30d absorption.
         absorption_prior_30d = None
-        prior_60 = await _prior_snapshot(db, days_ago=60)
+        prior_60 = await _prior_snapshot(db, days_ago=60, segment=segment)
         prior_60_row = _pick_prior(prior_60.get("rows", []) if prior_60 else [], slug)
         if prior_row and prior_60_row:
             absorption_prior_30d = max(0, (prior_60_row.get("actives") or 0) + (prior_row.get("new_30d") or 0) - (prior_row.get("actives") or 0))
@@ -373,9 +388,9 @@ async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
         })
 
     # 4. Trajectory arrows — compare current row against snapshots at 3/6/12 months.
-    snap_3  = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["3mo"])
-    snap_6  = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["6mo"])
-    snap_12 = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["12mo"])
+    snap_3  = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["3mo"],  segment=segment)
+    snap_6  = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["6mo"],  segment=segment)
+    snap_12 = await _prior_snapshot(db, days_ago=WINDOWS_DAYS["12mo"], segment=segment)
     snap_rows = {
         "3mo":  (snap_3  or {}).get("rows", []),
         "6mo":  (snap_6  or {}).get("rows", []),
@@ -431,13 +446,40 @@ async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
 
 # ── Snapshot writer + alerting ─────────────────────────────────────────────
 async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
-    """Persist today's snapshot, then compare against yesterday to detect
-    Warming→Hot crossings. Sends an instant Resend email per crossing,
-    deduped for 7 days.  Returns a summary dict for logs / debugging."""
+    """Persist today's snapshot for the full BC market AND every tracked
+    segment (luxury, equestrian). Then compare against yesterday to detect
+    Warming→Hot crossings for the FULL market only (segment crossings are
+    surfaced in the digest instead, to avoid alert fatigue).  Sends an
+    instant Resend email per full-market crossing, deduped for 7 days.
+    Returns a summary dict for logs / debugging."""
     from services.email_sender import send_email, casl_footer_html, casl_footer_text
 
-    heat = await compute_heatmap(db)
     now = datetime.now(timezone.utc)
+
+    # ── Segment snapshots (luxury, equestrian) — silently persisted so
+    # segment heatmap arrows have history to compare against. No alerts
+    # here; segment crossings ride the weekly digest.
+    segment_report: dict[str, Any] = {}
+    for seg in ("luxury", "equestrian"):
+        try:
+            seg_heat = await compute_heatmap(db, segment=seg)
+            await db[_snapshot_coll(seg)].insert_one({
+                "generated_at": now.isoformat(),
+                "segment": seg,
+                "rows": seg_heat["neighborhoods"],
+                "total_neighborhoods_analyzed": seg_heat["total_neighborhoods_analyzed"],
+            })
+            segment_report[seg] = {
+                "rows": len(seg_heat["neighborhoods"]),
+                "analyzed": seg_heat["total_neighborhoods_analyzed"],
+            }
+        except Exception as e:
+            logger.error(f"snapshot_and_alert: segment {seg} failed: {e}")
+            segment_report[seg] = {"error": str(e)[:200]}
+
+    heat = await compute_heatmap(db)
+    # `now` was set at the top of the function so all segment + full snapshots
+    # share the same timestamp for aligned cross-segment analysis.
 
     # Yesterday's snapshot (before we write today) — used to spot the crossing.
     yesterday = await db.neighborhood_heat_snapshots.find_one(
@@ -541,6 +583,7 @@ async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
         "crossings_detected": len(crossings),
         "instant_alerts_sent": sent,
         "instant_alerts_deduped": deduped,
+        "segments": segment_report,
     }
 
 
@@ -613,6 +656,8 @@ async def ensure_indices(db) -> None:
     """Idempotent index setup — called from server.py startup."""
     try:
         await db.neighborhood_heat_snapshots.create_index("generated_at")
+        await db.neighborhood_heat_snapshots_luxury.create_index("generated_at")
+        await db.neighborhood_heat_snapshots_equestrian.create_index("generated_at")
         await db.neighborhood_heat_alerts_sent.create_index([("slug", 1), ("sent_at", -1)])
         # TTL — auto-expire alerts_sent rows after 14 days so the collection
         # stays small. Dedup logic still uses the 7-day window via query.
