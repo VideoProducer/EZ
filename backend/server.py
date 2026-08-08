@@ -8316,7 +8316,7 @@ EQUESTRIAN_KEYWORDS = [
     # Original canon
     "equestrian", "horse property", "horse friendly", "horse farm",
     "barn", "stable", "arena", "riding ring", "paddock", "ALR",
-    # New additions (Feb 2026) — expanded feature-sheet vocabulary
+    # Feb 2026 — expanded feature-sheet vocabulary
     "horse facility", "horse ranch", "horse barn", "horse stall",
     "stall",                                # stall, stalls, stalled, stallion
     "round pen", "pasture", "tack room", "feed room",
@@ -8329,6 +8329,55 @@ EQUESTRIAN_KEYWORDS = [
     "hobby farm", "cattle ranch",
     "dressage",                             # dressage, dressage arena
     "corral",                               # bonus: common BC ranch term
+    # Feb 8, 2026 — Doug's expanded due-diligence criteria matrix
+    # (zoning, water, septic, permits, facility, storage). Any hit
+    # qualifies the listing so buyers surface the specific due-diligence
+    # features they need to evaluate.
+    #
+    # Zoning / ALR / farm classification
+    "agricultural land reserve", "farm class", "farm classification",
+    "class 9",                              # BC Assessment farm class 9
+    "ALC", "agricultural land commission",
+    # Water — wells, irrigation, drought
+    "drilled well", "well water", "artesian well",
+    "gpm",                                  # US "gallons per minute" — matches "8 GPM well"
+    "gallons per minute",
+    "irrigation", "water rights", "water license", "water licence",
+    "riparian",
+    # Septic / manure / environmental
+    "septic", "septic field", "septic tank",
+    "greywater", "grey water",
+    "manure",                               # manure management, manure pit
+    "environmental setback",
+    # Permits + electrical
+    "200 amp", "200-amp", "200a service",
+    "electrical service",
+    "barn permit", "arena permit",
+    # Facility detail
+    "arena footing", "arena drainage",
+    "stall size", "paddock acreage",
+    "fencing", "post and rail", "post-and-rail", "wire fenced",
+    # Storage + trailer + fire separation
+    "trailer parking", "trailer access", "trailer bay",
+    "fire separation",
+]
+
+# Trigger words that mean the visitor is actively searching for an
+# equestrian / acreage / horse-friendly property.  Matched against the
+# `q` query parameter (case-insensitive) so the main search bar auto-
+# applies the EQUESTRIAN_KEYWORDS scan when any of these appear.
+# Kept intentionally narrow to avoid false-positive "farmhouse sink"
+# or "ranch-style home" hits — every entry here is unambiguous.
+EQUESTRIAN_INTENT_TRIGGERS = [
+    "equestrian",
+    "horse property", "horse friendly", "horse farm", "horse ranch",
+    "hobby farm",
+    "acreage",                              # BC listing convention: "1.5-acre acreage"
+    "farmland",
+    "riding ring", "riding arena",
+    "stable", "stables",
+    "paddock",
+    "cattle ranch",
 ]
 
 
@@ -8500,6 +8549,7 @@ async def search_listings(
     _addr_regex = None
     _postal_regex = None
     _postal_fsa = None                # 3-char neighbourhood prefix, e.g. "V3A"
+    _equestrian_intent = False        # Feb 8, 2026 — auto-detect equestrian queries
     if q:
         q_stripped = q.strip()
         # Full Canadian postal code: A1A 1A1 or A1A1A1 (case-insensitive).
@@ -8518,6 +8568,13 @@ async def search_listings(
             # Catches "930 Josephine Rd", "22374 Lougheed Hwy", "#4 - 123 Main".
             if re.match(r'^\s*#?\s*\d', q_stripped) and ' ' in q_stripped:
                 _addr_regex = re.escape(q_stripped)
+        # Equestrian intent detection — if any EQUESTRIAN_INTENT_TRIGGERS
+        # word appears in the query, we AND the full EQUESTRIAN_KEYWORDS
+        # scan onto the query below. This surfaces the horse-friendly
+        # inventory Doug specializes in without requiring the user to
+        # navigate to /specialties/equestrian.
+        q_lower = q_stripped.lower()
+        _equestrian_intent = any(t in q_lower for t in EQUESTRIAN_INTENT_TRIGGERS)
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
@@ -8591,6 +8648,15 @@ async def search_listings(
             # the description (case-insensitive). Same semantics as Doogie NL.
             existing_and = query.get("$and", [])
             query["$and"] = existing_and + _features_query(feats)
+    # Equestrian intent — if the search bar was equestrian-flavoured
+    # ("equestrian", "horse property", "acreage", "hobby farm", "cattle
+    # ranch", "paddock"…) AND the query into the description-keyword scan
+    # so results only include listings whose text actually mentions horse-
+    # friendly features (barn, stall, arena, ALR, well, GPM, septic,
+    # 200 amp, arena footing, trailer parking, etc.).  Doug's specialty.
+    if _equestrian_intent:
+        eq_or = [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS]
+        query.setdefault("$and", []).append({"$or": eq_or})
     # `q` (natural-language query from the hero search bar) is treated as a
     # LOCALITY hint first — if it names a known BC city or CityRegion, we
     # promote it to a strict exact-match filter so a search for "Whistler"
@@ -8696,7 +8762,12 @@ async def search_listings(
                         ],
                     })
             else:
-                query["$text"] = {"$search": q}
+                # When the query is a pure equestrian intent word (no
+                # locality resolved), we've already added the precise
+                # EQUESTRIAN_KEYWORDS scan above — skipping $text avoids
+                # a redundant OR that would over-match.
+                if not _equestrian_intent:
+                    query["$text"] = {"$search": q}
     elif not q and _postal_fsa:
         # Postal code came in via the Community/City filter (city= param);
         # `q` is unset but we still want the FSA neighbourhood search.
@@ -8733,7 +8804,8 @@ async def search_listings(
                 ],
             })
         else:
-            query["$text"] = {"$search": q}
+            if not _equestrian_intent:
+                query["$text"] = {"$search": q}
 
     sort_key = [("created_at", -1)]
     if sort == "price_asc":  sort_key = [("list_price", 1)]
