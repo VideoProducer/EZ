@@ -7030,6 +7030,25 @@ async def admin_heatmap_neighborhoods(_=Depends(verify_admin)):
     return await compute_heatmap(db)
 
 
+@api.get("/admin/heatmap/luxury/neighborhoods")
+async def admin_heatmap_luxury(_=Depends(verify_admin)):
+    """Luxury slice — Active listings with list_price ≥ $3M across all BC.
+    When a $3M+ neighbourhood cluster goes Warming → Hot, Doug reaches
+    out to past clients in that area with a "your neighbourhood is
+    heating up" note.  Same engine as the main heatmap, just filtered."""
+    from services.neighborhood_heatmap import compute_heatmap
+    return await compute_heatmap(db, segment="luxury")
+
+
+@api.get("/admin/heatmap/equestrian/neighborhoods")
+async def admin_heatmap_equestrian(_=Depends(verify_admin)):
+    """Equestrian slice — Active listings whose description mentions any
+    EQUESTRIAN_KEYWORDS (barn, stall, arena, ALR, GPM, hobby farm, cattle
+    ranch, etc.). Doug's specialty market at a glance."""
+    from services.neighborhood_heatmap import compute_heatmap
+    return await compute_heatmap(db, segment="equestrian")
+
+
 @api.post("/admin/heatmap/recompute")
 async def admin_heatmap_recompute(_=Depends(verify_admin)):
     """Recompute the heatmap, persist a snapshot, dispatch any Warming→Hot

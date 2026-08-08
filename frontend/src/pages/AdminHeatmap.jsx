@@ -99,17 +99,29 @@ function MarketBadge({ market }) {
   );
 }
 
-export default function AdminHeatmap({ AdminShell }) {
+export default function AdminHeatmap({ AdminShell, segment = null }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recomputing, setRecomputing] = useState(false);
   const [lastRecompute, setLastRecompute] = useState(null);
 
+  // Segment routes:
+  //   null         → /api/admin/heatmap/neighborhoods              (all BC)
+  //   "luxury"     → /api/admin/heatmap/luxury/neighborhoods       ($3M+ listings)
+  //   "equestrian" → /api/admin/heatmap/equestrian/neighborhoods   (horse-friendly)
+  const endpoint = segment
+    ? `${API}/admin/heatmap/${segment}/neighborhoods`
+    : `${API}/admin/heatmap/neighborhoods`;
+  const activeKey = segment ? `heatmap-${segment}` : "heatmap";
+  const segmentLabel = segment === "luxury" ? "Luxury ($3M+)"
+                     : segment === "equestrian" ? "Equestrian & Acreage"
+                     : null;
+
   const load = async () => {
     setLoading(true); setError(null);
     try {
-      const r = await axios.get(`${API}/admin/heatmap/neighborhoods`, { withCredentials: true });
+      const r = await axios.get(endpoint, { withCredentials: true });
       setData(r.data);
     } catch (e) {
       setError(e?.response?.data?.detail || e.message || "Failed to load heatmap");
@@ -118,7 +130,7 @@ export default function AdminHeatmap({ AdminShell }) {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [segment]);
 
   const recompute = async () => {
     setRecomputing(true);
@@ -145,16 +157,18 @@ export default function AdminHeatmap({ AdminShell }) {
   }, [data]);
 
   return (
-    <AdminShell active="heatmap">
+    <AdminShell active={activeKey}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <h1 className="font-display" style={{ fontSize: "2rem", marginTop: 0, marginBottom: "0.25rem" }}>
             🌡️ Market Heatmap — Top 32 BC Neighborhoods
+            {segmentLabel && <span style={{ marginLeft: "0.6rem", padding: "3px 12px", background: segment === "luxury" ? "#FEF3C7" : "#DCFCE7", color: segment === "luxury" ? "#92400E" : "#166534", borderRadius: 999, fontSize: "0.75rem", fontWeight: 700, verticalAlign: "middle" }}>{segmentLabel}</span>}
           </h1>
           <p style={{ margin: 0, color: "#6B7280", fontSize: "0.88rem", maxWidth: "48rem" }}>
             Hottest → coldest, ranked by composite temperature (DOM · Months of Supply · absorption trend · MoM price).
-            Doug is auto-emailed the moment any neighborhood crosses <strong>Warming → Hot</strong> (deduped 7 days),
-            plus a Monday 07:00 PT weekly digest of every temperature move.
+            {segment === "luxury" && " Filtered to listings ≥ $3M — Doug's luxury practice slice."}
+            {segment === "equestrian" && " Filtered to listings whose description mentions any equestrian keyword (barn · stall · arena · ALR · hobby farm · cattle ranch · GPM · acreage)."}
+            {!segment && " Doug is auto-emailed the moment any neighborhood crosses Warming → Hot (deduped 7 days), plus a Monday 07:00 PT weekly digest."}
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>

@@ -230,22 +230,50 @@ def _pick_prior(rows: list[dict], slug: str) -> Optional[dict]:
     return None
 
 
-async def compute_heatmap(db) -> dict:
+async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
     """Aggregate current Active DDF listings into per-neighborhood metrics,
     read prior snapshots for trajectory arrows, rank hottest → coldest,
     return the top 32 rows.  Does NOT write a snapshot — call
-    `snapshot_and_alert()` for that."""
+    `snapshot_and_alert()` for that.
+
+    Args:
+        segment: Optional filter to slice the market —
+                 "luxury"     → list_price >= $3,000,000 only
+                 "equestrian" → description matches ANY EQUESTRIAN_KEYWORDS
+                 None (default) → full BC market (all Active listings)
+
+        The segment filter is applied at the initial listing query so
+        every downstream metric (median price, DOM, MoS, temperature,
+        market type, arrows) reflects THAT segment's dynamics — not the
+        broader market's.  Snapshots are stored separately per segment
+        (`neighborhood_heat_snapshots_luxury`, `..._equestrian`) so the
+        3/6/12-month trajectory arrows compare like-for-like."""
     now = datetime.now(timezone.utc)
     thirty_days_ago = now - timedelta(days=30)
     sixty_days_ago  = now - timedelta(days=60)
 
-    # 1. Pull minimal fields for every Active listing.
+    # ── Segment-specific listing filter ──────────────────────────────────
+    listing_filter: dict = {"status": "Active"}
+    if segment == "luxury":
+        listing_filter["list_price"] = {"$gte": 3_000_000}
+    elif segment == "equestrian":
+        # Import lazily to avoid circular deps at module load.
+        import sys
+        _server = sys.modules.get("server")
+        eq_kws = getattr(_server, "EQUESTRIAN_KEYWORDS", []) if _server else []
+        if eq_kws:
+            import re as _re
+            listing_filter["$or"] = [
+                {"description": {"$regex": r"\b" + _re.escape(k), "$options": "i"}} for k in eq_kws
+            ]
+
+    # 1. Pull minimal fields for every listing matching the segment filter.
     projection = {
         "_id": 0, "listing_key": 1, "list_price": 1, "city": 1, "region": 1,
         "modified_at": 1, "synced_at": 1, "status": 1,
     }
     listings = await db.listings.find(
-        {"status": "Active"}, projection
+        listing_filter, projection
     ).to_list(20000)
 
     # 2. Group by (city, region).
@@ -389,6 +417,7 @@ async def compute_heatmap(db) -> dict:
 
     return {
         "generated_at": now.isoformat(),
+        "segment": segment or "all",
         "count": min(len(rows), TOP_N),
         "total_neighborhoods_analyzed": len(rows),
         "history_available": {
