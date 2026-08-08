@@ -1679,8 +1679,8 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
               <div style="font-weight:800;color:#0F2A5B;font-size:13px;">${fmtPrice(l.list_price)}</div>
               <div style="color:#374151;margin-top:2px;">${(l.unparsed_address || "").replace(/</g, "")}</div>
               <div style="color:#6B7280;margin-top:2px;">${l.beds || "—"}bd · ${l.baths || "—"}ba · ${l.property_type || ""}</div>
-              ${l.realtor_ca_url
-                ? `<a href="${l.realtor_ca_url}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;color:#0A3D99;font-weight:700;">View on realtor.ca ↗</a>`
+              ${l.listing_key
+                ? `<a href="/listing/${encodeURIComponent(l.listing_key)}" style="display:inline-block;margin-top:6px;color:#0A3D99;font-weight:700;" data-testid="map-popup-view-listing">View listing on EZtoFind →</a>`
                 : ""}
              </div>`
           );
