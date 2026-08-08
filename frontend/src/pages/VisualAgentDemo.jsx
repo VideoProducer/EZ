@@ -502,20 +502,23 @@ export default function VisualAgentDemo() {
       if (!answer) { setVoiceSearchStatus(""); return; }
       setVoiceReplyText(answer);
       setVoiceSearchStatus("speaking");
-      // Play TTS
+      // Play TTS — fast prepare→GET flow (progressive playback + browser HTTP cache).
       try {
-        const r = await fetch(`${API}/doogie/tts`, {
+        const prep = await fetch(`${API}/doogie/tts/prepare`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: answer.slice(0, 3800), voice: "ash" }),
         });
-        if (r.ok) {
-          const blob = await r.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
+        if (prep.ok) {
+          const { audio_url, cache } = await prep.json();
+          const backendBase = API.replace(/\/api$/, "");
+          const audio = new Audio();
+          audio.preload = "auto";
+          audio.src = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
           voiceReplyAudioRef.current = audio;
-          audio.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } setVoiceSearchStatus(""); };
-          audio.onerror = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } setVoiceSearchStatus(""); };
-          await audio.play();
+          audio.onended = () => { setVoiceSearchStatus(""); };
+          audio.onerror = () => { setVoiceSearchStatus(""); };
+          const tryPlay = () => audio.play().catch(() => setVoiceSearchStatus(""));
+          if (audio.readyState >= 2) tryPlay(); else audio.oncanplay = tryPlay;
         } else {
           setVoiceSearchStatus("");
         }
@@ -690,6 +693,41 @@ export default function VisualAgentDemo() {
     setVoiceError("");
   }, [scenarioIdx]);
 
+  // Prewarm TTS for every agent turn in the selected scenario as soon as
+  // the user picks it. All turn scripts are known at compile time, so by
+  // the time the demo advances (or the user replays), the OpenAI-generated
+  // mp3 is already in Mongo and the perceived latency drops from ~3-6 s
+  // to ~100-200 ms. Fire-and-forget — never surfaces errors. Runs only
+  // when speakerOn is truthy so we don't spend Universal Key budget on
+  // muted visitors.
+  useEffect(() => {
+    if (!speakerOn) return;
+    const s = SCENARIOS[scenarioIdx];
+    if (!s) return;
+    const scripts = [];
+    // Turn-level agent replies
+    for (const t of (s.turns || [])) {
+      if (t.who === "agent" && t.text && t.text.length >= 3) scripts.push(t.text);
+    }
+    // Voice-mode narration (VOICE_SCRIPT) — the fuller answer TTS'd when the
+    // user hits the mic in Kiosk mode.
+    const vs = VOICE_SCRIPT[s.id];
+    if (vs?.reply) scripts.push(vs.reply);
+    // Fire each prewarm; stagger by 80 ms so we don't burst 5 requests at once.
+    scripts.forEach((text, i) => {
+      setTimeout(() => {
+        try {
+          fetch(`${API}/doogie/tts/prewarm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: text.slice(0, 3800), voice: "ash" }),
+            keepalive: true,
+          }).catch(() => {});
+        } catch {}
+      }, i * 80);
+    });
+  }, [scenarioIdx, speakerOn]);
+
   // Autoscroll transcript on new turn or voice update
   useEffect(() => {
     if (transcriptRef.current) {
@@ -718,26 +756,24 @@ export default function VisualAgentDemo() {
     ttsAbortRef.current = controller;
     try {
       setSpeaking(true);
-      const res = await fetch(`${API}/doogie/tts`, {
+      // Fast prepare→GET flow — progressive playback + browser HTTP cache.
+      const res = await fetch(`${API}/doogie/tts/prepare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: trimmed.slice(0, 3800), voice: "ash" }),
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`tts ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      if (!res.ok) throw new Error(`tts prepare ${res.status}`);
+      const { audio_url, cache } = await res.json();
+      const backendBase = API.replace(/\/api$/, "");
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
       audioRef.current = audio;
-      audio.onended = () => {
-        setSpeaking(false);
-        try { URL.revokeObjectURL(url); } catch { /* ignore */ }
-      };
-      audio.onerror = () => {
-        setSpeaking(false);
-        try { URL.revokeObjectURL(url); } catch { /* ignore */ }
-      };
-      await audio.play();
+      audio.onended = () => { setSpeaking(false); };
+      audio.onerror = () => { setSpeaking(false); };
+      const tryPlay = () => audio.play().catch(() => setSpeaking(false));
+      if (audio.readyState >= 2) tryPlay(); else audio.oncanplay = tryPlay;
     } catch (e) {
       // Autoplay block or fetch abort — silently stop the animation
       setSpeaking(false);

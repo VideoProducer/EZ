@@ -1,6 +1,16 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
 ## 2026-02-08 (latest)
+- **Full-site TTS prewarm coverage** — every page that renders a Doogie Play button now silently prewarms the audio on mount, so first-click playback is a Mongo cache HIT instead of a cold OpenAI generation:
+  - `DoogieHeroGreeting` (homepage): prewarms the current mode's onboarding script on mount and whenever the user toggles buyer/seller/all mode.
+  - `DoogieTour`: prewarms step N+1 while step N plays — tour transitions become instant.
+  - `CommunitySizzleReel` (community pages): swapped POST→blob for prepare→GET so the reel appears IMMEDIATELY with a Play button (previously hidden until the mp3 finished downloading, a 3-6 s gap Doug had flagged as feeling broken).
+  - `VisualAgentDemo` (kiosk): on scenario select, prewarms every `agent` turn's script + the VOICE_SCRIPT reply, staggered 80 ms apart to avoid a burst; only fires when `speakerOn` so muted visitors don't burn Universal Key budget.
+  - `DashboardMockup` (voice search summary + return greeting): both use prepare→GET now.
+  - `_playDoogieTTS()` shared helper + new `_prewarmDoogieTTS()` helper in App.js — every one of the ~9 call sites uses the same fast flow with `oncanplay` + progressive `<audio src=…>` streaming.
+- Verified with a page-load network capture: HomePage fires 1 prewarm + 1 prepare within 3.5 s of DOM ready (DoogieHero + DoogieTour); Whistler community page renders the sizzle reel immediately with an active Play button.
+
+## 2026-02-08 (earlier same day)
 - **Doogie TTS narration speed-up** — added a prepare→GET-by-cache-key flow so `<audio>` streams progressively and the mp3 is browser-HTTP-cacheable across sessions:
   - New endpoints in `server.py`: `POST /api/doogie/tts/prepare` (returns `{cache_key, audio_url, cache}` in ~150 ms), `POST /api/doogie/tts/prewarm` (fires background generation and returns "queued" in ~400 ms), and `GET /api/doogie/tts/audio/{key}.mp3?wait=1` (serves cached bytes with `Cache-Control: public, max-age=2592000, immutable` + `ETag`, waits up to ~4 s for a background prewarm to land).
   - Legacy `POST /api/doogie/tts` was refactored so the Mongo cache write now runs as a FastAPI `BackgroundTask` on miss (shaves 100-200 ms per cold play) and both HIT/MISS responses carry the immutable Cache-Control + ETag with 304 conditional support.

@@ -1997,23 +1997,45 @@ const DOOGIE_ONBOARDING_SCRIPTS = {
 const DOOGIE_ONBOARDING_SCRIPT = DOOGIE_ONBOARDING_SCRIPTS.all;
 
 // Shared TTS helper used by both the hero greeting card and the onboarding
-// modal. Fetches the MP3 blob from /api/doogie/tts and plays it. Returns the
-// <audio> element so callers can stop it if the user dismisses mid-play.
+// modal. Uses the fast prepare→GET flow (see App.js speak() docs) so audio
+// streams progressively via <audio src=URL> instead of blocking on a full
+// blob download. Returns the <audio> element so callers can stop it if the
+// user dismisses mid-play.
 const _playDoogieTTS = async (text, onEnded) => {
   try {
-    const r = await fetch(`${API}/doogie/tts`, {
+    const prep = await fetch(`${API}/doogie/tts/prepare`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: text.slice(0, 3800), voice: "ash" }),
     });
-    if (!r.ok) return null;
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    const a = new Audio(url);
-    a.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } onEnded && onEnded(); };
-    await a.play();
+    if (!prep.ok) return null;
+    const { audio_url, cache } = await prep.json();
+    const backendBase = API.replace(/\/api$/, "");
+    const url = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
+    const a = new Audio();
+    a.preload = "auto";
+    a.src = url;
+    a.onended = () => { onEnded && onEnded(); };
+    // canplay (not canplaythrough) → start on first playable frame, saves
+    // 200-500 ms perceived first-audio lag.
+    const tryPlay = () => a.play().catch(() => {});
+    if (a.readyState >= 2) tryPlay(); else a.oncanplay = tryPlay;
     return a;
   } catch { return null; }
+};
+
+// Silently kick off a backend TTS cache warm — used by pages that render
+// a Doogie Play button. Fire-and-forget; never surfaces errors.
+const _prewarmDoogieTTS = (text) => {
+  if (!text || text.length < 3) return;
+  try {
+    fetch(`${API}/doogie/tts/prewarm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text.slice(0, 3800), voice: "ash" }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {}
 };
 
 // ── Hero greeting card — small, friendly, invites first-time visitors ──
@@ -2027,6 +2049,13 @@ const DoogieHeroGreeting = () => {
   });
   const audioRef = useRef(null);
   useEffect(() => () => { if (audioRef.current) { try { audioRef.current.pause(); } catch { /* ignore */ } } }, []);
+  // Prewarm the current mode's onboarding script on mount + whenever the
+  // user changes mode. By the time they click "Hi from Doogie" the mp3 is
+  // already in Mongo (and probably HTTP-cached in the browser too).
+  useEffect(() => {
+    const script = DOOGIE_ONBOARDING_SCRIPTS[mode] || DOOGIE_ONBOARDING_SCRIPTS.all;
+    _prewarmDoogieTTS(script);
+  }, [mode]);
   const pickMode = (m) => {
     setMode(m);
     try { localStorage.setItem("ez_doogie_mode", m); } catch { /* ignore */ }
@@ -6834,23 +6863,29 @@ const CommunitySizzleReel = ({ slug, community }) => {
   React.useEffect(() => {
     if (!script) { setHidden(true); return; }
     try { if (sessionStorage.getItem(storageKey) === "1") { setHidden(true); return; } } catch {}
-    let revoke = null;
+    // NEW: fast prepare → GET-by-key flow.
+    //   • The reel becomes visible on the FIRST render (no more "wait for
+    //     blob then reveal") — Doug's audit flagged the 3-6 s pop-in delay
+    //     that made the sizzle feel broken on cold visits.
+    //   • The GET URL is content-hashed + Cache-Control: immutable so the
+    //     browser HTTP-caches the mp3 across sessions.
+    //   • If prepare reports MISS, the background prewarm generates the
+    //     mp3 in parallel; the <audio> element uses ?wait=1 to block up to
+    //     ~4 s at play-time waiting for the mp3 to land.
     (async () => {
       try {
-        const r = await fetch(`${API}/doogie/tts`, {
+        const prep = await fetch(`${API}/doogie/tts/prepare`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: script, voice: "ash" }),
         });
-        if (!r.ok) throw new Error("tts failed");
-        const blob = await r.blob();
-        const url = URL.createObjectURL(blob);
-        revoke = url;
-        setAudioUrl(url);
+        if (!prep.ok) throw new Error("tts prepare failed");
+        const { audio_url, cache } = await prep.json();
+        const backendBase = API.replace(/\/api$/, "");
+        setAudioUrl(`${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`);
         logEvent("view");
       } catch { setHidden(true); }
     })();
-    return () => { if (revoke) URL.revokeObjectURL(revoke); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
   const play = () => {

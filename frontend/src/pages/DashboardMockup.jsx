@@ -2402,20 +2402,25 @@ const SyncedResults = () => {
     setTtsLoading(true);
     try {
       const backendUrl = process.env.REACT_APP_BACKEND_URL;
-      const resp = await fetch(`${backendUrl}/api/doogie/tts`, {
+      // Fast path: prepare → GET-by-cache-key so <audio src> streams
+      // progressively and re-plays hit the browser HTTP cache.
+      const prep = await fetch(`${backendUrl}/api/doogie/tts/prepare`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: summary, voice: "ash" }),
       });
-      if (!resp.ok) throw new Error(`TTS failed (${resp.status})`);
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      if (!prep.ok) throw new Error(`TTS prepare failed (${prep.status})`);
+      const { audio_url, cache } = await prep.json();
+      const url = `${backendUrl}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = url;
       try { audio.playbackRate = getDoogieSpeed(); } catch {}
       audio.onplay = () => setPlaying(true);
-      audio.onended = () => { setPlaying(false); URL.revokeObjectURL(url); };
+      audio.onended = () => { setPlaying(false); };
       audio.onerror = () => { setPlaying(false); setTtsError("Playback failed."); };
       audioRef.current = audio;
-      await audio.play();
+      const tryPlay = () => audio.play().catch(() => setTtsError("Playback failed."));
+      if (audio.readyState >= 2) tryPlay(); else audio.oncanplay = tryPlay;
     } catch (e) {
       setTtsError(e.message || "TTS unavailable.");
       setPlaying(false);
@@ -2494,17 +2499,18 @@ const SyncedResults = () => {
     const t = setTimeout(async () => {
       try {
         const backendUrl = process.env.REACT_APP_BACKEND_URL;
-        const resp = await fetch(`${backendUrl}/api/doogie/tts`, {
+        const prep = await fetch(`${backendUrl}/api/doogie/tts/prepare`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: greeting, voice: "ash" }),
         });
-        if (!resp.ok) return;
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        if (!prep.ok) return;
+        const { audio_url, cache } = await prep.json();
+        const audio = new Audio();
+        audio.preload = "auto";
+        audio.src = `${backendUrl}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
         try { audio.playbackRate = getDoogieSpeed(); } catch {}
-        audio.onended = () => URL.revokeObjectURL(url);
-        await audio.play();
+        const tryPlay = () => audio.play().catch(() => {});
+        if (audio.readyState >= 2) tryPlay(); else audio.oncanplay = tryPlay;
       } catch { /* silently swallow — greeting is a nice-to-have, never blocking */ }
     }, 500);
     return () => clearTimeout(t);
