@@ -6668,6 +6668,39 @@ async def startup():
             await _a.sleep(3600)  # check hourly
     asyncio.create_task(_neighborhood_heatmap_weekly_digest_loop())
 
+    async def _weekly_refresh_loop():
+        """Weekly Content Refresh — Sunday 03:00 PT (= 11:00 UTC during
+        PST winter, 10:00 UTC during PDT summer).  Fires ONE full refresh
+        pass per week that regenerates the sitemap, llms-full.txt, ai.json
+        timestamp, heatmap snapshot, and emails Doug a change-log summary.
+        NEVER adds pages, changes URLs, or auto-edits statute content.
+        See /app/backend/services/weekly_refresh.py for the full contract."""
+        import asyncio as _a
+        from services.weekly_refresh import run_weekly_refresh
+        # De-dup: don't fire twice in the same week if the pod restarts on
+        # a Sunday.  Track last-fired week in Mongo.
+        while True:
+            try:
+                now_utc = datetime.now(timezone.utc)
+                # Sunday = weekday 6; 11:00 UTC ≈ 03:00 PT during PST (winter).
+                # During PDT (summer) this fires at 04:00 PT — acceptable
+                # since it's an internal cron with no consumer impact.
+                if now_utc.weekday() == 6 and now_utc.hour == 11:
+                    year_wk = f"{now_utc.year}-W{now_utc.isocalendar()[1]:02d}"
+                    already = await db.weekly_refresh_runs.find_one({"year_week": year_wk})
+                    if not already:
+                        r = await run_weekly_refresh(db, base_url="https://eztofind.ca")
+                        await db.weekly_refresh_runs.insert_one({
+                            "year_week": year_wk,
+                            "ran_at": now_utc.isoformat(),
+                            "duration_sec": r.get("duration_sec"),
+                        })
+                        logger.info(f"weekly_refresh completed: {year_wk} in {r.get('duration_sec')}s")
+            except Exception as e:
+                logger.error(f"weekly_refresh loop failed: {e}")
+            await _a.sleep(3600)  # check hourly
+    asyncio.create_task(_weekly_refresh_loop())
+
 @api.post("/admin/regenerate-sitemap")
 async def admin_regen_sitemap(_=Depends(verify_admin)):
     from sitemap_generator import generate_sitemap
@@ -7004,6 +7037,17 @@ async def admin_heatmap_recompute(_=Depends(verify_admin)):
     logic the daily background loop runs."""
     from services.neighborhood_heatmap import snapshot_and_alert
     return await snapshot_and_alert(db, base_url="https://eztofind.ca")
+
+
+@api.post("/admin/weekly-refresh/run")
+async def admin_weekly_refresh_run(_=Depends(verify_admin)):
+    """Manual trigger for the Sunday 03:00 PT internal weekly-refresh
+    cron.  Same code path as the automatic loop — regenerates sitemap +
+    llms-full.txt + ai.json + heatmap snapshot, audits glossary/climate
+    staleness, samples the AEO score, and emails Doug a change-log.
+    Idempotent; safe to run any time."""
+    from services.weekly_refresh import run_weekly_refresh
+    return await run_weekly_refresh(db, base_url="https://eztofind.ca")
 
 
 @api.get("/admin/heatmap/history/{slug}")
