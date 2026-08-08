@@ -8467,14 +8467,20 @@ async def search_listings(
     # against street_address / unparsed_address / postal_code.
     _addr_regex = None
     _postal_regex = None
+    _postal_fsa = None                # 3-char neighbourhood prefix, e.g. "V3A"
     if q:
         q_stripped = q.strip()
-        # Canadian postal code: A1A 1A1 or A1A1A1 (case-insensitive).
+        # Full Canadian postal code: A1A 1A1 or A1A1A1 (case-insensitive).
         pc_match = re.match(r'^([A-Za-z]\d[A-Za-z])\s*(\d[A-Za-z]\d)$', q_stripped)
+        # FSA-only (first 3 chars, e.g. "V3A") — treats the postal-code area
+        # as a neighbourhood.  Canada Post FSAs uniquely identify a district
+        # so this is the correct "neighbourhood search" behaviour.
+        fsa_match = re.match(r'^([A-Za-z]\d[A-Za-z])$', q_stripped)
         if pc_match:
-            # Stored postal codes may or may not include the mid-space, so
-            # tolerate both forms in the regex we hand to Mongo.
             _postal_regex = f"^{pc_match.group(1).upper()}\\s*{pc_match.group(2).upper()}$"
+            _postal_fsa = pc_match.group(1).upper()  # fallback if exact 0 hits
+        elif fsa_match:
+            _postal_fsa = fsa_match.group(1).upper()
         else:
             # Street-address heuristic: starts with a digit AND has ≥1 space.
             # Catches "930 Josephine Rd", "22374 Lougheed Hwy", "#4 - 123 Main".
@@ -8483,6 +8489,20 @@ async def search_listings(
     # Accept legacy `community` param as an alias for city (frontend has used both).
     if community and not city:
         city = community
+    # If the user typed a postal code into the Community/City filter, treat
+    # it as a postal-code lookup instead of a city name (0 exact = fall back
+    # to the FSA neighbourhood).  Same detection logic as `q` above.
+    if city:
+        city_stripped = city.strip()
+        pc_in_city  = re.match(r'^([A-Za-z]\d[A-Za-z])\s*(\d[A-Za-z]\d)$', city_stripped)
+        fsa_in_city = re.match(r'^([A-Za-z]\d[A-Za-z])$', city_stripped)
+        if pc_in_city:
+            _postal_regex = f"^{pc_in_city.group(1).upper()}\\s*{pc_in_city.group(2).upper()}$"
+            _postal_fsa   = pc_in_city.group(1).upper()
+            city = None   # don't apply the city filter — postal wins
+        elif fsa_in_city:
+            _postal_fsa   = fsa_in_city.group(1).upper()
+            city = None
     if city:      query["city"] = _city_query(city)
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
     # region_group: resolves a top-level BC area (e.g. "Sea-to-Sky") to the full
@@ -8615,8 +8635,12 @@ async def search_listings(
     if q and not (city or region or nl_extracted.get("city")):
         # Postal-code or street-address queries win over locality/text — we
         # know exactly what field to hit, so use it and skip $text entirely.
-        if _postal_regex:
-            query["postal_code"] = {"$regex": _postal_regex, "$options": "i"}
+        # For postal codes we prefer the FSA (first 3 chars) — Canada Post's
+        # Forward Sortation Area maps to a neighbourhood, which is what the
+        # visitor actually wants ("show me my area").  The exact 6-char code
+        # would return 0 for the vast majority of BC listings.
+        if _postal_fsa:
+            query["postal_code"] = {"$regex": f"^{_postal_fsa}", "$options": "i"}
         elif _addr_regex:
             query.setdefault("$or", [])
             query["$or"] = [
@@ -8641,6 +8665,10 @@ async def search_listings(
                     })
             else:
                 query["$text"] = {"$search": q}
+    elif not q and _postal_fsa:
+        # Postal code came in via the Community/City filter (city= param);
+        # `q` is unset but we still want the FSA neighbourhood search.
+        query["postal_code"] = {"$regex": f"^{_postal_fsa}", "$options": "i"}
     elif q and nl_extracted.get("city") and not city:
         # LLM extracted a city — but its output can be noisy ("West Vancouver
         # Under" instead of "West Vancouver"). Cross-check against the curated
@@ -8663,8 +8691,8 @@ async def search_listings(
     elif q:
         # City/region already set explicitly — still let q filter within that
         # scope. Postal-code / street-address get regex; otherwise $text.
-        if _postal_regex:
-            query["postal_code"] = {"$regex": _postal_regex, "$options": "i"}
+        if _postal_fsa:
+            query["postal_code"] = {"$regex": f"^{_postal_fsa}", "$options": "i"}
         elif _addr_regex:
             query.setdefault("$and", []).append({
                 "$or": [

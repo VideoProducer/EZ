@@ -1967,7 +1967,7 @@ const UnifiedSearchBar = () => {
             <input
               value={filters.city || ""}
               onChange={e => set("city", e.target.value)}
-              placeholder="Any BC community"
+              placeholder="Any BC community or postal code (e.g. V3A)"
               data-testid="dash-search-city"
               style={_inp}
             />

@@ -93,11 +93,12 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
   - Frontend page `/admin/heatmap` — 32-row ranked table with temperature badges (Hot/Warming/Cool/Cold), Buyer's (blue) / Seller's (yellow) / Balanced flags, 3mo/6mo/12mo composite arrows, "learning" placeholder for windows without enough snapshot history yet
   - 25 pytest unit tests cover scoring, classification, market-type thresholds, arrow logic, and neighborhood key/label helpers — all passing
   - Live-verified: 451 sub-areas analyzed, 32 rendered · Warming→Hot alert delivered to Resend outbox on synthetic crossing · dedup confirmed on repeat run
-- **Search bar upgrade — Address / Postal code (Feb 7)**:
+- **Search bar upgrade — Address / Postal code (Feb 7-8)**:
   - Root cause: `/api/listings?q=930 Josephine` returned 0 rows because Mongo `$text` tokenises words and matches ANY token (so "930 Josephine Rd" matched every listing with "Rd" in the description)
-  - Added targeted routing in `search_listings`: Canadian postal-code regex (`A1A 1A1` or `A1A1A1`) hits `postal_code` field with a tolerant space regex; street-address heuristic (starts with a digit + space) hits `street_address` + `unparsed_address` with a case-insensitive regex
-  - Placeholder updated: `Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)`
-  - Verified live: `930 Josephine Rd` → 2 correct Central Saanich listings; `V6B1X9` / `V6B 1X9` / lowercase `v0c 2c0` all return the right postal-code matches
+  - Added targeted routing in `search_listings`: Canadian postal codes (full A1A 1A1 OR FSA-only A1A) route to `postal_code` field with an FSA-prefix regex — matches Canada Post's neighbourhood definition, so "V3A 0A5" now returns all 358 listings in the V3A Langley/Maple Ridge FSA (not just the exact-postal 0 hits). Also works when postal is entered into the Community/City filter box (auto-detected + rerouted).
+  - Street-address heuristic (starts with a digit + space) hits `street_address` + `unparsed_address` with a case-insensitive regex
+  - Placeholders updated: main bar shows `Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)`; Community/City filter shows `Any BC community or postal code (e.g. V3A)`
+  - Verified live: `930 Josephine Rd` → 2 correct listings; `V3A 0A5` / `V3A` / `v3a 0a5` (in city filter) all → 358 Langley listings; city + street-address regressions clean
 - **New Doogie OG image (Feb 7)**:
   - Swapped iMessage / Facebook / LinkedIn / Slack link-preview image to the new "Doogie holding magnifying glass + laptop with EZtoFind.ca + DOOGIE wordmark" logo
   - `/app/frontend/public/images/doogie-og.png` (1200×630 OG spec on white) + updated `doogie-laptop.png` (1024² square) — both composited from the transparent-PNG source
