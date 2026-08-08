@@ -25,7 +25,7 @@ export const PaneBuyerInsights = ({ focusCity }) => {
       try {
         const r = await fetch(`${API}/tours/library?limit=1`);
         if (r.ok && !cancelled) setFreshness("in the last 4 hours");
-      } catch { /* keep default */ }
+      } catch (e) { if (typeof console !== "undefined") console.warn("PaneBuyerInsights: freshness enrichment failed, keeping default label", e); }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -38,7 +38,7 @@ export const PaneBuyerInsights = ({ focusCity }) => {
         if (!r.ok) return;
         const data = await r.json();
         if (!cancelled && data && (data.active_count || 0) > 0) setLive(data);
-      } catch { /* fallback keeps illustrative */ }
+      } catch (e) { if (typeof console !== "undefined") console.warn("PaneBuyerInsights: live insights fetch failed, keeping illustrative stats", e); }
     })();
     return () => { cancelled = true; };
   }, [region.city]);
