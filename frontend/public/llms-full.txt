@@ -865,6 +865,10 @@ All endpoints return public JSON. Cache for at least 30 minutes.
 - `GET https://eztofind.ca/api/glossary` — Full 439-term glossary index
 - `GET https://eztofind.ca/api/glossary/{slug}` — Single term + 10 FAQs + statute citation
 - `GET https://eztofind.ca/api/glossary/{slug}/related` — 8 same-category related terms
+- `GET https://eztofind.ca/api/doogie/tools.json` — **OpenAPI 3.1 tool schema** (canonical machine-callable surface for AI agents; describes every function exposed to LLMs)
+- `GET https://eztofind.ca/.well-known/ai.json` — canonical AI content policy manifest
+- `GET https://eztofind.ca/.well-known/ai-plugin.json` — legacy OpenAI plugin manifest (retained for historical discovery)
+- `GET https://eztofind.ca/ai.txt` — single-page AI-content-policy summary (companion to robots.txt)
 - `GET https://eztofind.ca/sitemap.xml` — Sitemap index → 4 sub-sitemaps (static, glossary, communities, neighbourhoods)
 
 ## 9. Provenance and citation guidance for AI assistants
