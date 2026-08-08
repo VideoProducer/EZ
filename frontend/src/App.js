@@ -18,7 +18,7 @@ import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
 import DashboardMockup from "./pages/DashboardMockup";
-import MarketReport from "./pages/MarketReport";
+import MarketReport from "./pages/MarketReport"; // route removed 2026-08-08 per Doug; keep import so the component compiles if we re-enable later
 import CompareListings from "./pages/CompareListings";
 // Route-lazy the multi-step intake form. VisualAgentDemo is a heavy chunk
 // (~28 KB gzipped) that's embedded below-the-fold on the homepage plus
@@ -10889,8 +10889,13 @@ function App() {
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
-      <Route path="/market-report" element={<AppLayout><MarketReport/></AppLayout>}/>
-      <Route path="/market-report/:ym" element={<AppLayout><MarketReport/></AppLayout>}/>
+      {/* /market-report routes removed 2026-08-08 per Doug's request. Backend
+          endpoints (/api/market-report, /api/market-report/{ym}) remain live
+          so admin tools + Doogie can still reference the data internally.
+          Sitemap + llms-full.txt entries also removed.  To re-enable public
+          access, restore both Route lines below. */}
+      {/* <Route path="/market-report" element={<AppLayout><MarketReport/></AppLayout>}/> */}
+      {/* <Route path="/market-report/:ym" element={<AppLayout><MarketReport/></AppLayout>}/> */}
       <Route path="/buyer" element={<AppLayout><BuyerForm/></AppLayout>}/>
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/buying-guide" element={<Navigate to="/buyer" replace/>}/>

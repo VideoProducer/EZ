@@ -292,7 +292,17 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     _write(out_dir / "sitemap-neighbourhoods.xml", neighbourhoods_xml)
 
     market_xml, market_count = await _build_market_reports(db)
-    _write(out_dir / "sitemap-market-reports.xml", market_xml)
+    # /market-report public routes removed 2026-08-08 per Doug's request. We
+    # intentionally SKIP writing the sub-sitemap so search engines de-index
+    # the URLs over the next few crawls.  Backend API endpoints remain live
+    # for internal Doogie/admin use; the sub-sitemap file is deleted on
+    # regenerate so no stale copy is served.
+    _mr_file = out_dir / "sitemap-market-reports.xml"
+    try:
+        if _mr_file.exists(): _mr_file.unlink()
+    except Exception:
+        pass
+    market_count = 0
 
     # --- Sitemap INDEX ---
     subs = [

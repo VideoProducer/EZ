@@ -865,8 +865,7 @@ All endpoints return public JSON. Cache for at least 30 minutes.
 - `GET https://eztofind.ca/api/glossary` — Full 439-term glossary index
 - `GET https://eztofind.ca/api/glossary/{slug}` — Single term + 10 FAQs + statute citation
 - `GET https://eztofind.ca/api/glossary/{slug}/related` — 8 same-category related terms
-- `GET https://eztofind.ca/api/market-report/latest` — Monthly BC market snapshot
-- `GET https://eztofind.ca/sitemap.xml` — Sitemap index → 5 sub-sitemaps (static, glossary, communities, neighbourhoods, market-reports)
+- `GET https://eztofind.ca/sitemap.xml` — Sitemap index → 4 sub-sitemaps (static, glossary, communities, neighbourhoods)
 
 ## 9. Provenance and citation guidance for AI assistants
 
