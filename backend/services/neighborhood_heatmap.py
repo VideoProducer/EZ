@@ -445,51 +445,33 @@ async def compute_heatmap(db, segment: Optional[str] = None) -> dict:
 
 
 # ── Snapshot writer + alerting ─────────────────────────────────────────────
-async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
-    """Persist today's snapshot for the full BC market AND every tracked
-    segment (luxury, equestrian). Then compare against yesterday to detect
-    Warming→Hot crossings for the FULL market only (segment crossings are
-    surfaced in the digest instead, to avoid alert fatigue).  Sends an
-    instant Resend email per full-market crossing, deduped for 7 days.
-    Returns a summary dict for logs / debugging."""
+# Label used in email subjects + `neighborhood_heat_alerts_sent.crossing` keys.
+_SEGMENT_LABELS = {
+    None: ("Market", "warming_to_hot"),
+    "luxury":     ("LUXURY market", "warming_to_hot:luxury"),
+    "equestrian": ("EQUESTRIAN market", "warming_to_hot:equestrian"),
+}
+
+
+async def _detect_and_alert_crossings(
+    db,
+    *,
+    heat: dict,
+    prev_snapshot: Optional[dict],
+    segment: Optional[str],
+    now: datetime,
+    base_url: str,
+) -> tuple[int, int, int]:
+    """Compare `heat["neighborhoods"]` to `prev_snapshot["rows"]`, detect
+    Warming→Hot crossings, send instant Resend emails to Doug (deduped 7 d
+    per (slug, segment)). Returns `(crossings_detected, sent, deduped)`."""
     from services.email_sender import send_email, casl_footer_html, casl_footer_text
 
-    now = datetime.now(timezone.utc)
-
-    # ── Segment snapshots (luxury, equestrian) — silently persisted so
-    # segment heatmap arrows have history to compare against. No alerts
-    # here; segment crossings ride the weekly digest.
-    segment_report: dict[str, Any] = {}
-    for seg in ("luxury", "equestrian"):
-        try:
-            seg_heat = await compute_heatmap(db, segment=seg)
-            await db[_snapshot_coll(seg)].insert_one({
-                "generated_at": now.isoformat(),
-                "segment": seg,
-                "rows": seg_heat["neighborhoods"],
-                "total_neighborhoods_analyzed": seg_heat["total_neighborhoods_analyzed"],
-            })
-            segment_report[seg] = {
-                "rows": len(seg_heat["neighborhoods"]),
-                "analyzed": seg_heat["total_neighborhoods_analyzed"],
-            }
-        except Exception as e:
-            logger.error(f"snapshot_and_alert: segment {seg} failed: {e}")
-            segment_report[seg] = {"error": str(e)[:200]}
-
-    heat = await compute_heatmap(db)
-    # `now` was set at the top of the function so all segment + full snapshots
-    # share the same timestamp for aligned cross-segment analysis.
-
-    # Yesterday's snapshot (before we write today) — used to spot the crossing.
-    yesterday = await db.neighborhood_heat_snapshots.find_one(
-        {}, sort=[("generated_at", -1)]
-    )
-    yest_rows_by_slug = {r["slug"]: r for r in (yesterday or {}).get("rows", [])}
-
+    seg_label, crossing_key = _SEGMENT_LABELS[segment]
+    prev_by_slug = {r["slug"]: r for r in (prev_snapshot or {}).get("rows", [])}
     crossings: list[dict] = []
     for row in heat["neighborhoods"]:
-        prev = yest_rows_by_slug.get(row["slug"])
+        prev = prev_by_slug.get(row["slug"])
         if not prev:
             continue
         if prev.get("temperature") == "Warming" and row["temperature"] == "Hot":
@@ -497,40 +479,38 @@ async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
                 "slug": row["slug"],
                 "name": row["name"],
                 "city": row["city"],
-                "prev_temp": prev.get("temperature"),
-                "new_temp":  row["temperature"],
+                "prev_temp":  prev.get("temperature"),
+                "new_temp":   row["temperature"],
                 "prev_score": prev.get("temperature_score"),
                 "new_score":  row["temperature_score"],
                 "median_list_price": row.get("median_list_price"),
-                "median_dom":       row.get("median_dom"),
-                "market_type":      row.get("market_type"),
+                "median_dom":  row.get("median_dom"),
+                "market_type": row.get("market_type"),
             })
 
-    # Write today's snapshot.
-    await db.neighborhood_heat_snapshots.insert_one({
-        "generated_at": now.isoformat(),
-        "rows": heat["neighborhoods"],
-        "total_neighborhoods_analyzed": heat["total_neighborhoods_analyzed"],
-    })
-
-    # Dispatch instant alerts (deduped 7 days per crossing).
+    # Dispatch instant alerts (deduped 7 days per (slug, segment)).
     sent, deduped = 0, 0
     dedup_cutoff = (now - timedelta(days=ALERT_DEDUP_DAYS)).isoformat()
+    dash_path = "/admin/heatmap" if segment is None else f"/admin/heatmap/{segment}"
     for c in crossings:
         already = await db.neighborhood_heat_alerts_sent.find_one({
             "slug": c["slug"],
-            "crossing": "warming_to_hot",
+            "crossing": crossing_key,
             "sent_at": {"$gte": dedup_cutoff},
         })
         if already:
             deduped += 1
             continue
 
-        subject = f"🔥 Market alert — {c['name']} ({c['city']}) just crossed into HOT"
+        subject = f"🔥 {seg_label} alert — {c['name']} ({c['city']}) just crossed into HOT"
         price_s = f"${c['median_list_price']:,}" if c.get("median_list_price") else "—"
         dom_s   = f"{c['median_dom']} days" if c.get("median_dom") is not None else "—"
+        seg_tag_html = "" if segment is None else (
+            f"<p style='margin:0 0 0.75rem;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em'>Segment: {seg_label}</p>"
+        )
         html = f"""
         <div style="font-family:Inter,Arial,sans-serif;color:#0F2A5B;max-width:640px">
+          {seg_tag_html}
           <h2 style="margin:0 0 0.5rem;font-size:20px">🔥 {c['name']} ({c['city']}) just crossed into HOT</h2>
           <p style="margin:0 0 1rem;color:#374151">
             Composite temperature moved from
@@ -543,7 +523,7 @@ async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
             <tr><td style="padding:4px 12px 4px 0;color:#6b7280">Market type</td><td><strong>{c['market_type']}</strong></td></tr>
           </table>
           <p style="margin:0 0 1rem">
-            <a href="{base_url}/admin/heatmap" style="background:#F5A623;color:#0F2A5B;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600">Open Market Heatmap →</a>
+            <a href="{base_url}{dash_path}" style="background:#F5A623;color:#0F2A5B;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600">Open {seg_label} Heatmap →</a>
           </p>
           <p style="font-size:12px;color:#6b7280;margin:0">
             Signals derived from CREA DDF® Active inventory (list price, DOM, absorption proxy, MoS).
@@ -553,10 +533,10 @@ async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
         </div>
         """.strip()
         text = (
-            f"{c['name']} ({c['city']}) just crossed WARMING → HOT.\n"
+            f"[{seg_label}] {c['name']} ({c['city']}) just crossed WARMING → HOT.\n"
             f"Score {c['prev_score']} → {c['new_score']}.\n"
             f"Median list: {price_s} · DOM: {dom_s} · Market: {c['market_type']}.\n"
-            f"Dashboard: {base_url}/admin/heatmap\n"
+            f"Dashboard: {base_url}{dash_path}\n"
             + casl_footer_text(f"{base_url}/admin/settings/heatmap-alerts/off")
         )
         await send_email(
@@ -566,23 +546,75 @@ async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
             html=html,
             text=text,
             kind="transactional",   # internal ops notification, not commercial
-            related_id=f"heatmap-crossing:{c['slug']}",
+            related_id=f"heatmap-crossing:{crossing_key}:{c['slug']}",
             unsubscribe_url=f"{base_url}/admin/settings/heatmap-alerts/off",
         )
         await db.neighborhood_heat_alerts_sent.insert_one({
             "slug": c["slug"],
-            "crossing": "warming_to_hot",
+            "crossing": crossing_key,
+            "segment": segment or "all",
             "sent_at": now.isoformat(),
             "payload": c,
         })
         sent += 1
 
+    return len(crossings), sent, deduped
+
+
+async def snapshot_and_alert(db, base_url: str = "https://eztofind.ca") -> dict:
+    """Persist today's snapshot for the full BC market AND every tracked
+    segment (luxury, equestrian). For each series, compare against the
+    most-recent prior snapshot in that series' collection to detect
+    Warming→Hot crossings, then fire instant Resend emails to Doug
+    (deduped 7 d per slug+segment).  Returns a summary dict for logs /
+    debugging."""
+    now = datetime.now(timezone.utc)
+
+    # ── 1. Full BC market ─────────────────────────────────────────────────
+    heat_full = await compute_heatmap(db)
+    prev_full = await db.neighborhood_heat_snapshots.find_one({}, sort=[("generated_at", -1)])
+    await db.neighborhood_heat_snapshots.insert_one({
+        "generated_at": now.isoformat(),
+        "segment": "all",
+        "rows": heat_full["neighborhoods"],
+        "total_neighborhoods_analyzed": heat_full["total_neighborhoods_analyzed"],
+    })
+    full_crossings, full_sent, full_deduped = await _detect_and_alert_crossings(
+        db, heat=heat_full, prev_snapshot=prev_full, segment=None, now=now, base_url=base_url,
+    )
+
+    # ── 2. Segment markets (luxury, equestrian) ───────────────────────────
+    segment_report: dict[str, Any] = {}
+    for seg in ("luxury", "equestrian"):
+        try:
+            seg_heat = await compute_heatmap(db, segment=seg)
+            prev_seg = await db[_snapshot_coll(seg)].find_one({}, sort=[("generated_at", -1)])
+            await db[_snapshot_coll(seg)].insert_one({
+                "generated_at": now.isoformat(),
+                "segment": seg,
+                "rows": seg_heat["neighborhoods"],
+                "total_neighborhoods_analyzed": seg_heat["total_neighborhoods_analyzed"],
+            })
+            seg_crossings, seg_sent, seg_deduped = await _detect_and_alert_crossings(
+                db, heat=seg_heat, prev_snapshot=prev_seg, segment=seg, now=now, base_url=base_url,
+            )
+            segment_report[seg] = {
+                "rows": len(seg_heat["neighborhoods"]),
+                "analyzed": seg_heat["total_neighborhoods_analyzed"],
+                "crossings_detected": seg_crossings,
+                "instant_alerts_sent": seg_sent,
+                "instant_alerts_deduped": seg_deduped,
+            }
+        except Exception as e:
+            logger.error(f"snapshot_and_alert: segment {seg} failed: {e}")
+            segment_report[seg] = {"error": str(e)[:200]}
+
     return {
-        "generated_at": heat["generated_at"],
-        "total_neighborhoods_analyzed": heat["total_neighborhoods_analyzed"],
-        "crossings_detected": len(crossings),
-        "instant_alerts_sent": sent,
-        "instant_alerts_deduped": deduped,
+        "generated_at": heat_full["generated_at"],
+        "total_neighborhoods_analyzed": heat_full["total_neighborhoods_analyzed"],
+        "crossings_detected": full_crossings,
+        "instant_alerts_sent": full_sent,
+        "instant_alerts_deduped": full_deduped,
         "segments": segment_report,
     }
 
@@ -594,62 +626,89 @@ async def send_weekly_digest(db, base_url: str = "https://eztofind.ca") -> dict:
     from services.email_sender import send_email, casl_footer_html, casl_footer_text
 
     now = datetime.now(timezone.utc)
-    heat = await compute_heatmap(db)
-    week_ago = await _prior_snapshot(db, days_ago=7)
-    if not week_ago:
-        return {"skipped": "no history yet"}
 
-    prev_by_slug = {r["slug"]: r for r in week_ago.get("rows", [])}
-    moves = []
-    for row in heat["neighborhoods"]:
-        prev = prev_by_slug.get(row["slug"])
-        if not prev:
+    # Collect temperature moves for the full market + each tracked segment.
+    # Each series compares against its own 7-day-prior snapshot so the digest
+    # doesn't mix full-BC moves with luxury/equestrian moves.
+    series = [
+        ("Full BC", None,          "/admin/heatmap"),
+        ("Luxury",  "luxury",      "/admin/heatmap/luxury"),
+        ("Equestrian", "equestrian", "/admin/heatmap/equestrian"),
+    ]
+    per_series: list[dict] = []
+    total_moves = 0
+    for label, seg, dash_path in series:
+        heat = await compute_heatmap(db, segment=seg)
+        week_ago = await _prior_snapshot(db, days_ago=7, segment=seg)
+        if not week_ago:
             continue
-        if prev.get("temperature") != row["temperature"]:
-            moves.append({
-                "name": row["name"], "city": row["city"],
-                "from": prev.get("temperature"), "to": row["temperature"],
-                "score_from": prev.get("temperature_score"),
-                "score_to":   row["temperature_score"],
-            })
+        prev_by_slug = {r["slug"]: r for r in week_ago.get("rows", [])}
+        moves = []
+        for row in heat["neighborhoods"]:
+            prev = prev_by_slug.get(row["slug"])
+            if not prev:
+                continue
+            if prev.get("temperature") != row["temperature"]:
+                moves.append({
+                    "name": row["name"], "city": row["city"],
+                    "from": prev.get("temperature"), "to": row["temperature"],
+                    "score_from": prev.get("temperature_score"),
+                    "score_to":   row["temperature_score"],
+                })
+        if moves:
+            per_series.append({"label": label, "segment": seg or "all",
+                               "dash_path": dash_path, "moves": moves})
+            total_moves += len(moves)
 
-    if not moves:
-        # No temperature changes → skip the email; digest fatigue is real.
+    if not per_series:
+        # No temperature changes anywhere → skip the email; digest fatigue is real.
         return {"skipped": "no temperature changes this week"}
 
-    rows_html = "".join(
-        f"<tr><td style='padding:6px 12px 6px 0'><strong>{m['name']}</strong> ({m['city']})</td>"
-        f"<td style='padding:6px 12px'>{m['from']} → <strong>{m['to']}</strong></td>"
-        f"<td style='padding:6px 0;color:#6b7280'>{m['score_from']} → {m['score_to']}</td></tr>"
-        for m in moves
-    )
+    # Build one email that sections by series (Full BC / Luxury / Equestrian).
+    def _section(entry: dict) -> str:
+        rows_html = "".join(
+            f"<tr><td style='padding:6px 12px 6px 0'><strong>{m['name']}</strong> ({m['city']})</td>"
+            f"<td style='padding:6px 12px'>{m['from']} → <strong>{m['to']}</strong></td>"
+            f"<td style='padding:6px 0;color:#6b7280'>{m['score_from']} → {m['score_to']}</td></tr>"
+            for m in entry["moves"]
+        )
+        return (
+            f"<h3 style='margin:1.25rem 0 0.5rem;font-size:16px;color:#0F2A5B'>{entry['label']} · {len(entry['moves'])} shift(s)</h3>"
+            f"<table style='border-collapse:collapse;font-size:14px;margin:0 0 0.75rem'>{rows_html}</table>"
+            f"<p style='margin:0 0 0.5rem'><a href='{base_url}{entry['dash_path']}' style='color:#0F2A5B;text-decoration:underline'>Open {entry['label']} heatmap →</a></p>"
+        )
+
+    sections_html = "".join(_section(e) for e in per_series)
     html = f"""
     <div style="font-family:Inter,Arial,sans-serif;color:#0F2A5B;max-width:640px">
       <h2 style="margin:0 0 0.75rem;font-size:20px">🌡️ Weekly Market Heatmap Digest</h2>
-      <p style="margin:0 0 1rem;color:#374151">{len(moves)} neighborhood(s) shifted temperature this week.</p>
-      <table style="border-collapse:collapse;font-size:14px;margin:0 0 1rem">{rows_html}</table>
-      <p style="margin:0 0 1rem">
-        <a href="{base_url}/admin/heatmap" style="background:#F5A623;color:#0F2A5B;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600">Open Market Heatmap →</a>
-      </p>
+      <p style="margin:0 0 1rem;color:#374151">{total_moves} neighborhood(s) shifted temperature this week across {len(per_series)} tracked series.</p>
+      {sections_html}
       {casl_footer_html(f"{base_url}/admin/settings/heatmap-alerts/off")}
     </div>
     """.strip()
-    text = "Weekly Market Heatmap Digest\n\n" + "\n".join(
-        f"- {m['name']} ({m['city']}): {m['from']} → {m['to']} (score {m['score_from']} → {m['score_to']})"
-        for m in moves
-    ) + f"\n\nDashboard: {base_url}/admin/heatmap\n" + casl_footer_text(f"{base_url}/admin/settings/heatmap-alerts/off")
+
+    def _section_text(entry: dict) -> str:
+        lines = [f"\n{entry['label']} ({len(entry['moves'])} shift(s)):"]
+        for m in entry["moves"]:
+            lines.append(f"  - {m['name']} ({m['city']}): {m['from']} → {m['to']} (score {m['score_from']} → {m['score_to']})")
+        lines.append(f"  Dashboard: {base_url}{entry['dash_path']}")
+        return "\n".join(lines)
+
+    text = "Weekly Market Heatmap Digest\n" + "\n".join(_section_text(e) for e in per_series) + "\n\n" + casl_footer_text(f"{base_url}/admin/settings/heatmap-alerts/off")
 
     await send_email(
         db,
         to="doug@eztofind.ca",
-        subject=f"🌡️ Weekly Heatmap — {len(moves)} neighborhood(s) shifted",
+        subject=f"🌡️ Weekly Heatmap — {total_moves} shift(s) across {len(per_series)} series",
         html=html,
         text=text,
         kind="transactional",
         related_id="heatmap-weekly-digest",
         unsubscribe_url=f"{base_url}/admin/settings/heatmap-alerts/off",
     )
-    return {"sent": True, "moves": len(moves)}
+    return {"sent": True, "series": len(per_series), "total_moves": total_moves,
+            "breakdown": {e["label"]: len(e["moves"]) for e in per_series}}
 
 
 async def ensure_indices(db) -> None:
