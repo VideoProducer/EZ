@@ -136,6 +136,46 @@ export default function MarketReport() {
         "xpath": ["/html/head/title", "//*[@data-speakable='report-highlights']"],
       },
     };
+    // NewsArticle schema (SEO audit #5) — makes monthly market reports
+    // eligible for Google Discover and Google News surfaces on mobile,
+    // which sit alongside standard SERP results and drive substantial
+    // referral traffic for time-sensitive real-estate coverage.  Coexists
+    // fine with the Dataset schema above; Google merges them as one entity.
+    const newsArticle = {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "headline": `British Columbia Real Estate Market Report — ${monthLabel}`,
+      "description": (snap.highlights?.join(" ") || "").substring(0, 220),
+      "datePublished": snap.generated_at,
+      "dateModified": snap.generated_at,
+      "url": url,
+      "mainEntityOfPage": { "@type": "WebPage", "@id": url },
+      "image": [`${site}/images/doogie-og.png?v=4`],
+      "author": {
+        "@type": "Person",
+        "name": "Doug LeMaire, REALTOR®",
+        "url": `${site}/about`,
+        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "EZtoFind.ca",
+        "url": site,
+        "logo": {
+          "@type": "ImageObject",
+          "url": `${site}/logo.png`,
+          "width": 512,
+          "height": 512,
+        },
+      },
+      "articleSection": "BC Real Estate Market Data",
+      "keywords": [
+        "BC real estate", "British Columbia housing market", "monthly market report",
+        "median list price", "MLS listings", monthLabel,
+      ],
+      "isAccessibleForFree": true,
+      "inLanguage": "en-CA",
+    };
     const attach = (id, data) => {
       let el = document.getElementById(id);
       if (!el) { el = document.createElement("script"); el.id = id; el.type = "application/ld+json"; document.head.appendChild(el); }
@@ -144,9 +184,10 @@ export default function MarketReport() {
     attach("mr-dataset-jsonld", dataset);
     attach("mr-faq-jsonld", faq);
     attach("mr-speakable-jsonld", speakable);
+    attach("mr-newsarticle-jsonld", newsArticle);
     document.title = `BC Real Estate Market Report — ${monthLabel} · EZtoFind.ca`;
     return () => {
-      ["mr-dataset-jsonld", "mr-faq-jsonld", "mr-speakable-jsonld"].forEach(id => {
+      ["mr-dataset-jsonld", "mr-faq-jsonld", "mr-speakable-jsonld", "mr-newsarticle-jsonld"].forEach(id => {
         const e = document.getElementById(id); if (e) e.remove();
       });
     };

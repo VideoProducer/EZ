@@ -4932,6 +4932,38 @@ async def list_communities():
     return json.loads(p.read_text())
 
 
+@api.get("/community/{slug}/nearby")
+async def community_nearby(slug: str, limit: int = 6):
+    """SEO / AEO internal-linking helper — return up to N nearby BC
+    communities in the same region_group. Renders as a "Nearby communities"
+    footer on every /community/{slug} page (see App.js CommunityPage).
+
+    Same-region grouping is the semantic linking model that Google's E-E-A-T
+    guidelines reward — visitors are more likely to explore Vancouver ↔
+    Burnaby than Vancouver ↔ Prince George.  For LLMs it strengthens the
+    entity graph ("Maple Ridge is in Greater Vancouver alongside…")."""
+    all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    current_name = current_region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-") == slug:
+                current_name = c; current_region = r; break
+        if current_name: break
+    if not current_name:
+        return {"region": None, "items": []}
+    peers = [c for c in all_comm.get(current_region, []) if c != current_name]
+    # Randomise slightly so each page-view surfaces a different mix,
+    # spreading internal-link equity across the region evenly.
+    import random as _r
+    _r.shuffle(peers)
+    items = [{
+        "name": c,
+        "slug": re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-"),
+        "region": current_region,
+    } for c in peers[:max(1, min(int(limit), 12))]]
+    return {"region": current_region, "current": current_name, "items": items}
+
+
 # =============== LIVE FORECAST (Open-Meteo, no key, 1-hour cache) ===============
 @api.get("/community/{slug}/vibe")
 async def community_vibe(slug: str):

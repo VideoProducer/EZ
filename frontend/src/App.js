@@ -6930,6 +6930,17 @@ const CommunityPage = () => {
       } catch {}
     }).catch(() => {});
   }, [slug]);
+  // Nearby communities in the same region — powers the internal-linking
+  // footer on every community page (SEO audit item #8).  Same region_group
+  // = strongest semantic link; spreads PageRank + strengthens the LLM
+  // entity graph ("Maple Ridge is in Greater Vancouver alongside…").
+  const [nearby, setNearby] = useState({ region: null, items: [] });
+  useEffect(() => {
+    setNearby({ region: null, items: [] });
+    axios.get(`${API}/community/${slug}/nearby?limit=6`, { timeout: 10000 })
+      .then(r => setNearby(r.data || { items: [] }))
+      .catch(() => {});
+  }, [slug]);
   let found = null, region = null;
   const _norm = (s) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => _norm(c) === slug); if(m) { found = m; region = r; break; } }
@@ -7152,6 +7163,32 @@ const CommunityPage = () => {
     {/* Phase B — cross-type "You may also be looking for" cards for community
         pages. Silent-hide if empty or on fetch error. */}
     {slug && <YouMayAlsoBeLookingFor sourceType="community" sourceId={slug} limit={6} testId="community-you-may-also"/>}
+
+    {/* Nearby communities footer — internal-linking win (SEO audit #8).
+        Same region_group siblings; distributes PageRank evenly across the
+        679-node graph and strengthens LLM entity co-occurrence signals. */}
+    {found && nearby.items && nearby.items.length > 0 && (
+      <div data-testid="community-nearby" style={{marginTop:"2.5rem",padding:"1.5rem",background:"var(--paper, #FAFAF7)",border:"1px solid var(--border, #E5E7EB)",borderRadius:12}}>
+        <h3 style={{fontFamily:"'Playfair Display', Georgia, serif",color:"var(--brand-navy, #0F2A5B)",marginTop:0,marginBottom:"0.5rem",fontSize:"1.3rem"}}>
+          Nearby communities in {nearby.region || region}
+        </h3>
+        <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted, #6B7280)",fontSize:"0.88rem",marginTop:0,marginBottom:"1rem"}}>
+          Explore other {nearby.region || region} communities Doug LeMaire, REALTOR® can help you research — every profile includes climate normals, community synopsis, and active MLS® listings.
+        </p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:"0.6rem"}}>
+          {nearby.items.map(n => (
+            <Link
+              key={n.slug}
+              to={`/community/${n.slug}`}
+              data-testid={`nearby-community-${n.slug}`}
+              style={{padding:"0.55rem 1rem",borderRadius:999,background:"#fff",border:"1px solid var(--border, #E5E7EB)",color:"var(--brand-blue, #0F2A5B)",textDecoration:"none",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",fontWeight:600}}
+            >
+              {n.name} →
+            </Link>
+          ))}
+        </div>
+      </div>
+    )}
   </div></section>);
 };
 
