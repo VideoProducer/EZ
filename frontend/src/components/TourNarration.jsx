@@ -102,16 +102,17 @@ export default function TourNarration({ listing }) {
     setState("loading");
     try {
       const script = await _resolveScript();
-      const r = await fetch(`${API}/doogie/tts`, {
+      const prep = await fetch(`${API}/doogie/tts/prepare`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: script, voice: "ash" }),
       });
-      if (!r.ok) throw new Error(`tts ${r.status}`);
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = url;
+      if (!prep.ok) throw new Error(`tts prepare ${prep.status}`);
+      const { audio_url, cache } = await prep.json();
+      const backendBase = API.replace(/\/api$/, "");
+      const url = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
+      if (objectUrlRef.current) { try { URL.revokeObjectURL(objectUrlRef.current); } catch {} }
+      objectUrlRef.current = null;
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.playbackRate = speed;

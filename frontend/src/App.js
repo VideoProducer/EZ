@@ -1209,8 +1209,16 @@ export const DoogieChat = ({ mode = "fab" }) => {
     }
   };
 
-  // Fetch a TTS blob from the backend and auto-play it. Text is trimmed to the
-  // TTS 4096-char cap on the server side; here we defensively slice to 3800.
+  // Fetch a TTS mp3 from the backend and auto-play it via a `prepare → GET
+  // audio-by-key` flow that gives us:
+  //   • `<audio src=URL>` progressive playback (browser streams as it downloads
+  //     — no more waiting for `.blob()` before we can hear anything).
+  //   • Browser HTTP cache reuse in production: the audio URL is content-hashed
+  //     and served with `Cache-Control: public, max-age=2592000, immutable`,
+  //     so re-plays of the same line skip the network entirely.
+  //   • `oncanplay` (not `oncanplaythrough`) trigger — start as soon as the
+  //     browser can begin playing, don't wait for full buffer. Saves 200-500 ms
+  //     of perceived lag on typical 30–90 s narrations.
   // Concurrency: if a new speak() starts before an older one has finished
   // fetching its audio, the older one is invalidated via a monotonic counter.
   const speakSeqRef = useRef(0);
@@ -1219,31 +1227,53 @@ export const DoogieChat = ({ mode = "fab" }) => {
     stopSpeaking();                              // pause anything currently playing
     const mySeq = ++speakSeqRef.current;         // claim the newest slot
     try {
-      const r = await fetch(`${API}/doogie/tts`, {
+      // 1. Prepare → returns cache_key + audio_url. `cache:HIT` means the mp3
+      //    is already in Mongo; `MISS` fires a background prewarm and we still
+      //    get a URL — the GET below waits (?wait=1) for it to land.
+      const prep = await fetch(`${API}/doogie/tts/prepare`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text: text.slice(0, 3800), voice: "ash", session_id: sessionId}),
+        body: JSON.stringify({text: text.slice(0, 3800), voice: "ash"}),
       });
-      if (!r.ok) return;
-      if (mySeq !== speakSeqRef.current) return; // a newer request has since started — drop this one
-      const blob = await r.blob();
-      if (mySeq !== speakSeqRef.current) return; // check again after blob() awaits
-      const url = URL.createObjectURL(blob);
-      const a = new Audio(url);
-      // preload="auto" tells the browser to start buffering immediately instead
-      // of waiting until .play() — shaves ~100-300ms off perceived first-audio lag.
+      if (!prep.ok) return;
+      if (mySeq !== speakSeqRef.current) return;
+      const {audio_url, cache} = await prep.json();
+      if (mySeq !== speakSeqRef.current) return;
+
+      // 2. Play via <audio src=…> — the browser streams audio progressively.
+      // Backend cache HIT → response arrives instantly from Mongo (no OpenAI).
+      // MISS → the GET blocks up to ~4 s waiting for the background prewarm.
+      const backendBase = API.replace(/\/api$/, "");
+      const url = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
+      const a = new Audio();
       a.preload = "auto";
+      a.src = url;
       audioRef.current = a;
-      a.onended = () => { try { URL.revokeObjectURL(url); } catch(_){} if (audioRef.current === a) audioRef.current = null; };
-      // Start playback the moment the browser confirms it can play through
-      // without buffering — sounds cleaner than starting mid-buffer.
+      a.onended = () => { if (audioRef.current === a) audioRef.current = null; };
+      // canplay fires as soon as the browser has enough data to *start* — this
+      // is 200-500 ms sooner than canplaythrough (which waits for a full buffer).
       const tryPlay = () => a.play().catch(()=>{});
-      if (a.readyState >= 3) tryPlay(); else a.oncanplaythrough = tryPlay;
+      if (a.readyState >= 2) tryPlay(); else a.oncanplay = tryPlay;
     } catch (e) {
       // Autoplay policies may throw NotAllowedError on some browsers until the user
       // interacts with the page. That's fine — the user just toggled the speaker
       // so we're already past that gate in almost every case.
     }
+  };
+
+  // Silently kick off a backend TTS cache warm for `text`. Fire-and-forget:
+  // called by places that render a Play button so that by the time the user
+  // clicks, the cache is a HIT (audio arrives in ~200 ms instead of 3–6 s).
+  const prewarmSpeech = (text) => {
+    if (!text || text.length < 3) return;
+    try {
+      fetch(`${API}/doogie/tts/prewarm`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({text: text.slice(0, 3800), voice: "ash"}),
+        keepalive: true,   // survives if the user navigates away mid-request
+      }).catch(()=>{});    // never surfaces errors — this is best-effort
+    } catch(_) {}
   };
 
   // When user disables voice-out mid-play, stop the audio immediately.

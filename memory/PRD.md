@@ -1,6 +1,15 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
 ## 2026-02-08 (latest)
+- **Doogie TTS narration speed-up** — added a prepare→GET-by-cache-key flow so `<audio>` streams progressively and the mp3 is browser-HTTP-cacheable across sessions:
+  - New endpoints in `server.py`: `POST /api/doogie/tts/prepare` (returns `{cache_key, audio_url, cache}` in ~150 ms), `POST /api/doogie/tts/prewarm` (fires background generation and returns "queued" in ~400 ms), and `GET /api/doogie/tts/audio/{key}.mp3?wait=1` (serves cached bytes with `Cache-Control: public, max-age=2592000, immutable` + `ETag`, waits up to ~4 s for a background prewarm to land).
+  - Legacy `POST /api/doogie/tts` was refactored so the Mongo cache write now runs as a FastAPI `BackgroundTask` on miss (shaves 100-200 ms per cold play) and both HIT/MISS responses carry the immutable Cache-Control + ETag with 304 conditional support.
+  - Frontend rewired to use the prepare→GET flow in App.js chat speaker (`speak()`), `ListingNarration.jsx`, `TourNarration.jsx`, `DoogieTour.jsx`. Also switched from `oncanplaythrough` (waits for full buffer) to `oncanplay` (starts on first playable frame) for 200-500 ms earlier playback start.
+  - `DoogieTour.jsx` now prewarms step N+1's TTS while step N is playing, so tour transitions are cache-HIT (~200 ms) instead of cold OpenAI round-trips (~3-6 s).
+  - Benchmarked cold path: OLD 11.3 s POST→blob → NEW 141 ms prepare + browser streams as GET arrives. Warm path: 131 ms prepare + 126 ms GET (immutable HTTP cache in production).
+  - Added `_tts_normalize_text()`, `_tts_write_cache()`, `_tts_generate_and_cache()`, `_tts_pick_voice()` helpers so every endpoint uses the same normalized cache key and voice fallback.
+
+## 2026-02-08 (earlier)
 - **Per-segment Warming→Hot alerts + weekly digest** — `services/neighborhood_heatmap.py::snapshot_and_alert()` now runs crossing detection for all three series (Full BC, Luxury, Equestrian) using series-specific prior snapshots. Instant Resend emails are subject-tagged ("🔥 LUXURY market alert — …"), body-tagged with an uppercase "Segment: LUXURY market" pill, and link to the matching `/admin/heatmap/{segment}` dashboard. Dedup key on `neighborhood_heat_alerts_sent` is now `warming_to_hot:{segment}` so a Luxury Whistler crossing doesn't dedup against a Full-BC Whistler crossing. Extracted the shared logic into `_detect_and_alert_crossings()`. Response schema of `POST /api/admin/heatmap/recompute` now reports `crossings_detected / instant_alerts_sent / instant_alerts_deduped` per segment. Verified: synthetic Fake Ridge (luxury) → 1st call sent, 2nd call deduped, subject line reads "🔥 LUXURY market alert — Fake Ridge (Testville) just crossed into HOT".
 - **Weekly digest goes multi-series** — `send_weekly_digest()` now sections the email by Full BC / Luxury / Equestrian, each with its own 7-day-prior snapshot lookup + move list + "Open {series} heatmap →" link. Subject reflects total shifts across series ("🌡️ Weekly Heatmap — 4 shift(s) across 3 series"). Skips series with no history yet (segment collections < 7d old).
 

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse, HTMLResponse, Response, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -13087,6 +13087,66 @@ class DoogieTTSIn(BaseModel):
 # TTS voice allow-list — anything else falls back to `ash` (Doogie's default).
 _TTS_ALLOWED_VOICES = {"alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer"}
 
+# Immutable HTTP cache for cache-hit audio bytes: the SHA-key is content-derived,
+# so any change to the underlying text produces a NEW key — the old blob URL
+# never lies. Safe to mark `immutable` and give a long max-age.  Value picked
+# to match the Mongo TTL (30 days) so browser/CDN caches don't outlive backend.
+_TTS_CACHE_HEADERS_HIT = {
+    "X-EZ-TTS-Cache": "HIT",
+    "Cache-Control": "public, max-age=2592000, immutable",
+}
+_TTS_CACHE_HEADERS_MISS = {
+    "X-EZ-TTS-Cache": "MISS",
+    "Cache-Control": "public, max-age=2592000, immutable",
+}
+
+
+def _tts_normalize_text(text: str) -> str:
+    """Return the text as sent to OpenAI TTS — trimmed, price-safe, and
+    capped at 4000 chars. Same pipeline is used by every endpoint so cache
+    keys stay consistent between prepare / prewarm / play calls."""
+    from services.price_speech import normalize_prices_for_speech
+    text = (text or "").strip()
+    if len(text) > 4000:
+        text = text[:4000]
+    return normalize_prices_for_speech(text)
+
+
+async def _tts_write_cache(key: str, voice: str, char_count: int, audio_bytes: bytes) -> None:
+    """Background-task friendly cache write — never raises so a slow / failed
+    Mongo write can't stall the audio response the caller already received."""
+    try:
+        await db.doogie_tts_cache.update_one(
+            {"_id": key},
+            {"$set": {
+                "audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
+                "voice": voice,
+                "char_count": char_count,
+                "cached_at": now_iso(),
+                "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
+            }},
+            upsert=True,
+        )
+    except Exception as e:
+        logger.warning(f"TTS cache write failed: {e}")
+
+
+async def _tts_generate_and_cache(text: str, voice: str, key: str) -> bytes:
+    """Call OpenAI TTS via the Emergent proxy and persist the mp3 into the
+    Mongo cache.  Caller decides whether to `await` the cache write inline
+    or hand it to a BackgroundTask — we always await the generation itself
+    so we can return the bytes."""
+    from emergentintegrations.llm.openai import OpenAITextToSpeech
+    tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
+    audio_bytes = await tts.generate_speech(
+        text=text,
+        model="tts-1",   # fast + cheap; upgrade to tts-1-hd later if Doug wants podcast-grade
+        voice=voice,
+        response_format="mp3",
+        speed=1.0,
+    )
+    return audio_bytes
+
 
 def _tts_cache_key(text: str, voice: str) -> str:
     """SHA256 hash of (normalized_text|voice|model) — used as the Mongo _id
@@ -13096,37 +13156,37 @@ def _tts_cache_key(text: str, voice: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _tts_pick_voice(voice: Optional[str]) -> str:
+    v = (voice or "ash").lower()
+    return v if v in _TTS_ALLOWED_VOICES else "ash"
+
+
 @app.post("/api/doogie/tts")
 @_limiter.limit("30/minute")  # per-IP anti-abuse (protects Universal Key balance)
-async def doogie_tts(request: Request, body: DoogieTTSIn):
+async def doogie_tts(request: Request, body: DoogieTTSIn, background: BackgroundTasks):
     """Convert Doogie's response text into an audio stream. Uses OpenAI TTS via
     the Emergent Universal Key.
 
+    Perf: on cache MISS the Mongo write is scheduled as a `BackgroundTask`
+    so the audio bytes ship to the browser ~100-200 ms sooner. On HIT we
+    ship straight from Mongo with an immutable long-max-age `Cache-Control`
+    plus an `ETag` so CDNs and service workers (and any future GET-by-key
+    frontend) can revalidate without re-downloading.
+
     Cost profile: ~$0.015 per 1,000 characters (tts-1 model). A typical Doogie
     answer is 300-600 chars → ~$0.005-$0.010 uncached. Every cache hit is $0.
-
-    Cache: keyed by SHA256(text+voice+model) with a 30-day TTL. If Doug regenerates
-    a glossary FAQ, the TTS blob for the OLD text simply expires — no manual bust.
     """
-    text = (body.text or "").strip()
+    text = _tts_normalize_text(body.text)
     if not text or len(text) < 3:
         raise HTTPException(400, "Text is too short to synthesize.")
-    if len(text) > 4000:
-        # OpenAI TTS caps at 4096 chars; also protects the bill.
-        text = text[:4000]
-
-    # Normalize any "$2,100,000" style dollar amounts so TTS never
-    # mispronounces a listing price (e.g. as "twenty-one thousand").
-    # Runs BEFORE the cache-key hash so cache hits stay deterministic
-    # and every synthesized clip is speech-safe.
-    from services.price_speech import normalize_prices_for_speech
-    text = normalize_prices_for_speech(text)
-
-    voice = (body.voice or "ash").lower()
-    if voice not in _TTS_ALLOWED_VOICES:
-        voice = "ash"
-
+    voice = _tts_pick_voice(body.voice)
     key = _tts_cache_key(text, voice)
+    etag = f'W/"{key[:16]}"'
+
+    # Conditional GET / POST — if the browser or CDN already has the audio,
+    # tell it not to re-download.  Saves the entire body over the wire.
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={**_TTS_CACHE_HEADERS_HIT, "ETag": etag})
 
     # 1. Cache lookup
     try:
@@ -13136,46 +13196,170 @@ async def doogie_tts(request: Request, body: DoogieTTSIn):
             return Response(
                 content=audio_bytes,
                 media_type="audio/mpeg",
-                headers={"X-EZ-TTS-Cache": "HIT", "Cache-Control": "public, max-age=86400"},
+                headers={**_TTS_CACHE_HEADERS_HIT, "ETag": etag},
             )
     except Exception as e:
         logger.warning(f"TTS cache lookup failed: {e}")
 
-    # 2. Cache miss → generate via OpenAI
+    # 2. Cache miss → generate via OpenAI, then hand off the Mongo write to
+    # BackgroundTasks so the response ships as soon as the audio is ready.
     try:
-        from emergentintegrations.llm.openai import OpenAITextToSpeech
-        tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
-        audio_bytes = await tts.generate_speech(
-            text=text,
-            model="tts-1",   # fast + cheap; upgrade to tts-1-hd later if Doug wants podcast-grade
-            voice=voice,
-            response_format="mp3",
-            speed=1.0,
-        )
-        # 3. Cache write (fire-and-forget so first play isn't slowed down)
-        try:
-            await db.doogie_tts_cache.update_one(
-                {"_id": key},
-                {"$set": {
-                    "audio_b64": base64.b64encode(audio_bytes).decode("ascii"),
-                    "voice": voice,
-                    "char_count": len(text),
-                    "cached_at": now_iso(),
-                    "expires_at": datetime.now(timezone.utc) + timedelta(days=30),
-                }},
-                upsert=True,
-            )
-        except Exception as e:
-            logger.warning(f"TTS cache write failed: {e}")
-
+        audio_bytes = await _tts_generate_and_cache(text, voice, key)
+        background.add_task(_tts_write_cache, key, voice, len(text), audio_bytes)
         return Response(
             content=audio_bytes,
             media_type="audio/mpeg",
-            headers={"X-EZ-TTS-Cache": "MISS", "Cache-Control": "public, max-age=86400"},
+            headers={**_TTS_CACHE_HEADERS_MISS, "ETag": etag},
         )
     except Exception as e:
         logger.error(f"TTS generation failed: {e}")
         raise HTTPException(502, "Voice synthesis is temporarily unavailable. Please try again in a moment.")
+
+
+class DoogieTTSPrewarmIn(BaseModel):
+    text: str
+    voice: Optional[str] = "ash"
+
+
+@app.post("/api/doogie/tts/prewarm")
+@_limiter.limit("60/minute")   # prewarm is cheap → higher ceiling
+async def doogie_tts_prewarm(request: Request, body: DoogieTTSPrewarmIn, background: BackgroundTasks):
+    """Fire-and-forget TTS cache warming.
+
+    Called by pages that render a "Play" button so the audio is already in
+    Mongo (and, indirectly, in the OpenAI edge) by the time the visitor
+    actually clicks. Returns `{status,cache_key,cache}` in <50 ms even on
+    a first-visit cold miss — the real generation happens in a background
+    task and never blocks the response.
+
+    On subsequent calls with the same text, the endpoint short-circuits
+    with `cache=HIT` so callers can decide whether it's worth calling
+    `POST /api/doogie/tts` at all."""
+    text = _tts_normalize_text(body.text)
+    if not text or len(text) < 3:
+        raise HTTPException(400, "Text is too short to synthesize.")
+    voice = _tts_pick_voice(body.voice)
+    key = _tts_cache_key(text, voice)
+
+    # If we already have it, tell the caller — they can skip the play POST entirely
+    try:
+        already = await db.doogie_tts_cache.find_one({"_id": key}, {"_id": 1})
+        if already:
+            return {"status": "ready", "cache_key": key, "cache": "HIT"}
+    except Exception as e:
+        logger.warning(f"TTS prewarm cache lookup failed: {e}")
+
+    async def _do_prewarm():
+        try:
+            audio_bytes = await _tts_generate_and_cache(text, voice, key)
+            await _tts_write_cache(key, voice, len(text), audio_bytes)
+        except Exception as e:
+            logger.warning(f"TTS prewarm generate failed: {e}")
+
+    background.add_task(_do_prewarm)
+    return {"status": "queued", "cache_key": key, "cache": "MISS"}
+
+
+class DoogieTTSPrepareIn(BaseModel):
+    text: str
+    voice: Optional[str] = "ash"
+
+
+@app.post("/api/doogie/tts/prepare")
+@_limiter.limit("60/minute")
+async def doogie_tts_prepare(request: Request, body: DoogieTTSPrepareIn, background: BackgroundTasks):
+    """Two-step audio playback flow for browser HTTP-cacheable playback.
+
+    Returns a stable, deterministic GET URL that the frontend can drop
+    straight into `<audio src=…>`.  Because the URL contains the SHA-cache
+    key and the audio response is served with `Cache-Control: immutable`,
+    the browser HTTP-caches the mp3 across sessions — a repeat play of
+    the same Doogie line is 0 requests and 0 ms.
+
+    Behavior:
+      - If audio already cached in Mongo → response is instant (`cache:HIT`)
+        and the client can play immediately.
+      - If not cached → we kick off a background prewarm and still return
+        the GET URL. The client should either poll `?wait=1` on the GET
+        or fall back to the legacy POST endpoint for the first play."""
+    text = _tts_normalize_text(body.text)
+    if not text or len(text) < 3:
+        raise HTTPException(400, "Text is too short to synthesize.")
+    voice = _tts_pick_voice(body.voice)
+    key = _tts_cache_key(text, voice)
+
+    cache_state = "MISS"
+    try:
+        already = await db.doogie_tts_cache.find_one({"_id": key}, {"_id": 1})
+        if already:
+            cache_state = "HIT"
+    except Exception as e:
+        logger.warning(f"TTS prepare cache lookup failed: {e}")
+
+    if cache_state == "MISS":
+        async def _do_prewarm():
+            try:
+                audio_bytes = await _tts_generate_and_cache(text, voice, key)
+                await _tts_write_cache(key, voice, len(text), audio_bytes)
+            except Exception as e:
+                logger.warning(f"TTS prepare prewarm failed: {e}")
+        background.add_task(_do_prewarm)
+
+    return {
+        "cache_key": key,
+        "cache": cache_state,
+        "audio_url": f"/api/doogie/tts/audio/{key}.mp3",
+        "voice": voice,
+        "char_count": len(text),
+    }
+
+
+@app.get("/api/doogie/tts/audio/{key}.mp3")
+async def doogie_tts_audio_by_key(request: Request, key: str, wait: int = 0):
+    """Serve a cached TTS mp3 by its SHA-cache key.
+
+    Deliberately a GET so the browser HTTP cache kicks in (POST responses
+    are never cached).  Marked `Cache-Control: immutable` because the key
+    is content-hashed — the bytes for a given key never change.
+
+    `?wait=1` (optional): if the audio isn't in the cache yet, poll up to
+    ~4 seconds waiting for a background prewarm to land.  Used by the
+    prepare→play flow so the client can `<audio src>` a URL that's still
+    warming and just let the request block until the mp3 lands."""
+    etag = f'W/"{key[:16]}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={**_TTS_CACHE_HEADERS_HIT, "ETag": etag})
+
+    # Validate: cache keys are 64-char hex (SHA-256)
+    if not re.fullmatch(r"[0-9a-f]{64}", key):
+        raise HTTPException(400, "Invalid audio key.")
+
+    async def _lookup() -> Optional[bytes]:
+        try:
+            doc = await db.doogie_tts_cache.find_one({"_id": key}, {"audio_b64": 1})
+            if doc and doc.get("audio_b64"):
+                return base64.b64decode(doc["audio_b64"])
+        except Exception as e:
+            logger.warning(f"TTS GET cache lookup failed: {e}")
+        return None
+
+    audio = await _lookup()
+    if audio is None and wait:
+        # Prewarm-in-flight — poll up to ~4 s with a light backoff.
+        for delay in (0.15, 0.25, 0.4, 0.6, 0.8, 1.0, 1.2):
+            await asyncio.sleep(delay)
+            audio = await _lookup()
+            if audio is not None:
+                break
+
+    if audio is None:
+        raise HTTPException(404, "Audio not yet ready. Prepare or POST /doogie/tts first.")
+
+    return Response(
+        content=audio,
+        media_type="audio/mpeg",
+        headers={**_TTS_CACHE_HEADERS_HIT, "ETag": etag},
+    )
 
 
 # ============================================================================

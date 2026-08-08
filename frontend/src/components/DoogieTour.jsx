@@ -124,17 +124,32 @@ export default function DoogieTour({ firstVisitToastOpen = false } = {}) {
       return () => { cancelled = true; clearTimeout(t); };
     }
     setBusy(true);
+    // Prewarm the NEXT step's TTS while we're playing this one — so when the
+    // user auto-advances (or taps Next) the audio arrives instantly instead
+    // of after a 3-6 s OpenAI round-trip.
+    if (i + 1 < STEPS.length) {
+      const nextScript = STEPS[i + 1].script;
+      try {
+        fetch(`${API}/doogie/tts/prewarm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: nextScript, voice: "ash" }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    }
     (async () => {
       try {
-        const r = await fetch(`${API}/doogie/tts`, {
+        const prep = await fetch(`${API}/doogie/tts/prepare`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: step.script, voice: "ash" }),
         });
-        if (!r.ok) throw new Error(`tts ${r.status}`);
-        const blob = await r.blob();
+        if (!prep.ok) throw new Error(`tts prepare ${prep.status}`);
+        const { audio_url, cache } = await prep.json();
         if (cancelled) return;
-        const url = URL.createObjectURL(blob);
+        const backendBase = API.replace(/\/api$/, "");
+        const url = `${backendBase}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
         if (audioRef.current) {
           audioRef.current.src = url;
           audioRef.current.playbackRate = speed;
