@@ -1,9 +1,14 @@
 User-agent: *
 Allow: /
-Disallow: /listings
+Allow: /listings
 Disallow: /listing/
 Disallow: /my-journey/
 Disallow: /admin/
+
+# CREA DDF® Rule 3.1: raw per-listing pages (/listing/{key}) must not be
+# machine-scraped or AI-trained. The /listings search hub, however, does
+# NOT expose per-property MLS data and is safe (and beneficial) to index
+# so it can rank for "bc real estate search", "maple ridge homes for sale".
 
 # AI answer engines welcome — for EDUCATIONAL content only
 # CREA DDF® terms prohibit scraping/AI-training against MLS® listing data,

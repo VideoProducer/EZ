@@ -120,7 +120,7 @@ export default function DoogieGPTPreview() {
                 padding: "12px 14px", border: "1px solid rgba(255,255,255,0.08)",
               }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-                  <img src={DOUG_HEADSHOT} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", objectPosition: "center 25%" }}/>
+                  <img loading="lazy" decoding="async" src={DOUG_HEADSHOT} alt="" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover", objectPosition: "center 25%" }}/>
                   <span style={{ fontSize: 11, color: "#94A3B8", fontWeight: 700 }}>Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.</span>
                 </div>
                 Woof! 🐾 I'm <strong style={{ color: C.gold }}>Doogie</strong>, Doug LeMaire's BC real-estate helper. Doug is a REALTOR® with Fraser Property Management Realty Services Ltd. — I look things up, he handles the transactions.

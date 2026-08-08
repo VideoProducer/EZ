@@ -73,12 +73,23 @@
           // actually visiting, stripped of query/hash. Runs synchronously
           // in <head> so search-engine crawlers that snapshot after HTML
           // parse (but before React hydration) capture the right URL.
+          //
+          // Normalization rules (Aug 2026 SEO audit):
+          //   1. Force apex host (eztofind.ca), never www.eztofind.ca — keeps
+          //      PageRank consolidated on one hostname.
+          //   2. Strip trailing slash (except root "/") — Google treats
+          //      "/glossary/ptt" and "/glossary/ptt/" as separate URLs
+          //      otherwise, splitting link equity.
+          //   3. Drop query string + fragment so ?utm_* variants canonicalise
+          //      to the clean URL.
           (function(){
             try {
               var l = document.getElementById("dyn-canonical");
-              if (l && typeof window !== "undefined") {
-                l.setAttribute("href", location.origin + location.pathname);
-              }
+              if (!l || typeof window === "undefined") return;
+              var host = location.hostname.replace(/^www\./i, "");
+              var path = location.pathname || "/";
+              if (path.length > 1 && path.slice(-1) === "/") path = path.slice(0, -1);
+              l.setAttribute("href", location.protocol + "//" + host + path);
             } catch(e) {}
           })();
         </script>
@@ -100,7 +111,7 @@
         <meta property="og:title" content="EZtoFind.ca | BC Real Estate Search"/>
         <meta property="og:description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
         <meta property="og:url" content="https://eztofind.ca/"/>
-        <meta property="og:image" content="https://eztofind.ca/images/doogie-og.png?v=3"/>
+        <meta property="og:image" content="https://eztofind.ca/images/doogie-og.png?v=4"/>
         <meta property="og:image:width" content="1200"/>
         <meta property="og:image:height" content="630"/>
         <meta property="og:image:alt" content="Doogie the golden retriever mascot holding a magnifying glass with a house icon and a laptop showing EZtoFind.ca"/>
@@ -109,7 +120,7 @@
         <meta name="twitter:card" content="summary_large_image"/>
         <meta name="twitter:title" content="EZtoFind.ca | BC Real Estate Search"/>
         <meta name="twitter:description" content="Free BC real estate research assistant. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
-        <meta name="twitter:image" content="https://eztofind.ca/images/doogie-og.png?v=3"/>
+        <meta name="twitter:image" content="https://eztofind.ca/images/doogie-og.png?v=4"/>
         <!-- PWA manifest — allows users to install the site as an app on iOS/Android/desktop -->
         <link rel="manifest" href="/manifest.json"/>
         <link rel="icon" href="/favicon.ico" sizes="any"/>

@@ -450,7 +450,7 @@ const FirstVisitToast = ({ onDismiss, setSection }) => {
       ...pos,
     }}
   >
-    <img src={DOOGIE.head} alt="Doogie welcomes you"
+    <img loading="lazy" decoding="async" src={DOOGIE.head} alt="Doogie welcomes you"
       data-testid="dash-first-visit-doogie"
       style={{
         width: isNarrow ? 56 : 72, height: isNarrow ? 56 : 72, flexShrink: 0, objectFit: "contain",
@@ -1007,7 +1007,7 @@ const FloatingFilters = () => {
         {voiceState === "listening" && (
           <div data-testid="voice-listening" style={{background:"linear-gradient(160deg,#1a3a6f,"+C.navy+")",color:"#fff",padding:"18px 14px 16px",textAlign:"center",minHeight:260}}>
             <div style={{width:74,height:74,borderRadius:"50%",background:C.brandGold,margin:"4px auto 10px",display:"grid",placeItems:"center",boxShadow:"0 0 0 6px rgba(245,166,35,0.22),0 0 0 14px rgba(245,166,35,0.11)",overflow:"hidden",animation:"doogie-pulse 1.5s ease-in-out infinite"}}>
-              <img src="/doogie/celebrating.webp" alt="Doogie" style={{width:"105%",height:"105%",objectFit:"cover"}} onError={(e)=>{e.currentTarget.style.display="none"}}/>
+              <img loading="lazy" decoding="async" src="/doogie/celebrating.webp" alt="Doogie" style={{width:"105%",height:"105%",objectFit:"cover"}} onError={(e)=>{e.currentTarget.style.display="none"}}/>
             </div>
             <div style={{fontFamily:"Playfair Display, Georgia, serif",fontWeight:800,fontSize:16,marginBottom:4}}>I'm all ears!</div>
             <div style={{fontSize:11,opacity:0.78,marginBottom:10,lineHeight:1.4,padding:"0 6px"}}>
@@ -1290,7 +1290,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
     <div data-testid="dash-home-tiles" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Welcome strip */}
       <div style={{ ...tile, padding: "4px 16px", display: "grid", gridTemplateColumns: "380px 1fr auto", gap: 6, alignItems: "center", background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)", borderColor: "rgba(245,166,35,0.35)" }}>
-        <img src={DOOGIE.head} alt="Doogie" style={{ width: 380, height: 380, objectFit: "contain", display: "block", margin: 0 }} onError={e => e.currentTarget.style.display = "none"}/>
+        <img loading="lazy" decoding="async" src={DOOGIE.head} alt="Doogie" style={{ width: 380, height: 380, objectFit: "contain", display: "block", margin: 0 }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 800, color: C.navy, lineHeight: 1.05 }}>
             <span style={{ color: C.brandGreen }}>Real estate,</span> <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
@@ -3984,7 +3984,7 @@ const ConsultPanel = () => {
   if (submitted) {
     return <div style={panelBase}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "12px 0 8px" }}>
-        <img src={DOOGIE.celebrating} alt="Doogie celebrating"
+        <img loading="lazy" decoding="async" src={DOOGIE.celebrating} alt="Doogie celebrating"
           data-testid="dash-consult-success-doogie"
           style={{ width: 200, height: "auto", marginBottom: 12, filter: "drop-shadow(0 6px 18px rgba(15,42,91,0.2))" }}/>
         <h2 style={{ color: C.navy, margin: 0 }}>Consultation request received!</h2>
@@ -4004,7 +4004,7 @@ const ConsultPanel = () => {
         Before we proceed, one important compliance question required by the <strong>CREA Code of Ethics</strong>:
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 20, alignItems: "center", maxWidth: 780, marginTop: 16 }}>
-        <img src={DOOGIE.pointingLeft} alt="Doogie pointing"
+        <img loading="lazy" decoding="async" src={DOOGIE.pointingLeft} alt="Doogie pointing"
           data-testid="dash-realtor-gate-doogie"
           style={{ width: "100%", maxWidth: 160, height: "auto", filter: "drop-shadow(0 6px 16px rgba(15,42,91,0.18))" }}/>
         <div style={{ background: "#FEF3C7", border: "1px solid #F59E0B", padding: 20, borderRadius: 12 }}>
@@ -4344,7 +4344,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
         <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
           {history.length === 0 && (
             <div style={{ background: C.mist, padding: 16, borderRadius: 10, fontSize: 13, color: C.navy, display: "flex", alignItems: "center", gap: 14 }}>
-              <img src={DOOGIE.thinking} alt="Doogie thinking"
+              <img loading="lazy" decoding="async" src={DOOGIE.thinking} alt="Doogie thinking"
                 data-testid="dash-ask-welcome-doogie"
                 style={{ width: 84, height: 84, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.15))" }}/>
               <div style={{ lineHeight: 1.5 }}>
@@ -4656,7 +4656,7 @@ const EmptyBox = ({ children }) => (
     color: C.muted, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 20,
     flexWrap: "wrap",
   }}>
-    <img src={DOOGIE.thinking} alt="Doogie thinking"
+    <img loading="lazy" decoding="async" src={DOOGIE.thinking} alt="Doogie thinking"
       data-testid="dash-empty-doogie"
       style={{ width: 96, height: 96, flexShrink: 0, filter: "drop-shadow(0 3px 8px rgba(15,42,91,0.12))" }}/>
     <div style={{ maxWidth: 480, textAlign: "left", lineHeight: 1.5 }}>{children}</div>

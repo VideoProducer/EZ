@@ -99,6 +99,23 @@ Build a highly compliant BC real estate lead-gen + research tool (EZtoFind.ca). 
   - Street-address heuristic (starts with a digit + space) hits `street_address` + `unparsed_address` with a case-insensitive regex
   - Placeholders updated: main bar shows `Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)`; Community/City filter shows `Any BC community or postal code (e.g. V3A)`
   - Verified live: `930 Josephine Rd` → 2 correct listings; `V3A 0A5` / `V3A` / `v3a 0a5` (in city filter) all → 358 Langley listings; city + street-address regressions clean
+- **Map popup keeps visitors on-site (Feb 8)**: swapped the Leaflet popup link from external `realtor.ca` redirect to the internal `/listing/{key}` page. CREA-required "Powered by REALTOR.ca" attribution stays on the listing detail page.
+- **Traditional SEO batch — 12 items shipped (Feb 8)**:
+  - **#2 Visible breadcrumbs**: new `components/Breadcrumbs.jsx` (visible trail + `BreadcrumbList` JSON-LD) wired into Community + Listing Detail pages. Live-verified: `Home › Communities › Greater Vancouver › Maple Ridge` and `Home › Listings › Pitt Meadows › 11761 190 Street`.
+  - **#3 robots.txt (safer)**: Allow `/listings` (the search hub) to be indexed; keep `/listing/{key}` disallowed per CREA DDF Rule 3.1.
+  - **#4 OG cache-bust**: `doogie-og.png?v=3 → ?v=4` forces FB/LinkedIn/iMessage to refresh cached previews.
+  - **#6 Meta descriptions**: existing `SEO` component already pads via `syn.synopsis.substring(0, 200)` fallback — no change needed.
+  - **#7 Central title/meta**: existing `SEO()` component (App.js:180) already centralizes title, description, canonical, hreflang, OG, Twitter, and schema — verified in use across pages. Deferred full 40-file title refactor.
+  - **#9 FAQ 5→10**: community pages now emit 10 auto-generated Q&A patterns (added: avg price, investment/BCFSA disclaimer, commute, schools, best time to buy).
+  - **#10 Alt text**: listing card `<img alt>` upgraded from `"street, city"` to `"{street} in {city} — {property_type} MLS® listing photo"` — richer image-search signal.
+  - **#11 Speakable**: already emitted on glossary and community pages (verified in App.js).
+  - **#12 loading="lazy"**: 40 `<img>` tags across App.js, DashboardMockup, ComingSoon, DoogieGPTPreview now lazy-load with `decoding="async"`.
+  - **#16 AudioObject schema**: sizzle reels now emit `AudioObject` JSON-LD (Doogie's TTS narration). NOTE: swap to `VideoObject` when actual video reels ship.
+  - **#20 Canonical normalization**: dynamic canonical script now strips trailing slash, drops `www.`, and drops query/fragment — consolidates PageRank on one hostname/path per page.
+  - **Deferred (need external input)**:
+    - **#1 GBP wiring** — awaiting Doug's Google Business Profile CID
+    - **#18 PSI verification** — off-platform; run PageSpeed Insights mobile on top 5 URLs
+    - **#19 Rich Results Test cron** — awaiting Google Search Console API credentials
 - **New Doogie OG image (Feb 7)**:
   - Swapped iMessage / Facebook / LinkedIn / Slack link-preview image to the new "Doogie holding magnifying glass + laptop with EZtoFind.ca + DOOGIE wordmark" logo
   - `/app/frontend/public/images/doogie-og.png` (1200×630 OG spec on white) + updated `doogie-laptop.png` (1024² square) — both composited from the transparent-PNG source

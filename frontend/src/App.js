@@ -40,6 +40,7 @@ import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
 import Sparkline from "./components/Sparkline";
 import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import AdminHeatmap from "./pages/AdminHeatmap";
+import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
 import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
@@ -660,7 +661,7 @@ const PublishedByDoug = ({compact=false, lastReviewed=null}) => {
   const CANARY = "EZTF-2026-EDU-XG8F-canary-verify-at-eztofind.ca-copyright";
   return (
   <div itemScope itemType="https://schema.org/Person" style={{background:"#F5F0E1",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:compact?"0.85rem 1rem":"1rem 1.25rem",fontFamily:"Inter,sans-serif",display:"flex",gap:"0.85rem",alignItems:"center",margin: compact ? "1rem 0" : "1.5rem 0",position:"relative"}} data-testid="published-by-doug">
-    <img src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
+    <img loading="lazy" decoding="async" src={DOUG_HEADSHOT} alt="Doug LeMaire, REALTOR®" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)",flexShrink:0}}/>
     <div style={{lineHeight:1.5,minWidth:0}}>
       <div style={{fontSize:"0.78rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Published by</div>
       <div style={{fontWeight:700,color:"var(--ink)"}} itemProp="name">Doug LeMaire, REALTOR®</div>
@@ -768,7 +769,7 @@ const FeaturedListing = () => {
         <div style={{display:"grid",gridTemplateColumns:"1.15fr 1fr",gap:"2rem",background:"white",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 60px rgba(15,42,91,0.14)",border:"1px solid rgba(15,42,91,0.08)"}} className="featured-grid">
           {/* IMAGE COLUMN */}
           <div style={{position:"relative",background:"#0F2A5B",minHeight:"420px"}}>
-            <img src={hero} alt={`${L.address}, ${L.city}`} style={{width:"100%",height:"100%",minHeight:"420px",objectFit:"cover",display:"block"}} data-testid="featured-hero-photo"/>
+            <img loading="lazy" decoding="async" src={hero} alt={`${L.address}, ${L.city}`} style={{width:"100%",height:"100%",minHeight:"420px",objectFit:"cover",display:"block"}} data-testid="featured-hero-photo"/>
             {/* Status badge */}
             <div style={{position:"absolute",top:"1.25rem",left:"1.25rem",background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.5rem 1rem",borderRadius:"999px",fontFamily:"Inter,sans-serif",fontWeight:800,letterSpacing:"0.08em",fontSize:"0.75rem",textTransform:"uppercase",boxShadow:"0 6px 16px rgba(0,0,0,0.2)"}} data-testid="featured-status-badge">{L.status}</div>
             {/* Price overlay */}
@@ -789,7 +790,7 @@ const FeaturedListing = () => {
               <div style={{position:"absolute",top:"1.25rem",right:"1.25rem",display:"flex",flexDirection:"column",gap:"0.5rem"}}>
                 {L.photos.map((p,i)=>(
                   <button key={i} onClick={()=>setActive(i)} data-testid={`featured-thumb-${i}`} style={{width:64,height:48,padding:0,border:i===active?"3px solid var(--brand-gold)":"2px solid rgba(255,255,255,0.6)",borderRadius:6,overflow:"hidden",cursor:"pointer",background:"none"}}>
-                    <img src={p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    <img loading="lazy" decoding="async" src={p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                   </button>
                 ))}
               </div>
@@ -858,7 +859,7 @@ const Nav = () => {
   return (
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
-        <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
+        <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
         <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}><span>EZtoFind<span style={{color:"#FDB813"}}>.ca</span></span>
         </div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>DOUG LEMAIRE, REALTOR®</div></div>
@@ -891,7 +892,7 @@ const Footer = () => (
     <div className="footer-grid">
       <div>
         <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"1rem"}}>
-          <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56,height:56,borderRadius:"50%",border:"2px solid var(--brand-gold)",objectFit:"cover"}}/>
+          <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56,height:56,borderRadius:"50%",border:"2px solid var(--brand-gold)",objectFit:"cover"}}/>
           <div><div className="font-display" style={{fontSize:"1.3rem",color:"white"}}>EZtoFind.ca</div>
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
@@ -1395,10 +1396,10 @@ export const DoogieChat = ({ mode = "fab" }) => {
 
   return (<>
     {!embedded && <button className="doogie-fab" onClick={()=>setOpen(o=>!o)} data-testid="doogie-fab" aria-label="Chat with Doogie">
-      <img src={DOOGIE_THINKING} alt="Doogie"/>
+      <img loading="lazy" decoding="async" src={DOOGIE_THINKING} alt="Doogie"/>
     </button>}
     {open && <div className={`doogie-panel${expanded ? " doogie-panel-expanded" : ""}${embedded ? " doogie-panel-embedded" : ""}`} data-testid={embedded ? "doogie-panel-embedded" : "doogie-panel"}>
-      <header><img src={DOOGIE_THINKING} alt="Doogie"/><div style={{minWidth:0,flexShrink:1,overflow:"hidden"}}><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>AI Helper · General Info Only</div></div>
+      <header><img loading="lazy" decoding="async" src={DOOGIE_THINKING} alt="Doogie"/><div style={{minWidth:0,flexShrink:1,overflow:"hidden"}}><div style={{fontWeight:600}}>Doogie</div><div style={{fontSize:"0.75rem",opacity:0.85,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>AI Helper · General Info Only</div></div>
         <button type="button" onClick={()=>setVoiceOut(v=>!v)} data-testid="doogie-voiceout-toggle"
           aria-label={voiceOut ? "Turn Doogie's voice off" : "Turn Doogie's voice on"}
           title={voiceOut ? "Voice ON — Doogie will speak replies. Tap to mute." : "Voice OFF — tap to hear Doogie speak"}
@@ -2460,7 +2461,7 @@ const Home = () => {
         </div>
       </div>
       <div className="doogie-hero-wrap" style={{textAlign:"center",overflow:"visible"}}>
-        <img className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
+        <img loading="lazy" decoding="async" className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie mascot" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
 
@@ -2483,7 +2484,7 @@ const Home = () => {
           {s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,d:"Langley, Abbotsford, Chilliwack and beyond — where space meets city convenience."},
           {s:"sea-to-sky",t:"Sea-to-Sky",i:IMG.seaToSky,d:"Squamish, Whistler, Pemberton — mountain lifestyle real estate."}].map(r =>
           <Link to={`/regions/${r.s}`} key={r.s} className="card" data-testid={`region-${r.s}`}>
-            <img src={r.i} alt={r.t} className="card-img"/>
+            <img loading="lazy" decoding="async" src={r.i} alt={r.t} className="card-img"/>
             <div className="card-body"><h3 className="card-title">{r.t}</h3><p className="card-desc">{r.d}</p></div>
           </Link>)}
       </div>
@@ -2536,7 +2537,7 @@ const Home = () => {
     </div></section>
 
     <section className="section"><div className="container-x" style={{textAlign:"center"}}>
-      <img src={DOOGIE_CELEBRATE} alt="Doogie celebrating" style={{width:180,margin:"0 auto 1rem"}}/>
+      <img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} alt="Doogie celebrating" style={{width:180,margin:"0 auto 1rem"}}/>
       <h2 className="section-title">Ready to start?</h2>
       <p className="section-sub" style={{marginBottom:"2rem"}}>Tell Doug what you're looking for — buyer or seller — and get a personal response within 1 business day.</p>
       <div style={{display:"flex",gap:"1rem",justifyContent:"center",flexWrap:"wrap"}}>
@@ -2639,7 +2640,7 @@ const ListingCard = ({ listing }) => {
       onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 12px rgba(15,42,91,0.06)";}}
     >
       <div style={{position:"relative",aspectRatio:"4/3",overflow:"hidden",background:"#F5F0E1"}}>
-        <img src={photo} alt={`${listing.street_address}, ${listing.city}`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} loading="lazy"/>
+        <img src={photo} alt={`${listing.street_address || "Home"} in ${listing.city || "British Columbia"} — ${listing.property_type || "residential"} property MLS® listing photo`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} loading="lazy" decoding="async"/>
         <div style={{position:"absolute",top:"0.75rem",left:"0.75rem",background:"var(--brand-navy)",color:"#fff",padding:"0.25rem 0.7rem",borderRadius:999,fontSize:"0.72rem",fontFamily:"Inter,sans-serif",fontWeight:600,letterSpacing:"0.03em"}}>{listing.property_type}</div>
         {/* Tour kind badges — anchored to the LEFT of the heart (which sits
             top-right at 0.75rem) so the row reads: [3D] [Video] [♥].
@@ -3395,7 +3396,7 @@ const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
   return (
     <>
       <div style={{marginTop:"1rem",background:"#F5F0E1",borderRadius:14,overflow:"hidden",aspectRatio:"16/9",position:"relative",cursor: n>0?"zoom-in":"default"}} data-testid="listing-hero-photo">
-        <img src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1} of ${n}`} onClick={()=>setLightbox(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+        <img loading="lazy" decoding="async" src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1} of ${n}`} onClick={()=>setLightbox(true)} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         {n > 1 && (
           <>
             <button onClick={prev} aria-label="Previous photo" data-testid="photo-prev" style={{...arrowBtn, left:"1rem"}}>‹</button>
@@ -3436,7 +3437,7 @@ const ListingGallery = ({photos, address, photoIdx, setPhotoIdx}) => {
           </div>
           <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",minHeight:0}}>
             {n > 1 && <button onClick={prev} data-testid="lightbox-prev" aria-label="Previous" style={{...arrowBtn,left:"1rem",width:56,height:56,fontSize:"1.8rem",background:"rgba(255,255,255,0.15)"}}>‹</button>}
-            <img src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1}`} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}/>
+            <img loading="lazy" decoding="async" src={photos[photoIdx]} alt={`${address} — photo ${photoIdx+1}`} style={{maxWidth:"100%",maxHeight:"100%",objectFit:"contain"}}/>
             {n > 1 && <button onClick={next} data-testid="lightbox-next" aria-label="Next" style={{...arrowBtn,right:"1rem",width:56,height:56,fontSize:"1.8rem",background:"rgba(255,255,255,0.15)"}}>›</button>}
           </div>
           {n > 1 && (
@@ -3860,6 +3861,12 @@ const ListingDetail = () => {
     <TermsGate>
     <section className="section"><div className="container-x">
       <Link to="/listings" data-testid="back-to-listings" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",fontSize:"0.9rem"}}>← All listings</Link>
+      <Breadcrumbs items={[
+        { label: "Home", to: "/" },
+        { label: "Listings", to: "/listings" },
+        ...(listing.city ? [{ label: listing.city, to: `/listings?city=${encodeURIComponent(listing.city)}` }] : []),
+        { label: listing.street_address || `MLS® #${listing.mls_number || listing.listing_key}` },
+      ]}/>
       {/* Photo gallery — big hero with arrows, counter, thumbnail strip, and click-to-fullscreen lightbox */}
       <div style={{position:"relative"}}>
         <ListingGallery photos={listing.photos||[]} address={listing.street_address||""} photoIdx={photoIdx} setPhotoIdx={setPhotoIdx}/>
@@ -4011,11 +4018,11 @@ const RegionsIndex = () => (
     <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Focus Areas</div><h1 className="section-title">Where Doug works.</h1></div>
     <div className="grid-3">
       {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky}].map(r =>
-        <Link to={`/regions/${r.s}`} key={r.s} className="card"><img src={r.i} className="card-img" alt={r.t}/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
+        <Link to={`/regions/${r.s}`} key={r.s} className="card"><img loading="lazy" decoding="async" src={r.i} className="card-img" alt={r.t}/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
     </div>
     <div style={{textAlign:"center",marginTop:"3.5rem",marginBottom:"2rem"}}><div className="eyebrow">Referral Network</div><h2 className="section-title" style={{fontSize:"1.8rem"}}>Covered by our REALTORS® across BC</h2></div>
     <div className="grid-3">
-      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
+      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img loading="lazy" decoding="async" src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
     </div>
   </div></section>
 );
@@ -4035,7 +4042,7 @@ const RegionPage = () => {
   if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/regions">Back</Link></div>;
   const list = communities[d.key] || [];
   return (<section className="section"><div className="container-x">
-    <img src={d.img} alt={d.title} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={d.img} alt={d.title} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">{d.referral ? "Referral Network Coverage" : "Focus Area"}</div>
       <h1 className="section-title">{d.title}</h1>
@@ -4063,7 +4070,7 @@ const SPECIALTIES = {
 };
 const SpecialtiesIndex = () => (<section className="section"><div className="container-x">
   <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Doug's Specialties</div><h1 className="section-title">Five focused expertises.</h1></div>
-  <div className="grid-3">{Object.entries(SPECIALTIES).map(([s,d])=><Link key={s} to={`/specialties/${s}`} className="card"><img src={d.i} className="card-img" alt={d.t}/><div className="card-body"><h3 className="card-title">{d.t}</h3><p className="card-desc">{d.c.slice(0,120)}...</p></div></Link>)}</div>
+  <div className="grid-3">{Object.entries(SPECIALTIES).map(([s,d])=><Link key={s} to={`/specialties/${s}`} className="card"><img loading="lazy" decoding="async" src={d.i} className="card-img" alt={d.t}/><div className="card-body"><h3 className="card-title">{d.t}</h3><p className="card-desc">{d.c.slice(0,120)}...</p></div></Link>)}</div>
 </div></section>);
 const SpecialtyPage = () => {
   const {slug} = useParams(); const d = SPECIALTIES[slug];
@@ -4077,7 +4084,7 @@ const SpecialtyPage = () => {
   const SPECIALTY_TYPE_MAP = { "detached":"Detached", "condos":"Condo", "townhomes":"Townhouse" };
   const lockedType = SPECIALTY_TYPE_MAP[slug];
   return (<section className="section"><div className="container-x">
-    <img src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={d.i} alt={d.t} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">Specialty</div><h1 className="section-title">{d.t}</h1>
       <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.c}</p>
@@ -4144,7 +4151,7 @@ const LuxurySection = ({ intro }) => {
   const viewAllHref = `/listings?property_type=${encodeURIComponent(tabKey)}&price_min=${LUXURY_MIN_PRICE}&sort=price_desc${region !== "Anywhere" ? `&region_chip=${encodeURIComponent(region)}` : ""}`;
 
   return (<section className="section" data-testid="luxury-section"><div className="container-x">
-    <img src={intro.i} alt="Luxury Real Estate BC" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={intro.i} alt="Luxury Real Estate BC" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"52rem",marginBottom:"2rem"}}>
       <div className="eyebrow">BC's High-Value Residential Market</div>
       <h1 className="section-title" data-testid="luxury-title">Luxury Real Estate — British Columbia</h1>
@@ -4293,7 +4300,7 @@ const EquestrianSection = ({ intro }) => {
   };
 
   return (<section className="section" data-testid="equestrian-section"><div className="container-x">
-    <img src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img loading="lazy" decoding="async" src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"52rem",marginBottom:"1.5rem"}}>
       <div className="eyebrow">BC's Horse Country</div>
       <h1 className="section-title" data-testid="equestrian-title">Equestrian Properties — British Columbia</h1>
@@ -4723,7 +4730,7 @@ const BuyerForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google surfaces this as a rich card for "how to buy a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
@@ -4776,7 +4783,7 @@ const SellerForm = () => {
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
@@ -4828,7 +4835,7 @@ const RealtorApply = () => {
   const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
   const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply`,f); trackConversion("realtor_application", { application_type: "bc", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
+    <img loading="lazy" decoding="async" src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
     <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed BC REALTOR®?</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
@@ -4858,7 +4865,7 @@ const RealtorApplyOutOfProvince = () => {
   const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); trackConversion("realtor_application", { application_type: "out_of_province", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
   const PROVINCES = ["Alberta","Saskatchewan","Manitoba","Ontario","Quebec","New Brunswick","Nova Scotia","Prince Edward Island","Newfoundland and Labrador","Yukon","Northwest Territories","Nunavut","Other (International)"];
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
+    <img loading="lazy" decoding="async" src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
     <div className="eyebrow">For REALTORS® Outside BC</div><h1 className="section-title">Request to join our out-of-province referral network</h1>
     <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia?</p>
     {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
@@ -4917,7 +4924,7 @@ const About = () => (<section className="section"><div className="container-x" s
   />
   <div className="eyebrow">About</div><h1 className="section-title">Doug LeMaire, REALTOR®</h1>
   <div style={{display:"flex",gap:"2rem",flexWrap:"wrap",alignItems:"flex-start",marginTop:"2rem"}}>
-    <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
+    <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
     <div style={{flex:1,minWidth:280,fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}>
       <p>I'm Doug LeMaire, a licensed REALTOR® with Fraser Property Management Realty Services Ltd. For 13 years I've helped people buy and sell across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor up to Whistler.</p>
       <p>My work centres on detached homes, acreages and equestrian properties, luxury real estate, residential strata's and probate/estate sales — and it's work I genuinely enjoy.</p>
@@ -6862,6 +6869,26 @@ const CommunitySizzleReel = ({ slug, community }) => {
           if (a.duration) setProgress(Math.min(100, (a.currentTime / a.duration) * 100));
         }}
       />
+      {/* AudioObject schema — makes the Doogie welcome narration citable
+          by AI answer engines and eligible for Google's audio-rich-result
+          treatment (voice assistants can offer to play it directly).
+          Using AudioObject (not VideoObject) because the sizzle is a TTS
+          audio track; if we ever ship an actual video reel we swap this. */}
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context":"https://schema.org","@type":"AudioObject",
+          "name":`Doogie welcomes you to ${community}, BC`,
+          "description":`AI-narrated 30-second welcome to the ${community} community — an educational orientation covering location, character, and what to expect.`,
+          "encodingFormat":"audio/mpeg",
+          "inLanguage":"en-CA",
+          "isFamilyFriendly":true,
+          "contentUrl":`https://eztofind.ca/api/doogie/tts?slug=${slug}`,
+          "creator":{"@type":"Organization","name":"EZtoFind.ca"},
+          "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+          "uploadDate": new Date().toISOString().slice(0,10),
+          "about":{"@type":"Place","name":`${community}, British Columbia`}
+        })}</script>
+      </Helmet>
     </div>
   );
 };
@@ -6944,7 +6971,12 @@ const CommunityPage = () => {
       {"@type":"Question","name":`Where is ${found} located in British Columbia?`,"acceptedAnswer":{"@type":"Answer","text":`${found} is a community within ${region || "British Columbia"}. See the interactive community map, climate normals from Environment Canada, and active MLS® listings on EZtoFind.ca.`}},
       {"@type":"Question","name":`What is the weather and climate like in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":(climate?.available && climate.summary_text) ? climate.summary_text.substring(0,480) : (wx?.weather || `Climate normals for ${found}, BC are published by Environment and Climate Change Canada. Visit the community page to see monthly temperature and precipitation averages.`).substring(0,480)}},
       {"@type":"Question","name":`Can I buy or sell a home in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text": isFocus ? `Yes — ${found} is within Doug LeMaire's primary practice area (Greater Vancouver, Fraser Valley, or Sea-to-Sky Corridor). Doug is a BCFSA-licensed REALTOR® at Fraser Property Management Realty Services Ltd. and can represent buyers and sellers directly.` : `${found} is outside Doug's primary practice area, but EZtoFind.ca offers a BC-wide REALTOR® referral network. Request a referral at https://eztofind.ca/referral-request.`}},
-      {"@type":"Question","name":`How do I see live MLS® listings in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`Active listings in ${found} are shown live via the CREA DDF® feed on eztofind.ca. Search results include price, beds/baths, square footage, and full listing photos direct from the source MLS®.`}}
+      {"@type":"Question","name":`How do I see live MLS® listings in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`Active listings in ${found} are shown live via the CREA DDF® feed on eztofind.ca. Search results include price, beds/baths, square footage, and full listing photos direct from the source MLS®.`}},
+      {"@type":"Question","name":`What is the average home price in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`Median list prices in ${found} update in real time from the CREA DDF® feed. Visit the EZtoFind.ca ${found} community page for the current median, active-listing count, and price-per-square-foot band. Historical monthly medians are published in the BC Market Report section.`}},
+      {"@type":"Question","name":`Are ${found}, BC homes a good investment?`,"acceptedAnswer":{"@type":"Answer","text":`BCFSA and CREA rules prohibit REALTORS® from giving investment guarantees. EZtoFind.ca does publish the factual market indicators buyers use to make their own decision: 3/6/12-month price trajectory, active inventory count, days on market, and Buyer's vs Seller's market classification. Compare these signals across ${found} and nearby communities on the Market Heatmap.`}},
+      {"@type":"Question","name":`How long is the commute from ${found} to downtown Vancouver?`,"acceptedAnswer":{"@type":"Answer","text":`Typical drive time from ${found} to downtown Vancouver depends on time of day and route (Highway 1, Highway 7, or SkyTrain feeder). The ${found} community page on EZtoFind.ca lists nearest transit stations, park-and-ride lots, and highway on-ramps so you can estimate your commute before viewing homes.`}},
+      {"@type":"Question","name":`What schools serve ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`${found} is served by the local School District as published by the BC Ministry of Education. School catchment boundaries can affect resale value — always confirm the current catchment with the school district before making an offer, as boundaries are redrawn periodically.`}},
+      {"@type":"Question","name":`What's the best time of year to buy a home in ${found}, BC?`,"acceptedAnswer":{"@type":"Answer","text":`Historically, BC housing inventory peaks in spring (April-June) and dips in December-January. The EZtoFind.ca Market Heatmap shows whether ${found} is currently Hot, Warming, Cool, or Cold — plus the Months of Supply (MoS) figure that indicates whether it's a Buyer's or Seller's market right now. Timing is one factor among many; discuss the current dynamics with Doug LeMaire, REALTOR® before deciding.`}}
     ]
   } : null;
 
@@ -7019,6 +7051,12 @@ const CommunityPage = () => {
       <link rel="alternate" type="text/html" href={`https://eztofind.ca/snapshot/community/${slug}.html`} title="Prerendered (AI-friendly)"/>
     </Helmet>
     <Link to="/communities" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",textDecoration:"none"}}>← All communities</Link>
+    {found && <Breadcrumbs items={[
+      { label: "Home", to: "/" },
+      { label: "Communities", to: "/communities" },
+      ...(region ? [{ label: region }] : []),
+      { label: found },
+    ]}/>}
     {found ? <>
       {found && <CommunityMap name={found} region={region}/>}
       <div style={{display:"flex",justifyContent:"center",marginBottom:"1.75rem"}}>
@@ -7122,9 +7160,9 @@ const Valuation = () => {
   const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, turnstile_token: getTurnstileToken()}); trackConversion("home_valuation_request", { timeline: f.timeline, property_type: f.property_type, city: f.city, currently_listed: f.currently_listed, currency: "CAD" }); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", source: "valuation_page", currency: "CAD" }); setDone(true);}catch(x){setErr("Please complete required fields and consents.");} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
+    <img loading="lazy" decoding="async" src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
     <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">Curious what your home could be worth?</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get a free market estimate from Doug within 24 hours.</p>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
@@ -7166,7 +7204,7 @@ const ReferralRequest = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")}</p>
@@ -7304,7 +7342,7 @@ const AffordabilityCalculator = () => {
   return (
     <div className="paper" data-testid="afford-calculator" style={{background:"#F7FAFF"}}>
       <div style={{display:"flex",justifyContent:"center",marginBottom:"1.25rem"}}>
-        <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <img loading="lazy" decoding="async" src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
       </div>
 
       <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
@@ -7430,7 +7468,7 @@ const PTTCalculator = () => {
   return (
     <div className="paper" data-testid="ptt-calculator" style={{marginTop:"2rem",background:"#F7FAFF"}}>
       <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"1.5rem"}}>
-        <img src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
+        <img loading="lazy" decoding="async" src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
         <div>
           <h2 className="font-display" style={{fontSize:"1.55rem",margin:0,color:"var(--brand-navy)"}}>BC Property Transfer Tax Calculator</h2>
           <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",marginTop:"0.25rem"}}>Estimate your one-time BC PTT at completion.</div>

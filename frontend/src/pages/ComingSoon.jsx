@@ -96,7 +96,7 @@ export function ComingSoonHero({ mode = "home", data = null }) {
           {hasVideo ? (
             <VideoPlayer url={cs.video_url} poster={heroPhoto?.url} autoPlay muted loop controls={false} testid="coming-soon-hero-video"/>
           ) : heroPhoto ? (
-            <img src={abs(heroPhoto.url)} alt={cs.title || "Coming soon listing"} data-testid="coming-soon-hero-image" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            <img loading="lazy" decoding="async" src={abs(heroPhoto.url)} alt={cs.title || "Coming soon listing"} data-testid="coming-soon-hero-image" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           ) : (
             <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",background:"linear-gradient(135deg, #0F2A5B, #1e3a8a)",fontSize:"1.1rem",color:"rgba(255,255,255,0.5)"}}>Upload a photo or video to preview</div>
           )}
@@ -129,7 +129,7 @@ export function ComingSoonHero({ mode = "home", data = null }) {
         {otherPhotos.length > 0 && (
           <div style={{background:"#0A1F45",padding:"1rem",display:"grid",gridTemplateColumns:`repeat(${otherPhotos.length}, 1fr)`,gap:"0.5rem"}} data-testid="coming-soon-gallery">
             {otherPhotos.map(p => (
-              <img key={p.id} src={abs(p.url)} alt="" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:6,cursor:"pointer"}} onClick={()=>window.open(abs(p.url),"_blank")}/>
+              <img loading="lazy" decoding="async" key={p.id} src={abs(p.url)} alt="" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:6,cursor:"pointer"}} onClick={()=>window.open(abs(p.url),"_blank")}/>
             ))}
           </div>
         )}
@@ -312,7 +312,7 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
           <div style={{marginTop:"1rem",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(10rem,1fr))",gap:"0.6rem"}}>
             {cs.photos.map(p => (
               <div key={p.id} style={{position:"relative",border: p.id === cs.hero_photo_id ? "3px solid #FDB813" : "1px solid rgba(15,42,91,0.15)",borderRadius:8,overflow:"hidden"}}>
-                <img src={abs(p.url)} alt="" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover"}} data-testid={`admin-cs-photo-${p.id}`}/>
+                <img loading="lazy" decoding="async" src={abs(p.url)} alt="" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover"}} data-testid={`admin-cs-photo-${p.id}`}/>
                 <div style={{position:"absolute",top:4,right:4,display:"flex",gap:"0.25rem"}}>
                   <button type="button" onClick={()=>setHero(p.id)} title="Set as hero" style={{background:"rgba(0,0,0,0.7)",color:"white",border:"none",borderRadius:4,padding:"0.15rem 0.45rem",fontSize:"0.72rem",cursor:"pointer",fontWeight:700}} data-testid={`admin-cs-photo-hero-${p.id}`}>{p.id === cs.hero_photo_id ? "★ Hero" : "☆"}</button>
                   <button type="button" onClick={()=>removePhoto(p)} style={{background:"rgba(220,38,38,0.9)",color:"white",border:"none",borderRadius:4,padding:"0.15rem 0.45rem",fontSize:"0.72rem",cursor:"pointer"}} data-testid={`admin-cs-photo-remove-${p.id}`}>✕</button>
