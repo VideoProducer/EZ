@@ -1,6 +1,6 @@
 # EZtoFind.ca — LLM Site Summary
 
-> British Columbia's AI-assisted real estate information platform. Free to use and information-first — every glossary term, community profile, and Doogie answer is anchored to a real, cited BC or federal statute or regulator. Optional buyer intake, seller intake, home-valuation, and consumer-referral forms are available; submitting any form connects the visitor with Doug LeMaire, REALTOR® or a network REALTOR® — that step is transactional lead generation and is clearly labelled at the point of submission.
+> British Columbia's real estate information and property-search platform. Free to use and information-first — every glossary term, community profile, and Doogie answer is anchored to a real, cited BC or federal statute or regulator. Optional buyer intake, seller intake, home-valuation, and consumer-referral forms are available; submitting any form connects the visitor with Doug LeMaire, REALTOR® or a network REALTOR® — that step is transactional and is clearly labelled at the point of submission.
 
 EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Management Realty Services Ltd. Doug's primary practice area is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor (up to Whistler). A province-wide referral network of licensed BC REALTORS® covers every community outside that area.
 

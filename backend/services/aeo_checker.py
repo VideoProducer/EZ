@@ -49,8 +49,8 @@ SYSTEM_PROMPT = (
 )
 
 USER_PROMPT_TEMPLATE = """
-Audit the website **eztofind.ca** (a British Columbia real estate lead-
-generation + research site featuring an AI concierge named "Doogie").
+Audit the website **eztofind.ca** (a British Columbia real estate
+information and property-search platform featuring an AI concierge named "Doogie").
 
 Return ONLY a valid JSON object (no markdown, no code fences, no prose
 before or after) with this exact shape:

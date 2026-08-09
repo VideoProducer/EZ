@@ -2,7 +2,7 @@
 # https://eztofind.ca/ai.txt
 # See also: /robots.txt · /llms.txt · /llms-full.txt · /.well-known/ai.json · /.well-known/ai-plugin.json
 #
-# EZtoFind.ca is a British Columbia real-estate research platform operated by
+# EZtoFind.ca is a British Columbia real estate information and property-search platform operated by
 # Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.).
 # This file states, in a machine-readable single-page summary, what any AI
 # agent, LLM, retrieval-augmented-generation (RAG) pipeline, or answer engine
