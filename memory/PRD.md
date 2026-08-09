@@ -1,5 +1,17 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-09 (later same day, part 3)
+- **Cast Session Labels** — admin-only meeting labels so ranked list groups by meeting instead of raw counts:
+  - `frontend/src/lib/castSession.js` — sessionStorage-backed store (`ez_cast_session`), broadcasts a `ez-cast-session-changed` custom event so all consumers stay in sync. Admin gate via existing `ez_admin_session` localStorage marker — anonymous visitors never see the banner or the inline control. Exposes `startCastSession`, `renameCastSession`, `endCastSession`, `readCastSession`, `useCastSession` React hook, plus `CastSessionBanner` and `CastSessionInlineControl` components.
+  - `CastSessionBanner` fixed top-right pill ("🔴 LIVE: Smith Family Viewing · N min · Rename · End") mounted globally in App.js at the BrowserRouter root — visible on every route while a session is active.
+  - `CastSessionInlineControl` rendered inside every Cast modal — shows a purple dashed "🎯 Label this meeting" input when idle, or a red "🔴 Session: X · Rename · End" bar when active.
+  - `CastToDevice._logEvent()` now reads the session at fire-time and stamps every GA4 + backend beacon with `session_id` + `session_label`.
+- **Backend**:
+  - `POST /api/listings/analytics/track` — accepts + persists optional `session_id` (≤64 chars) and `session_label` (≤80 chars) into `listing_analytics.request_meta`.
+  - New `GET /api/admin/cast-sessions?days=N` (max 365) — groups events by `session_id`, hydrates address/city/price/mls/status per listing, returns sorted-newest-first with `label`, `first_at`, `last_at`, `duration_min`, `event_count`, `event_types` histogram, and per-listing `opens/present/shares/sms` counters + `is_search` flag for filtered-search casts.
+- **Admin dashboard** — added a "🎯 Recent Cast Sessions" section (red-accented, sits between Cast Analytics KPIs and BCFSA Compliance) with expandable `<details>` per session showing session-level counts + a hydrated per-listing table. Silent-hides when zero labelled meetings exist.
+- **Verified end-to-end**: fired 4 events tagged `session_label="Smith Family Viewing"`; admin dashboard renders the session correctly showing 4 events across 2 listings (410 Government St, Victoria + filtered-search cast).
+
 ## 2026-02-09 (later same day, part 2)
 - **Cast Analytics dashboard card** — wired the `/api/admin/cast-analytics?days=30` endpoint into `AdminDash` (`AdminShell active="dash"`), inserted between the ChatGPT Doogie attribution card and the BCFSA Compliance Review card. Card includes:
   - Gold-accented left border matching the `📺 Cast` brand affordance.

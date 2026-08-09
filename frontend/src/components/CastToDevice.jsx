@@ -26,6 +26,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { readCastSession, CastSessionInlineControl } from "../lib/castSession";
 
 const IS_CHROMIUM = typeof navigator !== "undefined" &&
   (/Chrome|Chromium|Edg\//.test(navigator.userAgent) && !/Firefox/.test(navigator.userAgent));
@@ -61,14 +62,26 @@ const CastToDevice = ({
   // dashboard PLUS a fire-and-forget backend beacon so the admin analytics
   // panel can attribute casts by listing. Both are non-blocking and never
   // surface errors — never break UX for a metric.
+  //
+  // If Doug has started a "cast session" (admin-only meeting label like
+  // "Smith Family Viewing"), we attach the `session_id` + `session_label`
+  // so the admin dashboard can group casts by meeting instead of raw
+  // counts.  Session state is read at fire-time (not modal-open time) so
+  // late renames of an in-progress session apply immediately.
   const _logEvent = (event_type, extra = {}) => {
+    const sess = readCastSession() || null;
+    const payload = {
+      listing_key: listingKey || "search",
+      canonical_path: canonicalPath || "",
+      session_id:    sess?.session_id    || null,
+      session_label: sess?.label         || null,
+      ...extra,
+    };
     try {
       if (typeof window !== "undefined" && typeof window.gtag === "function") {
         window.gtag("event", event_type, {
           send_to: process.env.REACT_APP_GA4_MEASUREMENT_ID,
-          listing_key: listingKey || "search",
-          canonical_path: canonicalPath || "",
-          ...extra,
+          ...payload,
         });
       }
     } catch { /* swallow */ }
@@ -80,10 +93,9 @@ const CastToDevice = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          listing_key: listingKey || "search",
           event_type,
           path: canonicalPath || "",
-          ...extra,
+          ...payload,
         }),
         keepalive: true,
       }).catch(() => {});
@@ -194,6 +206,9 @@ const CastToDevice = ({
                 }}
               >×</button>
             </div>
+
+            {/* Admin-only session labeller — silent for anonymous visitors */}
+            <CastSessionInlineControl/>
 
             {/* ── 1. QR + copy link ──────────────────────────────────────── */}
             <div style={{

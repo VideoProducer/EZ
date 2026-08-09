@@ -10003,14 +10003,24 @@ a{{color:#F5A623;font-weight:700}}</style>
 @api.post("/listings/analytics/track")
 @_limiter.limit("120/minute")
 async def track_event(request: Request, payload: dict):
-    """Public analytics beacon. Frontend fire-and-forget event logger."""
+    """Public analytics beacon. Frontend fire-and-forget event logger.
+
+    Optional `session_id` + `session_label` fields carry Doug's admin-only
+    "meeting label" (e.g. "Smith Family Viewing") so the admin dashboard
+    can group casts by meeting. Session values are trimmed + length-capped
+    and stored under `request_meta` — never used for any user-facing
+    attribution, only Doug's private dashboard."""
     listing_key = (payload.get("listing_key") or "").strip()
     event_type  = (payload.get("event_type") or "").strip()
     if not listing_key or not event_type:
         raise HTTPException(400, "listing_key and event_type required")
+    session_id    = (payload.get("session_id")    or "").strip()[:64] or None
+    session_label = (payload.get("session_label") or "").strip()[:80] or None
     await _log_event(db, listing_key, event_type, {
         "path": payload.get("path"),
         "ua": request.headers.get("user-agent","")[:200],
+        "session_id":    session_id,
+        "session_label": session_label,
     })
     return {"ok": True}
 
@@ -10088,6 +10098,126 @@ async def admin_cast_analytics(days: int = 30, _=Depends(verify_admin)):
         "totals": totals,
         "search_page_casts": search_casts,
         "top_listings": top_rows,
+    }
+
+
+# =============== CAST SESSIONS (admin drill-down — grouped by meeting) ===============
+@api.get("/admin/cast-sessions")
+async def admin_cast_sessions(days: int = 30, _=Depends(verify_admin)):
+    """Group cast events by Doug's admin-only "meeting label".
+
+    For every distinct `session_id` recorded within the window we return:
+      • `label` — Doug's typed meeting name (e.g. "Smith Family Viewing")
+      • `first_at` / `last_at` — session boundaries
+      • `duration_min` — session length in minutes
+      • `event_count` — total cast events across the session
+      • `listings[]` — each listing that was cast during the session,
+        hydrated with `street_address`, `city`, `list_price`,
+        `mls_number`, plus per-listing event counts
+      • `event_types` — histogram (opens / present / share / …) so Doug
+        can see what actually happened in the meeting
+
+    Sessions are sorted newest-first; only the last 50 are returned so
+    a busy quarter doesn't blow up the dashboard payload."""
+    from datetime import timedelta as _td
+    days = max(1, min(int(days or 30), 365))
+    cutoff = (datetime.now(timezone.utc) - _td(days=days)).isoformat()
+
+    cast_types = ["cast_button_opened", "cast_link_copied", "cast_native_share",
+                  "cast_present_mode_started", "cast_sms_sent"]
+
+    # First pass: aggregate per-session totals + listing key sets.
+    sessions_map: dict[str, dict] = {}
+    async for ev in db.listing_analytics.find({
+        "event_type":                   {"$in": cast_types},
+        "occurred_at":                  {"$gte": cutoff},
+        "request_meta.session_id":      {"$ne": None, "$exists": True},
+    }, {
+        "_id": 0,
+        "event_type": 1, "listing_key": 1, "occurred_at": 1, "request_meta": 1,
+    }):
+        meta = ev.get("request_meta") or {}
+        sid = meta.get("session_id")
+        if not sid: continue
+        s = sessions_map.setdefault(sid, {
+            "session_id": sid,
+            "label": meta.get("session_label") or "Untitled meeting",
+            "first_at": ev["occurred_at"],
+            "last_at":  ev["occurred_at"],
+            "event_count": 0,
+            "event_types": {},
+            "_listing_stats": {},   # keyed by listing_key
+        })
+        # Latest label wins (Doug may have renamed mid-session).
+        if meta.get("session_label"):
+            s["label"] = meta["session_label"]
+        s["event_count"] += 1
+        s["event_types"][ev["event_type"]] = s["event_types"].get(ev["event_type"], 0) + 1
+        if ev["occurred_at"] < s["first_at"]: s["first_at"] = ev["occurred_at"]
+        if ev["occurred_at"] > s["last_at"]:  s["last_at"]  = ev["occurred_at"]
+        lk = ev.get("listing_key") or "search"
+        row = s["_listing_stats"].setdefault(lk, {
+            "listing_key": lk, "opens": 0, "present": 0, "sms": 0, "shares": 0,
+        })
+        et = ev["event_type"]
+        if et == "cast_button_opened":        row["opens"]   += 1
+        elif et == "cast_present_mode_started": row["present"] += 1
+        elif et == "cast_sms_sent":           row["sms"]     += 1
+        elif et in ("cast_native_share","cast_link_copied"): row["shares"] += 1
+
+    # Collect all listing_keys touched by any session so we can hydrate
+    # address / city / price in a single Mongo round-trip.
+    keys: set[str] = set()
+    for s in sessions_map.values():
+        for lk in s["_listing_stats"].keys():
+            if lk and lk != "search": keys.add(lk)
+    by_key: dict[str, dict] = {}
+    if keys:
+        async for l in db.listings.find(
+            {"listing_key": {"$in": list(keys)}},
+            {"_id": 0, "listing_key": 1, "street_address": 1, "city": 1, "list_price": 1, "mls_number": 1, "status": 1},
+        ):
+            by_key[l["listing_key"]] = l
+
+    # Second pass: assemble the response rows with hydrated listing metadata.
+    out: list[dict] = []
+    for s in sessions_map.values():
+        listings = []
+        for lk, stats in s["_listing_stats"].items():
+            meta = by_key.get(lk, {})
+            listings.append({
+                **stats,
+                "street_address": meta.get("street_address"),
+                "city":           meta.get("city"),
+                "list_price":     meta.get("list_price"),
+                "mls_number":     meta.get("mls_number"),
+                "status":         meta.get("status"),
+                "is_search":      lk == "search",
+            })
+        # Sort listings within a session by intent (present > opens > shares)
+        listings.sort(key=lambda r: (r["present"] * 3 + r["opens"] + r["shares"], r["opens"]), reverse=True)
+        try:
+            duration_min = max(1, int((datetime.fromisoformat(s["last_at"]) - datetime.fromisoformat(s["first_at"])).total_seconds() // 60))
+        except Exception:
+            duration_min = 1
+        out.append({
+            "session_id":  s["session_id"],
+            "label":       s["label"],
+            "first_at":    s["first_at"],
+            "last_at":     s["last_at"],
+            "duration_min": duration_min,
+            "event_count":  s["event_count"],
+            "event_types":  s["event_types"],
+            "listings":     listings,
+        })
+
+    # Newest sessions first, cap at 50.
+    out.sort(key=lambda r: r["last_at"], reverse=True)
+    return {
+        "days": days,
+        "since": cutoff,
+        "session_count": len(out),
+        "sessions": out[:50],
     }
 
 

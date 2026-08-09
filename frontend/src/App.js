@@ -44,6 +44,7 @@ import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
 import CastToDevice from "./components/CastToDevice";
 import ListingPresentMode from "./components/ListingPresentMode";
+import { CastSessionBanner } from "./lib/castSession";
 import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
@@ -5682,6 +5683,9 @@ const AdminDash = () => {
   // Present Mode / SMS)? Silent-hides when there's no activity yet so the
   // dashboard stays clean pre-adoption.
   const [castAnalytics, setCastAnalytics] = useState(null);
+  // Cast Sessions — grouped by Doug's meeting label ("Smith Family
+  // Viewing" etc). Silent-hides if no labelled meetings yet.
+  const [castSessions, setCastSessions] = useState(null);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -5703,6 +5707,9 @@ const AdminDash = () => {
     axios.get(`${API}/admin/cast-analytics?days=30`, {headers})
       .then(r => setCastAnalytics(r.data))
       .catch(() => setCastAnalytics(null));
+    axios.get(`${API}/admin/cast-sessions?days=30`, {headers})
+      .then(r => setCastSessions(r.data))
+      .catch(() => setCastSessions(null));
   },[]);
   const ackBcfsa = async (slug) => {
     setBcfsaAcking(prev => ({...prev, [slug]: true}));
@@ -5916,6 +5923,76 @@ const AdminDash = () => {
             </div>
           </>
         )}
+      </div>
+    )}
+
+    {castSessions && castSessions.session_count > 0 && (
+      <div data-testid="dash-cast-sessions" style={{
+        marginTop: "1.25rem", background: "#fff",
+        border: "1px solid #E5E7EB", borderRadius: 16, padding: "1.5rem",
+        borderLeft: "4px solid #DC2626",
+      }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:8,marginBottom:"1rem"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+              <span style={{fontSize:22}} aria-hidden>🎯</span>
+              <h2 style={{margin:0,fontSize:"1.35rem",color:"var(--brand-navy)"}}>Recent Cast Sessions</h2>
+              <span style={{background:"#FEE2E2",color:"#B91C1C",padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:700,letterSpacing:0.3,textTransform:"uppercase"}}>
+                {castSessions.session_count} labelled
+              </span>
+            </div>
+            <p style={{margin:0,color:"#6B7280",fontSize:"0.85rem"}}>
+              Every meeting you label ("<em>Start Cast Session</em>" from any Cast modal) is grouped here — see which listings a specific family actually engaged with.
+            </p>
+          </div>
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {castSessions.sessions.slice(0, 10).map(s => (
+            <details key={s.session_id} data-testid={`cast-session-${s.session_id.slice(0,12)}`}
+                     style={{background:"#F9FAFB",border:"1px solid #E5E7EB",borderRadius:10,padding:"10px 14px"}}>
+              <summary style={{cursor:"pointer",listStyle:"none",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <span aria-hidden style={{fontSize:14}}>🔴</span>
+                <span style={{fontWeight:700,color:"var(--brand-navy)",flex:"1 1 auto",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</span>
+                <span style={{fontSize:11,color:"#6B7280"}}>
+                  {new Date(s.last_at).toLocaleString("en-CA",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
+                </span>
+                <span style={{background:"#fff",border:"1px solid #E5E7EB",padding:"2px 8px",borderRadius:999,fontSize:11}}>{s.duration_min} min</span>
+                <span style={{background:"var(--brand-navy)",color:"#fff",padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:600}}>{s.event_count} events</span>
+                <span style={{background:"#FEF3C7",color:"#92400E",padding:"2px 8px",borderRadius:999,fontSize:11}}>{s.listings.length} listing{s.listings.length===1?"":"s"}</span>
+              </summary>
+              <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
+                {s.listings.map(l => (
+                  <div key={l.listing_key} style={{
+                    display:"grid",gridTemplateColumns:"minmax(0,1fr) auto",gap:12,
+                    alignItems:"center",fontSize:12.5,padding:"6px 10px",
+                    background:"#fff",border:"1px solid #E5E7EB",borderRadius:8,
+                  }}>
+                    <div style={{minWidth:0}}>
+                      {l.is_search ? (
+                        <span style={{color:"var(--brand-navy)",fontWeight:600}}>🔎 Filtered search cast</span>
+                      ) : (
+                        <a href={`/listing/${l.listing_key}`} target="_blank" rel="noopener noreferrer"
+                           style={{color:"var(--brand-navy)",fontWeight:600,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>
+                          {l.street_address || `MLS® #${l.mls_number || l.listing_key}`}
+                          <span style={{color:"#6B7280",fontWeight:400}}> · {l.city || "—"}
+                            {l.list_price ? ` · $${l.list_price.toLocaleString("en-CA")}` : ""}
+                          </span>
+                        </a>
+                      )}
+                    </div>
+                    <div style={{display:"flex",gap:5,fontSize:11,color:"#374151"}}>
+                      {l.opens   > 0 && <span title="Modal opens"    style={{background:"#F3F4F6",padding:"1px 7px",borderRadius:999}}>👀 {l.opens}</span>}
+                      {l.present > 0 && <span title="Present Mode"   style={{background:"#FEF3C7",padding:"1px 7px",borderRadius:999}}>🎥 {l.present}</span>}
+                      {l.shares  > 0 && <span title="Link copies + native shares" style={{background:"#DBEAFE",padding:"1px 7px",borderRadius:999}}>🔗 {l.shares}</span>}
+                      {l.sms     > 0 && <span title="SMS sent"       style={{background:"#DCFCE7",padding:"1px 7px",borderRadius:999}}>💬 {l.sms}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
       </div>
     )}
 
@@ -11114,6 +11191,10 @@ function App() {
         wrap in AppLayout). Kept inside AppLayout too as a belt-and-braces
         no-op safety for lazy-loaded async content. */}
     <ScrollToTop/>
+    {/* Admin-only "🔴 LIVE: {meeting label}" fixed pill — appears whenever
+        Doug has an active cast session in this tab. Silent for anonymous
+        visitors. */}
+    <CastSessionBanner/>
     <Routes>
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home
