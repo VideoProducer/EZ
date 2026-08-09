@@ -1,5 +1,14 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-09 (later same day, part 2)
+- **Cast Analytics dashboard card** — wired the `/api/admin/cast-analytics?days=30` endpoint into `AdminDash` (`AdminShell active="dash"`), inserted between the ChatGPT Doogie attribution card and the BCFSA Compliance Review card. Card includes:
+  - Gold-accented left border matching the `📺 Cast` brand affordance.
+  - 6-tile KPI strip: Modal opens · Link copies · Native shares · Present Mode · SMS sent · Search casts.
+  - Ranked top-25 listings list with `#N` badge, deep-link to `/listing/{key}`, hydrated address/city, list price, status, "last cast" date, per-listing 👀/🎥/💬 badges, and the cast score in a navy chip.
+  - `Raw JSON ↗` link so Doug can drop-through to the raw endpoint response.
+  - Silent-hides on zero activity so the dashboard stays clean pre-adoption.
+- Verified end-to-end via admin login → dashboard: card renders with the 4 seed events fired earlier (Top #1 = 410 Government St, Victoria, score 4).
+
 ## 2026-02-09 (later same day)
 - **Cast Analytics** — every Cast/Present-mode interaction now fires paired GA4 + backend beacon events (`cast_button_opened`, `cast_link_copied`, `cast_native_share`, `cast_present_mode_started`, plus `cast_sms_sent` reserved for future Twilio wiring). Events land in the existing `listing_analytics` Mongo collection alongside impressions/detail-views/etc.
 - Extended `services/analytics_logger.py::VALID_EVENT_TYPES` with the five cast event types and added a companion `_CREA_EVENT_TYPES` allow-list so the CREA Analytics flush helper filters internal telemetry out before its future batch POST.

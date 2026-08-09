@@ -5678,6 +5678,10 @@ const AdminDash = () => {
   // acknowledge each one during his quarterly review.
   const [bcfsaReview, setBcfsaReview] = useState(null);
   const [bcfsaAcking, setBcfsaAcking] = useState({});
+  // Cast Analytics — which listings are clients actually casting (QR / share /
+  // Present Mode / SMS)? Silent-hides when there's no activity yet so the
+  // dashboard stays clean pre-adoption.
+  const [castAnalytics, setCastAnalytics] = useState(null);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -5696,6 +5700,9 @@ const AdminDash = () => {
     axios.get(`${API}/admin/bcfsa/synopsis-review`, {headers})
       .then(r => setBcfsaReview(r.data))
       .catch(() => setBcfsaReview(null));
+    axios.get(`${API}/admin/cast-analytics?days=30`, {headers})
+      .then(r => setCastAnalytics(r.data))
+      .catch(() => setCastAnalytics(null));
   },[]);
   const ackBcfsa = async (slug) => {
     setBcfsaAcking(prev => ({...prev, [slug]: true}));
@@ -5823,6 +5830,91 @@ const AdminDash = () => {
           <div style={{ fontSize: 13, color: "var(--muted)", fontStyle: "italic", padding: "8px 0" }}>
             No ChatGPT Doogie leads yet — this widget lights up the moment the first buyer submits through the GPT Store tile.
           </div>
+        )}
+      </div>
+    )}
+
+    {castAnalytics && (castAnalytics.top_listings?.length > 0 || Object.values(castAnalytics.totals || {}).some(n => n > 0)) && (
+      <div data-testid="dash-cast-analytics" style={{
+        marginTop: "1.25rem", background: "#fff",
+        border: "1px solid #E5E7EB", borderRadius: 16, padding: "1.5rem",
+        borderLeft: "4px solid #C89B3C",
+      }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:8,marginBottom:"0.75rem"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+              <span style={{fontSize:22}} aria-hidden>📺</span>
+              <h2 style={{margin:0,fontSize:"1.35rem",color:"var(--brand-navy)"}}>Cast Analytics — last 30 days</h2>
+            </div>
+            <p style={{margin:0,color:"#6B7280",fontSize:"0.85rem"}}>
+              Which listings clients are actually casting to TVs and phones — QR scans, native shares, Present-Mode launches. Ranked by intent strength ({" "}
+              <code style={{background:"#F5F0E1",padding:"1px 6px",borderRadius:4,fontSize:11}}>opens + 3×present + 5×sms</code>).
+            </p>
+          </div>
+          <a href={`${API}/admin/cast-analytics?days=30`} target="_blank" rel="noopener noreferrer" style={{
+            fontSize:12, color:"var(--brand-blue)", textDecoration:"none", fontWeight:600,
+          }}>Raw JSON ↗</a>
+        </div>
+
+        {/* KPI strip — total events across the window */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10,marginBottom:"1rem"}}>
+          {[
+            {label:"Modal opens", n:castAnalytics.totals?.cast_button_opened || 0, icon:"👀"},
+            {label:"Link copies",  n:castAnalytics.totals?.cast_link_copied || 0, icon:"📋"},
+            {label:"Native shares",n:castAnalytics.totals?.cast_native_share || 0, icon:"📤"},
+            {label:"Present Mode", n:castAnalytics.totals?.cast_present_mode_started || 0, icon:"🎥"},
+            {label:"SMS sent",     n:castAnalytics.totals?.cast_sms_sent || 0, icon:"💬"},
+            {label:"Search casts", n:castAnalytics.search_page_casts || 0, icon:"🔎"},
+          ].map(s => (
+            <div key={s.label} data-testid={`cast-kpi-${s.label.replace(/\s+/g,"-").toLowerCase()}`}
+                 style={{textAlign:"center",padding:"0.75rem 0.5rem",background:"#FAF7F0",borderRadius:10,border:"1px solid rgba(200,155,60,0.2)"}}>
+              <div style={{fontSize:"1.6rem",fontWeight:700,color:"var(--brand-navy)",lineHeight:1}}>{s.n}</div>
+              <div style={{color:"#6B7280",fontSize:11,marginTop:4}}><span aria-hidden>{s.icon}</span> {s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Top listings ranked by cast score */}
+        {castAnalytics.top_listings?.length > 0 && (
+          <>
+            <div style={{fontSize:12,fontWeight:700,color:"var(--brand-navy)",marginBottom:6,textTransform:"uppercase",letterSpacing:0.3}}>
+              Top {castAnalytics.top_listings.length} listing{castAnalytics.top_listings.length === 1 ? "" : "s"} by cast activity
+            </div>
+            <div style={{display:"grid",gap:6}}>
+              {castAnalytics.top_listings.map((row, i) => (
+                <div key={row.listing_key} data-testid={`cast-top-${i}`} style={{
+                  background:"#fff", border:"1px solid #E5E7EB", borderRadius:8,
+                  padding:"10px 14px", display:"grid",
+                  gridTemplateColumns:"32px minmax(0,1fr) auto auto",
+                  gap:12, alignItems:"center", fontSize:13,
+                }}>
+                  <div style={{fontSize:16,fontWeight:700,color:"var(--brand-gold,#C89B3C)"}}>#{i+1}</div>
+                  <div style={{minWidth:0}}>
+                    <a href={`/listing/${row.listing_key}`} target="_blank" rel="noopener noreferrer" style={{
+                      color:"var(--brand-navy)", fontWeight:700, textDecoration:"none",
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"block",
+                    }}>
+                      {row.street_address || `MLS® #${row.mls_number || row.listing_key}`}
+                      <span style={{color:"#6B7280",fontWeight:400}}> · {row.city || "—"}</span>
+                    </a>
+                    <div style={{color:"#6B7280",fontSize:11,marginTop:2}}>
+                      {row.list_price ? `$${row.list_price.toLocaleString("en-CA")}` : "—"}
+                      {row.status && row.status !== "Active" && <span style={{color:"#DC2626",marginLeft:8}}>· {row.status}</span>}
+                      {row.last_at && <span style={{marginLeft:8}}>· last {new Date(row.last_at).toLocaleDateString("en-CA")}</span>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,fontSize:11,color:"#374151"}}>
+                    <span title="Modal opens" style={{background:"#F3F4F6",padding:"2px 8px",borderRadius:999}}>👀 {row.opens}</span>
+                    <span title="Present Mode starts" style={{background:"#FEF3C7",padding:"2px 8px",borderRadius:999}}>🎥 {row.present}</span>
+                    {row.sms > 0 && <span title="SMS sent" style={{background:"#DBEAFE",padding:"2px 8px",borderRadius:999}}>💬 {row.sms}</span>}
+                  </div>
+                  <div style={{background:"var(--brand-navy)",color:"#fff",padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:700,minWidth:38,textAlign:"center"}} title="Cast score">
+                    {row.score}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     )}
