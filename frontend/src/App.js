@@ -2848,13 +2848,29 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
   };
 
   const submit = (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     const merged = { ...defaults, ...Object.fromEntries(Object.entries(state).filter(([, v]) => v !== "" && v !== undefined && v !== null)) };
     // Ensure defaults survive (e.g., locked property_type on detached page)
     if (lockPropertyType && defaults.property_type) merged.property_type = defaults.property_type;
     const qs = new URLSearchParams(merged).toString();
     navigate(`/listings?${qs}`);
   };
+
+  // Auto-search the moment the user finishes typing a Canadian postal code
+  // (full A1A 1A1 / A1A1A1) or an FSA prefix (A1A) into the Community/City
+  // field. Debounced 500 ms so mid-typing values don't fire — feels the
+  // same as Redfin's "type your postal, see homes" pattern.  The backend
+  // /api/listings endpoint already understands postal codes in the `city`
+  // param, so we just navigate; no request shape changes needed.
+  useEffect(() => {
+    const v = (state.city || "").trim().toUpperCase();
+    const full = /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(v);
+    const fsa  = /^[A-Z]\d[A-Z]$/.test(v);
+    if (!full && !fsa) return;
+    const t = setTimeout(() => submit(), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.city]);
 
   return (
     <form onSubmit={submit} className="paper" data-testid="specialty-filter-panel" style={{marginBottom:"1.75rem", padding: 0, overflow: "hidden"}}>
@@ -2864,7 +2880,7 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
       <div className="field" style={{position:"relative"}}><label>Community / City</label>
         <input type="text" value={state.city} onChange={e=>set("city", e.target.value)}
           onFocus={()=>setCityFocus(true)} onBlur={()=>setTimeout(()=>setCityFocus(false), 200)}
-          placeholder="Type any BC community (e.g. Whistler, Nelson, Kelowna)"
+          placeholder="Community, city, or BC postal code (e.g. Whistler or V7T 1A0)"
           data-testid="specialty-filter-city" autoComplete="off"/>
         {cityFocus && suggestions.length > 0 && (
           <div style={{position:"absolute",top:"100%",left:0,right:0,background:"white",border:"1px solid rgba(15,42,91,0.15)",borderRadius:10,marginTop:"0.25rem",boxShadow:"0 10px 24px rgba(15,42,91,0.12)",maxHeight:240,overflowY:"auto",zIndex:20}}>
@@ -2947,6 +2963,23 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
     setTimeout(() => { try { onSubmit?.(); } catch {} }, 60);
   };
 
+  // Auto-search the moment the user finishes typing a Canadian postal code
+  // (full A1A 1A1 / A1A1A1) or an FSA prefix (A1A) into the Community/City
+  // field. Debounced 500 ms so mid-typing values don't fire.  Users no
+  // longer need to click the gold "Apply Filters" button after entering
+  // a postal code — the results just refresh.  The backend /api/listings
+  // endpoint already treats postal-like values in the `city` param as
+  // postal lookups (with an FSA fallback), so we simply fire onSubmit.
+  useEffect(() => {
+    const v = (filters.city || "").trim().toUpperCase();
+    const full = /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(v);
+    const fsa  = /^[A-Z]\d[A-Z]$/.test(v);
+    if (!full && !fsa) return;
+    const t = setTimeout(() => { try { onSubmit?.(); } catch {} }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.city]);
+
   // Map Doogie voice-filter output into <Listings/>'s filter shape and run search.
   const applyVoiceFilter = (vf) => {
     if (!vf) return;
@@ -2975,7 +3008,7 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
           onChange={e => set("city", e.target.value)}
           onFocus={() => setCityFocus(true)}
           onBlur={() => setTimeout(() => setCityFocus(false), 200)}
-          placeholder="Type any BC community (e.g. Whistler, Nelson, Kelowna)"
+          placeholder="Community, city, or BC postal code (e.g. Whistler or V7T 1A0)"
           data-testid="filter-city"
           autoComplete="off"
         />
