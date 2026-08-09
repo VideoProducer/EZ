@@ -1,6 +1,15 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
-## 2026-02-09 (latest)
+## 2026-02-09 (later same day)
+- **Cast Analytics** — every Cast/Present-mode interaction now fires paired GA4 + backend beacon events (`cast_button_opened`, `cast_link_copied`, `cast_native_share`, `cast_present_mode_started`, plus `cast_sms_sent` reserved for future Twilio wiring). Events land in the existing `listing_analytics` Mongo collection alongside impressions/detail-views/etc.
+- Extended `services/analytics_logger.py::VALID_EVENT_TYPES` with the five cast event types and added a companion `_CREA_EVENT_TYPES` allow-list so the CREA Analytics flush helper filters internal telemetry out before its future batch POST.
+- New admin endpoint `GET /api/admin/cast-analytics?days=N` returns:
+  - `totals` per event type across the window
+  - `search_page_casts` (a filtered-search share)
+  - `top_listings[]` — top 25 casted listings, ranked by `opens + 3×present + 5×sms` and hydrated with `street_address`, `city`, `list_price`, `mls_number`, `status` so Doug can spot which specific homes clients keep casting during meetings.
+- SMS-to-phone deferred by user request — the analytics event slot + admin scoring already accounts for it, so wiring Twilio later is a drop-in three-env-var change.
+
+## 2026-02-09 (earlier same day)
 - **Cast to another device — QR + Chromecast + AirPlay + Present Mode** — shipped a unified "Cast" button on `/listing/{key}` and `/listings` results:
   - `frontend/src/components/CastToDevice.jsx` — modal with a canonical-URL QR code (encodes `https://eztofind.ca/...` even when opened in preview), Copy-link, `navigator.share()` fallback (iOS/Android share sheet: AirDrop, Messages, WhatsApp, Mail), and browser-specific cast instructions (Chromecast for Chromium; AirPlay Screen Mirroring for Safari/iOS).
   - `frontend/src/components/ListingPresentMode.jsx` — fullscreen slideshow (auto-advance 6 s, ←/→/space/ESC controls, CREA "Powered by REALTOR.ca" badge pinned to every slide) with an auto-playing Doogie narration built from the listing's first-person description via the fast `/api/doogie/tts/prepare` flow. Uses `x-webkit-airplay="allow"` on the `<audio>` so iOS/macOS Safari can mirror the sound to Apple TV.
