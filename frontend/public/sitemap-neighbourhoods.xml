@@ -578,18 +578,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/tobiano</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Tobiano, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Tobiano, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Tobiano, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops/n/pritchard</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -599,6 +587,18 @@
       <image:caption>Pritchard, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Pritchard, Kamloops — BC Neighbourhood</image:title>
       <image:geo_location>Pritchard, Kamloops, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/tobiano</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Tobiano, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Tobiano, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Tobiano, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1226,18 +1226,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/saanich/n/quadra</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Quadra, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Quadra, Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>Quadra, Saanich, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/enderby/n/trinity-valley</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -1247,6 +1235,18 @@
       <image:caption>Trinity Valley, Enderby, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Trinity Valley, Enderby — BC Neighbourhood</image:title>
       <image:geo_location>Trinity Valley, Enderby, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/saanich/n/quadra</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Quadra, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Quadra, Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>Quadra, Saanich, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2750,15 +2750,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/shannon-lake</loc>
+    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Shannon Lake, West Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Shannon Lake, West Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Shannon Lake, West Kelowna, British Columbia, Canada</image:geo_location>
+      <image:caption>Port Alice, Port Alice, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Port Alice, Port Alice — BC Neighbourhood</image:title>
+      <image:geo_location>Port Alice, Port Alice, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2786,15 +2786,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/port-alice/n/port-alice</loc>
+    <loc>https://eztofind.ca/community/west-kelowna/n/shannon-lake</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Port Alice, Port Alice, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Port Alice, Port Alice — BC Neighbourhood</image:title>
-      <image:geo_location>Port Alice, Port Alice, British Columbia, Canada</image:geo_location>
+      <image:caption>Shannon Lake, West Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Shannon Lake, West Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Shannon Lake, West Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -3026,18 +3026,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/n/james-bay</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>James Bay, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>James Bay, Victoria — BC Neighbourhood</image:title>
-      <image:geo_location>James Bay, Victoria, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/castlegar/n/ootischenia</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -3047,6 +3035,18 @@
       <image:caption>Ootischenia, Castlegar, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Ootischenia, Castlegar — BC Neighbourhood</image:title>
       <image:geo_location>Ootischenia, Castlegar, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/victoria/n/james-bay</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>James Bay, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>James Bay, Victoria — BC Neighbourhood</image:title>
+      <image:geo_location>James Bay, Victoria, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4730,6 +4730,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Glenrosa, West Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Glenrosa, West Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Glenrosa, West Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/fairmont-hot-springs/n/fairmont-columbia-lake</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -4766,15 +4778,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/west-kelowna/n/glenrosa</loc>
+    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Glenrosa, West Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Glenrosa, West Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Glenrosa, West Kelowna, British Columbia, Canada</image:geo_location>
+      <image:caption>Dawson Creek, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Dawson Creek, Dawson Creek — BC Neighbourhood</image:title>
+      <image:geo_location>Dawson Creek, Dawson Creek, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4787,18 +4799,6 @@
       <image:caption>Kokanee Creek to Balfour, Nelson, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Kokanee Creek to Balfour, Nelson — BC Neighbourhood</image:title>
       <image:geo_location>Kokanee Creek to Balfour, Nelson, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Dawson Creek, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Dawson Creek, Dawson Creek — BC Neighbourhood</image:title>
-      <image:geo_location>Dawson Creek, Dawson Creek, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5882,18 +5882,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/john-muir</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>John Muir, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>John Muir, Sooke — BC Neighbourhood</image:title>
-      <image:geo_location>John Muir, Sooke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kelowna/n/springfield-spall</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -5903,6 +5891,18 @@
       <image:caption>Springfield/Spall, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Springfield/Spall, Kelowna — BC Neighbourhood</image:title>
       <image:geo_location>Springfield/Spall, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/sooke/n/john-muir</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>John Muir, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>John Muir, Sooke — BC Neighbourhood</image:title>
+      <image:geo_location>John Muir, Sooke, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

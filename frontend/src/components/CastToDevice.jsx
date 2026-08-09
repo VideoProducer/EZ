@@ -50,6 +50,12 @@ const CastToDevice = ({
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pickerState, setPickerState] = useState("idle");  // idle | trying | unsupported
+  // First-time coach mark that points at the "1 tap" picker button. Fires
+  // once per device via `localStorage.ez_cast_tutorial_seen`; auto-dismisses
+  // after 10 s OR the moment the user actually taps the picker.  Kept
+  // tiny + non-modal so it feels like a hint, not a blocker.
+  const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialTimerRef = useRef(null);
   const closeRef = useRef(null);
   const pickerAudioRef = useRef(null);
   const url = useMemo(() => canonicalUrl(canonicalPath), [canonicalPath]);
@@ -107,11 +113,28 @@ const CastToDevice = ({
     // click so the metric reflects modals actually shown to the user, not
     // spurious click-throughs.
     _logEvent("cast_button_opened");
+    // First-visit coach mark — show a tiny non-modal tooltip pointing at
+    // the 1-tap picker button for exactly 10 s so buyers understand where
+    // to tap without hunting.  Localstorage flag → shown once per device.
+    try {
+      if (!localStorage.getItem("ez_cast_tutorial_seen")) {
+        // Small delay so the modal transition finishes first and the
+        // tooltip lands correctly aligned.
+        setTimeout(() => setShowTutorial(true), 200);
+        localStorage.setItem("ez_cast_tutorial_seen", "1");
+        _logEvent("cast_tutorial_shown");
+        tutorialTimerRef.current = setTimeout(() => setShowTutorial(false), 10000);
+      }
+    } catch { /* private mode / disabled storage — silently skip the coach mark */ }
     const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", onKey);
     // Focus the close button so screen readers land there.
     setTimeout(() => closeRef.current?.focus(), 50);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (tutorialTimerRef.current) { clearTimeout(tutorialTimerRef.current); tutorialTimerRef.current = null; }
+      setShowTutorial(false);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -143,6 +166,11 @@ const CastToDevice = ({
   // Playback API (older Android/Firefox); the UI then shows the illustrated
   // fallback instructions.
   const openNativePicker = async () => {
+    // Dismiss the coach mark the moment the user acts on it.
+    if (showTutorial) {
+      setShowTutorial(false);
+      if (tutorialTimerRef.current) { clearTimeout(tutorialTimerRef.current); tutorialTimerRef.current = null; }
+    }
     _logEvent("cast_native_picker_opened");
     setPickerState("trying");
     const result = await openNativeCastPicker(pickerAudioRef.current);
@@ -286,6 +314,69 @@ const CastToDevice = ({
               <audio ref={pickerAudioRef} preload="metadata" playsInline
                      x-webkit-airplay="allow" style={{display:"none"}}/>
 
+              {/* Wrapper positions the first-run coach mark relative to the
+                  1-tap picker button.  Tooltip auto-dismisses after 10 s or
+                  the moment the user taps the picker.                     */}
+              <div style={{position:"relative"}}>
+              {showTutorial && (
+                <div
+                  role="tooltip"
+                  data-testid="cast-tutorial-tooltip"
+                  style={{
+                    position:"absolute",
+                    bottom:"calc(100% + 10px)", left:"50%",
+                    transform:"translateX(-50%)",
+                    background:"var(--brand-gold,#C89B3C)",
+                    color:"var(--brand-navy,#0F2A5B)",
+                    padding:"0.55rem 0.85rem",
+                    borderRadius: 10,
+                    fontFamily:"Sora,sans-serif", fontWeight:700, fontSize:"0.82rem",
+                    whiteSpace:"nowrap",
+                    boxShadow:"0 10px 22px rgba(200,155,60,0.45)",
+                    display:"flex", alignItems:"center", gap:"0.5rem",
+                    animation:"ez-cast-tut-bounce 1.2s ease-in-out infinite",
+                    zIndex: 2,
+                  }}
+                >
+                  <span aria-hidden style={{fontSize:"1.05rem"}}>👆</span>
+                  <span>Tap here — cast to your TV in <u>one step</u></span>
+                  <button
+                    type="button"
+                    onClick={() => setShowTutorial(false)}
+                    aria-label="Dismiss tutorial"
+                    data-testid="cast-tutorial-close"
+                    style={{
+                      background:"transparent", border:"none",
+                      color:"var(--brand-navy,#0F2A5B)",
+                      fontSize:"1.1rem", lineHeight:1,
+                      cursor:"pointer", padding:"0 0 0 0.25rem",
+                      opacity:0.75,
+                    }}
+                  >×</button>
+                  {/* Downward-pointing arrow */}
+                  <div style={{
+                    position:"absolute",
+                    top:"100%", left:"50%",
+                    transform:"translateX(-50%)",
+                    width:0, height:0,
+                    borderLeft:"8px solid transparent",
+                    borderRight:"8px solid transparent",
+                    borderTop:"8px solid var(--brand-gold,#C89B3C)",
+                  }}/>
+                </div>
+              )}
+              {/* Keyframes for the coach-mark bounce — injected inline so
+                  we don't need a global stylesheet edit. Applies only when
+                  the tooltip is mounted; garbage-collected on unmount.    */}
+              {showTutorial && (
+                <style>{`
+                  @keyframes ez-cast-tut-bounce {
+                    0%,100% { transform: translateX(-50%) translateY(0); }
+                    50%     { transform: translateX(-50%) translateY(-4px); }
+                  }
+                `}</style>
+              )}
+
               {/* 1-tap picker button. Big and gold so it's the obvious primary action. */}
               <button
                 type="button"
@@ -315,6 +406,7 @@ const CastToDevice = ({
                 </span>
                 <span style={{fontSize:"0.75rem", opacity:0.75}}>1 tap</span>
               </button>
+              </div>
 
               {/* Illustrated step-by-step fallback — shows when the picker
                   can't open (Firefox, older Android, some in-app browsers)
@@ -365,10 +457,6 @@ const CastToDevice = ({
                 boxShadow:"0 6px 16px rgba(200,155,60,0.35)",
               }}
             >🎥 Start Present Mode — big-screen slideshow</button>
-            <p style={{fontSize:"0.72rem", color:"var(--muted,#6b7280)", margin:"0.5rem 0 0", textAlign:"center", lineHeight:1.4}}>
-              Perfect for client meetings, agent open houses, or watching from the couch.
-              CREA attribution and the &ldquo;Powered by REALTOR.ca&rdquo; badge stay visible on every casted view.
-            </p>
           </div>
         </div>
       )}

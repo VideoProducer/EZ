@@ -1,5 +1,9 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-09 (later same day, part 6)
+- **First-run Cast tutorial coach mark** — small gold "👆 Tap here — cast to your TV in one step" tooltip with a bouncing downward arrow appears above the 1-tap picker button the FIRST time Doug (or any visitor) opens the Cast modal. Auto-dismisses after 10 s, or the moment the user taps the picker/× button. Persistence via `localStorage.ez_cast_tutorial_seen` so the coach mark only shows once per device.  Fires a new `cast_tutorial_shown` analytics event so we can measure adoption of the coach mark itself.
+- **Removed CREA/REALTOR.ca attribution footer** from the bottom of the Cast modal per Doug's request. The badge still appears on every `/listing/{key}` page + inside Present Mode's photo overlay, so compliance is untouched.
+
 ## 2026-02-09 (later same day, part 5)
 - **1-tap cast picker + illustrated manual steps** — Doug flagged that the "Open Control Center → tap Screen Mirroring" instruction was ambiguous. Fix:
   - New helper `frontend/src/lib/nativeCastPicker.js` — calls `HTMLMediaElement.remote.prompt()` (Web Remote Playback API — Chromium, iOS 15.4+ Safari) with graceful fallback to `webkitShowPlaybackTargetPicker()` (older Safari). Uses a hidden silent audio element as the attach target since the API requires a media element in the DOM.
