@@ -35,6 +35,20 @@ VALID_EVENT_TYPES = {
     "contact_request",  # user submitted "Book a Viewing" / "Ask" form
     "share",            # user shared the listing
     "favorite",         # user favorited/saved the listing
+    # Internal (EZtoFind-only) events — NOT flushed to CREA. The `flush_to_crea`
+    # helper filters these out via the `_CREA_EVENT_TYPES` allowlist below.
+    "cast_button_opened",        # user opened the Cast modal
+    "cast_link_copied",          # copied the canonical URL to clipboard
+    "cast_native_share",         # invoked navigator.share() (AirDrop/Messages/etc.)
+    "cast_present_mode_started", # launched fullscreen big-screen slideshow
+    "cast_sms_sent",             # texted the listing link to a phone number
+}
+
+# Subset of VALID_EVENT_TYPES that the CREA Analytics Web Service accepts.
+# Used by `flush_to_crea` to strip internal telemetry before the batch POST.
+_CREA_EVENT_TYPES = {
+    "impression", "detail_view", "media_view", "map_view",
+    "contact_request", "share", "favorite",
 }
 
 

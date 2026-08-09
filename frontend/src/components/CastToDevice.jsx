@@ -49,6 +49,7 @@ const CastToDevice = ({
   label = "Cast",     // button label
   variant = "pill",   // "pill" | "icon"
   onPresentMode,      // optional: called when user taps "Present Mode"
+  listingKey,         // optional: the MLS® listing_key for analytics attribution
   "data-testid": testId = "cast-to-device-btn",
 }) => {
   const [open, setOpen] = useState(false);
@@ -56,18 +57,57 @@ const CastToDevice = ({
   const closeRef = useRef(null);
   const url = useMemo(() => canonicalUrl(canonicalPath), [canonicalPath]);
 
+  // Fire an analytics event — GA4 (via window.gtag) for Doug's marketing
+  // dashboard PLUS a fire-and-forget backend beacon so the admin analytics
+  // panel can attribute casts by listing. Both are non-blocking and never
+  // surface errors — never break UX for a metric.
+  const _logEvent = (event_type, extra = {}) => {
+    try {
+      if (typeof window !== "undefined" && typeof window.gtag === "function") {
+        window.gtag("event", event_type, {
+          send_to: process.env.REACT_APP_GA4_MEASUREMENT_ID,
+          listing_key: listingKey || "search",
+          canonical_path: canonicalPath || "",
+          ...extra,
+        });
+      }
+    } catch { /* swallow */ }
+    try {
+      const backend = process.env.REACT_APP_BACKEND_URL;
+      // Backend beacon: listing_key is required; use "search" as a sentinel
+      // for the /listings-page cast (i.e. sharing a filtered search URL).
+      fetch(`${backend}/api/listings/analytics/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listing_key: listingKey || "search",
+          event_type,
+          path: canonicalPath || "",
+          ...extra,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch { /* swallow */ }
+  };
+
   // ESC closes the modal
   useEffect(() => {
     if (!open) return;
+    // Fire the "cast_button_opened" analytics event exactly once per open.
+    // Placed here (in the effect, guarded by `open`) instead of the button
+    // click so the metric reflects modals actually shown to the user, not
+    // spurious click-throughs.
+    _logEvent("cast_button_opened");
     const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", onKey);
     // Focus the close button so screen readers land there.
     setTimeout(() => closeRef.current?.focus(), 50);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); }
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500); _logEvent("cast_link_copied"); }
     catch { /* older browsers — user can select the URL text */ }
   };
 
@@ -76,11 +116,12 @@ const CastToDevice = ({
     // it opens the OS share sheet which usually has AirDrop, Messages, WhatsApp,
     // Mail, Copy Link, and other targets that get the URL onto the other device.
     if (!navigator.share) return copy();
-    try { await navigator.share({ title: "EZtoFind.ca listing", url }); }
+    try { await navigator.share({ title: "EZtoFind.ca listing", url }); _logEvent("cast_native_share"); }
     catch { /* user cancelled — silent */ }
   };
 
   const enterPresentMode = () => {
+    _logEvent("cast_present_mode_started");
     setOpen(false);
     if (onPresentMode) return onPresentMode();
     // No custom slideshow available — fall back to native tab fullscreen.

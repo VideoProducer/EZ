@@ -10014,6 +10014,83 @@ async def track_event(request: Request, payload: dict):
     })
     return {"ok": True}
 
+
+# =============== CAST ANALYTICS (admin drill-down) ===============
+@api.get("/admin/cast-analytics")
+async def admin_cast_analytics(days: int = 30, _=Depends(verify_admin)):
+    """Which listings are clients actually casting during meetings + from home?
+
+    Aggregates the internal Cast / Present-mode events from `listing_analytics`
+    over the last `days` window (max 365). Returns totals + a top-25 ranked
+    list of listings with hydrated address/city so Doug can see which
+    specific homes are getting the meeting-room treatment vs. the couch
+    treatment. Admin-only — anonymous browsing behaviour is aggregate."""
+    from datetime import timedelta as _td
+    days = max(1, min(int(days or 30), 365))
+    cutoff = (datetime.now(timezone.utc) - _td(days=days)).isoformat()
+
+    cast_types = ["cast_button_opened", "cast_link_copied", "cast_native_share",
+                  "cast_present_mode_started", "cast_sms_sent"]
+
+    totals = {et: 0 for et in cast_types}
+    async for row in db.listing_analytics.aggregate([
+        {"$match": {"event_type": {"$in": cast_types}, "occurred_at": {"$gte": cutoff}}},
+        {"$group": {"_id": "$event_type", "n": {"$sum": 1}}},
+    ]):
+        totals[row["_id"]] = row["n"]
+
+    top_rows: list[dict] = []
+    async for row in db.listing_analytics.aggregate([
+        {"$match": {
+            "event_type": {"$in": cast_types},
+            "listing_key": {"$ne": "search"},
+            "occurred_at": {"$gte": cutoff},
+        }},
+        {"$group": {
+            "_id": "$listing_key",
+            "opens":   {"$sum": {"$cond": [{"$eq": ["$event_type", "cast_button_opened"]}, 1, 0]}},
+            "present": {"$sum": {"$cond": [{"$eq": ["$event_type", "cast_present_mode_started"]}, 1, 0]}},
+            "sms":     {"$sum": {"$cond": [{"$eq": ["$event_type", "cast_sms_sent"]}, 1, 0]}},
+            "last_at": {"$max": "$occurred_at"},
+        }},
+        {"$addFields": {"score": {"$add": ["$opens", {"$multiply": ["$present", 3]}, {"$multiply": ["$sms", 5]}]}}},
+        {"$sort": {"score": -1}},
+        {"$limit": 25},
+    ]):
+        top_rows.append(row)
+
+    if top_rows:
+        keys = [r["_id"] for r in top_rows]
+        by_key = {}
+        async for l in db.listings.find(
+            {"listing_key": {"$in": keys}},
+            {"_id": 0, "listing_key": 1, "street_address": 1, "city": 1, "list_price": 1, "mls_number": 1, "status": 1},
+        ):
+            by_key[l["listing_key"]] = l
+        for r in top_rows:
+            meta = by_key.get(r["_id"], {})
+            r["listing_key"] = r.pop("_id")
+            r["street_address"] = meta.get("street_address")
+            r["city"] = meta.get("city")
+            r["list_price"] = meta.get("list_price")
+            r["mls_number"] = meta.get("mls_number")
+            r["status"] = meta.get("status")
+
+    search_casts = await db.listing_analytics.count_documents({
+        "event_type": {"$in": cast_types},
+        "listing_key": "search",
+        "occurred_at": {"$gte": cutoff},
+    })
+
+    return {
+        "days": days,
+        "since": cutoff,
+        "totals": totals,
+        "search_page_casts": search_casts,
+        "top_listings": top_rows,
+    }
+
+
 # =============== SITE-WIDE PAGE-VIEW BEACON (feeds Growth Dashboard) ===============
 # Anonymous session-scoped page-view tracking. No PII stored — just a hashed
 # session ID + path + timestamp + optional referrer. Used to measure unique

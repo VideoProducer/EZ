@@ -3987,6 +3987,7 @@ const ListingDetail = () => {
                 canonicalPath={`/listing/${listing.listing_key}`}
                 label="Cast"
                 onPresentMode={() => setPresentOpen(true)}
+                listingKey={listing.listing_key}
                 data-testid="listing-cast-btn"
               />
               <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
