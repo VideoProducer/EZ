@@ -40,6 +40,7 @@ VALID_EVENT_TYPES = {
     "cast_button_opened",        # user opened the Cast modal
     "cast_link_copied",          # copied the canonical URL to clipboard
     "cast_native_share",         # invoked navigator.share() (AirDrop/Messages/etc.)
+    "cast_native_picker_opened", # tapped the 1-tap OS AirPlay/Chromecast picker
     "cast_present_mode_started", # launched fullscreen big-screen slideshow
     "cast_sms_sent",             # texted the listing link to a phone number
 }

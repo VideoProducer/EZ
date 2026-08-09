@@ -27,13 +27,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { readCastSession, CastSessionInlineControl } from "../lib/castSession";
-
-const IS_CHROMIUM = typeof navigator !== "undefined" &&
-  (/Chrome|Chromium|Edg\//.test(navigator.userAgent) && !/Firefox/.test(navigator.userAgent));
-const IS_SAFARI = typeof navigator !== "undefined" &&
-  /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg\//.test(navigator.userAgent);
-const IS_IOS = typeof navigator !== "undefined" &&
-  /iPhone|iPad|iPod/.test(navigator.userAgent);
+import { openNativeCastPicker, detectCastCapability } from "../lib/nativeCastPicker";
 
 // The canonical listing URL used for QR + copy — always prefixed with the
 // production hostname so the QR code lands the visitor on the live domain
@@ -55,8 +49,11 @@ const CastToDevice = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pickerState, setPickerState] = useState("idle");  // idle | trying | unsupported
   const closeRef = useRef(null);
+  const pickerAudioRef = useRef(null);
   const url = useMemo(() => canonicalUrl(canonicalPath), [canonicalPath]);
+  const cap = useMemo(() => detectCastCapability(), []);
 
   // Fire an analytics event — GA4 (via window.gtag) for Doug's marketing
   // dashboard PLUS a fire-and-forget backend beacon so the admin analytics
@@ -138,6 +135,20 @@ const CastToDevice = ({
     if (onPresentMode) return onPresentMode();
     // No custom slideshow available — fall back to native tab fullscreen.
     try { document.documentElement.requestFullscreen?.(); } catch { /* ignored */ }
+  };
+
+  // 1-tap OS cast picker — asks the browser to open the AirPlay / Chromecast
+  // device picker directly (no "swipe Control Center" hunt required). Falls
+  // back to `unsupported` when the browser doesn't expose the Remote
+  // Playback API (older Android/Firefox); the UI then shows the illustrated
+  // fallback instructions.
+  const openNativePicker = async () => {
+    _logEvent("cast_native_picker_opened");
+    setPickerState("trying");
+    const result = await openNativeCastPicker(pickerAudioRef.current);
+    setPickerState(result.opened ? "idle" : "unsupported");
+    // Auto-reset after 4 s so a second tap tries again.
+    if (!result.opened) setTimeout(() => setPickerState("idle"), 4000);
   };
 
   // ── Button ─────────────────────────────────────────────────────────────
@@ -262,33 +273,83 @@ const CastToDevice = ({
               </div>
             </div>
 
-            {/* ── 2. Cast to TV ──────────────────────────────────────────── */}
+            {/* ── 2. Cast to TV ──────────────────────────────────────────
+                First: a 1-tap OS picker button (Remote Playback API +
+                Safari's webkitShowPlaybackTargetPicker fallback). When
+                unsupported, we show illustrated step-by-step instructions
+                so buyers/agents don't have to hunt Control Center.       */}
             <div style={{marginBottom:"1rem"}}>
               <div style={{fontSize:"0.72rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"var(--muted,#6b7280)", fontWeight:700, marginBottom:"0.5rem"}}>Cast to a TV</div>
-              {(IS_CHROMIUM || (!IS_SAFARI && !IS_IOS)) && (
-                <div style={{padding:"0.75rem 1rem", background:"#F4F6FB", borderRadius:8, marginBottom:"0.5rem", fontSize:"0.85rem", color:"var(--ink,#111827)"}} data-testid="cast-hint-chrome">
-                  <div style={{fontWeight:700, marginBottom:"0.15rem"}}>📺 Chromecast / Google TV / Nest Hub</div>
-                  <div>
-                    Chrome menu <span style={{fontFamily:"monospace", background:"#fff", padding:"0 0.35rem", borderRadius:4, border:"1px solid rgba(0,0,0,0.08)"}}>⋮</span> → <strong>Cast…</strong> → pick your device.
-                    Then tap <strong>Present Mode</strong> below for a big-screen slideshow.
-                  </div>
+
+              {/* Hidden audio element the Remote Playback API attaches to.
+                  Silent 1-second sample; never audible to the user.       */}
+              <audio ref={pickerAudioRef} preload="metadata" playsInline
+                     x-webkit-airplay="allow" style={{display:"none"}}/>
+
+              {/* 1-tap picker button. Big and gold so it's the obvious primary action. */}
+              <button
+                type="button"
+                onClick={openNativePicker}
+                data-testid="cast-native-picker-btn"
+                aria-label={cap.kind === "airplay" ? "Open AirPlay device picker" : "Open cast device picker"}
+                style={{
+                  display:"flex", alignItems:"center", gap:"0.6rem",
+                  width:"100%", padding:"0.9rem 1.05rem",
+                  background:"var(--brand-navy,#0F2A5B)", color:"#fff",
+                  border:"none", borderRadius: 10,
+                  fontFamily:"Sora,sans-serif", fontWeight:700, fontSize:"0.95rem",
+                  cursor: pickerState === "trying" ? "progress" : "pointer",
+                  boxShadow:"0 4px 12px rgba(15,42,91,0.25)",
+                  opacity: pickerState === "trying" ? 0.85 : 1,
+                }}
+              >
+                <span style={{fontSize:"1.2rem"}} aria-hidden>
+                  {cap.kind === "airplay" ? "🍎" : cap.kind === "chromecast" ? "📺" : "🎥"}
+                </span>
+                <span style={{flex:1, textAlign:"left"}}>
+                  {pickerState === "trying" ? "Opening picker…" : (
+                    cap.kind === "airplay" ? "Open AirPlay picker — pick your Apple TV" :
+                    cap.kind === "chromecast" ? "Open Chromecast picker — pick your TV" :
+                    "Open your TV / cast picker"
+                  )}
+                </span>
+                <span style={{fontSize:"0.75rem", opacity:0.75}}>1 tap</span>
+              </button>
+
+              {/* Illustrated step-by-step fallback — shows when the picker
+                  can't open (Firefox, older Android, some in-app browsers)
+                  or when the browser hasn't yet reported an available
+                  device.  Also useful as a "here's how it works" reference
+                  even when the picker opens successfully.                 */}
+              <details style={{marginTop:"0.6rem"}}>
+                <summary style={{cursor:"pointer", fontSize:"0.78rem", color:"#6b7280", padding:"0.3rem 0"}}>
+                  {pickerState === "unsupported"
+                    ? "Picker didn't open — here's how to cast manually ↓"
+                    : "Prefer manual steps? Tap to expand ↓"}
+                </summary>
+                <div style={{marginTop:"0.5rem"}}>
+                  {cap.kind === "airplay" ? (
+                    <ol data-testid="cast-hint-airplay" style={{margin:0, padding:"0 0 0 1.1rem", fontSize:"0.83rem", color:"#374151", lineHeight:1.65}}>
+                      <li><strong>Swipe down</strong> from the top-right corner of your iPhone or iPad → this opens <strong>Control Center</strong>.</li>
+                      <li>Tap <strong>Screen Mirroring</strong> <span style={{color:"#6b7280"}}>(two overlapping rectangles icon)</span>.</li>
+                      <li>Pick your <strong>Apple TV</strong> or AirPlay-enabled TV from the list.</li>
+                      <li>Come back to this tab and hit <strong>Present Mode</strong> below.</li>
+                    </ol>
+                  ) : cap.kind === "chromecast" ? (
+                    <ol data-testid="cast-hint-chrome" style={{margin:0, padding:"0 0 0 1.1rem", fontSize:"0.83rem", color:"#374151", lineHeight:1.65}}>
+                      <li>Open Chrome's <strong>three-dot menu</strong> <span style={{fontFamily:"monospace", background:"#F3F4F6", padding:"0 0.35rem", borderRadius:4}}>⋮</span> (top-right of the browser).</li>
+                      <li>Click <strong>Cast…</strong>.</li>
+                      <li>Pick your <strong>Chromecast / Google TV / Nest Hub</strong> from the list.</li>
+                      <li>Come back to this tab and hit <strong>Present Mode</strong> below.</li>
+                    </ol>
+                  ) : (
+                    <ol style={{margin:0, padding:"0 0 0 1.1rem", fontSize:"0.83rem", color:"#374151", lineHeight:1.65}}>
+                      <li>Use your browser's built-in <strong>Cast</strong> or <strong>Screen Mirroring</strong> option to send this tab to a TV.</li>
+                      <li>Come back to this tab and hit <strong>Present Mode</strong> below.</li>
+                    </ol>
+                  )}
                 </div>
-              )}
-              {(IS_SAFARI || IS_IOS) && (
-                <div style={{padding:"0.75rem 1rem", background:"#F4F6FB", borderRadius:8, marginBottom:"0.5rem", fontSize:"0.85rem", color:"var(--ink,#111827)"}} data-testid="cast-hint-airplay">
-                  <div style={{fontWeight:700, marginBottom:"0.15rem"}}>🍎 AirPlay to Apple TV / AirPlay-enabled TV</div>
-                  <div>
-                    Open <strong>Control Center</strong> → tap <strong>Screen Mirroring</strong> → pick your Apple TV.
-                    Then hit <strong>Present Mode</strong> below for a big-screen slideshow.
-                  </div>
-                </div>
-              )}
-              {/* Fallback for other browsers / desktop Safari without AirPlay */}
-              {!IS_CHROMIUM && !IS_SAFARI && !IS_IOS && (
-                <div style={{padding:"0.75rem 1rem", background:"#F4F6FB", borderRadius:8, fontSize:"0.85rem", color:"var(--ink,#111827)"}}>
-                  Use your browser's built-in <strong>Cast</strong> or <strong>Screen Mirroring</strong> option to send this tab to a TV. Once mirrored, tap <strong>Present Mode</strong> for the slideshow.
-                </div>
-              )}
+              </details>
             </div>
 
             {/* ── 3. Present Mode ────────────────────────────────────────── */}

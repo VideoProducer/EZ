@@ -1,5 +1,13 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-09 (later same day, part 5)
+- **1-tap cast picker + illustrated manual steps** — Doug flagged that the "Open Control Center → tap Screen Mirroring" instruction was ambiguous. Fix:
+  - New helper `frontend/src/lib/nativeCastPicker.js` — calls `HTMLMediaElement.remote.prompt()` (Web Remote Playback API — Chromium, iOS 15.4+ Safari) with graceful fallback to `webkitShowPlaybackTargetPicker()` (older Safari). Uses a hidden silent audio element as the attach target since the API requires a media element in the DOM.
+  - `CastToDevice.jsx` (Cast modal) now leads with a big navy **"Open [Chromecast / AirPlay] picker — pick your TV · 1 tap"** button. Label auto-detects the browser via a new `detectCastCapability()` helper (Safari/iOS → 🍎 AirPlay; Chromium → 📺 Chromecast; other → 🎥 generic).
+  - Manual step-by-step instructions moved into a collapsed `<details>` — expanded automatically with a "Picker didn't open — here's how to cast manually" hint when the API returns unsupported. Steps are numbered and specific ("Swipe down from the top-right of your iPhone… → Screen Mirroring icon → Pick Apple TV").
+  - `ListingPresentMode.jsx` fullscreen slideshow gained a `🍎/📺 Cast` button in the control bar so Doug/client can trigger the OS picker from inside Present Mode without exiting.
+  - New analytics event `cast_native_picker_opened` fires whenever Doug taps the 1-tap picker — feeds the same `/api/admin/cast-analytics` dashboard so we can measure which cast path clients actually use.
+
 ## 2026-02-09 (later same day, part 4)
 - **Cast Session → CRM Client one-click convert** — after Doug ends a labelled cast session, an admin-only auto-modal (`CastSessionConvertPrompt.jsx`) offers to seed a new CRM Client from the meeting:
   - `castSession.js` now snapshots the just-closed session into a `ez_cast_session_pending` sessionStorage slot on `endCastSession()`. The prompt reads from that slot and fetches full session context from `/admin/cast-sessions?days=30` so the shown listings are the source-of-truth server view (not the frontend's local snapshot).

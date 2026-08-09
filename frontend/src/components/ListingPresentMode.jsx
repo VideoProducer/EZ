@@ -23,6 +23,7 @@
 // captions aloud).
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { openNativeCastPicker, detectCastCapability } from "../lib/nativeCastPicker";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -32,6 +33,15 @@ const ListingPresentMode = ({ listing, onExit }) => {
   const [paused, setPaused] = useState(false);
   const audioRef = useRef(null);
   const containerRef = useRef(null);
+  const cap = useMemo(() => detectCastCapability(), []);
+  const [picking, setPicking] = useState(false);
+  const openPicker = useCallback(async () => {
+    setPicking(true);
+    await openNativeCastPicker(audioRef.current);
+    // Reset the visual state a bit later — the picker is modal-OS so we
+    // never really know when the user closed it; auto-clear after 1.5 s.
+    setTimeout(() => setPicking(false), 1500);
+  }, []);
 
   // ── Fullscreen on mount, restore on unmount ──────────────────────────
   useEffect(() => {
@@ -178,6 +188,14 @@ const ListingPresentMode = ({ listing, onExit }) => {
             </div>
           </div>
           <div style={{display:"flex",gap:"0.5rem",flexShrink:0}}>
+            <button
+              type="button"
+              onClick={openPicker}
+              aria-label={cap.kind === "airplay" ? "Open AirPlay picker" : "Open TV / cast picker"}
+              title="Cast to TV in 1 tap"
+              data-testid="present-cast-picker"
+              style={{..._ctrlBtn, background: picking ? "rgba(245,197,106,0.35)" : "rgba(245,197,106,0.22)", borderColor:"rgba(245,197,106,0.55)"}}
+            >{cap.kind === "airplay" ? "🍎" : "📺"} Cast</button>
             <button
               type="button"
               onClick={() => setIdx((i) => (i - 1 + Math.max(photos.length, 1)) % Math.max(photos.length, 1))}
