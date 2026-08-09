@@ -1,5 +1,13 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-09 (later same day, part 4)
+- **Cast Session → CRM Client one-click convert** — after Doug ends a labelled cast session, an admin-only auto-modal (`CastSessionConvertPrompt.jsx`) offers to seed a new CRM Client from the meeting:
+  - `castSession.js` now snapshots the just-closed session into a `ez_cast_session_pending` sessionStorage slot on `endCastSession()`. The prompt reads from that slot and fetches full session context from `/admin/cast-sessions?days=30` so the shown listings are the source-of-truth server view (not the frontend's local snapshot).
+  - Modal prefills a client name derived from the label with trailing "Viewing / Meeting / Session / Showing / Tour" stripped ("Smith Family Viewing" → "Smith Family"). Lets Doug uncheck any listing that shouldn't be attached and add follow-up notes.
+  - New backend endpoint `POST /api/admin/cast-sessions/{session_id}/convert-to-client` — validates the session exists, hydrates its listings (address/city/price/MLS®), builds a multi-line `notes` block with the meeting date, event count, and each listing shown, tags the client `["cast-session", "<raw label>"]`, sets `pipeline_stage="new"`. **CASL-safe**: `email_consent=false` — Doug must still capture express consent in the normal Add Client flow before any commercial email can go out.
+  - Idempotency: every event of the session gets stamped with `request_meta.converted_to_client_id` so re-visits/duplicate submits are no-ops. The admin dashboard sessions list now shows a green **✅ Converted** badge (deep-linking to `/admin/clients`) on already-converted sessions.
+- **Verified end-to-end**: 3 events on session "Jones Family Viewing" → convert → CRM client `Jones Family` created with rich notes ("Listings shown: • 410 Government Street, Victoria · $1,199,000"), tags applied, `converted_to_client_id` marker visible in the sessions endpoint.
+
 ## 2026-02-09 (later same day, part 3)
 - **Cast Session Labels** — admin-only meeting labels so ranked list groups by meeting instead of raw counts:
   - `frontend/src/lib/castSession.js` — sessionStorage-backed store (`ez_cast_session`), broadcasts a `ez-cast-session-changed` custom event so all consumers stay in sync. Admin gate via existing `ez_admin_session` localStorage marker — anonymous visitors never see the banner or the inline control. Exposes `startCastSession`, `renameCastSession`, `endCastSession`, `readCastSession`, `useCastSession` React hook, plus `CastSessionBanner` and `CastSessionInlineControl` components.

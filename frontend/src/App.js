@@ -45,6 +45,7 @@ import ListingNarration from "./components/ListingNarration";
 import CastToDevice from "./components/CastToDevice";
 import ListingPresentMode from "./components/ListingPresentMode";
 import { CastSessionBanner } from "./lib/castSession";
+import CastSessionConvertPrompt from "./components/CastSessionConvertPrompt";
 import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
@@ -5960,6 +5961,11 @@ const AdminDash = () => {
                 <span style={{background:"#fff",border:"1px solid #E5E7EB",padding:"2px 8px",borderRadius:999,fontSize:11}}>{s.duration_min} min</span>
                 <span style={{background:"var(--brand-navy)",color:"#fff",padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:600}}>{s.event_count} events</span>
                 <span style={{background:"#FEF3C7",color:"#92400E",padding:"2px 8px",borderRadius:999,fontSize:11}}>{s.listings.length} listing{s.listings.length===1?"":"s"}</span>
+                {s.converted_to_client_id && (
+                  <a href="/admin/clients" style={{background:"#DCFCE7",color:"#166534",padding:"2px 8px",borderRadius:999,fontSize:11,fontWeight:700,textDecoration:"none"}} title="Session was converted to a CRM Client — click to open">
+                    ✅ Converted
+                  </a>
+                )}
               </summary>
               <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:6}}>
                 {s.listings.map(l => (
@@ -11195,6 +11201,11 @@ function App() {
         Doug has an active cast session in this tab. Silent for anonymous
         visitors. */}
     <CastSessionBanner/>
+    {/* Admin-only auto-modal that fires the moment Doug ends a cast
+        session, offering to seed a new CRM Client from the meeting label
+        + the listings that were cast. Silent-hides for anonymous
+        visitors and for already-converted sessions. */}
+    <CastSessionConvertPrompt/>
     <Routes>
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home

@@ -1082,18 +1082,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/courtenay/n/mt-washington</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Mt Washington, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Mt Washington, Courtenay — BC Neighbourhood</image:title>
-      <image:geo_location>Mt Washington, Courtenay, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/radium-hot-springs/n/radium-hot-springs</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -1103,6 +1091,18 @@
       <image:caption>Radium Hot Springs, Radium Hot Springs, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Radium Hot Springs, Radium Hot Springs — BC Neighbourhood</image:title>
       <image:geo_location>Radium Hot Springs, Radium Hot Springs, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/courtenay/n/mt-washington</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Mt Washington, Courtenay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Mt Washington, Courtenay — BC Neighbourhood</image:title>
+      <image:geo_location>Mt Washington, Courtenay, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2702,18 +2702,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/sunriver</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Sunriver, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Sunriver, Sooke — BC Neighbourhood</image:title>
-      <image:geo_location>Sunriver, Sooke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/victoria/n/burnside</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -2723,6 +2711,18 @@
       <image:caption>Burnside, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Burnside, Victoria — BC Neighbourhood</image:title>
       <image:geo_location>Burnside, Victoria, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/sooke/n/sunriver</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Sunriver, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Sunriver, Sooke — BC Neighbourhood</image:title>
+      <image:geo_location>Sunriver, Sooke, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4730,18 +4730,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/university-district</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>University District, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>University District, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>University District, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops/n/south-thompson-valley</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -4751,6 +4739,18 @@
       <image:caption>South Thompson Valley, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>South Thompson Valley, Kamloops — BC Neighbourhood</image:title>
       <image:geo_location>South Thompson Valley, Kamloops, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kelowna/n/university-district</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>University District, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>University District, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>University District, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4898,18 +4898,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/sooke-vill-core</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Sooke Vill Core, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Sooke Vill Core, Sooke — BC Neighbourhood</image:title>
-      <image:geo_location>Sooke Vill Core, Sooke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/oak-bay/n/south-oak-bay</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -4919,6 +4907,18 @@
       <image:caption>South Oak Bay, Oak Bay, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>South Oak Bay, Oak Bay — BC Neighbourhood</image:title>
       <image:geo_location>South Oak Bay, Oak Bay, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/sooke/n/sooke-vill-core</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Sooke Vill Core, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Sooke Vill Core, Sooke — BC Neighbourhood</image:title>
+      <image:geo_location>Sooke Vill Core, Sooke, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5018,18 +5018,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/saanich/n/cordova-bay</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Cordova Bay, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Cordova Bay, Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>Cordova Bay, Saanich, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops/n/knutsford-lac-le-jeune</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -5039,18 +5027,6 @@
       <image:caption>Knutsford-Lac Le Jeune, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Knutsford-Lac Le Jeune, Kamloops — BC Neighbourhood</image:title>
       <image:geo_location>Knutsford-Lac Le Jeune, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/nanaimo/n/university-district</loc>
-    <lastmod>2026-08-09</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>University District, Nanaimo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>University District, Nanaimo — BC Neighbourhood</image:title>
-      <image:geo_location>University District, Nanaimo, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5066,6 +5042,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/nanaimo/n/university-district</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>University District, Nanaimo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>University District, Nanaimo — BC Neighbourhood</image:title>
+      <image:geo_location>University District, Nanaimo, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/sun-peaks/n/heffley</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
@@ -5075,6 +5063,18 @@
       <image:caption>Heffley, Sun Peaks, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Heffley, Sun Peaks — BC Neighbourhood</image:title>
       <image:geo_location>Heffley, Sun Peaks, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kimberley/n/kimberley-rural</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Kimberley Rural, Kimberley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Kimberley Rural, Kimberley — BC Neighbourhood</image:title>
+      <image:geo_location>Kimberley Rural, Kimberley, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5102,15 +5102,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kimberley/n/kimberley-rural</loc>
+    <loc>https://eztofind.ca/community/saanich/n/cordova-bay</loc>
     <lastmod>2026-08-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Kimberley Rural, Kimberley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Kimberley Rural, Kimberley — BC Neighbourhood</image:title>
-      <image:geo_location>Kimberley Rural, Kimberley, British Columbia, Canada</image:geo_location>
+      <image:caption>Cordova Bay, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Cordova Bay, Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>Cordova Bay, Saanich, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

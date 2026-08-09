@@ -10147,10 +10147,15 @@ async def admin_cast_sessions(days: int = 30, _=Depends(verify_admin)):
             "event_count": 0,
             "event_types": {},
             "_listing_stats": {},   # keyed by listing_key
+            "converted_to_client_id": None,   # set by the convert-to-client endpoint
         })
         # Latest label wins (Doug may have renamed mid-session).
         if meta.get("session_label"):
             s["label"] = meta["session_label"]
+        # If ANY event in this session has already been converted, mark the
+        # session so the UI can hide the Convert prompt.
+        if meta.get("converted_to_client_id"):
+            s["converted_to_client_id"] = meta["converted_to_client_id"]
         s["event_count"] += 1
         s["event_types"][ev["event_type"]] = s["event_types"].get(ev["event_type"], 0) + 1
         if ev["occurred_at"] < s["first_at"]: s["first_at"] = ev["occurred_at"]
@@ -10209,6 +10214,7 @@ async def admin_cast_sessions(days: int = 30, _=Depends(verify_admin)):
             "event_count":  s["event_count"],
             "event_types":  s["event_types"],
             "listings":     listings,
+            "converted_to_client_id": s.get("converted_to_client_id"),
         })
 
     # Newest sessions first, cap at 50.
@@ -10219,6 +10225,145 @@ async def admin_cast_sessions(days: int = 30, _=Depends(verify_admin)):
         "session_count": len(out),
         "sessions": out[:50],
     }
+
+
+class CastSessionConvertIn(BaseModel):
+    full_name: Optional[str] = None
+    email:     Optional[str] = ""
+    phone:     Optional[str] = ""
+    client_type: str = "buyer"
+    keep_listings: Optional[List[str]] = None   # subset of listing_keys the meeting had
+    extra_notes: Optional[str] = ""
+
+
+@api.post("/admin/cast-sessions/{session_id}/convert-to-client")
+async def admin_convert_cast_session_to_client(
+    session_id: str,
+    body: CastSessionConvertIn,
+    _=Depends(verify_admin),
+):
+    """Seed a new CRM Client from an ended Cast Session.
+
+    Doug uses this after a client meeting: the session label ("Smith Family
+    Viewing") becomes the client name, the listings that were cast in the
+    meeting become a short bullet list in `notes`, and the client is tagged
+    with `cast-session` + the raw label so Doug can filter by meeting
+    origin later.
+
+    CASL: this endpoint creates a "sphere/lead" record only — `email_consent`
+    is intentionally left FALSE. Doug must still capture express consent
+    separately (via the standard Add Client flow) before any commercial
+    email can go out. That protects him from the $1M-per-violation risk.
+    """
+    # 1. Fetch every cast event for this session (lightly capped so a rogue
+    #    session_id can't OOM the process).
+    events: list[dict] = []
+    async for ev in db.listing_analytics.find(
+        {"request_meta.session_id": session_id},
+        {"_id": 0, "event_type": 1, "listing_key": 1, "occurred_at": 1, "request_meta": 1},
+    ).limit(500):
+        events.append(ev)
+    if not events:
+        raise HTTPException(404, "No cast events found for that session_id.")
+
+    # 2. Derive metadata: label + list of listings (dedup, preserve first-seen order)
+    label = None
+    for e in events:
+        lbl = (e.get("request_meta") or {}).get("session_label")
+        if lbl:
+            label = lbl  # last-seen wins so a mid-session rename applies
+    label = label or "Cast Session"
+
+    listing_keys: list[str] = []
+    seen: set[str] = set()
+    for e in sorted(events, key=lambda r: r.get("occurred_at","")):
+        lk = e.get("listing_key")
+        if lk and lk != "search" and lk not in seen:
+            listing_keys.append(lk)
+            seen.add(lk)
+
+    keep = set(body.keep_listings) if body.keep_listings else set(listing_keys)
+    listing_keys = [k for k in listing_keys if k in keep]
+
+    # 3. Hydrate listings (one Mongo round-trip)
+    listings_meta: list[dict] = []
+    if listing_keys:
+        by_key = {}
+        async for l in db.listings.find(
+            {"listing_key": {"$in": listing_keys}},
+            {"_id": 0, "listing_key": 1, "street_address": 1, "city": 1, "list_price": 1, "mls_number": 1},
+        ):
+            by_key[l["listing_key"]] = l
+        for k in listing_keys:
+            m = by_key.get(k, {"listing_key": k})
+            listings_meta.append(m)
+
+    # 4. Derive the client's default name from the label — strip trailing
+    #    "Viewing", "Meeting", "Session" fluff so "Smith Family Viewing"
+    #    becomes "Smith Family". Doug can override via the modal.
+    default_name = body.full_name or re.sub(
+        r"\s*(viewing|meeting|session|showing|tour)\s*$",
+        "",
+        label,
+        flags=re.IGNORECASE,
+    ).strip() or label
+
+    # 5. Build the seed notes — everything Doug needs to remember the meeting
+    #    without opening the analytics dashboard.
+    when_iso = events[0]["occurred_at"][:10]  # YYYY-MM-DD
+    notes_lines = [
+        f"Seeded from Cast Session \"{label}\" on {when_iso}.",
+        f"({len(events)} cast events across {len(listings_meta)} listing"
+        f"{'' if len(listings_meta)==1 else 's'}.)",
+    ]
+    if listings_meta:
+        notes_lines.append("")
+        notes_lines.append("Listings shown:")
+        for m in listings_meta:
+            price = f" · ${m['list_price']:,}" if m.get("list_price") else ""
+            addr  = m.get("street_address") or f"MLS® #{m.get('mls_number') or m['listing_key']}"
+            city  = f", {m['city']}" if m.get("city") else ""
+            notes_lines.append(f"• {addr}{city}{price}")
+    if body.extra_notes:
+        notes_lines.extend(["", body.extra_notes.strip()])
+
+    # 6. Insert Client — reuse the existing schema/collection so the CRM UI
+    #    picks it up automatically.  Tags:
+    #      • "cast-session"  — filter-friendly aggregate tag
+    #      • raw label       — filter-friendly per-meeting tag (truncated
+    #                          to Client.tags element cap of ~64 chars)
+    client = Client(
+        full_name=default_name,
+        email=body.email or "",
+        phone=body.phone or "",
+        client_type=body.client_type if body.client_type in ("buyer","seller","past","sphere") else "buyer",
+        notes="\n".join(notes_lines),
+        tags=["cast-session", label[:64]],
+        pipeline_stage="new",
+        # CASL: express consent MUST NOT be auto-checked here — Doug has to
+        # capture it separately. We just record where the record came from.
+        consent_source=f"Seeded from Cast Session on {when_iso}",
+    )
+    await db.clients.insert_one(client.model_dump())
+
+    # 7. Idempotency marker: stamp the source session so subsequent calls
+    #    can tell it's already been converted. Stored on ANY event of the
+    #    session; the frontend uses this to hide the "Convert" prompt.
+    try:
+        await db.listing_analytics.update_many(
+            {"request_meta.session_id": session_id},
+            {"$set": {"request_meta.converted_to_client_id": client.id}},
+        )
+    except Exception as e:
+        logger.warning(f"convert_cast_session_to_client: marker update failed: {e}")
+
+    return {
+        "ok": True,
+        "client_id": client.id,
+        "full_name": client.full_name,
+        "listings_attached": len(listings_meta),
+    }
+
 
 
 # =============== SITE-WIDE PAGE-VIEW BEACON (feeds Growth Dashboard) ===============

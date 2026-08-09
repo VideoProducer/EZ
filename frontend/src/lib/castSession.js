@@ -22,6 +22,11 @@ import React, { useEffect, useMemo, useState } from "react";
 
 export const CAST_SESSION_KEY = "ez_cast_session";
 export const CAST_SESSION_EVENT = "ez-cast-session-changed";
+// When Doug ends a session we stash the just-closed session under this
+// separate key so the "Convert to CRM Client" prompt can survive after the
+// session itself has been cleared. Cleared by `dismissCastSessionPrompt`
+// or `convertCastSessionToClient`.
+export const CAST_SESSION_PENDING_KEY = "ez_cast_session_pending";
 const ADMIN_MARKER_KEY = "ez_admin_session";
 
 // ── Public API ───────────────────────────────────────────────────────
@@ -58,7 +63,30 @@ export function renameCastSession(label) {
 }
 
 export function endCastSession() {
-  try { sessionStorage.removeItem(CAST_SESSION_KEY); } catch {}
+  // Snapshot the just-closed session into a "pending prompt" slot so the
+  // convert-to-client modal can appear right after End is clicked. If a
+  // previous session was still pending (Doug ignored it), we overwrite —
+  // meetings are chronological, no need to queue.
+  try {
+    const cur = readCastSession();
+    if (cur) {
+      const pending = { ...cur, ended_at: new Date().toISOString() };
+      sessionStorage.setItem(CAST_SESSION_PENDING_KEY, JSON.stringify(pending));
+    }
+    sessionStorage.removeItem(CAST_SESSION_KEY);
+  } catch {}
+  _broadcast();
+}
+
+export function readPendingCastSession() {
+  try {
+    const raw = sessionStorage.getItem(CAST_SESSION_PENDING_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export function clearPendingCastSession() {
+  try { sessionStorage.removeItem(CAST_SESSION_PENDING_KEY); } catch {}
   _broadcast();
 }
 
