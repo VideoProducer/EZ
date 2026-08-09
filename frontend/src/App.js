@@ -2471,7 +2471,7 @@ const Home = () => {
         "logo":"https://eztofind.ca/images/doogie-laptop.png",
         "founder":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},
         "areaServed":{"@type":"AdministrativeArea","name":"British Columbia, Canada"},
-        "description":"AI-powered British Columbia real estate research platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
+        "description":"BC real estate information and property-search platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
           "https://ez2find.ca"
