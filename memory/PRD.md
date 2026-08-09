@@ -1,6 +1,15 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
-## 2026-02-08 (latest)
+## 2026-02-09 (latest)
+- **Cast to another device — QR + Chromecast + AirPlay + Present Mode** — shipped a unified "Cast" button on `/listing/{key}` and `/listings` results:
+  - `frontend/src/components/CastToDevice.jsx` — modal with a canonical-URL QR code (encodes `https://eztofind.ca/...` even when opened in preview), Copy-link, `navigator.share()` fallback (iOS/Android share sheet: AirDrop, Messages, WhatsApp, Mail), and browser-specific cast instructions (Chromecast for Chromium; AirPlay Screen Mirroring for Safari/iOS).
+  - `frontend/src/components/ListingPresentMode.jsx` — fullscreen slideshow (auto-advance 6 s, ←/→/space/ESC controls, CREA "Powered by REALTOR.ca" badge pinned to every slide) with an auto-playing Doogie narration built from the listing's first-person description via the fast `/api/doogie/tts/prepare` flow. Uses `x-webkit-airplay="allow"` on the `<audio>` so iOS/macOS Safari can mirror the sound to Apple TV.
+  - Wired into `ListingDetail` (next to Favorite button) and the `/listings` results toolbar (as "Cast search").
+  - Zero backend work required — casting reuses the existing canonical page URL that already renders through the SSR/prerender path with full CREA + BCFSA disclosures.
+- Added `qrcode.react@4.2.0` to `frontend/package.json` (yarn).
+- Verified end-to-end with a browser: Cast button opens modal, QR renders, canonical URL is `https://eztofind.ca/listing/30106318`, Present Mode overlay renders with Exit button and photo controls.
+
+## 2026-02-08
 - **Full-site TTS prewarm coverage** — every page that renders a Doogie Play button now silently prewarms the audio on mount, so first-click playback is a Mongo cache HIT instead of a cold OpenAI generation:
   - `DoogieHeroGreeting` (homepage): prewarms the current mode's onboarding script on mount and whenever the user toggles buyer/seller/all mode.
   - `DoogieTour`: prewarms step N+1 while step N plays — tour transitions become instant.

@@ -42,6 +42,8 @@ import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import AdminHeatmap from "./pages/AdminHeatmap";
 import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
+import CastToDevice from "./components/CastToDevice";
+import ListingPresentMode from "./components/ListingPresentMode";
 import SimilarListingsWidget from "./components/SimilarListingsWidget";
 import DoogieFilterHeader from "./components/DoogieFilterHeader";
 import AiCitationFooter from "./components/AiCitationFooter";
@@ -3262,9 +3264,16 @@ const Listings = () => {
             <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="listings-count">
               {loading ? "Searching…" : `${results.total} listing${results.total===1?"":"s"}${results.total>results.listings.length ? ` — showing ${results.listings.length}` : ""}`}
             </div>
-            <button onClick={()=>setAlertOpen(true)} data-testid="get-alerts-btn" className="btn" style={{background:"#fff",color:"var(--brand-navy)",border:"1.5px solid var(--brand-navy)",padding:"0.5rem 1.1rem",fontSize:"0.88rem",borderRadius:999,display:"inline-flex",alignItems:"center",gap:"0.4rem",fontWeight:600}}>
-              🔔 Get alerts for this search
-            </button>
+            <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap"}}>
+              <CastToDevice
+                canonicalPath={window.location.pathname + window.location.search}
+                label="Cast search"
+                data-testid="listings-cast-btn"
+              />
+              <button onClick={()=>setAlertOpen(true)} data-testid="get-alerts-btn" className="btn" style={{background:"#fff",color:"var(--brand-navy)",border:"1.5px solid var(--brand-navy)",padding:"0.5rem 1.1rem",fontSize:"0.88rem",borderRadius:999,display:"inline-flex",alignItems:"center",gap:"0.4rem",fontWeight:600}}>
+                🔔 Get alerts for this search
+              </button>
+            </div>
           </div>
           {results.listings.length === 0 && !loading && (
             <div className="paper" style={{textAlign:"center",padding:"3rem 1.5rem"}}>
@@ -3942,6 +3951,7 @@ const ListingDetail = () => {
   const [listing, setListing] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [presentOpen, setPresentOpen] = useState(false);
   useEffect(() => {
     axios.get(`${API}/listings/${key}`).then(r => setListing(r.data)).catch(() => setNotFound(true));
   }, [key]);
@@ -3972,7 +3982,15 @@ const ListingDetail = () => {
           <div className="eyebrow">{listing.region} · {listing.city}</div>
           <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap"}}>
             <h1 className="section-title" style={{margin:"0.5rem 0",flex:"1 1 auto"}} data-testid="listing-address">{listing.street_address}</h1>
-            <div style={{flexShrink:0,marginTop:"0.5rem"}}><FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/></div>
+            <div style={{flexShrink:0,marginTop:"0.5rem",display:"flex",gap:"0.5rem",alignItems:"center"}}>
+              <CastToDevice
+                canonicalPath={`/listing/${listing.listing_key}`}
+                label="Cast"
+                onPresentMode={() => setPresentOpen(true)}
+                data-testid="listing-cast-btn"
+              />
+              <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
+            </div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
           <ListingNarration listing={listing} onAdvancePhoto={setPhotoIdx} photoCount={(listing.photos || []).length}/>
@@ -4100,6 +4118,8 @@ const ListingDetail = () => {
           to /compare. Silent-fail if no comparable listings exist. */}
       <SimilarListingsWidget sourceKey={listing.listing_key} sourceCity={listing.city}/>
     </div></section>
+    {/* Present Mode overlay — full-screen slideshow for TV casting / meetings */}
+    {presentOpen && <ListingPresentMode listing={listing} onExit={() => setPresentOpen(false)}/>}
     </TermsGate>
   );
 };
