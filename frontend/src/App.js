@@ -33,6 +33,7 @@ const DoogieGPTPreview = lazy(() => import("./pages/DoogieGPTPreview"));
 const EquestrianChecklistMockup = lazy(() => import("./components/EquestrianChecklistMockup"));
 const FirstTimeBuyerCheatSheet = lazy(() => import("./components/FirstTimeBuyerCheatSheet"));
 const MovingToBcQuiz = lazy(() => import("./components/MovingToBcQuiz"));
+const CommunityPageMockup = lazy(() => import("./components/CommunityPageMockup"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -11240,6 +11241,7 @@ function App() {
       <Route path="/mockups/equestrian-checklist" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianChecklistMockup/></Suspense>}/>
       <Route path="/mockups/first-time-buyer" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><FirstTimeBuyerCheatSheet/></Suspense>}/>
       <Route path="/mockups/moving-to-bc-quiz" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><MovingToBcQuiz/></Suspense>}/>
+      <Route path="/mockups/community-page" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><CommunityPageMockup/></Suspense>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>

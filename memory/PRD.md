@@ -1,5 +1,19 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-10 (community-page lead-gen redesign mockup)
+- **CommunityPageMockup.jsx** — hybrid community-page redesign at `/mockups/community-page`. Ships in-area (Maple Ridge sample) and out-of-area (Kelowna sample) variants behind an on-page toggle. Layout is 80% shared, 20% branched:
+  - **Hero**: Doug's face + variant-specific trust badge (direct coverage vs. BC-wide referral network); live inventory strip (Active · New this week · Sold 30d · Median · $/sqft · DOM); variant-specific primary CTA row.
+  - **Micro-conversion band**: "Save {community}" tap-and-go (localStorage-only, $0 friction).
+  - **Spatial context**: Map + sub-neighbourhoods grid paired side-by-side.
+  - **Live listings preview**: 4 sample cards + "View all N listings" CTA. Out-of-area variant adds a "handled by our local referral partner" note.
+  - **Segment-matched lead magnets**: Different cards per variant (equestrian/first-time/luxury for in-area; moving-quiz/first-time/neighbourhood-snapshot for out-of-area).
+  - **3-step vetted process** (out-of-area only): "Fill form → Doug reviews → Intro in 24 hrs" trust block with $0/approve-each-intro/BCFSA-only/concierge callouts.
+  - **About + VibeScore + FAQ**: Synopsis excerpt, 5-facet VibeScore card, 4 surfaced FAQ answers (mirrors existing FAQPage schema).
+  - **Compact climate strip**: 5 stat tiles + expandable "See full normals".
+  - **Bottom CTA**: In-area = Buying/Selling/Book-a-call buttons; Out-of-area = full inline referral request form (name/email/phone/intent/timeline/budget/notes + CASL+PIPA consent).
+- Wired at `/mockups/community-page`, lazy-loaded, `UnlistedMockupBanner` (noindex + robots.txt block).
+
+
 ## 2026-02-10 (lead-magnet mockups parked for review)
 - Shipped 3 lead-magnet mockups **as parked/unlisted previews** — routes live for Doug's review but sealed from search engines and site nav:
   - `/mockups/equestrian-checklist` — 6-page print-ready PDF (EquestrianChecklistMockup.jsx)
