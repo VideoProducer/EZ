@@ -28,6 +28,11 @@ import CompareListings from "./pages/CompareListings";
 // it drives the homepage itself, so lazy-loading it would delay LCP.
 const VisualAgentDemo = lazy(() => import("./pages/VisualAgentDemo"));
 const DoogieGPTPreview = lazy(() => import("./pages/DoogieGPTPreview"));
+// Lead-magnet mockups — print-ready + interactive drafts. Lazy-loaded so
+// they don't bloat the main bundle since they only render on their own routes.
+const EquestrianChecklistMockup = lazy(() => import("./components/EquestrianChecklistMockup"));
+const FirstTimeBuyerCheatSheet = lazy(() => import("./components/FirstTimeBuyerCheatSheet"));
+const MovingToBcQuiz = lazy(() => import("./components/MovingToBcQuiz"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -11230,6 +11235,11 @@ function App() {
       {/* Side-by-side comparison of up to 5 MLS® listings. `?demo=1` seeds
           the page with real listings so Doug can preview the mockup. */}
       <Route path="/compare" element={<CompareListings/>}/>
+      {/* Lead-magnet mockups — review-only drafts. Wrapped in Suspense
+          because the components themselves are lazy-loaded. */}
+      <Route path="/mockups/equestrian-checklist" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianChecklistMockup/></Suspense>}/>
+      <Route path="/mockups/first-time-buyer" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><FirstTimeBuyerCheatSheet/></Suspense>}/>
+      <Route path="/mockups/moving-to-bc-quiz" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><MovingToBcQuiz/></Suspense>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
