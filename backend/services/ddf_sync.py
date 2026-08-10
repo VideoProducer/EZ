@@ -235,8 +235,14 @@ def _map_property(p: dict) -> Optional[dict]:
         "photo_count": p.get("PhotosCount") or len(photos),
         "virtual_tour_urls": virtual_tour_urls,   # [{url, category, is_branded}, ...]
         "has_virtual_tour": bool(virtual_tour_urls),
-        "brokerage_name": None,   # resolved from Office if needed via a follow-up sync
+        # Brokerage attribution is required by CREA DDF® Rules. RESO standard
+        # field is ListOfficeName; some feeds also expose ListingBrokerageName.
+        # Fall back to None so the frontend fallback ("Listing Brokerage (see
+        # REALTOR.ca)") kicks in only when the feed truly omits the value.
+        "brokerage_name": p.get("ListOfficeName") or p.get("ListingBrokerageName") or None,
         "list_office_key": p.get("ListOfficeKey") or "",
+        "list_office_mls_id": p.get("ListOfficeMlsId") or "",
+        "list_agent_full_name": p.get("ListAgentFullName") or "",
         "list_agent_key": p.get("ListAgentKey") or "",
         "realtor_ca_url": listing_url,
         "modified_at": p.get("ModificationTimestamp"),

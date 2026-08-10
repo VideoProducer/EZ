@@ -866,7 +866,11 @@ const Nav = () => {
         <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
         <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}}><span>EZtoFind<span style={{color:"#FDB813"}}>.ca</span></span>
         </div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",letterSpacing:"0.08em"}}>DOUG LEMAIRE, REALTOR®</div></div>
+        {/* BCFSA prominence requirement: licensed brokerage name must be at
+            least 50% of the trade-name/logo size. EZtoFind.ca is 1.4rem, so
+            the brokerage line is set to 0.78rem (>= 0.7rem = 50%). */}
+        <div data-testid="nav-brokerage-name" style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",fontWeight:600,color:"var(--brand-navy)",lineHeight:1.2,marginTop:"0.2rem",letterSpacing:"0.01em"}}>Fraser Property Management Realty Services Ltd.</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",letterSpacing:"0.08em",marginTop:"0.1rem"}}>DOUG LEMAIRE, REALTOR®</div></div>
       </Link>
       <button className="nav-hamburger" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} onClick={()=>setOpen(o=>!o)} data-testid="nav-hamburger">
         <span/><span/><span/>
@@ -4005,6 +4009,12 @@ const ListingDetail = () => {
             {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
             {listing.year_built && <span>🏗 Built {listing.year_built}</span>}
           </div>
+          {/* CREA attribution — moved up near the MLS® number so the
+              "Powered by REALTOR.ca" badge, listing brokerage, and MLS® ID are
+              visible in the top viewport (CREA DDF® preferred placement). */}
+          <div style={{marginTop:"1rem",paddingTop:"1rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>
+            <ListingCompliance listing={listing}/>
+          </div>
           <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
           {listing.virtual_tour_embed?.url && (
@@ -4048,7 +4058,6 @@ const ListingDetail = () => {
           <div style={{height:340,borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)"}}>
             <iframe title={`Map of ${listing.street_address}`} src={`https://www.google.com/maps?q=${q}&output=embed`} width="100%" height="340" style={{border:0}} loading="lazy"/>
           </div>
-          <ListingCompliance listing={listing}/>
         </div>
         {/* Inquiry sidebar */}
         <div style={{position:"sticky",top:"1rem"}}>

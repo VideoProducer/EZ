@@ -8214,7 +8214,11 @@ PROPERTY_TYPE_UI_OPTIONS = [
 def _sanitize_listing(doc: dict) -> dict:
     doc.pop("_id", None)
     # CREA compliance: brokerage name is required. Listing agent is per-listing (from feed).
-    doc.setdefault("brokerage_name", "Listing Brokerage (see REALTOR.ca)")
+    # Use truthiness check so historically-synced rows with brokerage_name=None
+    # still get the safe fallback (until the next DDF sync re-populates them
+    # via ListOfficeName / ListingBrokerageName).
+    if not doc.get("brokerage_name"):
+        doc["brokerage_name"] = "Listing Brokerage (see REALTOR.ca)"
     # Do NOT default listing_agent — that field is only populated from real DDF feed data.
     doc.setdefault("realtor_ca_url", f"https://www.realtor.ca/real-estate/{doc.get('listing_key','')}")
     # tour_kinds — coarse per-listing classification so the UI can badge

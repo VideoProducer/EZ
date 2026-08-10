@@ -1,5 +1,11 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-10 (compliance polish trio)
+- **CREA `ListOfficeName` capture** — `backend/services/ddf_sync.py::_map_property()` now pulls `brokerage_name` directly from the RESO Property payload (`ListOfficeName` first, `ListingBrokerageName` fallback). Also captures `ListOfficeMlsId` and `ListAgentFullName` for future compliance surfacing. `_sanitize_listing` in `server.py` upgraded from `setdefault` → truthy check so historical rows with stored `None` display the safe placeholder ("Listing Brokerage (see REALTOR.ca)") until the next auto-sync repopulates them.
+- **BCFSA header prominence** — global site header now displays **"Fraser Property Management Realty Services Ltd."** at 0.78rem directly under the 1.4rem `EZtoFind.ca` logo (56% ratio, exceeds BCFSA 50% requirement). `data-testid="nav-brokerage-name"`. The `DOUG LEMAIRE, REALTOR®` byline moved to a smaller tertiary line beneath.
+- **REALTOR.ca badge placement** — the `<ListingCompliance>` block (which contains the red "Powered by REALTOR.ca" badge + Listing Brokerage + MLS® number) moved from the bottom of `/listing/:key` (below the location map) to directly under the beds/baths row, above the "About This Property" heading. Sits at y≈475px on 900px viewport — top-fold visibility, per CREA DDF® preferred placement.
+
+
 ## 2026-02-09 (later same day, part 6)
 - **First-run Cast tutorial coach mark** — small gold "👆 Tap here — cast to your TV in one step" tooltip with a bouncing downward arrow appears above the 1-tap picker button the FIRST time Doug (or any visitor) opens the Cast modal. Auto-dismisses after 10 s, or the moment the user taps the picker/× button. Persistence via `localStorage.ez_cast_tutorial_seen` so the coach mark only shows once per device.  Fires a new `cast_tutorial_shown` analytics event so we can measure adoption of the coach mark itself.
 - **Removed CREA/REALTOR.ca attribution footer** from the bottom of the Cast modal per Doug's request. The badge still appears on every `/listing/{key}` page + inside Present Mode's photo overlay, so compliance is untouched.
