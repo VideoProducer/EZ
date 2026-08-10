@@ -8411,55 +8411,111 @@ async def _resolve_bc_locality(q: str) -> Optional[dict]:
 # "farmhouse sink" / "ranch-style home" (extremely common non-equestrian
 # real estate lingo). Use the more specific "hobby farm" / "horse ranch"
 # / "cattle ranch" instead.
-EQUESTRIAN_KEYWORDS = [
-    # Original canon
-    "equestrian", "horse property", "horse friendly", "horse farm",
-    "barn", "stable", "arena", "riding ring", "paddock", "ALR",
-    # Feb 2026 — expanded feature-sheet vocabulary
-    "horse facility", "horse ranch", "horse barn", "horse stall",
-    "stall",                                # stall, stalls, stalled, stallion
-    "round pen", "pasture", "tack room", "feed room",
-    "hay loft", "hay shed", "hay storage", "hayloft",
+#
+# CORE_EQUESTRIAN_KEYWORDS (Feb 10, 2026) — the tight canon used by
+# `/listings/equestrian` and `/specialties/equestrian`. Every phrase here is
+# unambiguously equestrian in a BC MLS® description. Weak/broad terms that
+# were false-positive-heavy on apartments and vanilla detached houses
+# ("stall" → parking stall, "fencing", "septic", "200 amp", "electrical
+# service", "outbuilding", "agricultural", "irrigation", "grazing",
+# "drilled well" alone, "gpm", "environmental setback") have been demoted
+# to EQUESTRIAN_SUPPORT_KEYWORDS which are only used to enrich the
+# due-diligence checklist — never to *qualify* a listing as equestrian.
+CORE_EQUESTRIAN_KEYWORDS = [
+    # Direct horse terms
+    "equestrian",
+    "horse property", "horse friendly", "horse farm", "horse ranch",
+    "horse facility", "horse barn", "horse stall", "horse stalls",
+    "horses",                               # "suitable for horses"
+    "stallion",
+    # Horse infrastructure
+    "riding ring", "riding arena",
+    "dressage",
+    "paddock", "paddocks",
+    "corral", "corrals",
+    "round pen",
+    "tack room", "feed room",
     "wash bay", "wash rack", "grooming area",
+    "in and out stall", "in-and-out stall",
+    "loafing shed",
+    # Barn / stable — 90%+ equestrian in BC MLS® context
+    "barn", "barns",
+    "stable", "stables",
+    "arena",
+    "pasture", "pastures",
+    # Horse-specific storage
+    "hay loft", "hayloft", "hay shed", "hay storage",
+    # Horse-specific fencing patterns
     "cross fenced", "cross-fenced",
-    "in and out stall",
-    "grazing", "outbuilding", "out building", "loafing shed",
-    "agricultural",
-    "hobby farm", "cattle ranch",
-    "dressage",                             # dressage, dressage arena
-    "corral",                               # bonus: common BC ranch term
-    # Feb 8, 2026 — Doug's expanded due-diligence criteria matrix
-    # (zoning, water, septic, permits, facility, storage). Any hit
-    # qualifies the listing so buyers surface the specific due-diligence
-    # features they need to evaluate.
-    #
-    # Zoning / ALR / farm classification
-    "agricultural land reserve", "farm class", "farm classification",
+    "post and rail", "post-and-rail",
+    # Farm classifications / zoning that implies livestock
+    "hobby farm",
+    "cattle ranch",
+    "ALR",                                  # BC Agricultural Land Reserve
+    "agricultural land reserve",
+    "farm class", "farm classification",
     "class 9",                              # BC Assessment farm class 9
     "ALC", "agricultural land commission",
-    # Water — wells, irrigation, drought
-    "drilled well", "well water", "artesian well",
-    "gpm",                                  # US "gallons per minute" — matches "8 GPM well"
-    "gallons per minute",
-    "irrigation", "water rights", "water license", "water licence",
-    "riparian",
-    # Septic / manure / environmental
-    "septic", "septic field", "septic tank",
-    "greywater", "grey water",
-    "manure",                               # manure management, manure pit
-    "environmental setback",
-    # Permits + electrical
-    "200 amp", "200-amp", "200a service",
-    "electrical service",
+    # Permits + facility specs (unique to horse properties)
     "barn permit", "arena permit",
-    # Facility detail
     "arena footing", "arena drainage",
     "stall size", "paddock acreage",
-    "fencing", "post and rail", "post-and-rail", "wire fenced",
-    # Storage + trailer + fire separation
-    "trailer parking", "trailer access", "trailer bay",
+    # Waste (only makes sense for livestock)
+    "manure",
+    # Water rights / riparian (irrigation + wells alone were too broad;
+    # water RIGHTS / LICENCE / RIPARIAN are specifically valuable to hobby
+    # farms and equestrian operations).
+    "water rights", "water license", "water licence",
+    "riparian",
+    # Trailer parking bay — sized for horse trailer (drop generic "trailer access")
+    "trailer bay",
+    "horse trailer",
+]
+
+# Support keywords — enrich the due-diligence checklist and appear in the
+# equestrian-count telemetry, but DO NOT qualify a listing for the equestrian
+# search page on their own. Kept here for /listings/equestrian-count reporting
+# and for the buyer's due-diligence PDF.
+EQUESTRIAN_SUPPORT_KEYWORDS = [
+    "outbuilding", "out building",
+    "grazing",
+    "agricultural",                         # matches ALR-abutting parcels
+    "fencing", "wire fenced",
+    "drilled well", "well water", "artesian well",
+    "gpm", "gallons per minute",
+    "irrigation",
+    "septic", "septic field", "septic tank",
+    "greywater", "grey water",
+    "environmental setback",
+    "200 amp", "200-amp", "200a service",
+    "electrical service",
+    "trailer parking", "trailer access",
     "fire separation",
 ]
+
+# Backwards-compatible superset for legacy call sites (count endpoints,
+# heatmap segment history, due-diligence checklist generator).
+EQUESTRIAN_KEYWORDS = CORE_EQUESTRIAN_KEYWORDS + EQUESTRIAN_SUPPORT_KEYWORDS
+
+# Property types eligible for the equestrian search page. Apartments, condos,
+# townhouses, and duplexes are STRUCTURALLY incompatible with horse ownership
+# in BC — no acreage, no ALR, no barn permit. This is a strict allowlist:
+# only property types where a horse *could* physically live qualify. Vacant
+# Land is allowed only when the caller opts into the "bareland" sub-category.
+EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES = {
+    "Equestrian",
+    "Acreage",
+    "Detached",
+    "Single Family",
+    "House",
+    "Manufactured Home",
+    "Manufactured Home/Mobile",
+    "Manufactured / Mobile",
+    "Mobile Home",
+    "Farm",
+    "Ranch",
+    "Rural",
+}
 
 # Trigger words that mean the visitor is actively searching for an
 # equestrian / acreage / horse-friendly property.  Matched against the
@@ -8562,16 +8618,23 @@ async def equestrian_keyword_search(
     region_chip: Optional[str] = None,
 ):
     """List active BC listings whose description contains any of the
-    user-defined equestrian keywords. Returns the same shape as /listings.
+    CORE equestrian keywords AND whose property type could plausibly house
+    a horse (Detached/Acreage/Single Family/Manufactured Home — never
+    Apartment/Condo/Townhouse/Duplex). Returns the same shape as /listings.
     Sort options: newest | price_asc | price_desc.
     Optional `sub_category` narrows further to acreage / hobby_farm / estate
     / ranch / bareland (see EQUESTRIAN_SUB_CATEGORIES).
     Optional `region_chip` narrows to a public BC region (see REGION_CHIP_MAP)."""
+    # STRICT property-type allowlist — apartments, condos, townhouses, and
+    # duplexes cannot physically house a horse and were previously polluting
+    # this endpoint via description-only matches like "parking stall" or
+    # "outbuilding".  Sub-category "bareland" opts into Vacant Land via its
+    # own property_types override below.
     q: dict = {
         "status": "Active",
-        "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+        "property_type": {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
-        "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS],
+        "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS],
     }
     # Region chip → city $in filter (server-side allowlist to prevent injection).
     city_filter = _resolve_region_chip_to_city_filter(region_chip)
@@ -8582,16 +8645,13 @@ async def equestrian_keyword_search(
         cfg = EQUESTRIAN_SUB_CATEGORIES[sub_category]
         sub_clauses = []
         if cfg.get("property_types"):
-            # Overrides the base $nin excluded-types filter for this segment
-            # (e.g., "bareland" MUST match property_type=Land which would
-            # otherwise be excluded). We add a strict $in match.
-            sub_clauses.append({"property_type": {"$in": cfg["property_types"]}})
+            # Overrides the base allowlist for this segment (e.g. bareland
+            # → Vacant Land / Land which are NOT in EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES).
+            q["property_type"] = {"$in": cfg["property_types"]}
         if cfg.get("patterns"):
             sub_clauses.append({"$or": [{"description": {"$regex": r"\b" + p, "$options": "i"}} for p in cfg["patterns"]]})
         if sub_clauses:
-            # $or between property-type match and description pattern match
-            # so either qualifies the listing for this sub-category.
-            q["$and"] = [{"$or": sub_clauses}] if len(sub_clauses) > 1 else sub_clauses
+            q["$and"] = sub_clauses
     sort_spec = [("list_price", 1)]
     if sort == "price_desc": sort_spec = [("list_price", -1)]
     elif sort == "newest":   sort_spec = [("modification_ts", -1)]
@@ -8605,10 +8665,11 @@ async def equestrian_keyword_search(
         "limit": limit,
         "listings": listings,
         "sub_category": sub_category,
-        "keywords_matched_on": EQUESTRIAN_KEYWORDS,
+        "keywords_matched_on": CORE_EQUESTRIAN_KEYWORDS,
+        "eligible_property_types": sorted(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES),
         "compliance": {
             "source": "CREA DDF®",
-            "note": "Keyword-based match on listing description. Confirm equestrian features (stables, arenas, water rights, ALR) with the listing REALTOR® before making an offer.",
+            "note": "Keyword-based match on listing description with strict residential property-type filter. Confirm equestrian features (stables, arenas, water rights, ALR) with the listing REALTOR® before making an offer.",
         },
     }
 
@@ -8754,8 +8815,12 @@ async def search_listings(
     # friendly features (barn, stall, arena, ALR, well, GPM, septic,
     # 200 amp, arena footing, trailer parking, etc.).  Doug's specialty.
     if _equestrian_intent:
-        eq_or = [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in EQUESTRIAN_KEYWORDS]
+        eq_or = [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS]
         query.setdefault("$and", []).append({"$or": eq_or})
+        # Also constrain property_type to horse-eligible residential types
+        # so an equestrian NL query never leaks parking-stall apartments or
+        # bareland lots into the results.
+        query["property_type"] = {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)}
     # `q` (natural-language query from the hero search bar) is treated as a
     # LOCALITY hint first — if it names a known BC city or CityRegion, we
     # promote it to a strict exact-match filter so a search for "Whistler"
