@@ -1,5 +1,15 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-10 (lead-magnet mockups parked for review)
+- Shipped 3 lead-magnet mockups **as parked/unlisted previews** — routes live for Doug's review but sealed from search engines and site nav:
+  - `/mockups/equestrian-checklist` — 6-page print-ready PDF (EquestrianChecklistMockup.jsx)
+  - `/mockups/first-time-buyer` — 5-page print-ready PDF (FirstTimeBuyerCheatSheet.jsx)
+  - `/mockups/moving-to-bc-quiz` — interactive 5-question funnel + CASL email gate + 3 community matches (MovingToBcQuiz.jsx)
+- Created shared `UnlistedMockupBanner` component — injects `noindex, nofollow, noarchive, nosnippet` on both `<meta name="robots">` and `<meta name="googlebot">` via Helmet, sets `[Unlisted]` page title prefix, and renders a visible amber "UNLISTED PREVIEW" strip at the top of each mockup.
+- Added `Disallow: /mockups/` to robots.txt in all 35 per-bot blocks (User-agent: * plus GPTBot, ChatGPT-User, OAI-SearchBot, PerplexityBot, Google-Extended, Claude-Web, anthropic-ai, Bytespider, meta-externalagent, Applebot-Extended, ClaudeBot, cohere-ai, cohere-training-data-crawler, Diffbot, DuckAssistBot, FacebookBot, FriendlyCrawler, ICC-Crawler, ImagesiftBot, Kangaroo Bot, magpie-crawler, Meltwater, omgili, PanguBot, PetalBot, SemrushBot-OCOB, Sidetrade indexer bot, YouBot, Timpi, VelenPublicWebCrawler, Webzio-Extended, YisouSpider, ZoominfoBot, plus fallback wildcards).
+- All 3 mockups lazy-loaded from the main bundle via `React.lazy()` so they don't affect LCP.
+
+
 ## 2026-02-10 (equestrian filter tightening)
 - **Property-type allowlist** added to `/api/listings/equestrian` — new `EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES` set restricts results to types that could physically house a horse (Equestrian, Acreage, Detached, Single Family, House, Manufactured Home, Manufactured Home/Mobile, Mobile Home, Farm, Ranch, Rural). Apartments, condos, townhouses, duplexes, and vacant land are now excluded by default. Sub-category "bareland" opts back into Vacant Land/Land via its own property_types override.
 - **Keyword canon refactored** — `EQUESTRIAN_KEYWORDS` split into two tiers:

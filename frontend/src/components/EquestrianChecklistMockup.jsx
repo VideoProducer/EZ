@@ -8,6 +8,7 @@
 // listing.
 import React from "react";
 import { Link } from "react-router-dom";
+import UnlistedMockupBanner from "./UnlistedMockupBanner";
 
 const BRAND = {
   navy: "#0F2A5B",
@@ -102,6 +103,7 @@ export default function EquestrianChecklistMockup() {
 
   return (
     <div style={{background:"#EDEEF3",minHeight:"100vh",padding:"24pt 0"}} data-testid="equestrian-checklist-mockup">
+      <UnlistedMockupBanner label="Equestrian Due-Diligence Checklist"/>
       {/* Print / view toolbar — hidden in print output */}
       <div className="no-print" style={{
         maxWidth:"8.5in",margin:"0 auto 20pt",padding:"12pt 16pt",background:"white",

@@ -12,6 +12,7 @@
 // this to the real /api/communities dataset.
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import UnlistedMockupBanner from "./UnlistedMockupBanner";
 
 const BRAND = {
   navy: "#0F2A5B",
@@ -137,6 +138,7 @@ export default function MovingToBcQuiz() {
 
   return (
     <div style={{background:"#EDEEF3",minHeight:"100vh",padding:"48px 0"}} data-testid="moving-to-bc-quiz">
+      <UnlistedMockupBanner label="Moving to BC · Community Match Quiz"/>
       <div style={{maxWidth:820,margin:"0 auto",padding:"0 20px"}}>
         {/* Header banner */}
         <div style={{

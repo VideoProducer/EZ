@@ -5,6 +5,7 @@
 // wire it as an email-gated download once approved.
 import React from "react";
 import { Link } from "react-router-dom";
+import UnlistedMockupBanner from "./UnlistedMockupBanner";
 
 const BRAND = {
   navy: "#0F2A5B",
@@ -79,6 +80,7 @@ const PageHeader = () => (
 export default function FirstTimeBuyerCheatSheet() {
   return (
     <div style={{background:"#EDEEF3",minHeight:"100vh",padding:"24pt 0"}} data-testid="first-time-buyer-mockup">
+      <UnlistedMockupBanner label="First-Time Buyer Grant & Rebate Cheat-Sheet"/>
       <div className="no-print" style={{
         maxWidth:"8.5in",margin:"0 auto 20pt",padding:"12pt 16pt",background:"white",
         borderRadius:"10pt",display:"flex",justifyContent:"space-between",alignItems:"center",
