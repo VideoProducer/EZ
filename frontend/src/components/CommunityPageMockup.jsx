@@ -92,30 +92,16 @@ const SectionH = ({ children, kicker }) => (
 );
 
 // ── The full page mockup ──────────────────────────────────────────────────
+// Doug reviewed Feb 2026 and locked in the OUT-OF-AREA variant for wiring up.
+// The in-area variant is preserved in the IN_AREA constant above for reference
+// but the mockup now renders only the out-of-area path with softer referral
+// messaging (no aggressive "Get matched" CTA, no advisory strip, no toggle).
 export default function CommunityPageMockup() {
-  const [mode, setMode] = useState("in-area");
-  const c = mode === "in-area" ? IN_AREA : OUT_OF_AREA;
+  const c = OUT_OF_AREA;
 
   return (
     <div style={{background:"#F5F5F0",minHeight:"100vh"}} data-testid="community-page-mockup">
       <UnlistedMockupBanner label="Hybrid Community Page (lead-gen redesign)"/>
-
-      {/* Variant toggle — only in the mockup */}
-      <div style={{background:"white",borderBottom:"1px solid #E5E7EB",padding:"14px 20px",display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{fontSize:"0.85rem",color:BRAND.muted,fontFamily:"Inter,sans-serif"}}>Preview variant:</span>
-        <button data-testid="mock-mode-in-area" onClick={() => setMode("in-area")} style={{
-          padding:"7px 16px",borderRadius:999,border:`1px solid ${BRAND.navy}`,cursor:"pointer",
-          background: mode==="in-area" ? BRAND.navy : "white",
-          color:      mode==="in-area" ? "white"    : BRAND.navy,
-          fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:"0.85rem",
-        }}>🏡 In-area (Maple Ridge)</button>
-        <button data-testid="mock-mode-out-of-area" onClick={() => setMode("out-of-area")} style={{
-          padding:"7px 16px",borderRadius:999,border:`1px solid ${BRAND.blue}`,cursor:"pointer",
-          background: mode==="out-of-area" ? BRAND.blue : "white",
-          color:      mode==="out-of-area" ? "white"    : BRAND.blue,
-          fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:"0.85rem",
-        }}>🌐 Out-of-area (Kelowna · Referral)</button>
-      </div>
 
       <div style={{maxWidth:"1100px",margin:"0 auto",padding:"28px 20px",fontFamily:"Inter,sans-serif"}}>
 
@@ -138,21 +124,19 @@ export default function CommunityPageMockup() {
           <div style={{fontSize:"0.75rem",letterSpacing:"0.16em",color:BRAND.gold,fontWeight:700}}>{c.region.toUpperCase()}</div>
           <h1 style={{fontSize:"clamp(2rem,5vw,3.2rem)",fontFamily:"'Sora',sans-serif",fontWeight:800,margin:"6px 0 10px",lineHeight:1.05}}>{c.name}, BC</h1>
 
-          {/* Trust badge — differs between variants */}
-          <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20,flexWrap:"wrap"}}>
-            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
-            <div style={{fontSize:"0.9rem",lineHeight:1.4}}>
-              {c.isFocus ? (
-                <>
-                  <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® · covers {c.name} directly</div>
-                  <div style={{opacity:0.85,fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · Fraser Property Management Realty Services Ltd.</div>
-                </>
-              ) : (
-                <>
-                  <div style={{fontWeight:700}}>{c.name} is served by Doug's BC-wide referral network</div>
-                  <div style={{opacity:0.85,fontSize:"0.82rem"}}>Doug personally hand-picks a BCFSA-licensed local specialist · $0 cost to you</div>
-                </>
-              )}
+          {/* Trust badge — softer service-area wording per Doug's Feb 2026
+              review. Instead of positioning the referral as a proactive
+              "network coverage" claim, we set the correct expectation up-front
+              (this is outside Doug's direct area) and offer the referral as
+              a helpful nicety with a warm 🐾 tone. */}
+          <div style={{marginBottom:20,background:"rgba(255,255,255,0.10)",padding:"14px 18px",borderRadius:10,backdropFilter:"blur(4px)"}}>
+            <div style={{fontSize:"0.92rem",lineHeight:1.55}}>
+              As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
+              <Link
+                to={`/referral-request?city=${encodeURIComponent(c.name)}`}
+                data-testid="hero-referral-link"
+                style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}
+              >Referral REALTOR® link →</Link>
             </div>
           </div>
 
@@ -184,19 +168,13 @@ export default function CommunityPageMockup() {
             </div>
           </div>
 
-          {/* Primary CTA row — differs between variants */}
+          {/* Primary CTA row — softer for out-of-area per Doug's Feb 2026
+              review. No aggressive "Get matched" hero button anymore; the
+              referral offer sits inside the trust badge above. Hero CTAs are
+              now the same as the in-area variant. */}
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {c.isFocus ? (
-              <>
-                <button data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer"}}>🏡 View {c.inventory.active} listings</button>
-                <button data-testid="hero-email-new" style={{background:"rgba(255,255,255,0.15)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"13px 22px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer"}}>📧 Email me new {c.name} listings</button>
-              </>
-            ) : (
-              <>
-                <button data-testid="hero-get-matched" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer"}}>🤝 Get matched with a {c.name} REALTOR® in 24 hrs</button>
-                <button data-testid="hero-email-new" style={{background:"rgba(255,255,255,0.15)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"13px 22px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer"}}>📧 Email me new {c.name} listings</button>
-              </>
-            )}
+            <button data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer"}}>🏡 View {c.inventory.active} listings</button>
+            <button data-testid="hero-email-new" style={{background:"rgba(255,255,255,0.15)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"13px 22px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer"}}>📧 Email me new {c.name} listings</button>
           </div>
         </div>
 
@@ -228,11 +206,6 @@ export default function CommunityPageMockup() {
 
         {/* ═══════════════ § LIVE LISTINGS PREVIEW ════════════════════ */}
         <SectionH kicker="§3 · Live inventory">4 sample listings in {c.name}</SectionH>
-        {!c.isFocus && (
-          <div style={{padding:"10px 14px",background:"#EFF6FF",border:`1px solid ${BRAND.blue}`,borderRadius:8,color:BRAND.blue,fontSize:"0.82rem",marginBottom:14}}>
-            💡 These listings are handled by our vetted {c.name} referral partner. Doug introduces you, they handle showings and offers.
-          </div>
-        )}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:14}}>
           {c.sampleListings.map(l => (
             <div key={l.key} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:12,overflow:"hidden"}}>
@@ -248,6 +221,79 @@ export default function CommunityPageMockup() {
         </div>
         <div style={{marginTop:14,textAlign:"center"}}>
           <button data-testid="section-view-all" style={{background:BRAND.navy,color:"white",border:"none",padding:"11px 22px",borderRadius:999,fontWeight:600,fontSize:"0.9rem",cursor:"pointer"}}>View all {c.inventory.active} {c.name} listings →</button>
+        </div>
+
+        {/* ═══ Filter card — added Feb 2026 per Doug's review so every ═════
+            community page has an inline search widget matching the /listings
+            filter panel. Visitors can narrow the {community} inventory
+            without leaving the page. Fields match FilterListings on
+            /listings for consistency. */}
+        <div data-testid="community-filter-card" style={{
+          marginTop:28,maxWidth:340,background:"white",borderRadius:14,
+          border:`2px solid ${BRAND.navy}`,padding:0,overflow:"hidden",
+        }}>
+          {/* Header strip with title + TYPE / DOOGIE / RESET pills */}
+          <div style={{background:"white",borderBottom:`1px solid ${BRAND.navy}`,padding:"10px 12px",display:"flex",alignItems:"center",gap:8,justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,fontFamily:"'Sora',sans-serif",fontWeight:800,letterSpacing:"0.06em",color:BRAND.navy,fontSize:"0.78rem"}}>
+              <span style={{letterSpacing:"0.14em"}}>·····</span>
+              FILTER<br/>LISTINGS
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button style={{background:"white",border:`1.5px solid ${BRAND.navy}`,borderRadius:6,padding:"5px 9px",fontSize:"0.68rem",fontWeight:700,color:BRAND.navy,cursor:"pointer"}}>🗂 TYPE</button>
+              <button style={{background:BRAND.gold,border:`1.5px solid ${BRAND.gold}`,borderRadius:6,padding:"5px 9px",fontSize:"0.68rem",fontWeight:700,color:BRAND.navy,cursor:"pointer"}}>🔑 DOOGIE</button>
+              <button style={{background:"white",border:`1.5px solid ${BRAND.navy}`,borderRadius:6,padding:"5px 9px",fontSize:"0.68rem",fontWeight:700,color:BRAND.navy,cursor:"pointer"}}>RESET</button>
+            </div>
+          </div>
+          {/* Fields */}
+          <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10,fontSize:"0.85rem"}}>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Community / City</label>
+              <input defaultValue={c.name} placeholder="Community, city, or BC postal" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem"}}/>
+            </div>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Property Type</label>
+              <select style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem",background:"white"}}>
+                <option>Any</option><option>Detached</option><option>Townhouse</option>
+                <option>Apartment</option><option>Acreage</option><option>Manufactured Home</option>
+              </select>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div>
+                <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Min beds</label>
+                <select style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem",background:"white"}}>
+                  <option>Any</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option><option>5+</option>
+                </select>
+              </div>
+              <div>
+                <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Min baths</label>
+                <select style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem",background:"white"}}>
+                  <option>Any</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Minimum price ($)</label>
+              <input placeholder="$ Any" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem"}}/>
+            </div>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Maximum price ($)</label>
+              <input placeholder="$ Any" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem"}}/>
+            </div>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Keyword</label>
+              <input placeholder="e.g. suite, waterfront" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem"}}/>
+            </div>
+            <div>
+              <label style={{fontWeight:700,color:BRAND.navy,display:"block",marginBottom:4}}>Sort by</label>
+              <select style={{width:"100%",padding:"9px 11px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.85rem",background:"white"}}>
+                <option>Newest first</option>
+                <option>Price: low to high</option>
+                <option>Price: high to low</option>
+                <option>Most beds</option>
+              </select>
+            </div>
+            <button data-testid="community-apply-filters" style={{marginTop:6,background:BRAND.navy,color:"white",border:"none",padding:"12px 20px",borderRadius:8,fontWeight:700,fontSize:"0.92rem",cursor:"pointer"}}>Apply Filters</button>
+          </div>
         </div>
 
         {/* ═══════════════ § SEGMENT-MATCHED LEAD MAGNETS ═════════════ */}
@@ -271,36 +317,12 @@ export default function CommunityPageMockup() {
           ))}
         </div>
 
-        {/* ═══════════════ § OUT-OF-AREA ONLY — 3-STEP VETTED PROCESS ═ */}
-        {!c.isFocus && (
-          <>
-            <SectionH kicker="§5 · How this works">Doug's 3-step vetted referral process</SectionH>
-            <div style={{background:"white",border:"1px solid #E5E7EB",borderRadius:14,padding:"22px 24px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:20}}>
-                {[
-                  { n:1, title:"You fill out a short form", body:`2 minutes. Tell us what you're looking for in ${c.name}, your timeline, and how to reach you.` },
-                  { n:2, title:"Doug personally reviews", body:`From a vetted network of BCFSA-licensed BC REALTORS® — same standard as if Doug were representing you himself.` },
-                  { n:3, title:"Intro within 24 hours", body:`You approve every intro before it happens. $0 cost. You always control the relationship — Doug stays in the loop as your BC concierge.` },
-                ].map(s => (
-                  <div key={s.n}>
-                    <div style={{width:34,height:34,borderRadius:"50%",background:BRAND.gold,color:BRAND.navy,fontFamily:"'Sora',sans-serif",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem"}}>{s.n}</div>
-                    <div style={{fontSize:"1rem",fontFamily:"'Sora',sans-serif",fontWeight:700,color:BRAND.navy,marginTop:8}}>{s.title}</div>
-                    <div style={{fontSize:"0.85rem",color:BRAND.ink,marginTop:4,lineHeight:1.55}}>{s.body}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{marginTop:20,padding:"12px 14px",background:"#DCFCE7",borderRadius:8,fontSize:"0.85rem",color:"#065F46",display:"flex",gap:14,flexWrap:"wrap"}}>
-                <span>✅ $0 cost to you</span>
-                <span>✅ You approve every intro</span>
-                <span>✅ BCFSA-licensed partners only</span>
-                <span>✅ Doug stays your BC concierge</span>
-              </div>
-            </div>
-          </>
-        )}
-
         {/* ═══════════════ § ABOUT + VIBESCORE + FAQ ══════════════════ */}
-        <SectionH kicker={c.isFocus ? "§5 · About" : "§6 · About"}>About {c.name}, BC</SectionH>
+        {/* §5 · 3-step vetted referral process REMOVED per Doug's Feb 2026
+            review. The soft referral-link approach in the hero (and repeated
+            at the bottom of the page) replaces the heavier "vetted process"
+            trust block. */}
+        <SectionH kicker="§5 · About">About {c.name}, BC</SectionH>
         <p style={{fontSize:"1rem",lineHeight:1.75,color:BRAND.ink,maxWidth:800}}>{c.synopsis}</p>
 
         {/* VibeScore mock */}
@@ -342,7 +364,7 @@ export default function CommunityPageMockup() {
         ))}
 
         {/* ═══════════════ § COMPACT WEATHER STRIP ════════════════════ */}
-        <SectionH kicker={c.isFocus ? "§7 · Climate" : "§8 · Climate"}>Weather &amp; climate</SectionH>
+        <SectionH kicker="§6 · Climate">Weather &amp; climate</SectionH>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <StatTile label="Avg high"        value={`${c.climate.avgHi}°C`}       sub="annual"/>
           <StatTile label="Avg low"         value={`${c.climate.avgLo}°C`}       sub="annual"/>
@@ -352,59 +374,29 @@ export default function CommunityPageMockup() {
         </div>
         <button style={{marginTop:14,background:"none",border:`1px solid ${BRAND.navy}`,color:BRAND.navy,padding:"8px 16px",borderRadius:999,fontSize:"0.83rem",fontWeight:600,cursor:"pointer"}}>See full monthly climate normals →</button>
 
-        {/* ═══════════════ § BOTTOM CTA ═══════════════════════════════ */}
-        <SectionH kicker={c.isFocus ? "§8 · Take the next step" : "§9 · Get connected"}>{c.isFocus ? `Ready to explore ${c.name}?` : `Get matched with your ${c.name} REALTOR®`}</SectionH>
-        {c.isFocus ? (
-          <div style={{background:BRAND.navy,color:"white",padding:"26px 28px",borderRadius:14}}>
-            <div style={{fontSize:"1.15rem",fontFamily:"'Sora',sans-serif",fontWeight:700,lineHeight:1.3}}>
-              Doug represents buyers &amp; sellers in {c.name} directly — book a free 20-minute call.
-            </div>
-            <div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap"}}>
-              <button data-testid="bottom-buying" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",cursor:"pointer"}}>I'm Buying in {c.name}</button>
-              <button data-testid="bottom-selling" style={{background:"white",color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",cursor:"pointer"}}>I'm Selling in {c.name}</button>
-              <button data-testid="bottom-call" style={{background:"rgba(255,255,255,0.12)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"11px 20px",borderRadius:999,fontWeight:600,fontSize:"0.92rem",cursor:"pointer"}}>📞 Book 20-min call</button>
-            </div>
+        {/* ═══════════════ § BOTTOM CTA ═══════════════════════════════
+            Per Doug's Feb 2026 review: no aggressive referral form here.
+            Replaced with the same soft "outside Doug's service area" copy
+            from the hero and a single "Referral REALTOR® link" button. */}
+        <SectionH kicker="§7 · Get connected">Looking to buy or sell in {c.name}?</SectionH>
+        <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14}}>
+          <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
+            As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?
           </div>
-        ) : (
-          <div style={{background:"white",border:"1px solid #E5E7EB",borderRadius:14,padding:"22px 24px"}}>
-            <div style={{fontSize:"1.05rem",fontFamily:"'Sora',sans-serif",fontWeight:700,color:BRAND.navy,marginBottom:14}}>
-              Get matched with a vetted {c.name} REALTOR® in 24 hrs — $0 to you.
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-              <input placeholder="Full name" data-testid="referral-name" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}/>
-              <input placeholder="Email" data-testid="referral-email" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}/>
-              <input placeholder="Phone" data-testid="referral-phone" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}/>
-              <select data-testid="referral-intent" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}>
-                <option>I'm buying</option>
-                <option>I'm selling</option>
-                <option>Both / not sure</option>
-                <option>Just researching</option>
-              </select>
-              <select data-testid="referral-timeline" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}>
-                <option>Timeline: ASAP</option>
-                <option>1-3 months</option>
-                <option>3-6 months</option>
-                <option>6-12 months</option>
-                <option>Just researching</option>
-              </select>
-              <select data-testid="referral-budget" style={{padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem"}}>
-                <option>Budget: Under $600K</option>
-                <option>$600K – $1.1M</option>
-                <option>$1.1M – $2M</option>
-                <option>$2M+</option>
-              </select>
-            </div>
-            <textarea placeholder={`Anything specific about ${c.name} that matters to you? (optional)`} data-testid="referral-notes" rows={2} style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontSize:"0.9rem",resize:"vertical"}}/>
-            <label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:"0.78rem",color:BRAND.muted,marginTop:12,lineHeight:1.55}}>
-              <input type="checkbox" data-testid="referral-consent"/>
-              <span>I consent to Doug LeMaire introducing me to a licensed BC REALTOR® in {c.name} under CASL + PIPA BC. I can withdraw consent anytime.</span>
-            </label>
-            <button data-testid="referral-submit" style={{marginTop:14,background:BRAND.navy,color:"white",border:"none",padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer"}}>🤝 Request my {c.name} REALTOR® match</button>
-          </div>
-        )}
+          <Link
+            to={`/referral-request?city=${encodeURIComponent(c.name)}`}
+            data-testid="bottom-referral-link"
+            style={{
+              display:"inline-block",background:BRAND.navy,color:"white",
+              padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",
+              textDecoration:"none",
+            }}
+          >🤝 Referral REALTOR® link →</Link>
+        </div>
+
 
         {/* ═══════════════ § NEARBY COMMUNITIES ═══════════════════════ */}
-        <SectionH kicker={c.isFocus ? "§9 · Nearby" : "§10 · Nearby"}>Other {c.region} communities</SectionH>
+        <SectionH kicker="§8 · Nearby">Other {c.region} communities</SectionH>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {(c.isFocus
             ? ["Pitt Meadows","Coquitlam","Langley","Mission","Port Coquitlam","Surrey"]
