@@ -1,0 +1,496 @@
+// Luxury Listings Landing Page — parked mockup at /mockups/luxury
+// Editorial-grade layout for $3M+ inventory with global-syndication framing.
+//
+// Requirements ship in this mockup:
+//   §1 Cinematic hero + syndication trust bar (WSJ / Mansion Global / Barron's · 80M+ affluent reach)
+//   §2 Lifestyle corridors filter (West Van Estates · GV Penthouses · Whistler · FV Acreages)
+//   §3 Magazine-grid CREA DDF® $3M+ inventory
+//   §4 "Request Private Viewing / Virtual Tour" modal (email · phone · Signal · Telegram · WhatsApp)
+//   §5 Doogie AI luxury assistant prompt strip
+//   §6 "Global Exposure for Your Estate" seller funnel
+//   §7 "Custom Confidential Estate Assessment" bespoke CMA form
+//   §8 BC PIPA privacy compliance banner
+//
+// Also captures UTM parameters (utm_source / utm_medium / utm_campaign /
+// utm_content) from the URL for print-magazine QR-code attribution.
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import UnlistedMockupBanner from "./UnlistedMockupBanner";
+import { Helmet } from "react-helmet-async";
+
+const BRAND = {
+  ink: "#0B0F1A",           // near-black for editorial
+  paper: "#F8F5EE",          // warm ivory
+  gold: "#B08D57",           // muted champagne gold, not the yellow
+  goldSoft: "#DABF7A",
+  navy: "#0F2A5B",
+  muted: "#6B6459",
+  hairline: "#D9D2C0",
+};
+
+const SERIF = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
+const SANS = "'Inter', -apple-system, sans-serif";
+
+// ── Reusable ──────────────────────────────────────────────────────────
+const Section = ({ children, tone = "paper", pad = "80px 0" }) => (
+  <section style={{
+    background: tone === "ink" ? BRAND.ink : tone === "white" ? "white" : BRAND.paper,
+    padding: pad, color: tone === "ink" ? "white" : BRAND.ink,
+  }}>
+    <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 32px" }}>{children}</div>
+  </section>
+);
+
+const Kicker = ({ children, tone = "gold" }) => (
+  <div style={{
+    fontFamily: SANS, fontSize: "0.72rem", letterSpacing: "0.24em",
+    color: tone === "gold" ? BRAND.gold : "rgba(255,255,255,0.7)",
+    fontWeight: 600, textTransform: "uppercase", marginBottom: 12,
+  }}>{children}</div>
+);
+
+const H = ({ level = 2, children, tone = "ink", align }) => {
+  const sz = { 1: "clamp(2.6rem,5.5vw,4.6rem)", 2: "clamp(1.9rem,3.2vw,2.6rem)", 3: "clamp(1.3rem,2vw,1.65rem)" }[level];
+  const Tag = `h${level}`;
+  return <Tag style={{
+    fontFamily: SERIF, fontWeight: 500, fontSize: sz, lineHeight: 1.1,
+    color: tone === "gold" ? BRAND.gold : tone === "white" ? "white" : BRAND.ink,
+    margin: 0, letterSpacing: "-0.01em", textAlign: align || "left",
+  }}>{children}</Tag>;
+};
+
+// ── Sample data ───────────────────────────────────────────────────────
+const CORRIDORS = [
+  { slug: "west-van-estates", name: "West Vancouver Estates", median: 8250000, count: 47, hero: "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800", editorial: "British Properties, Point Grey, and Caulfeild — heritage estates on view lots, waterfront moorage, and coach-house guest quarters." },
+  { slug: "gv-penthouses", name: "Greater Vancouver Penthouses", median: 4650000, count: 63, hero: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", editorial: "Coal Harbour, Yaletown, and Kitsilano skyline residences — private elevators, floor-plate primaries, and concierge on 24-hour rotation." },
+  { slug: "whistler-retreats", name: "Whistler Retreats", median: 7100000, count: 29, hero: "https://images.unsplash.com/photo-1517320964276-a002fa203177?w=800", editorial: "Kadenwood, Sunridge Plateau, and Whistler Cay — ski-in / ski-out chalets, timber-frame wellness pavilions, and heli-touring proximity." },
+  { slug: "fraser-valley-acreages", name: "Fraser Valley Acreages", median: 5450000, count: 38, hero: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800", editorial: "Fort Langley, Aldergrove, Mission — 10-to-100-acre gated estates, equestrian centres, and ALR-classified vineyards." },
+];
+
+const LISTINGS = [
+  { key: "L1", price: 32500000, addr: "2620 272 Street", city: "Langley", desc: "50-acre estate · private lake · guest villa · equestrian centre", corridor: "Fraser Valley Acreages" },
+  { key: "L2", price: 24250000, addr: "3800 Marine Drive", city: "West Vancouver", desc: "Waterfront estate · 240 ft frontage · deep-water moorage", corridor: "West Vancouver Estates" },
+  { key: "L3", price: 17800000, addr: "1108 Alberni Street PH", city: "Vancouver", desc: "Shangri-La penthouse · 5,400 sqft · private elevator · 360° city + water", corridor: "Greater Vancouver Penthouses" },
+  { key: "L4", price: 12900000, addr: "4550 Blackcomb Way", city: "Whistler", desc: "Ski-in / ski-out chalet · Kadenwood · 8,200 sqft · heli-pad access", corridor: "Whistler Retreats" },
+  { key: "L5", price: 8950000,  addr: "3450 Pine Crescent", city: "Vancouver", desc: "Shaughnessy heritage · 1912 · 12,000 sqft lot · fully restored", corridor: "West Vancouver Estates" },
+  { key: "L6", price: 6250000,  addr: "12550 264 Street", city: "Maple Ridge", desc: "Equestrian estate · 10 acres · 12-stall barn · dressage arena", corridor: "Fraser Valley Acreages" },
+];
+
+// ── Private-viewing modal ────────────────────────────────────────────
+function PrivateViewingModal({ listing, utm, onClose }) {
+  const [contact, setContact] = useState("email");
+  const [submitted, setSubmitted] = useState(false);
+  const submit = e => { e.preventDefault(); setSubmitted(true); };
+
+  if (submitted) {
+    return (
+      <div style={backdrop} onClick={onClose}>
+        <div style={modal} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: "48px 40px", textAlign: "center" }}>
+            <div style={{ fontSize: "3rem" }}>🔒</div>
+            <H level={2} tone="ink">Request received discreetly.</H>
+            <p style={{ marginTop: 12, color: BRAND.muted, fontFamily: SANS, fontSize: "0.95rem", lineHeight: 1.7 }}>
+              Doug LeMaire will respond within 4 business hours via your preferred channel. Your enquiry has not been shared with any third party and is not stored in our public CRM index.
+            </p>
+            <button onClick={onClose} style={btnDark}>Close</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={backdrop} onClick={onClose} data-testid="private-viewing-modal">
+      <div style={modal} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 16, right: 20, background: "none", border: "none", fontSize: "1.6rem", color: BRAND.muted, cursor: "pointer" }}>×</button>
+        <div style={{ padding: "36px 40px 40px" }}>
+          <Kicker>Discreet enquiry · unmonitored channel</Kicker>
+          <H level={2}>Request a Private Viewing</H>
+          {listing && (
+            <div style={{ marginTop: 8, fontFamily: SANS, fontSize: "0.9rem", color: BRAND.muted }}>
+              <em>{listing.addr}, {listing.city}</em> · ${listing.price.toLocaleString("en-CA")}
+            </div>
+          )}
+          <form onSubmit={submit} style={{ marginTop: 24, display: "grid", gap: 14 }}>
+            <input required placeholder="Full name (or initials only)" style={fld} data-testid="pv-name" />
+            <input required type="email" placeholder="Email" style={fld} data-testid="pv-email" />
+            <div>
+              <div style={{ fontFamily: SANS, fontSize: "0.78rem", fontWeight: 600, color: BRAND.ink, marginBottom: 6 }}>Preferred contact channel</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["email", "phone", "signal", "telegram", "whatsapp"].map(o => (
+                  <label key={o} style={{
+                    padding: "8px 14px", borderRadius: 999,
+                    border: `1px solid ${contact === o ? BRAND.ink : BRAND.hairline}`,
+                    background: contact === o ? BRAND.ink : "white",
+                    color: contact === o ? "white" : BRAND.ink,
+                    fontFamily: SANS, fontSize: "0.82rem", cursor: "pointer", fontWeight: 600, textTransform: "capitalize",
+                  }}>
+                    <input type="radio" name="contact" value={o} checked={contact === o} onChange={() => setContact(o)} style={{ display: "none" }} />
+                    {o === "signal" ? "🔒 Signal" : o === "telegram" ? "✈️ Telegram" : o === "whatsapp" ? "💬 WhatsApp" : o === "phone" ? "📞 Phone" : "📧 Email"}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <input required placeholder={contact === "email" ? "Confirm email" : contact === "phone" ? "Phone number" : `${contact.charAt(0).toUpperCase() + contact.slice(1)} handle`} style={fld} data-testid="pv-channel" />
+            <select style={fld}>
+              <option>Preferred viewing window: Weekday mornings</option>
+              <option>Weekday afternoons</option>
+              <option>Weekday evenings (concierge escort)</option>
+              <option>Weekend</option>
+              <option>Virtual tour first (Facetime / Signal video)</option>
+            </select>
+            <textarea placeholder="Any confidential notes for Doug (optional) — proxy purchase, timing constraints, related properties…" rows={3} style={{ ...fld, resize: "vertical" }} data-testid="pv-notes" />
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontFamily: SANS, fontSize: "0.78rem", color: BRAND.muted, lineHeight: 1.55 }}>
+              <input type="checkbox" required style={{ marginTop: 3 }} data-testid="pv-consent" />
+              <span>I acknowledge that Doug LeMaire, REALTOR® handles enquiries under BC's Personal Information Protection Act (PIPA). My details will not be shared with third parties and are stored in a client-only ledger, not the public marketing CRM. I can withdraw consent at any time.</span>
+            </label>
+            {utm.utm_source && (
+              <div style={{ fontFamily: SANS, fontSize: "0.7rem", color: BRAND.muted, background: "#F0EBE0", padding: "8px 12px", borderRadius: 6 }}>
+                📎 Attribution captured: source={utm.utm_source}{utm.utm_medium ? `, medium=${utm.utm_medium}` : ""}{utm.utm_campaign ? `, campaign=${utm.utm_campaign}` : ""}
+              </div>
+            )}
+            <button type="submit" data-testid="pv-submit" style={{ ...btnDark, marginTop: 6 }}>Submit discreet enquiry</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const backdrop = {
+  position: "fixed", inset: 0, background: "rgba(11,15,26,0.75)", backdropFilter: "blur(4px)",
+  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9000, padding: 16,
+};
+const modal = {
+  background: "white", borderRadius: 4, maxWidth: 540, width: "100%",
+  maxHeight: "94vh", overflow: "auto", position: "relative",
+  boxShadow: "0 30px 80px rgba(0,0,0,0.4)",
+};
+const fld = {
+  width: "100%", padding: "12px 14px", border: `1px solid ${BRAND.hairline}`,
+  borderRadius: 4, fontFamily: SANS, fontSize: "0.92rem", color: BRAND.ink, background: "white",
+};
+const btnDark = {
+  background: BRAND.ink, color: "white", border: "none", padding: "13px 26px",
+  borderRadius: 999, fontFamily: SANS, fontSize: "0.9rem", fontWeight: 600, letterSpacing: "0.06em",
+  textTransform: "uppercase", cursor: "pointer",
+};
+const btnGold = {
+  background: BRAND.gold, color: "white", border: "none", padding: "13px 26px",
+  borderRadius: 999, fontFamily: SANS, fontSize: "0.9rem", fontWeight: 600, letterSpacing: "0.06em",
+  textTransform: "uppercase", cursor: "pointer",
+};
+
+// ── Main page ────────────────────────────────────────────────────────
+export default function LuxuryLandingMockup() {
+  const [openListing, setOpenListing] = useState(null);
+  const [corridor, setCorridor] = useState("all");
+  const [sellerSubmitted, setSellerSubmitted] = useState(false);
+  const [utm, setUtm] = useState({});
+
+  // UTM capture — reads ?utm_source, utm_medium, utm_campaign, utm_content
+  // from the URL on first mount and stores them in state.  Production
+  // version will POST these into the referral_request payload for print-
+  // magazine QR attribution (e.g. utm_source=bc_luxury_guide).
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const captured = {};
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => {
+      const v = p.get(k);
+      if (v) captured[k] = v;
+    });
+    if (Object.keys(captured).length) {
+      setUtm(captured);
+      try { sessionStorage.setItem("ez_utm", JSON.stringify(captured)); } catch (_) {}
+    } else {
+      try {
+        const cached = sessionStorage.getItem("ez_utm");
+        if (cached) setUtm(JSON.parse(cached));
+      } catch (_) {}
+    }
+  }, []);
+
+  const shown = corridor === "all" ? LISTINGS : LISTINGS.filter(l => CORRIDORS.find(c => c.slug === corridor)?.name === l.corridor);
+  const flagship = LISTINGS[0];
+
+  return (
+    <div style={{ background: BRAND.paper, minHeight: "100vh" }} data-testid="luxury-landing-mockup">
+      <Helmet>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" />
+      </Helmet>
+      <UnlistedMockupBanner label="Luxury Listings landing page" />
+
+      {/* ═══════ §1 CINEMATIC HERO ═══════════════════════════════════════ */}
+      <section style={{
+        background: `linear-gradient(180deg, rgba(11,15,26,0.35) 0%, rgba(11,15,26,0.85) 100%), url(https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1800) center/cover`,
+        color: "white", padding: "0", minHeight: "88vh",
+        display: "flex", flexDirection: "column",
+      }}>
+        {/* Syndication trust bar */}
+        <div style={{
+          background: "rgba(11,15,26,0.5)", borderBottom: `1px solid ${BRAND.gold}`,
+          padding: "12px 32px", display: "flex", justifyContent: "center", gap: 24,
+          fontFamily: SANS, fontSize: "0.72rem", letterSpacing: "0.18em", color: BRAND.goldSoft,
+          textTransform: "uppercase", fontWeight: 600, flexWrap: "wrap",
+        }}>
+          <span>✦ Featured globally on</span>
+          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>The Wall Street Journal</span>
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>Mansion Global</span>
+          <span style={{ opacity: 0.5 }}>·</span>
+          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>Barron's</span>
+          <span>· 80M+ monthly affluent reach</span>
+        </div>
+
+        <div style={{ maxWidth: 1240, margin: "0 auto", padding: "80px 32px 40px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", width: "100%" }}>
+          <Kicker tone="soft">The BC Luxury Portfolio · $3M+ residences</Kicker>
+          <H level={1} tone="white">Where discretion,<br />craftsmanship, and place<br /><em style={{ color: BRAND.goldSoft }}>converge.</em></H>
+          <div style={{ marginTop: 24, fontFamily: SANS, fontSize: "1.05rem", lineHeight: 1.7, color: "rgba(255,255,255,0.9)", maxWidth: 620 }}>
+            A curated collection of British Columbia's most distinguished residences — West Vancouver waterfronts, Coal Harbour penthouses, Whistler chalets, and Fraser Valley estates. Represented by Doug LeMaire, REALTOR® · syndicated globally.
+          </div>
+
+          {/* Flagship listing card overlay */}
+          <div style={{
+            marginTop: 40, background: "rgba(255,255,255,0.06)", backdropFilter: "blur(12px)",
+            border: `1px solid rgba(218,191,122,0.35)`, borderRadius: 4,
+            padding: "24px 28px", maxWidth: 720, display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 24,
+          }}>
+            <div>
+              <Kicker tone="soft">Flagship listing</Kicker>
+              <div style={{ fontFamily: SERIF, fontSize: "1.6rem", color: "white", lineHeight: 1.2 }}>{flagship.addr}, {flagship.city}</div>
+              <div style={{ fontFamily: SANS, fontSize: "0.9rem", opacity: 0.85, marginTop: 6 }}>{flagship.desc}</div>
+              <div style={{ fontFamily: SERIF, fontSize: "1.9rem", color: BRAND.goldSoft, marginTop: 12 }}>${flagship.price.toLocaleString("en-CA")}</div>
+            </div>
+            <button onClick={() => setOpenListing(flagship)} data-testid="hero-private-viewing" style={{ ...btnGold, whiteSpace: "nowrap" }}>Private viewing</button>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ §2 LIFESTYLE CORRIDORS ══════════════════════════════════ */}
+      <Section tone="paper" pad="88px 0 40px">
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <Kicker>Curated corridors · 177 active $3M+ residences</Kicker>
+          <H level={2} align="center">Choose your lifestyle.</H>
+          <p style={{ fontFamily: SANS, fontSize: "1rem", color: BRAND.muted, marginTop: 16, maxWidth: 620, marginLeft: "auto", marginRight: "auto", lineHeight: 1.7 }}>
+            Every residence in the portfolio meets a $3M minimum and is vetted for provenance, permits, and privacy. Filter by the four defining BC luxury geographies.
+          </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          <button onClick={() => setCorridor("all")} style={{
+            padding: "20px 22px", border: corridor === "all" ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
+            background: corridor === "all" ? BRAND.ink : "white", color: corridor === "all" ? "white" : BRAND.ink,
+            cursor: "pointer", textAlign: "left", borderRadius: 4, fontFamily: SANS,
+          }}>
+            <div style={{ fontFamily: SERIF, fontSize: "1.3rem", fontWeight: 500 }}>The Entire Portfolio</div>
+            <div style={{ fontSize: "0.82rem", opacity: 0.75, marginTop: 6 }}>177 residences · $3M – $32.5M</div>
+          </button>
+          {CORRIDORS.map(c => (
+            <button key={c.slug} onClick={() => setCorridor(c.slug)} data-testid={`corridor-${c.slug}`} style={{
+              padding: 0, border: corridor === c.slug ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
+              cursor: "pointer", textAlign: "left", borderRadius: 4, overflow: "hidden", background: "white",
+            }}>
+              <div style={{ background: `linear-gradient(180deg, rgba(11,15,26,0) 40%, rgba(11,15,26,0.75) 100%), url(${c.hero}) center/cover`, height: 160, position: "relative" }}>
+                <div style={{ position: "absolute", bottom: 12, left: 16, color: "white" }}>
+                  <div style={{ fontFamily: SERIF, fontSize: "1.15rem", lineHeight: 1.2 }}>{c.name}</div>
+                  <div style={{ fontFamily: SANS, fontSize: "0.75rem", opacity: 0.9, marginTop: 3 }}>{c.count} residences · median ${(c.median/1_000_000).toFixed(1)}M</div>
+                </div>
+              </div>
+              <div style={{ padding: "12px 16px", fontFamily: SANS, fontSize: "0.82rem", color: BRAND.muted, lineHeight: 1.55 }}>{c.editorial}</div>
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
+      <Section tone="paper" pad="20px 0 80px">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>
+            <H level={2}>{corridor === "all" ? "Currently in market" : CORRIDORS.find(c => c.slug === corridor)?.name}</H>
+          </div>
+          <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted }}>Showing {shown.length} residences · updated 4 minutes ago</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 28 }}>
+          {shown.map(l => (
+            <article key={l.key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}` }}>
+              <div style={{ background: `linear-gradient(135deg, #DDD2B8, #F0E9D7)`, height: 260, position: "relative" }}>
+                <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{l.corridor}</div>
+              </div>
+              <div style={{ padding: "24px 26px 26px" }}>
+                <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{l.addr}</div>
+                <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, marginTop: 4 }}>{l.city}, British Columbia</div>
+                <div style={{ fontFamily: SANS, fontSize: "0.9rem", color: BRAND.ink, marginTop: 12, lineHeight: 1.6 }}>{l.desc}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
+                  <div style={{ fontFamily: SERIF, fontSize: "1.4rem", color: BRAND.ink }}>${l.price.toLocaleString("en-CA")}</div>
+                  <button onClick={() => setOpenListing(l)} data-testid={`viewing-${l.key}`} style={{ background: "none", border: `1px solid ${BRAND.ink}`, color: BRAND.ink, padding: "9px 16px", fontFamily: SANS, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 999 }}>Private viewing</button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </Section>
+
+      {/* ═══════ §4 DOOGIE LUXURY ASSISTANT ══════════════════════════════ */}
+      <Section tone="ink" pad="80px 0">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+          <div>
+            <Kicker>Doogie · Luxury concierge</Kicker>
+            <H level={2} tone="white">Discreet answers,<br /><em style={{ color: BRAND.goldSoft }}>on your schedule.</em></H>
+            <p style={{ fontFamily: SANS, fontSize: "1rem", lineHeight: 1.7, color: "rgba(255,255,255,0.82)", marginTop: 18 }}>
+              Doogie is our AI research concierge — trained on BC luxury zoning, private schools, waterfront riparian rules, and market comparables. Ask anything before you request a viewing, in complete anonymity.
+            </p>
+            <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                "What are the waterfront setback rules on Bowen Island?",
+                "Which West Van neighbourhoods feed Collingwood School?",
+                "Can I subdivide a 5-acre Whistler Cay lot?",
+                "What's the current Speculation Tax exposure on a $12M second home?",
+              ].map(q => (
+                <button key={q} data-testid="doogie-prompt" style={{
+                  background: "transparent", color: "rgba(255,255,255,0.95)",
+                  border: `1px solid rgba(218,191,122,0.3)`, textAlign: "left",
+                  padding: "12px 18px", borderRadius: 4, fontFamily: SERIF, fontStyle: "italic",
+                  fontSize: "0.95rem", cursor: "pointer",
+                }}>"{q}" →</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.04)", border: `1px solid rgba(218,191,122,0.25)`, borderRadius: 4, padding: "28px 32px" }}>
+            <div style={{ fontFamily: SANS, fontSize: "0.7rem", letterSpacing: "0.18em", color: BRAND.goldSoft, fontWeight: 600, textTransform: "uppercase", marginBottom: 14 }}>Sample response</div>
+            <p style={{ fontFamily: SERIF, fontSize: "1.05rem", lineHeight: 1.7, color: "rgba(255,255,255,0.92)", fontStyle: "italic" }}>
+              "West Vancouver waterfront properties are subject to the <strong>Riparian Areas Regulation</strong> requiring a 30-metre streamside protection zone from any natural boundary. The District of West Vancouver additionally applies a 15-metre setback from the natural boundary of the ocean under the Zoning Bylaw No. 4662 §200 — with variance possible for pre-existing structures. Waterfront zoning restrictions and encroachment on this setback are among the most-litigated issues in West Van transactions above $10M."
+            </p>
+            <div style={{ marginTop: 18, fontFamily: SANS, fontSize: "0.75rem", color: "rgba(255,255,255,0.55)" }}>Sources cited: District of West Vancouver Zoning Bylaw No. 4662, Riparian Areas Regulation (SBC 2004 c. 26)</div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ═══════ §5 GLOBAL EXPOSURE FOR YOUR ESTATE ═════════════════════ */}
+      <Section tone="paper" pad="88px 0">
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <Kicker>For sellers · The syndication funnel</Kicker>
+          <H level={2} align="center">Global Exposure for Your Estate.</H>
+          <p style={{ fontFamily: SANS, fontSize: "1.05rem", color: BRAND.muted, marginTop: 16, maxWidth: 720, marginLeft: "auto", marginRight: "auto", lineHeight: 1.75 }}>
+            Every residence listed by Doug LeMaire above the $3M threshold enters the same media syndication path — a proven funnel that has moved BC luxury inventory in front of eight-figure buyers in New York, London, Zurich, Singapore, and Dubai.
+          </p>
+        </div>
+
+        {/* Funnel visualization */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, alignItems: "stretch", marginBottom: 40 }}>
+          {[
+            { step: "01", title: "Editorial photography & staging", body: "Architectural photographer · drone · dusk hero shot · optional Matterport 3D tour" },
+            { step: "02", title: "BC Luxury Home Guide", body: "Featured in the flagship BC print quarterly · 12,000 mailed to high-net-worth BC households" },
+            { step: "03", title: "Global media syndication", body: "Simultaneous placement on WSJ Mansion, Mansion Global, and Barron's Penta channels" },
+            { step: "04", title: "Concierge buyer matching", body: "Doug personally curates all showings · qualifies international buyers before disclosure" },
+          ].map(s => (
+            <div key={s.step} style={{ background: "white", padding: "26px 22px", border: `1px solid ${BRAND.hairline}` }}>
+              <div style={{ fontFamily: SERIF, fontSize: "2rem", color: BRAND.gold }}>{s.step}</div>
+              <div style={{ fontFamily: SERIF, fontSize: "1.05rem", lineHeight: 1.3, color: BRAND.ink, marginTop: 8 }}>{s.title}</div>
+              <div style={{ fontFamily: SANS, fontSize: "0.82rem", color: BRAND.muted, marginTop: 8, lineHeight: 1.6 }}>{s.body}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Testimonial */}
+        <div style={{ background: BRAND.ink, color: "white", padding: "40px 50px", borderRadius: 4, textAlign: "center", maxWidth: 900, margin: "0 auto" }}>
+          <div style={{ fontFamily: SERIF, fontSize: "1.35rem", lineHeight: 1.65, fontStyle: "italic" }}>
+            "Doug placed our West Van estate in front of an American buyer within three weeks of listing — before we'd even done the second open house. The <em>Mansion Global</em> feature paid for itself twice over."
+          </div>
+          <div style={{ marginTop: 24, fontFamily: SANS, fontSize: "0.8rem", letterSpacing: "0.14em", color: BRAND.goldSoft, textTransform: "uppercase", fontWeight: 600 }}>— H.M. · West Vancouver seller · closed $11.4M above list</div>
+        </div>
+      </Section>
+
+      {/* ═══════ §6 CONFIDENTIAL ESTATE ASSESSMENT FORM ═════════════════ */}
+      <Section tone="ink" pad="88px 0">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "start" }}>
+          <div>
+            <Kicker tone="soft">Bespoke CMA · By invitation</Kicker>
+            <H level={2} tone="white">Custom Confidential<br />Estate Assessment.</H>
+            <p style={{ fontFamily: SANS, fontSize: "1rem", lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginTop: 18 }}>
+              For BC estate owners considering a sale in the next 3–24 months. Doug personally prepares a bespoke market analysis — comparable transactions above $3M, media syndication forecast, discretion protocol, and a listing timeline.
+            </p>
+            <ul style={{ marginTop: 22, padding: 0, listStyle: "none", fontFamily: SANS, fontSize: "0.9rem", color: "rgba(255,255,255,0.85)", lineHeight: 2 }}>
+              <li>✦ Delivered in a signed, watermarked PDF within 5 business days</li>
+              <li>✦ Prepared under signed NDA · never uploaded to a CRM index</li>
+              <li>✦ Includes a private valuation range, not a public listing suggestion</li>
+              <li>✦ Complimentary · zero obligation to list</li>
+            </ul>
+          </div>
+
+          {sellerSubmitted ? (
+            <div style={{ background: "white", padding: "44px 40px", borderRadius: 4, textAlign: "center" }}>
+              <div style={{ fontSize: "3rem" }}>🔒</div>
+              <H level={2}>Request received.</H>
+              <p style={{ marginTop: 12, color: BRAND.muted, fontFamily: SANS, fontSize: "0.95rem", lineHeight: 1.7 }}>
+                Doug will contact you within 2 business days via your preferred channel. Your enquiry is stored in the confidential estate ledger — never in our public CRM.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={e => { e.preventDefault(); setSellerSubmitted(true); }} style={{ background: "white", padding: "36px 36px", borderRadius: 4, display: "grid", gap: 14 }} data-testid="estate-assessment-form">
+              <input required placeholder="Full name" style={fld} data-testid="ea-name" />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <input required type="email" placeholder="Email" style={fld} data-testid="ea-email" />
+                <input placeholder="Phone (optional)" style={fld} data-testid="ea-phone" />
+              </div>
+              <input required placeholder="Estate address (kept confidential)" style={fld} data-testid="ea-address" />
+              <select required style={fld} data-testid="ea-value">
+                <option value="">Estimated market value…</option>
+                <option>$3M – $5M</option>
+                <option>$5M – $8M</option>
+                <option>$8M – $12M</option>
+                <option>$12M – $20M</option>
+                <option>$20M+</option>
+              </select>
+              <select required style={fld} data-testid="ea-timeline">
+                <option value="">Timeline to sell…</option>
+                <option>0–3 months</option>
+                <option>3–6 months</option>
+                <option>6–12 months</option>
+                <option>12–24 months</option>
+                <option>Exploring only</option>
+              </select>
+              <select required style={fld}>
+                <option value="">Preferred contact channel…</option>
+                <option>📧 Email only</option>
+                <option>📞 Phone (voice)</option>
+                <option>🔒 Signal (encrypted)</option>
+                <option>💬 WhatsApp / Telegram</option>
+              </select>
+              <textarea placeholder="Any confidential context Doug should know (optional)" rows={3} style={{ ...fld, resize: "vertical" }} data-testid="ea-notes" />
+              <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontFamily: SANS, fontSize: "0.75rem", color: BRAND.muted, lineHeight: 1.6, marginTop: 4 }}>
+                <input type="checkbox" required style={{ marginTop: 3 }} data-testid="ea-consent" />
+                <span>I understand this enquiry is handled under BC's Personal Information Protection Act (PIPA), stored in Doug's confidential estate ledger only, never used for marketing, and never shared with third parties.</span>
+              </label>
+              {utm.utm_source && (
+                <div style={{ fontFamily: SANS, fontSize: "0.7rem", color: BRAND.muted, background: "#F0EBE0", padding: "8px 12px", borderRadius: 4 }}>
+                  📎 Referral source captured: {utm.utm_source}
+                </div>
+              )}
+              <button type="submit" data-testid="ea-submit" style={{ ...btnDark, marginTop: 6 }}>Request confidential assessment</button>
+            </form>
+          )}
+        </div>
+      </Section>
+
+      {/* ═══════ §7 PIPA PRIVACY BANNER ═════════════════════════════════ */}
+      <Section tone="paper" pad="48px 0">
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 36px", background: "white", border: `1px solid ${BRAND.hairline}`, borderRadius: 4 }}>
+          <div style={{ fontFamily: SERIF, fontSize: "1.2rem", color: BRAND.ink, marginBottom: 12 }}>🔒 Confidentiality & PIPA Compliance</div>
+          <p style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, lineHeight: 1.75, margin: 0 }}>
+            All enquiries submitted through this portal are handled under British Columbia's <strong>Personal Information Protection Act (PIPA)</strong>. Estate ownership details, contact channels, and viewing preferences are stored in Doug LeMaire's private client ledger — separated from the public marketing CRM. Doug does not sell, rent, or share client information with third parties. Encrypted contact channels (Signal, WhatsApp end-to-end) are offered for buyers requesting maximum discretion. Enquiries may be withdrawn at any time by contacting <a href="mailto:privacy@eztofind.ca" style={{ color: BRAND.ink, fontWeight: 600 }}>privacy@eztofind.ca</a>.
+          </p>
+        </div>
+      </Section>
+
+      {/* Footer */}
+      <div style={{ background: BRAND.ink, color: "rgba(255,255,255,0.65)", padding: "36px 24px", fontFamily: SANS, fontSize: "0.75rem", textAlign: "center", lineHeight: 1.7 }}>
+        © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 · Brokerage (604) 466-7021 · Direct (604) 787-0851 · <a href="mailto:privacy@eztofind.ca" style={{ color: BRAND.goldSoft }}>privacy@eztofind.ca</a><br />
+        MLS® data © CREA DDF®. Media syndication placements provided by third-party publishing partners. General information only — not real-estate, legal, tax, or financial advice.
+      </div>
+
+      {openListing && <PrivateViewingModal listing={openListing} utm={utm} onClose={() => setOpenListing(null)} />}
+    </div>
+  );
+}
