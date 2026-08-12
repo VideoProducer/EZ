@@ -450,6 +450,20 @@ const FirstVisitToast = ({ onDismiss, setSection }) => {
       ...pos,
     }}
   >
+    {/* Close (×) button — dismisses the coach-mark without navigating,
+        so visitors who don't want the guided tour aren't force-moved
+        away from wherever they landed. */}
+    <button
+      onClick={onDismiss}
+      data-testid="dash-first-visit-close"
+      aria-label="Dismiss Doogie intro"
+      style={{
+        position: "absolute", top: 6, right: 8,
+        background: "none", border: "none", cursor: "pointer",
+        fontSize: 20, lineHeight: 1, color: C.muted || "#6B7280",
+        padding: "2px 6px", borderRadius: 6,
+      }}
+    >×</button>
     <img loading="lazy" decoding="async" src={DOOGIE.head} alt="Doogie welcomes you"
       data-testid="dash-first-visit-doogie"
       style={{
@@ -464,7 +478,7 @@ const FirstVisitToast = ({ onDismiss, setSection }) => {
         Tap any of the <strong>11 sections</strong> in the sidebar — I'll show you real BC listings, live market signals, community pages and glossary terms. Ask me anything anytime with the chat bubble in the sidebar.
       </div>
       <button
-        onClick={() => { onDismiss(); if (setSection) setSection("community"); }}
+        onClick={() => { onDismiss(); if (setSection) setSection("home"); }}
         data-testid="dash-first-visit-dismiss"
         style={{
           marginTop: 10, background: C.blue, color: "#fff", border: "none",
