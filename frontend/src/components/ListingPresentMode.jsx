@@ -96,7 +96,12 @@ const ListingPresentMode = ({ listing, onExit }) => {
         if (cancelled) return;
         const a = new Audio();
         a.preload = "auto";
-        a.setAttribute("x-webkit-airplay", "allow");           // AirPlay hook for iOS/macOS Safari
+        // Deny per-element AirPlay routing so iOS Screen Mirroring keeps both
+        // audio AND the photo slideshow on the Apple TV.  With "allow" iOS 17+
+        // hijacks the cast and plays audio only on the TV while the slideshow
+        // stays trapped on the iPhone.  disableRemotePlayback belts-and-braces.
+        a.setAttribute("x-webkit-airplay", "deny");
+        try { a.disableRemotePlayback = true; } catch { /* older Safari */ }
         a.src = `${process.env.REACT_APP_BACKEND_URL}${audio_url}${cache === "HIT" ? "" : "?wait=1"}`;
         audioRef.current = a;
         const tryPlay = () => a.play().catch(() => {});

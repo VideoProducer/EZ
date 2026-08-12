@@ -293,7 +293,7 @@ export default function DoogieTour({ firstVisitToastOpen = false } = {}) {
             <div style={{ fontSize: 13, lineHeight: 1.5, color: "#374151" }}>{step.script}</div>
           </div>
         </div>
-        <audio ref={audioRef} preload="auto" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); next(); }} data-testid="doogie-tour-audio"/>
+        <audio ref={audioRef} preload="auto" x-webkit-airplay="deny" disableRemotePlayback onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => { setPlaying(false); next(); }} data-testid="doogie-tour-audio"/>
         {/* Progress dots — one per step. Clickable so users can jump. */}
         <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }} data-testid="doogie-tour-progress">
           {STEPS.map((_, idx) => {
