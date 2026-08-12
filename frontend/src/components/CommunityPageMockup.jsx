@@ -56,7 +56,14 @@ const OUT_OF_AREA = {
   inventory: { active: 342, newWeek: 28, sold30: 87, median: 985000, ppsqft: 512, dom: 34 },
   synopsis: "Kelowna is the Okanagan's largest city and BC's third-fastest-growing metro. Set on the eastern shore of Okanagan Lake with the semi-arid Naramata Bench across the water, Kelowna enjoys the driest climate in the province — 300+ days of sun a year, roughly 320mm of rain, and reliably warm summers averaging 28°C. The city spans lakefront estates in Lower Mission, mid-century mid-rise condos in the North End, wine-country acreages in East Kelowna, and family suburbia in Rutland and Glenmore.",
   climate: { avgHi: 15, avgLo: 3, rain: 320, snowDays: 24, zone: "Semi-arid Interior" },
-  neighbourhoods: ["Lower Mission", "Glenmore", "Rutland", "East Kelowna", "Upper Mission", "North End"],
+  neighbourhoods: [
+    "Downtown / City Centre", "North End", "Pandosy Village",
+    "Lower Mission", "Upper Mission", "Kettle Valley (South Mission)",
+    "Glenmore", "Dilworth Mountain", "Clifton",
+    "Rutland North", "Rutland South", "Belgo",
+    "East Kelowna", "Ellison", "Black Mountain",
+    "McKinley Landing", "Wilden", "Quail Ridge / University District",
+  ],
   sampleListings: [
     { key:"K01", price: 1195000, beds: 3, baths: 3, sqft: 2150, addr: "1245 Lakeshore Rd", type: "Detached" },
     { key:"K02", price: 785000,  beds: 2, baths: 2, sqft: 1240, addr: "1088 Sunset Dr",    type: "Apartment" },
@@ -131,7 +138,7 @@ export default function CommunityPageMockup() {
               a helpful nicety with a warm 🐾 tone. */}
           <div style={{marginBottom:20,background:"rgba(255,255,255,0.10)",padding:"14px 18px",borderRadius:10,backdropFilter:"blur(4px)"}}>
             <div style={{fontSize:"0.92rem",lineHeight:1.55}}>
-              As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
+              As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like Doug to connect you with a licensed REALTOR® in that area?{" "}
               <Link
                 to={`/referral-request?city=${encodeURIComponent(c.name)}`}
                 data-testid="hero-referral-link"
@@ -353,7 +360,7 @@ export default function CommunityPageMockup() {
           { q: c.isFocus ? `Can Doug LeMaire help me buy or sell in ${c.name}?` : `Does Doug represent buyers or sellers in ${c.name}?`,
             a: c.isFocus
               ? `Yes — ${c.name} is in Doug's primary practice area. As a BCFSA-licensed REALTOR® with Fraser Property Management Realty Services Ltd., Doug represents both buyers and sellers directly.`
-              : `Not directly — ${c.name} is outside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky). Doug will personally match you with a vetted BCFSA-licensed ${c.name} REALTOR® through his referral network. $0 cost to you.` },
+              : `Not directly — ${c.name} is outside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky). Would you like Doug to connect you with a licensed REALTOR® in that area? Referral REALTOR® link →` },
           { q:`What is the weather like in ${c.name} year-round?`,
             a:`${c.name} averages ${c.climate.avgHi}°C highs, ${c.climate.avgLo}°C lows, ${c.climate.rain}mm annual rainfall, and ${c.climate.snowDays} snow days per year. Climate zone: ${c.climate.zone}. Source: Environment and Climate Change Canada 1991-2020 normals.` },
         ].map((f, i) => (
@@ -379,19 +386,36 @@ export default function CommunityPageMockup() {
             Replaced with the same soft "outside Doug's service area" copy
             from the hero and a single "Referral REALTOR® link" button. */}
         <SectionH kicker="§7 · Get connected">Looking to buy or sell in {c.name}?</SectionH>
-        <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14}}>
-          <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
-            As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?
-          </div>
-          <Link
-            to={`/referral-request?city=${encodeURIComponent(c.name)}`}
-            data-testid="bottom-referral-link"
+        <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
+          {/* Doogie head — added Feb 2026 per Doug's review so the referral
+              hand-off feels like a warm concierge introduction, not a form
+              redirect. Uses the same /doogie/head.webp asset as the sidebar
+              coach-mark, with an onError fallback so a missing asset never
+              breaks the layout. */}
+          <img
+            src="/doogie/head.webp"
+            alt="Doogie · Doug's real-estate concierge"
+            data-testid="get-connected-doogie"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
             style={{
-              display:"inline-block",background:BRAND.navy,color:"white",
-              padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",
-              textDecoration:"none",
+              width: 96, height: 96, flexShrink: 0, objectFit: "contain",
+              filter: "drop-shadow(0 4px 10px rgba(15,42,91,0.18))",
             }}
-          >🤝 Referral REALTOR® link →</Link>
+          />
+          <div style={{flex: "1 1 320px"}}>
+            <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
+              As a smaller BC community, <strong>{c.name}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like Doug to connect you with a licensed REALTOR® in that area?
+            </div>
+            <Link
+              to={`/referral-request?city=${encodeURIComponent(c.name)}`}
+              data-testid="bottom-referral-link"
+              style={{
+                display:"inline-block",background:BRAND.navy,color:"white",
+                padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",
+                textDecoration:"none",
+              }}
+            >🤝 Referral REALTOR® link →</Link>
+          </div>
         </div>
 
 
