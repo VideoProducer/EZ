@@ -1,5 +1,23 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-10 (community-page LIVE mockup — fully working)
+- **`CommunityPageMockupLive.jsx` — full end-to-end wiring pass**. Fixed 6 data-mapping bugs so both Kelowna (out-of-area referral) and Maple Ridge (in-area focus) render as fully functional lead-gen pages:
+  - **Listing card photos**: swapped `l.primary_photo` → `l.photos?.[0]` (API returns `photos[]` array). Also removed a `background: undefined` shorthand that was clobbering `backgroundImage` — cards now show real DDF CDN photography, plus a `🎥 TOUR` overlay pill when `has_virtual_tour=true`.
+  - **Living area**: mapped `l.living_area_sqft` → `l.living_area` (CREA field). Cards now display real sqft (e.g. `6bd · 5ba · 4,841 sqft`).
+  - **Weather section**: API returns a narrative `weather` string (ECCC-sourced), not numeric `avg_high_c` tiles. Replaced 4 broken stat tiles with a proper narrative card + source citation ("Source: Environment and Climate Change Canada").
+  - **Hero background**: Unsplash Source (`source.unsplash.com`) is deprecated → 404. Replaced with per-community backdrop map (`HERO_BACKDROP`) that reuses the region webps already shipped in `/public/images/regions/` for Fraser Valley, Sea-to-Sky, and Metro Vancouver communities. Others get a clean navy→blue gradient.
+  - **Map iframe**: was a blank world map (missing `bbox`). Now computes bbox from the 4 sample listings' lat/lon range with padding, or falls back to a Google Maps embed with the community name+province query. Both Kelowna and Maple Ridge render a properly-zoomed, marker-anchored map.
+  - **Sub-neighbourhood fallback** (`CURATED_HOODS`): Fraser Valley board doesn't populate CREA `CityRegion`, so `/api/community/maple-ridge/neighbourhoods` returned 0 rows. Added curated static roster for Maple Ridge (Albion, Cottonwood, East/West Central, Silver Valley, Websters Corners, Whonnock, Thornhill, Northwest/Southwest), Langley (Willoughby, Walnut Grove, Murrayville, Brookswood-Fernridge, Fort Langley, Aldergrove…), and Squamish (Downtown, Garibaldi Highlands, Valleycliffe, Brackendale…). Chips route into `/listings?city={community}&q={keyword}` for a real filtered result set. Live-hydrated communities (Kelowna: 29 real CityRegions) still use the live data.
+- **New sections added** to reach parity with the design-doc mockup:
+  - **3-step vetted referral process** (out-of-area only) — three numbered cards ("Fill form · Doug reviews · Intro in 24 hrs") + trust badge strip ($0 cost · You approve each intro · BCFSA-licensed only · Concierge follow-through).
+  - **Auto-generated FAQ** — 4 questions per community sourced from live stats (`How many active listings?`, `Top sub-neighbourhoods?`, `Does Doug cover directly?` / `Can Doug help outside his area?`, `Is this data live?`).
+  - **In-area hero CTA row upgraded**: `📅 Book a free {community} call` beside `🏡 View N listings`. Out-of-area gets `🤝 Request a {community} referral`.
+  - **Doogie head shot** now appears in the out-of-area hero (Kelowna) alongside the referral copy, not just in the bottom Get-Connected block.
+  - **Save {community}** button now persists to `localStorage` and shows `✅ {community} saved` when active.
+  - **Focus community bottom CTA** upgraded to 3 buttons: Buying · Selling · 📞 Call Doug directly (`tel:604-787-0851`).
+- **Verified live** at `/mockups/community-live?slug=kelowna` (referral variant, 1,803 listings, $819K median, 29 live sub-neighbourhoods) and `/mockups/community-live?slug=maple-ridge` (in-area focus variant, 859 listings, $1.1M median, 10 curated sub-neighbourhoods). Both render real DDF listing photos, functional maps, weather narrative, and end-to-end CTAs.
+- Still parked at `/mockups/community-live` with `UnlistedMockupBanner` (noindex + robots.txt) — awaiting Doug's approval before wiring to live public routes.
+
 ## 2026-02-10 (community-page lead-gen redesign mockup)
 - **CommunityPageMockup.jsx** — hybrid community-page redesign at `/mockups/community-page`. Ships in-area (Maple Ridge sample) and out-of-area (Kelowna sample) variants behind an on-page toggle. Layout is 80% shared, 20% branched:
   - **Hero**: Doug's face + variant-specific trust badge (direct coverage vs. BC-wide referral network); live inventory strip (Active · New this week · Sold 30d · Median · $/sqft · DOM); variant-specific primary CTA row.
