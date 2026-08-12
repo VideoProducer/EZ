@@ -321,7 +321,7 @@ export default function CommunityPageMockupLive() {
             <div style={{marginBottom:20,background:"rgba(255,255,255,0.10)",padding:"14px 18px",borderRadius:10,backdropFilter:"blur(4px)",display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" onError={e => e.currentTarget.style.display="none"} style={{width:64,height:64,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.35))"}}/>
               <div style={{fontSize:"0.92rem",lineHeight:1.55,flex:"1 1 340px"}}>
-                As a smaller BC community, <strong>{community}</strong> falls outside Doug's Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Doug will personally vet and connect you with a licensed local REALTOR® in {community}.{" "}
+                Would you like Doug to connect you with a {community} REALTOR®?{" "}
                 <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="hero-referral-link" style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}>Referral REALTOR® link →</Link>
               </div>
             </div>
@@ -427,32 +427,6 @@ export default function CommunityPageMockupLive() {
         <div style={{marginTop:14,textAlign:"center"}}>
           <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="section-view-all" style={{background:BRAND.navy,color:"white",border:"none",padding:"11px 22px",borderRadius:999,fontWeight:600,fontSize:"0.9rem",textDecoration:"none",display:"inline-block"}}>View all {active.toLocaleString()} {community} listings →</Link>
         </div>
-
-        {/* ── § 3-STEP VETTED PROCESS (out-of-area only) ────────────── */}
-        {!isFocus && (
-          <>
-            <SectionH kicker="§3.5 · How this works">Doug's 3-step vetted referral process</SectionH>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
-              {[
-                { step: "1", title: "Fill out the referral form", body: `Tell Doug what you're looking for in ${community} — budget, timeline, property type. Takes 60 seconds. CASL + PIPA consent built in.` },
-                { step: "2", title: "Doug personally reviews", body: `Doug reads every request himself. He hand-picks a BCFSA-licensed REALTOR® already active in ${community} — never a random referral.` },
-                { step: "3", title: "Intro within 24 hours", body: `You receive the intro by email. You approve every intro. $0 cost. No pressure. No spam. If the agent isn't a fit, Doug picks another.` },
-              ].map(({step, title, body}) => (
-                <div key={step} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:12,padding:"18px 20px"}}>
-                  <div style={{width:36,height:36,borderRadius:"50%",background:BRAND.gold,color:BRAND.navy,fontWeight:800,fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Sora',sans-serif"}}>{step}</div>
-                  <div style={{marginTop:12,fontSize:"1rem",fontWeight:700,color:BRAND.navy,fontFamily:"'Sora',sans-serif"}}>{title}</div>
-                  <div style={{marginTop:6,fontSize:"0.86rem",color:BRAND.ink,lineHeight:1.55}}>{body}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{marginTop:14,display:"flex",gap:14,flexWrap:"wrap",fontSize:"0.8rem",color:BRAND.muted}}>
-              <span>✅ $0 cost to you</span>
-              <span>✅ You approve each intro</span>
-              <span>✅ BCFSA-licensed only</span>
-              <span>✅ Concierge follow-through</span>
-            </div>
-          </>
-        )}
 
         {/* ── § ABOUT ───────────────────────────────────────────────── */}
         <SectionH kicker="§4 · About">About {community}, BC</SectionH>
