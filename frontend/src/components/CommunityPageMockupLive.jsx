@@ -340,11 +340,6 @@ export default function CommunityPageMockupLive() {
 
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>🏡 View {active.toLocaleString()} listings</Link>
-            {isFocus ? (
-              <Link to={`/buyer-consultation?city=${encodeURIComponent(community)}`} data-testid="hero-consult" style={{background:"rgba(255,255,255,0.15)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"13px 22px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>📅 Book a free {community} call</Link>
-            ) : (
-              <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="hero-referral-cta" style={{background:"rgba(255,255,255,0.15)",color:"white",border:"1px solid rgba(255,255,255,0.4)",padding:"13px 22px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>🤝 Request a {community} referral</Link>
-            )}
           </div>
         </div>
 
