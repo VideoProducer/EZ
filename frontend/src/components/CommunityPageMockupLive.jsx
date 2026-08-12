@@ -231,7 +231,7 @@ export default function CommunityPageMockupLive() {
     if (isFocus) {
       out.push({
         q: `Does Doug LeMaire cover ${community} directly?`,
-        a: `Yes. Doug is a BCFSA-licensed REALTOR® with Fraser Property Management Realty Services Ltd., serving ${community} personally. Book a free 20-minute buyer or seller consultation to get started — no obligation, no CASL spam.`,
+        a: `Yes. Doug is a BCFSA-licensed REALTOR® with Fraser Property Management Realty Services Ltd., serving ${community} personally.`,
       });
     } else {
       out.push({
@@ -461,11 +461,10 @@ export default function CommunityPageMockupLive() {
           <>
             <SectionH kicker="§7 · Take the next step">Ready to explore {community}?</SectionH>
             <div style={{background:BRAND.navy,color:"white",padding:"26px 28px",borderRadius:14}}>
-              <div style={{fontSize:"1.15rem",fontFamily:"'Sora',sans-serif",fontWeight:700,lineHeight:1.3}}>Doug represents buyers &amp; sellers in {community} directly — book a free 20-minute call.</div>
+              <div style={{fontSize:"1.15rem",fontFamily:"'Sora',sans-serif",fontWeight:700,lineHeight:1.3}}>Doug represents buyers &amp; sellers in {community} directly.</div>
               <div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap"}}>
                 <Link to={`/buyer-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-buying" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",textDecoration:"none"}}>I'm Buying in {community}</Link>
                 <Link to={`/seller-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-selling" style={{background:"white",color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",textDecoration:"none"}}>I'm Selling in {community}</Link>
-                <a href="tel:604-787-0851" data-testid="focus-call" style={{background:"transparent",color:"white",border:"1px solid rgba(255,255,255,0.5)",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",textDecoration:"none"}}>📞 Call Doug directly</a>
               </div>
             </div>
           </>
