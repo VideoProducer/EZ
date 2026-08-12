@@ -3961,6 +3961,93 @@ const VirtualTourFrame = ({ listing }) => {
   );
 };
 
+// NeighbourhoodChipStrip — renders directly under a listing's price.
+// Highlights the listing's own micro-neighbourhood (from the CREA `CityRegion`
+// field, stored as listing.region) with a direct "see all N Lower Mission
+// listings" link, and follows it with a chip strip of the community's other
+// top micro-neighbourhoods for internal-linking + AEO cross-navigation.
+//
+// Silently renders nothing when: no city, no region, or the community
+// neighbourhoods endpoint returns empty (small towns without sub-neighbourhood
+// break-outs). Never blocks the listing render — fetch is best-effort.
+const _slugify = (s) => (s || "").toString().toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-|-$/g, "");
+
+const NeighbourhoodChipStrip = ({ city, region }) => {
+  const [neighbourhoods, setNeighbourhoods] = React.useState([]);
+  const [self, setSelf] = React.useState(null);
+  const citySlug = _slugify(city);
+  React.useEffect(() => {
+    let alive = true;
+    if (!citySlug) return () => { alive = false; };
+    axios.get(`${API}/community/${citySlug}/neighbourhoods`)
+      .then(r => {
+        if (!alive) return;
+        const list = r.data?.neighbourhoods || [];
+        setNeighbourhoods(list);
+        if (region) {
+          const regionSlug = _slugify(region);
+          const match = list.find(n => n.slug === regionSlug || _slugify(n.name) === regionSlug);
+          if (match) setSelf(match);
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [citySlug, region]);
+
+  if (!city || neighbourhoods.length === 0) return null;
+
+  // Other neighbourhoods to show (top 6 by listing count, excluding self)
+  const others = neighbourhoods
+    .filter(n => !self || n.slug !== self.slug)
+    .slice(0, 6);
+
+  return (
+    <div data-testid="neighbourhood-chip-strip" style={{
+      marginTop: "0.9rem", padding: "0.85rem 1rem", borderRadius: 10,
+      background: "rgba(15,42,91,0.04)", border: "1px solid rgba(15,42,91,0.10)",
+      fontFamily: "Inter, sans-serif",
+    }}>
+      {self && (
+        <div style={{ fontSize: "0.9rem", color: "var(--ink)", marginBottom: 8 }}>
+          🏘 This home is in <Link to={`/community/${citySlug}/n/${self.slug}`} data-testid="chip-self-neighbourhood" style={{ color: "var(--brand-navy)", fontWeight: 700 }}>{self.name}</Link> · <span style={{ color: "var(--muted)" }}>see <Link to={`/community/${citySlug}/n/${self.slug}`} style={{ color: "var(--brand-navy)", fontWeight: 600 }}>{self.count} more {self.name} listings →</Link></span>
+        </div>
+      )}
+      {!self && region && (
+        <div style={{ fontSize: "0.9rem", color: "var(--ink)", marginBottom: 8 }}>
+          🏘 This home is in <strong style={{ color: "var(--brand-navy)" }}>{region}</strong>, {city}.
+        </div>
+      )}
+      {others.length > 0 && (
+        <div>
+          <div style={{ fontSize: "0.75rem", color: "var(--muted)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+            {self ? "Nearby " : "Explore "}{city} micro-neighbourhoods
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {others.map(n => (
+              <Link
+                key={n.slug}
+                to={`/community/${citySlug}/n/${n.slug}`}
+                data-testid={`chip-nearby-${n.slug}`}
+                style={{
+                  padding: "5px 12px", borderRadius: 999, fontSize: "0.78rem", fontWeight: 600,
+                  background: "white", border: "1px solid rgba(15,42,91,0.15)", color: "var(--brand-navy)",
+                  textDecoration: "none",
+                }}
+              >{n.name} <span style={{ color: "var(--muted)", fontWeight: 400 }}>({n.count})</span></Link>
+            ))}
+            <Link to={`/community/${citySlug}`} data-testid="chip-see-all" style={{
+              padding: "5px 12px", borderRadius: 999, fontSize: "0.78rem", fontWeight: 700,
+              background: "var(--brand-navy)", color: "white", textDecoration: "none",
+            }}>All {city} →</Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ListingDetail = () => {
   const { key } = useParams();
   const [listing, setListing] = useState(null);
@@ -4009,6 +4096,14 @@ const ListingDetail = () => {
             </div>
           </div>
           <div style={{fontFamily:"Sora,sans-serif",fontSize:"2rem",fontWeight:700,color:"var(--brand-navy)"}} data-testid="listing-price">${price}</div>
+          {/* Neighbourhood chip strip — internal-linking + AEO boost. Uses
+              the CREA `CityRegion` field (stored as listing.region) to
+              identify the micro-neighbourhood, then fetches the community's
+              full neighbourhood roster from /api/community/{slug}/neighbourhoods
+              to show the visitor other Kelowna / Maple Ridge / etc.
+              micro-neighbourhoods they can jump to.  Silently no-ops if the
+              listing has no region tag or the community lookup fails. */}
+          <NeighbourhoodChipStrip city={listing.city} region={listing.region}/>
           <ListingNarration listing={listing} onAdvancePhoto={setPhotoIdx} photoCount={(listing.photos || []).length}/>
           {/* Ask Doogie listing button removed per BCFSA compliance — Doogie
               cannot provide property-specific commentary. */}

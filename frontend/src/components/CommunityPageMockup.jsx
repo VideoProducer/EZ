@@ -360,7 +360,22 @@ export default function CommunityPageMockup() {
           { q: c.isFocus ? `Can Doug LeMaire help me buy or sell in ${c.name}?` : `Does Doug represent buyers or sellers in ${c.name}?`,
             a: c.isFocus
               ? `Yes — ${c.name} is in Doug's primary practice area. As a BCFSA-licensed REALTOR® with Fraser Property Management Realty Services Ltd., Doug represents both buyers and sellers directly.`
-              : `Not directly — ${c.name} is outside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky). Would you like Doug to connect you with a licensed REALTOR® in that area? Referral REALTOR® link →` },
+              : (
+                <>
+                  Not directly — {c.name} is outside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky). Would you like Doug to connect you with a licensed REALTOR® in that area?
+                  <div style={{ marginTop: 12 }}>
+                    <Link
+                      to={`/referral-request?city=${encodeURIComponent(c.name)}`}
+                      data-testid="faq-referral-link"
+                      style={{
+                        display: "inline-block", background: BRAND.navy, color: "white",
+                        padding: "10px 20px", borderRadius: 999, fontWeight: 700,
+                        fontSize: "0.88rem", textDecoration: "none",
+                      }}
+                    >🤝 Referral REALTOR® link →</Link>
+                  </div>
+                </>
+              ) },
           { q:`What is the weather like in ${c.name} year-round?`,
             a:`${c.name} averages ${c.climate.avgHi}°C highs, ${c.climate.avgLo}°C lows, ${c.climate.rain}mm annual rainfall, and ${c.climate.snowDays} snow days per year. Climate zone: ${c.climate.zone}. Source: Environment and Climate Change Canada 1991-2020 normals.` },
         ].map((f, i) => (
