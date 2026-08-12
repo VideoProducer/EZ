@@ -400,13 +400,33 @@ const CastToDevice = ({
                 <span style={{flex:1, textAlign:"left"}}>
                   {pickerState === "trying" ? "Opening picker…" : (
                     cap.kind === "airplay" ? "Open AirPlay picker — pick your Apple TV" :
-                    cap.kind === "chromecast" ? "Open Chromecast picker — pick your TV" :
+                    cap.kind === "chromecast" ? "Open Chromecast / Apple TV picker" :
                     "Open your TV / cast picker"
                   )}
                 </span>
                 <span style={{fontSize:"0.75rem", opacity:0.75}}>1 tap</span>
               </button>
               </div>
+
+              {/* Secondary Apple-TV callout — only rendered when the primary
+                  1-tap picker is Chromecast-flavoured, so Mac/iPhone users on
+                  Chrome/Edge still find their AirPlay path.  Safari/iOS users
+                  see their own AirPlay button as the primary action so this
+                  block is redundant for them.                              */}
+              {cap.kind === "chromecast" && (
+                <details data-testid="cast-appletv-hint" style={{marginTop:"0.55rem", background:"#F5F0E1", border:"1px solid rgba(200,155,60,0.35)", borderRadius:10, padding:"0.55rem 0.85rem"}}>
+                  <summary style={{cursor:"pointer", fontSize:"0.85rem", color:"var(--brand-navy,#0F2A5B)", fontWeight:700, fontFamily:"Sora,sans-serif", display:"flex", alignItems:"center", gap:"0.4rem"}}>
+                    <span aria-hidden style={{fontSize:"1rem"}}>🍎</span>
+                    Have an Apple TV? Cast via AirPlay instead
+                  </summary>
+                  <ol style={{margin:"0.5rem 0 0", padding:"0 0 0 1.1rem", fontSize:"0.83rem", color:"#374151", lineHeight:1.65}}>
+                    <li><strong>On a Mac:</strong> click the <strong>Control Centre</strong> icon in the top-right menu bar → <strong>Screen Mirroring</strong> → pick your <strong>Apple TV</strong>.</li>
+                    <li><strong>On an iPhone or iPad:</strong> swipe down from the top-right corner → tap <strong>Screen Mirroring</strong> (two overlapping rectangles) → pick your <strong>Apple TV</strong>.</li>
+                    <li>Come back to this tab (or Safari on iOS) and tap <strong>Start Present Mode</strong> below — the slideshow will mirror to the TV.</li>
+                    <li style={{color:"#6b7280"}}>Chrome on macOS doesn't expose a 1-tap AirPlay picker; the OS-level Screen Mirroring above is the standard path and works with every Apple TV.</li>
+                  </ol>
+                </details>
+              )}
 
               {/* Illustrated step-by-step fallback — shows when the picker
                   can't open (Firefox, older Android, some in-app browsers)
@@ -432,6 +452,7 @@ const CastToDevice = ({
                       <li>Open Chrome's <strong>three-dot menu</strong> <span style={{fontFamily:"monospace", background:"#F3F4F6", padding:"0 0.35rem", borderRadius:4}}>⋮</span> (top-right of the browser).</li>
                       <li>Click <strong>Cast…</strong>.</li>
                       <li>Pick your <strong>Chromecast / Google TV / Nest Hub</strong> from the list.</li>
+                      <li style={{marginTop:"0.35rem"}}><strong>Apple TV owner?</strong> Use the gold <em>"Cast via AirPlay"</em> panel above instead — Chrome can't open the AirPlay picker directly, but macOS/iOS Screen Mirroring does the same job.</li>
                       <li>Come back to this tab and hit <strong>Present Mode</strong> below.</li>
                     </ol>
                   ) : (
