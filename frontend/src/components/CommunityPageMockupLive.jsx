@@ -239,10 +239,21 @@ export default function CommunityPageMockupLive() {
             ) : (
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,maxHeight:340,overflowY:"auto"}}>
                 {data.neighbourhoods.map(n => (
-                  <div key={n.slug} style={{padding:"8px 11px",background:"white",border:"1px solid #E5E7EB",borderRadius:8,fontSize:"0.82rem",color:BRAND.ink,fontWeight:600}}>
-                    📍 {n.name}
+                  <Link
+                    key={n.slug}
+                    to={`/community/${slug}/n/${n.slug}`}
+                    data-testid={`neighbourhood-${n.slug}`}
+                    style={{
+                      padding:"9px 12px",background:"white",border:"1px solid #E5E7EB",borderRadius:8,
+                      fontSize:"0.82rem",color:BRAND.ink,fontWeight:600,textDecoration:"none",
+                      display:"block",transition:"all 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = BRAND.navy; e.currentTarget.style.background = BRAND.cream; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "white"; }}
+                  >
+                    📍 {n.name} <span style={{fontSize:"0.7rem",color:BRAND.navy,marginLeft:4}}>→</span>
                     <div style={{fontSize:"0.7rem",color:BRAND.muted,fontWeight:400,marginTop:1}}>{n.count} listings · median ${Math.round((n.median_price||0)/1000)}K</div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
