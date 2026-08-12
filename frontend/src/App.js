@@ -3823,6 +3823,67 @@ const VirtualTourFrame = ({ listing }) => {
   };
   const openInNewTab = embed.url_raw || embed.url;
 
+  // External-host tour (branded developer microsite, iGuide, Kuula, etc.) —
+  // these almost always block iframing via X-Frame-Options, so render a
+  // click-out card up front instead of a black iframe.  Users still get the
+  // Doogie narration audio and "Ask Doug for a private tour" fallback.
+  if (embed.host === "external") {
+    return (
+      <div
+        data-testid="listing-virtual-tour-external"
+        style={{
+          borderRadius: 12, border: "1px solid rgba(15,42,91,0.15)",
+          background: "linear-gradient(135deg, #EEF3FF 0%, #F5F0E1 100%)",
+          padding: "1.6rem 1.6rem 1.4rem", position: "relative",
+        }}
+      >
+        <div style={{
+          display: "inline-block", fontSize: "0.7rem", textTransform: "uppercase",
+          letterSpacing: "0.1em", fontWeight: 800, color: "#0F2A5B",
+          background: "rgba(15,42,91,0.10)", padding: "3px 10px", borderRadius: 999,
+          marginBottom: "0.6rem",
+        }}>{embed.is_branded ? "Branded developer tour" : "External video tour"}</div>
+        <h3 style={{
+          margin: "0 0 0.5rem", color: "var(--brand-navy, #0F2A5B)",
+          fontSize: "1.1rem", fontFamily: '"Playfair Display", serif',
+        }}>The listing brokerage hosts this tour on their own website.</h3>
+        <p style={{
+          margin: "0 0 1.1rem", fontFamily: "Inter, sans-serif",
+          color: "#334155", fontSize: "0.92rem", lineHeight: 1.55,
+        }}>
+          Because it's not on YouTube, Vimeo, or Matterport it can't be embedded
+          here directly. Open it in a new tab to view the full walk-through, or
+          ask Doug to arrange a private in-person tour instead.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+          <a
+            href={openInNewTab}
+            target="_blank" rel="noopener noreferrer"
+            data-testid="listing-virtual-tour-open-external"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "var(--brand-blue, #1E4FCF)", color: "#fff",
+              padding: "0.65rem 1.1rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.88rem",
+              boxShadow: "0 4px 10px rgba(30,79,207,0.28)",
+            }}
+          >▶ Open branded tour website ↗</a>
+          <Link
+            to={`/referral-request?context=${encodeURIComponent(`Private tour request — ${listing.street_address || listing.listing_key || "listing"}`)}`}
+            data-testid="listing-request-tour-external"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "#fff", color: "var(--brand-navy, #0F2A5B)",
+              border: "2px solid var(--brand-navy, #0F2A5B)",
+              padding: "0.6rem 1.1rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.88rem",
+            }}
+          >📅 Ask Doug for a private tour</Link>
+        </div>
+      </div>
+    );
+  }
+
   if (status === "blocked") {
     return (
       <div
@@ -4145,8 +4206,17 @@ const ListingDetail = () => {
                 </div>
               </div>
               <div style={{marginTop:"0.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",lineHeight:1.5}}>
-                {listing.virtual_tour_embed.host === "matterport" ? "Matterport 3D walk-through" : listing.virtual_tour_embed.host === "youtube" ? "YouTube video tour" : "Vimeo video tour"}{listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded"}.
-                {" "}If the tour doesn't load above (some browsers block third-party embeds), tap <strong>Play full-screen</strong> to open it in a new tab.
+                {(() => {
+                  const h = listing.virtual_tour_embed.host;
+                  const label = h === "matterport" ? "Matterport 3D walk-through"
+                    : h === "youtube" ? "YouTube video tour"
+                    : h === "vimeo" ? "Vimeo video tour"
+                    : (listing.virtual_tour_embed.category || "External video tour") + " (opens in new tab)";
+                  return label + (listing.virtual_tour_embed.is_branded ? " · listing-brokerage branded" : " · unbranded") + ".";
+                })()}
+                {listing.virtual_tour_embed.host !== "external" && (
+                  <>{" "}If the tour doesn't load above (some browsers block third-party embeds), tap <strong>Play full-screen</strong> to open it in a new tab.</>
+                )}
               </div>
             </div>
           )}

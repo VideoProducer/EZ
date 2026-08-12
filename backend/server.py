@@ -9006,27 +9006,40 @@ async def get_listing(request: Request, listing_key: str):
     if not d:
         raise HTTPException(404, "Listing not found")
     d = _sanitize_listing(d)
-    # Attach a single iframe-embeddable virtual tour (unbranded first, then any
-    # Matterport / YouTube / Vimeo). Doogie only surfaces tours on listing
-    # detail pages when a real one exists — no global Virtual Tours hub.
+    # Attach the best-available virtual tour reference.  Two tiers:
+    #   • Tier 1 (iframe-embeddable): Matterport / YouTube / Vimeo — the
+    #     detail-page component renders these inside <VirtualTourFrame/>.
+    #   • Tier 2 (click-out only):  branded developer microsites, Kuula,
+    #     iGuide, and other hosts that either block iframing via
+    #     X-Frame-Options / CSP or don't expose a stable embed URL.  These
+    #     get surfaced with host="external" so the frontend can render a
+    #     "Open branded tour website ↗" card instead of a black iframe.
+    #   Preference order:  embeddable-unbranded → embeddable-branded →
+    #     external-unbranded → external-branded.  Falls through on any
+    #     preference miss, so a single-tour listing with only an external
+    #     URL (like R3118660 → threeharbourgreenph.com) still surfaces.
     try:
         tours = d.get("virtual_tour_urls") or []
-        picked = None
-        for t in tours:  # already sorted unbranded-first by ddf_sync
+        embeddable = []
+        external = []
+        for t in tours:  # already unbranded-first thanks to ddf_sync
             raw = (t.get("url") or "").strip()
             if not raw:
                 continue
             sanitised = _sanitize_tour_url(raw)
             host = _tour_host_family(sanitised)
-            if host in ("matterport", "youtube", "vimeo"):
-                picked = {
-                    "url": sanitised,
-                    "url_raw": raw,
-                    "host": host,
-                    "is_branded": bool(t.get("is_branded", False)),
-                    "category": t.get("category") or "",
-                }
-                break
+            entry = {
+                "url": sanitised,
+                "url_raw": raw,
+                "host": host if host in ("matterport", "youtube", "vimeo") else "external",
+                "is_branded": bool(t.get("is_branded", False)),
+                "category": t.get("category") or "",
+            }
+            if entry["host"] == "external":
+                external.append(entry)
+            else:
+                embeddable.append(entry)
+        picked = (embeddable[0] if embeddable else (external[0] if external else None))
         if picked:
             d["virtual_tour_embed"] = picked
     except Exception:
