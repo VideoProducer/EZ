@@ -255,29 +255,7 @@ export default function CommunityPageMockupLive() {
     <div style={{background:"#F5F5F0",minHeight:"100vh"}} data-testid="community-page-mockup-live">
       <UnlistedMockupBanner label={`LIVE community page · ${community}`}/>
 
-      {/* Community picker — mockup control only */}
-      <div style={{background:"white",borderBottom:"1px solid #E5E7EB",padding:"14px 20px",display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{fontSize:"0.85rem",color:BRAND.muted,fontFamily:"Inter,sans-serif"}}>Live preview · pick a community:</span>
-        {FALLBACK_SUGGESTIONS.map(s => (
-          <button
-            key={s.slug}
-            onClick={() => setSp({ slug: s.slug })}
-            data-testid={`switch-${s.slug}`}
-            style={{
-              padding:"6px 14px",borderRadius:999,cursor:"pointer",
-              border:`1px solid ${slug===s.slug?BRAND.navy:"#D1D5DB"}`,
-              background: slug===s.slug ? BRAND.navy : "white",
-              color: slug===s.slug ? "white" : BRAND.ink,
-              fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:"0.8rem",
-            }}
-          >{s.label}</button>
-        ))}
-        <input
-          placeholder="…or type a slug e.g. penticton"
-          onKeyDown={e => { if (e.key === "Enter" && e.target.value) setSp({ slug: e.target.value.toLowerCase().trim() }); }}
-          style={{padding:"6px 12px",borderRadius:8,border:"1px solid #D1D5DB",fontFamily:"Inter,sans-serif",fontSize:"0.8rem",width:220}}
-        />
-      </div>
+      {/* Community picker removed per user request */}
 
       {loading && (
         <div style={{padding:"80px 20px",textAlign:"center",fontFamily:"Inter,sans-serif",color:BRAND.muted}}>
