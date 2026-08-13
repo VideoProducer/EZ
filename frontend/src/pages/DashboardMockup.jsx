@@ -11,8 +11,8 @@
 //  step so the mockup faithfully mirrors what a live production build would
 //  look like.
 // ============================================================================
-import React, { useEffect, useMemo, useRef, useState, useContext, createContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState, useContext, createContext, useCallback } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
@@ -165,7 +165,38 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const DASH_FILTERS_DISMISS_KEY = "ez_dashboard_restore_dismissed_at";
   const DEFAULT_DASH_FILTERS = { q: "", city: "", beds: "", baths: "", priceMin: "", priceMax: "", propertyType: "", keyword: "", sort: "newest" };
   const wasRestoredRef = useRef(false);
-  const [filters, setFilters] = useState(() => ({ ...DEFAULT_DASH_FILTERS }));
+
+  // ── URL ⇄ Filter state sync ──────────────────────────────────────────
+  // Reads filter state from URL query params (?city=…&beds_min=…) on mount
+  // so a browser-back navigation from /listing/{key} or /compare restores
+  // the visitor's search intact instead of dumping them on a blank Home.
+  //
+  // The URL uses the SAME shape as /api/listings params (`beds_min`,
+  // `price_max`, `property_type`, …) so a URL is shareable and equivalent
+  // to a `/listings?…` deep-link.  The dashboard's internal filter shape
+  // uses camelCase (`beds`, `priceMax`, `propertyType`) so we map at the
+  // boundary here — no other component needs to change.
+  const [urlParams, setUrlParams] = useSearchParams();
+  const _readFiltersFromUrl = () => {
+    const raw = {
+      q: urlParams.get("q") || "",
+      city: urlParams.get("city") || urlParams.get("community") || "",
+      beds: urlParams.get("beds_min") || urlParams.get("beds") || "",
+      baths: urlParams.get("baths_min") || urlParams.get("baths") || "",
+      priceMin: urlParams.get("price_min") || urlParams.get("priceMin") || "",
+      priceMax: urlParams.get("price_max") || urlParams.get("priceMax") || "",
+      propertyType: urlParams.get("property_type") || urlParams.get("propertyType") || "",
+      keyword: urlParams.get("features") || urlParams.get("keyword") || "",
+      sort: urlParams.get("sort") || "newest",
+    };
+    const anySet = Object.entries(raw).some(([k, v]) => v && k !== "sort");
+    return anySet ? { ...DEFAULT_DASH_FILTERS, ...raw } : null;
+  };
+
+  const [filters, setFilters] = useState(() => {
+    const fromUrl = _readFiltersFromUrl();
+    return fromUrl || { ...DEFAULT_DASH_FILTERS };
+  });
   // "Pick up where you left off" restore-nudge pill. We compute this ONCE
   // on mount and only surface if:
   //   (a) the visitor has a meaningful saved filter set in localStorage,
@@ -283,8 +314,65 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       setSyncLoading(false);
     }
   };
-  // First-load fetch (no filters).
+  // First-load fetch — respects any filter state hydrated from the URL on
+  // mount so a browser back-nav to `/?city=…` re-runs that exact search.
   useEffect(() => { runSearch(); /* eslint-disable-next-line */ }, []);
+
+  // ── Filter state → URL sync ─────────────────────────────────────────
+  // Runs whenever the filter state changes.  Writes the current filter set
+  // into the URL query string so browser Back/Forward from a listing or
+  // compare page restores the exact search intact.  Uses `replace: true`
+  // so we don't spam the history stack with every filter tweak — the
+  // history entry the visitor "goes back to" is whichever page they came
+  // from, and this Home URL just updates in-place.
+  const _lastSyncedQsRef = useRef("");
+  useEffect(() => {
+    try {
+      const urlNext = {};
+      if (filters.q) urlNext.q = filters.q;
+      if (filters.city) urlNext.city = filters.city;
+      if (filters.beds) urlNext.beds_min = filters.beds;
+      if (filters.baths) urlNext.baths_min = filters.baths;
+      if (filters.priceMin) urlNext.price_min = filters.priceMin;
+      if (filters.priceMax) urlNext.price_max = filters.priceMax;
+      if (filters.propertyType) urlNext.property_type = filters.propertyType;
+      if (filters.keyword) urlNext.features = filters.keyword;
+      if (filters.sort && filters.sort !== "newest") urlNext.sort = filters.sort;
+      const nextQs = new URLSearchParams(urlNext).toString();
+      if (_lastSyncedQsRef.current === nextQs) return;
+      _lastSyncedQsRef.current = nextQs;
+      setUrlParams(urlNext, { replace: true });
+    } catch { /* older browsers — no-op */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  // Re-read the URL when the visitor hits browser Back/Forward while on
+  // Home — react-router-dom's `useSearchParams` updates in place, so we
+  // hook into the change and re-hydrate + re-run whenever the URL query
+  // differs from what our current filter state would emit.  Without this
+  // effect the URL updates but the search results and filter form stay
+  // stuck on the pre-back state.
+  useEffect(() => {
+    const fromUrl = _readFiltersFromUrl();
+    const currentEmpty = Object.entries(filters).every(([k, v]) => k === "sort" || !v);
+    // Nothing in URL → user is at a bare /home; leave state alone (fresh
+    // first-visit behaviour) unless we currently HAVE filters set (i.e.
+    // they navigated back past their own search to bare /).
+    if (!fromUrl && currentEmpty) return;
+    if (!fromUrl && !currentEmpty) {
+      setFilters({ ...DEFAULT_DASH_FILTERS });
+      runSearch({ ...DEFAULT_DASH_FILTERS });
+      return;
+    }
+    // Only re-run if URL differs from current state (avoids the loop where
+    // filter-effect writes URL → this effect fires → runSearch → …).
+    const changed = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword","sort"].some(k => (fromUrl[k] || "") !== (filters[k] || ""));
+    if (changed) {
+      setFilters(fromUrl);
+      runSearch(fromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlParams]);
   // First-visit sidebar toast — appears once, dismissible, remembers via localStorage
   const [showToast, setShowToast] = useState(false);
   useEffect(() => {
