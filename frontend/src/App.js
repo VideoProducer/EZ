@@ -37,6 +37,7 @@ const CommunityPageMockup = lazy(() => import("./components/CommunityPageMockup"
 const CommunityPageMockupLive = lazy(() => import("./components/CommunityPageMockupLive"));
 const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
+const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -11485,6 +11486,7 @@ function App() {
       <Route path="/mockups/community-live" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><CommunityPageMockupLive/></Suspense>}/>
       <Route path="/mockups/home" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><HomepageMockup/></Suspense>}/>
       <Route path="/mockups/luxury" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><LuxuryLandingMockup/></Suspense>}/>
+      <Route path="/mockups/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianLeadMockup/></Suspense>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
