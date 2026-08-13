@@ -4174,7 +4174,48 @@ const ListingDetail = () => {
         <div>
           <div className="eyebrow">{listing.region} · {listing.city}</div>
           <div style={{display:"flex",gap:"0.75rem",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap"}}>
-            <h1 className="section-title" style={{margin:"0.5rem 0",flex:"1 1 auto"}} data-testid="listing-address">{listing.street_address}</h1>
+            <div style={{flex:"1 1 auto",display:"flex",alignItems:"center",gap:"0.55rem",flexWrap:"wrap"}}>
+              <h1
+                className="section-title"
+                style={{margin:"0.5rem 0"}}
+                data-testid="listing-address"
+                // Suppress iOS Live Text / Safari data-detectors so tapping
+                // (or long-pressing to highlight) the street address no
+                // longer offers to launch Apple Maps / Google Maps and
+                // yank the visitor off-site.  Chrome Android inherits the
+                // `<meta name="format-detection" content="address=no">`
+                // rule from index.html; Safari also honours the
+                // `x-apple-data-detectors` attribute below.
+                translate="no"
+                x-apple-data-detectors="false"
+              >{listing.street_address}</h1>
+              {/* Small in-page map pill.  Scrolls the visitor to the
+                  embedded map section below instead of launching a native
+                  Maps app — keeps them on-site and inside our lead-gen
+                  funnel.  A separate button (rather than making the H1
+                  itself clickable) means the address text stays as a
+                  clean, screen-reader-friendly heading. */}
+              <button
+                type="button"
+                data-testid="listing-address-map-btn"
+                aria-label={`Show ${listing.street_address || "this listing"} on the map`}
+                onClick={() => {
+                  const el = document.getElementById("listing-map-section");
+                  if (el && el.scrollIntoView) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                style={{
+                  display:"inline-flex", alignItems:"center", gap:"0.35rem",
+                  background:"var(--brand-navy,#0F2A5B)", color:"#fff",
+                  border:"none", padding:"0.35rem 0.75rem", borderRadius:999,
+                  fontFamily:"Sora,sans-serif", fontWeight:700, fontSize:"0.78rem",
+                  letterSpacing:"0.02em", cursor:"pointer",
+                  boxShadow:"0 2px 6px rgba(15,42,91,0.20)",
+                  whiteSpace:"nowrap",
+                }}
+              >📍 Map</button>
+            </div>
             <div style={{flexShrink:0,marginTop:"0.5rem",display:"flex",gap:"0.5rem",alignItems:"center"}}>
               <CastToDevice
                 canonicalPath={`/listing/${listing.listing_key}`}
@@ -4259,7 +4300,7 @@ const ListingDetail = () => {
               </div>
             </div>
           )}
-          <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>Location</h2>
+          <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}} id="listing-map-section">Location</h2>
           <div style={{height:340,borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.15)"}}>
             <iframe title={`Map of ${listing.street_address}`} src={`https://www.google.com/maps?q=${q}&output=embed`} width="100%" height="340" style={{border:0}} loading="lazy"/>
           </div>

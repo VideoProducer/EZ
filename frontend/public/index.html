@@ -7,6 +7,12 @@
              maximum-scale=5 keeps pinch-zoom (WCAG 1.4.4) while stopping iOS
              from auto-zooming when a form input gets focused. -->
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+        <!-- Stop iOS / Chrome mobile from auto-linkifying phone numbers,
+             email addresses, and street addresses into tap-to-launch links
+             that yank the visitor off-site into Google/Apple Maps or the
+             Phone app.  We render our own map + phone buttons where needed.
+             https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html -->
+        <meta name="format-detection" content="telephone=no, address=no, email=no, date=no" />
         <!-- Chrome/Android tinted address bar + light-mode fallback. -->
         <meta name="theme-color" content="#0F2A5B" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#FAF7F0" media="(prefers-color-scheme: light)" />
