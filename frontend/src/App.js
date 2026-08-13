@@ -5681,33 +5681,11 @@ const Relocating = () => {
 
         <div className="paper" style={{background:"#EAF3FF"}}>
           <p style={{margin:0,fontSize:"1rem",lineHeight:1.75}}>
-            <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, or considering BC as your first home in the country — this page is a starting point, not the whole picture. Everything below links to a deeper page on this site: community profiles, glossary entries, live MLS® listings, and Doug's AI assistant Doogie for follow-up questions in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.
+            <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, or considering BC as your first home in the country — this page is a starting point, not the whole picture.
           </p>
         </div>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>1. Choose a region</h2>
-        <p>British Columbia is huge — larger than California + Washington combined. Where you land affects taxes, weather, commute times, and cost of living more than in most provinces.</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))",gap:"0.85rem",marginTop:"1rem"}} data-testid="relocating-regions">
-          {[
-            {name:"Greater Vancouver", desc:"Urban core, most job diversity, highest housing costs. 22 municipalities.", href:"/communities"},
-            {name:"Fraser Valley", desc:"Suburban east of Vancouver. Better value, growing families, agricultural heritage.", href:"/communities"},
-            {name:"Sea-to-Sky", desc:"Squamish + Whistler + Pemberton. Ski country, tech workers, outdoor lifestyle.", href:"/community/squamish"},
-            {name:"Vancouver Island", desc:"Victoria + Nanaimo + Comox Valley. Mild winters, ferry access, slower pace.", href:"/community/victoria"},
-            {name:"Okanagan", desc:"Kelowna + Vernon + Penticton. Wine country, dry summers, retirement-friendly.", href:"/community/kelowna"},
-            {name:"Kootenays", desc:"Nelson + Cranbrook + Fernie. Alpine, artistic, most affordable BC housing.", href:"/community/nelson"},
-            {name:"Northern BC", desc:"Prince George + Fort St. John. Resource jobs, wilderness, cold winters.", href:"/community/prince-george"},
-            {name:"Cariboo & Thompson", desc:"Kamloops + Williams Lake. Interior plateau, ranching, four-season climate.", href:"/community/kamloops"},
-          ].map(r => (
-            <Link key={r.name} to={r.href} className="paper" style={{textDecoration:"none",color:"var(--ink)",transition:"transform 0.15s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";}}>
-              <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",fontSize:"1.05rem"}}>{r.name}</div>
-              <div style={{fontSize:"0.88rem",color:"var(--muted)",marginTop:"0.35rem",lineHeight:1.5}}>{r.desc}</div>
-              <div style={{fontSize:"0.8rem",color:"var(--brand-blue)",marginTop:"0.5rem"}}>Explore →</div>
-            </Link>
-          ))}
-        </div>
-        <p style={{marginTop:"1.5rem"}}>Not sure which fits? <Link to="/communities" style={{color:"var(--brand-blue)"}}>Browse all 241 BC communities</Link>, each with an AI-authored synopsis, live weather, Neighbourhood Vibe Score™, and active MLS® listings.</p>
-
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>2. Understand the tax picture</h2>
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>1. Understand the tax picture</h2>
         <p>BC has some of Canada's most nuanced housing taxes. Foreign buyers face additional layers. Skim these before you make an offer:</p>
         <ul style={{lineHeight:1.9}}>
           <li><Link to="/glossary/property-transfer-tax-ptt" style={{color:"var(--brand-blue)"}}>Property Transfer Tax (PTT)</Link> — payable by every BC buyer at closing. Tiered rates + first-time buyer / newly-built exemptions.</li>
@@ -5718,7 +5696,7 @@ const Relocating = () => {
           <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>Empty Homes Tax (Vancouver only)</Link> — separate 3% City of Vancouver tax on vacant properties within municipal boundaries.</li>
         </ul>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>3. Cost-of-living benchmarks</h2>
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>2. Cost-of-living benchmarks</h2>
         <p>Median BC sale prices vary wildly. Here's a rough 2026 snapshot to calibrate expectations:</p>
         <ul style={{lineHeight:1.9}}>
           <li>Greater Vancouver detached: <strong>~$2.0M+ median</strong> (West Vancouver + Vancouver West Side higher)</li>
@@ -5732,7 +5710,7 @@ const Relocating = () => {
         </ul>
         <p style={{marginTop:"1rem",fontSize:"0.88rem",color:"var(--muted)",fontStyle:"italic"}}>Median values reflect early-2026 MLS® snapshot data from your live listing feed and shift week-to-week. Use the search tool for current figures.</p>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>4. Immigration + banking + insurance essentials</h2>
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>3. Immigration + banking + insurance essentials</h2>
         <p>BC-side realities you'll want to line up before or shortly after arrival:</p>
         <ul style={{lineHeight:1.9}}>
           <li><strong>PR / work-permit status</strong> — dictates whether you're eligible to purchase under the federal ban and at what tax rate.</li>
@@ -5744,7 +5722,7 @@ const Relocating = () => {
           <li><strong>Notary + lawyer</strong> — required for the actual property closing. Retain one before signing an offer.</li>
         </ul>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>5. Start your search</h2>
+        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>4. Start your search</h2>
         <p style={{marginTop:"0.5rem"}}>Once you have a rough region in mind, use one of these three tools. All are free — no signup required to browse.</p>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"0.85rem",marginTop:"1rem"}} data-testid="relocating-tools">
           <Link to="/listings" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
