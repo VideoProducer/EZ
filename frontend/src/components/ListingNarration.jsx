@@ -102,6 +102,57 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
     autoOpenedRef.current = false;
   }, [listing?.listing_key]);
 
+  // ── Background prefetch: warm the narration + TTS the moment the
+  //    listing page mounts, so clicking Play feels instant.  Doug reported
+  //    that Doogie's narration "takes time to (re)load for each property"
+  //    on production.  Only the top 200 listings hit the nightly warmer
+  //    (server.py `_nightly_narration_warm_loop`), leaving the other ~40k
+  //    active listings paying the full cold cost on first play:
+  //       • /narration      → 3-10 s (vision LLM generates script + cues)
+  //       • /tts/prepare    → 5-8 s (OpenAI TTS synthesises the mp3)
+  //       • /audio?wait=1   → streams the mp3
+  //    Visitors spend 10-30 s scrolling photos before clicking Play, so we
+  //    kick off both fetches in the background here.  By the time they hit
+  //    Play the mp3 is already synthesised + browser-cacheable, turning
+  //    every cold click into a warm click (200-500 ms).
+  //
+  //    Respects the mute preference — a muted visitor never plays the
+  //    audio, so spending TTS credits on them would be pure waste.
+  React.useEffect(() => {
+    if (!listing?.listing_key) return;
+    if (muted) return;
+    let cancelled = false;
+    // Give the page a beat to paint and load photos before we hit the
+    // narration endpoint — no point competing with critical resources.
+    const t = setTimeout(async () => {
+      try {
+        // 1. Fetch the script + cues (server caches on doogie_narration).
+        const nR = await fetch(`${API}/listings/${encodeURIComponent(listing.listing_key)}/narration`);
+        if (!nR.ok || cancelled) return;
+        const nJ = await nR.json();
+        const body = (typeof nJ?.script === "string" && nJ.script.trim().length > 40) ? nJ.script.trim() : "";
+        const fetchedCues = Array.isArray(nJ?.cues) ? nJ.cues : [];
+        if (!body) return;                     // nothing usable → let click-time fallback handle it
+        const full = body + _buildOutro(listing, inServiceArea);
+        scriptCacheRef.current = { script: full, cues: fetchedCues };
+        setScriptText(full);
+        setCues(fetchedCues);
+        // 2. Warm the TTS.  `/doogie/tts/prepare` returns immediately and
+        //    kicks off the mp3 synthesis on the server; the file lands
+        //    in doogie_tts_cache within ~5 s.  We don't await the audio
+        //    itself here — that streams when the user hits Play.
+        if (cancelled) return;
+        await fetch(`${API}/doogie/tts/prepare`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: full, voice: "ash" }),
+        });
+      } catch { /* silent — visitor still gets a working button */ }
+    }, 800);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listing?.listing_key, muted, inServiceArea]);
+
   // Re-apply speed if the user drags the slider mid-narration.
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;

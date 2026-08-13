@@ -9049,7 +9049,75 @@ async def get_listing(request: Request, listing_key: str):
         await _log_event(db, listing_key, "detail_view", {"referer": request.headers.get("referer","")})
     except Exception:
         pass
+    # ── Background narration warmer ──────────────────────────────────
+    # If this listing's narration + TTS aren't cached yet, kick off a
+    # fire-and-forget background task to generate them now — while the
+    # visitor is still reading photos + description on the detail page.
+    # By the time they click "Have Doogie walk me through this home" the
+    # script + mp3 are already in Mongo / disk, so the click feels
+    # instant instead of the previous 10-20s cold wait.  Doug flagged
+    # this on production as "Doogie's narration takes time to (re)load
+    # for each property".  We only cover listings with photos (vision
+    # narration needs images to be useful).
+    try:
+        cached = (d.get("doogie_narration") or {})
+        expected_cache_key = str(d.get("modified_at") or d.get("_id"))
+        needs_warm = not cached.get("script") or cached.get("cache_key") != expected_cache_key
+        if needs_warm and d.get("photos"):
+            asyncio.create_task(_warm_listing_narration_bg(listing_key))
+    except Exception:
+        pass
     return d
+
+
+async def _warm_listing_narration_bg(listing_key: str) -> None:
+    """Background pre-generate the narration script + TTS mp3 for a listing.
+    Invoked from `GET /listings/{listing_key}` when the visitor lands on a
+    detail page.  Silent on any error — the visitor still gets a working
+    Play button (the click-time path can generate on demand)."""
+    try:
+        # Hit the public /narration endpoint through an in-process call so
+        # it goes through the same _sanitize_listing + cache-write logic
+        # human traffic uses.  We fake a Request-like object with the bare
+        # attributes _limiter needs (client.host).  Using a real HTTP loop
+        # via aiohttp would work too but adds needless network hops.
+        from starlette.requests import Request as _StRequest
+        scope = {"type": "http", "method": "GET", "headers": [], "client": ("127.0.0.1", 0),
+                 "path": f"/api/listings/{listing_key}/narration", "scheme": "http", "server": ("localhost", 8001)}
+        fake_req = _StRequest(scope)
+        try:
+            n = await get_listing_narration(fake_req, listing_key)          # populates doogie_narration cache
+        except Exception as e:
+            logger.debug(f"narration warm skipped for {listing_key}: {e}")
+            return
+        # Kick TTS synthesis so the mp3 lands in doogie_tts_cache too.
+        script = (n or {}).get("script") if isinstance(n, dict) else None
+        if script:
+            try:
+                # Build the same outro the ListingNarration frontend adds so
+                # the TTS cache key matches what the visitor's play will
+                # request.  See _buildOutro in ListingNarration.jsx.
+                outro = " This is general information only, not advice. For value or fit, always talk to a REALTOR."
+                # Service-area detection matches the frontend logic.
+                _svc = {"vancouver","burnaby","richmond","surrey","coquitlam","port coquitlam",
+                        "port moody","delta","new westminster","north vancouver","west vancouver",
+                        "maple ridge","pitt meadows","langley","abbotsford","chilliwack","mission",
+                        "hope","harrison hot springs","kent","squamish","whistler","pemberton",
+                        "furry creek","britannia beach"}
+                doc = await db.listings.find_one({"listing_key": listing_key}, {"city": 1})
+                if doc and (doc.get("city") or "").strip().lower() in _svc:
+                    outro += " Want to see this one in person? Ask Doug for a viewing — he's licensed for this area."
+                full = (script or "") + outro
+                voice = _tts_pick_voice(None)
+                key = _tts_cache_key(full, voice)
+                # Skip if the mp3 is already cached / being generated.
+                exists = await db.doogie_tts_cache.find_one({"_id": key}, {"_id": 1})
+                if not exists:
+                    await _tts_generate_and_cache(full, voice, key)
+            except Exception as e:
+                logger.debug(f"TTS warm skipped for {listing_key}: {e}")
+    except Exception as e:
+        logger.warning(f"warm_listing_narration_bg({listing_key}) crashed: {e}")
 
 
 # ── Doogie Listing Narration Script ─────────────────────────────────────────
