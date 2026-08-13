@@ -76,7 +76,7 @@ const FAQS = [
   { q:"Does Doug charge me anything to represent me as a buyer?",
     a:"No. Under BC's Multiple Listing Service® rules, the seller's brokerage compensates the co-operating (buyer's) brokerage from the sale proceeds — you pay $0 for consultations, showings, offer preparation, negotiation, or closing coordination. Full BCFSA Disclosure of Representation is presented before any meaningful engagement." },
   { q:"What if the property I love is outside Doug's direct service area?",
-    a:"Doug covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For anywhere else in BC (Interior, Vancouver Island, Kootenays, Cariboo, Peace), he hand-picks a BCFSA-licensed local REALTOR® from his vetted referral network — $0 cost to you, you approve every intro, no CASL spam." },
+    a:"Doug covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For anywhere else in BC (Interior, Vancouver Island, Kootenays, Cariboo, Peace), if you like, Doug can keep the pin drop, compare and fave heart, video, and VR tour on the listings." },
   { q:"Is Doogie giving me real-estate advice?",
     a:"No. Doogie is an AI-assisted concierge that explains BC real estate terminology, walks you through active listings, and helps you find community pages — but Doogie provides general information only, never legal, tax, financial, or property-specific advice. For your own situation, always speak with a BC lawyer or notary, an accountant, a licensed mortgage broker, and a REALTOR®." },
   { q:"How is my personal information handled when I submit a form?",

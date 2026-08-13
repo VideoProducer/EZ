@@ -15482,3 +15482,150 @@ async def address_validate(id: str):
         "data_level": "Premise" if addr.get("house_number") else "Street",
         "attribution": "© OpenStreetMap contributors",
     }}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TV Pairing — real casting (not screen-mirror). A phone creates a pairing
+# session, gets a 6-digit code, and any TV browser (Samsung Tizen / LG WebOS
+# / laptop-HDMI'd-to-a-TV / iPad-with-HDMI) opens `eztofind.ca/tv`, enters
+# the code, and now shows the listing full-screen. The phone becomes the
+# remote — swiping through photos and starting Doogie narration on the TV.
+#
+# Storage: `tv_pair_sessions` collection with 20-min TTL. Poll-based sync
+# (2 s cadence) — no WebSockets so it works on every smart-TV browser.
+# ═══════════════════════════════════════════════════════════════════════════
+import secrets as _secrets
+
+TV_PAIR_TTL_SECONDS = 60 * 20  # 20 minutes
+
+async def _ensure_tv_pair_indexes():
+    try:
+        await db.tv_pair_sessions.create_index("expires_at", expireAfterSeconds=0)
+        await db.tv_pair_sessions.create_index("code", unique=False)
+    except Exception:
+        pass
+
+@app.on_event("startup")
+async def _tv_pair_startup():
+    await _ensure_tv_pair_indexes()
+
+def _new_pair_code() -> str:
+    # 6-digit numeric code — easy to type on a TV remote / on-screen keyboard.
+    return f"{_secrets.randbelow(1_000_000):06d}"
+
+class TVPairCreate(BaseModel):
+    listing_key: Optional[str] = None
+    photo_index: int = 0
+    listing_snapshot: Optional[Dict[str, Any]] = None  # phone can push a snapshot so TV doesn't refetch
+
+class TVPairClaim(BaseModel):
+    code: str
+
+class TVPairState(BaseModel):
+    session_id: str
+    listing_key: Optional[str] = None
+    photo_index: int = 0
+    listing_snapshot: Optional[Dict[str, Any]] = None
+    action: Optional[str] = None  # "play_narration" | "stop_narration" | "exit"
+
+@app.post("/api/cast/pair/create")
+async def cast_pair_create(payload: TVPairCreate):
+    """Phone creates a pairing session; TV will later claim it with the code."""
+    session_id = str(uuid.uuid4())
+    # Retry a couple of times on the astronomically-unlikely collision with
+    # an unclaimed live code — 6-digit space is 1M so realistically fine.
+    code = _new_pair_code()
+    for _ in range(5):
+        existing = await db.tv_pair_sessions.find_one({"code": code, "claimed": True, "expires_at": {"$gt": datetime.now(timezone.utc)}})
+        if not existing:
+            break
+        code = _new_pair_code()
+    now = datetime.now(timezone.utc)
+    doc = {
+        "session_id": session_id,
+        "code": code,
+        "claimed": False,
+        "listing_key": payload.listing_key,
+        "photo_index": payload.photo_index,
+        "listing_snapshot": payload.listing_snapshot,
+        "action": None,
+        "created_at": now,
+        "updated_at": now,
+        "expires_at": now + timedelta(seconds=TV_PAIR_TTL_SECONDS),
+    }
+    await db.tv_pair_sessions.insert_one(doc)
+    return {"session_id": session_id, "code": code, "expires_in": TV_PAIR_TTL_SECONDS}
+
+@app.post("/api/cast/pair/claim")
+async def cast_pair_claim(payload: TVPairClaim):
+    """TV enters the 6-digit code — returns session_id + current state."""
+    code = (payload.code or "").strip()
+    if not code.isdigit() or len(code) != 6:
+        raise HTTPException(400, "Enter the 6-digit code shown on the phone.")
+    now = datetime.now(timezone.utc)
+    sess = await db.tv_pair_sessions.find_one_and_update(
+        {"code": code, "expires_at": {"$gt": now}},
+        {"$set": {"claimed": True, "updated_at": now}},
+        return_document=True,
+    )
+    if not sess:
+        raise HTTPException(404, "Pairing code not found or expired. Ask the phone to generate a new one.")
+    return {
+        "session_id": sess["session_id"],
+        "listing_key": sess.get("listing_key"),
+        "photo_index": sess.get("photo_index", 0),
+        "listing_snapshot": sess.get("listing_snapshot"),
+        "action": sess.get("action"),
+    }
+
+@app.post("/api/cast/pair/update")
+async def cast_pair_update(payload: TVPairState):
+    """Phone pushes new state (next photo, new listing, narration cue)."""
+    now = datetime.now(timezone.utc)
+    update = {
+        "updated_at": now,
+        "expires_at": now + timedelta(seconds=TV_PAIR_TTL_SECONDS),
+    }
+    if payload.listing_key is not None:
+        update["listing_key"] = payload.listing_key
+    if payload.photo_index is not None:
+        update["photo_index"] = int(payload.photo_index)
+    if payload.listing_snapshot is not None:
+        update["listing_snapshot"] = payload.listing_snapshot
+    if payload.action is not None:
+        update["action"] = payload.action
+    res = await db.tv_pair_sessions.update_one(
+        {"session_id": payload.session_id},
+        {"$set": update},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, "Pairing session ended.")
+    return {"ok": True}
+
+@app.get("/api/cast/pair/state/{session_id}")
+async def cast_pair_state(session_id: str):
+    """TV polls this endpoint every ~2s to sync its view with the phone."""
+    sess = await db.tv_pair_sessions.find_one({"session_id": session_id})
+    if not sess:
+        raise HTTPException(404, "Pairing session ended.")
+    # Mongo returns naive UTC datetimes — normalise before comparing.
+    exp = sess.get("expires_at")
+    if exp is not None:
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            raise HTTPException(410, "Pairing session expired.")
+    return {
+        "session_id": sess["session_id"],
+        "claimed": sess.get("claimed", False),
+        "listing_key": sess.get("listing_key"),
+        "photo_index": sess.get("photo_index", 0),
+        "listing_snapshot": sess.get("listing_snapshot"),
+        "action": sess.get("action"),
+        "updated_at": sess.get("updated_at").isoformat() if sess.get("updated_at") else None,
+    }
+
+@app.delete("/api/cast/pair/{session_id}")
+async def cast_pair_end(session_id: str):
+    await db.tv_pair_sessions.delete_one({"session_id": session_id})
+    return {"ok": True}
