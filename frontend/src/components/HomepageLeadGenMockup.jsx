@@ -191,7 +191,7 @@ export default function HomepageLeadGenMockup() {
     ],
   }), []);
 
-  const heroDesc = `Search ${stats.total ? stats.total.toLocaleString() : "40,000+"} live MLS® listings across British Columbia. BCFSA-licensed REALTOR® with a free 40-point buyer due-diligence process. CREA DDF® data · $0 cost consultations · no CASL spam.`;
+  const heroDesc = `Search ${stats.total ? stats.total.toLocaleString() : "40,000+"} live MLS® listings across British Columbia. BCFSA-licensed REALTOR® with a comprehensive buyer due-diligence process. CREA DDF® data · complimentary consultations · PIPA + CASL + BCFSA compliant.`;
 
   return (
     <div style={{ background: C.paper, minHeight: "100vh", fontFamily: "Inter,sans-serif" }} data-testid="homepage-leadgen-mockup">
@@ -220,10 +220,10 @@ export default function HomepageLeadGenMockup() {
         <div style={{ maxWidth: 1160, margin: "0 auto" }}>
           <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED</div>
           <h1 style={{ fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.05, margin: "8px 0 14px", maxWidth: 900 }}>
-            The friendly way to find your BC home — live listings, honest guidance, zero CASL spam.
+            British Columbia real estate — live MLS® listings, community insights, and a BCFSA-licensed REALTOR®.
           </h1>
           <p style={{ fontSize:"clamp(0.95rem, 2vw, 1.1rem)", lineHeight: 1.6, maxWidth: 780, opacity: 0.95, marginBottom: 22 }}>
-            {stats.total ? `${stats.total.toLocaleString()} active MLS® listings` : "40,000+ live listings"} · Fraser Valley + Metro Vancouver + Sea-to-Sky covered directly by Doug · BC-wide vetted referral network for everywhere else · $0 buyer consultations.
+            {stats.total ? `${stats.total.toLocaleString()} active MLS® listings` : "40,000+ live listings"} · Fraser Valley, Greater Vancouver, and Sea-to-Sky Corridor covered directly by Doug LeMaire · BC-wide vetted referral network for all other regions · complimentary buyer consultations.
           </p>
 
           {/* Doogie voice + text filter — reused from production */}
@@ -236,9 +236,9 @@ export default function HomepageLeadGenMockup() {
           </div>
 
           <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-            <Link to="/property-search" style={{ background: C.gold, color: C.navy, padding:"12px 22px", borderRadius:999, fontWeight:700, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-search">🏡 Browse all listings</Link>
-            <Link to="/market-estimate" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-value">💰 Free home-value check</Link>
-            <a href="#lead-form" style={{ background:"transparent", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-talk">💬 Talk to Doug</a>
+            <Link to="/property-search" style={{ background: C.gold, color: C.navy, padding:"12px 22px", borderRadius:999, fontWeight:700, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-search">Browse all listings</Link>
+            <Link to="/market-estimate" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-value">Home valuation</Link>
+            <a href="#lead-form" style={{ background:"transparent", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-talk">Request a consultation</a>
           </div>
 
           <div style={{ marginTop: 22, padding:"10px 14px", background:"rgba(255,255,255,0.08)", borderRadius: 8, fontSize:"0.75rem", opacity: 0.85, maxWidth: 780 }}>
@@ -386,9 +386,9 @@ function HomepageLeadForm() {
     return (
       <div id="lead-form" style={{ background: C.green, color:"white", borderRadius: 14, padding:"36px 32px" }} data-testid="lead-form-done">
         <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", opacity: 0.9, fontWeight: 700 }}>✅ RECEIVED</div>
-        <h2 style={{ fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 6, marginBottom: 8 }}>Thanks{f.full_name ? `, ${f.full_name.split(" ")[0]}` : ""} — Doug will reach out within 1 business day.</h2>
+        <h2 style={{ fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 6, marginBottom: 8 }}>Thank you{f.full_name ? `, ${f.full_name.split(" ")[0]}` : ""} — Doug will reach out within one business day.</h2>
         <p style={{ fontSize:"0.95rem", lineHeight: 1.55, marginBottom: 0, opacity: 0.92 }}>
-          You're all set. Because you gave CASL express consent, you'll also get Doug's weekly BC listings digest (unsubscribe in one click, any time).
+          Your request has been received. Because you provided CASL express consent, you will also receive Doug's weekly British Columbia listings digest. One-click unsubscribe is included in every email.
         </p>
       </div>
     );
@@ -396,10 +396,10 @@ function HomepageLeadForm() {
 
   return (
     <div id="lead-form" style={{ background: C.navy, color:"white", borderRadius: 16, padding:"clamp(24px,4vw,32px) clamp(20px,4vw,30px)", boxShadow:"0 10px 40px rgba(15,42,91,0.20)" }} data-testid="lead-form">
-      <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>TALK TO DOUG · $0 · NO OBLIGATION</div>
-      <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 1.8rem)", fontFamily:"'Sora',sans-serif", fontWeight: 700, lineHeight: 1.15, margin:"6px 0 16px" }}>Get a free 20-minute call with a BCFSA-licensed REALTOR®</h2>
+      <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>REQUEST A CONSULTATION</div>
+      <h2 style={{ fontSize:"clamp(1.4rem, 3vw, 1.8rem)", fontFamily:"'Sora',sans-serif", fontWeight: 700, lineHeight: 1.15, margin:"6px 0 16px" }}>Complimentary 20-minute consultation with a BCFSA-licensed REALTOR®</h2>
       <p style={{ fontSize:"0.92rem", opacity: 0.88, lineHeight: 1.6, marginBottom: 20 }}>
-        Whether you're buying, selling, relocating to BC, or moving around within it — Doug personally responds within 1 business day. $0 cost. PIPA + CASL + BCFSA compliant. Unsubscribe any time.
+        Whether you are buying, selling, relocating to British Columbia, or moving within the province — Doug LeMaire personally responds within one business day. No cost, no obligation. PIPA + CASL + BCFSA compliant.
       </p>
       <form onSubmit={submit} data-testid="lead-form-el">
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
