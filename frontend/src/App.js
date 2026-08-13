@@ -5668,7 +5668,9 @@ const Relocating = () => {
         })}</script></Helmet>
 
         <div className="eyebrow">Consumer Guide</div>
-        <h1 className="section-title" data-testid="relocating-title">Relocating to British Columbia</h1>
+        <h1 className="section-title" data-testid="relocating-title" style={{fontSize:"clamp(1.5rem, 3.2vw, 2.1rem)",lineHeight:1.3}}>
+          <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, staying in or considering BC as your first home in the country — this page is a starting point, not the whole picture.
+        </h1>
 
         {/* ═════ § COMMUNITY FINDER QUIZ — the primary lead capture. ═════
             Renders right below the H1 so relocators see it before the
@@ -5677,12 +5679,6 @@ const Relocating = () => {
             still available for readers who want to research first. */}
         <div style={{ margin: "1.75rem -1rem 2rem", padding: 0 }}>
           <CommunityFinderQuiz/>
-        </div>
-
-        <div className="paper" style={{background:"#EAF3FF"}}>
-          <p style={{margin:0,fontSize:"1rem",lineHeight:1.75}}>
-            <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, or considering BC as your first home in the country — this page is a starting point, not the whole picture.
-          </p>
         </div>
 
         <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>1. Understand the tax picture</h2>
