@@ -2713,10 +2713,10 @@ const SyncedResults = () => {
         >
           <div style={{ flex: "1 1 260px" }}>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: C.navy, fontSize: 15, fontWeight: 700, marginBottom: 3 }}>
-              🌉 Searching outside BC?
+              🌉 Searching outside Doug's direct area?
             </div>
             <div style={{ fontSize: 12, color: C.navy, lineHeight: 1.5 }}>
-              You mentioned <strong>{sync.out_of_area.city}</strong> — that's outside Doug's BCFSA licence area. He can introduce you to a local REALTOR® partner active in that market, then step aside so you work with them directly.
+              You mentioned <strong>{sync.out_of_area.city}</strong>, which sits outside Doug's BCFSA-licensed service area. <strong>Would you like Doug to have a local REALTOR® contact you?</strong> Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost to you, you approve every intro, no CASL spam.
             </div>
           </div>
           <Link
@@ -2728,7 +2728,7 @@ const SyncedResults = () => {
               display: "inline-block", whiteSpace: "nowrap",
             }}
           >
-            Get referred →
+            🤝 Get a local REALTOR® referral →
           </Link>
         </div>
       )}

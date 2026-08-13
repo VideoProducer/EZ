@@ -41,6 +41,9 @@ const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMocku
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
 const TVDisplayPage = lazy(() => import("./pages/TVDisplayPage"));
+// Family Viewing Party — lead-gen landing page that showcases the TV
+// Pairing flow to families wanting to review listings on the big screen.
+const FamilyViewingParty = lazy(() => import("./pages/FamilyViewingParty"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -55,6 +58,7 @@ import AdminReelAnalytics from "./pages/AdminReelAnalytics";
 import AdminHeatmap from "./pages/AdminHeatmap";
 import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
+import ReferralAsk from "./components/ReferralAsk";
 import CastToDevice from "./components/CastToDevice";
 import ListingPresentMode from "./components/ListingPresentMode";
 import { CastSessionBanner } from "./lib/castSession";
@@ -3328,7 +3332,10 @@ const Listings = () => {
             <div className="paper" style={{textAlign:"center",padding:"3rem 1.5rem"}}>
               <div style={{fontSize:"3rem",marginBottom:"1rem"}}>🏡</div>
               <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.2rem",fontWeight:700}}>No listings match your search</div>
-              <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem"}}>Try widening your filters, or <Link to="/referral-request" style={{color:"var(--brand-blue)"}}>request a referral</Link> if you're looking outside Doug's service area.</div>
+              <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem",marginBottom:"1.25rem"}}>Try widening your filters — or if you're looking outside Doug's direct service area, ask for a hand-picked local REALTOR® below.</div>
+              <div style={{maxWidth:520, margin:"0 auto"}}>
+                <ReferralAsk variant="card" context="listings-empty-state"/>
+              </div>
             </div>
           )}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"1.25rem"}} data-testid="listings-grid">
@@ -11494,6 +11501,8 @@ function App() {
       <Route path="/mockups/home-v2" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><HomepageLeadGenMockup/></Suspense>}/>
       {/* TV pairing target — bare-bones big-screen viewer, no AppLayout chrome. */}
       <Route path="/tv" element={<Suspense fallback={<div style={{minHeight:"100vh",background:"#0F2A5B",color:"#fff",display:"grid",placeItems:"center",fontFamily:"Inter,sans-serif"}}>Loading TV mode…</div>}><TVDisplayPage/></Suspense>}/>
+      {/* Family Viewing Party — indexable acquisition landing page. */}
+      <Route path="/family-viewing-party" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FamilyViewingParty/></Suspense></AppLayout>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>

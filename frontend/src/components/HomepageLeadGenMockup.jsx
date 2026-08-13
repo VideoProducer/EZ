@@ -28,6 +28,8 @@ import { Helmet } from "react-helmet-async";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import { DoogieFilterHeader } from "./DoogieFilterHeader";
 import { TurnstileWidget, getTurnstileToken } from "../App";
+import FeaturedComingSoonListing from "./FeaturedComingSoonListing";
+import ReferralAsk from "./ReferralAsk";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -247,6 +249,21 @@ export default function HomepageLeadGenMockup() {
         </div>
       </div>
 
+      {/* ═════ § FEATURED COMING-SOON LISTING — parked, generic teaser
+          until seller consent is signed OR listing goes live on MLS® ═════ */}
+      <FeaturedComingSoonListing
+        mode="coming_soon"
+        area="Fraser Valley"
+        home_type="Detached family home"
+        price_band="Priced under $2M"
+        beds_band="3–4 bedrooms"
+        baths_band="2–3 bathrooms"
+        sqft_band="Approx. 1,800–2,400 sqft"
+        eta_line="Coming to market next week"
+        description="A cared-for detached home in a family-friendly BC neighbourhood — quiet street, mature landscaping, walk-to-schools. Serious pre-MLS® enquiries only. Full address, exact price, MLS® number, and photos are published here the moment the listing is officially input to the Multiple Listing Service® under GVR/CREA rules."
+        video_url=""
+      />
+
       {/* ═════ § PATH-BASED CTAs ═════ */}
       <Section tone="paper">
         <H2 kicker="Choose your path">What brings you to EZtoFind today?</H2>
@@ -331,6 +348,12 @@ export default function HomepageLeadGenMockup() {
             <details key={i} style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 10, padding:"14px 18px" }} data-testid={`faq-${i}`}>
               <summary style={{ fontSize:"0.95rem", fontWeight: 700, color: C.navy, cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>{f.q}</summary>
               <div style={{ marginTop: 10, fontSize:"0.9rem", lineHeight: 1.65, color: C.ink }}>{f.a}</div>
+              {/* Out-of-area FAQ → drop the standard site-wide referral CTA */}
+              {/outside Doug's direct service area/i.test(f.q) && (
+                <div style={{ marginTop: 12 }}>
+                  <ReferralAsk variant="pill" context="home-v2-faq-out-of-area" compact/>
+                </div>
+              )}
             </details>
           ))}
         </div>

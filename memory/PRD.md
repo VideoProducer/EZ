@@ -1,5 +1,23 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-13 (Featured Coming Soon window + site-wide Referral CTA)
+- **`FeaturedComingSoonListing.jsx`** — reusable "Coming Soon" featured tile for the homepage that Doug can flip to "Just Listed" once MLS® goes live. Compliance is baked in:
+  - `mode="coming_soon"` renders a **generic teaser only** — no address, no photo of the actual home, no exact price, no MLS® number, no unit number, no distinctive sub-neighbourhood. Just home type, general area, rounded price band, general bed/bath/sqft range. Under GVR Rule 3.14 + CREA REALTOR® Code Article 6, a generic teaser is NOT pre-MLS advertising because it doesn't identify a specific property — so no signed express-consent from the seller is required to display.
+  - `mode="just_listed"` (once MLS is live OR consent signed): renders full address, exact price, real photo, MLS® number, JSON-LD `RealEstateListing`, brokerage attribution, and links to `/listing/{key}`.
+  - `mode="hidden"` renders nothing (self-removes when no featured listing).
+  - **Video slot** accepts direct mp4/webm, YouTube (`youtube-nocookie` for GDPR-lite), or Vimeo. Click-to-load so no 3rd-party pixel fires until the visitor taps play. Direct video tags carry `x-webkit-airplay="deny"` (matches Doogie audio pattern).
+  - By-Appointment-Only note replaces the missing open-house line per Doug's request.
+  - Priority-list CTA points to `/buyer?source=coming-soon&area=…` so Doug's CRM tags every incoming lead as pre-MLS.
+- **Injected into `/mockups/home-v2`** immediately after the hero (highest-visibility slot). Currently populated with the placeholder Fraser Valley detached teaser — swap the `<FeaturedComingSoonListing …/>` props to the real listing details once the MLS input is live.
+- **`ReferralAsk.jsx`** — new site-wide component with 3 variants (`pill`, `card`, `inline`) that renders the standardized user-requested copy: **"Would you like Doug to have a local REALTOR® contact you?"** + a "🤝 Get a local REALTOR® referral →" button. Every render fires a `referral_ask_click` analytics event tagged with the source context so Doug can see which out-of-area surfaces drive the most referrals.
+- **Injected** at 3 high-impact user-facing surfaces so the pitch is identical everywhere:
+  1. `HomepageLeadGenMockup.jsx` → out-of-area FAQ (Q "outside Doug's direct service area") now shows a pill below the answer.
+  2. `App.js` → search-empty state on `/listings` now shows a full `ReferralAsk` card (previously a plain text link).
+  3. `DashboardMockup.jsx` → the intent-sync out-of-area bridge banner now uses the exact question copy + "🤝 Get a local REALTOR® referral →" button (was "Get referred →").
+- **FVP lead-form field contract fixed**: `/family-viewing-party` was posting `name` — backend `BuyerLead` schema expects `full_name`, `casl_consent`, `pipa_ack`, `budget_range`, `timeline`, `financing_status`. Corrected to match.
+
+
+
 ## 2026-02-13 (TV Pairing — true casting, no phone-mirror)
 - **New `/tv` route** — big-screen browser (Samsung Tizen, LG WebOS, laptop-HDMI'd-to-a-TV, Chromebook, iPad-with-HDMI) enters a 6-digit code and plays the listing full-screen with the phone as a remote. No screen-mirroring, no receiver-app registration with Apple/Google needed.
 - **Backend endpoints** (`/api/cast/pair/*`) with 20-min TTL:
