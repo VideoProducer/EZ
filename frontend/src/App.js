@@ -924,7 +924,6 @@ const Footer = () => (
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85,marginTop:"0.75rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship.</p>
-        <p style={{fontSize:"0.78rem",opacity:0.85,marginTop:"1rem",lineHeight:1.5}}><strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/><strong>Fraser Property Management Realty Services Ltd.</strong><br/>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5<br/>Brokerage: <a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}} data-testid="footer-brokerage-phone">(604) 466-7021</a><br/>Direct: <a href="tel:+16047870851" style={{color:"var(--brand-gold)",textDecoration:"none"}} data-testid="footer-direct-phone">(604) 787-0851</a></p>
       </div>
       <div><h4>Explore</h4><ul>
         <li><Link to="/listings">Property Search</Link></li>
@@ -940,11 +939,19 @@ const Footer = () => (
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
       </ul></div>
-      <div><h4>Contact</h4><ul>
-        <li>info@eztofind.ca</li>
-        <li><a href="tel:+16044667021" style={{color:"inherit"}}>(604) 466-7021</a></li>
-        <li style={{fontSize:"0.82rem",opacity:0.85,marginTop:"0.35rem"}}>1 – 22374 Lougheed Hwy<br/>Maple Ridge, BC V2X 2T5</li>
-      </ul></div>
+      <div><h4>Contact</h4>
+        <p style={{fontSize:"0.82rem",opacity:0.9,margin:"0.5rem 0 0.9rem",lineHeight:1.55}}>
+          <strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/>
+          <strong>Fraser Property Management Realty Services Ltd.</strong><br/>
+          1 – 22374 Lougheed Hwy<br/>
+          Maple Ridge, BC V2X 2T5<br/>
+          Brokerage: <a href="tel:+16044667021" style={{color:"var(--brand-gold)",textDecoration:"none"}} data-testid="footer-brokerage-phone">(604) 466-7021</a><br/>
+          Direct: <a href="tel:+16047870851" style={{color:"var(--brand-gold)",textDecoration:"none"}} data-testid="footer-direct-phone">(604) 787-0851</a>
+        </p>
+        <ul>
+          <li><a href="mailto:info@eztofind.ca" style={{color:"inherit"}}>info@eztofind.ca</a></li>
+        </ul>
+      </div>
     </div>
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
       <div style={{maxWidth:"58ch"}}>
