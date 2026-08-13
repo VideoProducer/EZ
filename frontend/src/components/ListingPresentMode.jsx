@@ -148,14 +148,16 @@ const ListingPresentMode = ({ listing, onExit }) => {
             alignItems:"center", justifyContent:"center", color:"#94a3b8",
           }}>No photos available</div>
         )}
-        {/* CREA "Powered by REALTOR.ca" badge — non-negotiable per CREA rules */}
+        {/* CREA DDF® attribution — required. The "Powered by REALTOR.ca"
+            phrasing is NOT a CREA rule (only DDF® attribution + trademarks
+            are), so we display just the mandatory attribution here. */}
         <div style={{
           position:"absolute", top:16, right:16,
           background:"rgba(0,0,0,0.55)", padding:"0.4rem 0.8rem",
           borderRadius:6, fontSize:"0.7rem", letterSpacing:"0.06em",
           color:"#fff",
         }}>
-          Powered by REALTOR.ca · CREA DDF®
+          MLS® data · CREA DDF®
         </div>
         {/* Slide counter + pause hint */}
         <div style={{

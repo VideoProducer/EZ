@@ -2802,6 +2802,36 @@ const ListingCard = ({ listing }) => {
 //
 // `lockPropertyType` — if true, hides the Property Type dropdown (used on
 // Detached/Condo/Townhomes pages where the type is inherent to the page).
+
+// Numeric price input that DISPLAYS money in the standard Canadian
+// "$500,000" format while STORING the raw integer.  Solves the UX
+// inconsistency where equestrian/luxury filter fields showed a bare
+// "500000" digit blob instead of a dollar-formatted value.
+//
+// Behaviour:
+//   • Renders as text (not number) so we can insert the "$" prefix and
+//     thousands separators without fighting the browser's number spinner.
+//   • Strips every non-digit on change and reports the raw digits back to
+//     the parent via onChange(digitsString) — parents keep their existing
+//     integer-string contract with the /api/listings query params.
+//   • inputMode="numeric" surfaces the numeric keypad on iOS/Android.
+//   • Blank input reports "" so "no filter" round-trips cleanly.
+const PriceInput = ({ value, onChange, placeholder = "$ Any", ...rest }) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const display = digits ? `$${Number(digits).toLocaleString("en-CA")}` : "";
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder={placeholder}
+      value={display}
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+      {...rest}
+    />
+  );
+};
+
 const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, excludeTypes = [], hideFields = [], title = "Filter Listings" }) => {
   const navigate = useNavigate();
   const initial = {
@@ -2940,10 +2970,10 @@ const SpecialtyFilterPanel = ({ defaults = {}, lockPropertyType = false, exclude
       </div>
       )}
       <div className="field"><label>Minimum price ($)</label>
-        <input type="number" placeholder="$ Any" value={state.price_min} onChange={e=>set("price_min", e.target.value)} data-testid="specialty-filter-price-min"/>
+        <PriceInput value={state.price_min} onChange={v => set("price_min", v)} data-testid="specialty-filter-price-min"/>
       </div>
       <div className="field"><label>Maximum price ($)</label>
-        <input type="number" placeholder="$ Any" value={state.price_max} onChange={e=>set("price_max", e.target.value)} data-testid="specialty-filter-price-max"/>
+        <PriceInput value={state.price_max} onChange={v => set("price_max", v)} data-testid="specialty-filter-price-max"/>
       </div>
       <div className="field"><label>Keyword</label>
         <input placeholder="e.g. suite, waterfront" value={state.q} onChange={e=>set("q", e.target.value)} data-testid="specialty-filter-keyword"/>
@@ -3062,8 +3092,8 @@ const ListingFilters = ({ filters, setFilters, facets, allComms, onSubmit }) => 
           </select>
         </div>
       </div>
-      <div className="field"><label>Minimum price ($)</label><input type="number" placeholder="$ Any" value={filters.price_min||""} onChange={e=>set("price_min", e.target.value)} data-testid="filter-price-min"/></div>
-      <div className="field"><label>Maximum price ($)</label><input type="number" placeholder="$ Any" value={filters.price_max||""} onChange={e=>set("price_max", e.target.value)} data-testid="filter-price-max"/></div>
+      <div className="field"><label>Minimum price ($)</label><PriceInput value={filters.price_min||""} onChange={v => set("price_min", v)} data-testid="filter-price-min"/></div>
+      <div className="field"><label>Maximum price ($)</label><PriceInput value={filters.price_max||""} onChange={v => set("price_max", v)} data-testid="filter-price-max"/></div>
       <div className="field"><label>Keyword</label><input placeholder="e.g. suite, waterfront" value={filters.q||""} onChange={e=>set("q", e.target.value)} data-testid="filter-keyword"/></div>
       <div className="field"><label>Sort by</label>
         <select value={filters.sort||"newest"} onChange={e=>set("sort", e.target.value)} data-testid="filter-sort">
@@ -4174,9 +4204,10 @@ const ListingDetail = () => {
             {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
             {listing.year_built && <span>🏗 Built {listing.year_built}</span>}
           </div>
-          {/* CREA attribution — moved up near the MLS® number so the
-              "Powered by REALTOR.ca" badge, listing brokerage, and MLS® ID are
-              visible in the top viewport (CREA DDF® preferred placement). */}
+          {/* CREA attribution — MLS® trademark, listing brokerage prominence,
+              REALTOR® mark, and CREA DDF® attribution. Placed up near the
+              MLS® number so the compliance block is visible in the top
+              viewport (CREA DDF® preferred placement). */}
           <div style={{marginTop:"1rem",paddingTop:"1rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>
             <ListingCompliance listing={listing}/>
           </div>
