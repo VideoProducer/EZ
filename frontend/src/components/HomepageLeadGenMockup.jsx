@@ -76,13 +76,13 @@ const FAQS = [
   { q:"Does Doug charge me anything to represent me as a buyer?",
     a:"No. Under BC's Multiple Listing Service® rules, the seller's brokerage compensates the co-operating (buyer's) brokerage from the sale proceeds — you pay $0 for consultations, showings, offer preparation, negotiation, or closing coordination. Full BCFSA Disclosure of Representation is presented before any meaningful engagement." },
   { q:"What if the property I love is outside Doug's direct service area?",
-    a:"Doug covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For anywhere else in BC (Interior, Vancouver Island, Kootenays, Cariboo, Peace), if you like, Doug can keep the pin drop, compare and fave heart, video, and VR tour on the listings." },
+    a:"Doug covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For anywhere else in BC (Interior, Vancouver Island, Kootenays, Cariboo, Peace), if you like, Doug can keep the pin drop, compare and fave heart, video, and VR tour on the listings. If you want a REALTOR® in that area, Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost, you approve every intro, no CASL spam." },
   { q:"Is Doogie giving me real-estate advice?",
     a:"No. Doogie is an AI-assisted concierge that explains BC real estate terminology, walks you through active listings, and helps you find community pages — but Doogie provides general information only, never legal, tax, financial, or property-specific advice. For your own situation, always speak with a BC lawyer or notary, an accountant, a licensed mortgage broker, and a REALTOR®." },
   { q:"How is my personal information handled when I submit a form?",
     a:"Under British Columbia's Personal Information Protection Act (PIPA), your data is collected only to provide real-estate services, stored securely, never sold, and deletable on request. Marketing emails require your separate express consent under Canada's Anti-Spam Legislation (CASL) — one-click unsubscribe is in every message." },
   { q:"Can I cast a listing from my phone to my Apple TV or Chromecast?",
-    a:"Yes. Every listing detail page has a Cast button that opens a QR share code plus a one-tap picker for Chromecast, Apple TV / AirPlay (via iOS Screen Mirroring on Chrome), and Google TV — so a family can review a home together on the big screen without emailing links back and forth." },
+    a:"Yes — with a caveat. Every listing detail page has a Cast button that (1) shows a QR code so any phone can open the listing on itself, (2) offers a true big-screen TV pairing mode via eztofind.ca/tv where a smart-TV browser, laptop-HDMI'd-to-a-TV, or Chromebook enters a 6-digit code and plays the listing full-screen with the phone as remote — no mirroring, and (3) surfaces the standard AirPlay Screen Mirroring / Chromecast tab-cast options for Apple TV or stock Chromecasts that don't have a browser. So a family can review a home together on the big screen without emailing links back and forth." },
 ];
 
 // ── Small primitives ──────────────────────────────────────────────

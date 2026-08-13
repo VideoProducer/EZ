@@ -1,5 +1,26 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-13 (TV Pairing — true casting, no phone-mirror)
+- **New `/tv` route** — big-screen browser (Samsung Tizen, LG WebOS, laptop-HDMI'd-to-a-TV, Chromebook, iPad-with-HDMI) enters a 6-digit code and plays the listing full-screen with the phone as a remote. No screen-mirroring, no receiver-app registration with Apple/Google needed.
+- **Backend endpoints** (`/api/cast/pair/*`) with 20-min TTL:
+  - `POST /create` — phone creates a session with listing snapshot; returns `code` + `session_id`.
+  - `POST /claim` — TV submits code; returns snapshot + current state.
+  - `POST /update` — phone pushes new photo index, listing, or action ("play_narration", "stop_narration", "exit").
+  - `GET /state/{session_id}` — TV polls every 2s (works on every smart-TV JS engine, no WebSockets needed).
+  - `DELETE /{session_id}` — end session.
+  - Storage: `tv_pair_sessions` collection with Mongo TTL index on `expires_at`.
+- **Frontend components**:
+  - `components/TVPairingBlock.jsx` — new "Send to a TV browser (RECOMMENDED)" block injected at the top of the Cast modal. Renders code + QR (`/tv?code=NNNNNN` prefill), then flips to a remote with prev/next photo + play/stop Doogie narration buttons after the TV claims.
+  - `pages/TVDisplayPage.jsx` — the TV-side viewer. Photo takes ~78% of the screen; sidecar shows price, address, beds/baths, brokerage attribution. When phone pushes `action="play_narration"`, TV fetches `/api/listings/{key}/narration` + `/api/doogie/tts` and plays through TV speakers.
+  - Route wired in `App.js` (lazy-loaded, no AppLayout chrome, noindex).
+  - `CastToDevice.jsx` now accepts a `listing` prop and renders `TVPairingBlock` only when a full listing snapshot is available.
+- **FAQ copy updated** in `HomepageLeadGenMockup.jsx`:
+  - Q10 (cast): now honestly describes QR + TV pairing + AirPlay-mirror-as-fallback (was misleading).
+  - Q7 (out-of-area): rewritten to Doug's dictation — "pin drop, compare and fave heart, video, and VR tour on the listings" plus a referral-network fallback sentence.
+- **Verified end-to-end**: URL `/tv?code=730363` prefills → connect → TV renders live DDF photo, $1.20M price, beds/baths, brokerage; `POST /update` pushes photo_index → TV counter updates on next 2s poll; `DELETE` → TV shows "Session ended" screen.
+
+
+
 ## 2026-02-10 (community-page LIVE mockup — fully working)
 - **`CommunityPageMockupLive.jsx` — full end-to-end wiring pass**. Fixed 6 data-mapping bugs so both Kelowna (out-of-area referral) and Maple Ridge (in-area focus) render as fully functional lead-gen pages:
   - **Listing card photos**: swapped `l.primary_photo` → `l.photos?.[0]` (API returns `photos[]` array). Also removed a `background: undefined` shorthand that was clobbering `backgroundImage` — cards now show real DDF CDN photography, plus a `🎥 TOUR` overlay pill when `has_virtual_tour=true`.

@@ -39,6 +39,8 @@ const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
+// TV Display — the big-screen half of TV Pairing (phone stays a remote).
+const TVDisplayPage = lazy(() => import("./pages/TVDisplayPage"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -4224,6 +4226,7 @@ const ListingDetail = () => {
                 label="Cast"
                 onPresentMode={() => setPresentOpen(true)}
                 listingKey={listing.listing_key}
+                listing={listing}
                 data-testid="listing-cast-btn"
               />
               <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="md"/>
@@ -11489,6 +11492,8 @@ function App() {
       <Route path="/mockups/luxury" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><LuxuryLandingMockup/></Suspense>}/>
       <Route path="/mockups/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianLeadMockup/></Suspense>}/>
       <Route path="/mockups/home-v2" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><HomepageLeadGenMockup/></Suspense>}/>
+      {/* TV pairing target — bare-bones big-screen viewer, no AppLayout chrome. */}
+      <Route path="/tv" element={<Suspense fallback={<div style={{minHeight:"100vh",background:"#0F2A5B",color:"#fff",display:"grid",placeItems:"center",fontFamily:"Inter,sans-serif"}}>Loading TV mode…</div>}><TVDisplayPage/></Suspense>}/>
       <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>

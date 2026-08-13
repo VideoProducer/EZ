@@ -31,7 +31,6 @@ function buildSnapshot(listing) {
     province: listing.province,
     street_address: listing.street_address,
     unparsed_address: listing.unparsed_address,
-    internet_display_addr: listing.internet_display_addr,
     brokerage_name: listing.brokerage_name,
     description: (listing.description || "").slice(0, 800),
   };

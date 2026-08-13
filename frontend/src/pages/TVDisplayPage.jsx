@@ -243,7 +243,7 @@ export default function TVDisplayPage() {
   const area = snapshot?.living_area;
   const areaU = snapshot?.living_area_units || "sqft";
   const year = snapshot?.year_built;
-  const addr = snapshot?.internet_display_addr || snapshot?.unparsed_address || snapshot?.street_address || "";
+  const addr = snapshot?.unparsed_address || snapshot?.street_address || "";
   const cityLine = [snapshot?.city, snapshot?.province].filter(Boolean).join(", ");
   const brokerage = snapshot?.brokerage_name;
 

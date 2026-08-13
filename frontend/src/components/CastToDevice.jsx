@@ -28,6 +28,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { readCastSession, CastSessionInlineControl } from "../lib/castSession";
 import { openNativeCastPicker, detectCastCapability } from "../lib/nativeCastPicker";
+import TVPairingBlock from "./TVPairingBlock";
 
 // The canonical listing URL used for QR + copy — always prefixed with the
 // production hostname so the QR code lands the visitor on the live domain
@@ -45,6 +46,7 @@ const CastToDevice = ({
   variant = "pill",   // "pill" | "icon"
   onPresentMode,      // optional: called when user taps "Present Mode"
   listingKey,         // optional: the MLS® listing_key for analytics attribution
+  listing,            // optional: full listing object → enables true TV Pairing (no mirroring)
   "data-testid": testId = "cast-to-device-btn",
 }) => {
   const [open, setOpen] = useState(false);
@@ -248,6 +250,14 @@ const CastToDevice = ({
 
             {/* Admin-only session labeller — silent for anonymous visitors */}
             <CastSessionInlineControl/>
+
+            {/* ── 0. TV Pairing (true casting — no mirroring) ────────────
+                Only shown when we have a full listing object to snapshot.
+                Cast search / homepage falls through to the QR + mirroring
+                paths below since there is no per-listing snapshot to send. */}
+            {listing && (listing.listing_key || listing.photos) && (
+              <TVPairingBlock listing={listing} listingKey={listingKey || listing.listing_key}/>
+            )}
 
             {/* ── 1. QR + copy link ──────────────────────────────────────── */}
             <div style={{
