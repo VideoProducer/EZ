@@ -59,6 +59,7 @@ import AdminHeatmap from "./pages/AdminHeatmap";
 import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
 import ReferralAsk from "./components/ReferralAsk";
+import CommunityFinderQuiz from "./components/CommunityFinderQuiz";
 import CastToDevice from "./components/CastToDevice";
 import ListingPresentMode from "./components/ListingPresentMode";
 import { CastSessionBanner } from "./lib/castSession";
@@ -5669,7 +5670,16 @@ const Relocating = () => {
         <div className="eyebrow">Consumer Guide</div>
         <h1 className="section-title" data-testid="relocating-title">Relocating to British Columbia</h1>
 
-        <div className="paper" style={{background:"#EAF3FF",marginTop:"2rem"}}>
+        {/* ═════ § COMMUNITY FINDER QUIZ — the primary lead capture. ═════
+            Renders right below the H1 so relocators see it before the
+            supporting knowledge sections.  Everything below the quiz
+            (region grid, taxes, cost-of-living, immigration, etc.) is
+            still available for readers who want to research first. */}
+        <div style={{ margin: "1.75rem -1rem 2rem", padding: 0 }}>
+          <CommunityFinderQuiz/>
+        </div>
+
+        <div className="paper" style={{background:"#EAF3FF"}}>
           <p style={{margin:0,fontSize:"1rem",lineHeight:1.75}}>
             <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, or considering BC as your first home in the country — this page is a starting point, not the whole picture. Everything below links to a deeper page on this site: community profiles, glossary entries, live MLS® listings, and Doug's AI assistant Doogie for follow-up questions in English, Portuguese, 中文, ਪੰਜਾਬੀ, or فارسی.
           </p>

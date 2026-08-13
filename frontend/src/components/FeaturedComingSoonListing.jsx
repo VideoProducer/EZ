@@ -299,7 +299,7 @@ function VideoBlock({ url, poster, playing, onPlay, fallbackPoster, ariaLabel })
       {hasVideo && playing && isDirectVideo(url) && (
         <video
           src={url} controls autoPlay playsInline preload="metadata"
-          x-webkit-airplay="deny" data-testid="featured-listing-video-native"
+          disableRemotePlayback data-testid="featured-listing-video-native"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", background: "#000", objectFit: "contain" }}
         />
       )}

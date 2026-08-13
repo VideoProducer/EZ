@@ -1,5 +1,13 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-13 (Community Finder quiz merged into /relocating + audio/TV Pairing fixes)
+- **`CommunityFinderQuiz.jsx`** — self-contained 5-question lifestyle → BC region matcher. Design matches Doug's supplied mock: gold "📍 COMMUNITY FINDER" eyebrow, Playfair serif H1 "Where should you live?", subtitle, "Question N of 5" indicator, 5-segment progress bar, and up to 6 option pills per question. Back button appears from Q2. Result screen shows top-3 BC regions (Best match / #2 / #3) with taglines and starter community pill links (`/community/{slug}`) plus a "Talk to Doug →" CTA that posts to `/buyer?source=community-finder`. All quiz logic is client-side (no PII); no server round-trip until the visitor opts into the buyer form.
+- **Injected into `/relocating`** immediately below the H1 so visitors see the quiz before the supporting knowledge base. All existing sections (Choose a region, Taxes, Cost-of-living, Immigration essentials, Search tools, CTAs) remain untouched below.
+- **Audio fix — removed `x-webkit-airplay="deny"`** from all 5 places in the codebase that had it (ListingNarration, TourNarration, DoogieTour, TVDisplayPage, FeaturedComingSoonListing). It was over-blocking Doogie audio during AirPlay Screen Mirroring. Kept the standard `disableRemotePlayback` attribute which still prevents the original bug (iOS auto-hijacking Doogie audio to Apple TV with a black screen) without silencing audio during Screen Mirroring.
+- **TV Display fallback controls** — added on-screen prev/next photo buttons + arrow-key handlers to `/tv` so smart-TV browsers with unreliable polling (Hisense Vidaa, LG WebOS) can drive the slideshow directly with the TV remote. Also added a play-narration overlay button on the first photo so families never need the phone remote. `MediaTrackNext` / `MediaTrackPrevious` / `MediaPlayPause` media-key events are also bound.
+
+
+
 ## 2026-02-13 (Featured Coming Soon window + site-wide Referral CTA)
 - **`FeaturedComingSoonListing.jsx`** — reusable "Coming Soon" featured tile for the homepage that Doug can flip to "Just Listed" once MLS® goes live. Compliance is baked in:
   - `mode="coming_soon"` renders a **generic teaser only** — no address, no photo of the actual home, no exact price, no MLS® number, no unit number, no distinctive sub-neighbourhood. Just home type, general area, rounded price band, general bed/bath/sqft range. Under GVR Rule 3.14 + CREA REALTOR® Code Article 6, a generic teaser is NOT pre-MLS advertising because it doesn't identify a specific property — so no signed express-consent from the seller is required to display.

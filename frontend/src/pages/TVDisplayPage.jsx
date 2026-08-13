@@ -95,6 +95,44 @@ export default function TVDisplayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, sessionId]);
 
+  // Bind arrow keys / TV-remote left/right to prev/next photo, space to
+  // start narration.  Also bind Escape to end the session.  Declared
+  // above the early-return branches so it runs on every render and
+  // stays hook-order-safe.
+  useEffect(() => {
+    if (phase !== "connected") return;
+    const onKey = (e) => {
+      if (!snapshot) return;
+      const photos = snapshot.photos || [];
+      if (!photos.length) return;
+      if (e.key === "ArrowRight" || e.key === "MediaTrackNext") {
+        e.preventDefault();
+        const nxt = (photoIdx + 1) % photos.length;
+        setPhotoIdx(nxt);
+        if (sessionId) fetch(`${API}/api/cast/pair/update`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId, photo_index: nxt }),
+        }).catch(() => {});
+      } else if (e.key === "ArrowLeft" || e.key === "MediaTrackPrevious") {
+        e.preventDefault();
+        const prv = (photoIdx - 1 + photos.length) % photos.length;
+        setPhotoIdx(prv);
+        if (sessionId) fetch(`${API}/api/cast/pair/update`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId, photo_index: prv }),
+        }).catch(() => {});
+      } else if (e.key === " " || e.key === "Enter" || e.key === "MediaPlayPause") {
+        e.preventDefault();
+        if (narrating) stopNarrationOnTV(); else playNarrationOnTV();
+      } else if (e.key === "Escape") {
+        setPhase("ended");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, sessionId, photoIdx, snapshot, narrating]);
+
   const stopNarrationOnTV = () => {
     try {
       if (audioRef.current) {
@@ -247,6 +285,20 @@ export default function TVDisplayPage() {
   const cityLine = [snapshot?.city, snapshot?.province].filter(Boolean).join(", ");
   const brokerage = snapshot?.brokerage_name;
 
+  // Local photo advance — used by on-screen buttons AND arrow-key remote
+  // shortcuts.  Also pushes the new index back to the pairing session so
+  // the phone remote stays in sync when the TV drives the slideshow.
+  const advancePhoto = (delta) => {
+    if (!photos.length || !sessionId) return;
+    const nxt = ((photoIdx + delta) % photos.length + photos.length) % photos.length;
+    setPhotoIdx(nxt);
+    fetch(`${API}/api/cast/pair/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, photo_index: nxt }),
+    }).catch(() => {});
+  };
+
   return (
     <div
       data-testid="tv-display-connected"
@@ -260,7 +312,7 @@ export default function TVDisplayPage() {
         <title>{snapshot ? `${addr || "Listing"} · EZtoFind TV` : "EZtoFind TV"}</title>
         <meta name="robots" content="noindex,nofollow"/>
       </Helmet>
-      <audio ref={audioRef} preload="none" x-webkit-airplay="deny" playsInline style={{ display: "none" }}/>
+      <audio ref={audioRef} preload="none" disableRemotePlayback playsInline style={{ display: "none" }}/>
 
       {/* Photo area — full-bleed. */}
       <div style={{ position: "relative", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -303,6 +355,65 @@ export default function TVDisplayPage() {
             Doogie is narrating
           </div>
         )}
+        {/* On-TV photo controls — fallback when the phone remote is not
+            handy, or when the smart-TV browser can't keep up with the
+            2 s polling.  Also enables full drive-from-TV mode using the
+            TV remote's arrow keys (bound above). */}
+        {photos.length > 1 && (
+          <>
+            <button
+              type="button" onClick={() => advancePhoto(-1)}
+              aria-label="Previous photo"
+              data-testid="tv-display-prev-btn"
+              style={{
+                position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)",
+                width: 68, height: 68, borderRadius: "50%",
+                background: "rgba(0,0,0,0.55)", color: "#fff", border: "2px solid rgba(255,255,255,0.35)",
+                fontSize: "2rem", cursor: "pointer", lineHeight: 1,
+              }}
+            >‹</button>
+            <button
+              type="button" onClick={() => advancePhoto(1)}
+              aria-label="Next photo"
+              data-testid="tv-display-next-btn"
+              style={{
+                position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)",
+                width: 68, height: 68, borderRadius: "50%",
+                background: "rgba(0,0,0,0.55)", color: "#fff", border: "2px solid rgba(255,255,255,0.35)",
+                fontSize: "2rem", cursor: "pointer", lineHeight: 1,
+              }}
+            >›</button>
+          </>
+        )}
+        {/* On-TV Play / Stop narration — for TVs whose remote lacks a
+            spacebar equivalent, and for the many families who never
+            open the phone remote.  Rendered only when the listing has
+            a Doogie tour script. */}
+        {photoIdx === 0 && photos.length > 0 && !narrating && (
+          <button
+            type="button" onClick={() => playNarrationOnTV()}
+            data-testid="tv-display-play-narration-onscreen"
+            style={{
+              position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+              padding: "1rem 2rem", borderRadius: 999,
+              background: C.gold, color: C.navy, border: "none",
+              fontFamily: "Sora,sans-serif", fontWeight: 800, fontSize: "1.15rem",
+              cursor: "pointer", boxShadow: "0 12px 32px rgba(245,166,35,0.5)",
+            }}
+          >▶ Play Doogie narration</button>
+        )}
+        {/* On-TV remote hint */}
+        <div
+          data-testid="tv-display-remote-hint"
+          style={{
+            position: "absolute", right: 24, top: 24,
+            background: "rgba(0,0,0,0.55)", color: "#fff",
+            padding: "0.4rem 0.8rem", borderRadius: 8, fontSize: "0.78rem",
+            fontFamily: "Inter,sans-serif", letterSpacing: 0.4,
+          }}
+        >
+          Use ◀ ▶ on your TV remote · Space to narrate
+        </div>
       </div>
 
       {/* Info sidecar */}

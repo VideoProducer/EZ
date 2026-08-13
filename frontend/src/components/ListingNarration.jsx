@@ -485,7 +485,6 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
       <audio
         ref={audioRef}
         preload="none"
-        x-webkit-airplay="deny"
         disableRemotePlayback
         onTimeUpdate={onTimeUpdate}
         onEnded={() => { setState("idle"); setProgress(0); _logReel("complete"); }}

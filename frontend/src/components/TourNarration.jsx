@@ -209,7 +209,6 @@ export default function TourNarration({ listing }) {
       <audio
         ref={audioRef}
         preload="none"
-        x-webkit-airplay="deny"
         disableRemotePlayback
         onTimeUpdate={_onTimeUpdate}
         onEnded={() => setState("idle")}
