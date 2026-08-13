@@ -352,7 +352,22 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // differs from what our current filter state would emit.  Without this
   // effect the URL updates but the search results and filter form stay
   // stuck on the pre-back state.
+  //
+  // CRITICAL: this effect ONLY runs on browser Back/Forward navigation,
+  // NOT on the URL updates we push ourselves from the filters→URL sync
+  // above.  Otherwise we introduce a nasty race — while the user is
+  // mid-typing "abc" in the community field, an older render's URL sync
+  // ("?city=a") can fire this effect just as filters is already at "ab",
+  // the diff-check spots them as different, and we clobber the user's
+  // typed value back to "a".  Reported live by Doug on production
+  // (Feb 2026): "whenever I type anything in here it takes me to the
+  // home page — /?city=a, /?city=c…".  Fix: compare the incoming URL
+  // against `_lastSyncedQsRef` (what our own filter→URL sync wrote
+  // last) — if they match, this urlParams change came from OUR write,
+  // so ignore it and don't touch filters.
   useEffect(() => {
+    const incomingQs = urlParams.toString();
+    if (incomingQs === _lastSyncedQsRef.current) return;   // our own write — ignore
     const fromUrl = _readFiltersFromUrl();
     const currentEmpty = Object.entries(filters).every(([k, v]) => k === "sort" || !v);
     // Nothing in URL → user is at a bare /home; leave state alone (fresh
@@ -360,17 +375,15 @@ export default function DashboardMockup({ homeVariant = "search" }) {
     // they navigated back past their own search to bare /).
     if (!fromUrl && currentEmpty) return;
     if (!fromUrl && !currentEmpty) {
+      _lastSyncedQsRef.current = "";
       setFilters({ ...DEFAULT_DASH_FILTERS });
       runSearch({ ...DEFAULT_DASH_FILTERS });
       return;
     }
-    // Only re-run if URL differs from current state (avoids the loop where
-    // filter-effect writes URL → this effect fires → runSearch → …).
-    const changed = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword","sort"].some(k => (fromUrl[k] || "") !== (filters[k] || ""));
-    if (changed) {
-      setFilters(fromUrl);
-      runSearch(fromUrl);
-    }
+    // Genuine back/forward — bring state in line with URL and re-run.
+    _lastSyncedQsRef.current = incomingQs;
+    setFilters(fromUrl);
+    runSearch(fromUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlParams]);
   // First-visit sidebar toast — appears once, dismissible, remembers via localStorage
