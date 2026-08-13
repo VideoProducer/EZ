@@ -28,6 +28,7 @@ const C = {
 const REGIONS = {
   greater_vancouver: {
     name: "Greater Vancouver",
+    inServiceArea: true,
     tagline: "Urban core, most jobs, highest housing costs — 22 municipalities.",
     starterLinks: [
       { label: "Vancouver", href: "/community/vancouver" },
@@ -37,6 +38,7 @@ const REGIONS = {
   },
   fraser_valley: {
     name: "Fraser Valley",
+    inServiceArea: true,
     tagline: "Suburban, growing families, better value than Vancouver.",
     starterLinks: [
       { label: "Maple Ridge", href: "/community/maple-ridge" },
@@ -46,6 +48,7 @@ const REGIONS = {
   },
   sea_to_sky: {
     name: "Sea-to-Sky",
+    inServiceArea: true,
     tagline: "Squamish · Whistler · Pemberton — ski country, tech workers.",
     starterLinks: [
       { label: "Squamish", href: "/community/squamish" },
@@ -54,6 +57,7 @@ const REGIONS = {
   },
   vancouver_island: {
     name: "Vancouver Island",
+    inServiceArea: false,
     tagline: "Victoria + Nanaimo + Comox — mild winters, ferry access, slower pace.",
     starterLinks: [
       { label: "Victoria", href: "/community/victoria" },
@@ -63,6 +67,7 @@ const REGIONS = {
   },
   okanagan: {
     name: "Okanagan",
+    inServiceArea: false,
     tagline: "Kelowna · Vernon · Penticton — wine country, dry summers, retirement-friendly.",
     starterLinks: [
       { label: "Kelowna", href: "/community/kelowna" },
@@ -72,6 +77,7 @@ const REGIONS = {
   },
   kootenays: {
     name: "Kootenays",
+    inServiceArea: false,
     tagline: "Nelson · Cranbrook · Fernie — alpine, artistic, most affordable BC housing.",
     starterLinks: [
       { label: "Nelson", href: "/community/nelson" },
@@ -80,6 +86,7 @@ const REGIONS = {
   },
   northern_bc: {
     name: "Northern BC",
+    inServiceArea: false,
     tagline: "Prince George · Fort St. John — resource jobs, wilderness, cold winters.",
     starterLinks: [
       { label: "Prince George", href: "/community/prince-george" },
@@ -87,6 +94,7 @@ const REGIONS = {
   },
   cariboo_thompson: {
     name: "Cariboo & Thompson",
+    inServiceArea: false,
     tagline: "Kamloops · Williams Lake — interior plateau, ranching, four-season climate.",
     starterLinks: [
       { label: "Kamloops", href: "/community/kamloops" },
@@ -373,30 +381,94 @@ export default function CommunityFinderQuiz({ onComplete }) {
               background: C.navy, color: "#fff", borderRadius: 12,
               display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between",
             }}>
-              <div style={{ fontSize: "0.92rem", lineHeight: 1.55, flex: "1 1 260px" }}>
-                Ready for the next step? Talk to Doug about how to buy in any of these regions — $0 cost, complimentary consultation.
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Link
-                  to="/buyer?source=community-finder"
-                  data-testid="cfq-cta-buyer"
-                  style={{
-                    background: C.gold, color: C.navy,
-                    padding: "10px 18px", borderRadius: 999, textDecoration: "none",
-                    fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
-                  }}
-                >Talk to Doug →</Link>
-                <button
-                  type="button" onClick={restart}
-                  data-testid="cfq-restart-btn"
-                  style={{
-                    background: "transparent", color: "#fff",
-                    border: "1px solid rgba(255,255,255,0.5)",
-                    padding: "10px 18px", borderRadius: 999,
-                    fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
-                  }}
-                >Retake the quiz</button>
-              </div>
+              {(() => {
+                // Route the CTA based on Doug's direct service area vs. referral network.
+                //   • Top-1 match in Doug's area (Greater Vancouver / Fraser Valley / Sea-to-Sky)
+                //     → primary CTA is "Talk to Doug".
+                //   • Top-1 out-of-area → primary CTA is the standard site-wide referral flow
+                //     with the region name pre-filled on /referral-request.
+                //   • Zero matches → simple restart prompt (no CTA to avoid a dead end).
+                const topMatch = top3[0];
+                if (!topMatch) {
+                  return (
+                    <>
+                      <div style={{ fontSize: "0.92rem", lineHeight: 1.55, flex: "1 1 260px" }}>
+                        No clear region matched — try answering the quiz again.
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          type="button" onClick={restart}
+                          data-testid="cfq-restart-btn"
+                          style={{
+                            background: C.gold, color: C.navy, border: "none",
+                            padding: "10px 18px", borderRadius: 999,
+                            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+                          }}
+                        >Retake the quiz</button>
+                      </div>
+                    </>
+                  );
+                }
+                if (topMatch.inServiceArea) {
+                  return (
+                    <>
+                      <div style={{ fontSize: "0.92rem", lineHeight: 1.55, flex: "1 1 260px" }}>
+                        Ready for the next step? Talk to Doug about how to buy in {topMatch.name} — $0 cost, complimentary consultation.
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <Link
+                          to={`/buyer?source=community-finder&region=${encodeURIComponent(topMatch.key)}`}
+                          data-testid="cfq-cta-buyer"
+                          style={{
+                            background: C.gold, color: C.navy,
+                            padding: "10px 18px", borderRadius: 999, textDecoration: "none",
+                            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
+                          }}
+                        >Talk to Doug →</Link>
+                        <button
+                          type="button" onClick={restart}
+                          data-testid="cfq-restart-btn"
+                          style={{
+                            background: "transparent", color: "#fff",
+                            border: "1px solid rgba(255,255,255,0.5)",
+                            padding: "10px 18px", borderRadius: 999,
+                            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+                          }}
+                        >Retake the quiz</button>
+                      </div>
+                    </>
+                  );
+                }
+                // Out-of-area: swap in the Realtor Referral flow.
+                return (
+                  <>
+                    <div style={{ fontSize: "0.92rem", lineHeight: 1.55, flex: "1 1 260px" }}>
+                      <strong>{topMatch.name} is outside Doug's direct service area.</strong> Would you like Doug to connect you with a REALTOR® in that area? Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost, you approve every intro, no CASL spam.
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Link
+                        to={`/referral-request?area=${encodeURIComponent(topMatch.name)}&source=community-finder`}
+                        data-testid="cfq-cta-referral"
+                        style={{
+                          background: C.gold, color: C.navy,
+                          padding: "10px 18px", borderRadius: 999, textDecoration: "none",
+                          fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
+                        }}
+                      >🤝 Get a local REALTOR® referral →</Link>
+                      <button
+                        type="button" onClick={restart}
+                        data-testid="cfq-restart-btn"
+                        style={{
+                          background: "transparent", color: "#fff",
+                          border: "1px solid rgba(255,255,255,0.5)",
+                          padding: "10px 18px", borderRadius: 999,
+                          fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+                        }}
+                      >Retake the quiz</button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}
