@@ -338,57 +338,64 @@ export default function HomepageLeadGenMockup() {
 
       <UnlistedMockupBanner label="LEAD-GEN homepage v2 (parked)"/>
 
-      {/* ═════ HERO — Doogie search first, everything else second ═════ */}
-      <div style={{ position:"relative", background: `linear-gradient(135deg, ${C.navy} 0%, #1E40AF 100%)`, color:"white", padding:"clamp(36px, 7vw, 72px) clamp(16px, 4vw, 24px) clamp(28px, 5vw, 48px)" }}>
-        <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED · FREE PLATFORM</div>
-          <h1 style={{ fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.05, margin: "8px 0 14px", maxWidth: 900 }}>
-            British Columbia real estate — live MLS® listings, {FACTS.community_count} community profiles, and a BCFSA-licensed REALTOR®.
+      {/* Media-query CSS for the hero Doogie mascot — hidden on
+          narrow screens so it never crowds the H1/search on mobile. */}
+      <style>{`
+        .hv2-doogie-hero { display: none; }
+        @media (min-width: 1024px) {
+          .hv2-doogie-hero { display: block; }
+          .hv2-hero-copy { max-width: 640px; }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes hv2FloatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+          @keyframes hv2Wag    { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+          .hv2-doogie-hero img { animation: hv2FloatY 6s ease-in-out infinite; }
+          .hv2-path-doogie      { animation: hv2FloatY 4s ease-in-out infinite; }
+        }
+        .hv2-path-card:hover .hv2-path-doogie { animation: hv2Wag 0.6s ease-in-out infinite; }
+      `}</style>
+
+      {/* ═════ HERO — one big search, one primary CTA, one Doogie ═════ */}
+      <div style={{ position:"relative", overflow:"hidden", background: `linear-gradient(135deg, ${C.navy} 0%, #1E40AF 100%)`, color:"white", padding:"clamp(40px, 8vw, 88px) clamp(16px, 4vw, 24px) clamp(28px, 5vw, 48px)" }}>
+        <div className="hv2-doogie-hero" aria-hidden="true"
+             style={{ position:"absolute", right:"clamp(16px, 3vw, 48px)", bottom:0, width: 340, pointerEvents:"none", zIndex: 1 }}
+             data-testid="hero-doogie-mascot">
+          <img src="/images/doogie/celebrating.webp" alt="" width={340} height={340} loading="eager"
+               style={{ width: 340, height:"auto", filter:"drop-shadow(0 20px 40px rgba(0,0,0,0.35))" }}/>
+        </div>
+
+        <div className="hv2-hero-copy" style={{ maxWidth: 1160, margin:"0 auto", position:"relative", zIndex: 2 }}>
+          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>FREE · BCFSA-LICENSED · LIVE BC MLS®</div>
+          <h1 style={{ fontSize:"clamp(2.1rem, 5.5vw, 3.4rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.05, margin:"8px 0 12px", maxWidth: 720 }}>
+            Real estate,<br/>made EZ to Find.
           </h1>
-          <p style={{ fontSize:"clamp(0.95rem, 2vw, 1.1rem)", lineHeight: 1.6, maxWidth: 780, opacity: 0.95, marginBottom: 22 }}>
-            {stats.total ? `${stats.total.toLocaleString()} active MLS® listings` : "Live CREA DDF® MLS® feed"} · {FACTS.years_experience} years of BC experience · {FACTS.glossary_count} statute-cited glossary entries · <strong>{FACTS.practice_areas}</strong> covered directly by Doug LeMaire · BC-wide vetted REALTOR® referral network for all other regions (VIREB · IAR · KAR · BCNREB · CADREB) · complimentary buyer consultations.
+          <p style={{ fontSize:"clamp(1rem, 2vw, 1.15rem)", lineHeight: 1.55, maxWidth: 620, opacity: 0.94, marginBottom: 20 }}>
+            Search live BC listings, ask Doogie anything, and get a straight answer — all free. {FACTS.years_experience} years experience, BCFSA-licensed, no email required to browse.
           </p>
 
-          {/* Doogie voice + text filter — reused from production */}
-          <div style={{ background:"white", borderRadius: 14, boxShadow:"0 10px 40px rgba(0,0,0,0.18)", overflow:"hidden", marginBottom: 18 }} data-testid="hero-doogie-search">
+          <div style={{ background:"white", borderRadius: 14, boxShadow:"0 12px 44px rgba(0,0,0,0.24)", overflow:"hidden", marginBottom: 16, maxWidth: 720 }} data-testid="hero-doogie-search">
             <DoogieFilterHeader onVoiceFilter={applyVoiceFilter} onReset={() => nav("/listings")}/>
-            <div style={{ padding:"14px 18px", color: C.ink, fontSize:"0.85rem", lineHeight: 1.55, display:"flex", gap: 10, alignItems:"center" }}>
-              <img src="/images/doogie/thinking.webp" alt="" width={36} height={36} style={{ width: 36, height: 36, flexShrink: 0 }}/>
-              <div><strong style={{ color: C.navy }}>Ask Doogie</strong> — try voice or type a full sentence:{" "}
-                <em style={{ color: C.muted }}>"3-bed townhome in Langley under $1.2M with a suite"</em>
-              </div>
+            <div style={{ padding:"12px 16px", color: C.ink, fontSize:"0.85rem", display:"flex", gap: 10, alignItems:"center" }}>
+              <img src="/images/doogie/thinking.webp" alt="" width={32} height={32} style={{ width: 32, height: 32, flexShrink: 0 }}/>
+              <div><strong style={{ color: C.navy }}>Try:</strong> <em style={{ color: C.muted }}>"3-bed townhome in Langley under $1.2M"</em></div>
             </div>
           </div>
 
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-            <Link to="/property-search" style={{ background: C.gold, color: C.navy, padding:"12px 22px", borderRadius:999, fontWeight:700, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-search">Browse all listings</Link>
-            <Link to="/market-estimate" style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-value">Home valuation</Link>
-            <a href="#lead-form" style={{ background:"transparent", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"12px 22px", borderRadius:999, fontWeight:600, fontSize:"0.92rem", textDecoration:"none" }} data-testid="hero-cta-talk">Request a consultation</a>
+          <div style={{ display:"flex", gap: 10, flexWrap:"wrap" }}>
+            <Link to="/property-search" style={{ background: C.gold, color: C.navy, padding:"14px 28px", borderRadius: 999, fontWeight: 800, fontSize:"1rem", textDecoration:"none", fontFamily:"'Sora',sans-serif", boxShadow:"0 6px 20px rgba(245,166,35,0.4)" }} data-testid="hero-cta-search">🔍 Browse all listings</Link>
+            <a href="#lead-form" style={{ background:"rgba(255,255,255,0.12)", color:"white", border:"1px solid rgba(255,255,255,0.35)", padding:"14px 24px", borderRadius: 999, fontWeight: 600, fontSize:"0.95rem", textDecoration:"none" }} data-testid="hero-cta-talk">💬 Talk to Doug (free)</a>
           </div>
 
-          <div style={{ marginTop: 22, padding:"10px 14px", background:"rgba(255,255,255,0.08)", borderRadius: 8, fontSize:"0.75rem", opacity: 0.85, maxWidth: 780 }}>
-            <NotAdviceBumper inline/>
+          <div style={{ marginTop: 24, display:"flex", gap: 18, flexWrap:"wrap", fontSize:"0.78rem", opacity: 0.85 }}>
+            <span>🛡️ BCFSA-licensed</span>
+            <span>📡 MLS® refreshed every 4 hrs</span>
+            <span>📚 {FACTS.glossary_count} statute-cited terms</span>
+            <span>📍 {FACTS.community_count} BC community profiles</span>
           </div>
         </div>
       </div>
 
-      {/* ═════ § TRUST STRIP — 4 quick credibility facts, LLM/AEO citation fodder ═════ */}
-      <div style={{ background:"white", borderTop:`1px solid ${C.cream}`, borderBottom:`1px solid ${C.cream}` }}>
-        <div style={{ maxWidth: 1160, margin:"0 auto", padding:"clamp(16px, 3vw, 28px) clamp(16px, 4vw, 24px)", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:"clamp(12px, 3vw, 24px)" }} data-testid="trust-strip">
-          {TRUST_STATS.map(t => (
-            <div key={t.label} style={{ display:"flex", gap: 12, alignItems:"flex-start" }} data-testid={`trust-${t.label.toLowerCase().replace(/\W+/g,"-")}`}>
-              <div style={{ fontSize:"1.6rem", lineHeight: 1, flexShrink: 0 }}>{t.icon}</div>
-              <div>
-                <div style={{ fontSize:"0.85rem", fontWeight: 800, color: C.navy, fontFamily:"'Sora',sans-serif", lineHeight: 1.25 }}>{t.label}</div>
-                <div style={{ fontSize:"0.75rem", color: C.muted, lineHeight: 1.4, marginTop: 2 }}>{t.sub}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ═════ § FEATURED COMING-SOON LISTING — parked, generic teaser
-          until seller consent is signed OR listing goes live on MLS® ═════ */}
+      {/* ═════ § FEATURED COMING-SOON LISTING — FOMO / return-visit hook ═════ */}
       <FeaturedComingSoonListing
         mode="coming_soon"
         area="Fraser Valley"
@@ -402,154 +409,63 @@ export default function HomepageLeadGenMockup() {
         video_url=""
       />
 
-      {/* ═════ § PATH-BASED CTAs ═════ */}
+      {/* ═════ § 3 FUN PATH CARDS — each with a Doogie mascot ═════ */}
       <Section tone="paper">
-        <H2 kicker="Choose your path">What brings you to EZtoFind today?</H2>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
-          {PATHS.map(p => (
+        <H2 kicker="Where do we start?">What can Doogie help you with?</H2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+          {[
+            { title:"Find my next home", body:"Browse live BC MLS® listings, save favourites, get instant alerts.", cta:"Start searching →", href:"/property-search", tone:"gold", img:"/images/doogie/magnifying.webp", testid:"path-buying" },
+            { title:"What's my home worth?", body:"Free 60-second BC home-value snapshot, no sign-up needed.", cta:"Get my value →", href:"/market-estimate", tone:"white", img:"/images/doogie/pointing-right.webp", testid:"path-selling" },
+            { title:"Where should I live?", body:"90-second quiz picks 3 BC communities that match your vibe.", cta:"Take the quiz →", href:"/relocating", tone:"white", img:"/images/doogie/laptop.webp", testid:"path-where" },
+          ].map(p => (
             <Link key={p.title} to={p.href} data-testid={p.testid} style={{ textDecoration:"none", display:"block" }}>
-              <div style={{ padding:"22px 22px", borderRadius: 14, background: p.tone === "gold" ? C.gold : "white", border: p.tone === "gold" ? "none" : "1px solid #E5E7EB", height: "100%", boxSizing:"border-box", cursor:"pointer", transition:"transform 0.15s, box-shadow 0.15s" }}
-                   onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px)"; e.currentTarget.style.boxShadow="0 12px 28px rgba(15,42,91,0.15)"; }}
+              <div className="hv2-path-card" style={{ padding:"22px 22px 26px", borderRadius: 16, background: p.tone === "gold" ? C.gold : "white", border: p.tone === "gold" ? "none" : "1px solid #E5E7EB", height:"100%", boxSizing:"border-box", cursor:"pointer", transition:"transform 0.18s, box-shadow 0.18s", display:"flex", flexDirection:"column", gap: 12 }}
+                   onMouseEnter={e => { e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow="0 16px 36px rgba(15,42,91,0.18)"; }}
                    onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
-                <div style={{ fontSize:"2rem" }}>{p.icon}</div>
-                <div style={{ fontSize:"1.12rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, marginTop: 8 }}>{p.title}</div>
-                <div style={{ fontSize:"0.88rem", color: C.ink, marginTop: 6, lineHeight: 1.55 }}>{p.body}</div>
-                <div style={{ marginTop: 14, fontWeight: 700, color: C.navy, fontSize:"0.9rem" }}>{p.cta}</div>
+                <img className="hv2-path-doogie" src={p.img} alt="" width={96} height={96} style={{ width: 96, height: 96, objectFit:"contain", alignSelf:"center", filter:"drop-shadow(0 8px 16px rgba(15,42,91,0.15))" }}/>
+                <div style={{ fontSize:"1.18rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, textAlign:"center" }}>{p.title}</div>
+                <div style={{ fontSize:"0.9rem", color: C.ink, lineHeight: 1.55, textAlign:"center", flex: 1 }}>{p.body}</div>
+                <div style={{ marginTop: 4, fontWeight: 700, color: C.navy, fontSize:"0.92rem", textAlign:"center" }}>{p.cta}</div>
               </div>
             </Link>
           ))}
         </div>
       </Section>
 
-      {/* ═════ § 3 REGION CARDS — Doug's actual BCFSA practice areas ═════ */}
-      <Section tone="white">
-        <H2 kicker="Doug's direct practice areas">Where Doug personally represents you</H2>
-        <p style={{ fontSize:"0.92rem", lineHeight: 1.65, color: C.ink, maxWidth: 780, marginTop: -8, marginBottom: 18 }}>
-          Doug LeMaire personally transacts real estate in <strong>{FACTS.practice_areas}</strong>. Community pages and glossary content are published province-wide for research and education, but any consumer looking outside these regions is served <em>by referral only</em> through Doug's vetted network of BCFSA-licensed REALTORS® on the appropriate local board ({FACTS.referral_boards}).
-        </p>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-          {REGIONS.map(r => (
-            <Link key={r.slug} to={`/regions/${r.slug}`} data-testid={`region-${r.slug}`}
-                  style={{ background: C.navy, color:"white", padding:"22px 22px", borderRadius: 14, textDecoration:"none", display:"block", transition:"transform 0.15s, box-shadow 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px)"; e.currentTarget.style.boxShadow="0 12px 28px rgba(15,42,91,0.30)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
-              <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>{r.count.toUpperCase()}</div>
-              <div style={{ fontSize:"1.25rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 4 }}>{r.name}</div>
-              <div style={{ fontSize:"0.88rem", opacity: 0.85, marginTop: 6, lineHeight: 1.55 }}>{r.tagline}</div>
-              <div style={{ marginTop: 14, color: C.gold, fontWeight: 700, fontSize:"0.9rem" }}>Explore {r.name} →</div>
-            </Link>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, padding:"14px 18px", background: C.cream, borderRadius: 10, fontSize:"0.85rem", lineHeight: 1.55, color: C.ink }}>
-          <strong style={{ color: C.navy }}>Outside these areas?</strong> Doug will hand-pick a BCFSA-licensed REALTOR® from his BC-wide referral network — $0 cost to you, you approve every intro.
-          <ReferralAsk variant="pill" context="home-v2-region-band" compact/>
-        </div>
-      </Section>
-
-      {/* ═════ § FEATURED COMMUNITIES ═════ */}
-      <Section tone="white">
-        <H2 kicker="Explore BC">Featured communities · live inventory</H2>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
-          {FEATURED_COMMUNITIES.map(c => (
-            <Link key={c.slug} to={`/community/${c.slug}`} data-testid={`community-${c.slug}`}
-                  style={{ background: C.cream, border:"1px solid #E7DFC8", borderRadius: 10, padding:"14px 16px", color: C.navy, fontWeight: 700, fontSize:"0.92rem", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"space-between", transition:"background 0.15s" }}
-                  onMouseEnter={e => e.currentTarget.style.background="#F0E6C7"}
-                  onMouseLeave={e => e.currentTarget.style.background=C.cream}>
-              <span>📍 {c.name}</span>
-              <span style={{ color: C.gold, fontSize:"0.85rem" }}>→</span>
-            </Link>
-          ))}
-        </div>
-        <div style={{ marginTop: 16, textAlign:"center" }}>
-          <Link to="/communities" data-testid="all-communities" style={{ color: C.navy, fontWeight: 700, fontSize:"0.9rem", textDecoration:"underline" }}>See all 240 BC communities →</Link>
-        </div>
-      </Section>
-
-      {/* ═════ § SPECIALTIES ═════ */}
+      {/* ═════ § BC AFFORDABILITY CALCULATOR — the sticky lead-gen tool ═════ */}
       <Section tone="cream">
-        <H2 kicker="Doug's specialties">Buying something specific?</H2>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
-          {SPECIALTIES.map(s => (
-            <Link key={s.title} to={s.href} data-testid={`specialty-${s.title.toLowerCase().replace(/\W+/g,"-")}`}
-                  style={{ background:"white", border:"1px solid #E5E7EB", borderRadius: 12, padding:"18px 20px", textDecoration:"none" }}>
-              <div style={{ fontSize:"1.6rem" }}>{s.icon}</div>
-              <div style={{ fontSize:"1.02rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, marginTop: 6 }}>{s.title}</div>
-              <div style={{ fontSize:"0.85rem", color: C.ink, marginTop: 4, lineHeight: 1.5 }}>{s.body}</div>
-              <div style={{ marginTop: 10, color: C.blue, fontWeight: 700, fontSize:"0.85rem" }}>Learn more →</div>
-            </Link>
-          ))}
+        <div style={{ display:"flex", alignItems:"center", gap: 16, marginBottom: 14, flexWrap:"wrap" }}>
+          <img src="/images/doogie/pointing-left-transparent.webp" alt="" width={70} height={70} style={{ width: 70, height: 70, flexShrink: 0 }}/>
+          <div>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>DOOGIE'S QUICK CALC</div>
+            <h2 style={{ fontSize:"clamp(1.5rem, 3.5vw, 2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, lineHeight: 1.15, margin:"4px 0 4px" }}>What can you afford in BC?</h2>
+            <div style={{ fontSize:"0.85rem", color: C.muted, lineHeight: 1.5, maxWidth: 640 }}>Real BC math — stress-tested at 7.50 %, PTT + FTB exemption included. 30 seconds, no email.</div>
+          </div>
         </div>
-      </Section>
-
-      {/* ═════ § GLOSSARY SPOTLIGHT — internal-linking + AEO citation fodder ═════ */}
-      <Section tone="white">
-        <H2 kicker="Learn the language">BC real-estate terms worth knowing</H2>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
-          {GLOSSARY_SPOTLIGHT.map(g => (
-            <Link key={g.slug} to={`/glossary/${g.slug}`} data-testid={`glossary-${g.slug}`}
-                  style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 10, padding:"12px 16px", color: C.navy, fontWeight: 600, fontSize:"0.9rem", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span>📖 {g.term}</span>
-              <span style={{ color: C.gold, fontSize:"0.85rem" }}>→</span>
-            </Link>
-          ))}
-        </div>
-        <div style={{ marginTop: 14, textAlign:"center" }}>
-          <Link to="/glossary" data-testid="all-glossary" style={{ color: C.navy, fontWeight: 700, fontSize:"0.9rem", textDecoration:"underline" }}>Browse all 439 glossary entries →</Link>
-        </div>
-      </Section>
-
-      {/* ═════ § BC AFFORDABILITY CALCULATOR — big lead-gen tool ═════ */}
-      <Section tone="paper">
-        <H2 kicker="What can you afford?">BC home-affordability calculator</H2>
-        <p style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, maxWidth: 760, marginTop: -6, marginBottom: 18 }}>
-          Runs the <strong>OSFI B-20 stress test at 7.50 %</strong>, applies the <strong>BC Property Transfer Tax</strong> schedule with the First-Time Buyer exemption, and links straight to matching MLS® listings. Educational estimate only — verify with a licensed BC mortgage broker before making an offer.
-        </p>
         <AffordabilityCalculator/>
       </Section>
 
-      {/* ═════ § TESTIMONIALS — Review + AggregateRating schema in JSON-LD ═════ */}
+      {/* ═════ § TESTIMONIALS — trust in one honest strip ═════ */}
       <Section tone="white">
-        <H2 kicker="What clients say">Real people. Real BC real-estate results.</H2>
+        <H2 kicker="Real BC clients">People who trusted Doug</H2>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }} data-testid="testimonials">
           {TESTIMONIALS.map((t, i) => (
             <blockquote key={i} data-testid={`testimonial-${i}`} itemScope itemType="https://schema.org/Review"
-                        style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 14, padding:"22px 24px", margin: 0 }}>
-              <div style={{ color: C.gold, fontSize:"1.05rem", letterSpacing:"0.14em", marginBottom: 10 }} aria-label={`${t.stars} out of 5 stars`}>
+                        style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 14, padding:"24px 26px", margin: 0 }}>
+              <div style={{ color: C.gold, fontSize:"1.1rem", letterSpacing:"0.14em", marginBottom: 10 }} aria-label={`${t.stars} out of 5 stars`}>
                 {"★".repeat(t.stars)}<span itemProp="reviewRating" itemScope itemType="https://schema.org/Rating" style={{ display:"none" }}><meta itemProp="ratingValue" content={String(t.stars)}/><meta itemProp="bestRating" content="5"/></span>
               </div>
-              <p itemProp="reviewBody" style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px", fontStyle:"italic" }}>“{t.text}”</p>
-              <footer style={{ fontSize:"0.85rem", color: C.navy, fontWeight: 700 }}>
+              <p itemProp="reviewBody" style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px", fontStyle:"italic" }}>"{t.text}"</p>
+              <div style={{ fontSize:"0.85rem", color: C.navy, fontWeight: 700, background:"transparent" }}>
                 <span itemProp="author" itemScope itemType="https://schema.org/Person"><span itemProp="name">{t.author}</span></span>
                 <span style={{ color: C.muted, fontWeight: 500 }}> · {t.label}</span>
-              </footer>
+              </div>
               <meta itemProp="itemReviewed" content="Doug LeMaire, REALTOR®"/>
             </blockquote>
           ))}
         </div>
-        <div style={{ marginTop: 14, padding:"10px 14px", background: C.cream, borderRadius: 8, fontSize:"0.72rem", color: C.muted, lineHeight: 1.55 }} data-testid="testimonial-disclosure">
-          <strong style={{ color: C.navy }}>Testimonial disclosure (BCFSA Rule 5-11):</strong> Testimonials shown here are from verified past clients who consented to their initials being displayed. No consideration was paid for these testimonials. Full names on request for verification by licensed practitioners. Individual results vary — past results do not guarantee future outcomes.
-        </div>
-      </Section>
-
-      {/* ═════ § AI USE DISCLOSURE — BCFSA AI Guidelines transparency ═════ */}
-      <Section tone="cream">
-        <H2 kicker="AI transparency · BCFSA Guidelines">How Doogie AI is used on this site</H2>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }} data-testid="ai-disclosure">
-          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
-            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>1. DOOGIE CHAT</div>
-            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Voice + text AI helper. Messages are PII-redacted (SIN, credit card, phone, email, postal code, street address) before storage and purged after 30 days.</div>
-          </div>
-          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
-            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>2. AI-DRAFTED CONTENT</div>
-            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Community synopses, weather summaries, and glossary FAQs are drafted by AI and <strong>reviewed and approved by Doug LeMaire, REALTOR®</strong> before publication.</div>
-          </div>
-          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
-            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>3. GUARDRAILS</div>
-            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Doogie is prompt-engineered to never provide legal, tax, financial, or property-specific advice. Under BCFSA's AI Guidelines, the licensee (Doug) remains responsible for all AI-generated output.</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 14, fontSize:"0.8rem", color: C.muted, lineHeight: 1.55 }}>
-          Please do not share confidential information (full names, addresses, financial details, negotiations) with Doogie. For sensitive matters, request a direct call with Doug. Full disclosure and data flow at <Link to="/compliance" style={{ color: C.blue, fontWeight: 600 }}>/compliance</Link>.
+        <div style={{ marginTop: 12, fontSize:"0.7rem", color: C.muted, textAlign:"center" }} data-testid="testimonial-disclosure">
+          Verified past clients · no consideration paid · full names on request · past results don't guarantee future outcomes · BCFSA Rule 5-11.
         </div>
       </Section>
 
@@ -558,22 +474,34 @@ export default function HomepageLeadGenMockup() {
         <HomepageLeadForm/>
       </Section>
 
-      {/* ═════ § FAQ — AEO / LLM citation payload ═════ */}
+      {/* ═════ § "COME BACK NEXT WEEK" — subscribe for weekly new-listing digest ═════ */}
+      <div style={{ background: C.navy, color:"white", padding:"clamp(28px, 5vw, 44px) clamp(16px, 4vw, 24px)" }}>
+        <div style={{ maxWidth: 1000, margin:"0 auto", display:"grid", gridTemplateColumns:"auto 1fr", gap: 20, alignItems:"center" }}>
+          <img src="/images/doogie/thinking.webp" alt="" width={80} height={80} style={{ width: 80, height: 80, flexShrink: 0 }}/>
+          <div>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>DON'T MISS THE NEXT COMING-SOON</div>
+            <div style={{ fontSize:"1.25rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 4, marginBottom: 4 }}>Doogie's weekly BC listings digest — free.</div>
+            <div style={{ fontSize:"0.88rem", opacity: 0.85, lineHeight: 1.55 }}>Every Friday: new-listing round-up, coming-soons, and Doug's picks. CASL-compliant, one-click unsubscribe. <Link to="/newsletter" style={{ color: C.gold, fontWeight: 700 }}>Subscribe →</Link></div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═════ § FAQ — compact accordion, AEO/LLM citation payload ═════ */}
       <Section tone="white">
-        <H2 kicker="Frequently asked">The questions we get most</H2>
-        <div style={{ display:"flex", flexDirection:"column", gap: 10, maxWidth: 920 }}>
+        <H2 kicker="Have questions?">Quick answers</H2>
+        <div style={{ display:"flex", flexDirection:"column", gap: 8, maxWidth: 920 }}>
           {FAQS.map((f, i) => (
-            <details key={i} style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 10, padding:"14px 18px" }} data-testid={`faq-${i}`}>
-              <summary style={{ fontSize:"0.95rem", fontWeight: 700, color: C.navy, cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>{f.q}</summary>
-              <div style={{ marginTop: 10, fontSize:"0.9rem", lineHeight: 1.65, color: C.ink }}>{f.a}</div>
-              {/* Out-of-area FAQ → drop the standard site-wide referral CTA */}
+            <details key={i} style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 10, padding:"12px 16px" }} data-testid={`faq-${i}`}>
+              <summary style={{ fontSize:"0.92rem", fontWeight: 700, color: C.navy, cursor:"pointer", fontFamily:"'Sora',sans-serif" }}>{f.q}</summary>
+              <div style={{ marginTop: 10, fontSize:"0.88rem", lineHeight: 1.65, color: C.ink }}>{f.a}</div>
               {/outside Doug's direct service area/i.test(f.q) && (
-                <div style={{ marginTop: 12 }}>
-                  <ReferralAsk variant="pill" context="home-v2-faq-out-of-area" compact/>
-                </div>
+                <div style={{ marginTop: 12 }}><ReferralAsk variant="pill" context="home-v2-faq-out-of-area" compact/></div>
               )}
             </details>
           ))}
+        </div>
+        <div style={{ marginTop: 12, fontSize:"0.75rem", color: C.muted, textAlign:"center" }}>
+          Doogie is AI, always general info only — never legal, tax, financial, or property-specific advice. <Link to="/compliance" style={{ color: C.blue, fontWeight: 600 }}>BCFSA AI disclosure →</Link>
         </div>
       </Section>
 
