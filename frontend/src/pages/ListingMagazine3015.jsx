@@ -90,11 +90,11 @@ export default function ListingMagazine3015() {
             <Kicker>The invitation</Kicker>
             <H>Every square foot has a job.</H>
             <Body>
-              <p style={{ margin: 0 }}>Some houses feel big. This one feels <em>complete</em>. Six thousand, one hundred and twenty-nine finished square feet stretched across three intentional levels — a legal law suite tucked below, a chef's main floor at the heart, and a private family wing above.</p>
-              <p style={{ marginTop: 8 }}>Add a heated pool, a full-size sports court, and 4,033 square feet of covered outdoor living, and you have something rarer than a mansion: a home your family will actually <em>use</em>, every day, in every season.</p>
+              <p style={{ margin: 0 }}>Some houses feel big. This one feels <em>complete</em>. <strong>6,129 finished square feet</strong> distributed with intent across three levels — a walk-out lower floor of media, gym, and rec space; a <strong>2,252-square-foot main</strong> that hosts, feeds, and works; and an <strong>upper family wing</strong> where three bedrooms and two bathrooms make weekday mornings a little less complicated.</p>
+              <p style={{ marginTop: 8 }}>Add a heated pool, a full-size sports court, and more than 1,400 square feet of covered outdoor living, and you have a home your family will actually <em>use</em>, every day, in every season.</p>
               <p style={{ marginTop: 8 }}>Welcome to 3015 141 Street.</p>
             </Body>
-            <Callout>5+ bedrooms · 6+ bathrooms · 6,129 finished sq ft · Pool + Sports Court</Callout>
+            <Callout>5 bedrooms · 5 bathrooms · 6,129 finished sq ft · Pool + Sports Court · 782 sq ft garage</Callout>
           </div>
         </Page>
 
@@ -137,104 +137,106 @@ export default function ListingMagazine3015() {
           </div>
         </Page>
 
-        {/* ═══════ PAGE 5 · TWO PRIMARIES ═══════ */}
+        {/* ═══════ PAGE 5 · MAIN-FLOOR PRIMARY ═══════ */}
         <Page n={5}>
           <Photo label="MAIN-FLOOR PRIMARY · ENSUITE" h="40%"/>
           <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
-            <Kicker>Two primary suites</Kicker>
-            <H>Pick your view.</H>
+            <Kicker>The main-floor primary</Kicker>
+            <H>Sleep on the main. Skip the stairs.</H>
             <Body>
-              <p style={{ margin: 0 }}><strong style={{ color: C.navy }}>Prefer a single-level lifestyle?</strong> The main-floor primary (17′6″ × 15′3″) delivers hotel-scale living with a 138 sq ft spa ensuite and a 14-foot walk-in closet that thinks it's a room.</p>
-              <p style={{ marginTop: 8 }}><strong style={{ color: C.navy }}>Still love the "kids down the hall" era?</strong> The upper-floor primary (18′3″ × 16′10″) sits at the head of the family wing beside two 15-foot bedrooms and a 24-foot games room. Either choice is right. Both choices are yours.</p>
+              <p style={{ margin: 0 }}>The main-floor primary is a full <strong>17′6″ × 15′3″</strong> — hotel-scale by any measure. Beside it, a <strong>13′9″ × 10′3″ ensuite</strong> (~141 sq ft) and a <strong>7′3″ × 14′10″</strong> walk-in closet that reads as a small room in its own right.</p>
+              <p style={{ marginTop: 8 }}>For anyone thinking about single-level living, aging in place, or simply not wanting to negotiate a staircase at 6 a.m., this floor covers you. Kitchen twelve steps left. Coffee thirty seconds later. Pool through the back windows.</p>
             </Body>
-            <Callout><strong style={{ color: C.navy }}>Main-floor ensuite:</strong> walk-in shower · dual vanity · water closet · spa-tub-ready · natural light on two exposures.</Callout>
+            <Callout>Primary 17′6″ × 15′3″ · Ensuite 13′9″ × 10′3″ · W.I.C. 7′3″ × 14′10″ · Main-floor Bath 10′10″ × 11′8″ · 9′ ceilings</Callout>
           </div>
         </Page>
 
-        {/* ═══════ PAGE 6 · FAMILY WING (new) ═══════ */}
+        {/* ═══════ PAGE 6 · GAMES ROOM (main floor) ═══════ */}
         <Page n={6}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap: 4, height:"38%" }}>
+            <Photo label="GAMES ROOM WIDE" h="100%"/>
+            <Photo label="GAMES ROOM DETAIL" h="100%"/>
+            <Photo label="MUD ROOM / LAUNDRY" h="100%"/>
+          </div>
+          <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
+            <Kicker>The games room</Kicker>
+            <H size="1.55rem">The room every family adds to their wish list — and never actually gets.</H>
+            <Body>
+              <p style={{ margin: 0 }}>Right on the main floor at 3015 is a <strong>24′7″ × 14′0″ games room</strong> — 345 square feet of dedicated bonus space that most 6,000-foot homes don't bother to draw. Space for a sectional, a pool table, and a screen big enough to make Saturday-night hockey feel like it's played in the room.</p>
+              <p style={{ marginTop: 8 }}>Beside it, a <strong>6′10″ × 9′11″ mud room</strong> and a proper laundry room finish out the everyday-life side of the plan — because a home this size still has to handle Tuesday.</p>
+            </Body>
+            <Specs>Games 24′7″ × 14′0″ · Mud Room 6′10″ × 9′11″ · Laundry (utility W/D) · Main-floor Bath 10′10″ × 11′8″</Specs>
+          </div>
+        </Page>
+
+        {/* ═══════ PAGE 7 · UPPER FAMILY WING ═══════ */}
+        <Page n={7}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap: 4, height:"38%" }}>
+            <Photo label="UPPER PRIMARY 18′3″" h="100%"/>
             <Photo label="UPPER LANDING" h="100%"/>
-            <Photo label="GAMES ROOM 24'" h="100%"/>
             <Photo label="SECONDARY BEDROOM" h="100%"/>
           </div>
           <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
-            <Kicker>The family wing</Kicker>
+            <Kicker>The upper family wing</Kicker>
             <H>Kids down the hall. Not down a wing.</H>
             <Body>
-              <p style={{ margin: 0 }}>The upper floor was designed for the specific magic of raising older kids: close enough to hear the laughter, far enough that homework and headphones actually happen. Three bedrooms line the family wing, each large enough for a queen bed and a real desk.</p>
-              <p style={{ marginTop: 8 }}>Between them, a <strong>24-foot games room</strong> — the room every family adds to their wish list and never actually gets — with space for a sectional, a pool table, and a Nintendo Switch that lives permanently in the drawer.</p>
-              <p style={{ marginTop: 8 }}>An upstairs laundry room ends the great debate about carrying baskets down two flights of stairs.</p>
+              <p style={{ margin: 0 }}>The upper floor holds a <strong>1,806-square-foot</strong> family wing centred on an <strong>18′3″ × 16′10″ upper primary</strong> — the largest bedroom in the house. Two more bedrooms line the same corridor: <strong>15′0″ × 15′1″</strong> and <strong>15′1″ × 15′4″</strong>, each large enough for a queen bed and a real desk.</p>
+              <p style={{ marginTop: 8 }}>Two full baths serve the wing (<strong>9′2″ × 5′10″</strong> and <strong>8′3″ × 8′4″</strong>), and dedicated storage rooms (10′2″ × 11′3″ and 8′3″ × 9′9″) do the work that closets alone can't. Ceilings run 8 feet.</p>
             </Body>
-            <Specs>Bed 2: 15′2″ × 12′4″ · Bed 3: 15′1″ × 12′0″ · Bed 4: 13′10″ × 11′6″ · Games 24′ × 15′ · Upstairs Laundry</Specs>
+            <Specs>Primary 18′3″ × 16′10″ · Bedroom 15′0″ × 15′1″ · Bedroom 15′1″ × 15′4″ · Baths 9′2″ × 5′10″ + 8′3″ × 8′4″</Specs>
           </div>
         </Page>
 
-        {/* ═══════ PAGE 7 · LAW SUITE ═══════ */}
-        <Page n={7}>
+        {/* ═══════ PAGE 8 · LOWER LEVEL (media · gym · rec) ═══════ */}
+        <Page n={8}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: 4, height:"40%" }}>
-            <Photo label="LAW SUITE LIVING · KITCHEN" h="100%"/>
-            <Photo label="MEDIA ROOM" h="100%"/>
+            <Photo label="MEDIA ROOM 18′3″ × 15′8″" h="100%"/>
+            <Photo label="GYM 20′3″ × 15′8″" h="100%"/>
           </div>
           <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
-            <Kicker>The law suite</Kicker>
-            <H>A second home, inside the first.</H>
+            <Kicker>The lower level</Kicker>
+            <H>A whole floor built for the rest of life.</H>
             <Body>
-              <p style={{ margin: 0 }}>Two thousand and seventy-one square feet, its own private entry, its own kitchen, its own laundry, its own bathroom. The law suite at 3015 was built for the moments modern families quietly plan for — aging parents, adult children returning home, a live-in nanny, or an extended-stay guest who deserves better than a spare bedroom.</p>
-              <p style={{ marginTop: 8 }}>Beside it: a 320-square-foot gym (rack, mirrors, rubber flooring — bring your own dumbbells), a proper media room pre-wired for surround, and workshop-scale storage.</p>
+              <p style={{ margin: 0 }}>The lower level runs <strong>2,071 square feet</strong> and is drawn for the parts of family life the upstairs isn't for. A <strong>18′3″ × 15′8″ media room</strong> — pre-wired for surround. A <strong>20′3″ × 15′8″ gym</strong> — 317 sq ft of dedicated fitness space (rack, mirrors, rubber flooring — bring your own dumbbells). A <strong>16′11″ × 9′2″ living space</strong>, plus a full <strong>18′11″ × 16′9″ storage room</strong> and a bath. Ceilings 8 feet throughout.</p>
             </Body>
-            <Fine>Legal law-suite status is a matter of municipal permitting. Prospective buyers should verify current use with the City of Surrey Planning Department and their own legal counsel before making an offer. Any rental use is subject to municipal and provincial residential-tenancy regulations.</Fine>
+            <Fine>This level is labeled <em>Law Suite Floor</em> on the branded plan. Legal-suite status, kitchen configuration, private access, and any rental use are matters of municipal permitting under the City of Surrey Zoning By-law. Verify with the City of Surrey Planning Department and your own legal counsel before making an offer.</Fine>
           </div>
         </Page>
 
-        {/* ═══════ PAGE 8 · POOL / COURT / PORCH ═══════ */}
-        <Page n={8}>
+        {/* ═══════ PAGE 9 · POOL / COURT / OUTDOOR ═══════ */}
+        <Page n={9}>
           <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap: 4, height:"40%" }}>
-            <Photo label="POOL AERIAL · 33' HEATED" h="100%"/>
+            <Photo label="POOL 33′5″ × 15′11″ · 554 SQ FT" h="100%"/>
             <div style={{ display:"grid", gridTemplateRows:"1fr 1fr", gap: 4 }}>
-              <Photo label="SPORTS COURT" h="100%"/>
-              <Photo label="55' WRAP PORCH" h="100%"/>
+              <Photo label="SPORTS COURT 36′1″ × 29′6″" h="100%"/>
+              <Photo label="55′ FRONT PORCH" h="100%"/>
             </div>
           </div>
           <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
             <Kicker>The outdoor rooms</Kicker>
             <H>Summer takes a full page.</H>
             <Body>
-              <p style={{ margin: 0 }}>The 33-foot pool is the centrepiece — but the real magic is what surrounds it. A <strong>36 × 29 sports court</strong> means birthday parties, pickleball leagues, and rainy-day ball hockey without a drive to a rec centre. Twelve hundred combined square feet of covered patio keep the barbecue rolling through October. And a 55-foot wrap porch at the front is where morning coffee lives.</p>
-              <p style={{ marginTop: 8 }}>The pump house is tucked out of sight. So is the plumbing. So is the mess.</p>
+              <p style={{ margin: 0 }}>The <strong>33′5″ × 15′11″ pool</strong> — 554 square feet of finished water — sits at the centre of a considered outdoor plan. A <strong>36′1″ × 29′6″ sports court</strong> (<strong>1,063 sq ft</strong>) means birthday parties, pickleball, and rainy-day ball hockey without a drive to a rec centre.</p>
+              <p style={{ marginTop: 8 }}>A <strong>55-foot front porch</strong> where morning coffee lives. A <strong>24′5″ × 15′11″ rear patio</strong> and an <strong>18′ × 18′ covered patio</strong> off the great room keep the barbecue rolling into October. A dedicated 11′1″ × 11′3″ pump house keeps the machinery out of sight.</p>
             </Body>
-            <Callout>Pool 33′5″ × 15′11″ · Sports Court 36′1″ × 29′6″ · Covered Patios 1,272 sq ft · Wrap Porch 55′</Callout>
+            <Callout>Pool 33′5″ × 15′11″ · Sports Court 36′1″ × 29′6″ · Rear Patio 24′5″ × 15′11″ · Covered Patio 18′1″ × 18′1″ · Porch 55′0″ × 6′1″</Callout>
           </div>
         </Page>
 
-        {/* ═══════ PAGE 9 · THE DETAILS (new) ═══════ */}
-        <Page n={9}>
+        {/* ═══════ PAGE 10 · GARAGE + DETAILS ═══════ */}
+        <Page n={10}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: 4, height:"36%" }}>
-            <Photo label="STAIRCASE · NEWEL DETAIL" h="100%"/>
-            <Photo label="MECHANICAL · GARAGE" h="100%"/>
+            <Photo label="GARAGE 20′9″ × 41′8″ · 782 SQ FT" h="100%"/>
+            <Photo label="ARCHITECTURAL DETAIL" h="100%"/>
           </div>
           <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
-            <Kicker>The details</Kicker>
+            <Kicker>The garage + the details</Kicker>
             <H size="1.55rem">The parts of a home you only notice when they're missing.</H>
             <Body>
-              <p style={{ margin: 0 }}>The finishes at 3015 do the work that finishes are supposed to do: they get out of the way and let the rooms speak. Nine-foot ceilings on the main. Wide-plank flooring throughout the primary living zones. A staircase you can carry a queen mattress up without pivoting sideways.</p>
-              <p style={{ marginTop: 8 }}>A <strong>782-square-foot garage</strong> with room for two vehicles plus the storage that keeps the seasonal bins out of the mud room. Mechanicals are tucked into a dedicated room — not a closet — so future servicing means moving a broom, not moving a car.</p>
+              <p style={{ margin: 0 }}>The garage runs <strong>20′9″ × 41′8″</strong> — <strong>782 finished square feet</strong>, roughly a triple-length two-car with room for the mud-room bins, the seasonal storage, and the vehicles. The mud room connects it directly to the main-floor laundry, so groceries land where they belong.</p>
+              <p style={{ marginTop: 8 }}>Nine-foot ceilings on the main. Eight-foot ceilings on the two other floors. A <strong>55′ × 6′1″ front porch</strong> that means the house never looks small from the street.</p>
             </Body>
-            <Specs style={{ fontSize:"0.68rem" }}>Total: 6,129 · Main: 2,252 · Upper: 1,806 · Law Suite: 2,071 · Garage: 782 · Outdoor: 4,033 · 5+ bed · 6+ bath · 3 levels</Specs>
-          </div>
-        </Page>
-
-        {/* ═══════ PAGE 10 · NEIGHBOURHOOD (new) ═══════ */}
-        <Page n={10}>
-          <Photo label="LEAFY STREET / AERIAL CONTEXT" h="40%"/>
-          <div style={{ padding:"22px 28px", flex: 1, display:"flex", flexDirection:"column", gap: 10 }}>
-            <Kicker>The neighbourhood</Kicker>
-            <H>A quiet street with everything within seven minutes.</H>
-            <Body>
-              <p style={{ margin: 0 }}>141 Street sits in one of Surrey's most consistently family-favoured pockets — mature landscaping, low through-traffic, and the kind of neighbours who wave from the driveway. Elementary and secondary schools are within a short drive, and the Highway 10 / 152 Street corridor puts you at the border, downtown Surrey, or the Fraser Valley in reliably reasonable time.</p>
-              <p style={{ marginTop: 8 }}>The neighbourhood grew up organically over the last two decades, which means the streetscape has actual trees, actual sidewalks, and actual room to breathe. It's the kind of street you buy on once and stay on until your kids buy their own.</p>
-            </Body>
-            <Fine>School catchments, commute times, and neighbourhood amenities change over time. Verify current catchments with the Surrey School District, drive times with your own transit / traffic apps, and any lifestyle claims through independent inspection before making an offer.</Fine>
+            <Specs>Total 6,129 · Main 2,252 · Upper 1,806 · Law Suite level 2,071 · Garage 782 · Extras 4,033 · 5 bed · 5 bath · 3 levels · 9′/8′/8′</Specs>
           </div>
         </Page>
 
