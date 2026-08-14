@@ -1,5 +1,14 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-14 (Doogie mascot injected into Homepage V2 mockup)
+- **`HomepageLeadGenMockup.jsx`** — Doogie now appears in two contextually-appropriate spots on `/mockups/home-v2`:
+  1. **Hero right-side floating mascot** — `thinking.webp` positioned absolute bottom-right of the hero (desktop ≥ 1024px only, hidden on mobile via media-query CSS scoped to `.hv2-doogie-hero`). Includes a white speech-bubble callout: "Hi, I'm Doogie 👋 — Ask me anything…". Subtle 6s float animation, gated by `prefers-reduced-motion`. `aria-hidden` since the H1 carries the semantic meaning.
+  2. **Search-widget avatar** — 36×36 Doogie thumbnail next to "Ask Doogie" tagline inside the DoogieFilterHeader card, reinforcing the "who is asking" cue.
+  3. **"Meet Doogie" concierge band** — new section between the Glossary Spotlight and the Lead Form (cream background). Two-column responsive layout: `laptop.webp` on the left, headline "Ask questions in plain English — get straight answers, day or night." on the right, 4 feature bullets (voice/text, 439-term glossary, Cast to TV, EN+FR), dual CTA ("Try Doogie now →" → `/visual-agent-demo` · "I'd rather talk to Doug" → `#lead-form`), plus a full BCFSA/PIPA guardrail box: *"Doogie provides general information only — never legal, tax, financial, or property-specific advice. Any actionable step (offer, contract, valuation) is handled by Doug LeMaire, REALTOR®, personally."* Data-testids: `hero-doogie-mascot`, `meet-doogie-band`, `meet-doogie-cta-try`, `meet-doogie-cta-human`, `meet-doogie-guardrail`.
+- No new dependencies, no backend changes. Uses existing `/images/doogie/*` static assets already shipped with the frontend.
+
+
+
 ## 2026-02-13 (Community Finder quiz merged into /relocating + audio/TV Pairing fixes)
 - **`CommunityFinderQuiz.jsx`** — self-contained 5-question lifestyle → BC region matcher. Design matches Doug's supplied mock: gold "📍 COMMUNITY FINDER" eyebrow, Playfair serif H1 "Where should you live?", subtitle, "Question N of 5" indicator, 5-segment progress bar, and up to 6 option pills per question. Back button appears from Q2. Result screen shows top-3 BC regions (Best match / #2 / #3) with taglines and starter community pill links (`/community/{slug}`) plus a "Talk to Doug →" CTA that posts to `/buyer?source=community-finder`. All quiz logic is client-side (no PII); no server round-trip until the visitor opts into the buyer form.
 - **Injected into `/relocating`** immediately below the H1 so visitors see the quiz before the supporting knowledge base. All existing sections (Choose a region, Taxes, Cost-of-living, Immigration essentials, Search tools, CTAs) remain untouched below.

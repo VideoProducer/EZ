@@ -217,10 +217,43 @@ export default function HomepageLeadGenMockup() {
 
       <UnlistedMockupBanner label="LEAD-GEN homepage v2 (parked)"/>
 
+      {/* Media-query CSS for the hero Doogie mascot — hidden on
+          narrow screens so it never crowds the H1/search on mobile. */}
+      <style>{`
+        .hv2-doogie-hero { display: none; }
+        @media (min-width: 1024px) {
+          .hv2-doogie-hero { display: block; }
+          .hv2-hero-copy { max-width: 640px; }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes hv2FloatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+          .hv2-doogie-hero img { animation: hv2FloatY 6s ease-in-out infinite; }
+        }
+        .hv2-meet-doogie { display:grid; grid-template-columns: 1fr; gap: 20px; align-items:center; }
+        @media (min-width: 768px) {
+          .hv2-meet-doogie { grid-template-columns: minmax(200px, 260px) 1fr; gap: 40px; }
+        }
+      `}</style>
+
       {/* ═════ HERO — Doogie search first, everything else second ═════ */}
-      <div style={{ position:"relative", background: `linear-gradient(135deg, ${C.navy} 0%, #1E40AF 100%)`, color:"white", padding:"clamp(36px, 7vw, 72px) clamp(16px, 4vw, 24px) clamp(28px, 5vw, 48px)" }}>
-        <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED</div>
+      <div style={{ position:"relative", overflow:"hidden", background: `linear-gradient(135deg, ${C.navy} 0%, #1E40AF 100%)`, color:"white", padding:"clamp(36px, 7vw, 72px) clamp(16px, 4vw, 24px) clamp(28px, 5vw, 48px)" }}>
+        {/* Doogie mascot — floats bottom-right of hero on desktop, points
+            visually at the CTA cluster. Marked aria-hidden because the
+            H1 already carries the semantic meaning. */}
+        <div className="hv2-doogie-hero" aria-hidden="true"
+             style={{ position:"absolute", right: "clamp(16px, 3vw, 48px)", bottom: 0, width: 320, pointerEvents:"none", zIndex: 1 }}
+             data-testid="hero-doogie-mascot">
+          <div style={{ position:"absolute", top: 8, left: -40, background:"white", color: C.navy, padding:"10px 14px", borderRadius: 14, fontSize:"0.82rem", fontWeight: 700, fontFamily:"'Sora',sans-serif", boxShadow:"0 10px 30px rgba(0,0,0,0.20)", maxWidth: 220, lineHeight: 1.35 }}>
+            Hi, I'm Doogie 👋
+            <div style={{ fontWeight: 500, fontSize:"0.75rem", color: C.muted, marginTop: 3, lineHeight: 1.45 }}>Ask me anything — voice or text. I'll narrow it down.</div>
+            <span style={{ position:"absolute", bottom: -8, right: 40, width: 0, height: 0, borderLeft:"8px solid transparent", borderRight:"8px solid transparent", borderTop:"8px solid white" }}/>
+          </div>
+          <img src="/images/doogie/thinking.webp" alt="" width={320} height={320} loading="eager"
+               style={{ width: 320, height:"auto", filter:"drop-shadow(0 20px 40px rgba(0,0,0,0.35))" }}/>
+        </div>
+
+        <div className="hv2-hero-copy" style={{ maxWidth: 1160, margin: "0 auto", position:"relative", zIndex: 2 }}>
+          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED · AI CONCIERGE</div>
           <h1 style={{ fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.05, margin: "8px 0 14px", maxWidth: 900 }}>
             British Columbia real estate — live MLS® listings, community insights, and a BCFSA-licensed REALTOR®.
           </h1>
@@ -231,9 +264,11 @@ export default function HomepageLeadGenMockup() {
           {/* Doogie voice + text filter — reused from production */}
           <div style={{ background:"white", borderRadius: 14, boxShadow:"0 10px 40px rgba(0,0,0,0.18)", overflow:"hidden", marginBottom: 18 }} data-testid="hero-doogie-search">
             <DoogieFilterHeader onVoiceFilter={applyVoiceFilter} onReset={() => nav("/listings")}/>
-            <div style={{ padding:"14px 18px", color: C.ink, fontSize:"0.85rem", lineHeight: 1.55 }}>
-              <strong style={{ color: C.navy }}>Ask Doogie</strong> — try voice or type a full sentence:{" "}
-              <em style={{ color: C.muted }}>"3-bed townhome in Langley under $1.2M with a suite"</em>
+            <div style={{ padding:"14px 18px", color: C.ink, fontSize:"0.85rem", lineHeight: 1.55, display:"flex", gap: 10, alignItems:"center" }}>
+              <img src="/images/doogie/thinking.webp" alt="" width={36} height={36} style={{ width: 36, height: 36, flexShrink: 0 }}/>
+              <div><strong style={{ color: C.navy }}>Ask Doogie</strong> — try voice or type a full sentence:{" "}
+                <em style={{ color: C.muted }}>"3-bed townhome in Langley under $1.2M with a suite"</em>
+              </div>
             </div>
           </div>
 
@@ -332,6 +367,40 @@ export default function HomepageLeadGenMockup() {
         </div>
         <div style={{ marginTop: 14, textAlign:"center" }}>
           <Link to="/glossary" data-testid="all-glossary" style={{ color: C.navy, fontWeight: 700, fontSize:"0.9rem", textDecoration:"underline" }}>Browse all 439 glossary entries →</Link>
+        </div>
+      </Section>
+
+      {/* ═════ § MEET DOOGIE — the AI concierge introduction with
+          BCFSA/PIPA guardrails clearly stated up-front ═════ */}
+      <Section tone="cream">
+        <div className="hv2-meet-doogie" data-testid="meet-doogie-band">
+          <div style={{ textAlign:"center" }}>
+            <img src="/images/doogie/laptop.webp" alt="Doogie, the EZtoFind.ca AI concierge, at his laptop researching BC listings."
+                 width={240} height={240}
+                 style={{ width:"100%", maxWidth: 240, height:"auto", filter:"drop-shadow(0 12px 24px rgba(15,42,91,0.18))" }}/>
+          </div>
+          <div>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700, textTransform:"uppercase" }}>Meet Doogie · 24/7 AI concierge</div>
+            <h2 style={{ fontSize:"clamp(1.5rem, 3.5vw, 2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, lineHeight: 1.15, margin:"6px 0 10px" }}>
+              Ask questions in plain English — get straight answers, day or night.
+            </h2>
+            <p style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px" }}>
+              Doogie is EZtoFind.ca's built-in AI concierge. He speaks voice and text, filters {stats.total ? `${stats.total.toLocaleString()}+ ` : "40,000+ "}live MLS® listings, decodes BC glossary terms (ALR, PTT, strata depreciation reports…), narrates virtual tours, and hands off to Doug the moment you want to talk to a licensed human.
+            </p>
+            <ul style={{ listStyle:"none", padding: 0, margin:"0 0 16px", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap: 8, fontSize:"0.85rem", color: C.ink }}>
+              <li>🎙️ <strong>Voice or text</strong> — hands-free search on any device.</li>
+              <li>📚 <strong>439-term glossary</strong> — plain-English BC real-estate answers.</li>
+              <li>📺 <strong>Cast to TV</strong> — review listings on the big screen with family.</li>
+              <li>🌐 <strong>EN + FR</strong> — bilingual, PIPA-compliant, no audio stored.</li>
+            </ul>
+            <div style={{ display:"flex", gap: 10, flexWrap:"wrap", marginBottom: 14 }}>
+              <Link to="/visual-agent-demo" data-testid="meet-doogie-cta-try" style={{ background: C.navy, color:"white", padding:"11px 20px", borderRadius: 999, fontWeight: 700, fontSize:"0.9rem", textDecoration:"none" }}>Try Doogie now →</Link>
+              <a href="#lead-form" data-testid="meet-doogie-cta-human" style={{ background:"transparent", color: C.navy, border:`1px solid ${C.navy}`, padding:"11px 20px", borderRadius: 999, fontWeight: 700, fontSize:"0.9rem", textDecoration:"none" }}>I'd rather talk to Doug</a>
+            </div>
+            <div style={{ padding:"10px 14px", background:"white", borderRadius: 8, border:"1px solid #E5E7EB", fontSize:"0.78rem", color: C.muted, lineHeight: 1.55 }} data-testid="meet-doogie-guardrail">
+              <strong style={{ color: C.navy }}>Guardrails:</strong> Doogie provides <strong>general information only</strong> — never legal, tax, financial, or property-specific advice. Any actionable step (offer, contract, valuation) is handled by Doug LeMaire, REALTOR®, personally. See the <Link to="/compliance" style={{ color: C.blue }}>Compliance page</Link> for the full data-flow disclosure.
+            </div>
+          </div>
         </div>
       </Section>
 
