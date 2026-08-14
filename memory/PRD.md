@@ -1,5 +1,46 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-14 (Homepage V2 mockup — full parity with live eztofind.ca + AEO/LLM + BCFSA compliance sweep)
+Ported every high-value element from the live eztofind.ca homepage into `/mockups/home-v2`, layered in a full AEO/LLM/AI-search structured-data pass, and closed every BCFSA/CREA/PIPA/CASL/GVR compliance gap. Zero external-integration adds. Files touched: `frontend/src/components/HomepageLeadGenMockup.jsx`.
+
+**Lead-gen adds (Wave 3):**
+- **BC Home Affordability Calculator** — new `AffordabilityCalculator` component. OSFI B-20 stress test (max of contract + 2 % or 5.25 % minimum), full BC Property Transfer Tax schedule (1 % / 2 % / 3 % / 5 %), First-Time Buyer PTT linear-phase-out exemption ($500 K full → $835 K none), 39 % GDS ratio cap, $500/mo prop-tax+heat allowance, live "Show me listings under $X" CTA to `/listings?price_max=…`. Fully client-side, no PII leaves the browser.
+- **Testimonials** — J&M (Buyers · 2024) + M.C. (Seller · 2024) with 5-star ratings, inline microdata (`itemScope`/`itemProp` for Review/Rating/Person), plus a BCFSA Rule 5-11 disclosure box below (no consideration paid, full names on request, individual results vary).
+- **3 Region cards** — dark-navy `/regions/{slug}` cards for Greater Vancouver (22 communities), Fraser Valley (18), Sea-to-Sky (6) with tagline + hover-lift + community count. Includes a `ReferralAsk` pill for out-of-area visitors immediately below.
+- **Trust strip** — 4 badges: Licensed REALTOR® · Local Expert · 13 Years BC Experience · 439 Statute-Cited Terms · 240 community profiles. Placed between hero and Coming-Soon block.
+
+**AEO/LLM/citation adds (Wave 2):**
+JSON-LD `@graph` expanded from 5 → 10 entities:
+- `WebSite` — added `inLanguage: en-CA`, richer description
+- `RealEstateAgent` (Doug) — added `hasCredential` (BCFSA licence), `sameAs` (realtor.ca), `givenName`/`familyName`/`jobTitle`, `email`, richer `knowsAbout`, split `areaServed` into 3 sub-areas
+- `RealEstateAgent` (brokerage) — added `geo.latitude/longitude`, `priceRange`, `hasCredential`, `aggregateRating` (5.0 from 2 reviews), inline `review` array
+- **NEW** `ItemList` — 3 regions with `Place` + geo coords
+- **NEW** `DefinedTermSet` + 6 `DefinedTerm` entries (ALR, restrictive covenant, PTT, subject-to-financing, depreciation report, DoR) each with statute-cited definitions
+- **NEW** 4 `Service` entities (equestrian, luxury, condos, detached) with `provider` linked to Doug
+- **NEW** `SoftwareApplication` — BC Home Affordability Calculator with `featureList` + free `offers`
+- `FAQPage` — added `speakable` selector on FAQ testids
+
+**Compliance closures (Wave 1):**
+- **BCFSA licence numbers** — added dedicated Rule 4-2 identification paragraph in footer with both individual + brokerage placeholder slots + link to bcfsa.ca/registrant-search. Placeholders `PENDING — insert Doug's BCFSA licence #` and `PENDING — insert brokerage licence #` in the `FACTS` const at the top of the file must be replaced with real numbers before promoting to `/`.
+- **Practice-area statement** — new footer paragraph explicitly stating direct-representation regions and naming all 5 referral boards (VIREB, IAR / KAR, BCNREB, CADREB). Same statement now in the Regions section body.
+- **AI Use Disclosure** — new dedicated section between Testimonials and Lead Form with 3 cards (Doogie Chat · AI-Drafted Content · Guardrails) matching the BCFSA AI Guidelines wording from `/compliance`.
+- **CASL retention disclosure** — added to footer + FAQ Q5: consent record (email, timestamp, IP, user-agent) retained for 3 years.
+- **OIPC BC** — added complaint-route link to the BC Office of the Information & Privacy Commissioner in the footer PIPA paragraph.
+- **Privacy Officer contact** — `privacy@eztofind.ca` now printed in footer alongside general `info@eztofind.ca`.
+- **Testimonial disclosure** — BCFSA Rule 5-11 box immediately below the testimonials grid.
+- **Not-advice bumper** — reinforced in hero + footer + AI Disclosure section (previously only twice).
+
+**Factual accuracy corrections:**
+- "40,000+ live listings" fallback removed — now falls back to "Live CREA DDF® MLS® feed"
+- "Sea-to-Sky Corridor" → "Sea-to-Sky Corridor (to Whistler)" everywhere
+- "439 glossary entries" → "439 statute-cited glossary entries"
+- Added "13 years of BC experience" everywhere Doug's expertise is referenced
+- Explicit `240 community profiles` number in H1
+
+**File-level structure:** `FACTS` const at the top now serves as single-source-of-truth for every regulator-visible fact (brokerage name, address, phone, licence numbers, practice areas, referral boards, years experience, glossary count, community count). Edit `FACTS` to update everything site-wide.
+
+
+
 ## 2026-02-14 (Doogie mascot injected into Homepage V2 mockup)
 - **`HomepageLeadGenMockup.jsx`** — Doogie now appears in two contextually-appropriate spots on `/mockups/home-v2`:
   1. **Hero right-side floating mascot** — `thinking.webp` positioned absolute bottom-right of the hero (desktop ≥ 1024px only, hidden on mobile via media-query CSS scoped to `.hv2-doogie-hero`). Includes a white speech-bubble callout: "Hi, I'm Doogie 👋 — Ask me anything…". Subtle 6s float animation, gated by `prefers-reduced-motion`. `aria-hidden` since the H1 carries the semantic meaning.

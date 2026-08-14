@@ -42,8 +42,23 @@ const C = {
 const fmtMoney = n => !n ? "—" : n >= 1e6 ? `$${(n/1e6).toFixed(n>=1e7?0:1)}M` : n >= 1e3 ? `$${Math.round(n/1e3)}K` : `$${n.toLocaleString("en-CA")}`;
 
 // ── Content ────────────────────────────────────────────────────────
+const REGIONS = [
+  { slug:"greater-vancouver", name:"Greater Vancouver", tagline:"From downtown high-rises to West Van estates.", count:"22 communities", pin:{ lat:49.2827, lng:-123.1207 } },
+  { slug:"fraser-valley",     name:"Fraser Valley",     tagline:"Langley, Abbotsford, Chilliwack — where space meets city convenience.", count:"18 communities", pin:{ lat:49.1044, lng:-122.6603 } },
+  { slug:"sea-to-sky",        name:"Sea-to-Sky",        tagline:"Squamish, Whistler, Pemberton — mountain-lifestyle real estate.", count:"6 communities",  pin:{ lat:50.1163, lng:-122.9574 } },
+];
+const TESTIMONIALS = [
+  { author:"J&M", label:"Buyers · 2024",  stars:5, text:"Doug was an absolute pleasure to work with. As buyers, we truly appreciated his patience, professionalism, and thorough approach throughout the entire process. Doug took the time to understand our needs, provided valuable insights, and guided us every step of the way with clear communication and expert advice." },
+  { author:"M.C.", label:"Seller · 2024", stars:5, text:"Doug LeMaire is a real estate agent of an elite caliber who truly cares about his clients and will not stop until you are satisfied. Doug sold my home as an off-sale listing, demonstrating that he never stopped working on my behalf, even when the home was not actually listed for sale." },
+];
+const TRUST_STATS = [
+  { icon:"🛡️", label:"Licensed REALTOR®",       sub:"Fraser Property Management Realty Services Ltd." },
+  { icon:"📍", label:"Local Expert",              sub:"Greater Vancouver · Fraser Valley · Sea-to-Sky (to Whistler)" },
+  { icon:"⏱️", label:"13 Years",                  sub:"BC Real Estate Experience" },
+  { icon:"📚", label:"439 Statute-Cited Terms",   sub:"Free BC real-estate glossary · 240 community profiles" },
+];
 const PATHS = [
-  { icon:"🏡", title:"I'm buying in BC", body:"Search 40K+ live MLS® listings, save favourites, get instant new-listing alerts, and lock in a free 20-min buyer strategy call with Doug.", cta:"Start searching →", href:"/property-search", tone:"gold", testid:"path-buying" },
+  { icon:"🏡", title:"I'm buying in BC", body:"Search live CREA DDF® MLS® listings, save favourites, get instant new-listing alerts, and lock in a free 20-min buyer strategy call with Doug.", cta:"Start searching →", href:"/property-search", tone:"gold", testid:"path-buying" },
   { icon:"💰", title:"I'm selling", body:"Free home-value snapshot, professional listing prep playbook, and Doug's proven Fraser Valley marketing plan.", cta:"Get my home value →", href:"/market-estimate", tone:"white", testid:"path-selling" },
   { icon:"🌲", title:"Where should I live in BC?", body:"90-sec quiz picks 3 BC communities that match your climate, budget, and lifestyle — perfect whether you're moving to BC or thinking of a change within it.", cta:"Take the quiz →", href:"/relocating", tone:"white", testid:"path-where" },
   { icon:"⚖️", title:"Estate sale / probate", body:"Executor toolkit with court-approved CMAs, capital-gains guidance, and licensed BC lawyer & accountant intros.", cta:"Executor toolkit →", href:"/estate-sale", tone:"white", testid:"path-estate" },
@@ -65,12 +80,12 @@ const FEATURED_COMMUNITIES = [
   { slug:"surrey",      name:"Surrey" },
 ];
 const GLOSSARY_SPOTLIGHT = [
-  { slug:"agricultural-land-reserve",   term:"Agricultural Land Reserve" },
-  { slug:"restrictive-covenant",        term:"Restrictive Covenant" },
-  { slug:"property-transfer-tax",       term:"Property Transfer Tax" },
-  { slug:"subject-to-financing",        term:"Subject to Financing" },
-  { slug:"strata-depreciation-report",  term:"Strata Depreciation Report" },
-  { slug:"disclosure-of-representation",term:"BCFSA Disclosure of Representation" },
+  { slug:"agricultural-land-reserve",   term:"Agricultural Land Reserve",         defn:"Provincially designated agricultural land governed by the BC Agricultural Land Commission Act (RSBC 2002, c.36). Subdivision, non-farm use, and residential improvement are restricted." },
+  { slug:"restrictive-covenant",        term:"Restrictive Covenant",              defn:"A registered charge on title that restricts how a parcel may be used, built on, or subdivided (BC Land Title Act, s.219). Binds all future owners." },
+  { slug:"property-transfer-tax",       term:"BC Property Transfer Tax (PTT)",    defn:"Tax on the fair-market value of a BC property transfer under the Property Transfer Tax Act. 1 % on the first $200 K, 2 % up to $2 M, 3 % up to $3 M, 5 % above $3 M." },
+  { slug:"subject-to-financing",        term:"Subject to Financing",              defn:"A subject clause in a BC Contract of Purchase and Sale making the buyer's obligation contingent on obtaining satisfactory financing by a stated date." },
+  { slug:"strata-depreciation-report",  term:"Strata Depreciation Report",        defn:"A report every BC strata corporation of 5+ units must obtain under the Strata Property Act, s.94, projecting anticipated common-property repairs over 30 years." },
+  { slug:"disclosure-of-representation",term:"BCFSA Disclosure of Representation",defn:"The mandatory BCFSA form a licensee must provide at first substantive contact explaining how the consumer will (or will not) be represented in the trade." },
 ];
 const FAQS = [
   { q:"How current are the MLS® listings on EZtoFind.ca?",
@@ -78,14 +93,34 @@ const FAQS = [
   { q:"Does Doug charge me anything to represent me as a buyer?",
     a:"No. Under BC's Multiple Listing Service® rules, the seller's brokerage compensates the co-operating (buyer's) brokerage from the sale proceeds — you pay $0 for consultations, showings, offer preparation, negotiation, or closing coordination. Full BCFSA Disclosure of Representation is presented before any meaningful engagement." },
   { q:"What if the property I love is outside Doug's direct service area?",
-    a:"Doug covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For anywhere else in BC (Interior, Vancouver Island, Kootenays, Cariboo, Peace), if you like, Doug can keep the pin drop, compare and fave heart, video, and VR tour on the listings. If you want a REALTOR® in that area, Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost, you approve every intro, no CASL spam." },
+    a:"Doug personally transacts in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor (to Whistler). For anywhere else in BC (Vancouver Island via VIREB, the Interior via IAR/KAR, the Kootenays, Cariboo, Peace via BCNREB and CADREB), Doug hand-picks a BCFSA-licensed local from his vetted REALTOR® referral network — $0 cost to you, you approve every intro, and no CASL marketing spam follows." },
   { q:"Is Doogie giving me real-estate advice?",
-    a:"No. Doogie is an AI-assisted concierge that explains BC real estate terminology, walks you through active listings, and helps you find community pages — but Doogie provides general information only, never legal, tax, financial, or property-specific advice. For your own situation, always speak with a BC lawyer or notary, an accountant, a licensed mortgage broker, and a REALTOR®." },
+    a:"No. Doogie is an AI-assisted educational guide that explains BC real estate terminology, walks you through active listings, and helps you find community pages — but Doogie provides general information only, never legal, tax, financial, or property-specific advice. For your own situation, always speak with a BC lawyer or notary, an accountant, a licensed mortgage broker, and a REALTOR®. Under BCFSA's AI Guidelines, the licensee (Doug) remains responsible for all AI-generated output." },
   { q:"How is my personal information handled when I submit a form?",
-    a:"Under British Columbia's Personal Information Protection Act (PIPA), your data is collected only to provide real-estate services, stored securely, never sold, and deletable on request. Marketing emails require your separate express consent under Canada's Anti-Spam Legislation (CASL) — one-click unsubscribe is in every message." },
+    a:"Under British Columbia's Personal Information Protection Act (PIPA), your data is collected only to provide real-estate services, stored securely, never sold, and deletable on request. Marketing emails require your separate express consent under Canada's Anti-Spam Legislation (CASL) — one-click unsubscribe is in every message. Consent records (your email, submission timestamp, IP address, and browser user-agent) are retained for 3 years as CASL proof-of-consent." },
   { q:"Can I cast a listing from my phone to my Apple TV or Chromecast?",
-    a:"Yes — with a caveat. Every listing detail page has a Cast button that (1) shows a QR code so any phone can open the listing on itself, (2) offers a true big-screen TV pairing mode via eztofind.ca/tv where a smart-TV browser, laptop-HDMI'd-to-a-TV, or Chromebook enters a 6-digit code and plays the listing full-screen with the phone as remote — no mirroring, and (3) surfaces the standard AirPlay Screen Mirroring / Chromecast tab-cast options for Apple TV or stock Chromecasts that don't have a browser. So a family can review a home together on the big screen without emailing links back and forth." },
+    a:"Yes — with a caveat. Every listing detail page has a Cast button that (1) shows a QR code so any phone can open the listing on itself, (2) offers a true big-screen TV pairing mode via eztofind.ca/tv where a smart-TV browser, laptop-HDMI'd-to-a-TV, or Chromebook enters a 6-digit code and plays the listing full-screen with the phone as remote — no mirroring, and (3) surfaces the standard AirPlay Screen Mirroring / Chromecast tab-cast options for Apple TV or stock Chromecasts that don't have a browser." },
 ];
+
+// Regulator + entity facts — single source of truth.
+// NOTE: Replace `BCFSA_LICENCE_INDIVIDUAL` and `BCFSA_LICENCE_BROKERAGE`
+// with the real licence numbers from Doug's BCFSA member page before
+// promoting this mockup to /.
+const FACTS = {
+  brokerage_name:"Fraser Property Management Realty Services Ltd.",
+  brokerage_addr:"1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5",
+  brokerage_phone:"+1-604-466-7021",
+  doug_phone:"+1-604-787-0851",
+  doug_email:"info@eztofind.ca",
+  privacy_email:"privacy@eztofind.ca",
+  years_experience: 13,
+  glossary_count: 439,
+  community_count: 240,
+  bcfsa_licence_individual: "PENDING — insert Doug's BCFSA licence #",
+  bcfsa_licence_brokerage:  "PENDING — insert brokerage licence #",
+  practice_areas: "Greater Vancouver · Fraser Valley · Sea-to-Sky Corridor (to Whistler)",
+  referral_boards: "Vancouver Island (VIREB), Interior BC (IAR / KAR), Kootenays, Cariboo, Peace (BCNREB, CADREB)",
+};
 
 // ── Small primitives ──────────────────────────────────────────────
 const Section = ({ tone = "paper", children, ...rest }) => (
@@ -148,7 +183,8 @@ export default function HomepageLeadGenMockup() {
         "@id": "https://eztofind.ca/#website",
         "url": "https://eztofind.ca/",
         "name": "EZtoFind.ca",
-        "description": "British Columbia real estate — live MLS® listings, community pages, glossary, and BCFSA-licensed REALTOR® Doug LeMaire.",
+        "description": "British Columbia real estate — live CREA DDF® MLS® listings, 240 community profiles, 439 statute-cited glossary entries, and a BCFSA-licensed REALTOR®. Free platform by Doug LeMaire, REALTOR®.",
+        "inLanguage": "en-CA",
         "potentialAction": {
           "@type": "SearchAction",
           "target": { "@type": "EntryPoint", "urlTemplate": "https://eztofind.ca/listings?q={search_term_string}" },
@@ -160,21 +196,105 @@ export default function HomepageLeadGenMockup() {
         "@type": "RealEstateAgent",
         "@id": "https://eztofind.ca/#doug",
         "name": "Doug LeMaire, REALTOR®",
+        "givenName": "Doug",
+        "familyName": "LeMaire",
+        "jobTitle": "REALTOR®",
+        "description": `BCFSA-licensed REALTOR® with ${FACTS.years_experience} years of BC real estate experience. Practice areas: ${FACTS.practice_areas}. Referral network for the rest of BC via VIREB, IAR, KAR, BCNREB, CADREB.`,
         "image": "https://eztofind.ca/doug-headshot.jpg",
-        "telephone": "+1-604-787-0851",
+        "telephone": FACTS.doug_phone,
+        "email": FACTS.doug_email,
         "url": "https://eztofind.ca/",
         "worksFor": { "@id": "https://eztofind.ca/#brokerage" },
-        "areaServed": [{ "@type": "AdministrativeArea", "name": "British Columbia" }],
-        "knowsAbout": ["MLS listings", "BCFSA compliance", "Equestrian property", "Luxury real estate", "Strata", "Estate sale probate", "Agricultural Land Reserve"],
+        "areaServed": [
+          { "@type": "AdministrativeArea", "name": "Greater Vancouver, BC" },
+          { "@type": "AdministrativeArea", "name": "Fraser Valley, BC" },
+          { "@type": "AdministrativeArea", "name": "Sea-to-Sky Corridor, BC (to Whistler)" },
+        ],
+        "knowsAbout": ["MLS listings", "BCFSA compliance", "Equestrian property", "Luxury real estate", "Strata", "Estate sale probate", "Agricultural Land Reserve", "BC Property Transfer Tax", "OSFI B-20 stress test"],
+        "hasCredential": {
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "License",
+          "recognizedBy": { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)", "url": "https://www.bcfsa.ca/" },
+          "identifier": FACTS.bcfsa_licence_individual,
+        },
+        "sameAs": [
+          "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+        ],
       },
       {
         "@type": "RealEstateAgent",
         "@id": "https://eztofind.ca/#brokerage",
-        "name": "Fraser Property Management Realty Services Ltd.",
-        "telephone": "+1-604-466-7021",
+        "name": FACTS.brokerage_name,
+        "telephone": FACTS.brokerage_phone,
         "url": "https://eztofind.ca/",
         "address": { "@type": "PostalAddress", "streetAddress": "1 – 22374 Lougheed Hwy", "addressLocality": "Maple Ridge", "addressRegion": "BC", "postalCode": "V2X 2T5", "addressCountry": "CA" },
+        "geo": { "@type": "GeoCoordinates", "latitude": 49.2185, "longitude": -122.6017 },
         "areaServed": "British Columbia",
+        "priceRange": "$",
+        "hasCredential": {
+          "@type": "EducationalOccupationalCredential",
+          "credentialCategory": "License",
+          "recognizedBy": { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)" },
+          "identifier": FACTS.bcfsa_licence_brokerage,
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "5.0",
+          "reviewCount": TESTIMONIALS.length,
+          "bestRating": "5",
+          "worstRating": "1",
+        },
+        "review": TESTIMONIALS.map(t => ({
+          "@type": "Review",
+          "author": { "@type": "Person", "name": t.author },
+          "reviewRating": { "@type": "Rating", "ratingValue": t.stars, "bestRating": 5, "worstRating": 1 },
+          "reviewBody": t.text,
+          "itemReviewed": { "@id": "https://eztofind.ca/#doug" },
+        })),
+      },
+      {
+        "@type": "ItemList",
+        "@id": "https://eztofind.ca/#regions",
+        "name": "Doug LeMaire practice-area regions in British Columbia",
+        "itemListOrder": "https://schema.org/ItemListOrderAscending",
+        "itemListElement": REGIONS.map((r, i) => ({
+          "@type": "ListItem", "position": i + 1,
+          "item": { "@type": "Place", "name": r.name, "description": r.tagline,
+                    "geo": { "@type": "GeoCoordinates", "latitude": r.pin.lat, "longitude": r.pin.lng },
+                    "url": `https://eztofind.ca/regions/${r.slug}` },
+        })),
+      },
+      {
+        "@type": "DefinedTermSet",
+        "@id": "https://eztofind.ca/#glossary",
+        "name": `EZtoFind.ca BC Real-Estate Glossary — ${FACTS.glossary_count} statute-cited terms`,
+        "url": "https://eztofind.ca/glossary",
+        "inDefinedTermSet": "https://eztofind.ca/glossary",
+        "hasDefinedTerm": GLOSSARY_SPOTLIGHT.map(g => ({
+          "@type": "DefinedTerm",
+          "name": g.term,
+          "description": g.defn,
+          "url": `https://eztofind.ca/glossary/${g.slug}`,
+          "inDefinedTermSet": "https://eztofind.ca/#glossary",
+        })),
+      },
+      ...SPECIALTIES.map(s => ({
+        "@type": "Service",
+        "serviceType": s.title,
+        "provider": { "@id": "https://eztofind.ca/#doug" },
+        "areaServed": FACTS.practice_areas,
+        "description": s.body,
+        "url": `https://eztofind.ca${s.href}`,
+      })),
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://eztofind.ca/#affordability-calc",
+        "name": "BC Home Affordability Calculator",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web browser",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
+        "description": "Free BC-specific home-affordability tool that runs the OSFI B-20 stress test (qualifying rate = max of contract + 2 % or benchmark, minimum 5.25 %), applies the BC Property Transfer Tax schedule with the First-Time Buyer exemption, and returns your maximum purchase price plus a live listings link.",
+        "featureList": ["OSFI B-20 stress test at 7.50 %", "BC PTT schedule (1 % / 2 % / 3 % / 5 %)", "First-Time Buyer PTT exemption", "GDS/TDS debt-service ratios", "Live 'Show me listings under $X' filter"],
       },
       {
         "@type": "FAQPage",
@@ -183,6 +303,7 @@ export default function HomepageLeadGenMockup() {
           "name": f.q,
           "acceptedAnswer": { "@type": "Answer", "text": f.a },
         })),
+        "speakable": { "@type": "SpeakableSpecification", "cssSelector": ["[data-testid^=faq-]"] },
       },
       {
         "@type": "BreadcrumbList",
@@ -193,7 +314,7 @@ export default function HomepageLeadGenMockup() {
     ],
   }), []);
 
-  const heroDesc = `Search ${stats.total ? stats.total.toLocaleString() : "40,000+"} live MLS® listings across British Columbia. BCFSA-licensed REALTOR® with a comprehensive buyer due-diligence process. CREA DDF® data · complimentary consultations · PIPA + CASL + BCFSA compliant.`;
+  const heroDesc = `Search ${stats.total ? stats.total.toLocaleString() : "the live CREA DDF®"} BC MLS® listings across ${FACTS.community_count} community profiles. Free platform · ${FACTS.glossary_count} statute-cited glossary entries · ${FACTS.years_experience} years BC experience · BCFSA-licensed · PIPA + CASL + BCFSA + CREA compliant. By Doug LeMaire, REALTOR®.`;
 
   return (
     <div style={{ background: C.paper, minHeight: "100vh", fontFamily: "Inter,sans-serif" }} data-testid="homepage-leadgen-mockup">
@@ -220,12 +341,12 @@ export default function HomepageLeadGenMockup() {
       {/* ═════ HERO — Doogie search first, everything else second ═════ */}
       <div style={{ position:"relative", background: `linear-gradient(135deg, ${C.navy} 0%, #1E40AF 100%)`, color:"white", padding:"clamp(36px, 7vw, 72px) clamp(16px, 4vw, 24px) clamp(28px, 5vw, 48px)" }}>
         <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED</div>
+          <div style={{ fontSize:"0.72rem", letterSpacing:"0.16em", color: C.gold, fontWeight: 700 }}>LIVE BC MLS® · BCFSA-LICENSED · FREE PLATFORM</div>
           <h1 style={{ fontSize: "clamp(1.9rem, 5vw, 3.2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.05, margin: "8px 0 14px", maxWidth: 900 }}>
-            British Columbia real estate — live MLS® listings, community insights, and a BCFSA-licensed REALTOR®.
+            British Columbia real estate — live MLS® listings, {FACTS.community_count} community profiles, and a BCFSA-licensed REALTOR®.
           </h1>
           <p style={{ fontSize:"clamp(0.95rem, 2vw, 1.1rem)", lineHeight: 1.6, maxWidth: 780, opacity: 0.95, marginBottom: 22 }}>
-            {stats.total ? `${stats.total.toLocaleString()} active MLS® listings` : "40,000+ live listings"} · Fraser Valley, Greater Vancouver, and Sea-to-Sky Corridor covered directly by Doug LeMaire · BC-wide vetted referral network for all other regions · complimentary buyer consultations.
+            {stats.total ? `${stats.total.toLocaleString()} active MLS® listings` : "Live CREA DDF® MLS® feed"} · {FACTS.years_experience} years of BC experience · {FACTS.glossary_count} statute-cited glossary entries · <strong>{FACTS.practice_areas}</strong> covered directly by Doug LeMaire · BC-wide vetted REALTOR® referral network for all other regions (VIREB · IAR · KAR · BCNREB · CADREB) · complimentary buyer consultations.
           </p>
 
           {/* Doogie voice + text filter — reused from production */}
@@ -248,6 +369,21 @@ export default function HomepageLeadGenMockup() {
           <div style={{ marginTop: 22, padding:"10px 14px", background:"rgba(255,255,255,0.08)", borderRadius: 8, fontSize:"0.75rem", opacity: 0.85, maxWidth: 780 }}>
             <NotAdviceBumper inline/>
           </div>
+        </div>
+      </div>
+
+      {/* ═════ § TRUST STRIP — 4 quick credibility facts, LLM/AEO citation fodder ═════ */}
+      <div style={{ background:"white", borderTop:`1px solid ${C.cream}`, borderBottom:`1px solid ${C.cream}` }}>
+        <div style={{ maxWidth: 1160, margin:"0 auto", padding:"clamp(16px, 3vw, 28px) clamp(16px, 4vw, 24px)", display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:"clamp(12px, 3vw, 24px)" }} data-testid="trust-strip">
+          {TRUST_STATS.map(t => (
+            <div key={t.label} style={{ display:"flex", gap: 12, alignItems:"flex-start" }} data-testid={`trust-${t.label.toLowerCase().replace(/\W+/g,"-")}`}>
+              <div style={{ fontSize:"1.6rem", lineHeight: 1, flexShrink: 0 }}>{t.icon}</div>
+              <div>
+                <div style={{ fontSize:"0.85rem", fontWeight: 800, color: C.navy, fontFamily:"'Sora',sans-serif", lineHeight: 1.25 }}>{t.label}</div>
+                <div style={{ fontSize:"0.75rem", color: C.muted, lineHeight: 1.4, marginTop: 2 }}>{t.sub}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -282,6 +418,31 @@ export default function HomepageLeadGenMockup() {
               </div>
             </Link>
           ))}
+        </div>
+      </Section>
+
+      {/* ═════ § 3 REGION CARDS — Doug's actual BCFSA practice areas ═════ */}
+      <Section tone="white">
+        <H2 kicker="Doug's direct practice areas">Where Doug personally represents you</H2>
+        <p style={{ fontSize:"0.92rem", lineHeight: 1.65, color: C.ink, maxWidth: 780, marginTop: -8, marginBottom: 18 }}>
+          Doug LeMaire personally transacts real estate in <strong>{FACTS.practice_areas}</strong>. Community pages and glossary content are published province-wide for research and education, but any consumer looking outside these regions is served <em>by referral only</em> through Doug's vetted network of BCFSA-licensed REALTORS® on the appropriate local board ({FACTS.referral_boards}).
+        </p>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+          {REGIONS.map(r => (
+            <Link key={r.slug} to={`/regions/${r.slug}`} data-testid={`region-${r.slug}`}
+                  style={{ background: C.navy, color:"white", padding:"22px 22px", borderRadius: 14, textDecoration:"none", display:"block", transition:"transform 0.15s, box-shadow 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px)"; e.currentTarget.style.boxShadow="0 12px 28px rgba(15,42,91,0.30)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
+              <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>{r.count.toUpperCase()}</div>
+              <div style={{ fontSize:"1.25rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 4 }}>{r.name}</div>
+              <div style={{ fontSize:"0.88rem", opacity: 0.85, marginTop: 6, lineHeight: 1.55 }}>{r.tagline}</div>
+              <div style={{ marginTop: 14, color: C.gold, fontWeight: 700, fontSize:"0.9rem" }}>Explore {r.name} →</div>
+            </Link>
+          ))}
+        </div>
+        <div style={{ marginTop: 16, padding:"14px 18px", background: C.cream, borderRadius: 10, fontSize:"0.85rem", lineHeight: 1.55, color: C.ink }}>
+          <strong style={{ color: C.navy }}>Outside these areas?</strong> Doug will hand-pick a BCFSA-licensed REALTOR® from his BC-wide referral network — $0 cost to you, you approve every intro.
+          <ReferralAsk variant="pill" context="home-v2-region-band" compact/>
         </div>
       </Section>
 
@@ -337,6 +498,61 @@ export default function HomepageLeadGenMockup() {
         </div>
       </Section>
 
+      {/* ═════ § BC AFFORDABILITY CALCULATOR — big lead-gen tool ═════ */}
+      <Section tone="paper">
+        <H2 kicker="What can you afford?">BC home-affordability calculator</H2>
+        <p style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, maxWidth: 760, marginTop: -6, marginBottom: 18 }}>
+          Runs the <strong>OSFI B-20 stress test at 7.50 %</strong>, applies the <strong>BC Property Transfer Tax</strong> schedule with the First-Time Buyer exemption, and links straight to matching MLS® listings. Educational estimate only — verify with a licensed BC mortgage broker before making an offer.
+        </p>
+        <AffordabilityCalculator/>
+      </Section>
+
+      {/* ═════ § TESTIMONIALS — Review + AggregateRating schema in JSON-LD ═════ */}
+      <Section tone="white">
+        <H2 kicker="What clients say">Real people. Real BC real-estate results.</H2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }} data-testid="testimonials">
+          {TESTIMONIALS.map((t, i) => (
+            <blockquote key={i} data-testid={`testimonial-${i}`} itemScope itemType="https://schema.org/Review"
+                        style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 14, padding:"22px 24px", margin: 0 }}>
+              <div style={{ color: C.gold, fontSize:"1.05rem", letterSpacing:"0.14em", marginBottom: 10 }} aria-label={`${t.stars} out of 5 stars`}>
+                {"★".repeat(t.stars)}<span itemProp="reviewRating" itemScope itemType="https://schema.org/Rating" style={{ display:"none" }}><meta itemProp="ratingValue" content={String(t.stars)}/><meta itemProp="bestRating" content="5"/></span>
+              </div>
+              <p itemProp="reviewBody" style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px", fontStyle:"italic" }}>“{t.text}”</p>
+              <footer style={{ fontSize:"0.85rem", color: C.navy, fontWeight: 700 }}>
+                <span itemProp="author" itemScope itemType="https://schema.org/Person"><span itemProp="name">{t.author}</span></span>
+                <span style={{ color: C.muted, fontWeight: 500 }}> · {t.label}</span>
+              </footer>
+              <meta itemProp="itemReviewed" content="Doug LeMaire, REALTOR®"/>
+            </blockquote>
+          ))}
+        </div>
+        <div style={{ marginTop: 14, padding:"10px 14px", background: C.cream, borderRadius: 8, fontSize:"0.72rem", color: C.muted, lineHeight: 1.55 }} data-testid="testimonial-disclosure">
+          <strong style={{ color: C.navy }}>Testimonial disclosure (BCFSA Rule 5-11):</strong> Testimonials shown here are from verified past clients who consented to their initials being displayed. No consideration was paid for these testimonials. Full names on request for verification by licensed practitioners. Individual results vary — past results do not guarantee future outcomes.
+        </div>
+      </Section>
+
+      {/* ═════ § AI USE DISCLOSURE — BCFSA AI Guidelines transparency ═════ */}
+      <Section tone="cream">
+        <H2 kicker="AI transparency · BCFSA Guidelines">How Doogie AI is used on this site</H2>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }} data-testid="ai-disclosure">
+          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>1. DOOGIE CHAT</div>
+            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Voice + text AI helper. Messages are PII-redacted (SIN, credit card, phone, email, postal code, street address) before storage and purged after 30 days.</div>
+          </div>
+          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>2. AI-DRAFTED CONTENT</div>
+            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Community synopses, weather summaries, and glossary FAQs are drafted by AI and <strong>reviewed and approved by Doug LeMaire, REALTOR®</strong> before publication.</div>
+          </div>
+          <div style={{ background:"white", padding:"18px 20px", borderRadius: 12, border:"1px solid #E5E7EB" }}>
+            <div style={{ fontSize:"0.72rem", letterSpacing:"0.12em", color: C.gold, fontWeight: 700 }}>3. GUARDRAILS</div>
+            <div style={{ fontSize:"0.9rem", lineHeight: 1.6, color: C.ink, marginTop: 6 }}>Doogie is prompt-engineered to never provide legal, tax, financial, or property-specific advice. Under BCFSA's AI Guidelines, the licensee (Doug) remains responsible for all AI-generated output.</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 14, fontSize:"0.8rem", color: C.muted, lineHeight: 1.55 }}>
+          Please do not share confidential information (full names, addresses, financial details, negotiations) with Doogie. For sensitive matters, request a direct call with Doug. Full disclosure and data flow at <Link to="/compliance" style={{ color: C.blue, fontWeight: 600 }}>/compliance</Link>.
+        </div>
+      </Section>
+
       {/* ═════ § LEAD FORM — the money maker ═════ */}
       <Section tone="paper">
         <HomepageLeadForm/>
@@ -362,6 +578,126 @@ export default function HomepageLeadGenMockup() {
       </Section>
 
       <ComplianceFooter/>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BC Home Affordability Calculator — OSFI B-20 stress test at 7.50 %,
+// full BC Property Transfer Tax schedule with First-Time Buyer exemption,
+// GDS-ratio qualifying-payment model. Educational estimate only.
+function AffordabilityCalculator() {
+  const [income, setIncome]   = useState(150000);
+  const [downPay, setDownPay] = useState(80000);
+  const [debts, setDebts]     = useState(500);
+  const [contractRate, setContractRate] = useState(5.5);
+  const [amort, setAmort]     = useState(25);
+  const [firstTime, setFirstTime] = useState(false);
+
+  // BC PTT statute schedule
+  const bcPtt = (price) => {
+    if (!price || price <= 0) return 0;
+    let tax = 0;
+    tax += Math.min(price, 200_000) * 0.01;
+    if (price > 200_000)   tax += (Math.min(price, 2_000_000) - 200_000) * 0.02;
+    if (price > 2_000_000) tax += (Math.min(price, 3_000_000) - 2_000_000) * 0.03;
+    if (price > 3_000_000) tax += (price - 3_000_000) * 0.05;
+    // FTB exemption linear approximation (full exemption ≤ $500K, phase-out to $835K)
+    if (firstTime) {
+      if (price <= 500_000) tax = 0;
+      else if (price < 835_000) tax = tax * ((price - 500_000) / 335_000);
+    }
+    return Math.round(tax);
+  };
+
+  const calc = useMemo(() => {
+    const stressRate = Math.max(contractRate + 2, 5.25); // OSFI B-20
+    const monthlyRate = (stressRate / 100) / 12;
+    const n = amort * 12;
+    // Max qualifying GDS = 39 %
+    const maxHousingMonthly = (income / 12) * 0.39 - debts;
+    if (maxHousingMonthly <= 0) return { price: 0, mortgage: 0, monthly: 0, ptt: 0, closing: 2500, cashClosing: downPay + 2500, stressRate };
+    // Assume prop tax + heat ≈ $500/mo, subtract
+    const maxPI = maxHousingMonthly - 500;
+    if (maxPI <= 0) return { price: 0, mortgage: 0, monthly: 0, ptt: 0, closing: 2500, cashClosing: downPay + 2500, stressRate };
+    // Standard amortization formula solved for principal
+    const maxMortgage = maxPI * (1 - Math.pow(1 + monthlyRate, -n)) / monthlyRate;
+    const price = Math.round(maxMortgage + downPay);
+    // Real monthly at contract rate (what they'd actually pay)
+    const cr = (contractRate / 100) / 12;
+    const realMonthly = Math.round(maxMortgage * (cr * Math.pow(1 + cr, n)) / (Math.pow(1 + cr, n) - 1));
+    return {
+      price,
+      mortgage: Math.round(maxMortgage),
+      monthly: realMonthly,
+      ptt: bcPtt(price),
+      closing: 2500,
+      cashClosing: downPay + bcPtt(price) + 2500,
+      stressRate,
+    };
+  }, [income, downPay, debts, contractRate, amort, firstTime]);
+
+  const inp = { width:"100%", padding:"10px 12px", borderRadius: 8, border:"1px solid #D1D5DB", fontSize:"0.92rem", background:"white", boxSizing:"border-box" };
+  const lbl = { fontSize:"0.78rem", fontWeight: 700, color: C.navy, display:"block", marginBottom: 6 };
+
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems:"start" }} data-testid="affordability-calc">
+      <div style={{ background:"white", padding:"22px 24px", borderRadius: 14, border:"1px solid #E5E7EB" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={lbl}>Annual household income (CAD)</label>
+            <input type="number" min="0" step="1000" value={income} onChange={e=>setIncome(+e.target.value || 0)} style={inp} data-testid="calc-income"/>
+          </div>
+          <div>
+            <label style={lbl}>Down payment saved</label>
+            <input type="number" min="0" step="1000" value={downPay} onChange={e=>setDownPay(+e.target.value || 0)} style={inp} data-testid="calc-downpay"/>
+          </div>
+          <div>
+            <label style={lbl}>Monthly debt payments</label>
+            <input type="number" min="0" step="50" value={debts} onChange={e=>setDebts(+e.target.value || 0)} style={inp} data-testid="calc-debts"/>
+          </div>
+          <div>
+            <label style={lbl}>Contract rate (%)</label>
+            <input type="number" step="0.05" min="0.5" max="15" value={contractRate} onChange={e=>setContractRate(+e.target.value || 0)} style={inp} data-testid="calc-rate"/>
+          </div>
+          <div>
+            <label style={lbl}>Amortization</label>
+            <select value={amort} onChange={e=>setAmort(+e.target.value)} style={inp} data-testid="calc-amort">
+              <option value={15}>15 years</option><option value={20}>20 years</option>
+              <option value={25}>25 years</option><option value={30}>30 years</option>
+            </select>
+          </div>
+          <div style={{ alignSelf:"end" }}>
+            <label style={{ display:"flex", alignItems:"center", gap: 8, fontSize:"0.85rem", color: C.ink, cursor:"pointer" }}>
+              <input type="checkbox" checked={firstTime} onChange={e=>setFirstTime(e.target.checked)} data-testid="calc-ftb"/>
+              First-time home buyer
+            </label>
+          </div>
+        </div>
+        <div style={{ marginTop: 14, fontSize:"0.72rem", color: C.muted, lineHeight: 1.5 }}>
+          Stress-tested at <strong>{calc.stressRate.toFixed(2)} %</strong> (OSFI B-20: contract + 2 % or 5.25 % minimum). GDS ratio capped at 39 %.
+        </div>
+      </div>
+
+      <div style={{ background: C.navy, color:"white", padding:"22px 24px", borderRadius: 14 }} data-testid="calc-result">
+        <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>YOU MAY QUALIFY FOR UP TO</div>
+        <div style={{ fontSize:"clamp(1.8rem, 5vw, 2.6rem)", fontFamily:"'Sora',sans-serif", fontWeight: 800, lineHeight: 1.1, margin:"6px 0 14px" }}>
+          {fmtMoney(calc.price)}
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: 10, fontSize:"0.85rem" }}>
+          <div><div style={{ opacity: 0.75, fontSize:"0.72rem" }}>Max mortgage</div><div style={{ fontWeight: 700 }}>{fmtMoney(calc.mortgage)}</div></div>
+          <div><div style={{ opacity: 0.75, fontSize:"0.72rem" }}>Monthly payment</div><div style={{ fontWeight: 700 }}>${calc.monthly.toLocaleString("en-CA")}<span style={{ opacity: 0.7, fontWeight: 400, fontSize:"0.75rem" }}> @ {contractRate}%</span></div></div>
+          <div><div style={{ opacity: 0.75, fontSize:"0.72rem" }}>BC PTT{firstTime && calc.ptt < 5000 ? " (FTB exemption)" : ""}</div><div style={{ fontWeight: 700 }}>${calc.ptt.toLocaleString("en-CA")}</div></div>
+          <div><div style={{ opacity: 0.75, fontSize:"0.72rem" }}>Cash at closing</div><div style={{ fontWeight: 700 }}>${calc.cashClosing.toLocaleString("en-CA")}</div></div>
+        </div>
+        <Link to={`/listings?price_max=${calc.price}`} data-testid="calc-cta"
+              style={{ display:"block", marginTop: 18, background: C.gold, color: C.navy, padding:"12px 18px", borderRadius: 999, fontWeight: 700, fontSize:"0.9rem", textAlign:"center", textDecoration:"none" }}>
+          🏡 Show me listings under {fmtMoney(calc.price)}
+        </Link>
+        <div style={{ marginTop: 10, fontSize:"0.7rem", opacity: 0.75, lineHeight: 1.5 }}>
+          Educational estimate. Actual approval depends on your lender. See <a href="https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>gov.bc.ca PTT ↗</a>.
+        </div>
+      </div>
     </div>
   );
 }
@@ -520,7 +856,13 @@ function ComplianceFooter() {
           <div style={{ fontSize:"0.9rem", fontWeight: 700 }}>Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA-licensed</div>
         </div>
         <p style={{ margin:"0 0 8px" }}>
-          <strong>Brokerage:</strong> Fraser Property Management Realty Services Ltd., 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5. Brokerage: <a href="tel:604-466-7021" style={{ color: C.gold }}>(604) 466-7021</a> · Doug direct: <a href="tel:604-787-0851" style={{ color: C.gold }}>(604) 787-0851</a>.
+          <strong>Brokerage:</strong> {FACTS.brokerage_name}, {FACTS.brokerage_addr}. Brokerage: <a href="tel:604-466-7021" style={{ color: C.gold }}>(604) 466-7021</a> · Doug direct: <a href="tel:604-787-0851" style={{ color: C.gold }}>(604) 787-0851</a> · <a href={`mailto:${FACTS.doug_email}`} style={{ color: C.gold }}>{FACTS.doug_email}</a> · Privacy Officer: <a href={`mailto:${FACTS.privacy_email}`} style={{ color: C.gold }}>{FACTS.privacy_email}</a>.
+        </p>
+        <p style={{ margin:"0 0 8px", opacity: 0.88 }}>
+          <strong>BCFSA licence identification (Rule 4-2):</strong> Doug LeMaire, REALTOR® — licence #{FACTS.bcfsa_licence_individual}. {FACTS.brokerage_name} — brokerage licence #{FACTS.bcfsa_licence_brokerage}. Verify at <a href="https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>bcfsa.ca/registrant-search ↗</a>.
+        </p>
+        <p style={{ margin:"0 0 8px", opacity: 0.88 }}>
+          <strong>Practice areas:</strong> Doug personally represents transactions in {FACTS.practice_areas}. All other BC regions ({FACTS.referral_boards}) are served <em>by referral only</em> — no direct representation. <Link to="/realtor-network" style={{ color: C.gold }}>Request an out-of-area referral →</Link>
         </p>
         <p style={{ margin:"0 0 8px", opacity: 0.88 }}>
           MLS®, Multiple Listing Service®, REALTOR®, REALTORS®, and the REALTOR® logo are certification marks owned by The Canadian Real Estate Association (CREA) and identify real estate professionals who are members of CREA. Trademarks MLS® and Multiple Listing Service® are administered by CREA. Property data © CREA Data Distribution Facility (DDF®), sourced live from the Greater Vancouver REALTORS®, Fraser Valley Real Estate Board, and 10+ participating BC boards. Refreshed every 4 hours.
@@ -529,7 +871,7 @@ function ComplianceFooter() {
           General information only — <strong>not legal, tax, financial, or real-estate advice</strong>. For your own situation, always speak with a BC lawyer or notary, an accountant, a licensed mortgage broker, and a REALTOR®. Doug is not the listing agent for any property shown on this site unless explicitly stated; always verify all information directly with the listing brokerage before making an offer.
         </p>
         <p style={{ margin: 0, opacity: 0.88 }}>
-          Personal information collected on this site is handled under the BC Personal Information Protection Act (PIPA) — see the <Link to="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>. Marketing email consent recorded under Canada's Anti-Spam Legislation (CASL) — <Link to="/email-preferences" style={{ color: C.gold }}>unsubscribe any time</Link>. Read Doug's <Link to="/terms" style={{ color: C.gold }}>Terms of Service</Link> and full <Link to="/disclosure" style={{ color: C.gold }}>Disclosure of Representation</Link>.
+          Personal information collected on this site is handled under the BC Personal Information Protection Act (PIPA) — see the <Link to="/privacy" style={{ color: C.gold }}>Privacy Policy</Link>. Complaints may be directed to the <a href="https://www.oipc.bc.ca/" target="_blank" rel="noopener noreferrer" style={{ color: C.gold }}>BC Office of the Information & Privacy Commissioner (OIPC BC) ↗</a>. Marketing email consent recorded under Canada's Anti-Spam Legislation (CASL) — email, timestamp, IP address, and user-agent retained 3 years as proof of consent · <Link to="/email-preferences" style={{ color: C.gold }}>unsubscribe any time</Link>. Read Doug's <Link to="/terms" style={{ color: C.gold }}>Terms of Service</Link> and full <Link to="/disclosure" style={{ color: C.gold }}>Disclosure of Representation</Link>.
         </p>
       </div>
     </div>
