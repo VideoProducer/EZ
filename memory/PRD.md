@@ -1,5 +1,22 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Community mockup → live production + Referral CTA Analytics)
+
+**Community page rollout:**
+- `CommunityPageMockupLive.jsx` refactored to accept slug from BOTH `useParams` (production `/community/:slug`) AND `useSearchParams` (mockup `?slug=…`). New `live={true}` prop hides the "UNLISTED PREVIEW" banner.
+- New `gotoCommunity(slug)` helper — on the live route it calls `navigate("/community/:slug")` so browser history + canonical + scroll-restore work; on the mockup route it stays on `?slug=…`.
+- `App.js` route `/community/:slug` swapped from the legacy `CommunityPage` component → `<CommunityPageMockupLive live={true}/>`. Wrapped in `Suspense` since the mockup component is lazy-loaded.
+- Verified on Kelowna + Victoria: same rich layout — breadcrumbs, region eyebrow, hero + referral card, live CREA DDF® stats (Kelowna: 1,803 · $819K · $60K–$23M), "View N listings" CTA, "Save {community}" nudge, and the softened §7 "Would you like Doug to connect you…" copy from this morning.
+
+**Referral CTA Analytics — new instrumentation:**
+- `POST /api/analytics/referral-click` public beacon (60/min rate-limited, PIPA-safe: no PII, IPs sha256-hashed, session_id is client-generated UUID reused from the return-visit hero). Body: `{community, slug, source, session_id}` where `source ∈ {hero, section7}`.
+- `GET /api/admin/analytics/referral-clicks?days=30` admin readout returning `total_clicks`, `unique_communities`, `top_communities[]` (sorted desc with source array + unique-session count), `by_source` histogram, and per-day trend.
+- Frontend fires the beacon via `navigator.sendBeacon` **before** the `<Link>` navigation on both hero + §7 referral CTAs.
+
+**End-to-end verified:** posted 10 test events → admin endpoint correctly returned Kelowna (6 clicks, 6 unique sessions, hit from both hero + section7), Victoria (3), Nelson (1); `by_source`: `section7=6, hero=4`. Playwright confirmed the beacon fires on click before navigation.
+
+
+
 ## 2026-02-15 (Equestrian search overhaul — Doug's Feb 2026 criteria)
 
 **Backend (`server.py`):**

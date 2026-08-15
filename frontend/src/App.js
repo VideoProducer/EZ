@@ -11764,7 +11764,7 @@ function App() {
       {/* Legacy split slugs — merged into unified 'langley' page */}
       <Route path="/community/langley-city" element={<Navigate to="/community/langley" replace/>}/>
       <Route path="/community/langley-township" element={<Navigate to="/community/langley" replace/>}/>
-      <Route path="/community/:slug" element={<AppLayout><CommunityPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-community"/></AppLayout>}/>
+      <Route path="/community/:slug" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading community…</div>}><CommunityPageMockupLive live={true}/></Suspense><Canary phrase={CANARY_COMMUNITY} testId="canary-community"/></AppLayout>}/>
       <Route path="/community/:slug/n/:nSlug" element={<AppLayout><NeighbourhoodPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-neighbourhood"/></AppLayout>}/>
       <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>

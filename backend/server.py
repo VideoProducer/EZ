@@ -2255,6 +2255,93 @@ async def admin_run_price_drop_watch(_=Depends(verify_admin)):
     result = await run_price_drop_watch(db)
     return {"ok": True, **result}
 
+# ── Referral-CTA click analytics ──────────────────────────────────────────
+# Fired by the "Referral REALTOR® link →" button on non-focus community
+# pages (§7 Get Connected + hero mini-link). Helps Doug see which BC
+# communities generate the most referral demand so he can prioritise
+# building deeper partnerships (or hiring an associate) there. PIPA-safe:
+# no PII, IP sha256-hashed, session_id is a client-generated UUID kept in
+# localStorage per browser.
+class ReferralClickEvent(BaseModel):
+    community:  str
+    slug:       str
+    source:     str = ""        # hero | section7 | (future) email | footer
+    session_id: str = ""
+
+
+@api.post("/analytics/referral-click")
+@_limiter.limit("60/minute")
+async def log_referral_click(body: ReferralClickEvent, request: Request):
+    community = (body.community or "").strip()[:80]
+    if not community:
+        raise HTTPException(400, "community required")
+    doc = {
+        "community":  community,
+        "slug":       (body.slug or "").strip().lower()[:80],
+        "source":     (body.source or "")[:40] or "unknown",
+        "session_id": (body.session_id or "")[:60],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "ip_hash":    _hash_ip(request.client.host if request.client else ""),
+    }
+    try:
+        await db.referral_click_events.insert_one(doc)
+    except Exception as e:
+        logger.error(f"referral_click event insert failed: {e}")
+    return {"ok": True}
+
+
+@api.get("/admin/analytics/referral-clicks")
+async def referral_click_analytics(_=Depends(verify_admin), days: int = 30):
+    """Aggregate referral-CTA clicks by community over the last N days.
+    Answers Doug's question: which non-focus BC cities generate the most
+    referral demand and are therefore worth building deeper partnerships in?"""
+    since = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 365)))).isoformat()
+
+    totals_pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {
+            "_id":       "$community",
+            "clicks":    {"$sum": 1},
+            "sessions":  {"$addToSet": "$session_id"},
+            "sources":   {"$addToSet": "$source"},
+            "last_slug": {"$last": "$slug"},
+        }},
+        {"$project": {
+            "_id": 0, "community": "$_id",
+            "clicks": 1, "last_slug": 1, "sources": 1,
+            "unique_sessions": {"$size": {"$filter": {"input": "$sessions", "cond": {"$ne": ["$$this", ""]}}}},
+        }},
+        {"$sort": {"clicks": -1}},
+        {"$limit": 100},
+    ]
+    by_city = [d async for d in db.referral_click_events.aggregate(totals_pipeline)]
+
+    source_pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {"_id": "$source", "n": {"$sum": 1}}},
+        {"$sort": {"n": -1}},
+    ]
+    by_source = {r["_id"] or "unknown": r["n"] async for r in db.referral_click_events.aggregate(source_pipeline)}
+
+    daily_pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$project": {"day": {"$substr": ["$created_at", 0, 10]}}},
+        {"$group": {"_id": "$day", "n": {"$sum": 1}}},
+        {"$sort": {"_id": 1}},
+    ]
+    daily = [{"day": r["_id"], "clicks": r["n"]} async for r in db.referral_click_events.aggregate(daily_pipeline)]
+
+    return {
+        "window_days":  days,
+        "total_clicks": sum(c["clicks"] for c in by_city),
+        "unique_communities": len(by_city),
+        "top_communities":    by_city,   # sorted desc by clicks
+        "by_source":          by_source, # hero | section7 | …
+        "daily":              daily,
+        "compliance": "PIPA-safe: no PII stored. IP sha256-hashed; session_id is a client-generated UUID.",
+    }
+
+
 @api.post("/admin/sunday-night-digest/run")
 async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
     """Manually trigger the Sunday-Night Digest — combined new-matches

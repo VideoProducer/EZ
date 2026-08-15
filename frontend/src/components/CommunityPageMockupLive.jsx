@@ -7,10 +7,11 @@
 //   /api/community/{slug}/weather          — climate narrative
 //   /api/listings?city={name}              — live 4-card grid + count
 //
-// Route: /mockups/community-live?slug=kelowna  (default) OR ?slug=maple-ridge etc.
-// Parked / unlisted / noindex identical to CommunityPageMockup.
+// Routes:
+//   /community/:slug           → renders live (hides mockup banner)
+//   /mockups/community-live?slug=... → renders mockup (with banner)
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 
@@ -119,9 +120,54 @@ const fmtMoney = (n) => {
 };
 
 // ── Main component ──────────────────────────────────────────────────
-export default function CommunityPageMockupLive() {
+export default function CommunityPageMockupLive({ live = false } = {}) {
+  // Slug source depends on how the component is mounted:
+  //   /community/:slug            → useParams (live production page)
+  //   /mockups/community-live?slug=… → useSearchParams (parked mockup)
+  const routeParams = useParams();
   const [sp, setSp] = useSearchParams();
-  const slug = sp.get("slug") || "kelowna";
+  const navigate = useNavigate();
+  const slug = routeParams.slug || sp.get("slug") || "kelowna";
+  // Navigate to a sibling community — on the LIVE route we push a new URL
+  // (`/community/{slug}`) so browser history + canonical + scroll-restore
+  // behave correctly; on the mockup route we just rewrite `?slug=…`.
+  const gotoCommunity = (s) => live ? navigate(`/community/${s}`) : setSp({ slug: s });
+
+  // Per-browser session ID for referral-click analytics. Same key used by
+  // the return-visit hero so the admin can join both funnels. Generated
+  // once via crypto.randomUUID(); never rotated; never sent to a 3rd party.
+  const sessionId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      let sid = localStorage.getItem("ez_rv_session_id");
+      if (!sid) {
+        sid = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : `rv-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem("ez_rv_session_id", sid);
+      }
+      return sid;
+    } catch { return ""; }
+  }, []);
+
+  // Fire-and-forget beacon for the "Referral REALTOR® link →" click.
+  // Uses navigator.sendBeacon so the event survives the immediate
+  // <Link> navigation. PIPA-safe: no PII, filters limited to slug +
+  // source strings, IPs sha256-hashed server-side.
+  const trackReferralClick = (source) => {
+    if (!community || typeof window === "undefined") return;
+    try {
+      const payload = { community, slug, source, session_id: sessionId };
+      const url = `${API}/api/analytics/referral-click`;
+      const body = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+      }
+    } catch { /* analytics failures are non-fatal */ }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -253,7 +299,7 @@ export default function CommunityPageMockupLive() {
 
   return (
     <div style={{background:"#F5F5F0",minHeight:"100vh"}} data-testid="community-page-mockup-live">
-      <UnlistedMockupBanner label={`LIVE community page · ${community}`}/>
+      {!live && <UnlistedMockupBanner label={`LIVE community page · ${community}`}/>}
 
       {/* Community picker removed per user request */}
 
@@ -300,7 +346,7 @@ export default function CommunityPageMockupLive() {
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:64,height:64,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.35))"}}/>
               <div style={{fontSize:"0.92rem",lineHeight:1.55,flex:"1 1 340px"}}>
                 Would you like Doug to connect you with a {community} REALTOR®?{" "}
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="hero-referral-link" style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}>Referral REALTOR® link →</Link>
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("hero")} data-testid="hero-referral-link" style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}>Referral REALTOR® link →</Link>
               </div>
             </div>
           )}
@@ -452,7 +498,7 @@ export default function CommunityPageMockupLive() {
                 <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
                   As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you! 🐾 Would you like Doug to connect you with a licensed REALTOR® in that area?
                 </div>
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="bottom-referral-link" style={{display:"inline-block",background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",textDecoration:"none"}}>🤝 Referral REALTOR® link →</Link>
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("section7")} data-testid="bottom-referral-link" style={{display:"inline-block",background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",textDecoration:"none"}}>🤝 Referral REALTOR® link →</Link>
               </div>
             </div>
           </>
@@ -474,7 +520,7 @@ export default function CommunityPageMockupLive() {
         <SectionH kicker="§8 · Nearby">Other {region} communities</SectionH>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {data.nearby.slice(0, 8).map(n => (
-            <button key={n.slug} data-testid={`nearby-${n.slug}`} onClick={() => setSp({ slug: n.slug })} style={{padding:"8px 14px",background:"white",border:"1px solid #E5E7EB",borderRadius:999,color:BRAND.navy,fontSize:"0.85rem",fontWeight:600,cursor:"pointer"}}>{n.name} →</button>
+            <button key={n.slug} data-testid={`nearby-${n.slug}`} onClick={() => gotoCommunity(n.slug)} style={{padding:"8px 14px",background:"white",border:"1px solid #E5E7EB",borderRadius:999,color:BRAND.navy,fontSize:"0.85rem",fontWeight:600,cursor:"pointer"}}>{n.name} →</button>
           ))}
           {data.nearby.length === 0 && <span style={{fontSize:"0.85rem",color:BRAND.muted,fontStyle:"italic"}}>No nearby communities returned.</span>}
         </div>
