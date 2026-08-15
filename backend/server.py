@@ -8847,6 +8847,127 @@ EQUESTRIAN_SUB_CATEGORIES = {
     "bareland":   {"property_types": ["Land"], "patterns": ["bareland", "bare land", "vacant land", "raw land"]},
 }
 
+# ── Equestrian acreage rule (BC-specific, Doug's spec Feb 2026) ────────────
+# Property qualifies as equestrian ONLY if:
+#   Path A (Land):  lot_size_area >= 5 acres (unit-aware conversion)
+#   Path B (Small): lot_size < 5 acres BUT description explicitly mentions
+#                   a LEGAL BARN + PADDOCK/STALL combo (barn + paddock, or
+#                   barn + stall, or barn + arena, or barn + corral).
+# Path B catches sub-acre hobby-boarding properties that already have
+# permitted facilities. Vacant Land is always excluded from this endpoint
+# unless the caller opts in via sub_category="bareland".
+EQUESTRIAN_MIN_ACRES = 5.0
+
+def _equestrian_lot_or_barn_clause() -> dict:
+    """Returns the Mongo $or clause that enforces Doug's equestrian criteria:
+    5+ acres in ANY unit, OR a smaller parcel that already has a legal
+    barn + paddock/stall/corral/arena mentioned in the description."""
+    return {"$or": [
+        # Path A — acreage-based, unit-aware.
+        {"$and": [
+            {"lot_size_units": {"$regex": r"^ac", "$options": "i"}},
+            {"lot_size_area":  {"$gte": EQUESTRIAN_MIN_ACRES}},
+        ]},
+        {"$and": [
+            {"lot_size_units": {"$regex": r"^(hect|ha)", "$options": "i"}},
+            {"lot_size_area":  {"$gte": EQUESTRIAN_MIN_ACRES * 0.4047}},  # 5 ac ≈ 2.02 ha
+        ]},
+        {"$and": [
+            {"lot_size_units": {"$regex": r"sq.?f", "$options": "i"}},
+            {"lot_size_area":  {"$gte": EQUESTRIAN_MIN_ACRES * 43560}},  # 5 ac = 217,800 sqft
+        ]},
+        # Path B — smaller parcel with a legal barn + at least one horse-
+        # keeping structure. Description regex is intentionally strict:
+        # 'barn' AND at least one of paddock/stall/pasture/corral/arena.
+        {"$and": [
+            {"description": {"$regex": r"\bbarn", "$options": "i"}},
+            {"description": {"$regex": r"\b(paddock|stall|pasture|corral|arena|round\s*pen)\b", "$options": "i"}},
+        ]},
+    ]}
+
+
+# ── Equestrian amenity extraction ─────────────────────────────────────────
+# Parses free-text `description` and returns a normalised dict of due-
+# diligence facts a buyer needs before touring an acreage. Every field is
+# optional — missing = "not disclosed in listing text, verify with agent".
+# Kept regex-based (no LLM) so it's deterministic, cheap, and testable.
+_ACRES_RE       = re.compile(r"(\d+(?:\.\d+)?)\s*(?:acre|acres|ac\b|ac\.?)", re.I)
+_HECTARES_RE    = re.compile(r"(\d+(?:\.\d+)?)\s*(?:hectare|hectares|ha\b|ha\.?)", re.I)
+_STALL_COUNT_RE = re.compile(r"(\d{1,2})\s*(?:horse\s*)?(?:stalls?|box\s*stalls?)", re.I)
+_ZONING_RE      = re.compile(r"\bzon(?:ing|ed)\s*[:\-]?\s*([A-Z][A-Z0-9\-\s]{0,20})", re.I)
+_ALR_RE         = re.compile(r"\b(ALR|agricultural\s+land\s+reserve|Agricultural\s+Land\s+Commission|ALC)\b", re.I)
+_WATER_RE       = re.compile(r"\b(drilled\s*well|artesian\s*well|shallow\s*well|dug\s*well|shared\s*well|municipal\s*water|community\s*water|creek\s*water|spring\s*water|well\s*water|water\s*licen[sc]e|water\s*rights)\b", re.I)
+_SEPTIC_RE      = re.compile(r"\b(septic\s*(?:tank|field|system)?|holding\s*tank|municipal\s*sewer|community\s*sewer|sewer\s*hook.?up)\b", re.I)
+_FENCING_RE     = re.compile(r"\b(cross[\s-]*fenced|perimeter\s*fenced?|fully\s*fenced|electric\s*fence|post[\s-]*and[\s-]*rail|no[\s-]*climb\s*fence|wire\s*fenced?)\b", re.I)
+_ARENA_RE       = re.compile(r"\b(riding\s*arena|indoor\s*arena|outdoor\s*arena|dressage\s*arena|arena)\b", re.I)
+_MANURE_RE      = re.compile(r"\b(manure\s*(?:storage|management|pit|bunker|shed))\b", re.I)
+_BOARDING_RE    = re.compile(r"\b(boarding\s*(?:facility|operation|business|income)|commercial\s*equestrian|equestrian\s*business)\b", re.I)
+
+def _extract_equestrian_amenities(desc: str, lot_size_area, lot_size_units: str) -> dict:
+    """Return a dict of parsed equestrian due-diligence facts. Every value
+    is either a string (normalised) or None (not disclosed)."""
+    if not desc: desc = ""
+    desc_lower = desc.lower()
+
+    # Acreage (prefer explicit lot_size_area over description parse).
+    acres = None
+    if isinstance(lot_size_area, (int, float)) and lot_size_area > 0 and lot_size_units:
+        u = (lot_size_units or "").lower()
+        if u.startswith("ac"):     acres = float(lot_size_area)
+        elif u.startswith("hect") or u.startswith("ha"): acres = float(lot_size_area) / 0.4047
+        elif "sqf" in u or "sq f" in u or "sq. f" in u:  acres = float(lot_size_area) / 43560.0
+    if acres is None:
+        m = _ACRES_RE.search(desc)
+        if m:
+            try: acres = float(m.group(1))
+            except (ValueError, TypeError): pass
+        else:
+            mh = _HECTARES_RE.search(desc)
+            if mh:
+                try: acres = float(mh.group(1)) / 0.4047
+                except (ValueError, TypeError): pass
+
+    # Stall count — first plausible "N stall" hit.
+    stalls = None
+    for m in _STALL_COUNT_RE.finditer(desc):
+        try:
+            n = int(m.group(1))
+            if 1 <= n <= 60:  # sanity: reject "$3,000 stalls of storage"
+                stalls = n
+                break
+        except (ValueError, TypeError): pass
+
+    # Zoning code, ALR status.
+    zoning = None
+    mz = _ZONING_RE.search(desc)
+    if mz: zoning = mz.group(1).strip()[:24] or None
+
+    alr_status = "Yes" if _ALR_RE.search(desc) else None
+
+    # Normalise water source, septic, fencing, arena, manure, boarding.
+    def _first(regex, text):
+        m = regex.search(text)
+        return m.group(0).strip() if m else None
+    water_source = _first(_WATER_RE, desc)
+    septic       = _first(_SEPTIC_RE, desc)
+    fencing      = _first(_FENCING_RE, desc)
+    arena        = _first(_ARENA_RE, desc)
+    manure       = _first(_MANURE_RE, desc)
+    boarding     = _first(_BOARDING_RE, desc)
+
+    return {
+        "acres":               round(acres, 2) if acres is not None else None,
+        "zoning":              zoning,
+        "alr_status":          alr_status,
+        "stall_count":         stalls,
+        "arena":               arena,
+        "water_source":        water_source,
+        "septic":              septic,
+        "fencing":             fencing,
+        "manure_storage":      manure,
+        "boarding_permitted":  boarding,  # non-None ⇒ mentioned in listing text
+    }
+
 
 @api.get("/listings/equestrian")
 @_limiter.limit("60/minute")
@@ -8872,11 +8993,23 @@ async def equestrian_keyword_search(
     # this endpoint via description-only matches like "parking stall" or
     # "outbuilding".  Sub-category "bareland" opts into Vacant Land via its
     # own property_types override below.
+    #
+    # Doug's Feb 2026 spec — TWO qualification paths ANDed on top of the
+    # keyword scan:
+    #   Path A · lot_size_area ≥ 5 acres (unit-aware conversion), OR
+    #   Path B · description explicitly mentions BOTH a barn AND at least
+    #            one of paddock/stall/pasture/corral/arena/round-pen.
+    # Vacant-land only tiles, sub-acre suburban houses, and apartments are
+    # excluded by construction — the allowlist blocks the last two, the
+    # acreage-or-barn $or blocks the first.
     q: dict = {
         "status": "Active",
         "property_type": {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)},
         "list_price": {"$gt": 0} if not price_min else {"$gte": price_min},
-        "$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS],
+        "$and": [
+            {"$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS]},
+            _equestrian_lot_or_barn_clause(),
+        ],
     }
     # Region chip → city $in filter (server-side allowlist to prevent injection).
     city_filter = _resolve_region_chip_to_city_filter(region_chip)
@@ -8890,16 +9023,30 @@ async def equestrian_keyword_search(
             # Overrides the base allowlist for this segment (e.g. bareland
             # → Vacant Land / Land which are NOT in EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES).
             q["property_type"] = {"$in": cfg["property_types"]}
+            # Bareland also opts OUT of the 5-acre-or-barn rule — it's raw
+            # land by definition. Drop that clause from the base $and.
+            q["$and"] = [c for c in q.get("$and", []) if c is not _equestrian_lot_or_barn_clause()]
+            # Simpler: rebuild the $and to only keep the keyword-scan clause.
+            q["$and"] = [{"$or": [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS]}]
         if cfg.get("patterns"):
             sub_clauses.append({"$or": [{"description": {"$regex": r"\b" + p, "$options": "i"}} for p in cfg["patterns"]]})
         if sub_clauses:
-            q["$and"] = sub_clauses
+            # APPEND to the base $and (preserve keyword-scan + acreage/barn rules).
+            q["$and"] = list(q.get("$and", [])) + sub_clauses
     sort_spec = [("list_price", 1)]
     if sort == "price_desc": sort_spec = [("list_price", -1)]
     elif sort == "newest":   sort_spec = [("modification_ts", -1)]
     total = await db.listings.count_documents(q)
     cursor = db.listings.find(q, {"_id": 0}).sort(sort_spec).skip(offset).limit(min(limit, 100))
     listings = await cursor.to_list(min(limit, 100))
+    # Attach parsed equestrian amenities (zoning, ALR, stalls, arena, water,
+    # septic, fencing, manure storage, boarding) to every returned listing
+    # so the frontend card can render Doug's due-diligence chips without
+    # re-parsing the description client-side.
+    for l in listings:
+        l["equestrian"] = _extract_equestrian_amenities(
+            l.get("description", ""), l.get("lot_size_area"), l.get("lot_size_units", "")
+        )
     return {
         "total": total,
         "count": len(listings),
@@ -8909,9 +9056,13 @@ async def equestrian_keyword_search(
         "sub_category": sub_category,
         "keywords_matched_on": CORE_EQUESTRIAN_KEYWORDS,
         "eligible_property_types": sorted(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES),
+        "acreage_rule": {
+            "minimum_acres": EQUESTRIAN_MIN_ACRES,
+            "small_parcel_exception": "Sub-5-acre parcels qualify only if description mentions both a barn AND at least one of paddock / stall / pasture / corral / arena / round pen.",
+        },
         "compliance": {
             "source": "CREA DDF®",
-            "note": "Keyword-based match on listing description with strict residential property-type filter. Confirm equestrian features (stables, arenas, water rights, ALR) with the listing REALTOR® before making an offer.",
+            "note": "Keyword + acreage filter. Confirm zoning, ALR status, stalls, arena, water, septic, fencing, manure storage, and boarding-use permissions with the listing REALTOR® and municipality before making an offer.",
         },
     }
 
@@ -9079,7 +9230,11 @@ async def search_listings(
     # 200 amp, arena footing, trailer parking, etc.).  Doug's specialty.
     if _equestrian_intent:
         eq_or = [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS]
+        # Doug's Feb 2026 spec — ALWAYS pair the equestrian keyword scan
+        # with the 5-acre-or-legal-barn floor so a "hobby farm" search
+        # never returns a sub-acre suburban lot or a vacant parcel.
         query.setdefault("$and", []).append({"$or": eq_or})
+        query["$and"].append(_equestrian_lot_or_barn_clause())
         # Also constrain property_type to horse-eligible residential types
         # so an equestrian NL query never leaks parking-stall apartments or
         # bareland lots into the results.

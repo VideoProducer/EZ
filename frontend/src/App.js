@@ -4799,6 +4799,55 @@ const EQUESTRIAN_CHIPS = [
   { key: "bareland",   label: "Bareland" },
 ];
 
+// ── Equestrian due-diligence chip strip ────────────────────────────────
+// Renders under each ListingCard on the Equestrian specialty page. Displays
+// only the fields the DDF listing text actually disclosed (server-side
+// regex parse via `_extract_equestrian_amenities`). Missing fields render
+// as "Verify" so buyers know to ask the listing REALTOR® — never faking
+// data (BCFSA §3-3). Ordered by Doug's due-diligence priority: lot size
+// first (qualification driver), then legal/regulatory (ALR, zoning),
+// then facilities (stalls, arena, water, septic, fencing, manure),
+// then commercial use (last — impacts BCFSA licensing).
+const EquestrianAmenityStrip = ({ eq }) => {
+  if (!eq) return null;
+  const chips = [
+    { label: eq.acres ? `${eq.acres} ac` : "Verify acreage",   present: !!eq.acres,               important: true },
+    { label: eq.alr_status ? "ALR"        : "ALR?",             present: !!eq.alr_status },
+    { label: eq.zoning ? `Zone ${eq.zoning}` : "Verify zoning", present: !!eq.zoning },
+    { label: eq.stall_count ? `${eq.stall_count} stall${eq.stall_count === 1 ? "" : "s"}` : "Stalls?", present: !!eq.stall_count },
+    { label: eq.arena ? "Arena"           : "Arena?",           present: !!eq.arena },
+    { label: eq.water_source ? "Water ✓"  : "Water?",           present: !!eq.water_source },
+    { label: eq.septic ? "Septic ✓"       : "Septic?",          present: !!eq.septic },
+    { label: eq.fencing ? "Fenced"        : "Fenced?",          present: !!eq.fencing },
+    { label: eq.manure_storage ? "Manure ✓" : "Manure?",        present: !!eq.manure_storage },
+    { label: eq.boarding_permitted ? "Boarding ✓" : null,        present: !!eq.boarding_permitted },
+  ].filter(c => c.label);
+  return (
+    <div
+      data-testid="equestrian-amenity-strip"
+      style={{
+        display:"flex", flexWrap:"wrap", gap:"0.35rem",
+        padding:"0.6rem 0.15rem 0.15rem", fontFamily:"Inter,sans-serif",
+      }}
+    >
+      {chips.map((c, i) => (
+        <span
+          key={i}
+          title={c.present ? "Disclosed in listing text" : "Not disclosed — confirm with listing REALTOR®"}
+          style={{
+            display:"inline-flex", alignItems:"center",
+            padding:"3px 9px", borderRadius:999,
+            fontSize:"0.7rem", fontWeight: c.important ? 800 : 700, letterSpacing:0.2,
+            background: c.present ? (c.important ? "#0F2A5B" : "#EEF6ED") : "#FEF3C7",
+            color:      c.present ? (c.important ? "#F5F0E1" : "#065F46") : "#92400E",
+            border: `1px solid ${c.present ? (c.important ? "#0F2A5B" : "#BEE3C7") : "#FCD34D"}`,
+          }}
+        >{c.label}</span>
+      ))}
+    </div>
+  );
+};
+
 const EquestrianSection = ({ intro }) => {
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
@@ -4911,7 +4960,16 @@ const EquestrianSection = ({ intro }) => {
     ) : (
       <>
         <div className="grid-3" data-testid="equestrian-listings">
-          {listings.map(l => <ListingCard key={l.listing_key} listing={l}/>)}
+          {listings.map(l => (
+            <div key={l.listing_key} style={{display:"flex",flexDirection:"column"}}>
+              <ListingCard listing={l}/>
+              {/* Equestrian due-diligence chip strip — parsed server-side from
+                  description + lot_size fields. Each chip shows what the
+                  listing text disclosed; missing fields render as
+                  "Verify" so buyers know to ask the listing REALTOR®. */}
+              <EquestrianAmenityStrip eq={l.equestrian}/>
+            </div>
+          ))}
         </div>
         {listings.length < total && (
           <div style={{textAlign:"center",marginTop:"1.75rem"}}>

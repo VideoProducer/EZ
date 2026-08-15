@@ -1,5 +1,25 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Equestrian search overhaul — Doug's Feb 2026 criteria)
+
+**Backend (`server.py`):**
+- New `EQUESTRIAN_MIN_ACRES = 5.0` const + `_equestrian_lot_or_barn_clause()` helper. Every equestrian-endpoint query is now ANDed with a strict $or:
+  - **Path A (Land):** `lot_size_area ≥ 5 acres` — unit-aware conversion (acres / hectares / sqft with regex on `lot_size_units`).
+  - **Path B (Small parcel):** description matches BOTH `\bbarn` AND at least one of `paddock | stall | pasture | corral | arena | round pen` — catches the sub-5-acre hobby-boarding properties.
+- New `_extract_equestrian_amenities(desc, lot_size_area, lot_size_units)` — regex-based parse of the listing text returning `{acres, zoning, alr_status, stall_count, arena, water_source, septic, fencing, manure_storage, boarding_permitted}`. Attached to every listing in the `/api/listings/equestrian` response so the frontend can render due-diligence chips without re-parsing.
+- Bareland sub-category rebuilt to opt OUT of the acreage floor (raw land is exempt by definition) but keep the keyword scan.
+- `/api/listings` `q` bar equestrian intent detection now ALSO applies the same acreage-or-barn floor so a "hobby farm" search from the hero bar can't return sub-acre suburban lots.
+
+**Frontend (`App.js`):**
+- New `EquestrianAmenityStrip` component renders under each `ListingCard` on `/specialties/equestrian`. Shows Doug's priority-ordered due-diligence chips: `{acres, ALR, zoning, stalls, arena, water, septic, fencing, manure, boarding}`. Green ✓ when disclosed in the listing text; amber "?" when not — a clear PIPA/BCFSA-safe signal to buyers to verify with the listing REALTOR® rather than fabricating data.
+
+**End-to-end verified (real Mongo, 43,399 active listings):**
+- Endpoint returns **252 equestrian matches** (was polluted with vacant land + suburban houses + condos before). Property-type distribution: 76 House, 13 Manufactured Home/Mobile, 10 Manufactured Home, 1 Single Family. **Zero polluting rows** (no Vacant Land, Apartment, Condo, Townhouse, Duplex, Business, Retail).
+- **3 sub-5-acre Path-B qualifiers** included (e.g. 1.28-acre Quesnel Manufactured Home with an arena — legitimate hobby-boarding property).
+- Frontend renders 12 amenity strips per page load, colour-coded by disclosure status.
+
+
+
 ## 2026-02-15 (Return-Visit Nudge Analytics — measure the personalisation working)
 
 **Backend:**
