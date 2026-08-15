@@ -5207,24 +5207,26 @@ const FEATURED_HOME_LISTING = {
   city: "Surrey",
   neighbourhood: "Elgin Chantrell",
   province: "BC",
-  price: 3495000,
+  price: 3297000,
   beds: 5,
-  baths: 4,
-  half_baths: 1,
-  sqft: 4280,
-  lot_sqft: 8712,
+  baths: 5,
+  half_baths: 0,
+  sqft: 6129,
+  lot_sqft: 14636,                // 0.34 acre
   property_type: "Detached Home",
-  year_built: 2019,
+  year_built: null,               // let DDF fill in
   mls: "R2851234",                // ← Doug: replace Monday AM with real MLS#
-  headline: "Luxury family estate in Elgin Chantrell",
-  description: "A rare South Surrey offering — thoughtfully designed for family living and effortless entertaining. Five bedrooms, chef's kitchen with premium appliances, main-floor office, radiant floors, and a level backyard perfect for hosting. Minutes to top-rated schools, Crescent Beach, and the Semiahmoo Peninsula.",
+  headline: "Quality, Location, Lasting Value",
+  description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.34-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
+    // Placeholders shown only in preview mode. On Monday the CREA DDF® feed
+    // will auto-populate real photos the moment the MLS goes live.
     "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1400&q=85",
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
     "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
     "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
   ],
-  open_house: "Saturday 2 – 4 PM & Sunday 1 – 3 PM",
+  open_house: "By Appointment Only",
   // Video walkthrough — Vimeo. We use click-to-load so no third-party
   // network calls hit Vimeo until the visitor opts in (PIPA-friendly).
   video_url: "https://vimeo.com/1218107137",
@@ -5494,7 +5496,7 @@ const DashboardFeaturedListing = () => {
               { v: merged.beds, l: "Beds" },
               { v: `${merged.baths}${merged.half_baths ? "+" + merged.half_baths : ""}`, l: merged.half_baths ? "Full+½" : "Baths" },
               { v: (merged.sqft || 0).toLocaleString("en-CA"), l: "Sq Ft" },
-              { v: merged.year_built, l: "Built" },
+              { v: merged.year_built || "—", l: "Built" },
             ].map((s, i) => (
               <div key={i} style={{
                 background: "#F5F0E1", borderRadius: 8, padding: "8px 4px", textAlign: "center",
@@ -5511,7 +5513,7 @@ const DashboardFeaturedListing = () => {
             paddingBottom: 12, borderBottom: "1px solid rgba(15,42,91,0.08)",
           }}>
             <div><span style={{ color: C.muted }}>Type:</span> <strong>{merged.property_type}</strong></div>
-            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft</strong></div> : null}
+            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft{merged.lot_sqft >= 4356 ? ` (${(merged.lot_sqft / 43560).toFixed(2)} acre)` : ""}</strong></div> : null}
           </div>
 
           <p style={{
