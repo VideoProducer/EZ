@@ -8951,6 +8951,7 @@ async def search_listings(
     _addr_regex = None
     _postal_regex = None
     _postal_fsa = None                # 3-char neighbourhood prefix, e.g. "V3A"
+    _mls_lookup = None                # exact-match on the human-visible MLS® number
     _equestrian_intent = False        # Feb 8, 2026 — auto-detect equestrian queries
     if q:
         q_stripped = q.strip()
@@ -8960,11 +8961,21 @@ async def search_listings(
         # as a neighbourhood.  Canada Post FSAs uniquely identify a district
         # so this is the correct "neighbourhood search" behaviour.
         fsa_match = re.match(r'^([A-Za-z]\d[A-Za-z])$', q_stripped)
+        # MLS® number lookup — matches CREA's "R" / "C" / "V" prefixed number
+        # (R2812345), a purely numeric MLS (169571), or a bare listing_key
+        # (18787917). We look up BOTH `mls_number` and `listing_key` fields
+        # so pasting any of them into the address bar resolves to the right
+        # listing detail page.
+        mls_match = re.match(r'^([A-Za-z]{0,2})\s*(\d{5,10})$', q_stripped)
         if pc_match:
             _postal_regex = f"^{pc_match.group(1).upper()}\\s*{pc_match.group(2).upper()}$"
             _postal_fsa = pc_match.group(1).upper()  # fallback if exact 0 hits
         elif fsa_match:
             _postal_fsa = fsa_match.group(1).upper()
+        elif mls_match:
+            # Normalise to uppercase + no whitespace so "r 2812345" and
+            # "R2812345" both hit the same regex on the way in.
+            _mls_lookup = mls_match.group(1).upper() + mls_match.group(2)
         else:
             # Street-address heuristic: starts with a digit AND has ≥1 space.
             # Catches "930 Josephine Rd", "22374 Lougheed Hwy", "#4 - 123 Main".
@@ -9077,6 +9088,36 @@ async def search_listings(
     # exactly the same way — regardless of whether the user came from
     # Doogie, the hero search bar, or a bookmarked URL. Explicit query
     # parameters always win over anything the extractor infers.
+    # MLS® number / listing_key lookup — checked BEFORE NL extraction so
+    # a pasted number like "R2812345" or "18787917" doesn't get parsed as
+    # a price by _extract_listing_filters. When the input is an unambiguous
+    # MLS pattern we short-circuit to a strict $or on the two identifier
+    # fields and return early — no city, no property-type restriction, no
+    # NL parsing. Any listing that matches is served (regardless of status)
+    # so the frontend can still nav to a valid /listing/{key} detail page
+    # even for closed/sold — the detail endpoint then handles 410 Gone.
+    if _mls_lookup:
+        mls_query = {"$or": [
+            {"listing_key": _mls_lookup},
+            {"mls_number":  _mls_lookup},
+            {"mls_number":  {"$regex": f"^{re.escape(_mls_lookup)}$", "$options": "i"}},
+        ]}
+        total = await db.listings.count_documents(mls_query)
+        cursor = db.listings.find(mls_query, {"_id": 0}).limit(min(limit, 100))
+        listings = await cursor.to_list(min(limit, 100))
+        return {
+            "total":    total,
+            "count":    len(listings),
+            "offset":   0,
+            "limit":    limit,
+            "listings": [_sanitize_listing(l) for l in listings],
+            "mls_lookup": _mls_lookup,
+            "compliance": {
+                "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA).",
+                "data_source": "CREA DDF®",
+            },
+        }
+
     nl_extracted: dict = {}
     if q:
         try:

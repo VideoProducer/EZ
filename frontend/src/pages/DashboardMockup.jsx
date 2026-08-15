@@ -2377,10 +2377,20 @@ const SearchPanel = () => {
 //      route through SearchFiltersContext by setting `city` then runSearch()
 //      so results land inline without a full-page nav. (Falls back to
 //      /listings?q=... if context isn't available.)
-const _MLS_PATTERN = /^[A-Z]{0,2}\s?\d{6,10}$/i;
+// Canadian postal code — full 6-char (V6B 1A1) OR FSA-only (V6B). We route
+// these into `q` (never `city`), because the backend does postal-code
+// detection on `q` and applies a proper `postal_code` regex.
+const _POSTAL_PATTERN = /^[A-Za-z]\d[A-Za-z](\s?\d[A-Za-z]\d)?$/;
+// Human-visible MLS® number pattern — 0-2 letter prefix + 5-10 digits.
+// Matches CREA's "R2812345", a bare numeric MLS ("169571"), or a bare
+// listing_key ("18787917"). We hand these to the backend as `q` too so
+// it looks up BOTH `listing_key` AND `mls_number` in a single round-trip
+// and returns the matching listing (if any). No more speculative
+// `navigate("/listing/${key}")` calls that 404 because the pasted number
+// wasn't a listing_key.
+const _MLS_PATTERN = /^[A-Z]{0,2}\s?\d{5,10}$/i;
 
 // Web Speech API detection — used by the mic button INSIDE the address/MLS
-// input. This is intentionally different from DoogieFilterHeader's backend
 // Whisper flow: this mic is native, zero-latency, and DICTATES straight
 // into the input field so the visitor can just say "930 Josephine Road"
 // and hit Search. Doogie's NL filter parser stays available above it.
@@ -2501,22 +2511,46 @@ const UnifiedSearchBar = () => {
     return d ? "$" + Number(d).toLocaleString("en-CA") : "";
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e && e.preventDefault && e.preventDefault();
     const v = val.trim();
     if (!v) {
       if (ctx?.runSearch) ctx.runSearch();
       return;
     }
+    // Route by input shape — postal codes, addresses, MLS numbers, and
+    // free-text all go through `q` (NOT `city`) so the backend can apply
+    // its street_address / postal_code / mls_number detection. Dumping
+    // into `city` before this fix meant "V6B 1A1" or "930 Josephine Rd"
+    // triggered a strict city-name match and returned zero results.
     if (_MLS_PATTERN.test(v)) {
-      const key = v.replace(/\s+/g, "").toUpperCase();
-      navigate(`/listing/${encodeURIComponent(key)}`);
-      return;
+      // Ask the backend to resolve this to a real listing. Runs against
+      // BOTH `listing_key` AND `mls_number` fields. If exactly one hit,
+      // navigate straight to the detail page — otherwise fall through
+      // to a normal `q` search so the visitor sees the closest matches.
+      try {
+        const API = process.env.REACT_APP_BACKEND_URL + "/api";
+        const lookupQ = v.replace(/\s+/g, "").toUpperCase();
+        const r = await fetch(`${API}/listings?q=${encodeURIComponent(lookupQ)}&limit=2`);
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.total === 1 && j.listings && j.listings[0] && j.listings[0].listing_key) {
+            navigate(`/listing/${encodeURIComponent(j.listings[0].listing_key)}`);
+            return;
+          }
+        }
+      } catch { /* fall through to a generic q search */ }
     }
-    // Treat as address/keyword → push into context's `city` and re-run.
+    // Everything else — including postal codes, addresses, MLS numbers
+    // that didn't resolve to a single listing, and plain keywords — is
+    // handed to the backend as `q`. The backend already handles all
+    // four intents (postal code, MLS, street address, keyword) inside
+    // its `q` router. Also CLEAR the `city` filter so a lingering city
+    // value from a prior search doesn't intersect with the new intent.
     if (ctx?.setFilters && ctx?.runSearch) {
-      ctx.setFilters(prev => ({ ...prev, city: v }));
-      setTimeout(() => ctx.runSearch(), 40);
+      const nextFilters = { ...(ctx.filters || {}), q: v, city: "" };
+      ctx.setFilters(nextFilters);
+      setTimeout(() => ctx.runSearch(nextFilters), 40);
       setVal("");
       return;
     }

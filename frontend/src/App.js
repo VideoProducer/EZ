@@ -239,7 +239,7 @@ const SEO = ({ title, description, path, image, schema }) => {
 // mobile delivery and Cloudflare edge caching. Optimized: ~2 MB total (was ~7 MB).
 const DOOGIE_LAPTOP = "/images/doogie/laptop.png";
 const DOOGIE_POINT_R = "/images/doogie/pointing-right.png";
-const DOOGIE_POINT_L = "/images/doogie/pointing-left.jpg";
+const DOOGIE_POINT_L = "/images/doogie/pointing-left-transparent.webp";
 const DOOGIE_CELEBRATE = "/images/doogie/celebrating.png";
 const DOOGIE_THINKING = "/images/doogie/thinking.webp";
 const DOOGIE_MAGNIFY = "/images/doogie/magnifying.png";
