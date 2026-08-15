@@ -2264,6 +2264,130 @@ async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
     result = await run_sunday_night_digest(db)
     return {"ok": True, **result}
 
+# ── Return-Visit Hero — impression / resume / dismiss analytics ────────────
+# Fired by the personalised HeroIntro in DashboardMockup.jsx whenever a
+# returning visitor sees the "WELCOME BACK" variant. Tracks:
+#   • impression → visitor saw the personalised hero (fired once per mount)
+#   • resume    → clicked "Show me the newest matches" (conversion event)
+#   • dismiss   → clicked × or "Start a new search instead"
+# PIPA-safe: filters are stored WITHOUT any freeform text, only enum values.
+# IP is hashed with sha256 (see _hash_ip). Session_id is a client-generated
+# UUIDv4 kept in localStorage — no server-side auth involved.
+class ReturnVisitEvent(BaseModel):
+    event:      str        # impression | resume | dismiss
+    session_id: str = ""
+    days_since_last_visit: Optional[int] = None
+    total_at_last_visit:   Optional[int] = None
+    # Filter payload — capped to short strings + integer casts so nothing
+    # PII-ish sneaks in. Free-text `keyword` / `q` intentionally NOT stored.
+    city:          Optional[str] = None
+    property_type: Optional[str] = None
+    beds:          Optional[str] = None
+    price_max:     Optional[str] = None
+
+
+@api.post("/analytics/return-visit")
+@_limiter.limit("60/minute")
+async def log_return_visit_event(body: ReturnVisitEvent, request: Request):
+    if body.event not in {"impression", "resume", "dismiss"}:
+        raise HTTPException(400, "invalid event")
+    doc = {
+        "event":                 body.event,
+        "session_id":            (body.session_id or "")[:60],
+        "days_since_last_visit": int(body.days_since_last_visit) if body.days_since_last_visit is not None else None,
+        "total_at_last_visit":   int(body.total_at_last_visit) if body.total_at_last_visit is not None else None,
+        "city":                  (body.city or "")[:60] or None,
+        "property_type":         (body.property_type or "")[:40] or None,
+        "beds":                  (body.beds or "")[:6] or None,
+        "price_max":             (body.price_max or "")[:12] or None,
+        "created_at":            datetime.now(timezone.utc).isoformat(),
+        "ip_hash":               _hash_ip(request.client.host if request.client else ""),
+    }
+    try:
+        await db.return_visit_events.insert_one(doc)
+    except Exception as e:
+        logger.error(f"return_visit event insert failed: {e}")
+    return {"ok": True}
+
+
+@api.get("/admin/analytics/return-visit")
+async def return_visit_analytics(_=Depends(verify_admin), days: int = 30):
+    """Aggregate Return-Visit Hero funnel: impressions → resumes → dismisses.
+    Reports per-day trend, click-through rate, top converting filter combos,
+    and dismissal reasons over the last N days (default 30)."""
+    since = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 365)))).isoformat()
+
+    # Counts by event over the window
+    totals_pipeline = [
+        {"$match": {"created_at": {"$gte": since}}},
+        {"$group": {"_id": "$event", "n": {"$sum": 1}, "sessions": {"$addToSet": "$session_id"}}},
+    ]
+    totals = {r["_id"]: {"count": r["n"], "unique_sessions": len([s for s in r.get("sessions") or [] if s])} async for r in db.return_visit_events.aggregate(totals_pipeline)}
+    impressions = totals.get("impression", {}).get("count", 0)
+    resumes     = totals.get("resume", {}).get("count", 0)
+    dismisses   = totals.get("dismiss", {}).get("count", 0)
+    ctr         = round((resumes / impressions) * 100, 1) if impressions else 0.0
+
+    # Daily trend (impressions vs resumes) — bucketed to YYYY-MM-DD
+    daily_pipeline = [
+        {"$match": {"created_at": {"$gte": since}, "event": {"$in": ["impression", "resume"]}}},
+        {"$project": {"day": {"$substr": ["$created_at", 0, 10]}, "event": 1}},
+        {"$group": {"_id": {"day": "$day", "event": "$event"}, "n": {"$sum": 1}}},
+        {"$sort": {"_id.day": 1}},
+    ]
+    daily_buckets: dict = {}
+    async for r in db.return_visit_events.aggregate(daily_pipeline):
+        day = r["_id"]["day"]; ev = r["_id"]["event"]
+        daily_buckets.setdefault(day, {"day": day, "impressions": 0, "resumes": 0})
+        daily_buckets[day]["impressions" if ev == "impression" else "resumes"] = r["n"]
+    daily = list(daily_buckets.values())
+
+    # Top-converting filter combos — cities that convert best
+    resume_pipeline = [
+        {"$match": {"created_at": {"$gte": since}, "event": "resume", "city": {"$exists": True, "$nin": [None, ""]}}},
+        {"$group": {"_id": {"city": "$city", "property_type": "$property_type"}, "n": {"$sum": 1}}},
+        {"$sort": {"n": -1}},
+        {"$limit": 15},
+    ]
+    top_resumes = [
+        {"city": r["_id"].get("city"), "property_type": r["_id"].get("property_type"), "resumes": r["n"]}
+        async for r in db.return_visit_events.aggregate(resume_pipeline)
+    ]
+
+    # Days-since-last-visit histogram (buckets: 1, 2-3, 4-7, 8-14, 15-30)
+    def _bucket(d):
+        if d is None or d < 1: return "unknown"
+        if d == 1: return "1 day"
+        if d <= 3: return "2–3 days"
+        if d <= 7: return "4–7 days"
+        if d <= 14: return "8–14 days"
+        return "15–30 days"
+    dsl_pipeline = [
+        {"$match": {"created_at": {"$gte": since}, "event": "resume"}},
+    ]
+    dsl_hist: dict = {"1 day": 0, "2–3 days": 0, "4–7 days": 0, "8–14 days": 0, "15–30 days": 0, "unknown": 0}
+    async for r in db.return_visit_events.aggregate(dsl_pipeline):
+        dsl_hist[_bucket(r.get("days_since_last_visit"))] += 1
+
+    return {
+        "window_days":       days,
+        "totals": {
+            "impressions": impressions,
+            "resumes":     resumes,
+            "dismisses":   dismisses,
+            "ctr_pct":     ctr,     # click-through rate: resumes / impressions
+        },
+        "unique_sessions": {
+            "impressions": totals.get("impression", {}).get("unique_sessions", 0),
+            "resumes":     totals.get("resume",     {}).get("unique_sessions", 0),
+            "dismisses":   totals.get("dismiss",    {}).get("unique_sessions", 0),
+        },
+        "daily":              daily,
+        "top_resume_filters": top_resumes,
+        "days_since_last_visit_histogram": dsl_hist,
+        "compliance": "PIPA-safe: no PII stored. Filters limited to enum values, no free-text; IPs sha256-hashed.",
+    }
+
 # =============== BREACH RESPONSE (PIPA audit log) ===============
 class BreachReport(BaseModel):
     description: str

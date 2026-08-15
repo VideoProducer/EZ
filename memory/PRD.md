@@ -1,5 +1,22 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Return-Visit Nudge Analytics — measure the personalisation working)
+
+**Backend:**
+- `backend/server.py` — new **`POST /api/analytics/return-visit`** public beacon endpoint (60/min rate-limited, PIPA-safe, no PII, filters limited to enum values, IPs `_hash_ip`-sha256'd). Accepts `event ∈ {impression, resume, dismiss}` + `session_id` + `days_since_last_visit` + `total_at_last_visit` + coarse filter snapshot (`city`, `property_type`, `beds`, `price_max`). Events land in `db.return_visit_events`.
+- New **`GET /api/admin/analytics/return-visit?days=30`** admin readout returning: totals (impressions, resumes, dismisses, click-through rate %), unique-session counts per event, per-day trend buckets, top-15 converting filter combos, days-since-last-visit histogram (1 / 2-3 / 4-7 / 8-14 / 15-30).
+
+**Frontend:**
+- `pages/DashboardMockup.jsx` (`HeroIntro`) — added a per-browser `ez_rv_session_id` (localStorage, generated via `crypto.randomUUID()` with a `rv-{ts}-{rand}` fallback). Wired three fire-and-forget beacons via `navigator.sendBeacon` (with `fetch({ keepalive: true })` fallback) so events survive tab-close / navigation:
+  - **impression** — fires exactly once per mount when the personalised hero locks in (ref-guarded against double-fire on dismiss)
+  - **resume** — fires BEFORE state mutation on "Show me the newest matches" click
+  - **dismiss** — fires when the × or "Start a new search instead" is clicked
+
+**Verified end-to-end (live preview):**
+- Seeded a Burnaby / Row-Townhouse / 3+bd / ≤$1.2M return-visit blob in localStorage → hero rendered → clicked Resume → page rebound to 80 Burnaby townhome listings with pins visible on the map → admin analytics endpoint returned `impressions=2, resumes=2, ctr_pct=100%` with the new Burnaby/Row-Townhouse combo in `top_resume_filters` and the 4-7 days bucket incremented in the histogram. Compliance line PIPA-safe.
+
+
+
 ## 2026-02-15 (Return-Visit Hero + Wave D kickoff — #17 FAQ + #26 lazy images + #39 personalised return)
 
 **Return-Visit Homepage (#39):**

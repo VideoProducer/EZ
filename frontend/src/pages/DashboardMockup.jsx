@@ -81,6 +81,56 @@ const HeroIntro = () => {
   const ctx = useContext(SearchFiltersContext);
   const [returnMeta, setReturnMeta] = useState(null);
   const [dismissed, setDismissed] = useState(false);
+  const impressionFiredRef = useRef(false);
+
+  // Session ID used by the Return-Visit analytics beacons. Persisted per
+  // browser (localStorage) so the admin dashboard can dedupe unique sessions.
+  // Regenerated only if missing — never rotated, never sent to any 3rd party.
+  const sessionId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      let sid = localStorage.getItem("ez_rv_session_id");
+      if (!sid) {
+        sid = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : `rv-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem("ez_rv_session_id", sid);
+      }
+      return sid;
+    } catch { return ""; }
+  }, []);
+
+  // Fire-and-forget beacon for Return-Visit analytics. Uses navigator.sendBeacon
+  // where possible so events survive tab-close / navigation.
+  const beacon = (event, meta) => {
+    if (!event || typeof window === "undefined") return;
+    try {
+      const f = (meta && meta.filters) || {};
+      const daysSince = meta && meta.ts ? Math.max(1, Math.round((Date.now() - meta.ts) / (24 * 60 * 60 * 1000))) : null;
+      const payload = {
+        event,
+        session_id: sessionId,
+        days_since_last_visit: daysSince,
+        total_at_last_visit: (meta && typeof meta.total === "number") ? meta.total : null,
+        city:          f.city || null,
+        property_type: f.propertyType || null,
+        beds:          f.beds || null,
+        price_max:     f.priceMax || null,
+      };
+      const url = `${process.env.REACT_APP_BACKEND_URL}/api/analytics/return-visit`;
+      const body = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon(url, blob);
+      } else {
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body, keepalive: true,
+        }).catch(() => {});
+      }
+    } catch { /* analytics failures are non-fatal */ }
+  };
 
   useEffect(() => {
     // Only ever show the personalized variant when the current filter
@@ -106,8 +156,22 @@ const HeroIntro = () => {
     } catch { /* localStorage may be disabled */ }
   }, [ctx?.filters]);
 
+  // Fire the impression beacon exactly once per mount as soon as the
+  // personalised variant has locked in. The ref guard survives the
+  // intentional dismiss path (which nulls returnMeta) so a rapid
+  // impression → dismiss doesn't double-fire.
+  useEffect(() => {
+    if (returnMeta && !impressionFiredRef.current) {
+      impressionFiredRef.current = true;
+      beacon("impression", returnMeta);
+    }
+  }, [returnMeta]);
+
   const resume = () => {
     if (!returnMeta || !ctx?.setFilters || !ctx?.runSearch) return;
+    // Beacon BEFORE we mutate state so the payload still reflects the
+    // filters the visitor was shown (post-mutation `returnMeta` is null).
+    beacon("resume", returnMeta);
     ctx.setFilters({ ...returnMeta.filters });
     setTimeout(() => ctx.runSearch(returnMeta.filters), 40);
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
@@ -123,6 +187,7 @@ const HeroIntro = () => {
   };
 
   const dismiss = () => {
+    if (returnMeta) beacon("dismiss", returnMeta);
     try { localStorage.setItem("ez_return_visit_dismissed_at", String(Date.now())); } catch {}
     setDismissed(true);
     setReturnMeta(null);
