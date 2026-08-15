@@ -60,12 +60,33 @@ const H = ({ level = 2, children, tone = "ink", align }) => {
 };
 
 // ── Sample data ───────────────────────────────────────────────────────
+// CORRIDORS — full BC luxury coverage. Each corridor carries a `cities`
+// array used to build a live CREA DDF® query (city name is the strongest
+// filter available on the /api/listings endpoint). `count` and `median`
+// are seeded here for the initial paint; both are refreshed from the
+// live API on mount so the numbers you see always reflect the current
+// $3M+ inventory (updated every 4 hours by the DDF sync).
 const CORRIDORS = [
-  { slug: "west-van-estates", name: "West Vancouver Estates", median: 8250000, count: 47, hero: "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800", editorial: "British Properties, Point Grey, and Caulfeild — heritage estates on view lots, waterfront moorage, and coach-house guest quarters." },
-  { slug: "gv-penthouses", name: "Greater Vancouver Penthouses", median: 4650000, count: 63, hero: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", editorial: "Coal Harbour, Yaletown, and Kitsilano skyline residences — private elevators, floor-plate primaries, and concierge on 24-hour rotation." },
-  { slug: "whistler-retreats", name: "Whistler Retreats", median: 7100000, count: 29, hero: "https://images.unsplash.com/photo-1517320964276-a002fa203177?w=800", editorial: "Kadenwood, Sunridge Plateau, and Whistler Cay — ski-in / ski-out chalets, timber-frame wellness pavilions, and heli-touring proximity." },
-  { slug: "fraser-valley-acreages", name: "Fraser Valley Acreages", median: 5450000, count: 38, hero: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800", editorial: "Fort Langley, Aldergrove, Mission — 10-to-100-acre gated estates, equestrian centres, and ALR-classified vineyards." },
+  { slug: "west-van-estates",       name: "West Vancouver Estates",         median: 8250000, count: 47, hero: "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800", editorial: "British Properties, Point Grey, and Caulfeild — heritage estates on view lots, waterfront moorage, and coach-house guest quarters.", cities: ["West Vancouver", "Vancouver"] },
+  { slug: "gv-penthouses",          name: "Greater Vancouver Penthouses",   median: 4650000, count: 63, hero: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", editorial: "Coal Harbour, Yaletown, and Kitsilano skyline residences — private elevators, floor-plate primaries, and concierge on 24-hour rotation.",         cities: ["Vancouver", "North Vancouver", "Burnaby"] },
+  { slug: "whistler-retreats",      name: "Whistler Retreats",              median: 7100000, count: 29, hero: "https://images.unsplash.com/photo-1517320964276-a002fa203177?w=800", editorial: "Kadenwood, Sunridge Plateau, and Whistler Cay — ski-in / ski-out chalets, timber-frame wellness pavilions, and heli-touring proximity.",              cities: ["Whistler"] },
+  { slug: "fraser-valley-acreages", name: "Fraser Valley Acreages",         median: 5450000, count: 38, hero: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800", editorial: "Fort Langley, Aldergrove, Mission — 10-to-100-acre gated estates, equestrian centres, and ALR-classified vineyards.",                                cities: ["Langley", "Maple Ridge", "Mission", "Aldergrove", "Abbotsford"] },
+  { slug: "sea-to-sky",             name: "Sea-to-Sky Corridor",            median: 3950000, count: 18, hero: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800", editorial: "Squamish and Pemberton — glass-fronted mountain homes above Howe Sound, private helipads, and 15-minute Whistler proximity.",                          cities: ["Squamish", "Pemberton", "Britannia Beach"] },
+  { slug: "vancouver-island",       name: "Vancouver Island Waterfront",    median: 5250000, count: 42, hero: "https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800", editorial: "Oak Bay, Cordova Bay, and North Saanich — heritage Tudor estates, deep-water moorage, and Salish Sea sunset frontage.",                              cities: ["Victoria", "Oak Bay", "Saanich", "Sidney", "North Saanich", "Central Saanich"] },
+  { slug: "okanagan-vineyards",     name: "Okanagan Vineyards",             median: 4150000, count: 55, hero: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800", editorial: "Kelowna, Naramata, and Peachland — lakefront villas, working vineyards, and estate wineries with private tasting rooms.",                             cities: ["Kelowna", "West Kelowna", "Lake Country", "Naramata", "Peachland", "Vernon"] },
+  { slug: "sunshine-coast",         name: "Sunshine Coast Retreats",        median: 3450000, count: 22, hero: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?w=800", editorial: "Sechelt, Halfmoon Bay, and Roberts Creek — private-cove waterfronts, forested acreages, and mainland-adjacent seclusion.",                          cities: ["Sechelt", "Gibsons", "Halfmoon Bay", "Roberts Creek"] },
+  { slug: "gulf-islands",           name: "Gulf Islands Estates",           median: 3850000, count: 14, hero: "https://images.unsplash.com/photo-1502005097973-6a7082348e28?w=800", editorial: "Salt Spring, Pender, and Galiano — off-grid glass architecture, protected coves, and ferry-only exclusivity.",                                    cities: ["Salt Spring Island", "Pender Island", "Galiano Island", "Mayne Island"] },
+  { slug: "kootenays-alpine",       name: "Kootenay & Interior Alpine",     median: 3250000, count: 19, hero: "https://images.unsplash.com/photo-1517396120533-b0e19d6a0e01?w=800", editorial: "Rossland, Nelson, Sun Peaks, and Big White — ski-village chalets, heritage lake houses, and hot-spring-adjacent retreats.",                     cities: ["Rossland", "Nelson", "Sun Peaks", "Big White", "Fernie", "Invermere"] },
 ];
+
+// API base — uses REACT_APP_BACKEND_URL from .env. Same pattern as the
+// Community mockup so we hit the live CREA DDF® feed with no drift.
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Hero rotation timing — 6 s per photo is slow enough to admire an
+// estate but fast enough to signal "portfolio, not a single home".
+const HERO_ROTATION_MS = 6000;
+const HERO_FETCH_LIMIT = 15;
 
 const LISTINGS = [
   { key: "L1", price: 32500000, addr: "2620 272 Street", city: "Langley", desc: "50-acre estate · private lake · guest villa · equestrian centre", corridor: "Fraser Valley Acreages" },
@@ -187,6 +208,85 @@ export default function LuxuryLandingMockup() {
   const [corridor, setCorridor] = useState("all");
   const [sellerSubmitted, setSellerSubmitted] = useState(false);
   const [utm, setUtm] = useState({});
+  // Rotating hero photos — 6 s crossfade through live CREA DDF® luxury
+  // listings. Fetched once on mount from /api/listings?price_min=3000000&
+  // sort=price_desc&exclude_property_type=Vacant+Land,... so the hero is
+  // always drawn from the same $3M+ residential pool the grid uses. The
+  // MLS attribution badge in the corner is required by CREA DDF® rules.
+  const [heroPhotos, setHeroPhotos] = useState([]);
+  const [heroIndex, setHeroIndex]   = useState(0);
+  // Live per-corridor counts + medians — refreshed from the API so the
+  // chip labels stay honest as the DDF feed updates every 4 hours.
+  const [corridorStats, setCorridorStats] = useState({});
+
+  // Fetch live luxury inventory once on mount for hero rotation.
+  useEffect(() => {
+    let cancelled = false;
+    const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
+    fetch(`${API}/listings?price_min=3000000&sort=price_desc&exclude_property_type=${excl}&limit=${HERO_FETCH_LIMIT}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled || !d?.listings) return;
+        const pool = d.listings
+          .map(l => ({
+            url:         l.photos?.[0],
+            listing_key: l.listing_key,
+            city:        l.city,
+            price:       l.list_price,
+            address:     l.unparsed_address || l.street_address,
+          }))
+          .filter(p => p.url);
+        setHeroPhotos(pool);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  // Rotate hero photos every HERO_ROTATION_MS. Skips when the pool has
+  // fewer than 2 photos or the tab is hidden (respects browser
+  // background-tab throttling and prevents wasted paints).
+  useEffect(() => {
+    if (heroPhotos.length < 2) return;
+    const tick = () => {
+      if (document.visibilityState === "visible") {
+        setHeroIndex(i => (i + 1) % heroPhotos.length);
+      }
+    };
+    const id = setInterval(tick, HERO_ROTATION_MS);
+    return () => clearInterval(id);
+  }, [heroPhotos.length]);
+
+  // Refresh per-corridor counts + medians from the live API.
+  useEffect(() => {
+    let cancelled = false;
+    const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
+    Promise.all(CORRIDORS.map(c => {
+      const cityQ = c.cities.map(encodeURIComponent).join(",");
+      return fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&sort=price_asc&limit=100`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d?.listings) return [c.slug, null];
+          const prices = d.listings.map(l => l.list_price).filter(p => p > 0).sort((a, b) => a - b);
+          const median = prices.length ? prices[Math.floor(prices.length / 2)] : c.median;
+          return [c.slug, { count: d.total ?? d.listings.length, median }];
+        })
+        .catch(() => [c.slug, null]);
+    })).then(pairs => {
+      if (cancelled) return;
+      const next = {};
+      pairs.forEach(([slug, val]) => { if (val) next[slug] = val; });
+      setCorridorStats(next);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Resolve corridor for display — swap in the live counts+medians when
+  // we have them, otherwise fall back to the seeded defaults.
+  const resolvedCorridors = CORRIDORS.map(c => ({
+    ...c,
+    count:  corridorStats[c.slug]?.count  ?? c.count,
+    median: corridorStats[c.slug]?.median ?? c.median,
+  }));
 
   // UTM capture — reads ?utm_source, utm_medium, utm_campaign, utm_content
   // from the URL on first mount and stores them in state.  Production
@@ -224,10 +324,76 @@ export default function LuxuryLandingMockup() {
 
       {/* ═══════ §1 CINEMATIC HERO ═══════════════════════════════════════ */}
       <section style={{
-        background: `linear-gradient(180deg, rgba(11,15,26,0.35) 0%, rgba(11,15,26,0.85) 100%), url(https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1800) center/cover`,
+        background: BRAND.ink,
         color: "white", padding: "0", minHeight: "88vh",
         display: "flex", flexDirection: "column",
+        position: "relative", overflow: "hidden",
       }}>
+        {/* Rotating background photo layer — every 6 s a new $3M+ CREA
+            DDF® listing crossfades into view. Below-hero content sits on
+            top via z-index. Static fallback loads while the API resolves. */}
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          backgroundImage: `url(https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1800)`,
+          backgroundSize: "cover", backgroundPosition: "center",
+        }} aria-hidden="true"/>
+        {heroPhotos.map((p, i) => (
+          <div key={p.listing_key || i}
+               aria-hidden="true"
+               style={{
+                 position: "absolute", inset: 0, zIndex: 0,
+                 backgroundImage: `url(${p.url})`,
+                 backgroundSize: "cover", backgroundPosition: "center",
+                 opacity: heroIndex === i ? 1 : 0,
+                 transition: "opacity 1500ms ease-in-out",
+               }}/>
+        ))}
+        {/* Editorial overlay gradient — same tonal wash as before but
+            layered above the rotating photos so text stays readable
+            regardless of the underlying photo's brightness. */}
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 1,
+          background: "linear-gradient(180deg, rgba(11,15,26,0.35) 0%, rgba(11,15,26,0.85) 100%)",
+        }} aria-hidden="true"/>
+        {/* MLS® attribution — CREA DDF® rules require an on-photo
+            attribution whenever a live MLS® image is displayed outside
+            the standard listing detail page. Silent-hides when the
+            rotation hasn't loaded (static fallback in play). */}
+        {heroPhotos[heroIndex] && (
+          <div style={{
+            position: "absolute", bottom: 18, right: 20, zIndex: 3,
+            background: "rgba(11,15,26,0.72)", color: BRAND.goldSoft,
+            padding: "6px 14px", borderRadius: 2, fontFamily: SANS,
+            fontSize: "0.68rem", letterSpacing: "0.14em",
+            textTransform: "uppercase", fontWeight: 600,
+            border: `1px solid rgba(218,191,122,0.35)`,
+          }} data-testid="luxury-hero-mls-attribution">
+            <span style={{ color: "rgba(255,255,255,0.95)", fontFamily: SERIF, fontStyle: "italic", textTransform: "none", letterSpacing: 0, fontSize: "0.82rem" }}>
+              {heroPhotos[heroIndex].address}
+            </span>
+            <span style={{ opacity: 0.55, margin: "0 8px" }}>·</span>
+            {heroPhotos[heroIndex].city}
+            <span style={{ opacity: 0.55, margin: "0 8px" }}>·</span>
+            MLS® #{heroPhotos[heroIndex].listing_key}
+          </div>
+        )}
+        {/* Rotation dots — subtle indicator that this is a portfolio, */}
+        {/* not a single home. Hidden on very small pools. */}
+        {heroPhotos.length > 1 && (
+          <div style={{
+            position: "absolute", bottom: 22, left: 32, zIndex: 3,
+            display: "flex", gap: 6,
+          }} data-testid="luxury-hero-rotation-dots">
+            {heroPhotos.slice(0, 8).map((_, i) => (
+              <span key={i} style={{
+                width: heroIndex === i ? 22 : 6, height: 3,
+                background: heroIndex === i ? BRAND.goldSoft : "rgba(255,255,255,0.35)",
+                borderRadius: 2, transition: "width 400ms ease",
+              }}/>
+            ))}
+          </div>
+        )}
+        <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", flex: 1 }}>
         {/* Syndication trust bar */}
         <div style={{
           background: "rgba(11,15,26,0.5)", borderBottom: `1px solid ${BRAND.gold}`,
@@ -266,15 +432,16 @@ export default function LuxuryLandingMockup() {
             <button onClick={() => setOpenListing(flagship)} data-testid="hero-private-viewing" style={{ ...btnGold, whiteSpace: "nowrap" }}>Private viewing</button>
           </div>
         </div>
+        </div>{/* end .position:relative z-index:2 hero content wrapper */}
       </section>
 
       {/* ═══════ §2 LIFESTYLE CORRIDORS ══════════════════════════════════ */}
       <Section tone="paper" pad="88px 0 40px">
         <div style={{ textAlign: "center", marginBottom: 44 }}>
-          <Kicker>Curated corridors · 177 active $3M+ residences</Kicker>
+          <Kicker>Curated corridors · {resolvedCorridors.reduce((s, c) => s + (c.count || 0), 0).toLocaleString("en-CA")} active $3M+ residences across BC</Kicker>
           <H level={2} align="center">Choose your lifestyle.</H>
           <p style={{ fontFamily: SANS, fontSize: "1rem", color: BRAND.muted, marginTop: 16, maxWidth: 620, marginLeft: "auto", marginRight: "auto", lineHeight: 1.7 }}>
-            Every residence in the portfolio meets a $3M minimum and is vetted for provenance, permits, and privacy. Filter by the four defining BC luxury geographies.
+            Every residence in the portfolio meets a $3M minimum and is vetted for provenance, permits, and privacy. Filter across the ten defining BC luxury geographies — from Coal Harbour penthouses to Salt Spring off-grid architecture.
           </p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
@@ -282,11 +449,13 @@ export default function LuxuryLandingMockup() {
             padding: "20px 22px", border: corridor === "all" ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
             background: corridor === "all" ? BRAND.ink : "white", color: corridor === "all" ? "white" : BRAND.ink,
             cursor: "pointer", textAlign: "left", borderRadius: 4, fontFamily: SANS,
-          }}>
+          }} data-testid="corridor-all">
             <div style={{ fontFamily: SERIF, fontSize: "1.3rem", fontWeight: 500 }}>The Entire Portfolio</div>
-            <div style={{ fontSize: "0.82rem", opacity: 0.75, marginTop: 6 }}>177 residences · $3M – $32.5M</div>
+            <div style={{ fontSize: "0.82rem", opacity: 0.75, marginTop: 6 }}>
+              {resolvedCorridors.reduce((s, c) => s + (c.count || 0), 0).toLocaleString("en-CA")} residences · $3M – ${(Math.max(...resolvedCorridors.map(c => c.median || 0), 32500000)/1_000_000).toFixed(1)}M
+            </div>
           </button>
-          {CORRIDORS.map(c => (
+          {resolvedCorridors.map(c => (
             <button key={c.slug} onClick={() => setCorridor(c.slug)} data-testid={`corridor-${c.slug}`} style={{
               padding: 0, border: corridor === c.slug ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
               cursor: "pointer", textAlign: "left", borderRadius: 4, overflow: "hidden", background: "white",
@@ -294,7 +463,7 @@ export default function LuxuryLandingMockup() {
               <div style={{ background: `linear-gradient(180deg, rgba(11,15,26,0) 40%, rgba(11,15,26,0.75) 100%), url(${c.hero}) center/cover`, height: 160, position: "relative" }}>
                 <div style={{ position: "absolute", bottom: 12, left: 16, color: "white" }}>
                   <div style={{ fontFamily: SERIF, fontSize: "1.15rem", lineHeight: 1.2 }}>{c.name}</div>
-                  <div style={{ fontFamily: SANS, fontSize: "0.75rem", opacity: 0.9, marginTop: 3 }}>{c.count} residences · median ${(c.median/1_000_000).toFixed(1)}M</div>
+                  <div style={{ fontFamily: SANS, fontSize: "0.75rem", opacity: 0.9, marginTop: 3 }}>{(c.count || 0).toLocaleString("en-CA")} residences · median ${(c.median/1_000_000).toFixed(1)}M</div>
                 </div>
               </div>
               <div style={{ padding: "12px 16px", fontFamily: SANS, fontSize: "0.82rem", color: BRAND.muted, lineHeight: 1.55 }}>{c.editorial}</div>

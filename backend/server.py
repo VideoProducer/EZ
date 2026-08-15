@@ -9295,7 +9295,14 @@ async def search_listings(
         elif fsa_in_city:
             _postal_fsa   = fsa_in_city.group(1).upper()
             city = None
-    if city:      query["city"] = _city_query(city)
+    if city:      # Comma-separated allowed — used by the Luxury mockup to
+                  # merge multiple cities into a single corridor query.
+                  # Falls back to the single-city _city_query() when only one is passed.
+                  city_list = [c.strip() for c in city.split(",") if c.strip()]
+                  if len(city_list) > 1:
+                      query["city"] = {"$in": [re.compile(f"^{re.escape(c)}$", re.I) for c in city_list]}
+                  else:
+                      query["city"] = _city_query(city)
     if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
     # region_group: resolves a top-level BC area (e.g. "Sea-to-Sky") to the full
     # list of member cities and applies a case-insensitive $in filter. Ignored
