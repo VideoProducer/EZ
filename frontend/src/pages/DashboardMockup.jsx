@@ -5183,6 +5183,274 @@ const HomeComplianceBanner = () => {
 //   calculator   (4) Testimonials + credentials strip.
 //   The compliance banner is rendered separately as a sticky strip above
 //   the top bar (HomeComplianceBanner) so it doesn't scroll away.
+// ── Doug's Featured Listing (Home Page) ────────────────────────────────────
+// Prominent hero card that appears on both the Home tile view and the Search
+// landing view. Two modes controlled by the FEATURED_HOME_LISTING config:
+//
+//   • mls_auto_detect: true  → section stays hidden until /api/listings/{mls}
+//                              returns 200 (CREA DDF® sync confirms the MLS
+//                              is live). At that moment the card auto-populates
+//                              price, photos, address, description, and
+//                              detail-page link straight from the DDF feed —
+//                              zero manual work on launch morning.
+//   • mls_auto_detect: false → renders the snapshot fields immediately.
+//
+// Preview override: append `?featured=preview` to any homepage URL to force
+// the section to render even when MLS is not yet live. Only Doug uses this
+// to review layout before launch.
+// ──────────────────────────────────────────────────────────────────────────
+const FEATURED_HOME_LISTING = {
+  enabled: true,
+  mls_auto_detect: true,          // hide until DDF confirms MLS is live
+  status: "JUST LISTED",
+  address: "1234 Sample Crescent",
+  city: "West Vancouver",
+  neighbourhood: "Ambleside",
+  province: "BC",
+  price: 3495000,
+  beds: 5,
+  baths: 4,
+  half_baths: 1,
+  sqft: 4280,
+  lot_sqft: 8712,
+  property_type: "Detached Home",
+  year_built: 2019,
+  mls: "R2851234",                // ← Doug: replace Monday AM with real MLS#
+  headline: "Ocean-view family home on a private cul-de-sac",
+  description: "A rare Ambleside offering — 4,280 sq ft of thoughtful design, five bedrooms up, chef's kitchen with premium appliances, main-floor office, radiant floors, and a level backyard perfect for entertaining. Steps to the seawall, Ambleside Village, and top-rated schools.",
+  photos: [
+    "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1400&q=85",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
+    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
+    "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
+  ],
+  open_house: "Saturday 2 – 4 PM & Sunday 1 – 3 PM",
+};
+
+const fmtPriceShort = (n) => (n >= 1e6)
+  ? `$${(n/1e6).toFixed(n % 1e6 === 0 ? 0 : 2).replace(/\.?0+$/, "")}M`
+  : `$${(n || 0).toLocaleString("en-CA")}`;
+
+const DashboardFeaturedListing = () => {
+  const [active, setActive] = useState(0);
+  const [live, setLive] = useState(null);
+  const L = FEATURED_HOME_LISTING;
+  const previewOverride = (typeof window !== "undefined")
+    && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
+
+  useEffect(() => {
+    if (!L.enabled || !L.mls_auto_detect || !L.mls) return;
+    let stop = false;
+    const check = async () => {
+      try {
+        const r = await fetch(`${API}/listings/${encodeURIComponent(L.mls)}`);
+        if (!stop && r.ok) setLive(await r.json());
+      } catch { /* still coming soon */ }
+    };
+    check();
+    const t = setInterval(check, 5 * 60 * 1000);
+    return () => { stop = true; clearInterval(t); };
+  }, [L.enabled, L.mls_auto_detect, L.mls]);
+
+  if (!L.enabled) return null;
+  if (L.mls_auto_detect && !live && !previewOverride) return null;
+
+  const _photos = (live?.photos?.length ? live.photos.map(p => p.url || p) : L.photos) || [];
+  const merged = {
+    ...L,
+    ...(live ? {
+      address:       live.address || L.address,
+      city:          live.city || L.city,
+      neighbourhood: live.neighbourhood || live.subdivision || L.neighbourhood,
+      province:      live.province || L.province,
+      price:         live.price || L.price,
+      beds:          live.bedrooms || live.beds || L.beds,
+      baths:         live.bathrooms || live.baths || L.baths,
+      half_baths:    live.half_baths ?? L.half_baths,
+      sqft:          live.square_feet || live.sqft || L.sqft,
+      lot_sqft:      live.lot_size_sqft || live.lot_sqft || L.lot_sqft,
+      property_type: live.property_type || L.property_type,
+      year_built:    live.year_built || L.year_built,
+      description:   live.public_remarks || live.description || L.description,
+      photos:        _photos,
+    } : {}),
+  };
+  const hero = merged.photos[active] || merged.photos[0];
+  const isPreview = previewOverride && !live;
+  const detailUrl = live ? `/listings/${encodeURIComponent(L.mls)}` : null;
+
+  return (
+    <section data-testid="dash-featured-listing" style={{
+      background: "linear-gradient(135deg, #FBF7EE 0%, #FFFFFF 55%, #F0F4FB 100%)",
+      borderRadius: 18, border: "1px solid rgba(15,42,91,0.08)",
+      padding: "22px 22px 26px", marginBottom: 22,
+      boxShadow: "0 12px 32px rgba(15,42,91,0.08)",
+    }}>
+      {isPreview && (
+        <div data-testid="dash-featured-preview-banner" style={{
+          background: C.navy, color: "#fff", padding: "8px 14px", borderRadius: 8,
+          fontSize: 12.5, fontWeight: 600, marginBottom: 16, textAlign: "center",
+        }}>
+          👁 Preview mode — visible to Doug only. Public visitors won't see this section until MLS® {merged.mls} goes live on the DDF feed.
+        </div>
+      )}
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        marginBottom: 14, gap: 10, flexWrap: "wrap",
+      }}>
+        <div>
+          <div style={{
+            color: C.brandGold, fontSize: 11, fontWeight: 800,
+            textTransform: "uppercase", letterSpacing: 2, marginBottom: 4,
+          }}>Featured Listing</div>
+          <h2 style={{
+            margin: 0, fontFamily: "'Playfair Display', serif",
+            fontSize: 22, fontWeight: 800, color: C.navy,
+          }}>New from Doug LeMaire, REALTOR®</h2>
+        </div>
+        <div style={{
+          background: C.brandGold, color: C.navy, padding: "6px 14px",
+          borderRadius: 999, fontSize: 11.5, fontWeight: 800,
+          textTransform: "uppercase", letterSpacing: 1.2,
+        }}>{merged.status}</div>
+      </div>
+
+      <div style={{
+        display: "grid", gridTemplateColumns: "minmax(280px, 1.2fr) minmax(260px, 1fr)",
+        gap: 20, alignItems: "stretch",
+      }} className="dash-featured-grid">
+        {/* Image column */}
+        <div style={{
+          position: "relative", background: C.navy, borderRadius: 14,
+          overflow: "hidden", minHeight: 320, aspectRatio: "4/3",
+        }}>
+          <img src={hero} alt={`${merged.address}, ${merged.city}`}
+            loading="lazy" decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            data-testid="dash-featured-hero"/>
+          <div style={{
+            position: "absolute", inset: "auto 12px 12px", display: "flex",
+            justifyContent: "space-between", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
+          }}>
+            <div>
+              <div style={{
+                fontFamily: "'Playfair Display', serif", fontWeight: 800,
+                fontSize: 30, color: "#fff", lineHeight: 1,
+                textShadow: "0 2px 10px rgba(0,0,0,0.55)",
+              }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
+              <div style={{
+                fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
+                textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
+              }}>MLS® {merged.mls}</div>
+            </div>
+            {merged.open_house && (
+              <div style={{
+                background: "rgba(15,42,91,0.85)", color: "#fff",
+                padding: "6px 10px", borderRadius: 8, fontSize: 11.5,
+                fontWeight: 600, backdropFilter: "blur(6px)",
+              }}>
+                <span style={{ display: "block", fontSize: 9.5, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8 }}>Open House</span>
+                {merged.open_house}
+              </div>
+            )}
+          </div>
+          {merged.photos.length > 1 && (
+            <div style={{
+              position: "absolute", top: 12, right: 12,
+              display: "flex", flexDirection: "column", gap: 6,
+            }}>
+              {merged.photos.slice(0, 4).map((p, i) => (
+                <button key={i} onClick={() => setActive(i)}
+                  data-testid={`dash-featured-thumb-${i}`}
+                  style={{
+                    width: 52, height: 40, padding: 0,
+                    border: i === active ? `2px solid ${C.brandGold}` : "2px solid rgba(255,255,255,0.6)",
+                    borderRadius: 5, overflow: "hidden", cursor: "pointer", background: "none",
+                  }}>
+                  <img src={p} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Details column */}
+        <div style={{ display: "flex", flexDirection: "column", padding: "2px 4px" }}>
+          <div style={{
+            fontSize: 11, textTransform: "uppercase", letterSpacing: 1.4,
+            fontWeight: 700, color: C.blue, marginBottom: 4,
+          }}>{merged.neighbourhood} · {merged.city}, {merged.province}</div>
+          <h3 style={{
+            fontFamily: "'Playfair Display', serif", fontSize: 22,
+            color: C.navy, margin: "2px 0 6px", lineHeight: 1.2, fontWeight: 800,
+          }} data-testid="dash-featured-address">{merged.address}</h3>
+          <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
+            {merged.headline}
+          </p>
+
+          <div style={{
+            display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12,
+          }} data-testid="dash-featured-stats">
+            {[
+              { v: merged.beds, l: "Beds" },
+              { v: `${merged.baths}${merged.half_baths ? "+" + merged.half_baths : ""}`, l: merged.half_baths ? "Full+½" : "Baths" },
+              { v: (merged.sqft || 0).toLocaleString("en-CA"), l: "Sq Ft" },
+              { v: merged.year_built, l: "Built" },
+            ].map((s, i) => (
+              <div key={i} style={{
+                background: "#F5F0E1", borderRadius: 8, padding: "8px 4px", textAlign: "center",
+              }}>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 15, color: C.navy }}>{s.v}</div>
+                <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: 0.8, color: C.muted, marginTop: 2, fontWeight: 700 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: "4px 14px",
+            fontSize: 12, color: C.ink, marginBottom: 12,
+            paddingBottom: 12, borderBottom: "1px solid rgba(15,42,91,0.08)",
+          }}>
+            <div><span style={{ color: C.muted }}>Type:</span> <strong>{merged.property_type}</strong></div>
+            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft</strong></div> : null}
+          </div>
+
+          <p style={{
+            fontSize: 12.5, lineHeight: 1.55, color: C.ink, marginBottom: 14,
+            display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }} data-testid="dash-featured-description">{merged.description}</p>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
+            {detailUrl
+              ? <Link to={detailUrl} data-testid="dash-featured-view-details" style={{
+                  background: C.navy, color: "#fff", padding: "10px 16px",
+                  borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+                }}>View Full Listing <ChevronRight size={14}/></Link>
+              : <Link to="/buyer" data-testid="dash-featured-view-details" style={{
+                  background: C.navy, color: "#fff", padding: "10px 16px",
+                  borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+                }}>Request Details <ChevronRight size={14}/></Link>}
+            <Link to="/buyer" data-testid="dash-featured-book-showing" style={{
+              background: C.green, color: "#fff", padding: "10px 16px",
+              borderRadius: 8, fontSize: 13, fontWeight: 700,
+              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
+            }}>Book a Showing</Link>
+          </div>
+
+          <div style={{
+            fontSize: 10.5, color: C.muted, marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
+          }}>
+            Listed by <strong style={{ color: C.navy, fontStyle: "normal" }}>Doug LeMaire, REALTOR®</strong> · Fraser Property Management Realty Services Ltd. Not intended to solicit buyers currently under contract with another REALTOR®.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const HomeExtras = () => {
   const wrap = { marginTop: 32 };
   const cardShell = {
@@ -5226,6 +5494,10 @@ const HomeExtras = () => {
   ];
   return (
     <div style={wrap} data-testid="dash-home-extras">
+      {/* Doug's Featured Listing — hidden until MLS goes live (unless
+          preview mode is engaged via ?featured=preview). */}
+      <DashboardFeaturedListing/>
+
       {/* Item #38 · Weekly Just-Sold Digest signup — the primary
           return-visit hook. Every Friday morning subscribers get a
           curated list of BC listings that closed in the last 7 days

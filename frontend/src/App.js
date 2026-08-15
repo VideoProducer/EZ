@@ -793,12 +793,29 @@ export const IMG = {
 
 // =============================================================
 // FEATURED LISTING — Doug's currently-showcased home on the homepage.
-// To swap in a new listing, edit the fields below and drop in real photos.
-// To HIDE the featured section entirely, set enabled: false.
+//
+// MODES (controlled by `enabled` + `mls_auto_detect`):
+//   • enabled: false                       → section fully hidden (default)
+//   • enabled: true,  mls_auto_detect:false → shows snapshot below immediately
+//   • enabled: true,  mls_auto_detect:true  → hidden until /api/listings/{mls}
+//                                              returns 200 (DDF feed live).
+//                                              Once live, all display fields
+//                                              (price, photos, beds/baths,
+//                                              description) are pulled from
+//                                              the CREA DDF® feed — snapshot
+//                                              below is only a fallback for
+//                                              the ~5-min gap between MLS
+//                                              publish and next DDF sync.
+//
+// PREVIEW OVERRIDE:
+//   Append `?featured=preview` to any homepage URL to force-render the
+//   snapshot even while the listing is still hidden from the public.
+//   Doug uses this to review layout before Monday's launch.
 // =============================================================
 const FEATURED_LISTING = {
-  enabled: false,
-  status: "NEW LISTING",             // e.g. "NEW LISTING", "JUST SOLD", "OPEN HOUSE SAT"
+  enabled: true,                     // section may render (subject to mls_auto_detect below)
+  mls_auto_detect: true,             // hide until MLS goes live; then pull live DDF data
+  status: "JUST LISTED",             // e.g. "JUST LISTED", "NEW LISTING", "OPEN HOUSE SAT"
   address: "1234 Sample Crescent",
   city: "West Vancouver",
   neighbourhood: "Ambleside",
@@ -812,7 +829,7 @@ const FEATURED_LISTING = {
   lot_sqft: 8712,
   property_type: "Detached Home",
   year_built: 2019,
-  mls: "R2851234",
+  mls: "R2851234",                   // ← Doug: replace with real MLS# Monday AM
   headline: "Ocean-view family home on a private cul-de-sac",
   description: "A rare Ambleside offering — 4,280 sq ft of thoughtful design, five bedrooms up, chef's kitchen with premium appliances, main-floor office, radiant floors, and a level backyard perfect for entertaining. Steps to the seawall, Ambleside Village, and top-rated schools.",
   photos: [
@@ -822,7 +839,7 @@ const FEATURED_LISTING = {
     "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
   ],
   open_house: "Saturday 2 – 4 PM & Sunday 1 – 3 PM",
-  detail_url: null,                  // e.g. "/listings/1234-sample-crescent" once wired to a detail page
+  detail_url: null,                  // auto-set to /listings/{mls} once DDF sync confirms
 };
 
 const formatPrice = n => (n>=1000000)
@@ -831,12 +848,74 @@ const formatPrice = n => (n>=1000000)
 
 const FeaturedListing = () => {
   const [active, setActive] = useState(0);
+  const [live, setLive] = useState(null);         // DDF-synced live listing (or null)
+  const [checkedOnce, setCheckedOnce] = useState(false);
   const L = FEATURED_LISTING;
+
+  // Preview override — Doug can force-render the snapshot via ?featured=preview
+  // (or the legacy ?featured=coming_soon alias) even while the listing is still
+  // hidden from the public. Used to review layout before an MLS launch.
+  const previewOverride = (typeof window !== "undefined")
+    && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
+
+  // MLS auto-detect: poll /api/listings/{mls} every 5 min. Once the DDF feed
+  // returns 200, we merge the live payload over the local snapshot so price,
+  // photos, description, etc. always match what's on MLS. If the request
+  // errors (404/410/rate-limit), we silently keep the section hidden.
+  useEffect(() => {
+    if(!L.enabled) return;
+    if(!L.mls_auto_detect) return;
+    if(!L.mls) return;
+    let stop = false;
+    const check = async () => {
+      try {
+        const r = await axios.get(`${API}/listings/${encodeURIComponent(L.mls)}`, { timeout: 8000 });
+        if(!stop && r.status === 200 && r.data) setLive(r.data);
+      } catch(_) { /* still coming soon */ }
+      finally { if(!stop) setCheckedOnce(true); }
+    };
+    check();
+    const t = setInterval(check, 5 * 60 * 1000); // re-check every 5 min
+    return () => { stop = true; clearInterval(t); };
+  }, [L.enabled, L.mls_auto_detect, L.mls]);
+
   if(!L.enabled) return null;
-  const hero = L.photos[active] || L.photos[0];
+  // Hidden until DDF sync confirms MLS is live — unless the previewer forced it.
+  if(L.mls_auto_detect && !live && !previewOverride) return null;
+
+  // Merge live DDF data over the snapshot (live values win).
+  const _photos = (live?.photos?.length ? live.photos.map(p => p.url || p) : L.photos) || [];
+  const merged = {
+    ...L,
+    ...(live ? {
+      address:       live.address || L.address,
+      city:          live.city || L.city,
+      neighbourhood: live.neighbourhood || live.subdivision || L.neighbourhood,
+      province:      live.province || L.province,
+      price:         live.price || L.price,
+      beds:          live.bedrooms || live.beds || L.beds,
+      baths:         live.bathrooms || live.baths || L.baths,
+      half_baths:    live.half_baths ?? L.half_baths,
+      sqft:          live.square_feet || live.sqft || L.sqft,
+      lot_sqft:      live.lot_size_sqft || live.lot_sqft || L.lot_sqft,
+      property_type: live.property_type || L.property_type,
+      year_built:    live.year_built || L.year_built,
+      description:   live.public_remarks || live.description || L.description,
+      photos:        _photos,
+      detail_url:    `/listings/${encodeURIComponent(L.mls)}`,
+    } : {}),
+  };
+  const hero = merged.photos[active] || merged.photos[0];
+  const isPreview = previewOverride && !live;
+
   return (
     <section className="section" style={{background:"linear-gradient(180deg,#F5F0E1 0%,#FFFFFF 100%)",paddingTop:"3rem",paddingBottom:"4rem"}} data-testid="featured-listing-section">
       <div className="container-x">
+        {isPreview && (
+          <div style={{background:"#0F2A5B",color:"white",padding:"0.6rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.78rem",marginBottom:"1.5rem",textAlign:"center",fontWeight:600,letterSpacing:"0.02em"}} data-testid="featured-preview-banner">
+            👁 Preview mode — this is how the Featured Listing will appear on the homepage once MLS® {merged.mls} goes live. Public visitors do NOT see this section yet.
+          </div>
+        )}
         <div style={{textAlign:"center",marginBottom:"2.5rem"}}>
           <div className="eyebrow">Featured Listing</div>
           <h2 className="section-title" style={{fontSize:"2.2rem"}}>Currently featured by Doug LeMaire, REALTOR®</h2>
@@ -845,26 +924,26 @@ const FeaturedListing = () => {
         <div style={{display:"grid",gridTemplateColumns:"1.15fr 1fr",gap:"2rem",background:"white",borderRadius:20,overflow:"hidden",boxShadow:"0 24px 60px rgba(15,42,91,0.14)",border:"1px solid rgba(15,42,91,0.08)"}} className="featured-grid">
           {/* IMAGE COLUMN */}
           <div style={{position:"relative",background:"#0F2A5B",minHeight:"420px"}}>
-            <img loading="lazy" decoding="async" src={hero} alt={`${L.address}, ${L.city}`} style={{width:"100%",height:"100%",minHeight:"420px",objectFit:"cover",display:"block"}} data-testid="featured-hero-photo"/>
+            <img loading="lazy" decoding="async" src={hero} alt={`${merged.address}, ${merged.city}`} style={{width:"100%",height:"100%",minHeight:"420px",objectFit:"cover",display:"block"}} data-testid="featured-hero-photo"/>
             {/* Status badge */}
-            <div style={{position:"absolute",top:"1.25rem",left:"1.25rem",background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.5rem 1rem",borderRadius:"999px",fontFamily:"Inter,sans-serif",fontWeight:800,letterSpacing:"0.08em",fontSize:"0.75rem",textTransform:"uppercase",boxShadow:"0 6px 16px rgba(0,0,0,0.2)"}} data-testid="featured-status-badge">{L.status}</div>
+            <div style={{position:"absolute",top:"1.25rem",left:"1.25rem",background:"var(--brand-gold)",color:"var(--brand-navy)",padding:"0.5rem 1rem",borderRadius:"999px",fontFamily:"Inter,sans-serif",fontWeight:800,letterSpacing:"0.08em",fontSize:"0.75rem",textTransform:"uppercase",boxShadow:"0 6px 16px rgba(0,0,0,0.2)"}} data-testid="featured-status-badge">{merged.status}</div>
             {/* Price overlay */}
             <div style={{position:"absolute",bottom:"1.25rem",left:"1.25rem",right:"1.25rem",display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"0.75rem"}}>
               <div>
-                <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:800,fontSize:"2.4rem",color:"white",lineHeight:1,textShadow:"0 2px 8px rgba(0,0,0,0.5)"}} data-testid="featured-price">{formatPrice(L.price)}</div>
-                <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"rgba(255,255,255,0.92)",marginTop:"0.35rem",textShadow:"0 1px 4px rgba(0,0,0,0.6)"}}>MLS® {L.mls}</div>
+                <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:800,fontSize:"2.4rem",color:"white",lineHeight:1,textShadow:"0 2px 8px rgba(0,0,0,0.5)"}} data-testid="featured-price">{formatPrice(merged.price)}</div>
+                <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"rgba(255,255,255,0.92)",marginTop:"0.35rem",textShadow:"0 1px 4px rgba(0,0,0,0.6)"}}>MLS® {merged.mls}</div>
               </div>
-              {L.open_house && (
+              {merged.open_house && (
                 <div style={{background:"rgba(15,42,91,0.85)",color:"white",padding:"0.55rem 0.85rem",borderRadius:10,fontFamily:"Inter,sans-serif",fontSize:"0.78rem",fontWeight:600,backdropFilter:"blur(6px)"}}>
                   <span style={{display:"block",fontSize:"0.68rem",textTransform:"uppercase",letterSpacing:"0.08em",opacity:0.8}}>Open House</span>
-                  {L.open_house}
+                  {merged.open_house}
                 </div>
               )}
             </div>
             {/* Thumbnails */}
-            {L.photos.length > 1 && (
+            {merged.photos.length > 1 && (
               <div style={{position:"absolute",top:"1.25rem",right:"1.25rem",display:"flex",flexDirection:"column",gap:"0.5rem"}}>
-                {L.photos.map((p,i)=>(
+                {merged.photos.slice(0,4).map((p,i)=>(
                   <button key={i} onClick={()=>setActive(i)} data-testid={`featured-thumb-${i}`} style={{width:64,height:48,padding:0,border:i===active?"3px solid var(--brand-gold)":"2px solid rgba(255,255,255,0.6)",borderRadius:6,overflow:"hidden",cursor:"pointer",background:"none"}}>
                     <img loading="lazy" decoding="async" src={p} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                   </button>
@@ -875,17 +954,17 @@ const FeaturedListing = () => {
 
           {/* DETAILS COLUMN */}
           <div style={{padding:"2rem 2.25rem",fontFamily:"Inter,sans-serif",display:"flex",flexDirection:"column"}}>
-            <div style={{fontSize:"0.75rem",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,color:"var(--brand-blue)"}}>{L.neighbourhood} · {L.city}, {L.province}</div>
-            <h3 style={{fontFamily:"Playfair Display,serif",fontSize:"1.9rem",color:"var(--brand-navy)",margin:"0.35rem 0 0.4rem",lineHeight:1.15}} data-testid="featured-address">{L.address}</h3>
-            <p style={{color:"var(--muted)",fontSize:"1rem",lineHeight:1.5,margin:"0 0 1.25rem"}}>{L.headline}</p>
+            <div style={{fontSize:"0.75rem",textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:700,color:"var(--brand-blue)"}}>{merged.neighbourhood} · {merged.city}, {merged.province}</div>
+            <h3 style={{fontFamily:"Playfair Display,serif",fontSize:"1.9rem",color:"var(--brand-navy)",margin:"0.35rem 0 0.4rem",lineHeight:1.15}} data-testid="featured-address">{merged.address}</h3>
+            <p style={{color:"var(--muted)",fontSize:"1rem",lineHeight:1.5,margin:"0 0 1.25rem"}}>{merged.headline}</p>
 
             {/* Quick stats */}
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"0.65rem",marginBottom:"1.5rem"}} data-testid="featured-stats">
               {[
-                {v:L.beds,     l:"Beds"},
-                {v:`${L.baths}${L.half_baths?"+"+L.half_baths:""}`, l:L.half_baths?"Full+Half":"Baths"},
-                {v:L.sqft.toLocaleString("en-CA"), l:"Sq Ft"},
-                {v:L.year_built, l:"Built"},
+                {v:merged.beds,     l:"Beds"},
+                {v:`${merged.baths}${merged.half_baths?"+"+merged.half_baths:""}`, l:merged.half_baths?"Full+Half":"Baths"},
+                {v:(merged.sqft||0).toLocaleString("en-CA"), l:"Sq Ft"},
+                {v:merged.year_built, l:"Built"},
               ].map((s,i)=>(
                 <div key={i} style={{background:"#F5F0E1",borderRadius:10,padding:"0.75rem 0.5rem",textAlign:"center"}}>
                   <div style={{fontFamily:"Montserrat,sans-serif",fontWeight:700,fontSize:"1.15rem",color:"var(--brand-navy)"}}>{s.v}</div>
@@ -896,16 +975,16 @@ const FeaturedListing = () => {
 
             {/* Property meta */}
             <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem 1.25rem",fontSize:"0.85rem",color:"var(--ink)",marginBottom:"1.25rem",paddingBottom:"1.25rem",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
-              <div><span style={{color:"var(--muted)"}}>Type:</span> <strong>{L.property_type}</strong></div>
-              {L.lot_sqft && <div><span style={{color:"var(--muted)"}}>Lot:</span> <strong>{L.lot_sqft.toLocaleString("en-CA")} sq ft</strong></div>}
-              <div><span style={{color:"var(--muted)"}}>MLS®:</span> <strong>{L.mls}</strong></div>
+              <div><span style={{color:"var(--muted)"}}>Type:</span> <strong>{merged.property_type}</strong></div>
+              {merged.lot_sqft ? <div><span style={{color:"var(--muted)"}}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft</strong></div> : null}
+              <div><span style={{color:"var(--muted)"}}>MLS®:</span> <strong>{merged.mls}</strong></div>
             </div>
 
-            <p style={{fontSize:"0.92rem",lineHeight:1.65,color:"var(--ink)",marginBottom:"1.5rem"}} data-testid="featured-description">{L.description}</p>
+            <p style={{fontSize:"0.92rem",lineHeight:1.65,color:"var(--ink)",marginBottom:"1.5rem"}} data-testid="featured-description">{merged.description}</p>
 
             <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",marginTop:"auto"}}>
-              {L.detail_url
-                ? <Link to={L.detail_url} className="btn btn-primary" data-testid="featured-view-details">View Full Listing</Link>
+              {merged.detail_url
+                ? <Link to={merged.detail_url} className="btn btn-primary" data-testid="featured-view-details">View Full Listing</Link>
                 : <Link to="/buyer" className="btn btn-primary" data-testid="featured-view-details">Request Details</Link>}
               <Link to="/buyer" className="btn btn-green" data-testid="featured-book-showing">Book a Showing</Link>
             </div>
