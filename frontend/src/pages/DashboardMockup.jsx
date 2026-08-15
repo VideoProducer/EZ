@@ -5212,12 +5212,13 @@ const FEATURED_HOME_LISTING = {
   baths: 5,
   half_baths: 0,
   sqft: 6129,
-  lot_sqft: 14636,                // 0.34 acre
+  lot_sqft: 14636,                // 0.36 acre (see lot_acres override below)
+  lot_acres: 0.36,                // explicit override — takes precedence over calculated value
   property_type: "Detached Home",
   year_built: null,               // let DDF fill in
   mls: "R2851234",                // ← Doug: replace Monday AM with real MLS#
   headline: "Quality, Location, Lasting Value",
-  description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.34-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
+  description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
     // Placeholders shown only in preview mode. On Monday the CREA DDF® feed
     // will auto-populate real photos the moment the MLS goes live.
@@ -5513,7 +5514,7 @@ const DashboardFeaturedListing = () => {
             paddingBottom: 12, borderBottom: "1px solid rgba(15,42,91,0.08)",
           }}>
             <div><span style={{ color: C.muted }}>Type:</span> <strong>{merged.property_type}</strong></div>
-            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft{merged.lot_sqft >= 4356 ? ` (${(merged.lot_sqft / 43560).toFixed(2)} acre)` : ""}</strong></div> : null}
+            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft{(merged.lot_acres || merged.lot_sqft >= 4356) ? ` (${(merged.lot_acres || (merged.lot_sqft / 43560)).toFixed(2)} acre)` : ""}</strong></div> : null}
           </div>
 
           <p style={{
