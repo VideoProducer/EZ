@@ -8,6 +8,15 @@ Disallow: /admin/
 Disallow: /market-report
 Disallow: /mockups/
 
+# Crawl-Delay hardening (defense-in-depth per CREA DDF® §8 · anti-scraping).
+# Well-behaved crawlers throttle to one request every 5 seconds. Bulk
+# scrapers that ignore Disallow rules but respect Crawl-Delay get slowed
+# to a trickle; scrapers that ignore both hit the server-side per-IP rate
+# limit (3 req/sec) applied to /api/listings/{key} and 410-Gone responses
+# for sold / expired records. Together these three layers make bulk
+# harvesting of MLS® detail data operationally impractical.
+Crawl-Delay: 5
+
 # CREA DDF® Rule 3.1: raw per-listing pages (/listing/{key}) must not be
 # machine-scraped or AI-trained. The /listings search hub, however, does
 # NOT expose per-property MLS data and is safe (and beneficial) to index

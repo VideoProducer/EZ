@@ -9041,9 +9041,48 @@ async def search_listings(
 @api.get("/listings/{listing_key}")
 @_limiter.limit("120/minute")
 async def get_listing(request: Request, listing_key: str):
+    # Rate-limit hardening (CREA DDF® §8 · anti-scraping defense-in-depth):
+    # Cap listing-detail fetches at ~3 req/sec per IP. Honest visitors stay
+    # comfortably under the limit; a bulk scraper burning the sitemap-
+    # listings.xml URL list gets a 429 within seconds. Uses the existing
+    # rate_limits collection with a 1-second sliding window.
+    try:
+        client_ip = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+        ip_key = f"listing_detail:{client_ip}"
+        now_ts = datetime.now(timezone.utc)
+        window_start = now_ts - timedelta(seconds=1)
+        recent = await db.rate_limits.count_documents({"key": ip_key, "ts": {"$gte": window_start}})
+        if recent >= 3:
+            raise HTTPException(429, "Too many listing requests. Please slow down (max 3/sec).")
+        await db.rate_limits.insert_one({"key": ip_key, "ts": now_ts})
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # never block a legitimate visitor on a rate-limit book-keeping failure
+
     d = await db.listings.find_one({"listing_key": listing_key})
     if not d:
+        # Item · Return 410 Gone (not 404) for unknown listing_keys that
+        # were once valid. This tells Google to permanently drop the URL
+        # from its index within days instead of the usual weeks. Distinguish
+        # "never existed" (404) from "was published but is now gone" (410)
+        # by checking the historical archive collection if we track one.
+        try:
+            gone = await db.listings_archive.find_one({"listing_key": listing_key}) if hasattr(db, "listings_archive") else None
+        except Exception:
+            gone = None
+        if gone:
+            raise HTTPException(410, "This listing is no longer available on the MLS® (sold, expired, or withdrawn).")
         raise HTTPException(404, "Listing not found")
+
+    # Item · If the listing is present but no longer Active (Sold, Closed,
+    # Expired, Withdrawn, or Cancelled), serve a 410 Gone so search engines
+    # de-index it promptly. Consumers arriving via a stale bookmark still
+    # get a machine-readable status code + a friendly explanation.
+    status = (d.get("status") or "").strip()
+    if status and status.lower() not in ("active", "coming soon", "back on market"):
+        raise HTTPException(410, f"This listing is no longer active on the MLS® (status: {status}). It may have sold, expired, or been withdrawn under CREA DDF® rules.")
+
     d = _sanitize_listing(d)
     # Attach the best-available virtual tour reference.  Two tiers:
     #   • Tier 1 (iframe-embeddable): Matterport / YouTube / Vimeo — the
