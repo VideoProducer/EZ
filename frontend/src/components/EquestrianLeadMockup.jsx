@@ -428,12 +428,12 @@ function EquestrianLeadForm() {
       <div style={{display:"flex", gap:16, alignItems:"center", flexWrap:"wrap", marginBottom:14}}>
         <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
         <div>
-          <div style={{fontSize:"0.72rem", letterSpacing:"0.14em", color:BRAND.gold, fontWeight:700}}>§3 · SPEAK TO DOUG</div>
+          <div style={{fontSize:"0.72rem", letterSpacing:"0.14em", color:BRAND.gold, fontWeight:700}}>SPEAK TO DOUG</div>
           <h2 style={{fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight:700, lineHeight:1.15, margin:"4px 0 0"}}>Get the 40-point checklist &amp; a free 20-min equestrian call</h2>
         </div>
       </div>
       <p style={{fontSize:"0.9rem", opacity:0.88, lineHeight:1.6, marginBottom:22}}>
-        Fill this out and Doug personally emails you the checklist + suggests three specific properties that match your zoning, ALR, and water criteria within 1 business day. $0 cost. No CASL spam. Unsubscribe any time.
+        Fill this out and Doug personally emails you the checklist within 1 business day. $0 cost. No CASL spam. Unsubscribe any time.
       </p>
 
       <form onSubmit={submit} data-testid="lead-form-el">
