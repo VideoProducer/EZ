@@ -28,10 +28,19 @@ both ship with the base container image so no font install is required.
 from __future__ import annotations
 
 import io
+import os
+from pathlib import Path
 from typing import Optional
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont
+
+# ── Fraser Property Management logo (bundled with the frontend) ──────────────
+# Rendered at the bottom-left of the OG card, below the brokerage line.
+_FRASER_LOGO_PATH = Path(
+    os.environ.get("FRASER_LOGO_PATH")
+    or "/app/frontend/public/brand/fraser-logo.png"
+)
 
 # ── Font paths (Liberation ships with the container) ─────────────────────────
 FONT_SERIF_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"
@@ -154,7 +163,11 @@ async def render_featured_og(
     f_brand    = _load_font(FONT_SERIF_BOLD, 30)
 
     margin = 60
-    bottom_pad = 60
+    bottom_pad = 40
+    # Reserve vertical space for the brokerage logo which is rendered
+    # BELOW the brokerage-line text near the bottom edge.
+    fraser_logo_target_h = 56
+    logo_gap_above = 12  # space between text row and logo top edge
 
     # 3a · Gold status pill (top-right corner)
     if status:
@@ -171,8 +184,9 @@ async def render_featured_og(
 
     # 3b · Featured Listing eyebrow (bottom-left, above title)
     eyebrow_text = "FEATURED LISTING"
-    y_cursor = H - bottom_pad
-    # Render bottom-up: brokerage line, headline, location, title, eyebrow
+    # Render bottom-up. Start above the Fraser logo strip.
+    y_cursor = H - bottom_pad - fraser_logo_target_h - logo_gap_above
+    # Order: brokerage line → EZ to Find pill → hairline → headline → location → title → eyebrow
 
     # Brokerage line at the very bottom
     bl_w = _text_w(draw, brokerage_line, f_footer)
@@ -241,6 +255,28 @@ async def render_featured_og(
         bl, bt, br, bb = draw.textbbox((0, 0), price_text, font=f_title)
         th = bb - bt
         draw.text((px + 20, py + (ph - th) // 2 - bt), price_text, fill=WHITE, font=f_title)
+
+    # 3d · Fraser Property Management logo (bottom-left, below brokerage line)
+    try:
+        if _FRASER_LOGO_PATH.exists():
+            fraser = Image.open(_FRASER_LOGO_PATH).convert("RGBA")
+            # Scale to target height while preserving aspect ratio.
+            ratio = fraser_logo_target_h / fraser.height
+            fw = int(fraser.width * ratio)
+            fh = fraser_logo_target_h
+            fraser = fraser.resize((fw, fh), Image.LANCZOS)
+            # White rounded rectangle behind the logo so the transparent PNG
+            # renders cleanly against the dark gradient overlay (matches the
+            # feel of the EZ to Find.ca pill on the right).
+            pad_x, pad_y = 10, 6
+            bg_x0 = margin - pad_x
+            bg_y0 = H - bottom_pad - fh - pad_y
+            bg_x1 = margin + fw + pad_x
+            bg_y1 = H - bottom_pad + pad_y
+            draw.rounded_rectangle([bg_x0, bg_y0, bg_x1, bg_y1], radius=8, fill=(255, 255, 255, 235))
+            canvas.paste(fraser, (margin, H - bottom_pad - fh), fraser)
+    except Exception:
+        pass  # logo missing — silently omit rather than fail the render
 
     # ── Serialize ────────────────────────────────────────────────────────────
     out = canvas.convert("RGB")
