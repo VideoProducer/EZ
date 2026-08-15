@@ -2247,6 +2247,14 @@ async def admin_run_just_sold_digest(_=Depends(verify_admin)):
     result = await run_weekly_just_sold_digest(db)
     return {"ok": True, **result}
 
+@api.post("/admin/price-drop-watch/run")
+async def admin_run_price_drop_watch(_=Depends(verify_admin)):
+    """Manually trigger the daily Price-Drop Watch. First run seeds
+    the price_snapshots collection; subsequent runs detect drops."""
+    from services.price_drop_watch import run_price_drop_watch
+    result = await run_price_drop_watch(db)
+    return {"ok": True, **result}
+
 # =============== BREACH RESPONSE (PIPA audit log) ===============
 class BreachReport(BaseModel):
     description: str
@@ -6219,6 +6227,34 @@ async def startup():
                 logger.error(f"just_sold_digest_loop outer failed: {e}")
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(180)).add_done_callback(lambda _: asyncio.create_task(_just_sold_digest_loop()))
+
+    # Price-Drop Watch — daily at ~09:00 America/Vancouver. Scans every
+    # verified user_favorites record for listings whose list_price fell
+    # since the last snapshot, then fires a CASL-compliant digest to the
+    # owner. Snapshots live in `listing_price_snapshots` and self-seed on
+    # first run so no historical price data is required upfront.
+    async def _price_drop_watch_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Next 17:00 UTC (≈09:00 PST / 10:00 PDT)
+                nxt = now.replace(hour=17, minute=0, second=0, microsecond=0)
+                if nxt <= now:
+                    nxt = nxt + _td(days=1)
+                delay = max(60, int((nxt - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services.price_drop_watch import run_price_drop_watch
+                    result = await run_price_drop_watch(db)
+                    logger.info(f"price_drop_watch_loop: {result}")
+                except Exception as e:
+                    logger.error(f"price_drop_watch_loop iteration failed: {e}")
+            except Exception as e:
+                logger.error(f"price_drop_watch_loop outer failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(240)).add_done_callback(lambda _: asyncio.create_task(_price_drop_watch_loop()))
 
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
     # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community

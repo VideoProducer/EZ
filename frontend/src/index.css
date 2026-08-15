@@ -1093,3 +1093,22 @@ textarea:focus-visible,
 }
 [data-status="coming-soon"]::before { content: "⏱ "; }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Item #23 · Sticky mobile search bar. The unified search card on
+   the /search page pins to the top of the viewport on mobile once the
+   user scrolls past ~120px, so the most-used UI element is always
+   one thumb-reach away. Desktop keeps the existing static layout.
+   ═════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  [data-testid="dash-unified-search-card"] {
+    position: sticky;
+    top: 8px;
+    z-index: 30;
+    box-shadow: 0 8px 22px rgba(15,42,91,0.16);
+    /* Compact the padding to save vertical real estate on small screens */
+  }
+  [data-testid="dash-unified-search-card"] form[data-testid="dash-address-mls-search"] {
+    padding: 8px 10px;
+  }
+}
+

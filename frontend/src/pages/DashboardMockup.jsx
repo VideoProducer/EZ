@@ -18,6 +18,7 @@ import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
+import PlayfulEmptyState from "../components/PlayfulEmptyState";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -2407,7 +2408,15 @@ const CompareTray = () => {
 const ResultsGrid = ({ results, loading, hoveredKey, onHoverKey, onFocusMap }) => {
   if (loading && !results) return <SkeletonGrid/>;
   const rows = (results?.listings || []);
-  if (!rows.length) return <EmptyBox>No exact matches in CREA DDF® right now — try widening a filter.</EmptyBox>;
+  if (!rows.length) return (
+    <PlayfulEmptyState
+      title="Nothing exactly matches — yet."
+      subtitle="Try widening a filter, or let me alert you the moment one appears."
+      ctaLabel="Set up a Doogie alert"
+      ctaHref="/newsletter"
+      testid="dash-search-empty"
+    />
+  );
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
