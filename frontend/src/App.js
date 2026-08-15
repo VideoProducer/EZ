@@ -364,9 +364,6 @@ const NeighbourhoodPage = () => {
     { q: `Which municipality and BC region is ${d.neighbourhood} part of?`,
       a: `${d.neighbourhood} sits within ${d.community}, ${d.region || "British Columbia"}. For municipal-level walkability, transit, climate normals, and safety metrics see the ${d.community} community page on EZtoFind.ca.`,
       cite: {name: "Statistics Canada — Census Profile", url: "https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm?Lang=E"} },
-    { q: `Can Doug LeMaire, REALTOR® represent me for a home purchase in ${d.neighbourhood}?`,
-      a: `${d.neighbourhood} sits within ${d.community}. If ${d.community} is inside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor), Doug represents both buyers and sellers directly. For communities outside those areas, EZtoFind.ca operates a referral network of BCFSA-licensed local REALTORS® at zero cost to the consumer.`,
-      cite: {name: "BCFSA REALTOR® Registrant Search", url: "https://www.bcfsa.ca/public-resources/registrant-search"} },
   ] : [];
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     <SEO
