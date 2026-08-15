@@ -60,7 +60,7 @@ const C = {
 const SECTIONS = [
   { key: "home",      label: "Home",           icon: HomeIcon, hideWhen: "search" },
   { key: "search",    label: "Search",         icon: Search },
-  { key: "foryou",    label: "For You",        icon: Sparkles },
+  { key: "foryou",    label: "New Matches",    icon: Sparkles },
   { key: "saved",     label: "Saved Homes",    icon: Heart },
   // Curated specialty listing feeds — both link to pre-filtered /listings URLs.
   // Luxury goes above Equestrian (broader audience first).
@@ -1885,7 +1885,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
         {[
           { key: "saved",    label: "Saved Homes",    value: savedCount || "—", sub: "on this device", section: "saved",    icon: Heart },
-          { key: "foryou",   label: "For You",        value: "Personal picks",  sub: "based on saves",  section: "foryou",   icon: Sparkles },
+          { key: "foryou",   label: "New Matches",    value: "Fresh picks",     sub: "from your saves", section: "foryou",   icon: Sparkles },
           { key: "community",label: "Communities",    value: "Explore BC",      sub: "240+ cities",     section: "community",icon: MapPin },
           { key: "consult",  label: "Consultation",   value: "No Charge Consultation", sub: "REALTOR® · BCFSA", section: "consult",  icon: CalendarClock },
         ].map(q => {
@@ -4143,15 +4143,15 @@ const ForYouPanel = () => {
     })();
   }, []);
 
-  const blurb = !source                        ? "Loading your personalized picks…"
-              : source.kind === "search"       ? `Live matches for your saved search — "${source.label}".`
+  const blurb = !source                        ? "Loading your newest matches…"
+              : source.kind === "search"       ? `New CREA DDF® listings that match your saved search — "${source.label}". Refreshed every 4 hours.`
               : source.kind === "home"         ? `Freshest CREA DDF® listings in ${source.label} — based on the home you saved most recently.`
-              : "Save a search or a home to unlock your personalized feed.";
+              : "Save a home or a search — then Doogie shows you every new listing that matches.";
 
   const nav = useNavigate();
   return (
     <div>
-      <PanelIntro title="For You" blurb={blurb}/>
+      <PanelIntro title="New Matches" blurb={blurb}/>
       {source?.kind === "none" ? (
         <div data-testid="foryou-empty" style={{
           background: "#fff", border: "1px dashed #DDE6FA", borderRadius: 14,
@@ -4159,10 +4159,10 @@ const ForYouPanel = () => {
         }}>
           <div style={{ fontSize: 42, marginBottom: 10 }}>🐾</div>
           <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.navy, margin: 0 }}>
-            Save a home or a search — then this feed learns what you like.
+            Save a home or a search — new listings that match will appear here.
           </h3>
           <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.55, marginTop: 10 }}>
-            Doogie won't second-guess your taste. Tap the ❤️ on any listing, or run a search you'd want to see again — this pane will fill with fresh matches every time you come back.
+            Tap the ❤️ on any listing, or run a search you'd want to see again. Every 4 hours Doogie checks the CREA DDF® feed and drops fresh matches into this pane — you'll never miss a new one.
           </p>
           <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
             <button onClick={() => nav("/listings")} data-testid="foryou-browse-listings" style={{
