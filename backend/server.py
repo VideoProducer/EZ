@@ -2333,11 +2333,6 @@ async def featured_listing_og(
     )
 
 
-# ── Share landing page — serves rich OG meta to social crawlers ─────────────
-# When a share URL is pasted into WhatsApp / iMessage / FB / LinkedIn / X, the
-# platform's crawler fetches this URL and reads the <meta> tags to build the
-# preview card. Human browsers get a 302 back to the actual homepage or the
-# listing detail page once MLS goes live.
 @api.get("/share/featured")
 async def share_featured_landing(request: Request, mls: Optional[str] = None):
     ua = (request.headers.get("user-agent") or "").lower()
@@ -5637,6 +5632,64 @@ async def community_neighbourhoods(slug: str):
             "median_price": median,
         })
     return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
+
+
+# ── Wave 1 auto-pick — top N sub-neighbourhoods across all focus communities ─
+# Ranks curated sub-neighbourhoods by real MLS® active-listing volume so Doug
+# can approve the highest-signal targets before we generate landing pages.
+# Only searches within Doug's licensed focus area (BCFSA-compliant).
+@api.get("/admin/wave1/auto-pick")
+async def wave1_auto_pick(limit: int = 30):
+    from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+    import asyncio
+
+    # Prep all (parent_slug, sub_name, parent_name, region) tuples up-front.
+    tasks_meta = []
+    for parent_slug, subs in BC_SUB_NEIGHBOURHOODS.items():
+        parent_name, region = _resolve_community(parent_slug)
+        if not parent_name:
+            continue
+        for sub_name in subs:
+            tasks_meta.append((parent_slug, sub_name, parent_name, region))
+
+    async def count_one(sub_name: str, parent_name: str) -> int:
+        escaped = sub_name.replace("(", r"\(").replace(")", r"\)")
+        return await db.listings.count_documents({
+            "status": "Active",
+            "city": _city_query(parent_name),
+            "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+            "list_price": {"$gt": 0},
+            "$or": [
+                {"region": {"$regex": f"^{escaped}$", "$options": "i"}},
+                {"unparsed_address": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+            ],
+        })
+
+    # Batch in 25 concurrent queries — well under Motor's connection pool cap
+    # (default 100) and keeps Cloudflare's 60s timeout comfortable.
+    results = []
+    BATCH = 25
+    for i in range(0, len(tasks_meta), BATCH):
+        chunk = tasks_meta[i:i + BATCH]
+        counts = await asyncio.gather(*[count_one(t[1], t[2]) for t in chunk])
+        for (parent_slug, sub_name, parent_name, region), active in zip(chunk, counts):
+            if active > 0:
+                results.append({
+                    "sub_neighbourhood": sub_name,
+                    "sub_slug": _nhb_slug(sub_name),
+                    "parent_community": parent_name,
+                    "parent_slug": parent_slug,
+                    "region": region,
+                    "active_listings": active,
+                })
+    results.sort(key=lambda r: -r["active_listings"])
+    return {
+        "total_seeded": sum(len(v) for v in BC_SUB_NEIGHBOURHOODS.values()),
+        "total_with_active": len(results),
+        "limit": limit,
+        "top": results[:limit],
+    }
 
 
 @api.get("/community/{slug}/stats")
