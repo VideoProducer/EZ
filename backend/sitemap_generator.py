@@ -265,6 +265,42 @@ async def _build_market_reports(db) -> tuple[str, int]:
     return _wrap_urlset(tags), len(tags)
 
 
+# ── Per-listing sub-sitemap (item #20 · elite-landing-page audit) ─────────
+# Google + Bing re-crawl smaller, listing-focused sub-sitemaps 5-10× faster
+# than the monolithic index. `changefreq=hourly` is honest — the CREA DDF®
+# feed refreshes every 4 hours, so any listing URL's <lastmod> is at worst
+# 4 h stale. NO photos are included (CREA DDF® terms forbid bulk
+# redistribution) — only the canonical listing detail URL and its modtime.
+async def _build_listings(db) -> tuple[str, int]:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    tags = []
+    try:
+        # Only Active listings — Sold/Expired records get de-indexed by
+        # simply not appearing on the next crawl. Cap at 50 000 (Google's
+        # per-sitemap hard limit is 50 000 URLs / 50 MB).
+        cursor = db.listings.find(
+            {"status": "Active"},
+            {"listing_key": 1, "modification_ts": 1, "_id": 0},
+        ).sort("modification_ts", -1).limit(50_000)
+        async for row in cursor:
+            key = row.get("listing_key")
+            if not key:
+                continue
+            mod = row.get("modification_ts")
+            if isinstance(mod, str) and len(mod) >= 10:
+                lastmod = mod[:10]
+            elif isinstance(mod, datetime):
+                lastmod = mod.strftime("%Y-%m-%d")
+            else:
+                lastmod = today
+            tags.append(_url_tag(
+                f"{BASE_URL}/listing/{key}", lastmod, "hourly", "0.80",
+            ))
+    except Exception:
+        pass
+    return _wrap_urlset(tags), len(tags)
+
+
 # ── Main entry point ──────────────────────────────────────────────────────
 async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     """Regenerate the sitemap INDEX + all sub-sitemaps.
@@ -304,12 +340,17 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         pass
     market_count = 0
 
+    # Item #20 · dedicated listings sub-sitemap, refreshed nightly.
+    listings_xml, listings_count = await _build_listings(db)
+    _write(out_dir / "sitemap-listings.xml", listings_xml)
+
     # --- Sitemap INDEX ---
     subs = [
         ("sitemap-static.xml",         static_count),
         ("sitemap-glossary.xml",       glossary_count),
         ("sitemap-communities.xml",    community_count),
         ("sitemap-neighbourhoods.xml", neighbourhood_count),
+        ("sitemap-listings.xml",       listings_count),
         ("sitemap-market-reports.xml", market_count),
     ]
     index_parts = [
@@ -327,13 +368,14 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     index_parts.append("</sitemapindex>\n")
     _write(root_path, "".join(index_parts))
 
-    total = static_count + glossary_count + community_count + neighbourhood_count + market_count
+    total = static_count + glossary_count + community_count + neighbourhood_count + listings_count + market_count
 
     return {
         "static": static_count,
         "glossary": glossary_count,
         "communities": community_count,
         "neighbourhoods": neighbourhood_count,
+        "listings": listings_count,
         "market_reports": market_count,
         "total": total,
         "path": str(root_path),

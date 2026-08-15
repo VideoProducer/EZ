@@ -966,3 +966,130 @@ textarea:focus-visible,
   border-color: var(--brand-navy);
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ELITE LANDING-PAGE ENHANCEMENTS (2026-02-14)
+   Items 22 · 24 · 25 · 28 · 46 from the enhancement audit — global
+   CSS-only wins that lift Core Web Vitals, accessibility, and BC-wide
+   consistency without touching any React component.
+   ═════════════════════════════════════════════════════════════════ */
+
+/* Item 22 · Fluid typography scale — clamp()-based CSS variables that
+   scale linearly between 320px and 1440px viewports. Any component can
+   opt-in with var(--fs-*). Eliminates the "iPad text-size gap."      */
+:root {
+  --fs-xxs: clamp(0.68rem, 0.63rem + 0.20vw, 0.75rem);
+  --fs-xs:  clamp(0.78rem, 0.72rem + 0.24vw, 0.85rem);
+  --fs-sm:  clamp(0.88rem, 0.82rem + 0.28vw, 0.95rem);
+  --fs-md:  clamp(1.00rem, 0.94rem + 0.30vw, 1.10rem);
+  --fs-lg:  clamp(1.15rem, 1.05rem + 0.50vw, 1.35rem);
+  --fs-xl:  clamp(1.40rem, 1.20rem + 1.00vw, 1.80rem);
+  --fs-2xl: clamp(1.80rem, 1.40rem + 2.00vw, 2.60rem);
+  --fs-3xl: clamp(2.20rem, 1.60rem + 3.00vw, 3.40rem);
+  --fs-4xl: clamp(2.60rem, 1.80rem + 4.00vw, 4.20rem);
+  /* Tap-target minimum enforced site-wide (WCAG 2.1 SC 2.5.5) */
+  --tap-target-min: 44px;
+}
+
+/* Item 25 · 44×44 tap-target enforcement — any interactive element
+   below the WCAG 2.1 AA minimum is boosted. `:where()` keeps
+   specificity at 0 so per-component overrides still win.            */
+:where(button, [role="button"], a.btn, .tap, input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"]):not(.tap-target-exempt) {
+  min-height: var(--tap-target-min);
+  min-width:  var(--tap-target-min);
+}
+/* Checkboxes/radios need visible size, not padding — bump the hit-box
+   via a pseudo-element so the visual size stays untouched.          */
+:where(input[type="checkbox"], input[type="radio"]) {
+  position: relative;
+}
+:where(input[type="checkbox"], input[type="radio"])::before {
+  content: "";
+  position: absolute;
+  inset: 50% 50% auto auto;
+  transform: translate(50%, -50%);
+  width:  var(--tap-target-min);
+  height: var(--tap-target-min);
+  pointer-events: auto;
+}
+
+/* Item 24 · Reduced-motion strengthened — belt-and-braces global rule
+   so anything the app forgets to gate still respects the OS setting.
+   The two existing @media rules earlier in this file target specific
+   selectors; this catches any new component author who forgets.     */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Item 28 · iOS Safari safe-area padding utilities — extend the
+   existing safe-area block earlier in this file with helper classes
+   any component can drop in as `className="safe-bottom"` etc.       */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-top    { padding-top:    max(env(safe-area-inset-top),    12px); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
+  .safe-left   { padding-left:   max(env(safe-area-inset-left),   12px); }
+  .safe-right  { padding-right:  max(env(safe-area-inset-right),  12px); }
+  /* Fixed-bottom UI (Doogie launcher, sticky search bar) needs an
+     extra pad so the iOS home-indicator doesn't overlap it.        */
+  .fixed-bottom-safe { bottom: max(env(safe-area-inset-bottom), 12px); }
+}
+
+/* Item 46 · Colour-blind-safe status indicators — pattern + colour,
+   never colour alone. WCAG 2.1 SC 1.4.1. Use as `data-status="new"`
+   etc. on any status pill/badge.                                    */
+[data-status="new"] {
+  background: linear-gradient(135deg, #16a34a 0%, #16a34a 45%, #ffffff 45%, #ffffff 55%, #16a34a 55%);
+  background-size: 8px 8px;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+[data-status="new"]::before { content: "★ "; }
+[data-status="price-drop"] {
+  background: #dc2626;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+[data-status="price-drop"]::before { content: "▼ "; }
+[data-status="sold"] {
+  background: #6b7280;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: line-through;
+  text-decoration-color: rgba(255,255,255,0.6);
+}
+[data-status="sold"]::before { content: "◆ "; }
+[data-status="coming-soon"] {
+  background: repeating-linear-gradient(45deg, #F5A623 0px, #F5A623 8px, #d48c0f 8px, #d48c0f 16px);
+  color: #0F2A5B;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: var(--fs-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+[data-status="coming-soon"]::before { content: "⏱ "; }
+

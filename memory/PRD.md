@@ -1,5 +1,28 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Elite landing-page enhancement Wave A — shipped to live `/`)
+Reference: full 48-item enhancement audit; user selected 33 items; Wave A ships 9 items now, Waves B/C/D queued.
+
+**Files touched:**
+- `frontend/src/index.css` — appended global CSS block (items 22 · 24 · 25 · 28 · 46)
+- `frontend/src/components/PIPACookieBanner.jsx` — NEW (item 12)
+- `frontend/src/components/LiveHomepageSchema.jsx` — NEW (items 13 · 14 · 15 · 18)
+- `frontend/src/App.js` — imported PIPACookieBanner + rendered inside `<BrowserRouter>` tail
+- `frontend/src/pages/DashboardMockup.jsx` — imported LiveHomepageSchema and rendered inside `<SearchFiltersContext.Provider>`; injected NL search chips below `DoogieFilterHeader` (item 29)
+- `backend/sitemap_generator.py` — added `_build_listings()` function + `sitemap-listings.xml` sub-sitemap + wired into the index (item 20)
+
+**Verification:**
+- 2 `application/ld+json` blocks confirmed on `/` (12 entities in the new `@graph`)
+- PIPA cookie banner visible at bottom of `/` with BC OIPC link + "Got it" button
+- All prior functionality (Doogie hero, sidebar nav, Leaflet map, listing search) intact
+
+**⚠️ Placeholder to fill in before promoting to production:**
+- `frontend/src/components/LiveHomepageSchema.jsx` — `FACTS.bcfsa_licence_individual` and `FACTS.bcfsa_licence_brokerage` are both `"PENDING"`. Replace with Doug's real BCFSA licence numbers.
+
+**Queued for follow-up sessions** — 24 remaining items (Waves B, C, D) documented in the chat handoff with file plans.
+
+
+
 ## 2026-02-14 (Homepage V2 mockup — full parity with live eztofind.ca + AEO/LLM + BCFSA compliance sweep)
 Ported every high-value element from the live eztofind.ca homepage into `/mockups/home-v2`, layered in a full AEO/LLM/AI-search structured-data pass, and closed every BCFSA/CREA/PIPA/CASL/GVR compliance gap. Zero external-integration adds. Files touched: `frontend/src/components/HomepageLeadGenMockup.jsx`.
 

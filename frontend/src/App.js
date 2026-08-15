@@ -12,6 +12,7 @@ axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import MyJourney from "./pages/MyJourney";
+import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
@@ -11595,6 +11596,7 @@ function App() {
       <Route path="/admin/copycat-detector" element={<AdminCopycatDetector/>}/>
       <Route path="/admin/cease-desist" element={<AdminCeaseDesist/>}/>
     </Routes>
+    <PIPACookieBanner/>
   </BrowserRouter>);
 }
 

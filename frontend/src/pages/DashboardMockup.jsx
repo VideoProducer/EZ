@@ -16,6 +16,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
+import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -402,6 +403,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   };
   return (
     <SearchFiltersContext.Provider value={{ filters, setFilters, results, loading, runSearch, sync, syncLoading, setSyncQuery, voiceTriggerNonce, bumpVoiceTrigger: () => setVoiceTriggerNonce(n => n + 1), wasRestored: wasRestoredRef.current }}>
+    <LiveHomepageSchema/>
     <div data-testid="dashboard-mockup" style={{
       minHeight: "100vh",
       display: isMobile ? "block" : "grid",
@@ -738,6 +740,52 @@ const SidebarFilters = ({ hideDoogie = false } = {}) => {
           ["city","propertyType","beds","baths","priceMin","priceMax","keyword"].forEach(k => set(k, ""));
         }}
       />
+      )}
+      {/* Item #29 · Natural-language search starter chips. One tap loads a
+          curated filter set so first-time visitors don't stare at a blank
+          form. Data-driven so Doug can extend the list in one place.    */}
+      {!hideDoogie && (
+        <div data-testid="dash-nl-chips" style={{ padding:"10px 16px 4px", borderBottom:"1px solid #EEE7D2", background:"#FDFBF3" }}>
+          <div style={{ fontSize:"0.65rem", letterSpacing:"0.14em", color: C.muted, fontWeight: 700, textTransform:"uppercase", marginBottom: 6 }}>Try one of these</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap: 6 }}>
+            {[
+              { label:"3-bed under $1M in Langley", set:{ city:"Langley", beds:"3", priceMax:"1000000" } },
+              { label:"Waterfront Sea-to-Sky",       set:{ city:"Squamish", keyword:"waterfront" } },
+              { label:"Suite + garage Maple Ridge",  set:{ city:"Maple Ridge", keyword:"suite garage" } },
+              { label:"Acreage with barn",           set:{ propertyType:"Manufactured on Land", keyword:"barn acreage" } },
+              { label:"Condo under $600K Surrey",    set:{ city:"Surrey", propertyType:"Apartment", priceMax:"600000" } },
+            ].map(chip => (
+              <button
+                key={chip.label}
+                type="button"
+                data-testid={`dash-nl-chip-${chip.label.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,32)}`}
+                onClick={() => {
+                  // Wipe first so a chip is a full re-scope, not additive.
+                  ["city","propertyType","beds","baths","priceMin","priceMax","keyword"].forEach(k => set(k, ""));
+                  Object.entries(chip.set).forEach(([k, v]) => set(k, v));
+                  setTimeout(() => runSearch(), 60);
+                }}
+                className="tap-target-exempt"
+                style={{
+                  background:"white",
+                  border:`1px solid ${C.navy}`,
+                  color: C.navy,
+                  padding:"6px 12px",
+                  borderRadius: 999,
+                  fontSize:"0.78rem",
+                  fontWeight: 600,
+                  cursor:"pointer",
+                  fontFamily:"'Sora',sans-serif",
+                  transition:"background 0.15s, color 0.15s",
+                  minHeight: 32,
+                  minWidth: 0,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.color = "white"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = C.navy; }}
+              >{chip.label}</button>
+            ))}
+          </div>
+        </div>
       )}
       <div style={{ padding: "16px 20px 20px" }}>
       <label style={sLabel} htmlFor="dash-f-city">Community / City</label>
