@@ -106,6 +106,57 @@ export default function EquestrianLeadMockup() {
   const [stats, setStats] = useState({ total: 0, minPrice: 0, maxPrice: 0, medianPrice: 0 });
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Rotating hero background — pulls equestrian listings with ≥20 acres so
+  // the header telegraphs the real inventory (never a stock horse photo when
+  // we can help it). Falls back to the static Unsplash horse image below
+  // if the DDF® pool is empty (rare).
+  const [heroPhotos, setHeroPhotos] = useState([]);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Real equestrian search — ≥20 acre acreage listings. `property_type=Equestrian`
+        // isn't a real MLS® classification; the backend's equestrian search uses
+        // min_acres + alr_only / has_arena filters instead (per Wave-C rebuild).
+        // We request 24 to give the rotation a healthy pool of hero-worthy shots.
+        const r = await axios.get(`${API}/api/listings`, {
+          params: {
+            min_acres: 20,
+            has_arena: true,
+            exclude_property_type: "Vacant Land,Lot,Residential Commercial Mix,Mixed Use,Multi-Family,Commercial",
+            sort: "price_desc",
+            limit: 24,
+          },
+        });
+        if (cancelled) return;
+        const pool = (r.data.listings || [])
+          .map(l => ({
+            url: l.photos?.[0],
+            listing_key: l.listing_key,
+            city: l.city,
+            price: l.list_price,
+            address: l.unparsed_address || l.street_address,
+          }))
+          .filter(p => p.url);
+        setHeroPhotos(pool);
+      } catch { /* silent — hero falls back to static image */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Rotate every 6s. Respects background-tab throttling and single-photo
+  // pools (never cycles when nothing to cycle).
+  useEffect(() => {
+    if (heroPhotos.length < 2) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        setHeroIndex(i => (i + 1) % heroPhotos.length);
+      }
+    }, 6000);
+    return () => clearInterval(id);
+  }, [heroPhotos.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,10 +248,72 @@ export default function EquestrianLeadMockup() {
       {/* ═══ HERO ═══════════════════════════════════════════════════ */}
       <div style={{
         position:"relative", overflow:"hidden",
-        background:`linear-gradient(135deg, rgba(15,42,91,0.92) 0%, rgba(15,42,91,0.72) 100%), url("/specialties/equestrian.png") center/cover`,
         color:"white", padding:"48px 20px 60px",
+        minHeight: "88vh",
       }}>
-        <div style={{maxWidth:1120, margin:"0 auto"}}>
+        {/* Static fallback layer — the white horse hero. Always renders
+            underneath so the header never goes blank while the DDF® pool
+            loads or if the fetch fails. */}
+        <div aria-hidden="true" style={{
+          position:"absolute", inset:0, zIndex:0,
+          backgroundImage: 'url("/specialties/equestrian.png")',
+          backgroundSize:"cover", backgroundPosition:"center",
+        }}/>
+        {/* Rotating live MLS® photo layer — 20+ acre equestrian listings
+            from the CREA DDF® feed. Crossfade 1500ms between photos. */}
+        {heroPhotos.map((p, i) => (
+          <div key={p.listing_key || i} aria-hidden="true" style={{
+            position:"absolute", inset:0, zIndex:0,
+            backgroundImage:`url(${p.url})`,
+            backgroundSize:"cover", backgroundPosition:"center",
+            opacity: heroIndex === i ? 1 : 0,
+            transition:"opacity 1500ms ease-in-out",
+          }}/>
+        ))}
+        {/* Navy tonal wash — keeps title/subtext legible regardless of
+            the photo underneath. */}
+        <div aria-hidden="true" style={{
+          position:"absolute", inset:0, zIndex:1,
+          background:"linear-gradient(135deg, rgba(15,42,91,0.82) 0%, rgba(15,42,91,0.58) 100%)",
+        }}/>
+        {/* MLS® attribution — required by CREA DDF® rules whenever a
+            live MLS® image is shown outside the standard listing page.
+            Silent-hides while the fallback is playing. */}
+        {heroPhotos[heroIndex] && (
+          <div style={{
+            position:"absolute", bottom:18, right:20, zIndex:3,
+            background:"rgba(11,15,26,0.72)", color:BRAND.gold,
+            padding:"6px 14px", borderRadius:2,
+            fontSize:"0.68rem", letterSpacing:"0.14em",
+            textTransform:"uppercase", fontWeight:600,
+            border:`1px solid rgba(249,189,0,0.35)`,
+            fontFamily:"Inter, sans-serif",
+          }} data-testid="equestrian-hero-mls-attribution">
+            <span style={{color:"rgba(255,255,255,0.95)", fontStyle:"italic", textTransform:"none", letterSpacing:0, fontSize:"0.82rem"}}>
+              {heroPhotos[heroIndex].address}
+            </span>
+            <span style={{opacity:0.55, margin:"0 8px"}}>·</span>
+            {heroPhotos[heroIndex].city}
+            <span style={{opacity:0.55, margin:"0 8px"}}>·</span>
+            MLS® #{heroPhotos[heroIndex].listing_key}
+          </div>
+        )}
+        {/* Rotation dots — subtle indicator that this is a portfolio. */}
+        {heroPhotos.length > 1 && (
+          <div style={{
+            position:"absolute", bottom:22, left:32, zIndex:3,
+            display:"flex", gap:6,
+          }} data-testid="equestrian-hero-rotation-dots">
+            {heroPhotos.slice(0, 8).map((_, i) => (
+              <span key={i} style={{
+                width: heroIndex === i ? 22 : 6, height: 3,
+                background: heroIndex === i ? BRAND.gold : "rgba(255,255,255,0.35)",
+                borderRadius: 2, transition:"width 400ms ease",
+              }}/>
+            ))}
+          </div>
+        )}
+        <div style={{position:"relative", zIndex:2, maxWidth:1120, margin:"0 auto"}}>
           <nav aria-label="Breadcrumb" style={{fontSize:"0.78rem", opacity:0.85, marginBottom:14}}>
             <Link to="/" style={{color:"#fff", textDecoration:"none"}}>Home</Link> / <Link to="/specialties/equestrian" style={{color:"#fff", textDecoration:"none"}}>Equestrian</Link>
           </nav>
@@ -239,7 +352,7 @@ export default function EquestrianLeadMockup() {
       <div style={{maxWidth:1120, margin:"0 auto", padding:"0 20px 60px", fontFamily:"Inter,sans-serif"}}>
 
         {/* ═══ § VALUE PILLARS ═══════════════════════════════════════ */}
-        <SectionH kicker="§1 · Why Doug">Three things Doug catches on every equestrian file</SectionH>
+        <SectionH kicker="Why Doug">Three things Doug catches on every equestrian file</SectionH>
         <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:16}}>
           {PILLARS.map(p => (
             <div key={p.title} style={{background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"22px 24px"}}>
@@ -251,7 +364,7 @@ export default function EquestrianLeadMockup() {
         </div>
 
         {/* ═══ § SAMPLE LISTINGS ═════════════════════════════════════ */}
-        <SectionH kicker="§2 · Live inventory">4 sample equestrian listings on the market now</SectionH>
+        <SectionH kicker="Live inventory">4 sample equestrian listings on the market now</SectionH>
         {loading ? (
           <div style={{padding:"3rem", textAlign:"center", color:BRAND.muted}}>Loading live MLS® data…</div>
         ) : (
@@ -286,7 +399,7 @@ export default function EquestrianLeadMockup() {
         <EquestrianLeadForm/>
 
         {/* ═══ § 5-STEP CHECKLIST ═══════════════════════════════════ */}
-        <SectionH kicker="§4 · Free checklist" id="checklist">5-step equestrian buyer due-diligence checklist</SectionH>
+        <SectionH kicker="Free checklist" id="checklist">5-step equestrian buyer due-diligence checklist</SectionH>
         <p style={{fontSize:"0.95rem", color:BRAND.ink, maxWidth:780, lineHeight:1.65}}>
           Every horse property in BC needs these five verifications before you write an offer. Skip any of them and you may end up with a beautiful lot you can't legally keep animals on — or a barn you have to tear down.
         </p>
@@ -311,7 +424,7 @@ export default function EquestrianLeadMockup() {
         </div>
 
         {/* ═══ § FAQ ═════════════════════════════════════════════════ */}
-        <SectionH kicker="§5 · FAQ">Frequently asked about buying equestrian property in BC</SectionH>
+        <SectionH kicker="FAQ">Frequently asked about buying equestrian property in BC</SectionH>
         <div style={{display:"flex", flexDirection:"column", gap:10, maxWidth:900}}>
           {FAQS.map((f, i) => (
             <details key={i} style={{background:"white", border:"1px solid #E5E7EB", borderRadius:10, padding:"14px 18px"}} data-testid={`faq-${i}`}>
@@ -338,7 +451,7 @@ export default function EquestrianLeadMockup() {
         </div>
 
         {/* ═══ § REFERRAL BLOCK (out-of-area) ═══════════════════════ */}
-        <SectionH kicker="§6 · Outside Doug's area">Buying in the Interior, Vancouver Island, or Kootenays?</SectionH>
+        <SectionH kicker="Outside Doug's area">Buying in the Interior, Vancouver Island, or Kootenays?</SectionH>
         <div style={{background:"white", border:`1px solid ${BRAND.gold}`, padding:"22px 24px", borderRadius:14, display:"flex", gap:18, alignItems:"center", flexWrap:"wrap"}}>
           <img src="/doogie/head.webp" alt="Doogie" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:80, height:80, flexShrink:0, objectFit:"contain", filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
           <div style={{flex:"1 1 320px"}}>
