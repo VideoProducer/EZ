@@ -8934,6 +8934,7 @@ async def search_listings(
     price_min: Optional[int] = None,
     price_max: Optional[int] = None,
     features: Optional[str] = None,  # comma-separated
+    exclude_property_type: Optional[str] = None,  # comma-separated allowlist of extra types to exclude (e.g. "Vacant Land,Lot,Land" — used by the Luxury sidebar link to keep raw-land parcels out of a $3M+ price_desc sweep)
     sort: Optional[str] = "newest",  # newest|price_asc|price_desc
     limit: int = 24,
     offset: int = 0,
@@ -8941,7 +8942,16 @@ async def search_listings(
     """Search active MLS® listings. Rate-limited (60/min per IP).
     Returns { total, count, offset, limit, listings: [...], compliance }.
     """
-    query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
+    # Base residential exclusion + optional caller-supplied exclusion list.
+    # Merged into a single $nin so we only spend one Mongo index lookup on
+    # the property_type field.
+    _excluded = set(EXCLUDED_PROPERTY_TYPES)
+    if exclude_property_type:
+        for raw in exclude_property_type.split(","):
+            v = raw.strip()
+            if v:
+                _excluded.add(v)
+    query: dict = {"status": "Active", "property_type": {"$nin": sorted(_excluded)}, "list_price": {"$gt": 0}}
     # ── Detect Canadian postal codes and street-address-like queries ──────
     # Mongo `$text` tokenises on word boundaries and matches ANY token — so
     # "930 Josephine Rd" matches every listing whose street contains "Rd".
