@@ -2756,6 +2756,17 @@ const TermsGate = ({ children }) => {
 // - Listing agent line only shown when the feed actually provides one (blank on mock data).
 const ListingCompliance = ({ listing, compact = false }) => {
   const realtorCa = listing.realtor_ca_url || `https://www.realtor.ca/real-estate/${listing.listing_key}`;
+  // Some BC boards ship listings via the CREA DDF® feed without a
+  // brokerage name (VOW licensing distinction). The backend fills in a
+  // "Listing Brokerage (see REALTOR.ca)" placeholder to stay CREA-
+  // compliant, but rendering it as "Listing brokerage: Listing Brokerage
+  // (see REALTOR.ca)" reads like a duplicate label to the visitor.
+  // Detect the placeholder here and swap in cleaner one-line copy —
+  // the "Powered by REALTOR.ca" badge next to it already carries the
+  // canonical link to the true brokerage record.
+  const brokerageStr    = String(listing.brokerage_name || "").trim();
+  const isPlaceholder   = /^Listing Brokerage(\s*\(see REALTOR\.ca\))?$/i.test(brokerageStr);
+  const hasRealBrokerage = brokerageStr && !isPlaceholder;
   return (
     <div style={{fontFamily:"Inter,sans-serif",fontSize:compact?"0.72rem":"0.78rem",color:"var(--muted)",lineHeight:1.5,marginTop:"0.5rem"}} data-testid="listing-compliance">
       <div style={{display:"flex",alignItems:"center",gap:"0.6rem",marginBottom:"0.35rem"}}>
@@ -2763,7 +2774,12 @@ const ListingCompliance = ({ listing, compact = false }) => {
           <span>Powered by<br/>REALTOR<sup>®</sup>.ca</span>
         </a>
         <div style={{flex:1,minWidth:0}}>
-          {listing.brokerage_name && <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}}>Listing brokerage: {listing.brokerage_name}</div>}
+          {hasRealBrokerage && <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}} data-testid="listing-brokerage-name">Listing brokerage: {brokerageStr}</div>}
+          {!hasRealBrokerage && (
+            <div style={{color:"var(--ink)",fontWeight:600,fontSize:compact?"0.78rem":"0.85rem"}} data-testid="listing-brokerage-realtor-fallback">
+              Listing brokerage disclosed on <a href={realtorCa} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>REALTOR.ca</a>
+            </div>
+          )}
           {listing.listing_agent && <div>Listing agent: {listing.listing_agent}</div>}
           {listing.mls_number && <div>MLS® #{listing.mls_number}{listing.days_on_market !== undefined ? ` · ${listing.days_on_market} days on market` : ""}</div>}
         </div>
