@@ -4583,7 +4583,7 @@ const SpecialtyPage = () => {
   if(!d) return <div className="section container-x"><h2>Not found</h2></div>;
   // Luxury gets a richer experience: live listings preview across the 3
   // eligible property types (Detached / Townhouse / Condo) at $3M+ BC-wide.
-  if (slug === "luxury") return <LuxurySection intro={d}/>;
+  if (slug === "luxury") return <Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading portfolio…</div>}><LuxuryLandingMockup live={true}/></Suspense>;
   if (slug === "equestrian") return <EquestrianSection intro={d}/>;
   // Detached / Condos / Townhomes: type is inherent to the page, so the
   // filter panel pre-locks Property Type and just refines city/beds/etc.

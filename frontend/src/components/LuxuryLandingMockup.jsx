@@ -2,7 +2,7 @@
 // Editorial-grade layout for $3M+ inventory with global-syndication framing.
 //
 // Requirements ship in this mockup:
-//   §1 Cinematic hero + syndication trust bar (WSJ / Mansion Global / Barron's · 80M+ affluent reach)
+//   §1 Cinematic hero (rotating live CREA DDF® luxury photos)
 //   §2 Lifestyle corridors filter (West Van Estates · GV Penthouses · Whistler · FV Acreages)
 //   §3 Magazine-grid CREA DDF® $3M+ inventory
 //   §4 "Request Private Viewing / Virtual Tour" modal (email · phone · Signal · Telegram · WhatsApp)
@@ -203,7 +203,7 @@ const btnGold = {
 };
 
 // ── Main page ────────────────────────────────────────────────────────
-export default function LuxuryLandingMockup() {
+export default function LuxuryLandingMockup({ live = false } = {}) {
   const [openListing, setOpenListing] = useState(null);
   const [corridor, setCorridor] = useState("all");
   const [sellerSubmitted, setSellerSubmitted] = useState(false);
@@ -320,7 +320,7 @@ export default function LuxuryLandingMockup() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" />
       </Helmet>
-      <UnlistedMockupBanner label="Luxury Listings landing page" />
+      {!live && <UnlistedMockupBanner label="Luxury Listings landing page" />}
 
       {/* ═══════ §1 CINEMATIC HERO ═══════════════════════════════════════ */}
       <section style={{
@@ -394,21 +394,6 @@ export default function LuxuryLandingMockup() {
           </div>
         )}
         <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", flex: 1 }}>
-        {/* Syndication trust bar */}
-        <div style={{
-          background: "rgba(11,15,26,0.5)", borderBottom: `1px solid ${BRAND.gold}`,
-          padding: "12px 32px", display: "flex", justifyContent: "center", gap: 24,
-          fontFamily: SANS, fontSize: "0.72rem", letterSpacing: "0.18em", color: BRAND.goldSoft,
-          textTransform: "uppercase", fontWeight: 600, flexWrap: "wrap",
-        }}>
-          <span>✦ Featured globally on</span>
-          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>The Wall Street Journal</span>
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>Mansion Global</span>
-          <span style={{ opacity: 0.5 }}>·</span>
-          <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "0.95rem", textTransform: "none", letterSpacing: 0, color: "white" }}>Barron's</span>
-          <span>· 80M+ monthly affluent reach</span>
-        </div>
 
         <div style={{ maxWidth: 1240, margin: "0 auto", padding: "80px 32px 40px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", width: "100%" }}>
           <Kicker tone="soft">The BC Luxury Portfolio · $3M+ residences</Kicker>
@@ -551,7 +536,7 @@ export default function LuxuryLandingMockup() {
           {[
             { step: "01", title: "Editorial photography & staging", body: "Architectural photographer · drone · dusk hero shot · optional Matterport 3D tour" },
             { step: "02", title: "BC Luxury Home Guide", body: "Featured in the flagship BC print quarterly · 12,000 mailed to high-net-worth BC households" },
-            { step: "03", title: "Global media syndication", body: "Simultaneous placement on WSJ Mansion, Mansion Global, and Barron's Penta channels" },
+            { step: "03", title: "Discrete buyer outreach", body: "Direct email + text to Doug's verified $3M+ buyer pool and a rotating network of high-net-worth referral partners across Canada and the Pacific Northwest" },
             { step: "04", title: "Concierge buyer matching", body: "Doug personally curates all showings · qualifies international buyers before disclosure" },
           ].map(s => (
             <div key={s.step} style={{ background: "white", padding: "26px 22px", border: `1px solid ${BRAND.hairline}` }}>
@@ -565,7 +550,7 @@ export default function LuxuryLandingMockup() {
         {/* Testimonial */}
         <div style={{ background: BRAND.ink, color: "white", padding: "40px 50px", borderRadius: 4, textAlign: "center", maxWidth: 900, margin: "0 auto" }}>
           <div style={{ fontFamily: SERIF, fontSize: "1.35rem", lineHeight: 1.65, fontStyle: "italic" }}>
-            "Doug placed our West Van estate in front of an American buyer within three weeks of listing — before we'd even done the second open house. The <em>Mansion Global</em> feature paid for itself twice over."
+            "Doug placed our West Van estate in front of an American buyer within three weeks of listing — before we'd even done the second open house. The private buyer outreach paid for itself twice over."
           </div>
           <div style={{ marginTop: 24, fontFamily: SANS, fontSize: "0.8rem", letterSpacing: "0.14em", color: BRAND.goldSoft, textTransform: "uppercase", fontWeight: 600 }}>— H.M. · West Vancouver seller · closed $11.4M above list</div>
         </div>
