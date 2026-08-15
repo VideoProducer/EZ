@@ -1,5 +1,20 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Admin Personalisation Funnels widget)
+
+**Frontend (`App.js`, `AdminDash`):**
+- Added two new state hooks + fetches to `AdminDash`:
+  - `GET /api/admin/analytics/return-visit?days=30` → `returnVisitFn`
+  - `GET /api/admin/analytics/referral-clicks?days=30` → `referralFn`
+- New **🎯 Personalisation Funnels — last 30 days** card rendered directly above Cast Analytics. Silent-hides when both endpoints return zero activity so a fresh install stays clean.
+- Two side-by-side sub-cards:
+  - **Return-Visit Hero:** impressions → resumes → CTR pill (green ≥20 %, gold ≥10 %, red <10 %), dismisses + unique-sessions footer.
+  - **Referral CTA clicks:** total clicks + BC-city count + source-split chips (hero vs section7).
+- Actionable **Top referral-demand communities** list underneath — each row is a link to that community's live `/community/{slug}` page so Doug can dive in with one click.
+- Verified live in preview: card renders with `66.7% CTR`, `11 total clicks` across 3 cities, top three Kelowna → Victoria → Nelson.
+
+
+
 ## 2026-02-15 (Community mockup → live production + Referral CTA Analytics)
 
 **Community page rollout:**

@@ -6207,6 +6207,11 @@ const AdminDash = () => {
   // Cast Sessions — grouped by Doug's meeting label ("Smith Family
   // Viewing" etc). Silent-hides if no labelled meetings yet.
   const [castSessions, setCastSessions] = useState(null);
+  // Personalisation Funnels — Return-Visit Hero + Referral-CTA click
+  // analytics combined into one at-a-glance card. Silent-hides when both
+  // endpoints report zero activity.
+  const [returnVisitFn, setReturnVisitFn] = useState(null);
+  const [referralFn,    setReferralFn]    = useState(null);
   useEffect(()=>{ if(!headers) return;
     Promise.all([axios.get(`${API}/admin/reminders`,{headers}),axios.get(`${API}/admin/leads/buyer`,{headers}),axios.get(`${API}/admin/leads/seller`,{headers}),axios.get(`${API}/admin/realtors`,{headers})])
       .then(([r,b,s,rl])=>{ setRem(r.data); setStats({buyers:b.data.length,sellers:s.data.length,realtors:rl.data.length}); }).catch(()=>{});
@@ -6231,6 +6236,12 @@ const AdminDash = () => {
     axios.get(`${API}/admin/cast-sessions?days=30`, {headers})
       .then(r => setCastSessions(r.data))
       .catch(() => setCastSessions(null));
+    axios.get(`${API}/admin/analytics/return-visit?days=30`, {headers})
+      .then(r => setReturnVisitFn(r.data))
+      .catch(() => setReturnVisitFn(null));
+    axios.get(`${API}/admin/analytics/referral-clicks?days=30`, {headers})
+      .then(r => setReferralFn(r.data))
+      .catch(() => setReferralFn(null));
   },[]);
   const ackBcfsa = async (slug) => {
     setBcfsaAcking(prev => ({...prev, [slug]: true}));
@@ -6361,6 +6372,90 @@ const AdminDash = () => {
         )}
       </div>
     )}
+
+    {/* Personalisation Funnels — Return-Visit Hero + Referral CTA
+        analytics combined into one at-a-glance card. Silent-hides when
+        BOTH endpoints report zero activity. Data lives 30 days by default. */}
+    {(() => {
+      const rv = returnVisitFn?.totals || {};
+      const rf = referralFn || {};
+      const anyRV = (rv.impressions || 0) + (rv.resumes || 0) + (rv.dismisses || 0) > 0;
+      const anyRF = (rf.total_clicks || 0) > 0;
+      if (!anyRV && !anyRF) return null;
+      const rvCtr = typeof rv.ctr_pct === "number" ? rv.ctr_pct : 0;
+      const topCommunities = (rf.top_communities || []).slice(0, 5);
+      return (
+        <div data-testid="dash-personalisation-funnels" style={{
+          marginTop: "1.25rem", background: "#fff",
+          border: "1px solid #E5E7EB", borderRadius: 16, padding: "1.5rem",
+          borderLeft: "4px solid #0F2A5B",
+        }}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:8,marginBottom:"1rem"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                <span style={{fontSize:22}} aria-hidden>🎯</span>
+                <h2 style={{margin:0,fontSize:"1.35rem",color:"var(--brand-navy)"}}>Personalisation Funnels — last 30 days</h2>
+              </div>
+              <p style={{margin:0,fontSize:"0.85rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>
+                Return-Visit Hero click-through + Referral-CTA click volume. PIPA-safe, no PII stored.
+              </p>
+            </div>
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"1rem"}}>
+            {/* Return-Visit funnel — impressions → resumes → CTR */}
+            {anyRV && (
+              <div data-testid="funnel-return-visit" style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"1rem"}}>
+                <div style={{fontSize:"0.72rem",letterSpacing:1.2,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Return-Visit Hero</div>
+                <div style={{display:"flex",gap:"0.85rem",flexWrap:"wrap",alignItems:"baseline"}}>
+                  <div><div style={{fontSize:"1.85rem",fontWeight:800,color:"var(--brand-navy)",lineHeight:1}}>{(rv.impressions || 0).toLocaleString()}</div><div style={{fontSize:"0.7rem",color:"var(--muted)"}}>impressions</div></div>
+                  <div style={{color:"var(--muted)",fontSize:"1.25rem"}}>→</div>
+                  <div><div style={{fontSize:"1.85rem",fontWeight:800,color:"#065F46",lineHeight:1}}>{(rv.resumes || 0).toLocaleString()}</div><div style={{fontSize:"0.7rem",color:"var(--muted)"}}>resumes</div></div>
+                  <div style={{marginLeft:"auto",background:rvCtr >= 20 ? "#065F46" : rvCtr >= 10 ? "#C89B3C" : "#DC2626",color:"#fff",padding:"3px 10px",borderRadius:999,fontSize:"0.78rem",fontWeight:800}}>{rvCtr}% CTR</div>
+                </div>
+                <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",fontFamily:"Inter,sans-serif"}}>
+                  {(rv.dismisses || 0).toLocaleString()} dismissed · {(returnVisitFn?.unique_sessions?.impressions || 0).toLocaleString()} unique sessions
+                </div>
+              </div>
+            )}
+
+            {/* Referral-CTA volume + hero vs section7 split */}
+            {anyRF && (
+              <div data-testid="funnel-referral" style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"1rem"}}>
+                <div style={{fontSize:"0.72rem",letterSpacing:1.2,color:"var(--muted)",fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Referral CTA clicks</div>
+                <div style={{display:"flex",gap:"0.85rem",flexWrap:"wrap",alignItems:"baseline"}}>
+                  <div><div style={{fontSize:"1.85rem",fontWeight:800,color:"var(--brand-navy)",lineHeight:1}}>{(rf.total_clicks || 0).toLocaleString()}</div><div style={{fontSize:"0.7rem",color:"var(--muted)"}}>total clicks</div></div>
+                  <div><div style={{fontSize:"1.35rem",fontWeight:700,color:"#0F2A5B",lineHeight:1}}>{(rf.unique_communities || 0).toLocaleString()}</div><div style={{fontSize:"0.7rem",color:"var(--muted)"}}>BC cities</div></div>
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:"0.75rem",flexWrap:"wrap"}}>
+                  {Object.entries(rf.by_source || {}).map(([src, n]) => (
+                    <span key={src} style={{background:"#EEF2FF",color:"#3730A3",padding:"3px 9px",borderRadius:999,fontSize:"0.72rem",fontWeight:700,letterSpacing:0.3}}>{src}: {n}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Top referral-demand communities — the actionable list Doug */}
+          {/* wanted: which cities are worth building deeper partnerships in */}
+          {topCommunities.length > 0 && (
+            <div style={{marginTop:"1.15rem",borderTop:"1px solid #F1F5F9",paddingTop:"0.85rem"}}>
+              <div style={{fontSize:"0.78rem",fontWeight:700,color:"var(--muted)",textTransform:"uppercase",letterSpacing:1,marginBottom:"0.55rem",fontFamily:"Inter,sans-serif"}}>Top referral-demand communities</div>
+              <div style={{display:"flex",flexDirection:"column",gap:"0.4rem"}}>
+                {topCommunities.map((c, i) => (
+                  <div key={c.community} data-testid={`funnel-top-city-${i}`} style={{display:"flex",alignItems:"center",gap:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem"}}>
+                    <span style={{width:18,color:"var(--muted)",textAlign:"right"}}>{i + 1}.</span>
+                    <Link to={`/community/${c.last_slug || (c.community || "").toLowerCase().replace(/\s+/g, "-")}`} style={{color:"var(--brand-navy)",fontWeight:700,textDecoration:"none",flex:1}}>{c.community} →</Link>
+                    <span style={{color:"#065F46",fontWeight:700}}>{c.clicks} click{c.clicks === 1 ? "" : "s"}</span>
+                    <span style={{color:"var(--muted)",fontSize:"0.78rem"}}>· {c.unique_sessions} unique</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })()}
 
     {castAnalytics && (castAnalytics.top_listings?.length > 0 || Object.values(castAnalytics.totals || {}).some(n => n > 0)) && (
       <div data-testid="dash-cast-analytics" style={{
