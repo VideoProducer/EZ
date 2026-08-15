@@ -1,5 +1,56 @@
 # EZtoFind.ca — Product Requirements (append-only log)
 
+## 2026-02-15 (Return-Visit Hero + Wave D kickoff — #17 FAQ + #26 lazy images + #39 personalised return)
+
+**Return-Visit Homepage (#39):**
+- `DashboardMockup.jsx` — refactored `HeroIntro` to consume `SearchFiltersContext` and check a new `localStorage["ez_last_search_meta"]` blob written on every `runSearch()` (contains `{filters, ts, total}`). Freshness window 30 days; 7-day dismissal cooldown via `ez_return_visit_dismissed_at`. When a repeat visitor lands on `/` with no active URL/filter, the classic gold hero is replaced with a blue-cream "WELCOME BACK" variant showing a personalised H1 (e.g. `"Doogie kept your 2+ bed condo search in Vancouver under $900k warm."`), a "You last checked N days ago · N matches" sub-line, a primary `Show me the newest matches →` CTA that repopulates filters + `runSearch()`, and a `Start a new search instead` secondary link. BC PIPA note included ("Your saved search lives on your device only — nothing is sent to Doug's server").
+- Verified live: seeded a return-visit blob for `{Vancouver, Apartment, 2+ bd, ≤$900K, 3 days ago, 342 matches}` → hero rendered correctly with the personalised copy, resume button, and dismiss ×.
+
+**Wave D — Item #17 (FAQ-first content rollout):**
+- **SpecialtyPage** (`App.js`) — added `SPECIALTY_FAQS` map with 4 statute-cited Q&As per specialty (detached, luxury, equestrian, estate-sales, condos, townhomes). Each answer carries a primary citation (BC Land Title Act, Strata Property Act, PTT Act, ALR Act, Water Sustainability Act, WESA, Income Tax Act s.70, etc.). Rendered as both a **visible accordion `<details>` block** and a matching **schema.org/FAQPage JSON-LD graph** with `speakable` CSS-selector metadata for Google Assistant / voice-answer surfaces.
+- **NeighbourhoodPage** (`App.js`) — added 4-question FAQPage schema + visible accordion for all 518 micro-neighbourhood URLs. Questions are templated from the neighbourhood's own synopsis/listing-count/median-price data so answers stay factual and vary per URL. Each carries a primary-source citation (StatsCan, CREA DDF, BCFSA).
+- Verified live on `/specialties/condos` — visible FAQ block with 4 accordion items renders correctly and JSON-LD FAQPage confirmed present.
+
+**Wave D — Item #26 (lazy-loading images):**
+- Added `loading="lazy" decoding="async"` to 8 remaining non-hero `<img>` tags across `HomepageLeadGenMockup.jsx`, `HomepageMockup.jsx`, `EquestrianLeadMockup.jsx`, `CommunityPageMockupLive.jsx`, and `MovingToBcQuiz.jsx`. Doug's headshots (56×56 through 260×260) and every Doogie sub-image now load lazily. LCP hero images (Doogie laptop on Home) intentionally kept as `loading="eager" fetchpriority="high"` — verified untouched.
+
+**Wave D — Item #27 (font subsetting):**
+- Reviewed. Fonts already at 95% optimal: `public/index.html` uses 2 families only (Inter + Playfair Display), both preloaded via `<link rel="preload" as="font">` on `fonts.gstatic.com` with `crossorigin`, `preconnect` set up on `fonts.googleapis.com` and `fonts.gstatic.com`, `display=swap` on the Google Fonts CSS request. The one self-hosted font (TeX Gyre Heros Bold, 52 KB WOFF2) uses `font-display: swap`. Google Fonts' modern CSS API automatically ships `unicode-range` splits (loads only the Latin subset for en-CA pages). No further win available from custom webpack subsetting for CDN-loaded fonts.
+
+**Wave D remaining (queued):**
+- Sizzle Reel Language Toggle (FR button for Doogie)
+
+
+
+## 2026-02-15 (Wave C completion + Sunday-Night Digest — #30 · #33 · new digest engine)
+Ships the two Wave-C items that were deferred in the prior session (Map/List toggle, voice-search-in-input), adds a brand-new **Sunday-Night Digest** email engine, and verifies the daily Price-Drop Watch end-to-end with real Mongo data.
+
+**Files touched:**
+- `frontend/src/pages/DashboardMockup.jsx` — added `MapListToggle` component (three-way segmented `List / Split / Map`) with `localStorage` persistence key `ez_search_view_mode`; added viewport persistence to `ListingsMap` under `ez_search_map_viewport` (saved on `moveend`, restored on init when no city filter is active); dynamic `mapHeight` (320 → 640 in Map-only view); `map.invalidateSize()` on layout change to prevent gray tile gutters. Added `InputVoiceMic` component using the native Web Speech API (`webkitSpeechRecognition`, lang `en-CA`, interim results) with a pulsing "recording" state and graceful fallback (mic button hides silently on unsupported browsers). Mic auto-submits on final transcript through the same address / MLS heuristics as the manual Search button.
+- `backend/services/sunday_night_digest.py` — **NEW**. Runs Sunday ~18:00 America/Vancouver combining (1) new-listing matches within a 7-day lookback and (2) fresh price drops per saved search versus a rolling `snapshot_prices` field on the `saved_searches` doc. First run seeds the snapshot; drops fire from the following week. Reuses `_match_filters` from `just_sold_digest.py` and the same CASL/PIPA disclosure footer as Price-Drop Watch. Never emits exact street addresses in the drop block.
+- `backend/server.py` — accepted `sunday_night` in `frequency` + `digest_frequency` on `/api/saved-searches` (line ~1698). Added `POST /api/admin/sunday-night-digest/run` admin endpoint. Added `_sunday_night_digest_loop()` scheduler (targets 02:00 UTC Monday ≈ 18:00 PT Sunday).
+
+**Verification (backend, end-to-end against real Mongo — 2026-02-15):**
+- Price-Drop Watch: seeded synthetic verified `user_favorites` on a real active listing → Run 1 wrote snapshot (`drops_detected=0`) → artificially raised snapshot by $25K → Run 2 detected 1 drop and sent 1 email (Resend outbox path exercised) → snapshot rolled forward to current list price. ✅
+- Sunday-Night Digest: seeded synthetic verified `saved_searches` for Vancouver → Run 1 seeded `snapshot_prices` with 4,714 active Vancouver listings, 0 drops → artificially bumped 2 snapshot prices by $30K → Run 2 detected 2 drops, sent 1 email, `subscribers_matched=1`. ✅
+- Live active inventory across BC when tested: **52,199 listings** through the DDF sync.
+
+**Verification (frontend, live preview — 2026-02-15):**
+- Split view renders map + list (default). Toggling to List hides the map entirely; toggling to Map expands the map to 640px height and hides the list. Preference persists across reloads via `localStorage`.
+- Voice mic renders inside the search input row (data-testid `dash-address-mls-search-mic`). Recording state pulses red; final transcript auto-submits through the MLS/address search heuristic. Firefox/older browsers silently omit the mic (no error).
+
+**Still PENDING (user to provide):**
+- Doug's individual BCFSA licence # + brokerage BCFSA licence # → drop into `FACTS.bcfsa_licence_individual` / `FACTS.bcfsa_licence_brokerage` in `LiveHomepageSchema.jsx`. When these arrive the JSON-LD `identifier` fields flip from `"PENDING"` to real numbers with no other code change needed.
+
+**Wave D remaining (queued):**
+- FAQ-first content rollout (#17) — add FAQ + FAQPage schema to every community/glossary/specialty page
+- `loading="lazy"` + `decoding="async"` on all non-hero images (#26)
+- Font subsetting in webpack config (#27)
+- Personalised return-visit homepage based on cookies (#39)
+- Sizzle Reel Language Toggle (FR button for Doogie)
+
+
+
 ## 2026-02-15 (Elite landing-page enhancement Wave A — shipped to live `/`)
 Reference: full 48-item enhancement audit; user selected 33 items; Wave A ships 9 items now, Waves B/C/D queued.
 

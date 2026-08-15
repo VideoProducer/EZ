@@ -251,7 +251,7 @@ export default function MovingToBcQuiz() {
                   border:`1px solid #E5E7EB`,borderRadius:12,overflow:"hidden",
                   display:"grid",gridTemplateColumns:"160px 1fr",background:"white",
                 }}>
-                  <img src={c.hero} alt={c.name} style={{width:"100%",height:"100%",objectFit:"cover",minHeight:150}}/>
+                  <img src={c.hero} alt={c.name} loading="lazy" decoding="async" style={{width:"100%",height:"100%",objectFit:"cover",minHeight:150}}/>
                   <div style={{padding:"16px 18px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                       <div>

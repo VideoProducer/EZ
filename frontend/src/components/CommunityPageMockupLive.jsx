@@ -289,7 +289,7 @@ export default function CommunityPageMockupLive() {
 
           {isFocus ? (
             <div style={{marginBottom:20,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
+              <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
               <div style={{fontSize:"0.9rem",lineHeight:1.4}}>
                 <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® · covers {community} directly</div>
                 <div style={{opacity:0.85,fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · Fraser Property Management Realty Services Ltd.</div>
@@ -297,7 +297,7 @@ export default function CommunityPageMockupLive() {
             </div>
           ) : (
             <div style={{marginBottom:20,background:"rgba(255,255,255,0.10)",padding:"14px 18px",borderRadius:10,backdropFilter:"blur(4px)",display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" onError={e => e.currentTarget.style.display="none"} style={{width:64,height:64,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.35))"}}/>
+              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:64,height:64,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.35))"}}/>
               <div style={{fontSize:"0.92rem",lineHeight:1.55,flex:"1 1 340px"}}>
                 Would you like Doug to connect you with a {community} REALTOR®?{" "}
                 <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="hero-referral-link" style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}>Referral REALTOR® link →</Link>
@@ -447,7 +447,7 @@ export default function CommunityPageMockupLive() {
           <>
             <SectionH kicker="§7 · Get connected">Looking to buy or sell in {community}?</SectionH>
             <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
+              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
               <div style={{flex:"1 1 320px"}}>
                 <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
                   As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Doug will personally connect you with a licensed REALTOR® in that area.

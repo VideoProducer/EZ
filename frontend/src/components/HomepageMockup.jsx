@@ -89,7 +89,7 @@ export default function HomepageMockup() {
 
           {/* Doug trust badge */}
           <div style={{ marginTop: 32, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{ width: 56, height: 56, borderRadius: "50%", border: `2px solid ${BRAND.gold}`, objectFit: "cover" }} />
+            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{ width: 56, height: 56, borderRadius: "50%", border: `2px solid ${BRAND.gold}`, objectFit: "cover" }} />
             <div style={{ fontSize: "0.9rem", lineHeight: 1.4 }}>
               <div style={{ fontWeight: 700 }}>Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.</div>
               <div style={{ opacity: 0.85, fontSize: "0.82rem" }}>⭐ 4.9/5 from 43 client reviews · 200+ closed BC transactions · BCFSA-licensed</div>
@@ -307,7 +307,7 @@ export default function HomepageMockup() {
       {/* ══════════════════ § MEET DOUG ═════════════════════════════ */}
       <Section tone="paper">
         <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 32, alignItems: "center" }}>
-          <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" style={{ width: 260, height: 260, borderRadius: "50%", border: `4px solid ${BRAND.gold}`, objectFit: "cover" }} />
+          <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{ width: 260, height: 260, borderRadius: "50%", border: `4px solid ${BRAND.gold}`, objectFit: "cover" }} />
           <div>
             <H2 kicker="Meet Doug">Doug LeMaire, REALTOR®</H2>
             <div style={{ fontSize: "1rem", color: BRAND.ink, lineHeight: 1.7, marginBottom: 14 }}>

@@ -77,49 +77,212 @@ const SECTIONS = [
 ];
 
 // ── Hero (introduces Doogie + BCFSA context) ──────────────────────────────
-const HeroIntro = () => (
-  <section data-testid="dash-hero" className="dash-hero-section" style={{
-    background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)",
-    border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14,
-    padding: "22px 24px", marginBottom: 22, display: "grid",
-    gridTemplateColumns: "440px 1fr", gap: 22, alignItems: "center",
-  }}>
-    <picture>
-      <source srcSet="/doogie/laptop.webp" type="image/webp"/>
-      <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
-        data-testid="dash-hero-doogie"
-        className="dash-hero-doogie"
-        width={900} height={600}
-        fetchpriority="high"
-        loading="eager"
-        decoding="async"
+const HeroIntro = () => {
+  const ctx = useContext(SearchFiltersContext);
+  const [returnMeta, setReturnMeta] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    // Only ever show the personalized variant when the current filter
+    // state is still empty (URL / restore-nudge already handles the
+    // "I typed my own city" case — the hero should get out of the way).
+    const currentIsEmpty = !ctx?.filters || !["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (ctx.filters[k] || "").toString().trim() !== "");
+    if (!currentIsEmpty) { setReturnMeta(null); return; }
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("ez_last_search_meta") : null;
+      if (!raw) return;
+      const meta = JSON.parse(raw);
+      if (!meta || !meta.filters || !meta.ts) return;
+      // Freshness window: 30 days.
+      if (Date.now() - meta.ts > 30 * 24 * 60 * 60 * 1000) return;
+      // Skip if user dismissed within the last 7 days.
+      const dismissedAt = parseInt(localStorage.getItem("ez_return_visit_dismissed_at") || "0", 10);
+      if (dismissedAt && (Date.now() - dismissedAt) < 7 * 24 * 60 * 60 * 1000) { setDismissed(true); return; }
+      // Filters must actually contain SOMETHING or personalization is
+      // pointless (e.g. sort=newest only doesn't count).
+      const hasIntent = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (meta.filters[k] || "").toString().trim() !== "");
+      if (!hasIntent) return;
+      setReturnMeta(meta);
+    } catch { /* localStorage may be disabled */ }
+  }, [ctx?.filters]);
+
+  const resume = () => {
+    if (!returnMeta || !ctx?.setFilters || !ctx?.runSearch) return;
+    ctx.setFilters({ ...returnMeta.filters });
+    setTimeout(() => ctx.runSearch(returnMeta.filters), 40);
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+    // Update ts so the pill doesn't re-fire on the next reload of the same visit.
+    try {
+      const raw = localStorage.getItem("ez_last_search_meta");
+      if (raw) {
+        const cur = JSON.parse(raw);
+        localStorage.setItem("ez_last_search_meta", JSON.stringify({ ...cur, ts: Date.now() }));
+      }
+    } catch {}
+    setReturnMeta(null);
+  };
+
+  const dismiss = () => {
+    try { localStorage.setItem("ez_return_visit_dismissed_at", String(Date.now())); } catch {}
+    setDismissed(true);
+    setReturnMeta(null);
+  };
+
+  // Not a return visitor — render the classic hero unchanged.
+  if (!returnMeta || dismissed) return (
+    <section data-testid="dash-hero" className="dash-hero-section" style={{
+      background: "linear-gradient(135deg,#FBF7EE 0%,#FFF6DE 100%)",
+      border: "1px solid rgba(245,166,35,0.35)", borderRadius: 14,
+      padding: "22px 24px", marginBottom: 22, display: "grid",
+      gridTemplateColumns: "440px 1fr", gap: 22, alignItems: "center",
+    }}>
+      <picture>
+        <source srcSet="/doogie/laptop.webp" type="image/webp"/>
+        <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
+          data-testid="dash-hero-doogie"
+          className="dash-hero-doogie"
+          width={900} height={600}
+          fetchpriority="high"
+          loading="eager"
+          decoding="async"
+          style={{
+            width: "100%", maxWidth: 440, height: "auto", aspectRatio: "3/2",
+            filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+          }}
+          onError={e => { e.currentTarget.style.display = "none"; }}
+        />
+      </picture>
+      <div>
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,
+          fontSize: "clamp(28px, 3.4vw, 40px)", fontWeight: 800,
+        }}>
+          <span style={{ color: C.brandGreen }}>Real estate,</span><br/>
+          <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
+        </h1>
+        <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
+          EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
+        </p>
+        <p style={{ color: C.ink, marginTop: 6, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
+          <strong style={{ color: C.navy }}>Meet <em style={{ color: C.gold, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>Doogie</em> — your BC real estate helper.</strong> Ask about active BC listings, neighbourhoods, or real estate terms. Doogie provides <strong>general information only, never advice</strong>.
+        </p>
+        <p style={{ color: C.muted, marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.5, maxWidth: 720 }}>
+          Real Estate services are provided by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. — a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential stratas. Primary practice areas: <strong>Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC</strong>.
+        </p>
+      </div>
+    </section>
+  );
+
+  // ── Return-visit personalised hero ─────────────────────────────────────
+  // Reconstruct a friendly search summary from the saved filters and,
+  // if we know the previous total, hint at the delta since last visit.
+  const f = returnMeta.filters || {};
+  const daysAgo = Math.max(1, Math.round((Date.now() - returnMeta.ts) / (24 * 60 * 60 * 1000)));
+  const parts = [];
+  if (f.beds) parts.push(`${f.beds}+ bed`);
+  if (f.propertyType) {
+    const t = String(f.propertyType).toLowerCase();
+    parts.push(t.includes("row") || t.includes("town") ? "townhome" : t.includes("apartment") || t.includes("condo") ? "condo" : t.includes("house") || t.includes("single family") ? "home" : String(f.propertyType).toLowerCase());
+  } else {
+    parts.push("home");
+  }
+  const searchNoun = parts.join(" ");
+  const cityLabel = f.city ? ` in ${f.city}` : " across BC";
+  let priceLabel = "";
+  if (f.priceMax) {
+    const n = parseInt(f.priceMax, 10);
+    if (!isNaN(n)) priceLabel = n >= 1_000_000 ? ` under $${(n/1_000_000).toFixed(1).replace(/\.0$/, "")}M` : ` under $${Math.round(n/1000)}k`;
+  } else if (f.priceMin) {
+    const n = parseInt(f.priceMin, 10);
+    if (!isNaN(n)) priceLabel = n >= 1_000_000 ? ` from $${(n/1_000_000).toFixed(1).replace(/\.0$/, "")}M` : ` from $${Math.round(n/1000)}k`;
+  }
+
+  return (
+    <section data-testid="dash-hero-return-visit" className="dash-hero-section" style={{
+      background: "linear-gradient(135deg,#F0F7FF 0%,#FBF7EE 100%)",
+      border: "1px solid rgba(15,42,91,0.18)", borderRadius: 14,
+      padding: "22px 24px", marginBottom: 22, display: "grid",
+      gridTemplateColumns: "300px 1fr", gap: 22, alignItems: "center",
+      position: "relative",
+    }}>
+      <button
+        type="button"
+        onClick={dismiss}
+        data-testid="dash-hero-return-dismiss"
+        aria-label="Show the default homepage"
+        title="Show the default homepage instead"
         style={{
-          width: "100%", maxWidth: 440, height: "auto", aspectRatio: "3/2",
-          filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+          position: "absolute", top: 12, right: 14,
+          background: "transparent", border: "none",
+          color: C.muted, cursor: "pointer", fontSize: 20, lineHeight: 1,
+          fontWeight: 700,
         }}
-        onError={e => { e.currentTarget.style.display = "none"; }}
-      />
-    </picture>
-    <div>
-      <h1 style={{
-        fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,
-        fontSize: "clamp(28px, 3.4vw, 40px)", fontWeight: 800,
-      }}>
-        <span style={{ color: C.brandGreen }}>Real estate,</span><br/>
-        <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
-      </h1>
-      <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
-        EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
-      </p>
-      <p style={{ color: C.ink, marginTop: 6, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
-        <strong style={{ color: C.navy }}>Meet <em style={{ color: C.gold, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>Doogie</em> — your BC real estate helper.</strong> Ask about active BC listings, neighbourhoods, or real estate terms. Doogie provides <strong>general information only, never advice</strong>.
-      </p>
-      <p style={{ color: C.muted, marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.5, maxWidth: 720 }}>
-        Real Estate services are provided by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. — a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential stratas. Primary practice areas: <strong>Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC</strong>.
-      </p>
-    </div>
-  </section>
-);
+      >×</button>
+      <picture>
+        <source srcSet="/doogie/laptop.webp" type="image/webp"/>
+        <img src={DOOGIE_LAPTOP_URL} alt="Doogie — EZtoFind.ca real estate helper"
+          data-testid="dash-hero-doogie"
+          width={900} height={600}
+          fetchpriority="high"
+          loading="eager"
+          decoding="async"
+          style={{
+            width: "100%", maxWidth: 300, height: "auto", aspectRatio: "3/2",
+            filter: "drop-shadow(0 8px 24px rgba(15,42,91,0.25))",
+          }}
+          onError={e => { e.currentTarget.style.display = "none"; }}
+        />
+      </picture>
+      <div>
+        <div style={{
+          display: "inline-block", background: C.navy, color: "#fff",
+          fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase",
+          padding: "3px 10px", borderRadius: 999, marginBottom: 10,
+        }} data-testid="dash-hero-return-badge">
+          🐾 Welcome back
+        </div>
+        <h1 style={{
+          fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.1,
+          fontSize: "clamp(24px, 2.8vw, 34px)", fontWeight: 800, color: C.navy,
+        }}>
+          Doogie kept your <span style={{ color: C.brandBlue }}>{searchNoun}</span> search
+          <span style={{ color: C.brandGreen }}>{cityLabel}</span>
+          <span style={{ color: C.brandGold }}>{priceLabel}</span> warm.
+        </h1>
+        <p style={{ color: C.ink, marginTop: 10, marginBottom: 12, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
+          You last checked <strong>{daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`}</strong>.
+          {typeof returnMeta.total === "number" && returnMeta.total > 0 ? ` You had ${returnMeta.total.toLocaleString()} matches in that search — pick up right where you left off.` : " Pick up right where you left off."}
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={resume}
+            data-testid="dash-hero-return-resume"
+            style={{
+              background: C.navy, color: "#fff", border: "none",
+              padding: "11px 22px", borderRadius: 999, fontWeight: 800,
+              fontSize: 13, cursor: "pointer", letterSpacing: 0.3,
+              boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+            }}
+          >Show me the newest matches →</button>
+          <button
+            type="button"
+            onClick={dismiss}
+            data-testid="dash-hero-return-fresh"
+            style={{
+              background: "transparent", border: "none",
+              color: C.muted, fontSize: 12, fontWeight: 600,
+              cursor: "pointer", textDecoration: "underline",
+            }}
+          >Start a new search instead</button>
+        </div>
+        <p style={{ color: C.muted, marginTop: 12, marginBottom: 0, fontSize: 11, lineHeight: 1.45, maxWidth: 720 }}>
+          Your saved search lives on your device only — nothing is sent to Doug's server until you contact him. Compliant with BC PIPA.
+        </p>
+      </div>
+    </section>
+  );
+};
 
 // Search filter context — lifts filter state up so the Sidebar can host the
 // FILTERS form (below "Ask Doogie") while the main content area shows the
@@ -310,6 +473,16 @@ export default function DashboardMockup({ homeVariant = "search" }) {
         const meaningful = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (f[k] || "").toString().trim() !== "");
         if (meaningful) {
           localStorage.setItem(DASH_FILTERS_LS_KEY, JSON.stringify(f));
+          // Also stash a lightweight "return-visit" meta blob with the
+          // result-total + timestamp so the personalised hero on the
+          // next visit can say "You had N matches" and "you last
+          // checked N days ago". Total is best-effort; if the listings
+          // fetch rejected we still record filters + ts so the hero
+          // has something friendly to greet the visitor with.
+          const total = (listResp.status === "fulfilled" && listResp.value && typeof listResp.value.total === "number") ? listResp.value.total : null;
+          localStorage.setItem("ez_last_search_meta", JSON.stringify({
+            filters: f, ts: Date.now(), total,
+          }));
         }
       } catch { /* localStorage may be disabled in private windows */ }
     } finally {
@@ -1724,13 +1897,41 @@ const ensureLeafletCss = () => {
   _leafletCssInjected.current = true;
 };
 
-const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
+// localStorage key for the last map viewport (center + zoom).
+// Persisted on every `moveend` and restored on init IF the user opens the
+// map without a `city` filter (a specific city search still wins and flies
+// to the new region — we only restore when there's no explicit destination).
+const _VIEWPORT_KEY = "ez_search_map_viewport";
+const _readViewport = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(_VIEWPORT_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    if (typeof v.lat === "number" && typeof v.lon === "number" && typeof v.zoom === "number") return v;
+    return null;
+  } catch { return null; }
+};
+const _writeViewport = (lat, lon, zoom) => {
+  try { localStorage.setItem(_VIEWPORT_KEY, JSON.stringify({ lat, lon, zoom, ts: Date.now() })); } catch {}
+};
+
+const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height = 320, viewMode }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
   const officeMarkerRef = useRef(null);       // persistent gold-star office pin
   const markerByKeyRef = useRef({});   // listing_key → Leaflet marker
   const centerCacheRef = useRef({});
+
+  // When the parent switches between split/map/list layouts the map's
+  // container size changes underneath Leaflet. Nudge Leaflet to redraw its
+  // tile grid or you'll see gray gutters until the user pans.
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const t = setTimeout(() => { try { mapRef.current.invalidateSize(); } catch {} }, 60);
+    return () => clearTimeout(t);
+  }, [viewMode, height]);
 
   useEffect(() => {
     ensureLeafletCss();
@@ -1739,9 +1940,21 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
       const L = (await import("leaflet")).default;
       if (cancelled || !mapContainerRef.current) return;
       if (mapRef.current) return; // already initialized
+      // Restore last-viewed viewport only when there's no explicit city
+      // filter (city > cached viewport > default office anchor).
+      const saved = !city ? _readViewport() : null;
+      const initCenter = saved ? [saved.lat, saved.lon] : [DOUG_ADDRESS.lat, DOUG_ADDRESS.lon];
+      const initZoom   = saved ? saved.zoom : 13;
       const map = L.map(mapContainerRef.current, {
-        center: [DOUG_ADDRESS.lat, DOUG_ADDRESS.lon],
-        zoom: 13, scrollWheelZoom: false,
+        center: initCenter,
+        zoom: initZoom, scrollWheelZoom: false,
+      });
+      // Persist viewport on every user-driven move.
+      map.on("moveend", () => {
+        try {
+          const c = map.getCenter();
+          _writeViewport(c.lat, c.lng, map.getZoom());
+        } catch {}
       });
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
@@ -1920,7 +2133,7 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey }) => {
 
   return (
     <div ref={mapContainerRef} data-testid="dash-search-map"
-      style={{ width: "100%", height: 320, borderRadius: 8, overflow: "hidden", border: "1px solid #E5E7EB" }}/>
+      style={{ width: "100%", height, borderRadius: 8, overflow: "hidden", border: "1px solid #E5E7EB" }}/>
   );
 };
 
@@ -1932,6 +2145,66 @@ const fmtPrice = (n) => {
 };
 
 
+// localStorage key for the map/list/split view preference.
+const _VIEW_MODE_KEY = "ez_search_view_mode";
+const _readViewMode = () => {
+  if (typeof window === "undefined") return "split";
+  try {
+    const v = localStorage.getItem(_VIEW_MODE_KEY);
+    if (v === "split" || v === "list" || v === "map") return v;
+    return "split";
+  } catch { return "split"; }
+};
+
+// Small three-way segmented toggle used at the top of SearchPanel.
+// [ 🗂 List ]  [ ▤ Split ]  [ 🗺 Map ]
+const MapListToggle = ({ mode, onChange }) => {
+  const opts = [
+    { key: "list",  label: "List",  icon: "🗂" },
+    { key: "split", label: "Split", icon: "▤" },
+    { key: "map",   label: "Map",   icon: "🗺" },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Search view mode"
+      data-testid="dash-search-view-toggle"
+      style={{
+        display: "inline-flex", background: "#F1F5F9",
+        border: "1px solid #E5E7EB", borderRadius: 999, padding: 3,
+        gap: 2,
+      }}
+    >
+      {opts.map(o => {
+        const active = mode === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.key)}
+            data-testid={`dash-search-view-${o.key}`}
+            title={`${o.label} view`}
+            style={{
+              background: active ? C.navy : "transparent",
+              color:      active ? "#fff"  : C.navy,
+              border: "none", borderRadius: 999,
+              padding: "5px 12px", fontSize: 12, fontWeight: 700,
+              cursor: "pointer", letterSpacing: 0.2,
+              display: "inline-flex", alignItems: "center", gap: 5,
+              transition: "background-color 120ms ease, color 120ms ease",
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 13 }}>{o.icon}</span>
+            <span>{o.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 const SearchPanel = () => {
   const ctx = useContext(SearchFiltersContext);
   const { filters, results, loading } = ctx || { filters: {}, results: null, loading: false };
@@ -1939,37 +2212,79 @@ const SearchPanel = () => {
   // Shared "hovered listing_key" — when you hover a listing card the
   // corresponding map pin pops; hovering a pin highlights the card.
   const [hoveredKey, setHoveredKey] = useState(null);
+  // Persisted view mode: split (default) / list / map.
+  const [viewMode, _setViewMode] = useState(_readViewMode);
+  const setViewMode = (m) => {
+    _setViewMode(m);
+    try { localStorage.setItem(_VIEW_MODE_KEY, m); } catch {}
+  };
   // Click-to-Focus — tapping the map-pin button on a card sets this key,
   // which causes ListingsMap to fly to the matching pin and open its popup.
   // A tiny counter forces the effect to re-fire when the same key is tapped twice.
   const [focus, setFocus] = useState({ key: null, seq: 0 });
-  const focusOn = (key) => setFocus(prev => ({ key, seq: prev.seq + 1 }));
+  const focusOn = (key) => {
+    // If we're in "list only" mode, auto-flip to split so the flyTo animation
+    // is actually visible before we scroll into the map.
+    if (viewMode === "list") setViewMode("split");
+    setFocus(prev => ({ key, seq: prev.seq + 1 }));
+  };
+  const showMap  = viewMode === "split" || viewMode === "map";
+  const showList = viewMode === "split" || viewMode === "list";
+  const mapHeight = viewMode === "map" ? 640 : 320;
+  const pinCount  = (results?.listings || []).filter(l => l.lat && l.lon).length;
   return (
     <>
       <HeroIntro/>
-      {/* Map — full-width above the two-column filters/listings block. */}
-      <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
-          <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {(results?.listings || []).filter(l => l.lat && l.lon).length} pins</span>
+      {/* View mode toggle — sits directly above the map/list block. Lets
+          the visitor collapse to List-only for a scanning-heavy session or
+          to Map-only for area-shopping. Persisted to localStorage so
+          returning users keep their preferred layout. */}
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 8, marginBottom: 10,
+      }}>
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
+          {results?.total?.toLocaleString?.() || (results?.listings || []).length || 0} listings
+          {city ? ` · ${city}` : ""}{pinCount ? ` · ${pinCount} on map` : ""}
         </div>
-        <ListingsMap city={city} listings={results?.listings || []} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} focusKey={`${focus.key || ""}#${focus.seq}`}/>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
-          <a
-            href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
-            target="_blank" rel="noopener noreferrer"
-            style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
-            data-testid="dash-search-map-open"
-          >Open in Google Maps ↗</a>
-        </div>
+        <MapListToggle mode={viewMode} onChange={setViewMode}/>
       </div>
+      {/* Map — full-width above the two-column filters/listings block.
+          Hidden entirely when the visitor picks List-only. */}
+      {showMap && (
+        <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <strong style={{ color: C.navy }}>Interactive map {city ? `· ${city}` : ""}</strong>
+            <span style={{ fontSize: 11, color: C.muted }}>Leaflet + OpenStreetMap · {pinCount} pins</span>
+          </div>
+          <ListingsMap
+            city={city}
+            listings={results?.listings || []}
+            hoveredKey={hoveredKey}
+            onHoverKey={setHoveredKey}
+            focusKey={`${focus.key || ""}#${focus.seq}`}
+            height={mapHeight}
+            viewMode={viewMode}
+          />
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 6, textAlign: "right" }}>
+            <a
+              href={`https://www.google.com/maps?q=${encodeURIComponent(city ? `${city}, British Columbia real estate` : "Doug LeMaire REALTOR, 22374 Lougheed Hwy, Maple Ridge BC")}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ color: C.blue, fontWeight: 700, textDecoration: "none" }}
+              data-testid="dash-search-map-open"
+            >Open in Google Maps ↗</a>
+          </div>
+        </div>
+      )}
       {/* Unified search + filters + Doogie NL bar. Replaces the old floating
           FILTERS card and the address-only lookup — one row sits between the
           map and the listings grid with:
              [🔍 address/MLS input]  [Filters ▾]  [🐾 Doogie]  [Search]
           Active filters render as removable chips right below. */}
       <UnifiedSearchBar/>
-      <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+      {showList && (
+        <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
+      )}
       <SyncedResults/>
       <IdleSaveSearchNudge/>
       {/* Floating "Compare (N)" tray — appears when ≥2 listings are selected. */}
@@ -1998,6 +2313,116 @@ const SearchPanel = () => {
 //      so results land inline without a full-page nav. (Falls back to
 //      /listings?q=... if context isn't available.)
 const _MLS_PATTERN = /^[A-Z]{0,2}\s?\d{6,10}$/i;
+
+// Web Speech API detection — used by the mic button INSIDE the address/MLS
+// input. This is intentionally different from DoogieFilterHeader's backend
+// Whisper flow: this mic is native, zero-latency, and DICTATES straight
+// into the input field so the visitor can just say "930 Josephine Road"
+// and hit Search. Doogie's NL filter parser stays available above it.
+const _SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+
+// InputVoiceMic — inline mic button positioned inside the search input.
+// Dictates into the input via onTranscript(text). Auto-submits on final
+// result. Gracefully hides when the browser doesn't support Web Speech.
+const InputVoiceMic = ({ onTranscript, onFinalSubmit }) => {
+  const [state, setState] = useState("idle"); // idle | listening | error
+  const [err, setErr] = useState("");
+  const recRef = useRef(null);
+
+  if (!_SR) return null; // Firefox / older browsers → hide silently
+
+  const start = () => {
+    setErr("");
+    try {
+      const rec = new _SR();
+      rec.lang = "en-CA";
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.maxAlternatives = 1;
+      let finalText = "";
+      rec.onresult = (ev) => {
+        let interim = "";
+        for (let i = ev.resultIndex; i < ev.results.length; i++) {
+          const r = ev.results[i];
+          if (r.isFinal) finalText += r[0].transcript;
+          else interim += r[0].transcript;
+        }
+        onTranscript?.((finalText + interim).trim());
+      };
+      rec.onerror = (e) => {
+        const kind = e?.error || "unknown";
+        // "no-speech" and "aborted" aren't user-facing failures — the mic
+        // just timed out or the visitor tapped stop.
+        if (kind === "no-speech" || kind === "aborted") { setState("idle"); return; }
+        if (kind === "not-allowed" || kind === "service-not-allowed") {
+          setErr("Microphone blocked. Enable mic access in your browser settings.");
+        } else {
+          setErr("Voice input unavailable — please type your address or MLS number.");
+        }
+        setState("error");
+      };
+      rec.onend = () => {
+        setState("idle");
+        if (finalText.trim()) {
+          onTranscript?.(finalText.trim());
+          setTimeout(() => onFinalSubmit?.(finalText.trim()), 100);
+        }
+      };
+      recRef.current = rec;
+      rec.start();
+      setState("listening");
+    } catch {
+      setErr("Voice input unavailable — please type your address or MLS number.");
+      setState("error");
+    }
+  };
+  const stop = () => { try { recRef.current?.stop(); } catch {} setState("idle"); };
+  const listening = state === "listening";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={listening ? stop : start}
+        data-testid="dash-address-mls-search-mic"
+        aria-label={listening ? "Stop voice search" : "Search by voice"}
+        title={listening ? "Tap to stop listening" : "Search by voice (English)"}
+        style={{
+          background: listening ? "#DC2626" : "#F8FAFC",
+          color: listening ? "#fff" : C.navy,
+          border: `1px solid ${listening ? "#DC2626" : "#E5E7EB"}`,
+          borderRadius: 999, width: 34, height: 34,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer", flexShrink: 0,
+          transition: "background-color 120ms ease, color 120ms ease, transform 120ms ease",
+          animation: listening ? "ez-mic-pulse 1.1s infinite" : "none",
+        }}
+      >
+        <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>{listening ? "●" : "🎤"}</span>
+      </button>
+      {/* Inline pulse keyframes — scoped by animation name so it doesn't
+          leak into other components. Added once, harmless if repeated. */}
+      <style>{`
+        @keyframes ez-mic-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.55); }
+          50%      { box-shadow: 0 0 0 8px rgba(220,38,38,0);   }
+        }
+      `}</style>
+      {err && state === "error" && (
+        <div
+          data-testid="dash-address-mls-search-mic-error"
+          role="alert"
+          style={{
+            position: "absolute", top: "100%", right: 10,
+            marginTop: 6, background: "#FEE2E2", color: "#B91C1C",
+            padding: "6px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
+            border: "1px solid #FCA5A5", zIndex: 20,
+          }}
+        >{err}</div>
+      )}
+    </>
+  );
+};
 
 const UnifiedSearchBar = () => {
   const navigate = useNavigate();
@@ -2058,6 +2483,7 @@ const UnifiedSearchBar = () => {
           display: "flex", alignItems: "center", gap: 8,
           padding: "10px 12px",
           borderBottom: hasCtx ? "1px solid #F1F5F9" : "none",
+          position: "relative",
         }}
       >
         <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
@@ -2075,6 +2501,16 @@ const UnifiedSearchBar = () => {
           }}
         />
         <ActiveFilterCount/>
+        <InputVoiceMic
+          onTranscript={(txt) => setVal(txt)}
+          onFinalSubmit={(txt) => {
+            // Route through the same submit heuristics (MLS → detail nav,
+            // otherwise → city + runSearch). We build a synthetic event so
+            // preventDefault() is safe to call.
+            setVal(txt);
+            setTimeout(() => submit({ preventDefault: () => {} }), 50);
+          }}
+        />
         <button
           type="submit"
           data-testid="dash-address-mls-search-submit"

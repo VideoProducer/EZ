@@ -1695,8 +1695,8 @@ async def create_saved_search(body: SavedSearchIn, request: Request):
         "email": body.email.lower(),
         "filters": filters,
         "label": (body.label or "")[:120],
-        "frequency": body.frequency if body.frequency in ("instant", "daily", "weekly", "weekly_just_sold") else "instant",
-        "digest_frequency": body.frequency if body.frequency == "weekly_just_sold" else None,
+        "frequency": body.frequency if body.frequency in ("instant", "daily", "weekly", "weekly_just_sold", "sunday_night") else "instant",
+        "digest_frequency": body.frequency if body.frequency in ("weekly_just_sold", "sunday_night") else None,
         "status": "pending",     # → verified → unsubscribed
         "policy_version": CURRENT_POLICY_VERSION,
         "verification_token": verify_tok,
@@ -2253,6 +2253,15 @@ async def admin_run_price_drop_watch(_=Depends(verify_admin)):
     the price_snapshots collection; subsequent runs detect drops."""
     from services.price_drop_watch import run_price_drop_watch
     result = await run_price_drop_watch(db)
+    return {"ok": True, **result}
+
+@api.post("/admin/sunday-night-digest/run")
+async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
+    """Manually trigger the Sunday-Night Digest — combined new-matches
+    + fresh price drops per saved search. First run seeds each
+    subscriber's `snapshot_prices`; subsequent runs detect drops."""
+    from services.sunday_night_digest import run_sunday_night_digest
+    result = await run_sunday_night_digest(db)
     return {"ok": True, **result}
 
 # =============== BREACH RESPONSE (PIPA audit log) ===============
@@ -6255,6 +6264,40 @@ async def startup():
                 logger.error(f"price_drop_watch_loop outer failed: {e}")
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(240)).add_done_callback(lambda _: asyncio.create_task(_price_drop_watch_loop()))
+
+    # Sunday-Night Digest — every Sunday at ~18:00 America/Vancouver
+    # (≈02:00 UTC Monday during PDT / 03:00 UTC Monday during PST).
+    # Combines new-listing matches + fresh price drops per saved
+    # search so subscribers get one Sunday-evening brief the night
+    # before Doug's Monday-morning outreach round. First run seeds
+    # each subscriber's `snapshot_prices` field; drops fire from the
+    # following Sunday onward.
+    async def _sunday_night_digest_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Sunday = weekday 6. Target 02:00 UTC Monday (~18:00 PT
+                # during PDT). Approximate — DST creep is ±1h, well within
+                # a "Sunday night" window.
+                # Days until next Monday 02:00 UTC.
+                days = (0 - now.weekday()) % 7  # 0=Monday
+                nxt = (now + _td(days=days)).replace(hour=2, minute=0, second=0, microsecond=0)
+                if nxt <= now:
+                    nxt = nxt + _td(days=7)
+                delay = max(60, int((nxt - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services.sunday_night_digest import run_sunday_night_digest
+                    result = await run_sunday_night_digest(db)
+                    logger.info(f"sunday_night_digest_loop: {result}")
+                except Exception as e:
+                    logger.error(f"sunday_night_digest_loop iteration failed: {e}")
+            except Exception as e:
+                logger.error(f"sunday_night_digest_loop outer failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(300)).add_done_callback(lambda _: asyncio.create_task(_sunday_night_digest_loop()))
 
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
     # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community

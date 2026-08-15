@@ -376,7 +376,7 @@ export default function HomepageLeadGenMockup() {
           <div style={{ background:"white", borderRadius: 14, boxShadow:"0 12px 44px rgba(0,0,0,0.24)", overflow:"hidden", marginBottom: 16, maxWidth: 720 }} data-testid="hero-doogie-search">
             <DoogieFilterHeader onVoiceFilter={applyVoiceFilter} onReset={() => nav("/listings")}/>
             <div style={{ padding:"12px 16px", color: C.ink, fontSize:"0.85rem", display:"flex", gap: 10, alignItems:"center" }}>
-              <img src="/images/doogie/thinking.webp" alt="" width={32} height={32} style={{ width: 32, height: 32, flexShrink: 0 }}/>
+              <img src="/images/doogie/thinking.webp" alt="" width={32} height={32} loading="lazy" decoding="async" style={{ width: 32, height: 32, flexShrink: 0 }}/>
               <div><strong style={{ color: C.navy }}>Try:</strong> <em style={{ color: C.muted }}>"3-bed townhome in Langley under $1.2M"</em></div>
             </div>
           </div>
@@ -422,7 +422,7 @@ export default function HomepageLeadGenMockup() {
               <div className="hv2-path-card" style={{ padding:"22px 22px 26px", borderRadius: 16, background: p.tone === "gold" ? C.gold : "white", border: p.tone === "gold" ? "none" : "1px solid #E5E7EB", height:"100%", boxSizing:"border-box", cursor:"pointer", transition:"transform 0.18s, box-shadow 0.18s", display:"flex", flexDirection:"column", gap: 12 }}
                    onMouseEnter={e => { e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow="0 16px 36px rgba(15,42,91,0.18)"; }}
                    onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
-                <img className="hv2-path-doogie" src={p.img} alt="" width={96} height={96} style={{ width: 96, height: 96, objectFit:"contain", alignSelf:"center", filter:"drop-shadow(0 8px 16px rgba(15,42,91,0.15))" }}/>
+                <img className="hv2-path-doogie" src={p.img} alt="" width={96} height={96} loading="lazy" decoding="async" style={{ width: 96, height: 96, objectFit:"contain", alignSelf:"center", filter:"drop-shadow(0 8px 16px rgba(15,42,91,0.15))" }}/>
                 <div style={{ fontSize:"1.18rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, textAlign:"center" }}>{p.title}</div>
                 <div style={{ fontSize:"0.9rem", color: C.ink, lineHeight: 1.55, textAlign:"center", flex: 1 }}>{p.body}</div>
                 <div style={{ marginTop: 4, fontWeight: 700, color: C.navy, fontSize:"0.92rem", textAlign:"center" }}>{p.cta}</div>
@@ -435,7 +435,7 @@ export default function HomepageLeadGenMockup() {
       {/* ═════ § BC AFFORDABILITY CALCULATOR — the sticky lead-gen tool ═════ */}
       <Section tone="cream">
         <div style={{ display:"flex", alignItems:"center", gap: 16, marginBottom: 14, flexWrap:"wrap" }}>
-          <img src="/images/doogie/pointing-left-transparent.webp" alt="" width={70} height={70} style={{ width: 70, height: 70, flexShrink: 0 }}/>
+          <img src="/images/doogie/pointing-left-transparent.webp" alt="" width={70} height={70} loading="lazy" decoding="async" style={{ width: 70, height: 70, flexShrink: 0 }}/>
           <div>
             <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>DOOGIE'S QUICK CALC</div>
             <h2 style={{ fontSize:"clamp(1.5rem, 3.5vw, 2rem)", fontFamily:"'Sora',sans-serif", fontWeight: 700, color: C.navy, lineHeight: 1.15, margin:"4px 0 4px" }}>What can you afford in BC?</h2>
@@ -477,7 +477,7 @@ export default function HomepageLeadGenMockup() {
       {/* ═════ § "COME BACK NEXT WEEK" — subscribe for weekly new-listing digest ═════ */}
       <div style={{ background: C.navy, color:"white", padding:"clamp(28px, 5vw, 44px) clamp(16px, 4vw, 24px)" }}>
         <div style={{ maxWidth: 1000, margin:"0 auto", display:"grid", gridTemplateColumns:"auto 1fr", gap: 20, alignItems:"center" }}>
-          <img src="/images/doogie/thinking.webp" alt="" width={80} height={80} style={{ width: 80, height: 80, flexShrink: 0 }}/>
+          <img src="/images/doogie/thinking.webp" alt="" width={80} height={80} loading="lazy" decoding="async" style={{ width: 80, height: 80, flexShrink: 0 }}/>
           <div>
             <div style={{ fontSize:"0.72rem", letterSpacing:"0.14em", color: C.gold, fontWeight: 700 }}>DON'T MISS THE NEXT COMING-SOON</div>
             <div style={{ fontSize:"1.25rem", fontFamily:"'Sora',sans-serif", fontWeight: 700, marginTop: 4, marginBottom: 4 }}>Doogie's weekly BC listings digest — free.</div>

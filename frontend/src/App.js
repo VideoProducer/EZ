@@ -349,6 +349,25 @@ const NeighbourhoodPage = () => {
   if (!d) return <section className="section"><div className="container-x" style={{maxWidth:"46rem"}}><h1 className="section-title">Loading…</h1></div></section>;
   const fmt = (n) => n ? `$${(n/1000000 >= 1) ? (n/1000000).toFixed(2) + "M" : Math.round(n/1000) + "K"}` : "—";
   const jsonLd = {"@context":"https://schema.org","@type":"Place","name":`${d.neighbourhood}, ${d.community}, BC`,"containedInPlace":{"@type":"Place","name":`${d.community}, British Columbia`},"description":(d.synopsis||"").substring(0,300)};
+  // FAQPage schema for the micro-neighbourhood — item #17 (FAQ-first content
+  // rollout). Answers are templated from the same synopsis/market-snapshot
+  // data already visible on the page, with primary-source citations. This
+  // adds a rich-result surface for AI Overviews / Perplexity / Google Search
+  // on all 518 micro-neighbourhood pages without inventing new copy.
+  const nhbFaqs = d.synopsis ? [
+    { q: `What is ${d.neighbourhood}, ${d.community} known for?`,
+      a: (d.synopsis || "").substring(0, 480),
+      cite: {name: `${d.neighbourhood} — EZtoFind.ca community profile`, url: `https://eztofind.ca/community/${slug}/n/${nSlug}`} },
+    { q: `How many active MLS® listings are currently in ${d.neighbourhood}?`,
+      a: `${d.neighbourhood} currently has ${d.listing_count || 0} active MLS® listing${d.listing_count === 1 ? "" : "s"} in the CREA DDF® feed. Listings refresh every four hours on EZtoFind.ca. Price range: ${fmt(d.min_price)} – ${fmt(d.max_price)}${d.median_price ? `, median ${fmt(d.median_price)}` : ""}.`,
+      cite: {name: "CREA Data Distribution Facility (DDF®)", url: "https://www.crea.ca/ddf/"} },
+    { q: `Which municipality and BC region is ${d.neighbourhood} part of?`,
+      a: `${d.neighbourhood} sits within ${d.community}, ${d.region || "British Columbia"}. For municipal-level walkability, transit, climate normals, and safety metrics see the ${d.community} community page on EZtoFind.ca.`,
+      cite: {name: "Statistics Canada — Census Profile", url: "https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm?Lang=E"} },
+    { q: `Can Doug LeMaire, REALTOR® represent me for a home purchase in ${d.neighbourhood}?`,
+      a: `${d.neighbourhood} sits within ${d.community}. If ${d.community} is inside Doug's primary practice area (Greater Vancouver, Fraser Valley, Sea-to-Sky Corridor), Doug represents both buyers and sellers directly. For communities outside those areas, EZtoFind.ca operates a referral network of BCFSA-licensed local REALTORS® at zero cost to the consumer.`,
+      cite: {name: "BCFSA REALTOR® Registrant Search", url: "https://www.bcfsa.ca/public-resources/registrant-search"} },
+  ] : [];
   return (<section className="section"><div className="container-x" style={{maxWidth:"46rem"}}>
     <SEO
       title={`What is ${d.neighbourhood} like? Sub-Neighbourhood Guide in ${d.community}, BC | EZtoFind.ca`}
@@ -356,7 +375,8 @@ const NeighbourhoodPage = () => {
       path={`/community/${slug}/n/${nSlug}`}
       schema={jsonLd}
     />
-    <Helmet><script type="application/ld+json">{JSON.stringify({
+    <Helmet>
+      <script type="application/ld+json">{JSON.stringify({
       "@context":"https://schema.org","@type":"BreadcrumbList",
       "itemListElement":[
         {"@type":"ListItem","position":1,"name":"Home","item":"https://eztofind.ca/"},
@@ -364,7 +384,21 @@ const NeighbourhoodPage = () => {
         {"@type":"ListItem","position":3,"name":d.community,"item":`https://eztofind.ca/community/${slug}`},
         {"@type":"ListItem","position":4,"name":d.neighbourhood,"item":`https://eztofind.ca/community/${slug}/n/${nSlug}`},
       ]
-    })}</script></Helmet>
+    })}</script>
+    {nhbFaqs.length > 0 && <script type="application/ld+json">{JSON.stringify({
+      "@context":"https://schema.org","@type":"FAQPage",
+      "author":    { "@type":"Person", "name":"Doug LeMaire, REALTOR®", "url":"https://eztofind.ca/about" },
+      "publisher": { "@type":"Organization", "name":"EZtoFind.ca", "url":"https://eztofind.ca" },
+      "mainEntity": nhbFaqs.map(f => ({
+        "@type":"Question", "name": f.q,
+        "acceptedAnswer": {
+          "@type":"Answer", "text": f.a,
+          "citation": { "@type":"CreativeWork", "name": f.cite.name, "url": f.cite.url },
+        },
+      })),
+      "speakable": { "@type":"SpeakableSpecification", "cssSelector": ["[data-testid=nhb-faq] [data-testid^=nhb-faq-q-]"] },
+    })}</script>}
+    </Helmet>
     <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem"}}>
       <Link to="/communities" style={{color:"var(--brand-blue)",textDecoration:"none"}}>Communities</Link>
       <span style={{color:"var(--muted)"}}> › </span>
@@ -401,6 +435,24 @@ const NeighbourhoodPage = () => {
         page — matches glossary and community pages, strengthens E-E-A-T for
         520 micro-nhb URLs. */}
     {d.synopsis && <PublishedByDoug compact lastReviewed={d.synopsis_generated_at || d.updated_at}/>}
+    {/* Visible FAQ block — item #17 (FAQ-first rollout). Content mirrors the
+        JSON-LD FAQPage above so Google's schema validator sees matching
+        visible text (required for rich-result eligibility). */}
+    {nhbFaqs.length > 0 && (
+      <div data-testid="nhb-faq" style={{marginTop:"2.5rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
+        <div className="eyebrow" style={{marginBottom:"0.5rem"}}>Frequently Asked</div>
+        <h2 className="font-display" style={{fontSize:"1.6rem",marginTop:0,marginBottom:"1.15rem",color:"var(--brand-navy)"}}>About {d.neighbourhood}</h2>
+        <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+          {nhbFaqs.map((f, i) => (
+            <details key={i} data-testid={`nhb-faq-item-${i}`} style={{background:"#FDFCF7",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:"0.9rem 1.1rem",fontFamily:"Inter,sans-serif"}}>
+              <summary data-testid={`nhb-faq-q-${i}`} style={{cursor:"pointer",fontSize:"1rem",fontWeight:700,color:"var(--brand-navy)",listStyle:"none"}}>{f.q}</summary>
+              <div data-testid={`nhb-faq-a-${i}`} style={{fontSize:"0.95rem",lineHeight:1.7,color:"var(--ink)",marginTop:"0.65rem",whiteSpace:"pre-wrap"}}>{f.a}</div>
+              <div style={{fontSize:"0.76rem",color:"var(--muted)",marginTop:"0.55rem"}}>Source: <a href={f.cite.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>{f.cite.name}</a></div>
+            </details>
+          ))}
+        </div>
+      </div>
+    )}
   </div></section>);
 };
 
@@ -4460,6 +4512,51 @@ const SPECIALTIES = {
   "condos":{t:"Condos",i:IMG.condo,alt:"Modern Vancouver condo tower interior with city views — BC strata-lot expertise including Form B, Form F, and depreciation report review across Metro Vancouver and Fraser Valley",c:"Strata-lot expertise across BC — Form B, Form F, depreciation reports, contingency reserve funds, bylaw review. Metro Vancouver, Fraser Valley, and resort condos."},
   "townhomes":{t:"Townhomes",i:IMG.townhomes,alt:"Row of BC townhomes with private entrances and garages — Lower Mainland townhouse and half-duplex expertise from Doug LeMaire",c:"Townhome expertise across the Lower Mainland — strata townhouse complexes, freehold row homes, half-duplexes. Understanding of restrictive covenants, shared-amenity fees, bareland strata, and unit-entitlement calculations."}
 };
+
+// SPECIALTY_FAQS — statute-cited FAQ entries per specialty, rendered as both
+// a visible block on the page AND a schema.org/FAQPage JSON-LD graph so
+// Google AI Overviews / Perplexity / ChatGPT Search can quote the answers
+// with attribution. Every answer is BCFSA-compliant (informational only,
+// never opinion of value or investment guarantee) and includes a citation
+// URL to the primary statute or regulator.
+const SPECIALTY_FAQS = {
+  "detached": [
+    { q: "What counts as a detached home in BC real estate?", a: "A detached home in BC is a freehold, single-family residence on its own lot with no shared walls, no strata fees, and full title to both the building and the land. Under the BC Land Title Act, ownership is registered as a fee-simple estate.", cite: {name:"BC Land Title Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96250_00"} },
+    { q: "What is the average price of a detached home in Greater Vancouver?", a: "Median list prices for detached homes across Greater Vancouver update live from the CREA DDF® feed on EZtoFind.ca. Filter the Detached specialty page by community to see the current median, active-listing count, and price band for your target area.", cite: {name:"CREA Data Distribution Facility (DDF®)", url:"https://www.crea.ca/ddf/"} },
+    { q: "Are property taxes higher on a detached home than a condo?", a: "In BC, property tax is assessed by BC Assessment on the property's fair-market value, not its type — so a detached home and a condo of the same value pay similar municipal tax. What differs is the total cost of ownership: detached owners cover all maintenance themselves, while strata owners pay monthly fees that fund shared building costs.", cite: {name:"BC Assessment — How Assessment Works", url:"https://info.bcassessment.ca/services-and-products/property-assessment"} },
+    { q: "Do detached homes appreciate faster than condos in BC?", a: "BCFSA rules prohibit REALTORS® from guaranteeing investment outcomes for any property type. What EZtoFind.ca can show is factual: historic median-price trends by community and property type, sourced from the CREA DDF® feed. Compare those alongside your own financial goals and, ideally, a licensed financial advisor.", cite: {name:"BCFSA — Prohibition on Investment Guarantees", url:"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base"} },
+  ],
+  "luxury": [
+    { q: "What qualifies as a luxury home in British Columbia?", a: "There is no BCFSA-defined luxury threshold, but the BC market convention treats $3M+ as the entry into luxury for detached homes and $2M+ for condos. On EZtoFind.ca, the Luxury specialty spans Detached, Townhouse, and Condo inventory at $3M+ across the entire province.", cite: {name:"CREA — MLS® Home Price Index", url:"https://www.crea.ca/housing-market-stats/mls-home-price-index/"} },
+    { q: "How is my privacy protected when buying a luxury home?", a: "Doug LeMaire, REALTOR® handles high-net-worth transactions with private-showing protocols, NDA-backed buyer representations, and BC PIPA-compliant data handling. Contact records are stored on encrypted infrastructure and never sold or shared with third-party marketers.", cite: {name:"BC Personal Information Protection Act (PIPA)", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/03063_01"} },
+    { q: "What is the BC Property Transfer Tax on a $3M+ home?", a: "BC's Property Transfer Tax uses a tiered schedule: 1 % on the first $200,000, 2 % from $200,000 to $2M, 3 % from $2M to $3M, and 5 % on the portion above $3M. A $3M residential purchase attracts a PTT of $58,000; a $5M purchase attracts $158,000. Foreign-buyer additional PTT (20 %) may apply in specified regions.", cite: {name:"BC Property Transfer Tax Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96378_01"} },
+    { q: "Can Doug represent me discreetly on an off-market listing?", a: "Yes — where the seller has authorized a pocket-listing or exclusive-listing arrangement permitted by BCFSA Rule 5-13 (formerly Section 6-8), Doug can facilitate private-buyer introductions with full written disclosure of representation to both parties before any showing.", cite: {name:"BCFSA Real Estate Rules — Rule 5", url:"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/real-estate-rules-and-regulations"} },
+  ],
+  "equestrian": [
+    { q: "Can I keep horses on an ALR property in BC?", a: "Yes — the BC Agricultural Land Reserve (governed by the Agricultural Land Commission Act, RSBC 2002 c.36) permits horse-keeping as a farm use on most ALR parcels. Non-farm structures like a large arena or a second residence may require a non-farm-use application to the Agricultural Land Commission.", cite: {name:"BC Agricultural Land Commission Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/02036_01"} },
+    { q: "How do I verify water rights on a Fraser Valley acreage?", a: "Under the BC Water Sustainability Act, all surface-water diversions (streams, ponds, lakes) require a licensed water allocation. Check the FrontCounter BC Water Rights Registry for existing licences before making an offer — an acreage without a water licence for its irrigation source may not legally use that water.", cite: {name:"BC Water Sustainability Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/14015_00"} },
+    { q: "What size acreage do I need for horses in BC?", a: "There is no province-wide minimum, but municipal zoning bylaws typically require 2-5 acres for the first horse and 1 additional acre per subsequent horse. Confirm the specific rule for your target municipality — a home on the smallest acreage in a stricter jurisdiction may be non-conforming to future horse-count changes.", cite: {name:"BC Ministry of Agriculture — Horse Fact Sheets", url:"https://www2.gov.bc.ca/gov/content/industry/agriculture-seafood/animals-and-crops/animal-production/horses"} },
+    { q: "Does Doug handle equestrian properties outside Greater Vancouver?", a: "Doug LeMaire, REALTOR® personally represents equestrian buyers and sellers across Greater Vancouver, the Fraser Valley, and Sea-to-Sky. For Vancouver Island, Interior, and Kootenay acreages, EZtoFind.ca operates a referral network of BCFSA-licensed local REALTORS® at zero cost to the consumer.", cite: {name:"BCFSA REALTOR® Registrant Search", url:"https://www.bcfsa.ca/public-resources/registrant-search"} },
+  ],
+  "estate-sales": [
+    { q: "How long does a probate sale take in BC?", a: "A BC estate sale requires a Grant of Probate under the Wills, Estates and Succession Act (WESA). Grants typically issue 4–12 weeks after application, depending on court workload and completeness of documents. A listing can be publicly marketed before probate issues, but title cannot transfer until the Grant is filed.", cite: {name:"BC Wills, Estates and Succession Act (WESA)", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/09013_01"} },
+    { q: "Can an executor accept an offer before probate is granted?", a: "Yes — an offer can be signed \"subject to grant of probate\" before probate issues, but completion (closing) must wait until the Grant of Probate is filed with the Land Title Office. Doug coordinates with the estate's legal counsel to ensure timeline alignment.", cite: {name:"BC Land Title Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/96250_00"} },
+    { q: "Are estate-sale homes sold \"as is\" in BC?", a: "Most estate sales are marketed \"where is, as is\" because the executor is legally unable to warrant condition on behalf of a deceased owner. Buyers should budget for a full home inspection and, where relevant, oil-tank and asbestos assessments before firming up an offer.", cite: {name:"BCFSA — Property Disclosure Statement", url:"https://www.bcfsa.ca/public-resources/property-disclosure-statements"} },
+    { q: "What are the tax implications for the estate on a sale?", a: "The deceased is deemed to have disposed of all capital property at fair-market value on the date of death (Canada Income Tax Act, s.70). Any post-death gain on the residence is taxable to the estate unless it qualifies for the principal-residence exemption. Executors should consult an accountant early — Doug can refer you to specialists.", cite: {name:"Canada Income Tax Act — Deemed Disposition", url:"https://laws-lois.justice.gc.ca/eng/acts/i-3.3/section-70.html"} },
+  ],
+  "condos": [
+    { q: "What is a Form B in a BC strata purchase?", a: "A Form B (Information Certificate) is a mandatory disclosure under the BC Strata Property Act that lists the strata lot's monthly fees, special levies, bylaw amendments, and rental restrictions. A subject-to-review-of-Form B clause protects buyers who need to inspect strata finances before firming.", cite: {name:"BC Strata Property Act — Form B", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/98043_09"} },
+    { q: "Do I need to review a depreciation report?", a: "Every BC strata corporation of five or more units must obtain a depreciation report under Section 94 of the Strata Property Act every three years, unless waived by ¾ vote. The report projects 30-year common-property repair costs — reviewing it before purchase reveals looming special levies (e.g. roof, envelope, elevator).", cite: {name:"BC Strata Property Act — Section 94", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/98043_05#section94"} },
+    { q: "Can I rent out my BC condo?", a: "Since November 2022, the BC Strata Property Amendment Act removed most rental restrictions from strata bylaws (short-term rental restrictions and age-55+ restrictions remain lawful). Verify the current bylaws on the Form B before assuming a specific rental strategy is permitted.", cite: {name:"BC Strata Property Amendment Act, 2022", url:"https://www.leg.bc.ca/parliamentary-business/legislation-debates-proceedings/42nd-parliament/3rd-session/bills/first-reading/gov44-1"} },
+    { q: "How is the strata's contingency reserve fund (CRF) supposed to be funded?", a: "Under the Strata Property Regulation, a strata corporation must contribute at least 10 % of its annual operating budget to the CRF until the CRF equals 25 % of the operating budget, then may contribute freely. A significantly underfunded CRF is a red flag for pending special levies.", cite: {name:"BC Strata Property Regulation", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/43_2000"} },
+  ],
+  "townhomes": [
+    { q: "What is the difference between a strata townhouse and a freehold row home?", a: "A strata townhouse is a strata lot under the BC Strata Property Act — you own the interior of your unit and share common property (roof, exterior walls, landscaping) with neighbours through the strata corporation. A freehold row home is a fee-simple parcel with no strata — you own the building and the land it sits on outright.", cite: {name:"BC Strata Property Act", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/98043_00"} },
+    { q: "What is a bareland strata?", a: "A bareland strata is a strata corporation where each owner owns their lot in fee simple (like a freehold) but shares common property (roads, drainage, landscaping) through the strata. Monthly fees are usually lower than a building strata and homeowners have more control over their unit's exterior.", cite: {name:"BC Strata Property Act — Bareland Stratas", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/98043_11#section178"} },
+    { q: "Are townhomes cheaper to insure than condos in a high-rise?", a: "Typically yes — townhomes have lower shared-liability exposure than a high-rise strata. Your strata corporation's building policy covers exterior/common property; your personal condo insurance (HO-6 in BC industry parlance) covers interior improvements, contents, and personal liability. Get quotes on both before firming.", cite: {name:"BC Insurance Council — Home Insurance", url:"https://www.insurancecouncilofbc.com/"} },
+    { q: "How does unit entitlement affect my monthly strata fee in a townhome?", a: "Under Section 246 of the Strata Property Act, each strata lot's share of common expenses is calculated by its unit entitlement (usually habitable-area square footage) divided by the strata's total unit entitlement. A larger townhome pays a proportionally larger monthly fee — verify the calculation on the Form B before purchasing.", cite: {name:"BC Strata Property Act — Section 246", url:"https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/98043_10#section246"} },
+  ],
+};
 const SpecialtiesIndex = () => (<section className="section"><div className="container-x">
   <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Doug's Specialties</div><h1 className="section-title">Five focused expertises.</h1></div>
   <div className="grid-3">{Object.entries(SPECIALTIES).map(([s,d])=><Link key={s} to={`/specialties/${s}`} className="card"><img loading="lazy" decoding="async" src={d.i} className="card-img" alt={d.alt||d.t} width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">{d.t}</h3><p className="card-desc">{d.c.slice(0,120)}...</p></div></Link>)}</div>
@@ -4475,7 +4572,29 @@ const SpecialtyPage = () => {
   // filter panel pre-locks Property Type and just refines city/beds/etc.
   const SPECIALTY_TYPE_MAP = { "detached":"Detached", "condos":"Condo", "townhomes":"Townhouse" };
   const lockedType = SPECIALTY_TYPE_MAP[slug];
+  // FAQPage schema + visible FAQ block — item #17 (FAQ-first content rollout).
+  // Statute-cited answers matched to schema JSON-LD so Google AI Overviews /
+  // Perplexity / ChatGPT can quote us with attribution. Every answer's
+  // citation is a primary BC/CA statute or regulator URL.
+  const faqs = SPECIALTY_FAQS[slug] || [];
   return (<section className="section"><div className="container-x">
+    {faqs.length > 0 && (
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org", "@type": "FAQPage",
+          "author":    { "@type": "Person", "name": "Doug LeMaire, REALTOR®", "url": "https://eztofind.ca/about" },
+          "publisher": { "@type": "Organization", "name": "EZtoFind.ca", "url": "https://eztofind.ca" },
+          "mainEntity": faqs.map(f => ({
+            "@type": "Question", "name": f.q,
+            "acceptedAnswer": {
+              "@type": "Answer", "text": f.a,
+              "citation": { "@type": "CreativeWork", "name": f.cite.name, "url": f.cite.url },
+            },
+          })),
+          "speakable": { "@type": "SpeakableSpecification", "cssSelector": [`[data-testid="specialty-faq-${slug}"] [data-testid^="specialty-faq-q-"]`] },
+        })}</script>
+      </Helmet>
+    )}
     <img loading="lazy" decoding="async" src={d.i} alt={d.alt || `${d.t} — ${d.c.slice(0,120)}`} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}} width="1200" height="400" itemProp="image"/>
     <div style={{maxWidth:"46rem"}}>
       <div className="eyebrow">Specialty</div><h1 className="section-title">{d.t}</h1>
@@ -4486,7 +4605,31 @@ const SpecialtyPage = () => {
         <SpecialtyFilterPanel defaults={{ property_type: lockedType, sort: "newest" }} lockPropertyType={true}/>
       </div>
     )}
-    <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}><Link to="/buyer" className="btn btn-primary">Start as a Buyer</Link><Link to="/seller" className="btn btn-green">Start as a Seller</Link></div>
+    <div style={{display:"flex",gap:"1rem",flexWrap:"wrap",marginBottom:"3rem"}}><Link to="/buyer" className="btn btn-primary">Start as a Buyer</Link><Link to="/seller" className="btn btn-green">Start as a Seller</Link></div>
+    {faqs.length > 0 && (
+      <div data-testid={`specialty-faq-${slug}`} style={{maxWidth:"46rem",marginTop:"1rem",paddingTop:"2rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>
+        <div className="eyebrow" style={{marginBottom:"0.5rem"}}>Frequently Asked</div>
+        <h2 className="font-display" style={{fontSize:"1.75rem",marginTop:0,marginBottom:"1.25rem",color:"var(--brand-navy)"}}>About {d.t}</h2>
+        <div style={{display:"flex",flexDirection:"column",gap:"1.25rem"}}>
+          {faqs.map((f, i) => (
+            <details key={i} data-testid={`specialty-faq-item-${i}`} style={{background:"#FDFCF7",border:"1px solid rgba(15,42,91,0.1)",borderRadius:12,padding:"1rem 1.25rem"}}>
+              <summary data-testid={`specialty-faq-q-${i}`} style={{cursor:"pointer",fontFamily:"Inter,sans-serif",fontSize:"1.02rem",fontWeight:700,color:"var(--brand-navy)",listStyle:"none"}}>
+                {f.q}
+              </summary>
+              <div data-testid={`specialty-faq-a-${i}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.98rem",lineHeight:1.7,color:"var(--ink)",marginTop:"0.75rem"}}>
+                {f.a}
+              </div>
+              <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.65rem"}}>
+                Source: <a href={f.cite.url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>{f.cite.name}</a>
+              </div>
+            </details>
+          ))}
+        </div>
+        <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"1.25rem",fontStyle:"italic"}}>
+          Informational only — not real-estate, legal, tax, or financial advice. Verify with a BCFSA-licensed REALTOR® or the appropriate regulator before making an offer.
+        </p>
+      </div>
+    )}
   </div></section>);
 };
 

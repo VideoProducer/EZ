@@ -209,7 +209,7 @@ export default function EquestrianLeadMockup() {
           </p>
 
           <div style={{display:"flex", gap:14, alignItems:"center", flexWrap:"wrap", marginBottom:26}}>
-            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
+            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
             <div style={{fontSize:"0.9rem", lineHeight:1.4}}>
               <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd.</div>
               <div style={{opacity:0.85, fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · covers Greater Vancouver, Fraser Valley + Sea-to-Sky directly · BC-wide referral network for everywhere else</div>
@@ -320,7 +320,7 @@ export default function EquestrianLeadMockup() {
         {/* ═══ § REFERRAL BLOCK (out-of-area) ═══════════════════════ */}
         <SectionH kicker="§6 · Outside Doug's area">Buying in the Interior, Vancouver Island, or Kootenays?</SectionH>
         <div style={{background:"white", border:`1px solid ${BRAND.gold}`, padding:"22px 24px", borderRadius:14, display:"flex", gap:18, alignItems:"center", flexWrap:"wrap"}}>
-          <img src="/doogie/head.webp" alt="Doogie" onError={e => e.currentTarget.style.display="none"} style={{width:80, height:80, flexShrink:0, objectFit:"contain", filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
+          <img src="/doogie/head.webp" alt="Doogie" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:80, height:80, flexShrink:0, objectFit:"contain", filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
           <div style={{flex:"1 1 320px"}}>
             <div style={{fontSize:"1rem", color:BRAND.ink, lineHeight:1.65, marginBottom:14}}>
               Cariboo, Peace, Nicola Valley, Vernon, Vancouver Island — Doug's referral network covers every BCFSA-licensed rural REALTOR® in BC. He personally hand-picks the intro, you approve every one, $0 cost, no CASL spam.
@@ -406,7 +406,7 @@ function EquestrianLeadForm() {
   return (
     <div id="lead-form" style={{marginTop:56, background:BRAND.navy, color:"white", borderRadius:16, padding:"32px 30px 34px", boxShadow:"0 10px 40px rgba(15,42,91,0.20)"}} data-testid="lead-form">
       <div style={{display:"flex", gap:16, alignItems:"center", flexWrap:"wrap", marginBottom:14}}>
-        <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
+        <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
         <div>
           <div style={{fontSize:"0.72rem", letterSpacing:"0.14em", color:BRAND.gold, fontWeight:700}}>§3 · SPEAK TO DOUG</div>
           <h2 style={{fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight:700, lineHeight:1.15, margin:"4px 0 0"}}>Get the 40-point checklist &amp; a free 20-min equestrian call</h2>
