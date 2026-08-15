@@ -12,6 +12,7 @@
 //   /mockups/community-live?slug=... → renders mockup (with banner)
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 
@@ -297,8 +298,131 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
     setSaved(true);
   };
 
+  // ── SEO / AEO / GEO metadata — differs by service-area status ────────────
+  // The isFocus flag is the single source of truth for BCFSA-compliant framing:
+  //   • isFocus=true  → Doug personally represents buyers & sellers here.
+  //                     Meta + JSON-LD present him as the local REALTOR®.
+  //   • isFocus=false → Doug does NOT list here; the page is informational
+  //                     with a referral CTA. Meta + JSON-LD present him as
+  //                     coordinator of a BC-wide licensed referral network,
+  //                     and areaServed on the RealEstateAgent block stays
+  //                     scoped to the three focus regions. This prevents
+  //                     AEO/GEO citation authority drift and eliminates
+  //                     any BCFSA misrepresentation risk.
+  const canonical = `https://eztofind.ca/community/${slug}`;
+  const pageTitle = isFocus
+    ? `${community}, BC Real Estate · Doug LeMaire, REALTOR® · EZtoFind.ca`
+    : `${community}, BC — Community Profile & Referral REALTOR® · EZtoFind.ca`;
+  const pageDesc = isFocus
+    ? `Live ${community}, BC listings, sub-neighbourhood breakdowns, climate, and market data. Doug LeMaire, REALTOR® with Fraser Property Management personally represents buyers and sellers in ${community}.`
+    : `${community}, BC community profile with live MLS® data, climate, and market snapshot. ${community} is outside Doug LeMaire's direct service area (Greater Vancouver, Fraser Valley, Sea-to-Sky) — Doug will connect you with a BCFSA-licensed local REALTOR® in ${community} within 24 hours at $0 cost to you.`;
+  const ogImage = `https://eztofind.ca/images/doogie-og.png?v=4`;
+  const faqLd = faqs && faqs.length ? {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "author":    { "@type": "Person", "name": "Doug LeMaire, REALTOR®", "url": "https://eztofind.ca/about" },
+    "publisher": { "@type": "Organization", "name": "EZtoFind.ca", "url": "https://eztofind.ca" },
+    "mainEntity": faqs.map(f => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": { "@type": "Answer", "text": f.a },
+    })),
+  } : null;
+  const focusAreas = [
+    { "@type": "AdministrativeArea", "name": "Greater Vancouver, British Columbia" },
+    { "@type": "AdministrativeArea", "name": "Fraser Valley, British Columbia" },
+    { "@type": "AdministrativeArea", "name": "Sea-to-Sky Corridor, British Columbia" },
+  ];
+  const agentLd = isFocus
+    ? {
+        "@context": "https://schema.org",
+        "@type": "RealEstateAgent",
+        "name": "Doug LeMaire, REALTOR®",
+        "url": "https://eztofind.ca/about",
+        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+        // In-area: emit direct areaServed for THIS community explicitly, alongside
+        // the three focus regions. Signals to LLMs that Doug personally represents
+        // buyers and sellers here.
+        "areaServed": [
+          ...focusAreas,
+          { "@type": "City", "name": `${community}, British Columbia` },
+        ],
+        "memberOf": [
+          { "@type": "Organization", "name": "Canadian Real Estate Association (CREA)" },
+          { "@type": "Organization", "name": "Greater Vancouver REALTORS® (GVR)" },
+          { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)" },
+        ],
+      }
+    : {
+        "@context": "https://schema.org",
+        "@type": "RealEstateAgent",
+        "name": "Doug LeMaire, REALTOR®",
+        "url": "https://eztofind.ca/about",
+        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+        // Out-of-area: areaServed stays scoped to focus regions ONLY.
+        "areaServed": focusAreas,
+        "memberOf": [
+          { "@type": "Organization", "name": "Canadian Real Estate Association (CREA)" },
+          { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)" },
+        ],
+        // makesOffer — declares the coordinator service Doug DOES provide for
+        // this community (a licensed referral, not direct representation).
+        "makesOffer": {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": `Licensed REALTOR® referral for ${community}, BC`,
+            "serviceType": "Real estate referral",
+            "areaServed": { "@type": "City", "name": `${community}, British Columbia` },
+            "provider": { "@type": "Person", "name": "Doug LeMaire, REALTOR®" },
+            "description": `Vetted introduction to a BCFSA-licensed local REALTOR® in ${community} within 24 hours. Zero cost to the consumer. Consumer approves each introduction.`,
+          },
+          "price": 0,
+          "priceCurrency": "CAD",
+          "eligibleRegion": { "@type": "AdministrativeArea", "name": "British Columbia, Canada" },
+        },
+      };
+  const placeLd = {
+    "@context": "https://schema.org",
+    "@type": "Place",
+    "name": `${community}, British Columbia`,
+    "containedInPlace": { "@type": "AdministrativeArea", "name": `${region}, British Columbia` },
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",        "item": "https://eztofind.ca/" },
+      { "@type": "ListItem", "position": 2, "name": "Communities", "item": "https://eztofind.ca/communities" },
+      { "@type": "ListItem", "position": 3, "name": region,        "item": "https://eztofind.ca/communities" },
+      { "@type": "ListItem", "position": 4, "name": community,     "item": canonical },
+    ],
+  };
+
   return (
     <div style={{background:"#F5F5F0",minHeight:"100vh"}} data-testid="community-page-mockup-live">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc}/>
+        <link rel="canonical" href={canonical}/>
+        <meta property="og:type" content="website"/>
+        <meta property="og:url" content={canonical}/>
+        <meta property="og:title" content={pageTitle}/>
+        <meta property="og:description" content={pageDesc}/>
+        <meta property="og:image" content={ogImage}/>
+        <meta property="og:site_name" content="EZtoFind.ca"/>
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:title" content={pageTitle}/>
+        <meta name="twitter:description" content={pageDesc}/>
+        <meta name="twitter:image" content={ogImage}/>
+        {/* Machine-readable service-area status — lets any downstream
+            crawler tell in-area from referral pages without parsing prose. */}
+        <meta name="ez:community-status" content={isFocus ? "in-area-direct" : "out-of-area-referral"}/>
+        <script type="application/ld+json">{JSON.stringify(placeLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(agentLd)}</script>
+        <script type="application/ld+json">{JSON.stringify(breadcrumbLd)}</script>
+        {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
+      </Helmet>
       {!live && <UnlistedMockupBanner label={`LIVE community page · ${community}`}/>}
 
       {/* Community picker removed per user request */}
@@ -365,17 +489,6 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>🏡 View {active.toLocaleString()} listings</Link>
           </div>
-        </div>
-
-        {/* Micro-conversion */}
-        <div style={{marginTop:16,padding:"14px 18px",background:BRAND.cream,borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-          <div style={{fontSize:"0.88rem",color:BRAND.ink}}><strong>🐾 Free · $0 · no commitment</strong> — Save {community} to get weekly listing updates and price drops.</div>
-          <button
-            data-testid="save-community"
-            onClick={onSave}
-            disabled={saved}
-            style={{background: saved ? BRAND.green : BRAND.navy,color:"white",border:"none",padding:"9px 18px",borderRadius:999,fontWeight:600,fontSize:"0.85rem",cursor: saved ? "default" : "pointer"}}
-          >{saved ? `✅ ${community} saved` : `❤️ Save ${community}`}</button>
         </div>
 
         {/* ── § SPATIAL ─────────────────────────────────────────────── */}
