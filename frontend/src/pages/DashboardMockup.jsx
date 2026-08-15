@@ -5220,14 +5220,16 @@ const FEATURED_HOME_LISTING = {
   headline: "Quality, Location, Lasting Value",
   description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
-    // Placeholders shown only in preview mode. On Monday the CREA DDF® feed
-    // will auto-populate real photos the moment the MLS goes live.
-    "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1400&q=85",
+    // Front elevation from Doug's photoshoot — first photo shown on the
+    // homepage hero and social share OG card. DDF live sync will provide
+    // the full gallery Monday; this photo remains the pinned #1 image
+    // because it's the intended marketing hero.
+    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ar5fqtu0_Front%20of%20House.webp",
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
     "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
     "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
   ],
-  open_house: "By Appointment Only",
+  open_house: null,               // No public open house — showings by appointment only
   // Video walkthrough — Vimeo. We use click-to-load so no third-party
   // network calls hit Vimeo until the visitor opts in (PIPA-friendly).
   video_url: "https://vimeo.com/1218107137",
@@ -5539,32 +5541,27 @@ const DashboardFeaturedListing = () => {
           )}
           {!videoLoaded && (
             <>
-              <div style={{
-                position: "absolute", inset: "auto 12px 12px", display: "flex",
-                justifyContent: "space-between", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
-              }}>
-                <div>
-                  <div style={{
-                    fontFamily: "'Playfair Display', serif", fontWeight: 800,
-                    fontSize: 30, color: "#fff", lineHeight: 1,
-                    textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-                  }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
-                  <div style={{
-                    fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
-                    textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
-                  }}>MLS® {merged.mls}</div>
-                </div>
-                {merged.open_house && (
-                  <div style={{
-                    background: "rgba(15,42,91,0.85)", color: "#fff",
-                    padding: "6px 10px", borderRadius: 8, fontSize: 11.5,
-                    fontWeight: 600, backdropFilter: "blur(6px)",
-                  }}>
-                    <span style={{ display: "block", fontSize: 9.5, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8 }}>Open House</span>
-                    {merged.open_house}
+              {/* Price + MLS# overlay — only shown once the DDF feed confirms
+                  the listing is live. In preview mode we intentionally hide
+                  this so a placeholder MLS# never displays to the public. */}
+              {live && (
+                <div style={{
+                  position: "absolute", inset: "auto 12px 12px", display: "flex",
+                  justifyContent: "flex-start", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
+                }}>
+                  <div>
+                    <div style={{
+                      fontFamily: "'Playfair Display', serif", fontWeight: 800,
+                      fontSize: 30, color: "#fff", lineHeight: 1,
+                      textShadow: "0 2px 10px rgba(0,0,0,0.55)",
+                    }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
+                    <div style={{
+                      fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
+                      textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
+                    }}>MLS® {merged.mls}</div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               {merged.photos.length > 1 && (
                 <div style={{
                   position: "absolute", top: 12, right: 12,
@@ -5651,25 +5648,6 @@ const DashboardFeaturedListing = () => {
             display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
             overflow: "hidden",
           }} data-testid="dash-featured-description">{merged.description}</p>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" }}>
-            {detailUrl
-              ? <Link to={detailUrl} data-testid="dash-featured-view-details" style={{
-                  background: C.navy, color: "#fff", padding: "10px 16px",
-                  borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
-                }}>View Full Listing <ChevronRight size={14}/></Link>
-              : <Link to="/buyer" data-testid="dash-featured-view-details" style={{
-                  background: C.navy, color: "#fff", padding: "10px 16px",
-                  borderRadius: 8, fontSize: 13, fontWeight: 700,
-                  textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
-                }}>Request Details <ChevronRight size={14}/></Link>}
-            <Link to="/buyer" data-testid="dash-featured-book-showing" style={{
-              background: C.green, color: "#fff", padding: "10px 16px",
-              borderRadius: 8, fontSize: 13, fontWeight: 700,
-              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
-            }}>Book a Showing</Link>
-          </div>
 
           <LuxuryShareBar
             url={live ? `${typeof window !== "undefined" ? window.location.origin : ""}/listings/${encodeURIComponent(L.mls)}` : (typeof window !== "undefined" ? window.location.origin + "/" : "")}
