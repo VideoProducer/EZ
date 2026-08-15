@@ -66,7 +66,11 @@ const FAQS = [
   { q: "Do I need a water licence for a horse property?",
     a: "In BC, domestic well authorisations under the Water Sustainability Act typically cover household use only. Livestock watering (horses, cattle, sheep) can require a separate water licence, especially if you're drawing from a stream or dugout. On a Fraser Valley acreage this rarely blocks a purchase, but it's worth confirming with the Ministry of Water, Land and Resource Stewardship before you close." },
   { q: "How does Doug help equestrian buyers specifically?",
-    a: "Doug LeMaire is BCFSA-licensed with Fraser Property Management Realty Services Ltd. and covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For equestrian properties he runs a 40-point due-diligence checklist covering ALR status, zoning, water rights, septic capacity, restrictive covenants, arena permits, and legal-non-conforming barn structures. For properties outside his coverage area (Interior, Vancouver Island, Kootenays), he refers you to a vetted BCFSA-licensed local REALTOR® at no cost — you approve every intro." },
+    a: "Doug LeMaire is BCFSA-licensed with Fraser Property Management Realty Services Ltd. and covers Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor directly. For equestrian properties he runs a 40-point due-diligence checklist covering ALR status, zoning, water rights, septic capacity, restrictive covenants, arena permits, and legal-non-conforming barn structures. For properties outside his coverage area (Interior, Vancouver Island, Kootenays), If you like, Doug can have a local realtor contact you.",
+    chip: {
+      to: "/referral-request?context=Equestrian%20property%20-%20out%20of%20area",
+      label: "🤝 Request a REALTOR® referral",
+    } },
   { q: "How many equestrian listings are active in BC right now?",
     a: "Live count updates daily from the CREA Data Distribution Facility (DDF®). Filters look for barn / stable / arena / horse features across residential detached and acreage listings. Typical inventory is 400–1,500 listings province-wide, concentrated in Langley, Aldergrove, Abbotsford, Chilliwack, Maple Ridge, Cariboo, Kootenays, and the South Okanagan." },
   { q: "Does Doug charge a fee for the equestrian buyer consultation?",
@@ -312,7 +316,23 @@ export default function EquestrianLeadMockup() {
           {FAQS.map((f, i) => (
             <details key={i} style={{background:"white", border:"1px solid #E5E7EB", borderRadius:10, padding:"14px 18px"}} data-testid={`faq-${i}`}>
               <summary style={{fontSize:"0.95rem", fontWeight:700, color:BRAND.navy, cursor:"pointer", fontFamily:"'Sora',sans-serif"}}>{f.q}</summary>
-              <div style={{marginTop:10, fontSize:"0.9rem", lineHeight:1.65, color:BRAND.ink}}>{f.a}</div>
+              <div style={{marginTop:10, fontSize:"0.9rem", lineHeight:1.65, color:BRAND.ink}}>
+                {f.a}
+                {f.chip && (
+                  <div style={{marginTop:12}}>
+                    <Link
+                      to={f.chip.to}
+                      data-testid={`faq-referral-chip-${i}`}
+                      style={{
+                        display:"inline-flex", alignItems:"center", gap:6,
+                        background:BRAND.navy, color:"white", padding:"8px 14px",
+                        borderRadius:999, fontWeight:700, fontSize:"0.82rem",
+                        textDecoration:"none",
+                      }}
+                    >{f.chip.label} →</Link>
+                  </div>
+                )}
+              </div>
             </details>
           ))}
         </div>
