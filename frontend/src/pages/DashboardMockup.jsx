@@ -68,7 +68,7 @@ const SECTIONS = [
   { key: "equestrian", label: "Equestrian Listings", icon: Building2, href: "/listings?property_type=Equestrian" },
   { key: "buyer",     label: "Buyer Insights", icon: BarChart3 },
   { key: "seller",    label: "Seller Insights",icon: TrendingUp },
-  { key: "value",     label: "Home Value",     icon: DollarSign, href: "/valuation" },
+  { key: "value",     label: "Market Estimate", icon: DollarSign, href: "/valuation" },
   { key: "community", label: "Communities",    icon: MapPin },
   { key: "glossary",  label: "Glossary",       icon: BookOpen },
   { key: "relocating",label: "Relocating",     icon: Plane, href: "/relocating" },
