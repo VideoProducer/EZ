@@ -2856,8 +2856,8 @@ const ListingCompliance = ({ listing, compact = false }) => {
               Listing brokerage disclosed on <a href={realtorCa} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>REALTOR.ca</a>
             </div>
           )}
-          {listing.listing_agent && <div>Listing agent: {listing.listing_agent}</div>}
-          {listing.mls_number && <div>MLS® #{listing.mls_number}{listing.days_on_market !== undefined ? ` · ${listing.days_on_market} days on market` : ""}</div>}
+          {(listing.list_agent_full_name || listing.listing_agent) && <div data-testid="listing-agent-name">Listing agent: {listing.list_agent_full_name || listing.listing_agent}</div>}
+          {(listing.listing_key || listing.mls_number) && <div>MLS® #{listing.listing_key || listing.mls_number}{listing.days_on_market !== undefined ? ` · ${listing.days_on_market} days on market` : ""}</div>}
         </div>
       </div>
       <div style={{fontSize:"0.7rem",color:"var(--muted)",marginTop:"0.4rem"}}>

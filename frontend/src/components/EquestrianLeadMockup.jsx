@@ -166,7 +166,7 @@ export default function EquestrianLeadMockup() {
       {
         "@type": "WebPage",
         "name": "BC Equestrian Properties for Sale — REALTOR® with ALR & Rural Zoning Expertise",
-        "description": `Browse ${stats.total.toLocaleString()} active MLS® equestrian listings in British Columbia. Free 40-point due-diligence checklist. BCFSA-licensed REALTOR® covering Greater Vancouver, Fraser Valley, and Sea-to-Sky directly, with a vetted BC-wide referral network for other regions.`,
+        "description": `Browse ${stats.total.toLocaleString()} active MLS® equestrian listings in British Columbia. Free 40-point due-diligence checklist. BCFSA-licensed REALTOR® covering Greater Vancouver, Fraser Valley, and Sea-to-Sky.`,
         "primaryImageOfPage": "https://eztofind.ca/specialties/equestrian.png",
         "isPartOf": {"@type": "WebSite", "name": "EZtoFind.ca", "url": "https://eztofind.ca"},
       },
@@ -212,7 +212,7 @@ export default function EquestrianLeadMockup() {
             <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
             <div style={{fontSize:"0.9rem", lineHeight:1.4}}>
               <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd.</div>
-              <div style={{opacity:0.85, fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · covers Greater Vancouver, Fraser Valley + Sea-to-Sky directly · BC-wide referral network for everywhere else</div>
+              <div style={{opacity:0.85, fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · covers Greater Vancouver, Fraser Valley + Sea-to-Sky directly</div>
             </div>
           </div>
 
