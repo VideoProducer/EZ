@@ -5234,6 +5234,7 @@ const fmtPriceShort = (n) => (n >= 1e6)
 const DashboardFeaturedListing = () => {
   const [active, setActive] = useState(0);
   const [live, setLive] = useState(null);
+  const sectionRef = useRef(null);
   const L = FEATURED_HOME_LISTING;
   const previewOverride = (typeof window !== "undefined")
     && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
@@ -5251,6 +5252,17 @@ const DashboardFeaturedListing = () => {
     const t = setInterval(check, 5 * 60 * 1000);
     return () => { stop = true; clearInterval(t); };
   }, [L.enabled, L.mls_auto_detect, L.mls]);
+
+  // In preview mode, auto-scroll to the section so Doug lands directly on it
+  // instead of having to scroll past the map + latest-listings row.
+  useEffect(() => {
+    const shouldScroll = previewOverride && !live && L.enabled && sectionRef.current;
+    if (!shouldScroll) return;
+    const t = setTimeout(() => {
+      sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [previewOverride, live, L.enabled]);
 
   if (!L.enabled) return null;
   if (L.mls_auto_detect && !live && !previewOverride) return null;
@@ -5280,7 +5292,7 @@ const DashboardFeaturedListing = () => {
   const detailUrl = live ? `/listings/${encodeURIComponent(L.mls)}` : null;
 
   return (
-    <section data-testid="dash-featured-listing" style={{
+    <section ref={sectionRef} id="featured" data-testid="dash-featured-listing" style={{
       background: "linear-gradient(135deg, #FBF7EE 0%, #FFFFFF 55%, #F0F4FB 100%)",
       borderRadius: 18, border: "1px solid rgba(15,42,91,0.08)",
       padding: "22px 22px 26px", marginBottom: 22,
