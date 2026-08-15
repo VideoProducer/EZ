@@ -41,6 +41,8 @@ FONT_SANS       = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.t
 # ── Colours (matches DashboardMockup / brand system) ─────────────────────────
 NAVY = (15, 42, 91)
 GOLD = (249, 189, 0)
+BRAND_BLUE = (10, 61, 153)
+BRAND_GREEN = (47, 107, 56)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
@@ -177,10 +179,31 @@ async def render_featured_og(
     draw.text((margin, y_cursor - 30), brokerage_line, fill=WHITE, font=f_footer)
     y_cursor -= 30 + 6
 
-    # EZtoFind.ca gold word on the right end of the footer row
-    ez_text = "EZtoFind.ca"
-    ez_w = _text_w(draw, ez_text, f_brand)
-    draw.text((W - margin - ez_w, y_cursor + 4), ez_text, fill=GOLD, font=f_brand)
+    # EZtoFind.ca multi-colour wordmark on the right end of the footer row.
+    # Matches the on-site sidebar palette: EZ (green) · to (navy) · Find
+    # (blue) · .ca (gold).  Drawn as four consecutive draw calls advancing
+    # the x-cursor by each segment's measured width.
+    parts = [
+        ("EZ ",   BRAND_GREEN),
+        ("to ",   NAVY),
+        ("Find",  BRAND_BLUE),
+        (".ca",   GOLD),
+    ]
+    ez_total_w = sum(_text_w(draw, s, f_brand) for s, _ in parts)
+    # Draw a subtle white pill behind the wordmark so navy text stays legible
+    # against the dark gradient overlay.
+    pill_pad_x, pill_pad_y = 16, 8
+    pill_x0 = W - margin - ez_total_w - pill_pad_x * 2
+    pill_y0 = y_cursor + 4 - pill_pad_y
+    pill_x1 = W - margin
+    _, bt2, _, bb2 = draw.textbbox((0, 0), "EZ", font=f_brand)
+    th2 = bb2 - bt2
+    pill_y1 = pill_y0 + th2 + pill_pad_y * 2
+    draw.rounded_rectangle([pill_x0, pill_y0, pill_x1, pill_y1], radius=8, fill=(255, 255, 255, 240))
+    x_cursor = pill_x0 + pill_pad_x
+    for s, colour in parts:
+        draw.text((x_cursor, y_cursor + 4 - bt2), s, fill=colour, font=f_brand)
+        x_cursor += _text_w(draw, s, f_brand)
 
     y_cursor -= 24  # gap above brokerage line
 

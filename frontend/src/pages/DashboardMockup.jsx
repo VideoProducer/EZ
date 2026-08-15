@@ -742,7 +742,12 @@ export default function DashboardMockup({ homeVariant = "search" }) {
                 display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13,
               }}
             >☰ Menu</button>
-            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16 }}>EZtoFind.ca</span>
+            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16, lineHeight: 1 }}>
+              <span style={{ color: C.brandGreen }}>EZ </span>
+              <span style={{ color: "#fff" }}>to </span>
+              <span style={{ color: C.brandBlue, background: "#fff", padding: "0 4px", borderRadius: 3 }}>Find</span>
+              <span style={{ color: C.brandGold }}>.ca</span>
+            </span>
           </div>
         )}
         <TopBar section={section} homeVariant={homeVariant}/>
@@ -867,10 +872,20 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
         />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>
-            <span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
+            <span style={{ color: C.brandGreen }}>EZ </span>
+            <span style={{ color: C.navy }}>to </span>
+            <span style={{ color: C.brandBlue }}>Find</span>
+            <span style={{ color: C.brandGold }}>.ca</span>
           </div>
           <div style={{ fontSize: 10, color: C.navy, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>Doug LeMaire · REALTOR®</div>
           <div style={{ fontSize: 9, color: C.muted, marginTop: 2, lineHeight: 1.2 }}>Fraser Property Management Realty Services Ltd</div>
+          <img
+            src="/brand/fraser-logo.png"
+            alt="Fraser Property Management Realty Services Ltd"
+            data-testid="dash-brand-fraser-logo"
+            style={{ marginTop: 6, height: 34, width: "auto", display: "block", objectFit: "contain" }}
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
         </div>
       </div>
     </Link>
