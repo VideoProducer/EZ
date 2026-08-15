@@ -4855,6 +4855,12 @@ const EquestrianSection = ({ intro }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [subCat, setSubCat] = useState("");
   const [region, setRegion] = useState("Anywhere");
+  // Doug's Feb 2026 quick filters — narrow the base match set without
+  // leaving the page. Each toggles a boolean/number query param on
+  // /api/listings/equestrian. Composed AND with sub_category + region.
+  const [alrOnly, setAlrOnly]   = useState(false);
+  const [hasArena, setHasArena] = useState(false);
+  const [minAcres, setMinAcres] = useState(0);  // 0 = default 5-ac base; 20 = "20+ acres" chip
   const PAGE_SIZE = 12;
 
   useEffect(() => {
@@ -4863,6 +4869,9 @@ const EquestrianSection = ({ intro }) => {
     const params = { sort: "price_asc", limit: PAGE_SIZE, offset: 0, price_min: EQUESTRIAN_MIN_PRICE };
     if (subCat) params.sub_category = subCat;
     if (region && region !== "Anywhere") params.region_chip = region;
+    if (alrOnly)  params.alr_only  = true;
+    if (hasArena) params.has_arena = true;
+    if (minAcres) params.min_acres = minAcres;
     axios.get(`${API}/listings/equestrian`, { params }).then(r => {
       if (cancelled) return;
       setListings(r.data?.listings || []);
@@ -4870,7 +4879,7 @@ const EquestrianSection = ({ intro }) => {
       setLoading(false);
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [subCat, region]);
+  }, [subCat, region, alrOnly, hasArena, minAcres]);
 
   const loadMore = () => {
     if (loadingMore || listings.length >= total) return;
@@ -4878,6 +4887,9 @@ const EquestrianSection = ({ intro }) => {
     const params = { sort: "price_asc", limit: PAGE_SIZE, offset: listings.length, price_min: EQUESTRIAN_MIN_PRICE };
     if (subCat) params.sub_category = subCat;
     if (region && region !== "Anywhere") params.region_chip = region;
+    if (alrOnly)  params.alr_only  = true;
+    if (hasArena) params.has_arena = true;
+    if (minAcres) params.min_acres = minAcres;
     axios.get(`${API}/listings/equestrian`, { params })
       .then(r => setListings(prev => [...prev, ...(r.data?.listings || [])]))
       .catch(() => {})
@@ -4943,6 +4955,52 @@ const EquestrianSection = ({ intro }) => {
             }}>{c.label}</button>
         );
       })}
+    </div>
+
+    {/* Doug's Feb 2026 quick-filter chips — narrow the base match set.
+        Independent of sub_category and region, so buyers can layer:
+        e.g. Fraser Valley + Hobby Farm + ALR + 20+ acres. Each chip is
+        a toggle — active = green pill, inactive = outlined. */}
+    <div style={{marginBottom:"1.75rem"}}>
+      <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",marginBottom:"0.55rem",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Quick filters</div>
+      <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}} data-testid="equestrian-quick-filters">
+        {[
+          { key: "alr",   label: "ALR only",       active: alrOnly,        toggle: () => setAlrOnly(v => !v) },
+          { key: "arena", label: "Has arena",      active: hasArena,       toggle: () => setHasArena(v => !v) },
+          { key: "20ac",  label: "20+ acres",      active: minAcres === 20, toggle: () => setMinAcres(v => v === 20 ? 0 : 20) },
+          { key: "50ac",  label: "50+ acres",      active: minAcres === 50, toggle: () => setMinAcres(v => v === 50 ? 0 : 50) },
+        ].map(c => (
+          <button key={c.key} type="button"
+            onClick={c.toggle}
+            data-testid={`equestrian-quick-${c.key}`}
+            aria-pressed={c.active}
+            style={{
+              background: c.active ? "#065F46" : "transparent",
+              color:      c.active ? "#ECFDF5" : "#065F46",
+              border: `2px solid ${c.active ? "#065F46" : "#BEE3C7"}`,
+              padding: "0.42rem 1.05rem", borderRadius: 999,
+              fontFamily: "Inter,sans-serif", fontSize: "0.85rem", fontWeight: 700,
+              cursor: "pointer", transition: "all 0.15s",
+              display: "inline-flex", alignItems: "center", gap: "0.35rem",
+            }}
+          >
+            {c.active && <span aria-hidden style={{fontSize:"0.75rem"}}>✓</span>}
+            {c.label}
+          </button>
+        ))}
+        {(alrOnly || hasArena || minAcres > 0) && (
+          <button type="button"
+            onClick={() => { setAlrOnly(false); setHasArena(false); setMinAcres(0); }}
+            data-testid="equestrian-quick-clear"
+            style={{
+              background: "transparent", color: "var(--muted)",
+              border: "none", padding: "0.42rem 0.75rem", cursor: "pointer",
+              fontFamily: "Inter,sans-serif", fontSize: "0.82rem", fontWeight: 600,
+              textDecoration: "underline",
+            }}
+          >Clear quick filters</button>
+        )}
+      </div>
     </div>
 
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:"1rem",flexWrap:"wrap",gap:"0.5rem"}}>

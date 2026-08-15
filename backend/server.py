@@ -8979,6 +8979,12 @@ async def equestrian_keyword_search(
     price_min: Optional[int] = None,
     sub_category: Optional[str] = None,
     region_chip: Optional[str] = None,
+    # Quick filters — narrow the 252-ish match set without leaving the page.
+    # All three are ANDed with the base equestrian scan (keywords + 5-acre-
+    # or-legal-barn floor). Missing = filter disabled.
+    alr_only:   Optional[bool] = False,   # only listings whose description mentions ALR / Agricultural Land Reserve / ALC
+    has_arena:  Optional[bool] = False,   # only listings whose description mentions an arena / riding ring / round pen
+    min_acres:  Optional[float] = None,   # tighter acreage floor (e.g. 20+) — overrides the default 5-ac base
 ):
     """List active BC listings whose description contains any of the
     CORE equestrian keywords AND whose property type could plausibly house
@@ -9033,6 +9039,37 @@ async def equestrian_keyword_search(
         if sub_clauses:
             # APPEND to the base $and (preserve keyword-scan + acreage/barn rules).
             q["$and"] = list(q.get("$and", [])) + sub_clauses
+
+    # Quick filter chips — narrow the base result set. Each chip appends
+    # one clause to the existing $and so they compose cleanly with the
+    # keyword-scan + acreage-or-barn base rule + sub_category selection.
+    if alr_only:
+        q["$and"] = list(q.get("$and", [])) + [{
+            "description": {"$regex": r"\b(ALR|agricultural\s+land\s+reserve|agricultural\s+land\s+commission|ALC)\b", "$options": "i"},
+        }]
+    if has_arena:
+        q["$and"] = list(q.get("$and", [])) + [{
+            "description": {"$regex": r"\b(riding\s*arena|indoor\s*arena|outdoor\s*arena|dressage\s*arena|arena|round\s*pen|riding\s*ring)\b", "$options": "i"},
+        }]
+    if min_acres and min_acres > 0:
+        # Overrides the default 5-acre floor. Same unit-aware $or as the
+        # base clause, but scaled to the caller-supplied minimum.
+        q["$and"] = list(q.get("$and", [])) + [{
+            "$or": [
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"^ac", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres)}},
+                ]},
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"^(hect|ha)", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres) * 0.4047}},
+                ]},
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"sq.?f", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres) * 43560}},
+                ]},
+            ],
+        }]
     sort_spec = [("list_price", 1)]
     if sort == "price_desc": sort_spec = [("list_price", -1)]
     elif sort == "newest":   sort_spec = [("modification_ts", -1)]
@@ -9054,6 +9091,11 @@ async def equestrian_keyword_search(
         "limit": limit,
         "listings": listings,
         "sub_category": sub_category,
+        "quick_filters": {
+            "alr_only":  bool(alr_only),
+            "has_arena": bool(has_arena),
+            "min_acres": min_acres,
+        },
         "keywords_matched_on": CORE_EQUESTRIAN_KEYWORDS,
         "eligible_property_types": sorted(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES),
         "acreage_rule": {
