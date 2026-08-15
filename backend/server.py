@@ -1695,7 +1695,8 @@ async def create_saved_search(body: SavedSearchIn, request: Request):
         "email": body.email.lower(),
         "filters": filters,
         "label": (body.label or "")[:120],
-        "frequency": body.frequency if body.frequency in ("instant", "daily", "weekly") else "instant",
+        "frequency": body.frequency if body.frequency in ("instant", "daily", "weekly", "weekly_just_sold") else "instant",
+        "digest_frequency": body.frequency if body.frequency == "weekly_just_sold" else None,
         "status": "pending",     # → verified → unsubscribed
         "policy_version": CURRENT_POLICY_VERSION,
         "verification_token": verify_tok,
@@ -2235,6 +2236,16 @@ async def admin_email_outbox_flush(_=Depends(verify_admin)):
             stats["still_failed"] += 1
             logger.exception(f"flush send failed: {e}")
     return stats
+
+# =============== JUST-SOLD DIGEST (weekly) — admin manual trigger =========
+@api.post("/admin/just-sold-digest/run")
+async def admin_run_just_sold_digest(_=Depends(verify_admin)):
+    """Manually trigger the Weekly Just-Sold Digest. In production the loop
+    fires every Friday morning; this endpoint lets Doug (or a testing agent)
+    re-run it on-demand to verify email formatting and Resend delivery."""
+    from services.just_sold_digest import run_weekly_just_sold_digest
+    result = await run_weekly_just_sold_digest(db)
+    return {"ok": True, **result}
 
 # =============== BREACH RESPONSE (PIPA audit log) ===============
 class BreachReport(BaseModel):
@@ -6181,6 +6192,34 @@ async def startup():
                 await _a.sleep(3600)  # back off an hour on error, then retry
     asyncio.create_task(asyncio.sleep(120)).add_done_callback(lambda _: asyncio.create_task(_weekly_digest_loop()))
 
+    # Just-Sold Digest — every Friday at ~08:00 America/Vancouver we email
+    # verified subscribers a curated recap of listings that closed in the
+    # last 7 days matching their saved-search criteria. Loop sleeps until
+    # the next Friday-16:00 UTC (≈08:00 PST / 09:00 PDT).
+    async def _just_sold_digest_loop():
+        import asyncio as _a
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                # Days until next Friday (weekday 4)
+                days = (4 - now.weekday()) % 7
+                if days == 0 and now.hour >= 16:
+                    days = 7
+                nxt = (now + _td(days=days)).replace(hour=16, minute=0, second=0, microsecond=0)
+                delay = max(60, int((nxt - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    from services.just_sold_digest import run_weekly_just_sold_digest
+                    result = await run_weekly_just_sold_digest(db)
+                    logger.info(f"just_sold_digest_loop: {result}")
+                except Exception as e:
+                    logger.error(f"just_sold_digest_loop iteration failed: {e}")
+            except Exception as e:
+                logger.error(f"just_sold_digest_loop outer failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(180)).add_done_callback(lambda _: asyncio.create_task(_just_sold_digest_loop()))
+
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
     # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community
     # profiles, and MLS listings from the day's CREA DDF® sync show up in
@@ -6586,7 +6625,7 @@ async def startup():
     try:
         from sitemap_generator import generate_sitemap
         stats = await generate_sitemap(db)
-        logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities + {stats.get('neighbourhoods',0)} micro-neighbourhoods)")
+        logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities + {stats.get('neighbourhoods',0)} micro-neighbourhoods + {stats.get('listings',0)} listings)")
     except Exception as e:
         logger.error(f"sitemap generation failed: {e}")
 

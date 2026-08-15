@@ -17,6 +17,7 @@ import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
+import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -4681,6 +4682,15 @@ const HomeExtras = () => {
   ];
   return (
     <div style={wrap} data-testid="dash-home-extras">
+      {/* Item #38 · Weekly Just-Sold Digest signup — the primary
+          return-visit hook. Every Friday morning subscribers get a
+          curated list of BC listings that closed in the last 7 days
+          matching their area. Double-opt-in (CASL) via existing
+          /api/saved-searches endpoint with frequency=weekly_just_sold. */}
+      <section style={{ ...cardShell, background:"#0F2A5B", color:"white", borderColor:"transparent" }} data-testid="dash-home-weekly-digest-slot">
+        <WeeklyDigestSignup variant="banner"/>
+      </section>
+
       {/* 1. Focus regions */}
       <section style={cardShell} data-testid="dash-home-regions">
         <p style={sectionSub}>

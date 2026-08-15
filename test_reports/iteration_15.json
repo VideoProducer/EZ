@@ -1,0 +1,33 @@
+{
+  "summary": "Backend: all 9 tests pass (weekly digest signup incl. consent rejection, admin manual trigger returns sent/sold_count/subscribers_matched, sitemap-listings.xml serves XML, sitemap.xml index references it, admin endpoint unauthenticated returns 401/403). Frontend: PIPA cookie banner appears on first visit, dismisses on 'Got it', persists across reload. Homepage has 2 JSON-LD blocks and required @types (RealEstateAgent, DefinedTermSet, SoftwareApplication, FAQPage, ItemList) all present. WeeklyDigestSignup widget on / — validation error appears when consent boxes unticked, and full submit with both consent boxes ticked reaches the '📬 Check your inbox' success card (POST /api/saved-searches → 200). Wave D helper files (AddressAutocomplete, PlayfulEmptyState, FormProgress) exist and frontend compiles error-free. NL search chips (dash-nl-chips) — CANNOT LOCATE anywhere in the rendered app: the container lives inside SidebarFilters, which in turn only mounts inside FloatingFilters, which is defined but NEVER referenced (the file even comments 'The old vertical FloatingFilters card is retired'). So `data-testid=dash-nl-chips` is orphaned dead code — no user path renders it.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SidebarFilters / FloatingFilters", "issue": "NL search chips (data-testid=dash-nl-chips) are never rendered — FloatingFilters component is defined at DashboardMockup.jsx:914 but never mounted (retired per in-file comment on line 1988). SidebarFilters (which contains the 5 chip buttons at lines 748-790) has no consumer.", "selector": "[data-testid=\"dash-nl-chips\"]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage /", "issues": ["React warnings: `fetchpriority` should be `fetchPriority`; <span> child of <option> hydration warning inside DashboardMockup (line ~11473 area). Non-blocking but should be cleaned."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_waveb_d.py", "/app/test_reports/pytest/waveb_d.xml"],
+  "action_items": [
+    "Mount the NL search chips somewhere in the live filter UI. Either re-wire FloatingFilters into DashboardMockup, or move the chips block out of SidebarFilters into the current UnifiedSearchBar / Filters popover (line 1985+). Right now the feature ships but is invisible to users, so the review-request test 'sidebar filter panel dash-nl-chips visible with 5 button chips' fails.",
+    "(Nit) Fix React warnings on / — `fetchpriority` → `fetchPriority`; remove <span> inside <option>.",
+    "(Nit) SavedSearchIn.frequency docstring on server.py:1649 still says '\"instant\" | \"daily\" | \"weekly\"' — extend to include weekly_just_sold to match line 1698 validation."
+  ],
+  "critical_code_review_comments": [
+    "DashboardMockup.jsx is 4864 lines — should be split into per-feature files (SidebarFilters, FloatingFilters, UnifiedSearchBar, TopBar, Panel, etc. each their own module).",
+    "FloatingFilters is dead code (lines 912-1201) — either delete or wire back in.",
+    "just_sold_digest.py cleanly separates concerns and honors CASL/PIPA (price-band only, one-click unsubscribe, transactional footer). Good.",
+    "run_weekly_just_sold_digest signature accepts base_url but admin endpoint (server.py:2247) calls it without base_url — uses default 'https://eztofind.ca'. OK for prod but the digest emails triggered from the preview environment will contain live-domain unsubscribe URLs. Consider passing PUBLIC_APP_URL from env."
+  ],
+  "updated_files": ["/app/backend/tests/test_waveb_d.py"],
+  "success_rate": {"backend": "100%", "frontend": "~85% (NL chips not renderable)"},
+  "test_credentials": "Admin login used doug@eztofind.ca / Doug2026Login! — worked (cookie-based auth).",
+  "seed_data_creation": "Created 1 pending saved_searches row with email TEST_wavebd@example.com (frequency=weekly_just_sold, filters={city:'Vancouver'}). Never verified so no commercial email sent. Safe to leave or purge.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoints /api/saved-searches (POST) and /api/admin/just-sold-digest/run (POST, admin cookie) both functional and produce sensible payloads. Sitemap listings/index working. Weekly digest signup widget on / works end-to-end (double-opt-in verification card shown). Main outstanding UI issue: dash-nl-chips container is never mounted — the SidebarFilters/FloatingFilters component pair are dead code. Ask main agent to re-mount NL chips inside the Filters popover of UnifiedSearchBar.",
+  "rca of the issue": "grep of DashboardMockup.jsx shows only ONE `<SidebarFilters/>` usage, inside FloatingFilters (line 1158). FloatingFilters is never referenced with `<FloatingFilters/>` anywhere (verified via `grep -n 'FloatingFilters' /app/frontend/src/pages/DashboardMockup.jsx` returns only the definition on line 914 + a comment on line 1988 saying it's retired). Therefore dash-nl-chips never enters the DOM (confirmed via page.evaluate query returning null on both / and /listings desktop viewports)."
+}
