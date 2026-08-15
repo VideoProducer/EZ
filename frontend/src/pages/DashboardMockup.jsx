@@ -5203,9 +5203,9 @@ const FEATURED_HOME_LISTING = {
   enabled: true,
   mls_auto_detect: true,          // hide until DDF confirms MLS is live
   status: "JUST LISTED",
-  address: "1234 Sample Crescent",
-  city: "West Vancouver",
-  neighbourhood: "Ambleside",
+  address: "3015 141 Street",
+  city: "Surrey",
+  neighbourhood: "Elgin Chantrell",
   province: "BC",
   price: 3495000,
   beds: 5,
@@ -5216,8 +5216,8 @@ const FEATURED_HOME_LISTING = {
   property_type: "Detached Home",
   year_built: 2019,
   mls: "R2851234",                // ← Doug: replace Monday AM with real MLS#
-  headline: "Ocean-view family home on a private cul-de-sac",
-  description: "A rare Ambleside offering — 4,280 sq ft of thoughtful design, five bedrooms up, chef's kitchen with premium appliances, main-floor office, radiant floors, and a level backyard perfect for entertaining. Steps to the seawall, Ambleside Village, and top-rated schools.",
+  headline: "Luxury family estate in Elgin Chantrell",
+  description: "A rare South Surrey offering — thoughtfully designed for family living and effortless entertaining. Five bedrooms, chef's kitchen with premium appliances, main-floor office, radiant floors, and a level backyard perfect for hosting. Minutes to top-rated schools, Crescent Beach, and the Semiahmoo Peninsula.",
   photos: [
     "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1400&q=85",
     "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
@@ -5225,6 +5225,11 @@ const FEATURED_HOME_LISTING = {
     "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
   ],
   open_house: "Saturday 2 – 4 PM & Sunday 1 – 3 PM",
+  // Video walkthrough — Vimeo. We use click-to-load so no third-party
+  // network calls hit Vimeo until the visitor opts in (PIPA-friendly).
+  video_url: "https://vimeo.com/1218107137",
+  video_duration: "4:42",
+  video_provider: "vimeo",
 };
 
 const fmtPriceShort = (n) => (n >= 1e6)
@@ -5234,10 +5239,26 @@ const fmtPriceShort = (n) => (n >= 1e6)
 const DashboardFeaturedListing = () => {
   const [active, setActive] = useState(0);
   const [live, setLive] = useState(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const sectionRef = useRef(null);
   const L = FEATURED_HOME_LISTING;
   const previewOverride = (typeof window !== "undefined")
     && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
+
+  // Extract Vimeo/YouTube ID from a plain URL. Supports:
+  //   • https://vimeo.com/1218107137
+  //   • https://vimeo.com/1218107137?fl=tl&fe=ec
+  //   • https://player.vimeo.com/video/1218107137
+  //   • https://youtu.be/xxx  and  https://www.youtube.com/watch?v=xxx
+  const parseVideo = (url) => {
+    if (!url) return null;
+    const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    if (vimeo) return { provider: "vimeo", id: vimeo[1] };
+    const yt = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
+    if (yt) return { provider: "youtube", id: yt[1] };
+    return null;
+  };
+  const video = parseVideo(L.video_url);
 
   useEffect(() => {
     if (!L.enabled || !L.mls_auto_detect || !L.mls) return;
@@ -5336,53 +5357,119 @@ const DashboardFeaturedListing = () => {
           position: "relative", background: C.navy, borderRadius: 14,
           overflow: "hidden", minHeight: 320, aspectRatio: "4/3",
         }}>
-          <img src={hero} alt={`${merged.address}, ${merged.city}`}
-            loading="lazy" decoding="async"
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-            data-testid="dash-featured-hero"/>
-          <div style={{
-            position: "absolute", inset: "auto 12px 12px", display: "flex",
-            justifyContent: "space-between", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
-          }}>
-            <div>
-              <div style={{
-                fontFamily: "'Playfair Display', serif", fontWeight: 800,
-                fontSize: 30, color: "#fff", lineHeight: 1,
-                textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-              }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
-              <div style={{
-                fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
-                textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
-              }}>MLS® {merged.mls}</div>
-            </div>
-            {merged.open_house && (
-              <div style={{
-                background: "rgba(15,42,91,0.85)", color: "#fff",
-                padding: "6px 10px", borderRadius: 8, fontSize: 11.5,
-                fontWeight: 600, backdropFilter: "blur(6px)",
-              }}>
-                <span style={{ display: "block", fontSize: 9.5, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8 }}>Open House</span>
-                {merged.open_house}
-              </div>
-            )}
-          </div>
-          {merged.photos.length > 1 && (
-            <div style={{
-              position: "absolute", top: 12, right: 12,
-              display: "flex", flexDirection: "column", gap: 6,
-            }}>
-              {merged.photos.slice(0, 4).map((p, i) => (
-                <button key={i} onClick={() => setActive(i)}
-                  data-testid={`dash-featured-thumb-${i}`}
+          {videoLoaded && video ? (
+            <iframe
+              title={`Video walkthrough — ${merged.address}, ${merged.city}`}
+              src={video.provider === "vimeo"
+                ? `https://player.vimeo.com/video/${video.id}?autoplay=1&title=0&byline=0&portrait=0&dnt=1`
+                : `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0`}
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              style={{ width: "100%", height: "100%", display: "block", border: 0 }}
+              data-testid="dash-featured-video-iframe"
+            />
+          ) : (
+            <>
+              <img src={hero} alt={`${merged.address}, ${merged.city}`}
+                loading="lazy" decoding="async"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                data-testid="dash-featured-hero"/>
+              {video && (
+                <button
+                  onClick={() => setVideoLoaded(true)}
+                  aria-label={`Play video walkthrough (${L.video_duration || "video"})`}
+                  data-testid="dash-featured-video-play"
                   style={{
-                    width: 52, height: 40, padding: 0,
-                    border: i === active ? `2px solid ${C.brandGold}` : "2px solid rgba(255,255,255,0.6)",
-                    borderRadius: 5, overflow: "hidden", cursor: "pointer", background: "none",
-                  }}>
-                  <img src={p} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                    position: "absolute", top: "50%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    background: "rgba(15,42,91,0.88)", color: "#fff",
+                    border: "3px solid rgba(255,255,255,0.9)",
+                    borderRadius: 999, padding: "16px 26px 16px 32px",
+                    display: "inline-flex", alignItems: "center", gap: 12,
+                    fontFamily: "Inter, sans-serif", fontSize: 14, fontWeight: 700,
+                    letterSpacing: 0.5, cursor: "pointer",
+                    boxShadow: "0 12px 32px rgba(0,0,0,0.35), 0 0 0 6px rgba(255,255,255,0.15)",
+                    backdropFilter: "blur(4px)",
+                    transition: "transform 160ms ease, background 160ms ease",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translate(-50%, -50%) scale(1.05)"; e.currentTarget.style.background = "rgba(15,42,91,1)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translate(-50%, -50%) scale(1)"; e.currentTarget.style.background = "rgba(15,42,91,0.88)"; }}
+                >
+                  <Play size={22} fill="#fff" strokeWidth={0}/>
+                  <span>
+                    <span style={{ display: "block", fontSize: 12.5, opacity: 0.85, textTransform: "uppercase", letterSpacing: 1.2, fontWeight: 600 }}>Walkthrough</span>
+                    <span style={{ display: "block", fontSize: 13.5, fontWeight: 700 }}>{L.video_duration ? `Play video · ${L.video_duration}` : "Play video"}</span>
+                  </span>
                 </button>
-              ))}
-            </div>
+              )}
+            </>
+          )}
+          {!videoLoaded && (
+            <>
+              <div style={{
+                position: "absolute", inset: "auto 12px 12px", display: "flex",
+                justifyContent: "space-between", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
+              }}>
+                <div>
+                  <div style={{
+                    fontFamily: "'Playfair Display', serif", fontWeight: 800,
+                    fontSize: 30, color: "#fff", lineHeight: 1,
+                    textShadow: "0 2px 10px rgba(0,0,0,0.55)",
+                  }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
+                  <div style={{
+                    fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
+                    textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
+                  }}>MLS® {merged.mls}</div>
+                </div>
+                {merged.open_house && (
+                  <div style={{
+                    background: "rgba(15,42,91,0.85)", color: "#fff",
+                    padding: "6px 10px", borderRadius: 8, fontSize: 11.5,
+                    fontWeight: 600, backdropFilter: "blur(6px)",
+                  }}>
+                    <span style={{ display: "block", fontSize: 9.5, textTransform: "uppercase", letterSpacing: 1, opacity: 0.8 }}>Open House</span>
+                    {merged.open_house}
+                  </div>
+                )}
+              </div>
+              {merged.photos.length > 1 && (
+                <div style={{
+                  position: "absolute", top: 12, right: 12,
+                  display: "flex", flexDirection: "column", gap: 6,
+                }}>
+                  {merged.photos.slice(0, 4).map((p, i) => (
+                    <button key={i} onClick={() => setActive(i)}
+                      data-testid={`dash-featured-thumb-${i}`}
+                      style={{
+                        width: 52, height: 40, padding: 0,
+                        border: i === active ? `2px solid ${C.brandGold}` : "2px solid rgba(255,255,255,0.6)",
+                        borderRadius: 5, overflow: "hidden", cursor: "pointer", background: "none",
+                      }}>
+                      <img src={p} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {videoLoaded && (
+            <button
+              onClick={() => setVideoLoaded(false)}
+              data-testid="dash-featured-video-close"
+              aria-label="Close video and return to photos"
+              style={{
+                position: "absolute", top: 10, right: 10,
+                background: "rgba(15,42,91,0.9)", color: "#fff",
+                border: "none", borderRadius: 999, padding: "6px 12px",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                display: "inline-flex", alignItems: "center", gap: 6,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                zIndex: 2,
+              }}
+            >
+              <X size={14}/> Close video
+            </button>
           )}
         </div>
 
