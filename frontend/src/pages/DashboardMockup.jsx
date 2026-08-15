@@ -24,7 +24,7 @@ import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
   CalendarClock, MessageCircle, ShieldCheck, Star, Home as HomeIcon,
   Mic, Send, ChevronRight, ExternalLink, X, Sparkles, Building2,
-  Plane, DollarSign, Box, Play,
+  Plane, DollarSign, Box, Play, Facebook, Mail, Link2, Check,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -5239,6 +5239,135 @@ const fmtPriceShort = (n) => (n >= 1e6)
   ? `$${(n/1e6).toFixed(n % 1e6 === 0 ? 0 : 2).replace(/\.?0+$/, "")}M`
   : `$${(n || 0).toLocaleString("en-CA")}`;
 
+// ── Luxury Share Bar ──────────────────────────────────────────────────────
+// Subtle, elegant share row tuned for high-end property sharing. NOT the
+// generic gaudy "AddThis" toolbar — this is Sotheby's-style: muted pill
+// buttons, brand-tinted only on hover, and a "Copied ✓" micro-affordance
+// so the user gets tactile confirmation without a modal or toast.
+//
+// Uses standard web share intents (no third-party SDKs, no tracking pixels):
+//   • WhatsApp    → wa.me/?text=…
+//   • Facebook    → facebook.com/sharer/sharer.php?u=…
+//   • Email       → mailto:?subject=…&body=…
+//   • Copy Link   → navigator.clipboard.writeText
+//
+// The Open Graph card is served by the shared URL itself. For pre-launch,
+// we share the homepage (which has Doug's brand OG). Once MLS is live, we
+// deep-link to /listings/{MLS#} which serves a per-listing OG card with
+// the hero photo, price band, and address (rendered by the listing detail
+// page's <ListingSchema/> block).
+// ─────────────────────────────────────────────────────────────────────────
+const LuxuryShareBar = ({ url, title, text, mls, address, city }) => {
+  const [copied, setCopied] = useState(false);
+  const shareUrl = url || (typeof window !== "undefined" ? window.location.origin + "/" : "");
+  const shareTitle = title || "Doug LeMaire, REALTOR® — Featured Listing";
+  const shareText = text || `${address ? address + ", " + city + " — " : ""}${title || ""}`.trim();
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {}
+  };
+
+  const openIntent = (channel, href) => {
+    window.open(href, channel === "email" ? "_self" : "_blank", "noopener,noreferrer");
+  };
+
+  const encoded = {
+    url: encodeURIComponent(shareUrl),
+    text: encodeURIComponent(shareText),
+    title: encodeURIComponent(shareTitle),
+    body: encodeURIComponent(`${shareText}\n\n${shareUrl}\n\nShared from EZtoFind.ca — Doug LeMaire, REALTOR®`),
+  };
+
+  const pillBase = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    gap: 6, padding: "8px 12px", borderRadius: 999,
+    background: "#FFFFFF", border: "1px solid rgba(15,42,91,0.14)",
+    color: C.navy, fontSize: 12, fontWeight: 600, cursor: "pointer",
+    textDecoration: "none", fontFamily: "'Inter', sans-serif",
+    transition: "transform 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease",
+  };
+  const hoverIn = (bg, border, color = "#fff") => (e) => {
+    e.currentTarget.style.background = bg;
+    e.currentTarget.style.borderColor = bg;
+    e.currentTarget.style.color = color;
+    e.currentTarget.style.transform = "translateY(-1px)";
+  };
+  const hoverOut = (e) => {
+    e.currentTarget.style.background = "#FFFFFF";
+    e.currentTarget.style.borderColor = "rgba(15,42,91,0.14)";
+    e.currentTarget.style.color = C.navy;
+    e.currentTarget.style.transform = "translateY(0)";
+  };
+
+  // Inline WhatsApp glyph (lucide doesn't ship one)
+  const WhatsAppIcon = ({ size = 14 }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.966-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.174.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.876 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347Zm-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884Zm8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+    </svg>
+  );
+
+  return (
+    <div data-testid="dash-featured-share-bar" style={{
+      marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(15,42,91,0.08)",
+      display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+    }}>
+      <span style={{
+        fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.4,
+        fontWeight: 700, color: C.muted, marginRight: 4,
+      }}>Share this listing</span>
+
+      <button
+        onClick={onCopy}
+        data-testid="share-copy-link"
+        aria-label={copied ? "Link copied to clipboard" : "Copy listing link"}
+        style={pillBase}
+        onMouseEnter={hoverIn(C.navy, C.navy)}
+        onMouseLeave={hoverOut}
+      >
+        {copied ? <Check size={14}/> : <Link2 size={14}/>}
+        {copied ? "Copied" : "Copy link"}
+      </button>
+
+      <button
+        onClick={() => openIntent("email", `mailto:?subject=${encoded.title}&body=${encoded.body}`)}
+        data-testid="share-email"
+        aria-label="Share by email"
+        style={pillBase}
+        onMouseEnter={hoverIn(C.navy, C.navy)}
+        onMouseLeave={hoverOut}
+      >
+        <Mail size={14}/> Email
+      </button>
+
+      <button
+        onClick={() => openIntent("whatsapp", `https://wa.me/?text=${encoded.text}%20${encoded.url}`)}
+        data-testid="share-whatsapp"
+        aria-label="Share on WhatsApp"
+        style={pillBase}
+        onMouseEnter={hoverIn("#25D366", "#25D366")}
+        onMouseLeave={hoverOut}
+      >
+        <WhatsAppIcon size={14}/> WhatsApp
+      </button>
+
+      <button
+        onClick={() => openIntent("facebook", `https://www.facebook.com/sharer/sharer.php?u=${encoded.url}`)}
+        data-testid="share-facebook"
+        aria-label="Share on Facebook"
+        style={pillBase}
+        onMouseEnter={hoverIn("#1877F2", "#1877F2")}
+        onMouseLeave={hoverOut}
+      >
+        <Facebook size={14}/> Facebook
+      </button>
+    </div>
+  );
+};
+
 const DashboardFeaturedListing = () => {
   const [active, setActive] = useState(0);
   const [live, setLive] = useState(null);
@@ -5541,6 +5670,15 @@ const DashboardFeaturedListing = () => {
               textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
             }}>Book a Showing</Link>
           </div>
+
+          <LuxuryShareBar
+            url={live ? `${typeof window !== "undefined" ? window.location.origin : ""}/listings/${encodeURIComponent(L.mls)}` : (typeof window !== "undefined" ? window.location.origin + "/" : "")}
+            title={`${merged.address}, ${merged.city} — ${fmtPriceShort(merged.price)}`}
+            text={`${merged.address}, ${merged.city} · ${fmtPriceShort(merged.price)} · ${merged.beds} bed / ${merged.baths} bath · ${(merged.sqft || 0).toLocaleString("en-CA")} sq ft — Featured by Doug LeMaire, REALTOR®`}
+            mls={merged.mls}
+            address={merged.address}
+            city={merged.city}
+          />
 
           <div style={{
             fontSize: 10.5, color: C.muted, marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
