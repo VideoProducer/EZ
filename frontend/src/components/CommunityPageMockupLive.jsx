@@ -450,7 +450,7 @@ export default function CommunityPageMockupLive() {
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
               <div style={{flex:"1 1 320px"}}>
                 <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
-                  As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Doug will personally connect you with a licensed REALTOR® in that area.
+                  As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you! 🐾 Would you like Doug to connect you with a licensed REALTOR® in that area?
                 </div>
                 <Link to={`/referral-request?city=${encodeURIComponent(community)}`} data-testid="bottom-referral-link" style={{display:"inline-block",background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",textDecoration:"none"}}>🤝 Referral REALTOR® link →</Link>
               </div>
