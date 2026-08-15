@@ -5259,11 +5259,16 @@ const fmtPriceShort = (n) => (n >= 1e6)
 // the hero photo, price band, and address (rendered by the listing detail
 // page's <ListingSchema/> block).
 // ─────────────────────────────────────────────────────────────────────────
-const LuxuryShareBar = ({ url, title, text, mls, address, city }) => {
+const LuxuryShareBar = ({ url, ogPreviewUrl, title, text, mls, address, city }) => {
   const [copied, setCopied] = useState(false);
   const shareUrl = url || (typeof window !== "undefined" ? window.location.origin + "/" : "");
   const shareTitle = title || "Doug LeMaire, REALTOR® — Featured Listing";
   const shareText = text || `${address ? address + ", " + city + " — " : ""}${title || ""}`.trim();
+
+  // Preview override — Doug clicks "Preview social card" to see the actual
+  // Open Graph image that will render in WhatsApp / iMessage / FB / X etc.
+  const previewOverride = (typeof window !== "undefined")
+    && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
 
   const onCopy = async () => {
     try {
@@ -5366,6 +5371,31 @@ const LuxuryShareBar = ({ url, title, text, mls, address, city }) => {
       >
         <Facebook size={14}/> Facebook
       </button>
+
+      {previewOverride && ogPreviewUrl && (
+        <a
+          href={ogPreviewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="share-preview-og"
+          aria-label="Preview the social share card image"
+          style={{
+            ...pillBase,
+            background: "rgba(15,42,91,0.06)",
+            borderStyle: "dashed",
+            marginLeft: "auto",
+          }}
+          onMouseEnter={hoverIn(C.brandGold, C.brandGold, C.navy)}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(15,42,91,0.06)";
+            e.currentTarget.style.borderColor = "rgba(15,42,91,0.14)";
+            e.currentTarget.style.color = C.navy;
+            e.currentTarget.style.transform = "translateY(0)";
+          }}
+        >
+          <ExternalLink size={14}/> Preview social card
+        </a>
+      )}
     </div>
   );
 };
@@ -5650,7 +5680,12 @@ const DashboardFeaturedListing = () => {
           }} data-testid="dash-featured-description">{merged.description}</p>
 
           <LuxuryShareBar
-            url={live ? `${typeof window !== "undefined" ? window.location.origin : ""}/listings/${encodeURIComponent(L.mls)}` : (typeof window !== "undefined" ? window.location.origin + "/" : "")}
+            url={typeof window !== "undefined"
+              ? `${window.location.origin}/api/share/featured${live ? `?mls=${encodeURIComponent(L.mls)}` : ""}`
+              : ""}
+            ogPreviewUrl={typeof window !== "undefined"
+              ? `${window.location.origin}/api/og/featured-listing.png?photo=${encodeURIComponent(merged.photos[0] || "")}&address=${encodeURIComponent(merged.address)}&city=${encodeURIComponent(merged.city)}&province=${encodeURIComponent(merged.province)}&neighbourhood=${encodeURIComponent(merged.neighbourhood)}&headline=${encodeURIComponent(L.headline || "")}&status=${encodeURIComponent(L.status || "JUST LISTED")}&price=${merged.price || 0}&is_live=${live ? "true" : "false"}`
+              : ""}
             title={`${merged.address}, ${merged.city} — ${fmtPriceShort(merged.price)}`}
             text={`${merged.address}, ${merged.city} · ${fmtPriceShort(merged.price)} · ${merged.beds} bed / ${merged.baths} bath · ${(merged.sqft || 0).toLocaleString("en-CA")} sq ft — Featured by Doug LeMaire, REALTOR®`}
             mls={merged.mls}

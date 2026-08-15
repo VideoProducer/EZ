@@ -2290,6 +2290,128 @@ async def log_referral_click(body: ReferralClickEvent, request: Request):
     return {"ok": True}
 
 
+# ── Featured Listing Open Graph Card ────────────────────────────────────────
+# Renders the 1200×630 PNG social-share preview for Doug's currently-featured
+# home. All fields are query params so the same endpoint powers preview links
+# and (later) social crawler hits when the URL is pasted into WhatsApp,
+# iMessage, Facebook, LinkedIn, X, Slack, etc.
+@api.get("/og/featured-listing.png")
+async def featured_listing_og(
+    photo: str,
+    address: str,
+    city: str,
+    province: str = "BC",
+    neighbourhood: str = "",
+    headline: str = "",
+    status: str = "JUST LISTED",
+    price: int = 0,
+    is_live: bool = False,
+):
+    from services.featured_listing_og import render_featured_og
+    try:
+        png = await render_featured_og(
+            photo_url=photo,
+            address=address,
+            city=city,
+            province=province,
+            neighbourhood=neighbourhood,
+            headline=headline,
+            status=status,
+            price=price if price > 0 else None,
+            is_live=is_live,
+        )
+    except Exception as e:
+        logger.error(f"featured OG render failed: {e}")
+        raise HTTPException(500, "OG card generation failed")
+    return Response(
+        content=png,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=3600, s-maxage=3600",
+            "Content-Disposition": 'inline; filename="featured-listing-og.png"',
+        },
+    )
+
+
+# ── Share landing page — serves rich OG meta to social crawlers ─────────────
+# When a share URL is pasted into WhatsApp / iMessage / FB / LinkedIn / X, the
+# platform's crawler fetches this URL and reads the <meta> tags to build the
+# preview card. Human browsers get a 302 back to the actual homepage or the
+# listing detail page once MLS goes live.
+@api.get("/share/featured")
+async def share_featured_landing(request: Request, mls: Optional[str] = None):
+    ua = (request.headers.get("user-agent") or "").lower()
+    bot_signatures = (
+        "facebookexternalhit", "facebot", "twitterbot", "linkedinbot",
+        "whatsapp", "slackbot", "telegrambot", "discordbot", "pinterest",
+        "skypeuripreview", "bingbot", "googlebot", "applebot",
+        "embedly", "quora link preview",
+    )
+    is_bot = any(sig in ua for sig in bot_signatures)
+
+    # Featured listing metadata (mirrors the frontend config).
+    photo = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ar5fqtu0_Front%20of%20House.webp"
+    address = "3015 141 Street"
+    city = "Surrey"
+    province = "BC"
+    neighbourhood = "Elgin Chantrell"
+    headline = "Quality, Location, Lasting Value"
+    price = 3297000
+    status = "JUST LISTED"
+
+    is_live = False
+    if mls:
+        try:
+            doc = await db.listings.find_one({"listing_key": mls}, {"listing_key": 1})
+            is_live = bool(doc)
+        except Exception:
+            is_live = False
+
+    site = os.environ.get("PUBLIC_SITE_URL", "https://eztofind.ca").rstrip("/")
+    og_img = (
+        f"{site}/api/og/featured-listing.png"
+        f"?photo={urllib.parse.quote(photo, safe='')}"
+        f"&address={urllib.parse.quote(address)}"
+        f"&city={urllib.parse.quote(city)}"
+        f"&province={province}"
+        f"&neighbourhood={urllib.parse.quote(neighbourhood)}"
+        f"&headline={urllib.parse.quote(headline)}"
+        f"&status={urllib.parse.quote(status)}"
+        f"&price={price}"
+        f"&is_live={'true' if is_live else 'false'}"
+    )
+    canonical = f"{site}/listings/{mls}" if (is_live and mls) else f"{site}/"
+    title = f"{address}, {city} — Featured by Doug LeMaire, REALTOR®"
+    desc = f"{headline} · {neighbourhood}, {city}. 5 bed / 5 bath · 6,129 sq ft on 0.36 acre. View walkthrough on EZtoFind.ca."
+
+    if not is_bot:
+        return Response(status_code=302, headers={"Location": canonical})
+
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<title>{title}</title>
+<meta name="description" content="{desc}"/>
+<link rel="canonical" href="{canonical}"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="{canonical}"/>
+<meta property="og:title" content="{title}"/>
+<meta property="og:description" content="{desc}"/>
+<meta property="og:image" content="{og_img}"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="{address}, {city} — featured listing by Doug LeMaire, REALTOR®"/>
+<meta property="og:site_name" content="EZtoFind.ca"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="{title}"/>
+<meta name="twitter:description" content="{desc}"/>
+<meta name="twitter:image" content="{og_img}"/>
+</head><body>
+<p>Redirecting to <a href="{canonical}">{canonical}</a>…</p>
+</body></html>"""
+    return HTMLResponse(content=html, headers={"Cache-Control": "public, max-age=1800"})
+
+
 @api.get("/admin/analytics/referral-clicks")
 async def referral_click_analytics(_=Depends(verify_admin), days: int = 30):
     """Aggregate referral-CTA clicks by community over the last N days.
