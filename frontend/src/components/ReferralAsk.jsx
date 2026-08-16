@@ -34,6 +34,19 @@ const COPY = {
   trust: "$0 cost · You approve every intro · BCFSA-only · Under CREA Article 24",
 };
 
+// New card variant copy — dynamic per-community "Outside Doug's Service
+// Area" card (Feb 2026 redesign). Falls back to "your area" when no
+// specific community is supplied.
+const CARD_COPY = {
+  kicker: "OUTSIDE DOUG'S SERVICE AREA",
+  headingWithCity: (city) => (<><strong>{city}, BC</strong> is beyond Doug's direct service area.</>),
+  headingGeneric: <>This area is beyond Doug's direct service area.</>,
+  ctaWithCity: (city) => `Request a Referral REALTOR® in ${city}`,
+  ctaGeneric: "Request a Referral REALTOR® in your area",
+  subWithCity: (city) => `We'll match you with a BC-licensed REALTOR® active in ${city}.`,
+  subGeneric: "We'll match you with a BC-licensed REALTOR® active in your area.",
+};
+
 const _logClick = (context) => {
   try {
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
@@ -81,40 +94,58 @@ const ReferralAsk = ({
   }
 
   if (variant === "card") {
+    // New Feb 2026 design — centered "Outside Doug's Service Area" card
+    // with the applicable community name inserted dynamically.
+    const hasCity = typeof area === "string" && area.trim().length > 0;
+    const cityLabel = hasCity ? area.trim() : "";
     return (
       <div
         data-testid={testId}
         className={className}
         style={{
-          background: "#F5F0E1",
-          border: "1px solid rgba(245,166,35,0.4)",
-          borderRadius: 14,
-          padding: "1rem 1.15rem",
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          borderRadius: 16,
+          padding: "1.5rem 1.75rem 1.6rem",
           fontFamily: "Inter,sans-serif",
+          textAlign: "center",
+          maxWidth: 440,
+          margin: "0 auto",
+          boxShadow: "0 4px 18px rgba(15,42,91,0.06)",
           ...(style || {}),
         }}
       >
-        <div style={{ fontFamily: "Sora,sans-serif", fontWeight: 700, color: "var(--brand-navy,#0F2A5B)", fontSize: "1.05rem", marginBottom: "0.35rem" }}>
-          🤝 {COPY.heading}
+        <div style={{
+          fontSize: "0.72rem", letterSpacing: "0.14em",
+          color: "var(--brand-navy,#0F2A5B)", fontWeight: 700,
+          marginBottom: "0.85rem",
+        }}>
+          {CARD_COPY.kicker}
         </div>
-        <p style={{ margin: "0 0 0.65rem", fontSize: "0.9rem", color: "var(--ink,#1F2937)", lineHeight: 1.5 }}>
-          {COPY.body}
-        </p>
+        <div style={{
+          fontFamily: "Sora,sans-serif", fontSize: "1.15rem", lineHeight: 1.35,
+          color: "var(--brand-navy,#0F2A5B)", marginBottom: "1.05rem",
+        }}>
+          {hasCity ? CARD_COPY.headingWithCity(cityLabel) : CARD_COPY.headingGeneric}
+        </div>
         <Link
           to={href}
           onClick={() => _logClick(context)}
           data-testid={`${testId}-cta`}
           style={{
-            display: "inline-block", background: "var(--brand-navy,#0F2A5B)", color: "#fff",
-            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
-            padding: "0.65rem 1.2rem", borderRadius: 999, textDecoration: "none",
+            display: "inline-block",
+            background: "var(--brand-navy,#0F2A5B)", color: "#fff",
+            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.95rem",
+            padding: "0.85rem 1.6rem", borderRadius: 999, textDecoration: "none",
+            lineHeight: 1.3,
           }}
-        >{COPY.cta}</Link>
-        {!compact && (
-          <div style={{ marginTop: "0.55rem", fontSize: "0.72rem", color: "var(--muted,#6B7280)" }}>
-            {COPY.trust}
-          </div>
-        )}
+        >{hasCity ? CARD_COPY.ctaWithCity(cityLabel) : CARD_COPY.ctaGeneric}</Link>
+        <p style={{
+          margin: "0.85rem 0 0", fontSize: "0.82rem",
+          color: "var(--muted,#6B7280)", lineHeight: 1.5,
+        }}>
+          {hasCity ? CARD_COPY.subWithCity(cityLabel) : CARD_COPY.subGeneric}
+        </p>
       </div>
     );
   }

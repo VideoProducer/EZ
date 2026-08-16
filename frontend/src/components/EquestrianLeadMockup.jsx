@@ -31,6 +31,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Helmet } from "react-helmet-async";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
+import ReferralAsk from "./ReferralAsk";
 import { TurnstileWidget, getTurnstileToken } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -647,15 +648,11 @@ export default function EquestrianLeadMockup() {
 
         {/* ═══ § REFERRAL BLOCK (out-of-area) ═══════════════════════ */}
         <SectionH kicker="Outside Doug's area">Buying in the Interior, Vancouver Island, or Kootenays?</SectionH>
-        <div style={{background:"white", border:`1px solid ${BRAND.gold}`, padding:"22px 24px", borderRadius:14, display:"flex", gap:18, alignItems:"center", flexWrap:"wrap"}}>
-          <img src="/doogie/head.webp" alt="Doogie" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:80, height:80, flexShrink:0, objectFit:"contain", filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
-          <div style={{flex:"1 1 320px"}}>
-            <div style={{fontSize:"1rem", color:BRAND.ink, lineHeight:1.65, marginBottom:14}}>
-              Cariboo, Peace, Nicola Valley, Vernon, Vancouver Island — Doug's referral network covers every BCFSA-licensed rural REALTOR® in BC. He personally hand-picks the intro, you approve every one, $0 cost, no CASL spam.
-            </div>
-            <Link to="/referral-request?context=Equestrian%20property%20-%20out%20of%20area" style={{display:"inline-block", background:BRAND.navy, color:"white", padding:"11px 22px", borderRadius:999, fontWeight:700, fontSize:"0.92rem", textDecoration:"none"}} data-testid="referral-link">🤝 Request an equestrian REALTOR® referral →</Link>
-          </div>
-        </div>
+        <ReferralAsk
+          variant="card"
+          context="equestrian-out-of-area"
+          data-testid="referral-link"
+        />
 
         {/* ═══ COMPLIANCE FOOTER ══════════════════════════════════════ */}
         <ComplianceFooter/>

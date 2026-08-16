@@ -19,6 +19,7 @@ import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
+import ReferralAsk from "../components/ReferralAsk";
 import { DoogieVoiceToggle, DoogieSpeedSlider, DoogieTalkingStyle, useDoogieMuted, getDoogieSpeed } from "../components/voicePref";
 import {
   Search, Heart, BarChart3, TrendingUp, MapPin, BookOpen, Video,
@@ -3355,35 +3356,12 @@ const SyncedResults = () => {
         )}
       </header>
       {sync?.out_of_area && (
-        <div
-          data-testid="sync-out-of-area-bridge"
-          style={{
-            marginBottom: 14, padding: "12px 16px",
-            background: "linear-gradient(90deg,#FEF3C7,#FDE68A)",
-            border: `1px solid ${C.brandGold}`, borderRadius: 10,
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            gap: 12, flexWrap: "wrap",
-          }}
-        >
-          <div style={{ flex: "1 1 260px" }}>
-            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: C.navy, fontSize: 15, fontWeight: 700, marginBottom: 3 }}>
-              🌉 Searching outside Doug's direct area?
-            </div>
-            <div style={{ fontSize: 12, color: C.navy, lineHeight: 1.5 }}>
-              You mentioned <strong>{sync.out_of_area.city}</strong>, which sits outside Doug's BCFSA-licensed service area. <strong>Would you like Doug to have a local REALTOR® contact you?</strong> Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost to you, you approve every intro, no CASL spam.
-            </div>
-          </div>
-          <Link
-            to={`/referral-request?city=${encodeURIComponent(sync.out_of_area.city)}`}
-            data-testid="sync-out-of-area-cta"
-            style={{
-              background: C.navy, color: "#fff", padding: "8px 16px", borderRadius: 999,
-              fontSize: 12, fontWeight: 800, letterSpacing: 0.3, textDecoration: "none",
-              display: "inline-block", whiteSpace: "nowrap",
-            }}
-          >
-            🤝 Get a local REALTOR® referral →
-          </Link>
+        <div data-testid="sync-out-of-area-bridge" style={{ marginBottom: 14 }}>
+          <ReferralAsk
+            variant="card"
+            area={sync.out_of_area.city}
+            context="dashboard-sync-out-of-area"
+          />
         </div>
       )}
       <div style={{ display: "grid", gap: 14 }}>

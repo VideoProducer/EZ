@@ -15,6 +15,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import ReferralAsk from "./ReferralAsk";
 
 const C = {
   navy: "#0F2A5B", gold: "#F5A623", cream: "#F5F0E1",
@@ -442,19 +443,15 @@ export default function CommunityFinderQuiz({ onComplete }) {
                 // Out-of-area: swap in the Realtor Referral flow.
                 return (
                   <>
-                    <div style={{ fontSize: "0.92rem", lineHeight: 1.55, flex: "1 1 260px" }}>
-                      <strong>{topMatch.name} is outside Doug's direct service area.</strong> Would you like Doug to connect you with a REALTOR® in that area? Doug hand-picks a BCFSA-licensed local from his vetted referral network — $0 cost, you approve every intro, no CASL spam.
+                    <div style={{ flex: "1 1 260px" }}>
+                      <ReferralAsk
+                        variant="card"
+                        area={topMatch.name}
+                        context="community-finder-out-of-area"
+                        data-testid="cfq-cta-referral"
+                      />
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <Link
-                        to={`/referral-request?area=${encodeURIComponent(topMatch.name)}&source=community-finder`}
-                        data-testid="cfq-cta-referral"
-                        style={{
-                          background: C.gold, color: C.navy,
-                          padding: "10px 18px", borderRadius: 999, textDecoration: "none",
-                          fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
-                        }}
-                      >🤝 Get a local REALTOR® referral →</Link>
                       <button
                         type="button" onClick={restart}
                         data-testid="cfq-restart-btn"
