@@ -158,6 +158,57 @@ export default function EquestrianLeadMockup() {
     return () => clearInterval(id);
   }, [heroPhotos.length]);
 
+  // ── Filter chip state ────────────────────────────────────────────
+  //   region       — single-select (default "all")
+  //   propertyType — single-select (default "all")
+  //   quickFilters — multi-select   (set of "alr_only" | "has_arena" | "20+" | "50+")
+  const [region, setRegion] = useState("all");
+  const [propertyType, setPropertyType] = useState("all");
+  const [quickFilters, setQuickFilters] = useState(new Set());
+
+  // Compose backend query params from chip state — reused by both the
+  // "View listings" CTA below the chips and the hero CTA above.
+  const composedListingsUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    // Region → city filter (in-focus regions map to city names; out-of-area
+    // regions send the visitor to search but flag for the referral CTA on the
+    // results page).
+    const REGION_CITIES = {
+      "lower-mainland":   "Vancouver,Burnaby,Richmond,North Vancouver,West Vancouver,Coquitlam,Port Coquitlam,Port Moody,Surrey,Delta,Langley,White Rock,New Westminster,Maple Ridge,Pitt Meadows",
+      "fraser-valley":    "Abbotsford,Chilliwack,Mission,Hope,Kent,Harrison Hot Springs,Agassiz",
+      "okanagan":         "Kelowna,West Kelowna,Vernon,Penticton,Peachland,Summerland,Osoyoos,Lake Country",
+      "vancouver-island": "Victoria,Nanaimo,Courtenay,Comox,Duncan,Parksville,Qualicum Beach,Campbell River",
+      "kootenays":        "Nelson,Cranbrook,Fernie,Kimberley,Revelstoke,Golden,Invermere",
+      "northern-bc":      "Prince George,Terrace,Smithers,Fort St. John,Dawson Creek,Prince Rupert",
+    };
+    if (region !== "all" && REGION_CITIES[region]) params.set("city", REGION_CITIES[region]);
+    // Property type mapping — keep loose because MLS® board classifications
+    // vary. "All" means don't filter type.
+    const PT_MAP = {
+      "acreage":   "Acreage,Rural Residential,Residential Acreage",
+      "hobby-farm":"Hobby Farm,Farm",
+      "estate":    "Detached,Detached Single Family,House",
+      "ranch":     "Ranch,Farm,Recreational",
+      "bareland":  "Vacant Land,Land,Lot",
+    };
+    if (propertyType !== "all" && PT_MAP[propertyType]) params.set("property_type", PT_MAP[propertyType]);
+    // Quick filters
+    if (quickFilters.has("alr_only")) params.set("alr_only", "true");
+    if (quickFilters.has("has_arena")) params.set("has_arena", "true");
+    if (quickFilters.has("50+"))       params.set("min_acres", "50");
+    else if (quickFilters.has("20+"))  params.set("min_acres", "20");
+    return `/listings?${params.toString()}`;
+  }, [region, propertyType, quickFilters]);
+
+  const toggleQuickFilter = (key) => {
+    setQuickFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -344,7 +395,120 @@ export default function EquestrianLeadMockup() {
 
           <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:22}}>
             <a href="#lead-form" style={{background:BRAND.gold, color:BRAND.navy, padding:"13px 24px", borderRadius:999, fontWeight:700, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-lead-form-cta">🐴 Get the checklist + speak to Doug</a>
-            <Link to="/listings?property_type=Equestrian&price_min=500000" style={{background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"13px 24px", borderRadius:999, fontWeight:600, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-view-listings">🏡 View {stats.total.toLocaleString()} live listings</Link>
+            <Link to={composedListingsUrl} style={{background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"13px 24px", borderRadius:999, fontWeight:600, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-view-listings">🏡 View {stats.total.toLocaleString()} live listings</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ NARROW YOUR SEARCH — Filter chip bar ═══════════════════════
+          Three chip rows:
+            • Region        (single-select, navy fill when active)
+            • Property type (single-select, navy fill when active)
+            • Quick filters (multi-select,  green outline when active)
+          Chips compose into query params on `composedListingsUrl` above.
+      */}
+      <div style={{background:BRAND.cream, borderBottom:`1px solid ${BRAND.cream}`, padding:"22px 20px"}} data-testid="equestrian-filter-chips">
+        <div style={{maxWidth:1120, margin:"0 auto"}}>
+          {/* Row 1 · Region */}
+          <div style={{fontSize:"0.72rem", letterSpacing:"0.16em", color:BRAND.muted, fontWeight:700, textTransform:"uppercase", marginBottom:8}}>Where are you looking?</div>
+          <div style={{display:"flex", flexWrap:"wrap", gap:10, marginBottom:14}}>
+            {[
+              { k:"all",              label:"Anywhere in BC" },
+              { k:"lower-mainland",   label:"Lower Mainland" },
+              { k:"fraser-valley",    label:"Fraser Valley" },
+              { k:"okanagan",         label:"Okanagan" },
+              { k:"vancouver-island", label:"Vancouver Island" },
+              { k:"kootenays",        label:"Kootenays" },
+              { k:"northern-bc",      label:"Northern BC" },
+            ].map(c => {
+              const active = region === c.k;
+              return (
+                <button
+                  key={c.k}
+                  onClick={() => setRegion(c.k)}
+                  data-testid={`chip-region-${c.k}`}
+                  aria-pressed={active}
+                  style={{
+                    background: active ? BRAND.navy : "white",
+                    color: active ? "white" : BRAND.navy,
+                    border: `1px solid ${active ? BRAND.navy : "#D6D8DE"}`,
+                    padding:"9px 18px", borderRadius:999, fontWeight:600, fontSize:"0.9rem",
+                    cursor:"pointer", fontFamily:"Inter, sans-serif",
+                    transition:"background 140ms ease, color 140ms ease, border-color 140ms ease",
+                  }}
+                >{c.label}</button>
+              );
+            })}
+          </div>
+
+          {/* Row 2 · Property type */}
+          <div style={{display:"flex", flexWrap:"wrap", gap:10, marginBottom:14}}>
+            {[
+              { k:"all",        label:"All" },
+              { k:"acreage",    label:"Acreage" },
+              { k:"hobby-farm", label:"Hobby Farm" },
+              { k:"estate",     label:"Estate" },
+              { k:"ranch",      label:"Ranch" },
+              { k:"bareland",   label:"Bareland" },
+            ].map(c => {
+              const active = propertyType === c.k;
+              return (
+                <button
+                  key={c.k}
+                  onClick={() => setPropertyType(c.k)}
+                  data-testid={`chip-type-${c.k}`}
+                  aria-pressed={active}
+                  style={{
+                    background: active ? BRAND.navy : "white",
+                    color: active ? "white" : BRAND.navy,
+                    border: `1px solid ${active ? BRAND.navy : "#D6D8DE"}`,
+                    padding:"9px 18px", borderRadius:999, fontWeight:600, fontSize:"0.9rem",
+                    cursor:"pointer", fontFamily:"Inter, sans-serif",
+                    transition:"background 140ms ease, color 140ms ease, border-color 140ms ease",
+                  }}
+                >{c.label}</button>
+              );
+            })}
+          </div>
+
+          {/* Row 3 · Quick filters (multi-select) */}
+          <div style={{fontSize:"0.72rem", letterSpacing:"0.16em", color:BRAND.muted, fontWeight:700, textTransform:"uppercase", marginBottom:8}}>Quick filters</div>
+          <div style={{display:"flex", flexWrap:"wrap", gap:10, alignItems:"center"}}>
+            {[
+              { k:"alr_only",  label:"ALR only" },
+              { k:"has_arena", label:"Has arena" },
+              { k:"20+",       label:"20+ acres" },
+              { k:"50+",       label:"50+ acres" },
+            ].map(c => {
+              const active = quickFilters.has(c.k);
+              return (
+                <button
+                  key={c.k}
+                  onClick={() => toggleQuickFilter(c.k)}
+                  data-testid={`chip-flag-${c.k}`}
+                  aria-pressed={active}
+                  style={{
+                    background: active ? "rgba(47,107,56,0.14)" : "white",
+                    color: BRAND.green,
+                    border: `1px solid ${active ? BRAND.green : "rgba(47,107,56,0.35)"}`,
+                    padding:"8px 16px", borderRadius:999, fontWeight:700, fontSize:"0.85rem",
+                    cursor:"pointer", fontFamily:"Inter, sans-serif",
+                    transition:"background 140ms ease, border-color 140ms ease",
+                  }}
+                >{c.label}</button>
+              );
+            })}
+            <Link
+              to={composedListingsUrl}
+              data-testid="chip-view-listings"
+              style={{
+                marginLeft:"auto",
+                background:BRAND.gold, color:BRAND.navy,
+                padding:"9px 18px", borderRadius:999,
+                fontWeight:700, fontSize:"0.9rem", textDecoration:"none",
+                display:"inline-flex", alignItems:"center", gap:6,
+              }}
+            >🏡 View matching listings →</Link>
           </div>
         </div>
       </div>
