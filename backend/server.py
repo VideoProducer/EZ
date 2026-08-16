@@ -4271,7 +4271,17 @@ async def _search_faqs(q: str, q_terms: list, limit: int, exclude_categories: li
 
 
 def _search_communities(q: str, q_terms: list, limit: int):
-    """Search community names from the seed JSON file."""
+    """Search community names from the seed JSON file.
+
+    Uses WHOLE-WORD token matching, not substring matching. The previous
+    substring implementation caused a "Ridge" query to also match
+    "Spences Bridge" (because "Bridge" contains the substring "ridge"),
+    and returned geographically unrelated communities under a "Related
+    Communities" header. Relatedness by name overlap alone is a false
+    signal — geographic relatedness is enforced by the caller that
+    resolves an anchor community and pulls peers from the same
+    region_group.
+    """
     try:
         all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
     except Exception:
@@ -4279,7 +4289,12 @@ def _search_communities(q: str, q_terms: list, limit: int):
     hits = []
     for region, communities in all_comm.items():
         for name in communities:
-            score = _score_match(name, q_terms)
+            name_tokens = set(re.findall(r"[a-z0-9]+", name.lower()))
+            # Score = 3 pts per full-token match, +5 bonus if the whole community
+            # name is present as a contiguous phrase in the query.
+            score = sum(3 for qt in q_terms if qt in name_tokens)
+            if name.lower() in (q or "").lower():
+                score += 5
             if score <= 0:
                 continue
             slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
@@ -4292,6 +4307,42 @@ def _search_communities(q: str, q_terms: list, limit: int):
             }))
     hits.sort(key=lambda x: -x[0])
     return hits[:limit]
+
+
+def _same_region_peers(community_name: str, limit: int):
+    """Geographic "Related Communities" — return peers from the SAME
+    region_group as `community_name`. This is the correct semantic model
+    for LLM entity graphs and human internal-linking ("Maple Ridge is in
+    Greater Vancouver alongside Pitt Meadows, Coquitlam, Port Moody…"),
+    matching the /api/community/{slug}/nearby endpoint. Randomised so
+    each page-view surfaces a fresh mix and internal-link equity spreads
+    across the region evenly.
+    """
+    if not community_name:
+        return []
+    try:
+        all_comm = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    except Exception:
+        return []
+    target = community_name.strip().lower()
+    region = None
+    for r, lst in all_comm.items():
+        if any((c or "").strip().lower() == target for c in (lst or [])):
+            region = r
+            break
+    if not region:
+        return []
+    peers = [c for c in all_comm.get(region, []) if (c or "").strip().lower() != target]
+    import random as _r
+    _r.shuffle(peers)
+    peers = peers[:max(1, min(int(limit), 12))]
+    return [(1, {
+        "kind": "Communities",
+        "title": c,
+        "blurb": f"BC community in {region}. Neighbourhood profile, climate, and vibe score.",
+        "href": f"/community/{re.sub(r'[^a-z0-9]+', '-', c.lower()).strip('-')}",
+        "region": region,
+    }) for c in peers]
 
 
 def _search_tools(q: str, q_terms: list, limit: int):
@@ -16143,7 +16194,18 @@ async def doogie_sync_search(request: Request, body: SyncSearchIn):
         return_exceptions=False,
     )
 
-    community_hits = _search_communities(query, q_terms, lim) if q_terms else []
+    # "Related Communities" — geography-first: if the query resolves to a
+    # specific community, surface peers from the SAME region_group (the
+    # semantic linking model that matches /api/community/{slug}/nearby).
+    # If no anchor community is detected, fall back to whole-word name
+    # search across the seed list. Never falls back to substring matches
+    # (which historically grouped "Maple Ridge", "Tumbler Ridge", and
+    # "Spences Bridge" under "Related Communities" purely because of the
+    # "ridge" substring in "Bridge").
+    if community_name:
+        community_hits = _same_region_peers(community_name, lim)
+    else:
+        community_hits = _search_communities(query, q_terms, lim) if q_terms else []
     tools_hits = _search_tools(query, q_terms, lim) if q_terms else []
     journey_hits = _search_journey(query, q_terms, lim) if q_terms else []
 
