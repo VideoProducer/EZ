@@ -9390,6 +9390,13 @@ async def search_listings(
     price_max: Optional[int] = None,
     features: Optional[str] = None,  # comma-separated
     exclude_property_type: Optional[str] = None,  # comma-separated allowlist of extra types to exclude (e.g. "Vacant Land,Lot,Land" — used by the Luxury sidebar link to keep raw-land parcels out of a $3M+ price_desc sweep)
+    # Equestrian quick-filter passthrough — used by /specialties/equestrian chips
+    # so a single search page can serve both generic + equestrian result sets.
+    # Each ANDs a description-regex (alr/arena) or acreage-floor clause on top
+    # of whatever filters the caller already sent. Missing = filter disabled.
+    alr_only:   Optional[bool]  = False,
+    has_arena:  Optional[bool]  = False,
+    min_acres:  Optional[float] = None,
     sort: Optional[str] = "newest",  # newest|price_asc|price_desc
     limit: int = 24,
     offset: int = 0,
@@ -9550,6 +9557,36 @@ async def search_listings(
         # so an equestrian NL query never leaks parking-stall apartments or
         # bareland lots into the results.
         query["property_type"] = {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)}
+    # Equestrian quick-filter chips — from /specialties/equestrian.
+    # Each ANDs one clause onto the existing query so they compose cleanly
+    # with city / property_type / features already applied above. Same
+    # regex/acreage semantics as the dedicated /listings/equestrian endpoint
+    # so the two search paths return identical result sets for identical filters.
+    if alr_only:
+        query.setdefault("$and", []).append({
+            "description": {"$regex": r"\b(ALR|agricultural\s+land\s+reserve|agricultural\s+land\s+commission|ALC)\b", "$options": "i"},
+        })
+    if has_arena:
+        query.setdefault("$and", []).append({
+            "description": {"$regex": r"\b(riding\s*arena|indoor\s*arena|outdoor\s*arena|dressage\s*arena|arena|round\s*pen|riding\s*ring)\b", "$options": "i"},
+        })
+    if min_acres and min_acres > 0:
+        query.setdefault("$and", []).append({
+            "$or": [
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"^ac", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres)}},
+                ]},
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"^(hect|ha)", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres) * 0.4047}},
+                ]},
+                {"$and": [
+                    {"lot_size_units": {"$regex": r"sq.?f", "$options": "i"}},
+                    {"lot_size_area":  {"$gte": float(min_acres) * 43560}},
+                ]},
+            ],
+        })
     # `q` (natural-language query from the hero search bar) is treated as a
     # LOCALITY hint first — if it names a known BC city or CityRegion, we
     # promote it to a strict exact-match filter so a search for "Whistler"

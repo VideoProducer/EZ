@@ -178,11 +178,14 @@ export default function EquestrianLeadMockup() {
     "northern-bc":      "Prince George,Terrace,Smithers,Fort St. John,Dawson Creek,Prince Rupert",
   };
   const PT_MAP = {
-    "acreage":   "Acreage,Rural Residential,Residential Acreage",
-    "hobby-farm":"Hobby Farm,Farm",
-    "estate":    "Detached,Detached Single Family,House",
-    "ranch":     "Ranch,Farm,Recreational",
-    "bareland":  "Vacant Land,Land,Lot",
+    // Single canonical CREA labels — the backend expands each into its full
+    // synonym list via PROPERTY_TYPE_SYNONYMS. Sending a comma-separated list
+    // here would break the exact-match lookup on the server.
+    "acreage":   "Acreage",
+    "hobby-farm":"Acreage",
+    "estate":    "Detached",
+    "ranch":     "Acreage",
+    "bareland":  "Vacant Land",
   };
   // Build the equestrian-search URL for a given (region, propertyType, quickFilters)
   // triple. Every chip in the block calls this with the projected state so a
@@ -190,7 +193,13 @@ export default function EquestrianLeadMockup() {
   const buildUrl = (r, pt, qf) => {
     const params = new URLSearchParams();
     if (r !== "all"  && REGION_CITIES[r])  params.set("city", REGION_CITIES[r]);
-    if (pt !== "all" && PT_MAP[pt])         params.set("property_type", PT_MAP[pt]);
+    // Type chip: if the visitor picked a specific sub-type, use its canonical
+    // CREA label. Otherwise default to "Equestrian" so /listings triggers the
+    // fuzzy horse-property matcher (property_type + description regex on
+    // equestrian keywords) instead of returning ALL residential inventory in
+    // the selected cities.
+    if (pt !== "all" && PT_MAP[pt]) params.set("property_type", PT_MAP[pt]);
+    else                             params.set("property_type", "Equestrian");
     if (qf.has("alr_only"))  params.set("alr_only",  "true");
     if (qf.has("has_arena")) params.set("has_arena", "true");
     if (qf.has("50+"))       params.set("min_acres", "50");

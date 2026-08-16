@@ -3297,6 +3297,10 @@ const Listings = () => {
     price_min: params.get("price_min") || "",
     price_max: params.get("price_max") || "",
     exclude_property_type: params.get("exclude_property_type") || "",
+    // Equestrian quick-filter passthrough (from /specialties/equestrian chips)
+    alr_only:  params.get("alr_only")  || "",
+    has_arena: params.get("has_arena") || "",
+    min_acres: params.get("min_acres") || "",
     sort: params.get("sort") || "newest",
   });
   const [nlBanner, setNlBanner] = useState(null); // { original, extracted }
@@ -3312,7 +3316,7 @@ const Listings = () => {
     const f = overrideFilters || filters;
     setLoading(true);
     const qp = {};
-    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","exclude_property_type","sort"].forEach(k => {
+    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","exclude_property_type","alr_only","has_arena","min_acres","sort"].forEach(k => {
       if (f[k] !== "" && f[k] !== undefined && f[k] !== null) qp[k] = f[k];
     });
     qp.limit = PAGE_SIZE;
@@ -3339,7 +3343,7 @@ const Listings = () => {
     if (loadingMore || !results.listings) return;
     setLoadingMore(true);
     const qp = {};
-    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","exclude_property_type","sort"].forEach(k => {
+    ["q","city","community","region","region_group","property_type","beds_min","beds_exact","baths_min","baths_exact","price_min","price_max","features","exclude_property_type","alr_only","has_arena","min_acres","sort"].forEach(k => {
       if (filters[k] !== "" && filters[k] !== undefined && filters[k] !== null) qp[k] = filters[k];
     });
     qp.limit = PAGE_SIZE;
