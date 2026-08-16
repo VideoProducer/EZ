@@ -319,9 +319,32 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
   // Fetch live $3M+ inventory for the selected corridor. When "all",
   // fetches across every corridor's cities so the "Entire Portfolio" tile
   // shows a true province-wide luxury sweep. Refires on corridor change.
+  //
+  // Two-layer non-residence filter is critical here. CREA DDF® routinely
+  // double-lists development parcels — once correctly as "Vacant Land"
+  // AND again as "House" with a farmhouse on the parcel. The property
+  // type exclusion catches the first, but the description keyword
+  // blacklist is what kicks the industrial-zoned, "future industrial",
+  // land-assembly, and "development opportunity" duplicates out of the
+  // luxury portfolio.
   useEffect(() => {
     let cancelled = false;
-    const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
+    const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Recreational,Business,Industrial,Multi-family,Retail,Office,Institutional,Residential+Commercial+Mix,Mixed+Use";
+    const excludeDescKeywords = [
+      "industrial[- ]?zoned", "industrial\\s+land", "industrial\\s+site",
+      "future\\s+industrial", "general\\s+industrial", "light\\s+industrial",
+      "heavy\\s+industrial", "\\bM-?[123]\\s+zoning", "M-?[123]\\s+general",
+      "development\\s+opportunity", "development\\s+site", "development\\s+potential",
+      "developers,?\\s+discover", "future\\s+townhouse\\s+development",
+      "multi-family\\s+development", "multifamily\\s+development",
+      "land\\s+assembly", "assembly\\s+opportunity",
+      "holding\\s+opportunity", "investment\\s+opportunity\\s+for\\s+developers",
+      "redevelopment\\s+opportunity", "future\\s+redevelopment",
+      "OCP\\s+designated", "OCP\\s+designation",
+      "commercial\\s+land", "zoned\\s+commercial", "commercial\\s+opportunity",
+      "business\\s+park", "\\bNCP\\b(?!\\w)",
+      "special\\s+study\\s+area", "urban\\s+containment\\s+boundary",
+    ].join("|");
     const targetCities = corridor === "all"
       ? Array.from(new Set(CORRIDORS.flatMap(c => c.cities)))
       : (CORRIDORS.find(c => c.slug === corridor)?.cities || []);
@@ -331,7 +354,8 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
     }
     setLiveListingsLoading(true);
     const cityQ = targetCities.map(encodeURIComponent).join(",");
-    fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&sort=price_desc&limit=48`)
+    const kwQ = encodeURIComponent(excludeDescKeywords);
+    fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&exclude_description_keywords=${kwQ}&sort=price_desc&limit=48`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (cancelled) return;

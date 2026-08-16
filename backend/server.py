@@ -9433,6 +9433,13 @@ async def search_listings(
     price_max: Optional[int] = None,
     features: Optional[str] = None,  # comma-separated
     exclude_property_type: Optional[str] = None,  # comma-separated allowlist of extra types to exclude (e.g. "Vacant Land,Lot,Land" — used by the Luxury sidebar link to keep raw-land parcels out of a $3M+ price_desc sweep)
+    # Description-keyword blacklist. Comma-separated list of case-insensitive
+    # word/phrase regexes; any listing whose description matches ANY of the
+    # patterns is excluded. Used by the Luxury landing page to filter out
+    # development plays / industrial land / land assemblies that CREA mis-
+    # classifies as "House" — those slip past exclude_property_type and
+    # would otherwise pollute a $3M+ residence portfolio.
+    exclude_description_keywords: Optional[str] = None,
     # Equestrian quick-filter passthrough — used by /specialties/equestrian chips
     # so a single search page can serve both generic + equestrian result sets.
     # Each ANDs a description-regex (alr/arena) or acreage-floor clause on top
@@ -9621,6 +9628,22 @@ async def search_listings(
         query.setdefault("$and", []).append({
             "description": {"$regex": r"\b(ALR|agricultural\s+land\s+reserve|agricultural\s+land\s+commission|ALC)\b", "$options": "i"},
         })
+    # Description-keyword blacklist — used by the Luxury page to filter out
+    # development plays, land assemblies, and industrial holdings that CREA
+    # sometimes mis-classifies as "House" or "Detached". A single $nor block
+    # holds every regex so a match on ANY pattern excludes the listing.
+    # Patterns are pipe-separated (`|`) — NOT comma — so regex atoms with
+    # literal commas (e.g. `developers,?\s+discover`) don't collide with
+    # the delimiter.
+    if exclude_description_keywords:
+        patterns = [k.strip() for k in exclude_description_keywords.split("|") if k.strip()]
+        if patterns:
+            query.setdefault("$and", []).append({
+                "$nor": [
+                    {"description": {"$regex": p, "$options": "i"}}
+                    for p in patterns
+                ],
+            })
     if has_arena:
         query.setdefault("$and", []).append({
             "description": {"$regex": r"\b(riding\s*arena|indoor\s*arena|outdoor\s*arena|dressage\s*arena|arena|round\s*pen|riding\s*ring)\b", "$options": "i"},
