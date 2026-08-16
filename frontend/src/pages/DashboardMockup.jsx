@@ -4885,7 +4885,7 @@ const DoogieReferralButton = ({ location }) => {
         padding: "10px 12px", borderRadius: 10, fontSize: 12,
         color: "#7A3E0A", lineHeight: 1.5, marginBottom: 12,
       }}>
-        <strong>Outside Doug's service area?</strong> Doug's primary practice is Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor. For anywhere else in BC, if you like we will match you to a licensed local REALTOR®.
+        Doug's primary practice is Greater Vancouver, Fraser Valley, and Sea-to-Sky. For all other BC communities, if you like, we'll connect you with a REALTOR®.
       </div>
       <button
         type="button"
