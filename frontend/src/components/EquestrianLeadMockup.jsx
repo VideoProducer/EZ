@@ -410,7 +410,7 @@ export default function EquestrianLeadMockup() {
           </div>
 
           <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:22}}>
-            <a href="#lead-form" style={{background:BRAND.gold, color:BRAND.navy, padding:"13px 24px", borderRadius:999, fontWeight:700, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-lead-form-cta">🐴 Get the checklist + speak to Doug</a>
+            <a href="#lead-form" style={{background:BRAND.gold, color:BRAND.navy, padding:"13px 24px", borderRadius:999, fontWeight:700, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-lead-form-cta">🐴 Get the checklist</a>
             <Link to={composedListingsUrl} style={{background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"13px 24px", borderRadius:999, fontWeight:600, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-view-listings">🏡 View {stats.total.toLocaleString()} live listings</Link>
           </div>
         </div>
