@@ -852,8 +852,7 @@ function EquestrianLeadForm() {
 function ComplianceFooter() {
   return (
     <div style={{marginTop:60, padding:"22px 24px", background:"white", border:"1px solid #E5E7EB", borderRadius:14, fontSize:"0.78rem", color:BRAND.muted, lineHeight:1.7}} data-testid="compliance-footer">
-      <div style={{display:"flex", gap:14, alignItems:"center", flexWrap:"wrap", marginBottom:12}}>
-        <div style={{background:"#EF3E42", color:"white", padding:"8px 12px", borderRadius:6, fontSize:"0.7rem", fontWeight:800, letterSpacing:"0.06em"}}>REALTOR.ca</div>
+      <div style={{marginBottom:12}}>
         <div style={{fontSize:"0.85rem", color:BRAND.ink, fontWeight:600}}>
           Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA-licensed real estate professional
         </div>
