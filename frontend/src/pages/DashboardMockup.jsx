@@ -5445,6 +5445,12 @@ const DashboardFeaturedListing = () => {
   const [videoLoaded, setVideoLoaded] = useState(false);
   const sectionRef = useRef(null);
   const L = FEATURED_HOME_LISTING;
+  // "NEW · JUST ACTIVE" ribbon — shows Feb 17 2026 9AM PT + 7 days.
+  // Auto-fades after ribbon window closes.
+  const launchAt = new Date("2026-02-17T17:00:00Z").getTime();
+  const ribbonEnd = launchAt + 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const showJustActiveRibbon = now >= launchAt && now <= ribbonEnd;
   const previewOverride = (typeof window !== "undefined")
     && /[?&]featured=(preview|coming_soon)\b/i.test(window.location.search);
 
@@ -5521,7 +5527,17 @@ const DashboardFeaturedListing = () => {
       borderRadius: 18, border: "1px solid rgba(15,42,91,0.08)",
       padding: "22px 22px 26px", marginBottom: 22,
       boxShadow: "0 12px 32px rgba(15,42,91,0.08)",
+      position: "relative", overflow: "hidden",
     }}>
+      {showJustActiveRibbon && (
+        <div data-testid="featured-just-active-ribbon" style={{
+          position: "absolute", top: 20, left: -50, transform: "rotate(-45deg)",
+          background: "#B7351B", color: "white", padding: "6px 60px",
+          fontFamily: "Inter,sans-serif", fontSize: "0.68rem", fontWeight: 800,
+          letterSpacing: "0.14em", zIndex: 5,
+          boxShadow: "0 3px 10px rgba(0,0,0,0.3)",
+        }}>NEW · JUST ACTIVE</div>
+      )}
       {isPreview && (
         <div data-testid="dash-featured-preview-banner" style={{
           background: C.navy, color: "#fff", padding: "8px 14px", borderRadius: 8,

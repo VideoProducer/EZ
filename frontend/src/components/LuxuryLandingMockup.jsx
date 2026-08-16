@@ -16,6 +16,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
+import LuxuryFlagshipCard from "./LuxuryFlagshipCard";
 import { Helmet } from "react-helmet-async";
 
 const BRAND = {
@@ -580,6 +581,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
 
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
       <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
+        <LuxuryFlagshipCard/>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>
