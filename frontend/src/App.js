@@ -10228,6 +10228,16 @@ function ScrollToTop() {
     // pathname changed, so direct loads to /specialties/equestrian would
     // land wherever the browser restored scroll — sometimes mid-page.
     // Watching loc.key catches every navigation event including first mount.
+    //
+    // IMPORTANT (Feb 2026 bugfix): do NOT depend on `loc.search` or
+    // `loc.key`.  Both change whenever a user is typing in a filter
+    // input (community, keyword, price…) — the debounced URL sync
+    // calls `setUrlParams({replace:true})`, which generates a fresh
+    // `loc.key` even though the pathname is unchanged.  Watching either
+    // dependency yanked the visitor back to the top mid-keystroke.
+    // Route-level navigations are captured by `loc.pathname` alone.
+    // Direct/fresh loads are captured naturally because pathname is
+    // "different" from its initial null-then-set state.
     const scroll = () => {
       try { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); } catch { window.scrollTo(0, 0); }
       if (document.documentElement) document.documentElement.scrollTop = 0;
@@ -10238,7 +10248,7 @@ function ScrollToTop() {
     const t = setTimeout(scroll, 80);
     const t2 = setTimeout(scroll, 300);
     return () => { clearTimeout(t); clearTimeout(t2); };
-  }, [loc.pathname, loc.search, loc.key]);
+  }, [loc.pathname]);
   return null;
 }
 

@@ -615,12 +615,19 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // history entry the visitor "goes back to" is whichever page they came
   // from, and this Home URL just updates in-place.
   const _lastSyncedQsRef = useRef("");
-  // Sync filters → URL. Debounced so a rapid typist doesn't push a
-  // history entry (or trigger iOS Safari's URL-bar animation) per
-  // keystroke — that per-keystroke URL churn was the root cause of
-  // the "typing in Keyword takes me to the map" bug on iPhone (Feb
-  // 2026). 380ms strikes a balance between deep-linkable URLs and
-  // not fighting the on-screen keyboard.
+  // Sync filters → URL + auto-run search. Debounced so a rapid typist
+  // doesn't push a history entry per keystroke — that per-keystroke URL
+  // churn was the root cause of the "typing in Keyword takes me to the
+  // map" bug on iPhone (Feb 2026). 380ms strikes a balance between
+  // deep-linkable URLs and not fighting the on-screen keyboard.
+  //
+  // The same debounced effect ALSO fires runSearch so listings live-
+  // update as the visitor types / adjusts filters — no "Apply" tap
+  // required. This is the standard mobile-search UX Doug asked for.
+  // The initial mount is skipped so we don't run a search before the
+  // page even paints (the top-of-effect useEffect below handles the
+  // first search when filters are non-empty at load).
+  const _firstFilterSyncRef = useRef(true);
   useEffect(() => {
     const t = setTimeout(() => {
       try {
@@ -639,6 +646,14 @@ export default function DashboardMockup({ homeVariant = "search" }) {
         _lastSyncedQsRef.current = nextQs;
         setUrlParams(urlNext, { replace: true });
       } catch { /* older browsers — no-op */ }
+      // Auto-fire the actual MLS search. Skipped on the very first
+      // render because the empty-state initial fetch runs once on
+      // mount from the useEffect further below.
+      if (_firstFilterSyncRef.current) {
+        _firstFilterSyncRef.current = false;
+        return;
+      }
+      try { runSearch(filters); } catch {}
     }, 380);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2433,14 +2448,9 @@ const SearchPanel = () => {
         </div>
         <MapListToggle mode={viewMode} onChange={setViewMode}/>
       </div>
-      {/* Unified search + filters card. On MOBILE it renders ABOVE the
-          map so tapping any input never scrolls the viewport past the
-          map — that layout order was the root cause of the Feb 2026
-          "typing takes me to the map" bug on mobile. On desktop we keep
-          the original order (map on top → search below). */}
-      {isMobile && <UnifiedSearchBar/>}
-      {/* Map — full-width above the two-column filters/listings block.
-          Hidden entirely when the visitor picks List-only. */}
+      {/* Map — full-width above the filter card (Doug spec Feb 2026:
+          map on top, filter below, on every viewport). Hidden entirely
+          when the visitor picks List-only. */}
       {showMap && (
         <div style={{ background: "#fff", padding: 12, borderRadius: 12, border: "1px solid #E5E7EB", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -2466,8 +2476,8 @@ const SearchPanel = () => {
           </div>
         </div>
       )}
-      {/* Desktop: search card sits below the map (original layout). */}
-      {!isMobile && <UnifiedSearchBar/>}
+      {/* Filter card — always below the map now (Doug spec Feb 2026). */}
+      <UnifiedSearchBar/>
       {showList && (
         <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       )}
