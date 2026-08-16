@@ -442,8 +442,29 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   };
 
   const [filters, setFilters] = useState(() => {
+    // Precedence for the initial filter state:
+    //   1. Explicit URL query params (?city=…) — shareable deep links
+    //   2. sessionStorage from this same tab — auto-restore on listing
+    //      detail → Back → home navigation (Feb 2026: user was losing
+    //      their search when tapping into a listing).
+    //   3. Default empty filter set — first visit / cleared session.
+    // The cross-session localStorage restore is intentionally NOT read
+    // here; it's surfaced only via the click-to-restore nudge below so
+    // return visitors are asked before their old search is re-applied.
     const fromUrl = _readFiltersFromUrl();
-    return fromUrl || { ...DEFAULT_DASH_FILTERS };
+    if (fromUrl) return fromUrl;
+    try {
+      if (typeof window !== "undefined") {
+        const rawSess = sessionStorage.getItem(DASH_FILTERS_LS_KEY);
+        if (rawSess) {
+          const parsed = JSON.parse(rawSess);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return { ...DEFAULT_DASH_FILTERS, ...parsed };
+          }
+        }
+      }
+    } catch { /* sessionStorage may be disabled */ }
+    return { ...DEFAULT_DASH_FILTERS };
   });
   // "Pick up where you left off" restore-nudge pill. We compute this ONCE
   // on mount and only surface if:
@@ -456,6 +477,11 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   const [restoreNudge, setRestoreNudge] = useState(null);
   useEffect(() => {
     try {
+      // Skip the restore-nudge entirely when sessionStorage already
+      // hydrated a filter set — that means the visitor is returning
+      // to /home from within the same tab (e.g. Back from a listing
+      // detail) and their filters are already re-applied.
+      if (typeof window !== "undefined" && sessionStorage.getItem(DASH_FILTERS_LS_KEY)) return;
       const raw = typeof window !== "undefined" ? localStorage.getItem(DASH_FILTERS_LS_KEY) : null;
       if (!raw) return;
       const saved = JSON.parse(raw);
@@ -555,6 +581,11 @@ export default function DashboardMockup({ homeVariant = "search" }) {
         const meaningful = ["q","city","beds","baths","priceMin","priceMax","propertyType","keyword"].some(k => (f[k] || "").toString().trim() !== "");
         if (meaningful) {
           localStorage.setItem(DASH_FILTERS_LS_KEY, JSON.stringify(f));
+          // Session-scoped copy: auto-restored on the next mount in the
+          // same tab (listing detail → back → home) without prompting.
+          // Clears when the tab closes, so the localStorage "restore nudge"
+          // still governs cross-session return visits.
+          sessionStorage.setItem(DASH_FILTERS_LS_KEY, JSON.stringify(f));
           // Also stash a lightweight "return-visit" meta blob with the
           // result-total + timestamp so the personalised hero on the
           // next visit can say "You had N matches" and "you last
@@ -2583,7 +2614,10 @@ const InputVoiceMic = ({ onTranscript, onFinalSubmit }) => {
 const UnifiedSearchBar = () => {
   const navigate = useNavigate();
   const ctx = useContext(SearchFiltersContext);
-  const [val, setVal] = useState("");
+  // Prime the input from the currently-applied `city` filter so the
+  // visitor's search text stays visible after a Back-nav from a listing
+  // detail or after the sessionStorage restore runs on mount.
+  const [val, setVal] = useState(() => (ctx?.filters?.city || ctx?.filters?.q || ""));
   // Cache the known BC community list on mount so submit() can decide
   // whether typed input is a community name (→ set `city`, which
   // recenters the map) or free text / postal / address (→ `q` search).
@@ -2689,7 +2723,10 @@ const UnifiedSearchBar = () => {
         : { ...(ctx.filters || {}), q: v, city: "" };
       ctx.setFilters(nextFilters);
       setTimeout(() => ctx.runSearch(nextFilters), 40);
-      setVal("");
+      // Keep the visitor's text visible in the input so they can see
+      // what filter is active (the ActiveFilterChips row also shows a
+      // removable pill).  Previously we cleared val here, which made
+      // the field feel amnesic every time Apply was tapped.
       return;
     }
     navigate(`/listings?q=${encodeURIComponent(v)}`);

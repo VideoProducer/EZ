@@ -200,7 +200,17 @@ export default function CompareListings() {
         zIndex: 20,
       }}>
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            // If the visitor landed on /compare directly (bookmark, deep
+            // link, or fresh tab) window.history has only one entry so
+            // navigate(-1) would silently do nothing. Fall back to "/"
+            // in that case so the Back chip is never a dead click.
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate("/");
+            }
+          }}
           data-testid="compare-back"
           style={{
             background: "transparent", border: `1px solid ${C.hair}`,
