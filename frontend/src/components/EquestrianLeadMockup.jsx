@@ -27,7 +27,7 @@
 //   • Deep internal-link density (glossary + community + referral routes)
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Helmet } from "react-helmet-async";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
@@ -103,6 +103,7 @@ const SectionH = ({ children, kicker, id }) => (
 );
 
 export default function EquestrianLeadMockup() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ total: 0, minPrice: 0, maxPrice: 0, medianPrice: 0 });
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -168,46 +169,63 @@ export default function EquestrianLeadMockup() {
 
   // Compose backend query params from chip state — reused by both the
   // "View listings" CTA below the chips and the hero CTA above.
-  const composedListingsUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    // Region → city filter (in-focus regions map to city names; out-of-area
-    // regions send the visitor to search but flag for the referral CTA on the
-    // results page).
-    const REGION_CITIES = {
-      "lower-mainland":   "Vancouver,Burnaby,Richmond,North Vancouver,West Vancouver,Coquitlam,Port Coquitlam,Port Moody,Surrey,Delta,Langley,White Rock,New Westminster,Maple Ridge,Pitt Meadows",
-      "fraser-valley":    "Abbotsford,Chilliwack,Mission,Hope,Kent,Harrison Hot Springs,Agassiz",
-      "okanagan":         "Kelowna,West Kelowna,Vernon,Penticton,Peachland,Summerland,Osoyoos,Lake Country",
-      "vancouver-island": "Victoria,Nanaimo,Courtenay,Comox,Duncan,Parksville,Qualicum Beach,Campbell River",
-      "kootenays":        "Nelson,Cranbrook,Fernie,Kimberley,Revelstoke,Golden,Invermere",
-      "northern-bc":      "Prince George,Terrace,Smithers,Fort St. John,Dawson Creek,Prince Rupert",
-    };
-    if (region !== "all" && REGION_CITIES[region]) params.set("city", REGION_CITIES[region]);
-    // Property type mapping — keep loose because MLS® board classifications
-    // vary. "All" means don't filter type.
-    const PT_MAP = {
-      "acreage":   "Acreage,Rural Residential,Residential Acreage",
-      "hobby-farm":"Hobby Farm,Farm",
-      "estate":    "Detached,Detached Single Family,House",
-      "ranch":     "Ranch,Farm,Recreational",
-      "bareland":  "Vacant Land,Land,Lot",
-    };
-    if (propertyType !== "all" && PT_MAP[propertyType]) params.set("property_type", PT_MAP[propertyType]);
-    // Quick filters
-    if (quickFilters.has("alr_only")) params.set("alr_only", "true");
-    if (quickFilters.has("has_arena")) params.set("has_arena", "true");
-    if (quickFilters.has("50+"))       params.set("min_acres", "50");
-    else if (quickFilters.has("20+"))  params.set("min_acres", "20");
-    return `/listings?${params.toString()}`;
-  }, [region, propertyType, quickFilters]);
-
-  const toggleQuickFilter = (key) => {
-    setQuickFilters(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const REGION_CITIES = {
+    "lower-mainland":   "Vancouver,Burnaby,Richmond,North Vancouver,West Vancouver,Coquitlam,Port Coquitlam,Port Moody,Surrey,Delta,Langley,White Rock,New Westminster,Maple Ridge,Pitt Meadows",
+    "fraser-valley":    "Abbotsford,Chilliwack,Mission,Hope,Kent,Harrison Hot Springs,Agassiz",
+    "okanagan":         "Kelowna,West Kelowna,Vernon,Penticton,Peachland,Summerland,Osoyoos,Lake Country",
+    "vancouver-island": "Victoria,Nanaimo,Courtenay,Comox,Duncan,Parksville,Qualicum Beach,Campbell River",
+    "kootenays":        "Nelson,Cranbrook,Fernie,Kimberley,Revelstoke,Golden,Invermere",
+    "northern-bc":      "Prince George,Terrace,Smithers,Fort St. John,Dawson Creek,Prince Rupert",
   };
+  const PT_MAP = {
+    "acreage":   "Acreage,Rural Residential,Residential Acreage",
+    "hobby-farm":"Hobby Farm,Farm",
+    "estate":    "Detached,Detached Single Family,House",
+    "ranch":     "Ranch,Farm,Recreational",
+    "bareland":  "Vacant Land,Land,Lot",
+  };
+  // Build the equestrian-search URL for a given (region, propertyType, quickFilters)
+  // triple. Every chip in the block calls this with the projected state so a
+  // click behaves as "select AND route" — no separate submit needed.
+  const buildUrl = (r, pt, qf) => {
+    const params = new URLSearchParams();
+    if (r !== "all"  && REGION_CITIES[r])  params.set("city", REGION_CITIES[r]);
+    if (pt !== "all" && PT_MAP[pt])         params.set("property_type", PT_MAP[pt]);
+    if (qf.has("alr_only"))  params.set("alr_only",  "true");
+    if (qf.has("has_arena")) params.set("has_arena", "true");
+    if (qf.has("50+"))       params.set("min_acres", "50");
+    else if (qf.has("20+"))  params.set("min_acres", "20");
+    // Route to the DEDICATED equestrian search — respects the CORE keyword
+    // scan + property-type allowlist that /listings ignores.
+    return `/listings/equestrian?${params.toString()}`;
+  };
+
+  const composedListingsUrl = useMemo(
+    () => buildUrl(region, propertyType, quickFilters),
+    [region, propertyType, quickFilters]
+  );
+
+  // Chip click handlers — update state AND navigate immediately.
+  // Each chip both selects itself in the UI (state) and takes the visitor
+  // straight to the filtered results (navigate). No "click chips then hit
+  // submit" two-step required.
+  const onRegionChip = (r) => {
+    setRegion(r);
+    navigate(buildUrl(r, propertyType, quickFilters));
+  };
+  const onTypeChip = (pt) => {
+    setPropertyType(pt);
+    navigate(buildUrl(region, pt, quickFilters));
+  };
+  const onQuickChip = (key) => {
+    const next = new Set(quickFilters);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setQuickFilters(next);
+    navigate(buildUrl(region, propertyType, next));
+  };
+
+  const toggleQuickFilter = (key) => onQuickChip(key);
 
   useEffect(() => {
     let cancelled = false;
@@ -425,7 +443,7 @@ export default function EquestrianLeadMockup() {
               return (
                 <button
                   key={c.k}
-                  onClick={() => setRegion(c.k)}
+                  onClick={() => onRegionChip(c.k)}
                   data-testid={`chip-region-${c.k}`}
                   aria-pressed={active}
                   style={{
@@ -455,7 +473,7 @@ export default function EquestrianLeadMockup() {
               return (
                 <button
                   key={c.k}
-                  onClick={() => setPropertyType(c.k)}
+                  onClick={() => onTypeChip(c.k)}
                   data-testid={`chip-type-${c.k}`}
                   aria-pressed={active}
                   style={{
