@@ -2564,6 +2564,23 @@ const UnifiedSearchBar = () => {
   const navigate = useNavigate();
   const ctx = useContext(SearchFiltersContext);
   const [val, setVal] = useState("");
+  // Cache the known BC community list on mount so submit() can decide
+  // whether typed input is a community name (→ set `city`, which
+  // recenters the map) or free text / postal / address (→ `q` search).
+  const [knownCommunities, setKnownCommunities] = useState([]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const API = process.env.REACT_APP_BACKEND_URL + "/api";
+        const r = await fetch(`${API}/communities`);
+        const d = await r.json();
+        if (d && typeof d === "object") {
+          const names = Object.values(d).flat().filter(Boolean).map(String);
+          setKnownCommunities(names);
+        }
+      } catch { /* silent — falls back to q-search routing */ }
+    })();
+  }, []);
 
   const set = (k, v) => ctx?.setFilters && ctx.setFilters(prev => ({ ...prev, [k]: v }));
   const digitsOnly = (s) => String(s || "").replace(/[^\d]/g, "");
@@ -2604,12 +2621,20 @@ const UnifiedSearchBar = () => {
     }
     // Everything else — including postal codes, addresses, MLS numbers
     // that didn't resolve to a single listing, and plain keywords — is
-    // handed to the backend as `q`. The backend already handles all
-    // four intents (postal code, MLS, street address, keyword) inside
-    // its `q` router. Also CLEAR the `city` filter so a lingering city
-    // value from a prior search doesn't intersect with the new intent.
+    // handed to the backend. Route decision:
+    //   • Community-name match (case-insensitive, exact) → set `city`
+    //     so the map recenters on that community and the results filter
+    //     by city. This is the primary UX for the homepage search.
+    //   • Otherwise (postal code, address, MLS-not-resolved, keyword) →
+    //     use `q` and clear `city` so a lingering city value from a
+    //     prior search doesn't intersect with the new intent.
     if (ctx?.setFilters && ctx?.runSearch) {
-      const nextFilters = { ...(ctx.filters || {}), q: v, city: "" };
+      const isCommunity = knownCommunities.some(
+        c => c && c.toLowerCase() === v.toLowerCase()
+      );
+      const nextFilters = isCommunity
+        ? { ...(ctx.filters || {}), city: v, q: "" }
+        : { ...(ctx.filters || {}), q: v, city: "" };
       ctx.setFilters(nextFilters);
       setTimeout(() => ctx.runSearch(nextFilters), 40);
       setVal("");
