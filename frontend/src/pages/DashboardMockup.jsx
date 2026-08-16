@@ -2403,12 +2403,9 @@ const SearchPanel = () => {
           </div>
         </div>
       )}
-      {/* Unified search + filters + Doogie NL bar. Replaces the old floating
-          FILTERS card and the address-only lookup — one row sits between the
-          map and the listings grid with:
-             [🔍 address/MLS input]  [Filters ▾]  [🐾 Doogie]  [Search]
-          Active filters render as removable chips right below. */}
-      <UnifiedSearchBar/>
+      {/* Unified search + filters + Doogie NL bar — removed from the homepage
+          per Doug's request (Feb 2026). The full search UI still lives on
+          `/listings`. To restore inline, re-add: <UnifiedSearchBar/> */}
       {showList && (
         <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       )}
