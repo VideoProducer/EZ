@@ -10220,6 +10220,12 @@ function ScrollToTop() {
     // scroll a scrollable body/html, and async content can push the scroll
     // position back down. Do it immediately + on next frame + one more after
     // 60ms to catch layout shifts from lazy-loaded images / async fetches.
+    //
+    // Feb 2026 hardening: also fire on INITIAL page load (fresh tab / direct
+    // URL / social-share landing). Previously the effect only fired when
+    // pathname changed, so direct loads to /specialties/equestrian would
+    // land wherever the browser restored scroll — sometimes mid-page.
+    // Watching loc.key catches every navigation event including first mount.
     const scroll = () => {
       try { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); } catch { window.scrollTo(0, 0); }
       if (document.documentElement) document.documentElement.scrollTop = 0;
@@ -10228,9 +10234,17 @@ function ScrollToTop() {
     scroll();
     requestAnimationFrame(scroll);
     const t = setTimeout(scroll, 80);
-    return () => clearTimeout(t);
-  }, [loc.pathname, loc.search]);
+    const t2 = setTimeout(scroll, 300);
+    return () => { clearTimeout(t); clearTimeout(t2); };
+  }, [loc.pathname, loc.search, loc.key]);
   return null;
+}
+
+// Disable the browser's built-in scroll restoration for SPA routing. Without
+// this, some browsers (Firefox, Chrome desktop) will race the ScrollToTop
+// effect and re-scroll to the previous scroll position after we scroll to top.
+if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
 }
 
 // --- Cloudflare Turnstile (invisible bot-check on lead forms) ---

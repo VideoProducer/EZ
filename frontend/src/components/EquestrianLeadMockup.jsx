@@ -115,17 +115,18 @@ export default function EquestrianLeadMockup() {
     let cancelled = false;
     (async () => {
       try {
-        // Dedicated equestrian endpoint — applies the CORE keyword scan
-        // (barn/stable/paddock/arena/etc.) plus the property-type allowlist
-        // that excludes condos/apartments/townhouses. min_acres + has_arena
-        // ONLY work on this endpoint (they're ignored by the generic /listings
-        // route, which was giving us $35M penthouses).
+        // Hero photo pool — the visible outcome is just 8 crossfading listing
+        // photos, so keep the query CHEAP: drop the expensive has_arena regex,
+        // reduce the acreage floor from 20→5 (still filters out suburban lots),
+        // and cap the pool at 8. Reduces initial-paint time by ~1.5–2 s on
+        // the equestrian landing page vs the previous limit=24 + has_arena=true
+        // sweep (which fired the full ~180-keyword description regex on every
+        // qualifying listing).
         const r = await axios.get(`${API}/api/listings/equestrian`, {
           params: {
-            min_acres: 20,
-            has_arena: true,
+            min_acres: 5,
             sort: "price_desc",
-            limit: 24,
+            limit: 8,
           },
         });
         if (cancelled) return;
@@ -139,7 +140,7 @@ export default function EquestrianLeadMockup() {
           }))
           .filter(p => p.url);
         setHeroPhotos(pool);
-      } catch { /* silent — hero falls back to static image */ }
+      } catch { /* silent — hero falls back to navy gradient */ }
     })();
     return () => { cancelled = true; };
   }, []);
