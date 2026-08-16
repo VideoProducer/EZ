@@ -80,9 +80,8 @@ memory/test_credentials.md
 
 # Mobile development
 android-sdk/frontend/node_modules/.cache/default-development/21.pack
-.env
-.env.*
-*.env
+# .env files are REQUIRED for Emergent deployment — do not ignore.
+# Sensitive values are overridden by Kubernetes secrets at runtime.
 credentials.json
 *.key
 .credentials
