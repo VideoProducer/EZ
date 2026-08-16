@@ -111,11 +111,14 @@
         <meta name="rights" content="EZtoFind.ca content, code, design, and Doogie AI character are proprietary works of Doug LeMaire, federally registered with the Canadian Intellectual Property Office (Reg. No. 1247822). See https://eztofind.ca/copyright"/>
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
         <meta name="googlebot" content="index, follow, max-image-preview:large"/>
-        <!-- Open Graph — surfaces on Facebook, LinkedIn, Slack, Discord, iMessage link previews -->
+        <!-- Open Graph — surfaces on Facebook, LinkedIn, Slack, Discord, iMessage link previews.
+             NOTE (Feb 2026): og:title / og:description / twitter:title / twitter:description
+             are set PER PAGE via react-helmet-async so crawlers see the right preview text
+             for /specialties/luxury, /specialties/equestrian, community pages, etc. Only the
+             *structural* OG tags (type, site_name, url root, default image, locale) live here
+             so every page inherits sensible fallbacks. -->
         <meta property="og:type" content="website"/>
         <meta property="og:site_name" content="EZtoFind.ca"/>
-        <meta property="og:title" content="EZtoFind.ca | BC Real Estate Search"/>
-        <meta property="og:description" content="Free BC real estate information and property-search platform. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
         <meta property="og:url" content="https://eztofind.ca/"/>
         <meta property="og:image" content="https://eztofind.ca/images/doogie-og.png?v=4"/>
         <meta property="og:image:width" content="1200"/>
@@ -124,8 +127,6 @@
         <meta property="og:locale" content="en_CA"/>
         <!-- X (Twitter) card — larger preview for shares from X, Bluesky, Threads -->
         <meta name="twitter:card" content="summary_large_image"/>
-        <meta name="twitter:title" content="EZtoFind.ca | BC Real Estate Search"/>
-        <meta name="twitter:description" content="Free BC real estate information and property-search platform. Live CREA DDF® MLS® search, 439-term glossary, 240 community profiles, and Doogie AI guide."/>
         <meta name="twitter:image" content="https://eztofind.ca/images/doogie-og.png?v=4"/>
         <!-- PWA manifest — allows users to install the site as an app on iOS/Android/desktop -->
         <link rel="manifest" href="/manifest.json"/>
@@ -144,7 +145,10 @@
              `await import("leaflet")` only when the map component actually
              mounts. Saves ~1 render-blocking stylesheet + defer script on
              every non-map page (glossary, community, listing detail, etc.). -->
-        <meta name="description" content="Free BC real estate information and property-search platform. Live CREA DDF® MLS® search, 439-term statute-cited glossary, and 240 community profiles. By Doug LeMaire, REALTOR®."/>
+        <!-- NOTE: <meta name="description"> is set PER PAGE via react-helmet-async
+             so each route (luxury, equestrian, communities, listings, etc.) shows
+             its own crawler-visible summary. No static default here to avoid
+             tag duplication that confuses first-match crawlers. -->
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
         <!-- Ahrefs Web Analytics — first-party, cookieless, GDPR/PIPA-friendly.

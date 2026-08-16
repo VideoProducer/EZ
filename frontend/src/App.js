@@ -1018,7 +1018,7 @@ const Nav = () => {
             least 50% of the trade-name/logo size. EZtoFind.ca is 1.4rem, so
             the brokerage line is set to 0.78rem (>= 0.7rem = 50%). */}
         <div data-testid="nav-brokerage-name" style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",fontWeight:600,color:"var(--brand-navy)",lineHeight:1.2,marginTop:"0.2rem",letterSpacing:"0.01em"}}>Fraser Property Management Realty Services Ltd.</div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",letterSpacing:"0.08em",marginTop:"0.1rem"}}>DOUG LEMAIRE, REALTOR®</div></div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",letterSpacing:"0.08em",marginTop:"0.1rem"}}>DOUG LEMAIRE, REALTOR® · BCFSA #167790</div></div>
       </Link>
       <button className="nav-hamburger" aria-label={open?"Close menu":"Open menu"} aria-expanded={open} onClick={()=>setOpen(o=>!o)} data-testid="nav-hamburger">
         <span/><span/><span/>
@@ -1072,6 +1072,7 @@ const Footer = () => (
       <div><h4>Contact</h4>
         <p style={{fontSize:"0.82rem",opacity:0.9,margin:"0.5rem 0 0.9rem",lineHeight:1.55}}>
           <strong style={{color:"var(--brand-gold)"}}>Doug LeMaire, REALTOR®</strong><br/>
+          <span style={{fontSize:"0.75rem",opacity:0.75,letterSpacing:"0.03em"}}>BCFSA Licence #167790</span><br/>
           <strong>Fraser Property Management Realty Services Ltd.</strong><br/>
           1 – 22374 Lougheed Hwy<br/>
           Maple Ridge, BC V2X 2T5<br/>
@@ -1086,7 +1087,7 @@ const Footer = () => (
     <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:"2.5rem",paddingTop:"1.5rem",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",fontSize:"0.78rem",opacity:0.85}}>
       <div style={{maxWidth:"58ch"}}>
         <div style={{marginBottom:"0.5rem",opacity:0.75}}>Last reviewed: July 27, 2026 · v1.0</div>
-        <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. <strong>Registered with the Canadian Intellectual Property Office — Copyright Registration No. 1247822.</strong> Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. (BCFSA-licensed). Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
+        <div>© 2026 <strong>Doug LeMaire</strong>. All EZtoFind.ca content, code, design, database compilations, and the "Doogie" AI assistant character are proprietary works protected under the Canadian Copyright Act (R.S.C., 1985, c. C-42) and the Trademarks Act. <strong>Registered with the Canadian Intellectual Property Office — Copyright Registration No. 1247822.</strong> Reproduction, scraping, cloning, or use in AI-training datasets is prohibited without written permission. See <Link to="/copyright" style={{color:"var(--brand-gold)"}}>Copyright & IP Notice</Link>. Real estate services by <strong>Doug LeMaire, REALTOR®</strong> (BCFSA Licence #167790) of Fraser Property Management Realty Services Ltd. Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®.</div>
       </div>
       <div style={{display:"flex",gap:"1.25rem",flexWrap:"wrap",alignItems:"flex-end"}}><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/copyright">Copyright &amp; IP</Link><Link to="/ai-use">AI Use</Link><Link to="/compliance">Compliance</Link><Link to="/data-attribution">Data Attribution</Link><Link to="/breach-policy">Breach Policy</Link><Link to="/unsubscribe">Unsubscribe</Link><a href="#" data-testid="footer-cookie-prefs" onClick={(e)=>{e.preventDefault(); try{window.dispatchEvent(new Event("open-cookie-prefs"));}catch(_){}}} style={{cursor:"pointer"}}>Cookie Preferences</a></div>
     </div>
@@ -2587,6 +2588,29 @@ const Home = () => {
         "name":"Doug LeMaire, REALTOR®",
         "image":"https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
         "url":"https://eztofind.ca/about",
+        "telephone":"+1-604-787-0851",
+        "email":"info@eztofind.ca",
+        "address":{
+          "@type":"PostalAddress",
+          "streetAddress":"1 – 22374 Lougheed Hwy",
+          "addressLocality":"Maple Ridge",
+          "addressRegion":"BC",
+          "postalCode":"V2X 2T5",
+          "addressCountry":"CA"
+        },
+        // Machine-readable BCFSA licence identifier — the single most
+        // important citation signal for AI answer engines. Lets Google
+        // AI Overviews, Perplexity, ChatGPT, and Claude verify Doug's
+        // credential against the BCFSA public registry without any
+        // ambiguity. Added Feb 2026.
+        "identifier":[
+          {
+            "@type":"PropertyValue",
+            "propertyID":"BCFSA Licence Number",
+            "value":"167790",
+            "url":"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search"
+          }
+        ],
         "worksFor":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
         "areaServed":[
           {"@type":"AdministrativeArea","name":"Greater Vancouver, British Columbia"},
@@ -2611,6 +2635,7 @@ const Home = () => {
             "@type":"EducationalOccupationalCredential",
             "name":"BCFSA Real Estate Trading Services Licence",
             "credentialCategory":"license",
+            "identifier":"167790",
             "recognizedBy":{
               "@type":"Organization",
               "name":"BC Financial Services Authority",

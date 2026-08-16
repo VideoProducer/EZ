@@ -372,9 +372,71 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
   return (
     <div style={{ background: BRAND.paper, minHeight: "100vh" }} data-testid="luxury-landing-mockup">
       <Helmet>
+        <title>Luxury Homes for Sale in British Columbia — $3M+ CREA DDF® MLS® · Doug LeMaire, REALTOR®</title>
+        <meta name="description" content="Curated collection of British Columbia's most distinguished residences — West Vancouver waterfronts, Coal Harbour penthouses, Whistler chalets, Fraser Valley estates, Okanagan vineyards, and Gulf Islands off-grid architecture. Every residence meets a $3M minimum, sourced live from the CREA DDF® MLS® feed. Represented by Doug LeMaire, REALTOR® — BCFSA Licence #167790."/>
+        <link rel="canonical" href="https://eztofind.ca/specialties/luxury"/>
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
+        {/* Open Graph */}
+        <meta property="og:type" content="website"/>
+        <meta property="og:site_name" content="EZtoFind.ca"/>
+        <meta property="og:title" content="Luxury Homes for Sale in British Columbia — $3M+ CREA DDF® MLS®"/>
+        <meta property="og:description" content="Curated collection of BC's most distinguished residences — West Vancouver waterfronts, Coal Harbour penthouses, Whistler chalets, and Fraser Valley estates. $3M+ live MLS®."/>
+        <meta property="og:url" content="https://eztofind.ca/specialties/luxury"/>
+        <meta property="og:locale" content="en_CA"/>
+        {/* Twitter card */}
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:title" content="Luxury Homes for Sale in British Columbia — $3M+ MLS®"/>
+        <meta name="twitter:description" content="Curated BC luxury residences · West Van, Coal Harbour, Whistler, Fraser Valley, Okanagan, Gulf Islands. Doug LeMaire, REALTOR® — BCFSA #167790."/>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" />
+        {/* RealEstateAgent + WebPage + BreadcrumbList schemas — critical
+            AEO/LLM entity signals for the Luxury landing page. Includes
+            machine-readable BCFSA licence identifier for citation trust. */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "RealEstateAgent",
+              "@id": "https://eztofind.ca/#doug",
+              "name": "Doug LeMaire, REALTOR®",
+              "url": "https://eztofind.ca/specialties/luxury",
+              "telephone": "+1-604-787-0851",
+              "email": "info@eztofind.ca",
+              "identifier": [{
+                "@type": "PropertyValue",
+                "propertyID": "BCFSA Licence Number",
+                "value": "167790",
+                "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
+              }],
+              "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+              "areaServed": "British Columbia",
+              "knowsAbout": ["Luxury real estate", "Waterfront estates", "Penthouses", "Ski chalets", "Vineyard estates", "Private-showing protocols"],
+              "memberOf": [
+                { "@type": "Organization", "name": "Canadian Real Estate Association (CREA)" },
+                { "@type": "Organization", "name": "Greater Vancouver REALTORS® (GVR)" },
+                { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)" },
+              ],
+            },
+            {
+              "@type": "WebPage",
+              "name": "Luxury Homes for Sale in British Columbia — $3M+ CREA DDF® MLS®",
+              "description": "Curated collection of BC's most distinguished residences across 10 luxury corridors.",
+              "url": "https://eztofind.ca/specialties/luxury",
+              "inLanguage": "en-CA",
+              "isPartOf": { "@type": "WebSite", "name": "EZtoFind.ca", "url": "https://eztofind.ca" },
+              "primaryImageOfPage": heroPhotos[heroIndex]?.url || undefined,
+            },
+            {
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://eztofind.ca/" },
+                { "@type": "ListItem", "position": 2, "name": "Specialties", "item": "https://eztofind.ca/specialties" },
+                { "@type": "ListItem", "position": 3, "name": "Luxury Listings", "item": "https://eztofind.ca/specialties/luxury" },
+              ],
+            },
+          ],
+        })}</script>
       </Helmet>
       {!live && <UnlistedMockupBanner label="Luxury Listings landing page" />}
 
@@ -656,6 +718,15 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
               <div style={{ fontWeight: 700, color: BRAND.ink, fontSize: "0.95rem" }}>J&amp;M</div>
               <div style={{ color: BRAND.muted, fontSize: "0.82rem", marginTop: 2 }}>Buyers</div>
             </div>
+          </div>
+          {/* BCFSA advertising-rule disclosure — individual client experience */}
+          <div style={{
+            marginTop: 18, paddingTop: 14,
+            borderTop: `1px solid rgba(15,42,91,0.08)`,
+            fontSize: "0.72rem", color: BRAND.muted, lineHeight: 1.5,
+            fontStyle: "italic",
+          }}>
+            Individual client experience — results are not typical and depend on factors specific to each transaction.
           </div>
         </div>
       </Section>

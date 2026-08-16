@@ -267,6 +267,13 @@ export default function EquestrianLeadMockup() {
         "@type": "RealEstateAgent",
         "@id": "https://eztofind.ca/#doug",
         "name": "Doug LeMaire, REALTOR®",
+        // Machine-readable BCFSA licence — key AEO citation signal.
+        "identifier": [{
+          "@type": "PropertyValue",
+          "propertyID": "BCFSA Licence Number",
+          "value": "167790",
+          "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
+        }],
         "worksFor": {
           "@type": "RealEstateAgent",
           "name": "Fraser Property Management Realty Services Ltd.",
@@ -274,6 +281,7 @@ export default function EquestrianLeadMockup() {
           "telephone": "+1-604-466-7021",
         },
         "telephone": "+1-604-787-0851",
+        "email": "info@eztofind.ca",
         "areaServed": "British Columbia",
         "knowsAbout": ["Equestrian property", "Agricultural Land Reserve", "BCFSA licensing", "Restrictive covenants", "Water licensing", "Rural zoning"],
         "url": "https://eztofind.ca/specialties/equestrian",
@@ -308,14 +316,21 @@ export default function EquestrianLeadMockup() {
     <div style={{background:BRAND.paper, minHeight:"100vh"}} data-testid="equestrian-lead-mockup">
       <Helmet>
         <title>BC Equestrian Properties for Sale · REALTOR® with ALR + Zoning Expertise — EZtoFind.ca</title>
-        <meta name="description" content={`Browse ${stats.total ? stats.total.toLocaleString() : "1,000+"} active equestrian MLS® listings across British Columbia. Free 40-point equestrian buyer checklist. BCFSA-licensed REALTOR® — no obligation, PIPA + CASL compliant.`}/>
-        <meta name="robots" content="index, follow"/>
+        <meta name="description" content={`Browse ${stats.total ? stats.total.toLocaleString() : "1,000+"} active equestrian MLS® listings across British Columbia. Free 40-point equestrian buyer checklist. Doug LeMaire, REALTOR® — BCFSA Licence #167790. PIPA + CASL compliant.`}/>
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
         <link rel="canonical" href="https://eztofind.ca/specialties/equestrian"/>
-        <meta property="og:title" content="BC Equestrian Properties for Sale — with ALR + Zoning Expertise"/>
-        <meta property="og:description" content="Live MLS® equestrian listings in BC. Free 40-point due-diligence checklist. BCFSA-licensed."/>
+        {/* Open Graph */}
         <meta property="og:type" content="website"/>
+        <meta property="og:site_name" content="EZtoFind.ca"/>
+        <meta property="og:title" content="BC Equestrian Properties for Sale — with ALR + Zoning Expertise"/>
+        <meta property="og:description" content="Live MLS® equestrian listings in BC. Free 40-point due-diligence checklist. Doug LeMaire, REALTOR® — BCFSA #167790."/>
+        <meta property="og:url" content="https://eztofind.ca/specialties/equestrian"/>
+        <meta property="og:locale" content="en_CA"/>
         <meta property="og:image" content="https://eztofind.ca/specialties/equestrian.png"/>
+        {/* Twitter card */}
         <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:title" content="BC Equestrian Properties for Sale — ALR + Zoning Expertise"/>
+        <meta name="twitter:description" content="Live MLS® equestrian listings across BC. 40-point checklist. Doug LeMaire, REALTOR® — BCFSA #167790."/>
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
@@ -851,7 +866,7 @@ function ComplianceFooter() {
     <div style={{marginTop:60, padding:"22px 24px", background:"white", border:"1px solid #E5E7EB", borderRadius:14, fontSize:"0.78rem", color:BRAND.muted, lineHeight:1.7}} data-testid="compliance-footer">
       <div style={{marginBottom:12}}>
         <div style={{fontSize:"0.85rem", color:BRAND.ink, fontWeight:600}}>
-          Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA-licensed real estate professional
+          Doug LeMaire, REALTOR® · BCFSA Licence #167790 · Fraser Property Management Realty Services Ltd. · BCFSA-licensed real estate professional
         </div>
       </div>
       <p style={{margin:"0 0 8px", color:BRAND.ink}}>

@@ -339,6 +339,15 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         "@type": "RealEstateAgent",
         "name": "Doug LeMaire, REALTOR®",
         "url": "https://eztofind.ca/about",
+        "telephone": "+1-604-787-0851",
+        "email": "info@eztofind.ca",
+        // Machine-readable BCFSA licence — critical AEO/LLM citation signal.
+        "identifier": [{
+          "@type": "PropertyValue",
+          "propertyID": "BCFSA Licence Number",
+          "value": "167790",
+          "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
+        }],
         "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
         // In-area: emit direct areaServed for THIS community explicitly, alongside
         // the three focus regions. Signals to LLMs that Doug personally represents
@@ -358,6 +367,14 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         "@type": "RealEstateAgent",
         "name": "Doug LeMaire, REALTOR®",
         "url": "https://eztofind.ca/about",
+        "telephone": "+1-604-787-0851",
+        "email": "info@eztofind.ca",
+        "identifier": [{
+          "@type": "PropertyValue",
+          "propertyID": "BCFSA Licence Number",
+          "value": "167790",
+          "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
+        }],
         "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
         // Out-of-area: areaServed stays scoped to focus regions ONLY.
         "areaServed": focusAreas,
