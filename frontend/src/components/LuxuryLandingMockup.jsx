@@ -218,6 +218,12 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
   // Live per-corridor counts + medians — refreshed from the API so the
   // chip labels stay honest as the DDF feed updates every 4 hours.
   const [corridorStats, setCorridorStats] = useState({});
+  // Live listings shown in the magazine grid — refetched whenever the
+  // corridor selection changes so each tile ("West Van Estates", "Whistler
+  // Retreats", etc.) shows REAL $3M+ inventory in that corridor's cities,
+  // not the hardcoded LISTINGS demo array.
+  const [liveListings, setLiveListings] = useState([]);
+  const [liveListingsLoading, setLiveListingsLoading] = useState(true);
 
   // Fetch live luxury inventory once on mount for hero rotation.
   useEffect(() => {
@@ -310,7 +316,33 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
     }
   }, []);
 
-  const shown = corridor === "all" ? LISTINGS : LISTINGS.filter(l => CORRIDORS.find(c => c.slug === corridor)?.name === l.corridor);
+  // Fetch live $3M+ inventory for the selected corridor. When "all",
+  // fetches across every corridor's cities so the "Entire Portfolio" tile
+  // shows a true province-wide luxury sweep. Refires on corridor change.
+  useEffect(() => {
+    let cancelled = false;
+    const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
+    const targetCities = corridor === "all"
+      ? Array.from(new Set(CORRIDORS.flatMap(c => c.cities)))
+      : (CORRIDORS.find(c => c.slug === corridor)?.cities || []);
+    if (!targetCities.length) {
+      setLiveListings([]); setLiveListingsLoading(false);
+      return;
+    }
+    setLiveListingsLoading(true);
+    const cityQ = targetCities.map(encodeURIComponent).join(",");
+    fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&sort=price_desc&limit=48`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled) return;
+        setLiveListings(d?.listings || []);
+        setLiveListingsLoading(false);
+      })
+      .catch(() => { if (!cancelled) { setLiveListings([]); setLiveListingsLoading(false); } });
+    return () => { cancelled = true; };
+  }, [corridor]);
+
+  const shown = liveListings;
   const flagship = LISTINGS[0];
 
   return (
@@ -521,40 +553,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
         </div>
       </Section>
 
-      {/* ═══════ §5 GLOBAL EXPOSURE FOR YOUR ESTATE ═════════════════════ */}
-      <Section tone="paper" pad="88px 0">
-        <div style={{ textAlign: "center", marginBottom: 44 }}>
-          <Kicker>For sellers · The syndication funnel</Kicker>
-          <H level={2} align="center">Global Exposure for Your Estate.</H>
-          <p style={{ fontFamily: SANS, fontSize: "1.05rem", color: BRAND.muted, marginTop: 16, maxWidth: 720, marginLeft: "auto", marginRight: "auto", lineHeight: 1.75 }}>
-            Every residence listed by Doug LeMaire above the $3M threshold enters the same media syndication path — a proven funnel that has moved BC luxury inventory in front of eight-figure buyers in New York, London, Zurich, Singapore, and Dubai.
-          </p>
-        </div>
-
-        {/* Funnel visualization */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, alignItems: "stretch", marginBottom: 40 }}>
-          {[
-            { step: "01", title: "Editorial photography & staging", body: "Architectural photographer · drone · dusk hero shot · optional Matterport 3D tour" },
-            { step: "02", title: "BC Luxury Home Guide", body: "Featured in the flagship BC print quarterly · 12,000 mailed to high-net-worth BC households" },
-            { step: "03", title: "Discrete buyer outreach", body: "Direct email + text to Doug's verified $3M+ buyer pool and a rotating network of high-net-worth referral partners across Canada and the Pacific Northwest" },
-            { step: "04", title: "Concierge buyer matching", body: "Doug personally curates all showings · qualifies international buyers before disclosure" },
-          ].map(s => (
-            <div key={s.step} style={{ background: "white", padding: "26px 22px", border: `1px solid ${BRAND.hairline}` }}>
-              <div style={{ fontFamily: SERIF, fontSize: "2rem", color: BRAND.gold }}>{s.step}</div>
-              <div style={{ fontFamily: SERIF, fontSize: "1.05rem", lineHeight: 1.3, color: BRAND.ink, marginTop: 8 }}>{s.title}</div>
-              <div style={{ fontFamily: SANS, fontSize: "0.82rem", color: BRAND.muted, marginTop: 8, lineHeight: 1.6 }}>{s.body}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Testimonial */}
-        <div style={{ background: BRAND.ink, color: "white", padding: "40px 50px", borderRadius: 4, textAlign: "center", maxWidth: 900, margin: "0 auto" }}>
-          <div style={{ fontFamily: SERIF, fontSize: "1.35rem", lineHeight: 1.65, fontStyle: "italic" }}>
-            "Doug placed our West Van estate in front of an American buyer within three weeks of listing — before we'd even done the second open house. The private buyer outreach paid for itself twice over."
-          </div>
-          <div style={{ marginTop: 24, fontFamily: SANS, fontSize: "0.8rem", letterSpacing: "0.14em", color: BRAND.goldSoft, textTransform: "uppercase", fontWeight: 600 }}>— H.M. · West Vancouver seller · closed $11.4M above list</div>
-        </div>
-      </Section>
+      {/* ═══════ §5 GLOBAL EXPOSURE FOR YOUR ESTATE — removed Feb 2026 per Doug's request ═══ */}
 
       {/* ═══════ §6 CONFIDENTIAL ESTATE ASSESSMENT FORM ═════════════════ */}
       <Section tone="ink" pad="88px 0">
