@@ -11959,6 +11959,7 @@ function App() {
       <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>
       <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
+      <Route path="/specialties/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><EquestrianLeadMockup/></Suspense>}/>
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>

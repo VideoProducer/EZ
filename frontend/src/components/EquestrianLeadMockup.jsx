@@ -303,7 +303,7 @@ export default function EquestrianLeadMockup() {
       <Helmet>
         <title>BC Equestrian Properties for Sale · REALTOR® with ALR + Zoning Expertise — EZtoFind.ca</title>
         <meta name="description" content={`Browse ${stats.total ? stats.total.toLocaleString() : "1,000+"} active equestrian MLS® listings across British Columbia. Free 40-point equestrian buyer checklist. BCFSA-licensed REALTOR® — no obligation, PIPA + CASL compliant.`}/>
-        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="robots" content="index, follow"/>
         <link rel="canonical" href="https://eztofind.ca/specialties/equestrian"/>
         <meta property="og:title" content="BC Equestrian Properties for Sale — with ALR + Zoning Expertise"/>
         <meta property="og:description" content="Live MLS® equestrian listings in BC. Free 40-point due-diligence checklist. BCFSA-licensed."/>
@@ -312,8 +312,6 @@ export default function EquestrianLeadMockup() {
         <meta name="twitter:card" content="summary_large_image"/>
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
-
-      <UnlistedMockupBanner label="LEAD-GEN equestrian landing (parked)"/>
 
       {/* ═══ HERO ═══════════════════════════════════════════════════ */}
       <div style={{
