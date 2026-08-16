@@ -840,7 +840,7 @@ function EquestrianLeadForm() {
         <div style={{marginTop:12, padding:"14px 16px", background:"rgba(255,255,255,0.06)", borderRadius:8}}>
           <label style={{display:"flex", gap:10, alignItems:"flex-start", cursor:"pointer", fontSize:"0.85rem", lineHeight:1.55}}>
             <input type="checkbox" checked={f.dor_ack} onChange={e => set("dor_ack", e.target.checked)} style={{marginTop:3, transform:"scale(1.2)"}} data-testid="lead-dor"/>
-            <span><strong>BCFSA Disclosure of Representation — required.</strong> I have read the <a href="https://www.bcfsa.ca/public-resources/real-estate/consumer-resources/disclosure-representation-trading-services" target="_blank" rel="noopener noreferrer" style={{color:BRAND.gold, textDecoration:"underline"}}>BCFSA Disclosure of Representation in Trading Services</a> pamphlet and understand my options for representation before any meaningful engagement.</span>
+            <span><strong>BCFSA Disclosure of Representation — required.</strong> I have read the <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:BRAND.gold, textDecoration:"underline"}}>BCFSA Disclosure of Representation in Trading Services</a> pamphlet and understand my options for representation before any meaningful engagement.</span>
           </label>
         </div>
 

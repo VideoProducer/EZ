@@ -754,7 +754,7 @@ function HomepageLeadForm() {
         <div style={consentBox}>
           <label style={{ display:"flex", gap: 10, alignItems:"flex-start", cursor:"pointer", fontSize:"0.85rem", lineHeight: 1.55 }}>
             <input type="checkbox" checked={f.dor_ack} onChange={e=>set("dor_ack", e.target.checked)} style={{ marginTop: 3, transform:"scale(1.2)" }} data-testid="lead-dor"/>
-            <span><strong>BCFSA Disclosure of Representation — required.</strong> I have read the <a href="https://www.bcfsa.ca/public-resources/real-estate/consumer-resources/disclosure-representation-trading-services" target="_blank" rel="noopener noreferrer" style={{ color: C.gold, textDecoration:"underline" }}>BCFSA Disclosure of Representation in Trading Services</a> pamphlet.</span>
+            <span><strong>BCFSA Disclosure of Representation — required.</strong> I have read the <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{ color: C.gold, textDecoration:"underline" }}>BCFSA Disclosure of Representation in Trading Services</a> pamphlet.</span>
           </label>
         </div>
 
