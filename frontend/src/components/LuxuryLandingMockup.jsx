@@ -363,12 +363,9 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
       }}>
         {/* Rotating background photo layer — every 6 s a new $3M+ CREA
             DDF® listing crossfades into view. Below-hero content sits on
-            top via z-index. Static fallback loads while the API resolves. */}
-        <div style={{
-          position: "absolute", inset: 0, zIndex: 0,
-          backgroundImage: `url(https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1800)`,
-          backgroundSize: "cover", backgroundPosition: "center",
-        }} aria-hidden="true"/>
+            top via z-index. No static fallback (Feb 2026): if the pool
+            hasn't resolved yet, the navy gradient below shows alone
+            instead of a generic non-BC stock photo. */}
         {heroPhotos.map((p, i) => (
           <div key={p.listing_key || i}
                aria-hidden="true"
