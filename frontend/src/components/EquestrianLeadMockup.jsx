@@ -328,16 +328,10 @@ export default function EquestrianLeadMockup() {
         color:"white", padding:"48px 20px 60px",
         minHeight: "88vh",
       }}>
-        {/* Static fallback layer — the white horse hero. Always renders
-            underneath so the header never goes blank while the DDF® pool
-            loads or if the fetch fails. */}
-        <div aria-hidden="true" style={{
-          position:"absolute", inset:0, zIndex:0,
-          backgroundImage: 'url("/specialties/equestrian.png")',
-          backgroundSize:"cover", backgroundPosition:"center",
-        }}/>
         {/* Rotating live MLS® photo layer — 20+ acre equestrian listings
-            from the CREA DDF® feed. Crossfade 1500ms between photos. */}
+            from the CREA DDF® feed. Crossfade 1500ms between photos.
+            No static fallback: if the DDF® pool is empty, the navy
+            gradient below is shown alone. */}
         {heroPhotos.map((p, i) => (
           <div key={p.listing_key || i} aria-hidden="true" style={{
             position:"absolute", inset:0, zIndex:0,
@@ -760,11 +754,11 @@ function EquestrianLeadForm() {
         <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
         <div>
           <div style={{fontSize:"0.72rem", letterSpacing:"0.14em", color:BRAND.gold, fontWeight:700}}>SPEAK TO DOUG</div>
-          <h2 style={{fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight:700, lineHeight:1.15, margin:"4px 0 0"}}>Get the 40-point checklist &amp; a free 20-min equestrian call</h2>
+          <h2 style={{fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight:700, lineHeight:1.15, margin:"4px 0 0"}}>Get the 40-point checklist</h2>
         </div>
       </div>
       <p style={{fontSize:"0.9rem", opacity:0.88, lineHeight:1.6, marginBottom:22}}>
-        Fill this out and Doug personally emails you the checklist within 1 business day. $0 cost. No CASL spam. Unsubscribe any time.
+        Fill this out and Doug personally emails you the checklist.
       </p>
 
       <form onSubmit={submit} data-testid="lead-form-el">

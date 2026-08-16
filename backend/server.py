@@ -8926,54 +8926,97 @@ async def _resolve_bc_locality(q: str) -> Optional[dict]:
 # to EQUESTRIAN_SUPPORT_KEYWORDS which are only used to enrich the
 # due-diligence checklist — never to *qualify* a listing as equestrian.
 CORE_EQUESTRIAN_KEYWORDS = [
-    # Direct horse terms
-    "equestrian",
-    "horse property", "horse friendly", "horse farm", "horse ranch",
-    "horse facility", "horse barn", "horse stall", "horse stalls",
-    "horses",                               # "suitable for horses"
-    "stallion",
-    # Horse infrastructure
-    "riding ring", "riding arena",
-    "dressage",
-    "paddock", "paddocks",
-    "corral", "corrals",
-    "round pen",
-    "tack room", "feed room",
-    "wash bay", "wash rack", "grooming area",
-    "in and out stall", "in-and-out stall",
-    "loafing shed",
-    # Barn / stable — 90%+ equestrian in BC MLS® context
-    "barn", "barns",
+    # ── Core property terms ─────────────────────────────────────────
+    "equestrian property", "horse property", "horse acreage",
+    "horse farm", "horse ranch",
+    "horse-friendly acreage", "horse-ready property",
+    "hobby farm", "small farm",
+    "farm acreage", "agricultural acreage", "rural acreage",
+    "rural estate", "country estate",
+    "livestock property", "agricultural property",
+    "farmette",
+    "equestrian estate",
+    "horse facility", "equestrian facility",
+    "riding facility", "training facility",
+    "boarding stable", "livery stable",
+    # ── Barn and stable terms ───────────────────────────────────────
+    "barn", "horse barn",
     "stable", "stables",
-    "arena",
-    "pasture", "pastures",
-    # Horse-specific storage
-    "hay loft", "hayloft", "hay shed", "hay storage",
-    # Horse-specific fencing patterns
-    "cross fenced", "cross-fenced",
-    "post and rail", "post-and-rail",
-    # Farm classifications / zoning that implies livestock
-    "hobby farm",
-    "cattle ranch",
-    "ALR",                                  # BC Agricultural Land Reserve
-    "agricultural land reserve",
-    "farm class", "farm classification",
-    "class 9",                              # BC Assessment farm class 9
-    "ALC", "agricultural land commission",
-    # Permits + facility specs (unique to horse properties)
-    "barn permit", "arena permit",
-    "arena footing", "arena drainage",
-    "stall size", "paddock acreage",
-    # Waste (only makes sense for livestock)
-    "manure",
-    # Water rights / riparian (irrigation + wells alone were too broad;
-    # water RIGHTS / LICENCE / RIPARIAN are specifically valuable to hobby
-    # farms and equestrian operations).
-    "water rights", "water license", "water licence",
-    "riparian",
-    # Trailer parking bay — sized for horse trailer (drop generic "trailer access")
-    "trailer bay",
-    "horse trailer",
+    "stall", "stalls",
+    "box stalls", "tie stalls",
+    "stall barn", "livestock barn",
+    "run-in barn", "shelter barn",
+    "pole barn", "post-and-beam barn",
+    "foaling barn", "foaling stall",
+    "hay barn", "hay storage", "hay loft",
+    "feed room",
+    "tack room", "tack storage",
+    "grooming stall",
+    "wash stall", "wash bay",
+    "cross-tie area",
+    "quarantine stall",
+    "barn apartment", "barn loft",
+    # ── Pasture and paddock terms ───────────────────────────────────
+    "pasture", "pastureland",
+    "grazing land",
+    "paddock", "paddocks",
+    "turnout", "turnout paddock",
+    "dry lot",
+    "sacrifice paddock", "sacrifice area",
+    "run-in shelter", "horse shelter", "livestock shelter",
+    "corrals", "pens",
+    "fenced pasture", "cross-fenced",
+    "rotational grazing",
+    "irrigated pasture",
+    "hay field", "grass paddock",
+    "no-climb fencing", "post-and-rail fencing",
+    "board fencing", "electric fencing",
+    "automatic waterers",
+    # ── Arena and riding terms ──────────────────────────────────────
+    "riding arena", "horse arena",
+    "indoor arena", "indoor riding arena",
+    "covered arena", "outdoor arena",
+    "riding ring", "training ring",
+    "dressage arena", "jumping arena", "show-jumping arena",
+    "round pen", "lunging pen", "exercise pen",
+    "working arena", "sand arena", "all-weather arena",
+    "arena footing", "lit arena",
+    "riding track", "bridle path",
+    "riding trails", "trail access", "direct trail access",
+    "cross-country course", "horse jumps",
+    "space for arena", "room for arena", "arena-ready",
+    # ── Horse-business terms ────────────────────────────────────────
+    "horse boarding", "boarding facility",
+    "horse training", "horse trainer",
+    "riding lessons", "riding school",
+    "equine business", "equestrian business",
+    "horse rental",
+    "horse camp", "horse clinics", "horse shows",
+    "competition facility",
+    "breeding farm", "horse breeding", "horse rearing",
+    "thoroughbred farm", "stud farm",
+    "income property", "revenue property",
+    "commercial barn",
+    # ── Access and support terms ────────────────────────────────────
+    "horse trailer access", "trailer parking", "trailer turnaround",
+    "loading area", "stock trailer access",
+    "wide driveway", "farm lane", "gated access",
+    "equipment barn", "implement shed", "machinery shed",
+    "hay shed",
+    "feed storage",
+    "manure storage", "composting area", "muck-out area",
+    "service road",
+    "caretaker accommodation", "staff accommodation", "guest accommodation",
+    # ── Land and zoning terms ───────────────────────────────────────
+    "acreage",
+    "agricultural land", "ALR", "agricultural land reserve",
+    "farm class", "farm status",
+    "rural residential", "rural resource", "rural holding",
+    "country residential",
+    "agricultural zoning", "rural zoning",
+    "horse permitted", "livestock permitted", "animal keeping",
+    "agricultural use", "farm use",
+    "RU zoning", "A zoning", "RR zoning",
 ]
 
 # Support keywords — enrich the due-diligence checklist and appear in the
