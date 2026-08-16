@@ -94,10 +94,15 @@ const ReferralAsk = ({
   }
 
   if (variant === "card") {
-    // New Feb 2026 design — centered "Outside Doug's Service Area" card
-    // with the applicable community name inserted dynamically.
+    // New Feb 2026 design — conversational "Would you like Doug to
+    // connect you with a {city} REALTOR®?" prompt with a Referral REALTOR®
+    // chip button. Falls back to "local" when no specific community is
+    // supplied (e.g. the equestrian landing page).
     const hasCity = typeof area === "string" && area.trim().length > 0;
     const cityLabel = hasCity ? area.trim() : "";
+    const question = hasCity
+      ? <>Would you like Doug to connect you with a <strong>{cityLabel}</strong> REALTOR<sup>®</sup>?</>
+      : <>Would you like Doug to connect you with a local REALTOR<sup>®</sup>?</>;
     return (
       <div
         data-testid={testId}
@@ -106,46 +111,33 @@ const ReferralAsk = ({
           background: "#FFFFFF",
           border: "1px solid #E5E7EB",
           borderRadius: 16,
-          padding: "1.5rem 1.75rem 1.6rem",
+          padding: "1.35rem 1.6rem",
           fontFamily: "Inter,sans-serif",
           textAlign: "center",
-          maxWidth: 440,
+          maxWidth: 520,
           margin: "0 auto",
           boxShadow: "0 4px 18px rgba(15,42,91,0.06)",
           ...(style || {}),
         }}
       >
         <div style={{
-          fontSize: "0.72rem", letterSpacing: "0.14em",
-          color: "var(--brand-navy,#0F2A5B)", fontWeight: 700,
-          marginBottom: "0.85rem",
+          fontFamily: "Sora,sans-serif", fontSize: "1.05rem", lineHeight: 1.4,
+          color: "var(--brand-navy,#0F2A5B)", marginBottom: "1rem",
         }}>
-          {CARD_COPY.kicker}
-        </div>
-        <div style={{
-          fontFamily: "Sora,sans-serif", fontSize: "1.15rem", lineHeight: 1.35,
-          color: "var(--brand-navy,#0F2A5B)", marginBottom: "1.05rem",
-        }}>
-          {hasCity ? CARD_COPY.headingWithCity(cityLabel) : CARD_COPY.headingGeneric}
+          {question}
         </div>
         <Link
           to={href}
           onClick={() => _logClick(context)}
           data-testid={`${testId}-cta`}
           style={{
-            display: "inline-block",
+            display: "inline-flex", alignItems: "center", gap: 6,
             background: "var(--brand-navy,#0F2A5B)", color: "#fff",
-            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.95rem",
-            padding: "0.85rem 1.6rem", borderRadius: 999, textDecoration: "none",
+            fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
+            padding: "0.7rem 1.35rem", borderRadius: 999, textDecoration: "none",
             lineHeight: 1.3,
           }}
-        >{hasCity ? CARD_COPY.ctaWithCity(cityLabel) : CARD_COPY.ctaGeneric}</Link>
-        <p style={{
-          margin: "0.85rem 0 0", fontSize: "0.82rem",
-          color: "var(--muted,#6B7280)", lineHeight: 1.5,
-        }}>
-          {hasCity ? CARD_COPY.subWithCity(cityLabel) : CARD_COPY.subGeneric}
-        </p>
+        >Referral REALTOR<sup style={{fontSize:"0.65em"}}>®</sup> link →</Link>
       </div>
     );
   }
