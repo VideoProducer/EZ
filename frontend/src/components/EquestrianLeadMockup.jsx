@@ -89,11 +89,7 @@ const CHECKLIST = [
   { title: "Title covenants + easements", body: "Pull a current title from the Land Title and Survey Authority. Read every restrictive covenant — 1980s-90s Fraser Valley subdivisions frequently prohibit livestock even on large lots." },
 ];
 
-const PILLARS = [
-  { icon: "🏞", title: "ALR expertise", body: "Non-farm-use applications, Section 20(1) subdivisions, and farm-class tax appeals. Doug's brokerage has closed 60+ ALR transactions since 2018." },
-  { icon: "💧", title: "Water & septic", body: "40-point due-diligence checklist covering water licences, flow rate, ROWP septic inspections, and secondary-dwelling load capacity." },
-  { icon: "🏛", title: "Zoning navigation", body: "Written zoning confirmations from every Fraser Valley municipality, plus a plain-English breakdown of what you can and can't build with your acreage." },
-];
+const PILLARS = [];  // deprecated Feb 2026 — "Why Doug" tiles removed per Doug's request
 
 const SectionH = ({ children, kicker, id }) => (
   <div style={{marginTop:56, marginBottom:18}} id={id || undefined}>
@@ -411,7 +407,6 @@ export default function EquestrianLeadMockup() {
           </div>
 
           <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:22}}>
-            <a href="#lead-form" style={{background:BRAND.gold, color:BRAND.navy, padding:"13px 24px", borderRadius:999, fontWeight:700, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-lead-form-cta">🐴 Get the checklist</a>
             <Link to={composedListingsUrl} style={{background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.4)", padding:"13px 24px", borderRadius:999, fontWeight:600, fontSize:"0.95rem", textDecoration:"none"}} data-testid="hero-view-listings">🏡 View {stats.total.toLocaleString()} live listings</Link>
           </div>
         </div>
@@ -466,7 +461,6 @@ export default function EquestrianLeadMockup() {
               { k:"hobby-farm", label:"Hobby Farm" },
               { k:"estate",     label:"Estate" },
               { k:"ranch",      label:"Ranch" },
-              { k:"bareland",   label:"Bareland" },
             ].map(c => {
               const active = propertyType === c.k;
               return (
@@ -562,18 +556,6 @@ export default function EquestrianLeadMockup() {
       </div>
 
       <div style={{maxWidth:1120, margin:"0 auto", padding:"0 20px 60px", fontFamily:"Inter,sans-serif"}}>
-
-        {/* ═══ § VALUE PILLARS ═══════════════════════════════════════ */}
-        <SectionH kicker="Why Doug">Three things Doug catches on every equestrian file</SectionH>
-        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))", gap:16}}>
-          {PILLARS.map(p => (
-            <div key={p.title} style={{background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"22px 24px"}}>
-              <div style={{fontSize:"2rem", marginBottom:6}}>{p.icon}</div>
-              <h3 style={{fontSize:"1.1rem", fontFamily:"'Sora',sans-serif", fontWeight:700, color:BRAND.navy, margin:"0 0 8px"}}>{p.title}</h3>
-              <p style={{fontSize:"0.9rem", lineHeight:1.6, color:BRAND.ink, margin:0}}>{p.body}</p>
-            </div>
-          ))}
-        </div>
 
         {/* ═══ § SAMPLE LISTINGS ═════════════════════════════════════ */}
         <SectionH kicker="Live inventory">4 sample equestrian listings on the market now</SectionH>
