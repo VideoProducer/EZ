@@ -458,7 +458,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
           <Kicker>Curated corridors · {resolvedCorridors.reduce((s, c) => s + (c.count || 0), 0).toLocaleString("en-CA")} active $3M+ residences across BC</Kicker>
           <H level={2} align="center">Choose your lifestyle.</H>
           <p style={{ fontFamily: SANS, fontSize: "1rem", color: BRAND.muted, marginTop: 16, maxWidth: 620, marginLeft: "auto", marginRight: "auto", lineHeight: 1.7 }}>
-            Every residence in the portfolio meets a $3M minimum and is vetted for provenance, permits, and privacy. Filter across the ten defining BC luxury geographies — from Coal Harbour penthouses to Salt Spring off-grid architecture.
+            Every residence in the portfolio meets a $3M minimum, sourced live from the CREA DDF® MLS® feed. When you request a private viewing, Doug personally reviews title, active permits with the municipality, and negotiates showings with discretion. Filter across the ten defining BC luxury geographies — from Coal Harbour penthouses to Salt Spring off-grid architecture.
           </p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
