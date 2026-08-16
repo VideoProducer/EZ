@@ -195,9 +195,10 @@ export default function EquestrianLeadMockup() {
     if (qf.has("has_arena")) params.set("has_arena", "true");
     if (qf.has("50+"))       params.set("min_acres", "50");
     else if (qf.has("20+"))  params.set("min_acres", "20");
-    // Route to the DEDICATED equestrian search — respects the CORE keyword
-    // scan + property-type allowlist that /listings ignores.
-    return `/listings/equestrian?${params.toString()}`;
+    // Route to the main frontend listings search — NOT `/listings/equestrian`
+    // which is a BACKEND route that the frontend router misreads as
+    // /listings/{mls} (giving a blank "MLS undefined" page).
+    return `/listings?${params.toString()}`;
   };
 
   const composedListingsUrl = useMemo(
