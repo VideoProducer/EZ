@@ -9555,10 +9555,22 @@ async def search_listings(
                         "trademark_notice": "MLS®, Multiple Listing Service® and the associated logos are owned by The Canadian Real Estate Association (CREA).",
                         "data_source": "CREA DDF® — residential only",
                     }}
-        # For fuzzy types (Equestrian, Manufactured / Mobile, Recreation) merge
+        # Equestrian gets the FULL treatment — same as /api/listings/equestrian:
+        #   1. Full CORE_EQUESTRIAN_KEYWORDS keyword scan on description
+        #   2. 5-acre-or-legal-barn floor (blocks sub-acre suburban lots)
+        #   3. EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES allowlist (no condos/apts)
+        # This ensures every chip on /specialties/equestrian returns REAL
+        # horse-friendly acreage in the exact selected cities — not just any
+        # listing whose description happens to mention "horseshoe" once.
+        if property_type == "Equestrian":
+            eq_or = [{"description": {"$regex": r"\b" + re.escape(k), "$options": "i"}} for k in CORE_EQUESTRIAN_KEYWORDS]
+            query.setdefault("$and", []).append({"$or": eq_or})
+            query["$and"].append(_equestrian_lot_or_barn_clause())
+            query["property_type"] = {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)}
+        # For remaining fuzzy types (Manufactured / Mobile, Recreation) merge
         # a description-text fallback so we catch listings even when CREA
         # doesn't have a matching structured label.
-        if property_type in ("Equestrian", "Manufactured / Mobile", "Recreation", "Recreational"):
+        elif property_type in ("Manufactured / Mobile", "Recreation", "Recreational"):
             merged = query.get("$and", [])
             merged.append(_property_type_or_feature_query(property_type))
             query["$and"] = merged
