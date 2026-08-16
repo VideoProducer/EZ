@@ -127,6 +127,13 @@ export default function EquestrianLeadMockup() {
             min_acres: 5,
             sort: "price_desc",
             limit: 8,
+            // Filter development / land-assembly / holding aerials out of the
+            // rotating hero — CREA sometimes classifies these as Detached /
+            // Acreage so they slip past the property-type allowlist, and the
+            // first photo is often an overlay-labelled site plan (e.g.
+            // "FULLY DEVELOPED COMMUNITY"). Pipe-separated regex patterns.
+            exclude_description_keywords:
+              "land\\s+assembl|development\\s+(potential|opportunity|site|play)|developer'?s?\\s+(alert|dream|discover|attention)|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+(land|holding|opportunity)|fully\\s+developed\\s+community|land\\s+banking",
           },
         });
         if (cancelled) return;

@@ -230,7 +230,15 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
   useEffect(() => {
     let cancelled = false;
     const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
-    fetch(`${API}/listings?price_min=3000000&sort=price_desc&exclude_property_type=${excl}&limit=${HERO_FETCH_LIMIT}`)
+    // Pipe-separated regex blacklist — filters out development / land-
+    // assembly / holding-property listings that CREA mis-classifies as
+    // "Detached" and whose first photo is an aerial site plan (the
+    // "FULLY DEVELOPED COMMUNITY" parcel-overlay style). Keeps the hero
+    // rotator locked to genuine residential/lifestyle imagery.
+    const excludeKw = encodeURIComponent(
+      "land\\s+assembl|development\\s+(potential|opportunity|site|play)|developer'?s?\\s+(alert|dream|discover|attention)|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+(land|holding|opportunity)|fully\\s+developed\\s+community|land\\s+banking|revenue\\s+propert"
+    );
+    fetch(`${API}/listings?price_min=3000000&sort=price_desc&exclude_property_type=${excl}&exclude_description_keywords=${excludeKw}&limit=${HERO_FETCH_LIMIT}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (cancelled || !d?.listings) return;

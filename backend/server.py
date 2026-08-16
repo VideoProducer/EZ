@@ -9298,6 +9298,11 @@ async def equestrian_keyword_search(
     alr_only:   Optional[bool] = False,   # only listings whose description mentions ALR / Agricultural Land Reserve / ALC
     has_arena:  Optional[bool] = False,   # only listings whose description mentions an arena / riding ring / round pen
     min_acres:  Optional[float] = None,   # tighter acreage floor (e.g. 20+) — overrides the default 5-ac base
+    # Description-keyword blacklist. PIPE-separated (`|`) regex patterns —
+    # any listing whose description matches ANY pattern is excluded. Mirrors
+    # the same parameter on /api/listings. Used by the hero rotator to keep
+    # land-assembly / development-site aerials out of the equestrian hero.
+    exclude_description_keywords: Optional[str] = None,
 ):
     """List active BC listings whose description contains any of the
     CORE equestrian keywords AND whose property type could plausibly house
@@ -9364,6 +9369,15 @@ async def equestrian_keyword_search(
         q["$and"] = list(q.get("$and", [])) + [{
             "description": {"$regex": r"\b(riding\s*arena|indoor\s*arena|outdoor\s*arena|dressage\s*arena|arena|round\s*pen|riding\s*ring)\b", "$options": "i"},
         }]
+    if exclude_description_keywords:
+        patterns = [k.strip() for k in exclude_description_keywords.split("|") if k.strip()]
+        if patterns:
+            q["$and"] = list(q.get("$and", [])) + [{
+                "$nor": [
+                    {"description": {"$regex": p, "$options": "i"}}
+                    for p in patterns
+                ],
+            }]
     if min_acres and min_acres > 0:
         # Overrides the default 5-acre floor. Same unit-aware $or as the
         # base clause, but scaled to the caller-supplied minimum.
