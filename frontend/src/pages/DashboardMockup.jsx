@@ -2602,6 +2602,38 @@ const UnifiedSearchBar = () => {
     })();
   }, []);
 
+  // Mobile keyboard-scroll helper. iOS Safari does not honour
+  // `scroll-margin-top` on nested inputs — when a field deep inside the
+  // FILTER LISTINGS card is focused, the on-screen keyboard covers it
+  // instead of scrolling it into view. This handler runs on every input
+  // focus and manually centres the field above the keyboard once the
+  // keyboard finishes opening (~350ms). Only fires on touch devices so
+  // desktop focus behaviour is unchanged.
+  const focusScrollInput = React.useCallback((e) => {
+    if (typeof window === "undefined") return;
+    // Only fire on narrow viewports (mobile / small tablet). Coarse-pointer
+    // media queries don't match reliably on all iOS Safari versions, so
+    // we key off inner width — same threshold as the SearchPanel isMobile
+    // branch that reorders the search card above the map.
+    if (window.innerWidth >= 768) return;
+    const el = e.target;
+    // Only scroll for text-entry controls — not selects (which iOS renders
+    // as native pickers) or buttons (which would jitter the layout).
+    if (!el || !(el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
+    if (typeof el.scrollIntoView !== "function") return;
+    setTimeout(() => {
+      try {
+        // block:'start' with scroll-margin-top:96 on the input keeps the
+        // active label + input above the keyboard on iOS. block:'center'
+        // is unreliable when the field is near the bottom of the page —
+        // iOS reverts to native "just above keyboard" positioning which
+        // hides the label.
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch {}
+    }, 350);
+  }, []);
+
+
   const set = (k, v) => ctx?.setFilters && ctx.setFilters(prev => ({ ...prev, [k]: v }));
   const digitsOnly = (s) => String(s || "").replace(/[^\d]/g, "");
   const formatMoney = (raw) => {
@@ -2722,6 +2754,7 @@ const UnifiedSearchBar = () => {
       {hasCtx && (
         <form
           onSubmit={submit}
+          onFocus={focusScrollInput}
           data-testid="dash-inline-filters"
           style={{
             display: "flex", flexWrap: "wrap", gap: 14,
