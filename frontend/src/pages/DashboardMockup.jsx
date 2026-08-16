@@ -65,7 +65,7 @@ const SECTIONS = [
   { key: "saved",     label: "Saved Homes",    icon: Heart },
   // Curated specialty listing feeds — both link to pre-filtered /listings URLs.
   // Luxury goes above Equestrian (broader audience first).
-  { key: "luxury",     label: "Luxury Listings",     icon: Star,     href: "/listings?price_min=3000000&sort=price_desc&exclude_property_type=Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use" },
+  { key: "luxury",     label: "Luxury Listings",     icon: Star,     href: "/specialties/luxury" },
   { key: "equestrian", label: "Equestrian Listings", icon: Building2, href: "/specialties/equestrian" },
   { key: "buyer",     label: "Buyer Insights", icon: BarChart3 },
   { key: "seller",    label: "Seller Insights",icon: TrendingUp },
