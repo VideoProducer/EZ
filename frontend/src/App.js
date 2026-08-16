@@ -72,6 +72,7 @@ import AiCitationFooter from "./components/AiCitationFooter";
 import { autoGlossaryLink } from "./lib/autoGlossaryLink";
 import TourNarration from "./components/TourNarration";
 import RoomLabelPill from "./components/RoomLabelPill";
+import FeatureSheet from "./components/FeatureSheet";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
@@ -4450,6 +4451,7 @@ const ListingDetail = () => {
           </div>
           <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
+          <FeatureSheet listing={listing}/>
           {listing.virtual_tour_embed?.url && (
             <div style={{marginTop:"1.75rem"}} data-testid="listing-virtual-tour">
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"0.6rem",marginBottom:"0.6rem"}}>
