@@ -426,8 +426,9 @@ export default function EquestrianLeadMockup() {
             <div><div style={{fontSize:"0.65rem", opacity:0.8}}>ACTIVE MLS® LISTINGS</div><div style={{fontSize:"1.35rem", fontFamily:"'Sora',sans-serif", fontWeight:700}} data-testid="stat-total">{loading ? "…" : stats.total.toLocaleString()}</div></div>
             <div style={{width:1, background:"rgba(255,255,255,0.25)"}}/>
             <div><div style={{fontSize:"0.65rem", opacity:0.8}}>PRICE RANGE</div><div style={{fontSize:"1.35rem", fontFamily:"'Sora',sans-serif", fontWeight:700}}>{loading ? "…" : `${_fmtMoney(stats.minPrice)} – ${_fmtMoney(stats.maxPrice)}`}</div></div>
-            <div style={{width:1, background:"rgba(255,255,255,0.25)"}}/>
-            <div><div style={{fontSize:"0.65rem", opacity:0.8}}>DATA SOURCE</div><div style={{fontSize:"1.05rem", fontFamily:"'Sora',sans-serif", fontWeight:700}}>🟢 CREA DDF® live</div></div>
+            {/* DATA SOURCE badge removed per Doug (Feb 2026) — the source
+                is disclosed in the compliance footer already, and the
+                extra pill was cluttering the hero. */}
           </div>
 
           <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:22}}>
