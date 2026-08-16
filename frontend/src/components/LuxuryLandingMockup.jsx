@@ -499,22 +499,44 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
           <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted }}>Showing {shown.length} residences · updated 4 minutes ago</div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 28 }}>
-          {shown.map(l => (
-            <article key={l.key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}` }}>
-              <div style={{ background: `linear-gradient(135deg, #DDD2B8, #F0E9D7)`, height: 260, position: "relative" }}>
-                <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{l.corridor}</div>
-              </div>
-              <div style={{ padding: "24px 26px 26px" }}>
-                <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{l.addr}</div>
-                <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, marginTop: 4 }}>{l.city}, British Columbia</div>
-                <div style={{ fontFamily: SANS, fontSize: "0.9rem", color: BRAND.ink, marginTop: 12, lineHeight: 1.6 }}>{l.desc}</div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
-                  <div style={{ fontFamily: SERIF, fontSize: "1.4rem", color: BRAND.ink }}>${l.price.toLocaleString("en-CA")}</div>
-                  <button onClick={() => setOpenListing(l)} data-testid={`viewing-${l.key}`} style={{ background: "none", border: `1px solid ${BRAND.ink}`, color: BRAND.ink, padding: "9px 16px", fontFamily: SANS, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 999 }}>Private viewing</button>
+          {liveListingsLoading && (
+            <div style={{ gridColumn:"1 / -1", padding:"3rem", textAlign:"center", color:BRAND.muted, fontFamily:SANS }}>
+              Loading live $3M+ inventory…
+            </div>
+          )}
+          {!liveListingsLoading && shown.length === 0 && (
+            <div style={{ gridColumn:"1 / -1", padding:"3rem", textAlign:"center", color:BRAND.muted, fontFamily:SANS }}>
+              No $3M+ listings currently active in this corridor. Check back — the CREA DDF® feed refreshes every 4 hours.
+            </div>
+          )}
+          {!liveListingsLoading && shown.map(l => {
+            const key    = l.listing_key || l.key;
+            const price  = l.list_price ?? l.price ?? 0;
+            const addr   = l.unparsed_address || l.street_address || l.addr || "Address available on request";
+            const city   = l.city || "British Columbia";
+            const desc   = (l.description || l.public_remarks || l.desc || "").slice(0, 180);
+            const photo  = l.photos?.[0];
+            const corridorLabel = CORRIDORS.find(c => (c.cities || []).some(cc => cc.toLowerCase() === (city || "").toLowerCase()))?.name || l.corridor || "Luxury Portfolio";
+            return (
+              <article key={key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}` }}>
+                <div style={{
+                  background: photo ? `url(${photo}) center/cover` : `linear-gradient(135deg, #DDD2B8, #F0E9D7)`,
+                  height: 260, position: "relative",
+                }}>
+                  <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{corridorLabel}</div>
                 </div>
-              </div>
-            </article>
-          ))}
+                <div style={{ padding: "24px 26px 26px" }}>
+                  <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{addr}</div>
+                  <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, marginTop: 4 }}>{city}, British Columbia</div>
+                  {desc && <div style={{ fontFamily: SANS, fontSize: "0.9rem", color: BRAND.ink, marginTop: 12, lineHeight: 1.6 }}>{desc}{(l.description || "").length > 180 ? "…" : ""}</div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
+                    <div style={{ fontFamily: SERIF, fontSize: "1.4rem", color: BRAND.ink }}>${Number(price).toLocaleString("en-CA")}</div>
+                    <button onClick={() => setOpenListing(l)} data-testid={`viewing-${key}`} style={{ background: "none", border: `1px solid ${BRAND.ink}`, color: BRAND.ink, padding: "9px 16px", fontFamily: SANS, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 999 }}>Private viewing</button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </Section>
 
@@ -553,7 +575,51 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
         </div>
       </Section>
 
-      {/* ═══════ §5 GLOBAL EXPOSURE FOR YOUR ESTATE — removed Feb 2026 per Doug's request ═══ */}
+      {/* ═══════ §5 CLIENT TESTIMONIAL ═══════════════════════════════════ */}
+      <Section tone="paper" pad="60px 0 80px">
+        <div style={{
+          background: "#EEF2FF",
+          borderRadius: 12,
+          padding: "36px 40px",
+          maxWidth: 620,
+          margin: "0 auto",
+          fontFamily: SANS,
+        }}>
+          {/* 5-star rating */}
+          <div style={{ display: "flex", gap: 3, marginBottom: 14 }} aria-label="5 out of 5 stars">
+            {[0,1,2,3,4].map(i => (
+              <svg key={i} width="20" height="20" viewBox="0 0 24 24" fill={BRAND.gold} aria-hidden="true">
+                <path d="M12 2l2.9 6.9L22 10l-5.5 4.8L18 22l-6-3.5L6 22l1.5-7.2L2 10l7.1-1.1z"/>
+              </svg>
+            ))}
+          </div>
+          {/* Quote icon */}
+          <svg width="26" height="20" viewBox="0 0 24 20" fill={BRAND.navy || "#0F2A5B"} style={{ marginBottom: 10, opacity: 0.85 }} aria-hidden="true">
+            <path d="M0 20V10C0 4.5 3.6 0 9 0v3C6 3 3 6 3 10h3v10H0zm14 0V10c0-5.5 3.6-10 9-10v3c-3 0-6 3-6 7h3v10h-6z"/>
+          </svg>
+          {/* Testimonial text */}
+          <div style={{
+            fontSize: "0.98rem", lineHeight: 1.7, color: BRAND.ink,
+            fontStyle: "italic", marginBottom: 26,
+          }}>
+            Doug was an absolute pleasure to work with! As a buyer, we truly appreciated his patience, professionalism, and thorough approach throughout the entire process. Doug took the time to understand our needs, provided valuable insights, and guided us every step of the way with clear communication and expert advice. Doug's attention to detail and dedication made the experience smooth and stress-free. We couldn't have asked for a better realtor and highly recommend Doug to anyone looking to buy or sell a home!
+          </div>
+          {/* Author row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: "50%",
+              background: BRAND.navy || "#0F2A5B", color: "white",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.02em",
+              fontFamily: SANS,
+            }}>JM</div>
+            <div>
+              <div style={{ fontWeight: 700, color: BRAND.ink, fontSize: "0.95rem" }}>J&amp;M</div>
+              <div style={{ color: BRAND.muted, fontSize: "0.82rem", marginTop: 2 }}>Buyers</div>
+            </div>
+          </div>
+        </div>
+      </Section>
 
       {/* ═══════ §6 CONFIDENTIAL ESTATE ASSESSMENT FORM ═════════════════ */}
       <Section tone="ink" pad="88px 0">
@@ -562,7 +628,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
             <Kicker tone="soft">Bespoke CMA · By invitation</Kicker>
             <H level={2} tone="white">Custom Confidential<br />Estate Assessment.</H>
             <p style={{ fontFamily: SANS, fontSize: "1rem", lineHeight: 1.75, color: "rgba(255,255,255,0.85)", marginTop: 18 }}>
-              For BC estate owners considering a sale in the next 3–24 months. Doug personally prepares a bespoke market analysis — comparable transactions above $3M, media syndication forecast, discretion protocol, and a listing timeline.
+              For BC estate owners considering a sale in the next 3–24 months. Doug personally prepares a bespoke market analysis — comparable transactions above $3M, discretion protocol, and a listing timeline.
             </p>
             <ul style={{ marginTop: 22, padding: 0, listStyle: "none", fontFamily: SANS, fontSize: "0.9rem", color: "rgba(255,255,255,0.85)", lineHeight: 2 }}>
               <li>✦ Delivered in a signed, watermarked PDF within 5 business days</li>
