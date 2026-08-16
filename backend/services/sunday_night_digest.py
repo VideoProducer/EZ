@@ -180,7 +180,6 @@ async def run_sunday_night_digest(db, base_url: str = "https://eztofind.ca") -> 
          "property_type": 1, "list_price": 1, "list_date": 1, "modification_ts": 1},
     )
     active = [d async for d in active_cursor]
-    active_by_key = {l["listing_key"]: l for l in active if l.get("listing_key")}
 
     # Newly listed = list_date within lookback window (fallback to
     # modification_ts if list_date isn't populated by the DDF pipeline).

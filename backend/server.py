@@ -3626,7 +3626,6 @@ async def auto_send_today(request: Request, _=Depends(verify_admin)):
     """Sends all AUTO-eligible reminders due today (Birthday, Anniversary, Christmas on Dec 20).
     Manual-review types (BC Assessment, Mortgage Renewal) are intentionally excluded.
     Doug can click this daily; a cron trigger can hit it too."""
-    all_reminders = await get_reminders(_=None) if False else None  # (avoid re-auth; inline instead)
     # Re-run the reminders logic inline (avoiding re-auth complexity)
     clients = await db.clients.find({}).to_list(2000)
     today = datetime.now(timezone.utc).date()
@@ -9271,7 +9270,6 @@ def _extract_equestrian_amenities(desc: str, lot_size_area, lot_size_units: str)
     """Return a dict of parsed equestrian due-diligence facts. Every value
     is either a string (normalised) or None (not disclosed)."""
     if not desc: desc = ""
-    desc_lower = desc.lower()
 
     # Acreage (prefer explicit lot_size_area over description parse).
     acres = None

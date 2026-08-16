@@ -189,7 +189,6 @@ async def render_featured_og(
     # Order: brokerage line → EZ to Find pill → hairline → headline → location → title → eyebrow
 
     # Brokerage line at the very bottom
-    bl_w = _text_w(draw, brokerage_line, f_footer)
     draw.text((margin, y_cursor - 30), brokerage_line, fill=WHITE, font=f_footer)
     y_cursor -= 30 + 6
 

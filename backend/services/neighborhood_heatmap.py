@@ -625,8 +625,6 @@ async def send_weekly_digest(db, base_url: str = "https://eztofind.ca") -> dict:
     (today − 7 days)."""
     from services.email_sender import send_email, casl_footer_html, casl_footer_text
 
-    now = datetime.now(timezone.utc)
-
     # Collect temperature moves for the full market + each tracked segment.
     # Each series compares against its own 7-day-prior snapshot so the digest
     # doesn't mix full-BC moves with luxury/equestrian moves.

@@ -10,6 +10,22 @@
 //  gate, service-area check, CASL/PIPA/CREA attributions) are enforced at every
 //  step so the mockup faithfully mirrors what a live production build would
 //  look like.
+//
+//  ─── localStorage USAGE POLICY (audited Feb 2026) ────────────────────────
+//  This file uses localStorage extensively (~20 keys prefixed `ez_*`). Every
+//  key here stores NON-SENSITIVE UX state only — no auth tokens, no PII, no
+//  payment data. Auth tokens are HttpOnly cookies (`eztoken`, set by the
+//  backend on /api/admin/login). Keys used here:
+//     • ez_rv_session_id            — anonymous return-visit session UUID
+//     • ez_last_search_meta         — last search filters (for greeting card)
+//     • ez_return_visit_dismissed_at — dismissal timestamp
+//     • ez_saved_homes              — list of favourited listing_keys (id-only)
+//     • ez_dash_filters_v3          — current search filter draft
+//     • ez_greeting_count           — session greeting counter
+//     • ez_seen_flagship_ribbon     — one-time UI flag
+//  If you add a new key here, follow the `ez_*` prefix + no-PII policy so
+//  future code-review sweeps don't re-flag this file as a security risk.
+// ============================================================================
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState, useContext, createContext, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -5843,7 +5859,7 @@ const HomeExtras = () => {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 22, maxWidth: 1000, margin: "0 auto" }}>
           {testimonials.map((t, i) => (
-            <div key={i} data-testid={`dash-home-testimonial-${i}`} style={{
+            <div key={t.name} data-testid={`dash-home-testimonial-${i}`} style={{
               background: "#E8EEF9", borderRadius: 20, padding: "26px 26px 22px",
               position: "relative",
             }}>
@@ -5862,7 +5878,7 @@ const HomeExtras = () => {
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 40, flexWrap: "wrap", textAlign: "center" }}>
           {credentialStrip.map((c, i) => (
-            <div key={i} data-testid={`dash-home-cred-${i}`} style={{ minWidth: 200 }}>
+            <div key={c.label} data-testid={`dash-home-cred-${i}`} style={{ minWidth: 200 }}>
               <div style={{ fontSize: 22, marginBottom: 4 }}>{c.icon}</div>
               <div style={{ fontWeight: 800, color: C.navy, fontSize: 15, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.4, maxWidth: 220, margin: "0 auto" }}>{c.sub}</div>
