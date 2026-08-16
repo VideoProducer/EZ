@@ -12497,20 +12497,135 @@ def _property_type_or_feature_query(pt: str) -> dict:
 def _features_query(feature_list: list) -> list:
     """Return a list of $and clauses — each feature must match either
     the structured `features` tag array OR the `description` text (case-insensitive
-    substring). Every feature must be present (AND semantics)."""
+    substring). Every feature must be present (AND semantics).
+
+    Synonym expansion: DDF descriptions vary in punctuation and phrasing
+    (e.g. "in-law suite" vs "inlaw suite" vs "in law suite" vs
+    "secondary suite" vs "mortgage helper" vs "nanny suite"). To make
+    the Keyword field forgiving we expand any hit on a known synonym-
+    group member into a regex that matches EVERY member of the group.
+    Extend this dict as Doug spots more variants."""
     clauses = []
     for feat in feature_list:
         f = feat.strip()
         if not f:
             continue
-        # Try broader match — either in features tags OR anywhere in the description
+        expanded = _expand_feature_synonyms(f)
+        # Structured tag match only fires when the raw feature itself is
+        # a canonical single-word tag (e.g. "fireplace", "pool"). Multi-
+        # word or synonym-expanded features rely on description regex.
         clauses.append({
             "$or": [
                 {"features": {"$regex": f"^{re.escape(f.lower())}$", "$options": "i"}},
-                {"description": {"$regex": re.escape(f), "$options": "i"}},
+                {"description": {"$regex": expanded, "$options": "i"}},
             ]
         })
     return clauses
+
+
+# ── Feature keyword synonym groups ─────────────────────────────────────────
+# Each group has two halves:
+#   • `triggers` — lowercase substrings that, when found ANYWHERE in the
+#     visitor's keyword phrase, activate the group.  Match is intentionally
+#     loose so "inlaw", "in-law", "in law", "in-law suite" all hit the
+#     secondary-suite group.
+#   • `regex`    — the pipe-separated set of regex atoms we search for in
+#     the listing description.  Anchored with `\b` boundaries so partial
+#     words never match.
+# _expand_feature_synonyms() picks the first group whose triggers hit and
+# emits the group's regex; unmatched keywords fall back to an escaped
+# substring so DDF descriptions are still searched literally.
+_FEATURE_SYNONYM_GROUPS: list[dict] = [
+    # Secondary-dwelling / rental-suite family — the most common
+    # buyer-side keyword that was previously unmatched (Feb 2026 bug).
+    {
+        "triggers": [
+            "inlaw", "in-law", "in law",
+            "secondary suite", "legal suite", "basement suite",
+            "suite down", "suite up", "mortgage helper",
+            "rental suite", "income suite",
+            "nanny suite", "granny suite", "granny flat",
+            "coach house", "laneway house", "laneway home",
+            "detached suite", "guest suite", "guest house", "guest cottage",
+            "garden suite", "accessory dwelling", "adu",
+        ],
+        "regex": (
+            r"\b("
+            r"in[\s\-]?law\s+suite|in[\s\-]?law|"
+            r"secondary\s+suite|legal\s+suite|"
+            r"basement\s+suite|suite\s+(?:down|up|below|above)|"
+            r"mortgage\s+helper|rental\s+suite|income\s+suite|"
+            r"nanny\s+suite|granny\s+(?:suite|flat)|"
+            r"coach\s+house|laneway\s+(?:house|home)|"
+            r"detached\s+suite|guest\s+(?:suite|house|cottage)|"
+            r"garden\s+suite|accessory\s+dwelling(?:\s+unit)?|ADU"
+            r")\b"
+        ),
+    },
+    # Waterfront family
+    {
+        "triggers": ["waterfront", "lakefront", "oceanfront", "riverfront",
+                     "water access", "dock", "private dock", "boat dock"],
+        "regex": (
+            r"\b(waterfront|lakefront|oceanfront|riverfront|"
+            r"water\s+access|(?:private|boat)\s+dock)\b"
+        ),
+    },
+    # View family
+    {
+        "triggers": ["ocean view", "mountain view", "city view",
+                     "panoramic view", "view home", "view property"],
+        "regex": (
+            r"\b(ocean\s+view|mountain\s+view|city\s+view|"
+            r"panoramic\s+view|view\s+(?:home|property))\b"
+        ),
+    },
+    # Acreage / land family
+    {
+        "triggers": ["acreage", "hobby farm", "gentlemans farm", "gentleman's farm",
+                     "large lot", "private lot"],
+        "regex": (
+            r"\b(acreage|\d+\s*acres?|hobby\s+farm|"
+            r"gentleman'?s\s+farm|large\s+lot|private\s+lot)\b"
+        ),
+    },
+    # Equestrian family (mirrors CORE_EQUESTRIAN_KEYWORDS for the keyword
+    # field; the /listings/equestrian endpoint has its own richer match).
+    {
+        "triggers": ["equestrian", "horse property", "horse ready",
+                     "barn", "stall", "paddock", "riding arena", "round pen"],
+        "regex": (
+            r"\b(equestrian|horse\s+propert|horse\s+ready|"
+            r"barn|stall|paddock|riding\s+arena|round\s+pen)\b"
+        ),
+    },
+    # Move-in / new-construction family
+    {
+        "triggers": ["new construction", "new build", "brand new",
+                     "turnkey", "turn-key", "turn key",
+                     "movein ready", "move-in ready", "move in ready"],
+        "regex": (
+            r"\b(new\s+construction|new\s+build|brand\s+new|"
+            r"turn[\s\-]?key|move[\s\-]?in\s+ready)\b"
+        ),
+    },
+]
+
+
+def _expand_feature_synonyms(feat: str) -> str:
+    """Return a single case-insensitive regex string that matches the
+    visitor's exact phrase OR any known synonym.  If the keyword doesn't
+    match any group it falls back to an escaped substring so DDF
+    descriptions are still searched literally.
+    """
+    lc = feat.lower().strip()
+    if not lc:
+        return re.escape(feat)
+    for group in _FEATURE_SYNONYM_GROUPS:
+        for trigger in group["triggers"]:
+            if trigger in lc:
+                return group["regex"]
+    return re.escape(feat)
 
 
 def _build_mls_query(filters: dict) -> dict:

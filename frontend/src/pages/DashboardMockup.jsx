@@ -2726,12 +2726,20 @@ const UnifiedSearchBar = () => {
             background: "#FDFCF7",
           }}
         >
-          <_Field label="Community · MLS® · Postal · Address" flex="1 1 320px">
+          <_Field label="Community · MLS® · Postal · Address" flex="1 1 320px" htmlFor="dash-unified-search-input">
             <input
+              id="dash-unified-search-input"
               value={val}
               onChange={e => setVal(e.target.value)}
               placeholder="Community, MLS® #, postal code (V6B 1A1) or address"
               data-testid="dash-search-city"
+              type="search"
+              inputMode="text"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               style={_inp}
             />
           </_Field>
@@ -2828,18 +2836,37 @@ const UnifiedSearchBar = () => {
 
 // Compact label + child wrapper used by the inline filter row. Kept inline
 // so we can pass a `flex` value per field to control wrapping.
-const _Field = ({ label, flex, children }) => (
-  <label style={{ flex, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, letterSpacing: 0.3 }}>{label}</span>
+const _Field = ({ label, flex, htmlFor, children }) => (
+  // Use a plain <div> instead of a <label> wrapper. iOS Safari has a
+  // long-standing quirk where a <label> that wraps a form control can
+  // proxy taps to the label surface itself rather than focusing the
+  // inner input — the user hits the field but the keyboard never
+  // opens, and the surrounding form background scrolls to fill the
+  // viewport instead (perceived as "takes me to the map").  An explicit
+  // <label htmlFor> avoids the tap-proxy path entirely.
+  <div style={{ flex, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+    <label
+      htmlFor={htmlFor}
+      style={{ fontSize: 13, fontWeight: 700, color: C.navy, letterSpacing: 0.3 }}
+    >
+      {label}
+    </label>
     {children}
-  </label>
+  </div>
 );
 
 const _inp = {
   width: "100%", padding: "12px 14px", borderRadius: 10,
   border: "1px solid #D1D5DB", background: "#fff", color: C.ink,
-  fontSize: 15, fontWeight: 500, outline: "none", boxSizing: "border-box",
+  fontSize: 16, fontWeight: 500, outline: "none", boxSizing: "border-box",
   fontFamily: "'Inter', system-ui, sans-serif",
+  // 16px font prevents iOS Safari's auto-zoom-on-focus that shifts the
+  // viewport and makes the field feel unresponsive.  scroll-margin-top
+  // gives mobile browsers space above the keyboard when they scroll the
+  // focused field into view.
+  scrollMarginTop: 96,
+  WebkitAppearance: "none",
+  appearance: "none",
 };
 const _sel = { ..._inp, appearance: "auto", cursor: "pointer" };
 
