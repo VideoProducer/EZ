@@ -554,7 +554,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
                 "What are the waterfront setback rules on Bowen Island?",
                 "Which West Van neighbourhoods feed Collingwood School?",
                 "Can I subdivide a 5-acre Whistler Cay lot?",
-                "What's the current Speculation Tax exposure on a $12M second home?",
+                "How does the Speculation & Vacancy Tax generally apply to $10M+ second homes?",
               ].map(q => (
                 <button key={q} data-testid="doogie-prompt" style={{
                   background: "transparent", color: "rgba(255,255,255,0.95)",
@@ -568,9 +568,17 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
           <div style={{ background: "rgba(255,255,255,0.04)", border: `1px solid rgba(218,191,122,0.25)`, borderRadius: 4, padding: "28px 32px" }}>
             <div style={{ fontFamily: SANS, fontSize: "0.7rem", letterSpacing: "0.18em", color: BRAND.goldSoft, fontWeight: 600, textTransform: "uppercase", marginBottom: 14 }}>Sample response</div>
             <p style={{ fontFamily: SERIF, fontSize: "1.05rem", lineHeight: 1.7, color: "rgba(255,255,255,0.92)", fontStyle: "italic" }}>
-              "West Vancouver waterfront properties are subject to the <strong>Riparian Areas Regulation</strong> requiring a 30-metre streamside protection zone from any natural boundary. The District of West Vancouver additionally applies a 15-metre setback from the natural boundary of the ocean under the Zoning Bylaw No. 4662 §200 — with variance possible for pre-existing structures. Waterfront zoning restrictions and encroachment on this setback are among the most-litigated issues in West Van transactions above $10M."
+              "West Vancouver waterfront properties are generally subject to BC's <strong>Riparian Areas Regulation</strong>, which typically establishes a 30-metre streamside protection zone measured from the natural boundary. The District of West Vancouver also generally applies a 15-metre setback from the natural boundary of the ocean under Zoning Bylaw No. 4662 §200. Setbacks, variances, and pre-existing structures are addressed on a property-by-property basis by the municipal planning department, and any decision to buy or renovate should be reviewed with a BC lawyer and the municipality before you write an offer."
             </p>
             <div style={{ marginTop: 18, fontFamily: SANS, fontSize: "0.75rem", color: "rgba(255,255,255,0.55)" }}>Sources cited: District of West Vancouver Zoning Bylaw No. 4662, Riparian Areas Regulation (SBC 2004 c. 26)</div>
+            <div style={{
+              marginTop: 18, paddingTop: 14,
+              borderTop: `1px solid rgba(218,191,122,0.18)`,
+              fontFamily: SANS, fontSize: "0.72rem",
+              color: "rgba(255,255,255,0.65)", lineHeight: 1.55,
+            }}>
+              <strong style={{ color: BRAND.goldSoft }}>General educational information only.</strong> Doogie's output is AI-assisted and reviewed by Doug LeMaire, REALTOR<sup style={{fontSize:"0.7em"}}>®</sup>. Not legal, tax, or property-specific advice. Confirm all zoning, setback, tax, and variance details with a qualified BC lawyer, notary, accountant, and the applicable municipal planning department before acting.
+            </div>
           </div>
         </div>
       </Section>
