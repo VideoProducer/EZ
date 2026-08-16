@@ -2403,9 +2403,11 @@ const SearchPanel = () => {
           </div>
         </div>
       )}
-      {/* Unified search + filters + Doogie NL bar — removed from the homepage
-          per Doug's request (Feb 2026). The full search UI still lives on
-          `/listings`. To restore inline, re-add: <UnifiedSearchBar/> */}
+      {/* Unified search + filters + Doogie NL bar — Row 1 (address/MLS bar)
+          was removed per Doug (Feb 2026). The Community/City field on Row 3
+          now handles all four intents (community, MLS #, postal code, or
+          street address) via the same routing logic. */}
+      <UnifiedSearchBar/>
       {showList && (
         <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       )}
@@ -2633,52 +2635,10 @@ const UnifiedSearchBar = () => {
         overflow: "hidden",
       }}
     >
-      {/* Row 1 — address / MLS input + Search button */}
-      <form
-        onSubmit={submit}
-        data-testid="dash-address-mls-search"
-        style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "10px 12px",
-          borderBottom: hasCtx ? "1px solid #F1F5F9" : "none",
-          position: "relative",
-        }}
-      >
-        <Search size={18} style={{ color: C.blue, flexShrink: 0 }} aria-hidden="true"/>
-        <input
-          type="text"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          data-testid="dash-address-mls-search-input"
-          placeholder="Search by address, postal code, or MLS® number (e.g. 930 Josephine Rd · V6B 1A1 · R2812345)"
-          aria-label="Search by address, postal code, or MLS number"
-          style={{
-            flex: 1, minWidth: 0, border: "none", outline: "none",
-            fontSize: 14, color: C.ink, background: "transparent",
-            fontFamily: "'Inter', system-ui, sans-serif",
-          }}
-        />
-        <ActiveFilterCount/>
-        <InputVoiceMic
-          onTranscript={(txt) => setVal(txt)}
-          onFinalSubmit={(txt) => {
-            // Route through the same submit heuristics (MLS → detail nav,
-            // otherwise → city + runSearch). We build a synthetic event so
-            // preventDefault() is safe to call.
-            setVal(txt);
-            setTimeout(() => submit({ preventDefault: () => {} }), 50);
-          }}
-        />
-        <button
-          type="submit"
-          data-testid="dash-address-mls-search-submit"
-          style={{
-            background: C.navy, color: "#fff", border: "none",
-            padding: "9px 18px", borderRadius: 8, fontWeight: 700,
-            fontSize: 13, cursor: "pointer", flexShrink: 0,
-          }}
-        >Search</button>
-      </form>
+      {/* Row 1 removed (Feb 2026) — the standalone address/MLS bar was
+          collapsed into the Community/City field on Row 3. That field
+          now accepts community names, MLS® numbers, postal codes, and
+          street addresses via the same `submit()` routing logic below. */}
 
       {/* Row 2 — Doogie voice / type / reset strip. Uses the shared
           DoogieFilterHeader so the mic behaviour + safe error handling
@@ -2711,27 +2671,30 @@ const UnifiedSearchBar = () => {
 
       {/* Row 3 — inline filter fields. Everything visible, wraps naturally on
           narrow viewports; no popover. Same SearchFiltersContext as the
-          old vertical FILTERS card. */}
+          old vertical FILTERS card. Wrapped in a <form> so hitting Enter
+          in the Community/City field runs the same MLS/postal/address/
+          community routing as the old Row 1 address bar. */}
       {hasCtx && (
-        <div
+        <form
+          onSubmit={submit}
           data-testid="dash-inline-filters"
           style={{
-            display: "flex", flexWrap: "wrap", gap: 10,
-            padding: "12px 14px",
+            display: "flex", flexWrap: "wrap", gap: 14,
+            padding: "20px 24px",
             alignItems: "flex-end",
             background: "#FDFCF7",
           }}
         >
-          <_Field label="Community / City" flex="1 1 200px">
+          <_Field label="Community · MLS® · Postal · Address" flex="1 1 320px">
             <input
-              value={filters.city || ""}
-              onChange={e => set("city", e.target.value)}
-              placeholder="Any BC community or postal code (e.g. V3A)"
+              value={val}
+              onChange={e => setVal(e.target.value)}
+              placeholder="Community, MLS® #, postal code (V6B 1A1) or address"
               data-testid="dash-search-city"
               style={_inp}
             />
           </_Field>
-          <_Field label="Property Type" flex="1 1 150px">
+          <_Field label="Property Type" flex="1 1 180px">
             <select
               value={filters.propertyType || ""}
               onChange={e => set("propertyType", e.target.value)}
@@ -2748,19 +2711,19 @@ const UnifiedSearchBar = () => {
               <option value="Vacant Land">Vacant Land</option>
             </select>
           </_Field>
-          <_Field label="Min beds" flex="0 0 92px">
+          <_Field label="Min beds" flex="0 0 108px">
             <select value={filters.beds || ""} onChange={e => set("beds", e.target.value)} data-testid="dash-search-beds" style={_sel}>
               <option value="">Any</option>
               {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
           </_Field>
-          <_Field label="Min baths" flex="0 0 92px">
+          <_Field label="Min baths" flex="0 0 108px">
             <select value={filters.baths || ""} onChange={e => set("baths", e.target.value)} data-testid="dash-search-baths" style={_sel}>
               <option value="">Any</option>
               {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
           </_Field>
-          <_Field label="Min price" flex="1 1 130px">
+          <_Field label="Min price" flex="1 1 150px">
             <input
               type="text" inputMode="numeric"
               value={formatMoney(filters.priceMin)}
@@ -2770,7 +2733,7 @@ const UnifiedSearchBar = () => {
               style={_inp}
             />
           </_Field>
-          <_Field label="Max price" flex="1 1 130px">
+          <_Field label="Max price" flex="1 1 150px">
             <input
               type="text" inputMode="numeric"
               value={formatMoney(filters.priceMax)}
@@ -2780,7 +2743,7 @@ const UnifiedSearchBar = () => {
               style={_inp}
             />
           </_Field>
-          <_Field label="Keyword" flex="1 1 150px">
+          <_Field label="Keyword" flex="1 1 170px">
             <input
               value={filters.keyword || ""}
               onChange={e => set("keyword", e.target.value)}
@@ -2789,7 +2752,7 @@ const UnifiedSearchBar = () => {
               style={_inp}
             />
           </_Field>
-          <_Field label="Sort by" flex="0 0 140px">
+          <_Field label="Sort by" flex="0 0 160px">
             <select
               value={filters.sort || "newest"}
               onChange={e => set("sort", e.target.value)}
@@ -2802,17 +2765,16 @@ const UnifiedSearchBar = () => {
             </select>
           </_Field>
           <button
-            type="button"
-            onClick={() => ctx.runSearch && ctx.runSearch()}
+            type="submit"
             data-testid="dash-inline-filters-apply"
             style={{
               background: C.gold, color: C.navy, border: "none",
-              padding: "9px 18px", borderRadius: 8, fontWeight: 800,
-              fontSize: 13, cursor: "pointer", flex: "0 0 auto",
+              padding: "13px 26px", borderRadius: 10, fontWeight: 800,
+              fontSize: 15, cursor: "pointer", flex: "0 0 auto",
               marginBottom: 2,
             }}
           >Apply filters</button>
-        </div>
+        </form>
       )}
 
       {/* Row 4 — active-filter chips (removable). Same behaviour as before. */}
@@ -2826,16 +2788,16 @@ const UnifiedSearchBar = () => {
 // Compact label + child wrapper used by the inline filter row. Kept inline
 // so we can pass a `flex` value per field to control wrapping.
 const _Field = ({ label, flex, children }) => (
-  <label style={{ flex, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-    <span style={{ fontSize: 11, fontWeight: 700, color: C.navy, letterSpacing: 0.2 }}>{label}</span>
+  <label style={{ flex, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+    <span style={{ fontSize: 13, fontWeight: 700, color: C.navy, letterSpacing: 0.3 }}>{label}</span>
     {children}
   </label>
 );
 
 const _inp = {
-  width: "100%", padding: "8px 10px", borderRadius: 8,
+  width: "100%", padding: "12px 14px", borderRadius: 10,
   border: "1px solid #D1D5DB", background: "#fff", color: C.ink,
-  fontSize: 13, fontWeight: 500, outline: "none", boxSizing: "border-box",
+  fontSize: 15, fontWeight: 500, outline: "none", boxSizing: "border-box",
   fontFamily: "'Inter', system-ui, sans-serif",
 };
 const _sel = { ..._inp, appearance: "auto", cursor: "pointer" };
