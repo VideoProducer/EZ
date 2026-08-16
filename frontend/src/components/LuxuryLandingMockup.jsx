@@ -518,22 +518,32 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
             const photo  = l.photos?.[0];
             const corridorLabel = CORRIDORS.find(c => (c.cities || []).some(cc => cc.toLowerCase() === (city || "").toLowerCase()))?.name || l.corridor || "Luxury Portfolio";
             return (
-              <article key={key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}` }}>
-                <div style={{
-                  background: photo ? `url(${photo}) center/cover` : `linear-gradient(135deg, #DDD2B8, #F0E9D7)`,
-                  height: 260, position: "relative",
-                }}>
-                  <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{corridorLabel}</div>
-                </div>
-                <div style={{ padding: "24px 26px 26px" }}>
-                  <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{addr}</div>
-                  <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, marginTop: 4 }}>{city}, British Columbia</div>
-                  {desc && <div style={{ fontFamily: SANS, fontSize: "0.9rem", color: BRAND.ink, marginTop: 12, lineHeight: 1.6 }}>{desc}{(l.description || "").length > 180 ? "…" : ""}</div>}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
-                    <div style={{ fontFamily: SERIF, fontSize: "1.4rem", color: BRAND.ink }}>${Number(price).toLocaleString("en-CA")}</div>
-                    <button onClick={() => setOpenListing(l)} data-testid={`viewing-${key}`} style={{ background: "none", border: `1px solid ${BRAND.ink}`, color: BRAND.ink, padding: "9px 16px", fontFamily: SANS, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 999 }}>Private viewing</button>
+              <article key={key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}`, transition: "transform 0.2s ease, box-shadow 0.2s ease" }}>
+                <Link
+                  to={`/listings/${encodeURIComponent(key)}`}
+                  data-testid={`luxury-listing-${key}`}
+                  style={{ display: "block", color: "inherit", textDecoration: "none" }}
+                >
+                  <div style={{
+                    background: photo ? `url(${photo}) center/cover` : `linear-gradient(135deg, #DDD2B8, #F0E9D7)`,
+                    height: 260, position: "relative",
+                  }}>
+                    <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{corridorLabel}</div>
                   </div>
-                </div>
+                  <div style={{ padding: "24px 26px 26px" }}>
+                    <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{addr}</div>
+                    <div style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, marginTop: 4 }}>{city}, British Columbia</div>
+                    {desc && <div style={{ fontFamily: SANS, fontSize: "0.9rem", color: BRAND.ink, marginTop: 12, lineHeight: 1.6 }}>{desc}{(l.description || "").length > 180 ? "…" : ""}</div>}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22 }}>
+                      <div style={{ fontFamily: SERIF, fontSize: "1.4rem", color: BRAND.ink }}>${Number(price).toLocaleString("en-CA")}</div>
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenListing(l); }}
+                        data-testid={`viewing-${key}`}
+                        style={{ background: "none", border: `1px solid ${BRAND.ink}`, color: BRAND.ink, padding: "9px 16px", fontFamily: SANS, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", borderRadius: 999 }}
+                      >Private viewing</button>
+                    </div>
+                  </div>
+                </Link>
               </article>
             );
           })}
