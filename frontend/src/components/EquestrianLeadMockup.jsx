@@ -589,8 +589,9 @@ export default function EquestrianLeadMockup() {
           <Link to="/listings?property_type=Equestrian" style={{background:BRAND.navy, color:"white", padding:"11px 22px", borderRadius:999, fontWeight:600, fontSize:"0.9rem", textDecoration:"none", display:"inline-block"}} data-testid="view-all-listings">View all {stats.total.toLocaleString()} equestrian listings →</Link>
         </div>
 
-        {/* ═══ § LEAD FORM ═══════════════════════════════════════════ */}
-        <EquestrianLeadForm/>
+        {/* ═══ § LEAD FORM ═══════════════════════════════════════════
+            Removed Feb 2026 per Doug's request — the "Get the checklist"
+            form + card was pulled from the equestrian landing page. */}
 
         {/* ═══ § 5-STEP CHECKLIST ═══════════════════════════════════ */}
         <SectionH kicker="Free checklist" id="checklist">5-step equestrian buyer due-diligence checklist</SectionH>
