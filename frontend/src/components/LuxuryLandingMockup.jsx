@@ -32,8 +32,8 @@ const SERIF = "'Playfair Display', 'Cormorant Garamond', Georgia, serif";
 const SANS = "'Inter', -apple-system, sans-serif";
 
 // ── Reusable ──────────────────────────────────────────────────────────
-const Section = ({ children, tone = "paper", pad = "80px 0" }) => (
-  <section style={{
+const Section = ({ children, tone = "paper", pad = "80px 0", id }) => (
+  <section id={id} style={{
     background: tone === "ink" ? BRAND.ink : tone === "white" ? "white" : BRAND.paper,
     padding: pad, color: tone === "ink" ? "white" : BRAND.ink,
   }}>
@@ -462,7 +462,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
           </p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-          <button onClick={() => setCorridor("all")} style={{
+          <button onClick={() => { setCorridor("all"); setTimeout(() => document.getElementById("luxury-magazine-grid")?.scrollIntoView({behavior:"smooth", block:"start"}), 100); }} style={{
             padding: "20px 22px", border: corridor === "all" ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
             background: corridor === "all" ? BRAND.ink : "white", color: corridor === "all" ? "white" : BRAND.ink,
             cursor: "pointer", textAlign: "left", borderRadius: 4, fontFamily: SANS,
@@ -473,7 +473,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
             </div>
           </button>
           {resolvedCorridors.map(c => (
-            <button key={c.slug} onClick={() => setCorridor(c.slug)} data-testid={`corridor-${c.slug}`} style={{
+            <button key={c.slug} onClick={() => { setCorridor(c.slug); setTimeout(() => document.getElementById("luxury-magazine-grid")?.scrollIntoView({behavior:"smooth", block:"start"}), 100); }} data-testid={`corridor-${c.slug}`} style={{
               padding: 0, border: corridor === c.slug ? `2px solid ${BRAND.ink}` : `1px solid ${BRAND.hairline}`,
               cursor: "pointer", textAlign: "left", borderRadius: 4, overflow: "hidden", background: "white",
             }}>
@@ -490,7 +490,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
       </Section>
 
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
-      <Section tone="paper" pad="20px 0 80px">
+      <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>
