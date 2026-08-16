@@ -581,7 +581,8 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
 
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
       <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
-        <LuxuryFlagshipCard/>
+        {/* Parked until flagship launch (tomorrow 9:00 AM PT) — do not remove */}
+        {false && <LuxuryFlagshipCard/>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>
