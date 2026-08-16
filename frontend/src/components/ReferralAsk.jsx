@@ -137,7 +137,7 @@ const ReferralAsk = ({
             padding: "0.7rem 1.35rem", borderRadius: 999, textDecoration: "none",
             lineHeight: 1.3,
           }}
-        >Referral REALTOR<sup style={{fontSize:"0.65em"}}>®</sup> link →</Link>
+        >Referral REALTOR<sup style={{fontSize:"0.65em"}}>®</sup> →</Link>
       </div>
     );
   }
