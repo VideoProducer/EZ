@@ -452,7 +452,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
           <Kicker tone="soft">The BC Luxury Portfolio · $3M+ residences</Kicker>
           <H level={1} tone="white">Where discretion,<br />craftsmanship, and place<br /><em style={{ color: BRAND.goldSoft }}>converge.</em></H>
           <div style={{ marginTop: 24, fontFamily: SANS, fontSize: "1.05rem", lineHeight: 1.7, color: "rgba(255,255,255,0.9)", maxWidth: 620 }}>
-            A curated collection of British Columbia's most distinguished residences — West Vancouver waterfronts, Coal Harbour penthouses, Whistler chalets, and Fraser Valley estates. Represented by Doug LeMaire, REALTOR® · syndicated globally.
+            A curated collection of British Columbia's most distinguished residences — West Vancouver waterfronts, Coal Harbour penthouses, Whistler chalets, and Fraser Valley estates.
           </div>
 
           {/* Flagship listing card overlay */}
@@ -745,7 +745,7 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
       {/* Footer */}
       <div style={{ background: BRAND.ink, color: "rgba(255,255,255,0.65)", padding: "36px 24px", fontFamily: SANS, fontSize: "0.75rem", textAlign: "center", lineHeight: 1.7 }}>
         © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 · Brokerage (604) 466-7021 · Direct (604) 787-0851 · <a href="mailto:privacy@eztofind.ca" style={{ color: BRAND.goldSoft }}>privacy@eztofind.ca</a><br />
-        MLS® data © CREA DDF®. Media syndication placements provided by third-party publishing partners. General information only — not real-estate, legal, tax, or financial advice.
+        MLS® data © CREA DDF®. General information only — not real-estate, legal, tax, or financial advice.
       </div>
 
       {openListing && <PrivateViewingModal listing={openListing} utm={utm} onClose={() => setOpenListing(null)} />}
