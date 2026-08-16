@@ -335,7 +335,7 @@ export default function FirstTimeBuyerCheatSheet() {
             <strong>General information only.</strong> Program thresholds, eligibility rules, and rebate caps change frequently. Amounts shown were current as of February 2026. This cheat-sheet is not tax, legal, or financial advice — always confirm your specific eligibility with the BC Ministry of Finance, Canada Revenue Agency, and a licensed tax professional before relying on any figure. Statute references (Property Transfer Tax Act, Income Tax Act, Excise Tax Act) are for guidance only.
           </p>
           <p style={{fontSize:"8.5pt",color:BRAND.muted,lineHeight:1.6,marginTop:"6pt"}}>
-            <strong>Privacy (PIPA BC):</strong> Your email was collected under BC's Personal Information Protection Act solely to deliver this document. Withdraw consent at privacy@eztofind.ca. Full privacy policy at eztofind.ca/privacy.
+            <strong>Privacy (PIPA BC):</strong> Your email was collected under BC's Personal Information Protection Act solely to deliver this document. Withdraw consent at info@eztofind.ca. Full privacy policy at eztofind.ca/privacy.
           </p>
           <p style={{fontSize:"8pt",color:BRAND.muted,lineHeight:1.6,marginTop:"10pt"}}>
             © 2026 Doug LeMaire. EZtoFind.ca™ and Doogie™ are trademarks. Copyright registered with the Canadian Intellectual Property Office (Registration No. 1247822).

@@ -1,7 +1,7 @@
 # EZtoFind.ca — Privacy Breach Response Plan
 
 **Owner**: Doug LeMaire, REALTOR® (Privacy Officer) · BCFSA License #167790
-**Escalation contact**: privacy@eztofind.ca · (604) 466-7021
+**Escalation contact**: info@eztofind.ca · (604) 466-7021
 **Version**: 1.0
 **Effective**: 2026-02-02
 **Review cycle**: Annually + after every incident (whether or not reportable)
@@ -62,7 +62,7 @@ Answer, in writing:
 - What personal information was involved
 - What we have done and are doing about it
 - What they can do to protect themselves (change passwords, watch for phishing, monitor credit, etc.)
-- Our contact for follow-up questions (privacy@eztofind.ca)
+- Our contact for follow-up questions (info@eztofind.ca)
 - Their right to complain to the OIPC BC
 
 **BCFSA** — notify the Managing Broker at Fraser Property Management Realty Services Ltd. **immediately**. The Managing Broker will decide whether BCFSA notification is triggered under the RESA Rules (typically for breaches involving trading records or client trust information).
@@ -105,7 +105,7 @@ Send a written "closed" summary to the Managing Broker and update this plan.
 > Subject: PIPA Breach Notification — EZtoFind.ca / Doug LeMaire, REALTOR® — Incident [ID]
 >
 > Organization: EZtoFind.ca operated by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.)
-> Privacy Officer: privacy@eztofind.ca · (604) 466-7021
+> Privacy Officer: info@eztofind.ca · (604) 466-7021
 > Incident detected: [ISO timestamp]
 > Nature of incident: [1-paragraph description]
 > Personal information involved: [categories + record count]
@@ -129,7 +129,7 @@ Send a written "closed" summary to the Managing Broker and update this plan.
 > **What we've done**: [containment + remediation]
 > **What you can do**: [tailored advice — change password, watch for phishing, etc.]
 >
-> If you have questions, reply to this email or write to us at privacy@eztofind.ca. You can also contact the BC Office of the Information and Privacy Commissioner at privacyhelp@oipc.bc.ca or 1-800-663-7867.
+> If you have questions, reply to this email or write to us at info@eztofind.ca. You can also contact the BC Office of the Information and Privacy Commissioner at privacyhelp@oipc.bc.ca or 1-800-663-7867.
 >
 > Sincerely,
 > Doug LeMaire, REALTOR® · Privacy Officer · EZtoFind.ca
@@ -137,7 +137,7 @@ Send a written "closed" summary to the Managing Broker and update this plan.
 ## 6. Reporting a suspected breach — inbound channels
 
 Anyone (visitor, security researcher, contractor, staff) may report a suspected breach 24/7:
-- Email: privacy@eztofind.ca (monitored daily)
+- Email: info@eztofind.ca (monitored daily)
 - Phone: (604) 466-7021
 - Web: any contact form on the site, marked "Privacy" in the subject
 - Coordinated disclosure: security@eztofind.ca

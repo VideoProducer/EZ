@@ -825,14 +825,14 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 36px", background: "white", border: `1px solid ${BRAND.hairline}`, borderRadius: 4 }}>
           <div style={{ fontFamily: SERIF, fontSize: "1.2rem", color: BRAND.ink, marginBottom: 12 }}>🔒 Confidentiality & PIPA Compliance</div>
           <p style={{ fontFamily: SANS, fontSize: "0.85rem", color: BRAND.muted, lineHeight: 1.75, margin: 0 }}>
-            All enquiries submitted through this portal are handled under British Columbia's <strong>Personal Information Protection Act (PIPA)</strong>. Estate ownership details, contact channels, and viewing preferences are stored in Doug LeMaire's private client ledger — separated from the public marketing CRM. Doug does not sell, rent, or share client information with third parties. Encrypted contact channels (Signal, WhatsApp end-to-end) are offered for buyers requesting maximum discretion. Enquiries may be withdrawn at any time by contacting <a href="mailto:privacy@eztofind.ca" style={{ color: BRAND.ink, fontWeight: 600 }}>privacy@eztofind.ca</a>.
+            All enquiries submitted through this portal are handled under British Columbia's <strong>Personal Information Protection Act (PIPA)</strong>. Estate ownership details, contact channels, and viewing preferences are stored in Doug LeMaire's private client ledger — separated from the public marketing CRM. Doug does not sell, rent, or share client information with third parties. Encrypted contact channels (Signal, WhatsApp end-to-end) are offered for buyers requesting maximum discretion. Enquiries may be withdrawn at any time by contacting <a href="mailto:info@eztofind.ca" style={{ color: BRAND.ink, fontWeight: 600 }}>info@eztofind.ca</a>.
           </p>
         </div>
       </Section>
 
       {/* Footer */}
       <div style={{ background: BRAND.ink, color: "rgba(255,255,255,0.65)", padding: "36px 24px", fontFamily: SANS, fontSize: "0.75rem", textAlign: "center", lineHeight: 1.7 }}>
-        © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 · Brokerage (604) 466-7021 · Direct (604) 787-0851 · <a href="mailto:privacy@eztofind.ca" style={{ color: BRAND.goldSoft }}>privacy@eztofind.ca</a><br />
+        © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. — 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5 · Brokerage (604) 466-7021 · Direct (604) 787-0851 · <a href="mailto:info@eztofind.ca" style={{ color: BRAND.goldSoft }}>info@eztofind.ca</a><br />
         MLS® data © CREA DDF®. General information only — not real-estate, legal, tax, or financial advice.
       </div>
 

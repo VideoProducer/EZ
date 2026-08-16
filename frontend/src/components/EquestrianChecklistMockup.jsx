@@ -396,7 +396,7 @@ export default function EquestrianChecklistMockup() {
           <strong>General information only.</strong> This checklist provides educational information about typical BC equestrian property due-diligence items. It is <strong>not legal, tax, veterinary, or property-specific advice</strong>, and it is not a substitute for a licensed professional. Statute references (ALC Act, WSA, RAR, LTA, SSR, AEM Code) are for guidance only — always verify against the current in-force text.
         </p>
         <p style={{fontSize:"8.5pt",color:BRAND.muted,lineHeight:1.6,marginBottom:"7pt"}}>
-          <strong>Privacy (PIPA BC):</strong> Your email was collected under BC's Personal Information Protection Act to deliver this checklist. You may withdraw consent at any time — privacy@eztofind.ca. Full policy at eztofind.ca/privacy.
+          <strong>Privacy (PIPA BC):</strong> Your email was collected under BC's Personal Information Protection Act to deliver this checklist. You may withdraw consent at any time — info@eztofind.ca. Full policy at eztofind.ca/privacy.
         </p>
         <p style={{fontSize:"8pt",color:BRAND.muted,lineHeight:1.6,marginTop:"12pt"}}>
           © 2026 Doug LeMaire. EZtoFind.ca™ and Doogie™ are trademarks. Copyright registered with the Canadian Intellectual Property Office (Registration No. 1247822). Reproduction, redistribution, or use in AI-training datasets is prohibited without written permission.

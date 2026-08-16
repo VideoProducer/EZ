@@ -1,7 +1,7 @@
 # EZtoFind.ca — Data Retention Schedule
 
 **Owner**: Doug LeMaire, REALTOR® · BCFSA License #167790 · Fraser Property Management Realty Services Ltd.
-**Privacy Officer**: privacy@eztofind.ca
+**Privacy Officer**: info@eztofind.ca
 **Version**: 1.0
 **Effective**: 2026-02-02
 **Review cycle**: Annually, or on material change to statute / business practice
@@ -37,7 +37,7 @@ This schedule governs how long EZtoFind.ca retains each category of personal inf
 
 ## 3. Early-deletion requests (PIPA s.23–s.29)
 
-Individuals may request earlier deletion of their personal information at any time by emailing **privacy@eztofind.ca** or using the self-service data-export tool at `/privacy/data-request`.
+Individuals may request earlier deletion of their personal information at any time by emailing **info@eztofind.ca** or using the self-service data-export tool at `/privacy/data-request`.
 
 We will:
 1. Verify identity via double opt-in (email verification link) before acting on the request

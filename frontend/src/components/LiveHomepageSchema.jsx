@@ -32,7 +32,7 @@ const FACTS = {
   brokerage_phone: "+1-604-466-7021",
   doug_phone:      "+1-604-787-0851",
   doug_email:      "info@eztofind.ca",
-  privacy_email:   "privacy@eztofind.ca",
+  privacy_email:   "info@eztofind.ca",
   years_experience: 13,
   glossary_count:   439,
   community_count:  240,
