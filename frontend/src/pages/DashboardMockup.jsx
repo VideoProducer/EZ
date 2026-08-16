@@ -2352,6 +2352,7 @@ const SearchPanel = () => {
   const ctx = useContext(SearchFiltersContext);
   const { filters, results, loading } = ctx || { filters: {}, results: null, loading: false };
   const { city } = filters;
+  const isMobile = useIsMobile();
   // Shared "hovered listing_key" — when you hover a listing card the
   // corresponding map pin pops; hovering a pin highlights the card.
   const [hoveredKey, setHoveredKey] = useState(null);
@@ -2392,6 +2393,12 @@ const SearchPanel = () => {
         </div>
         <MapListToggle mode={viewMode} onChange={setViewMode}/>
       </div>
+      {/* Unified search + filters card. On MOBILE it renders ABOVE the
+          map so tapping any input never scrolls the viewport past the
+          map — that layout order was the root cause of the Feb 2026
+          "typing takes me to the map" bug on mobile. On desktop we keep
+          the original order (map on top → search below). */}
+      {isMobile && <UnifiedSearchBar/>}
       {/* Map — full-width above the two-column filters/listings block.
           Hidden entirely when the visitor picks List-only. */}
       {showMap && (
@@ -2419,11 +2426,8 @@ const SearchPanel = () => {
           </div>
         </div>
       )}
-      {/* Unified search + filters + Doogie NL bar — Row 1 (address/MLS bar)
-          was removed per Doug (Feb 2026). The Community/City field on Row 3
-          now handles all four intents (community, MLS #, postal code, or
-          street address) via the same routing logic. */}
-      <UnifiedSearchBar/>
+      {/* Desktop: search card sits below the map (original layout). */}
+      {!isMobile && <UnifiedSearchBar/>}
       {showList && (
         <ResultsGrid results={results} loading={loading} hoveredKey={hoveredKey} onHoverKey={setHoveredKey} onFocusMap={focusOn}/>
       )}
@@ -2772,9 +2776,12 @@ const UnifiedSearchBar = () => {
               {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
           </_Field>
-          <_Field label="Min price" flex="1 1 150px">
+          <_Field label="Min price" flex="1 1 150px" htmlFor="dash-price-min-input">
             <input
+              id="dash-price-min-input"
               type="text" inputMode="numeric"
+              enterKeyHint="search"
+              autoComplete="off"
               value={formatMoney(filters.priceMin)}
               onChange={e => set("priceMin", digitsOnly(e.target.value))}
               placeholder="$ Any"
@@ -2782,9 +2789,12 @@ const UnifiedSearchBar = () => {
               style={_inp}
             />
           </_Field>
-          <_Field label="Max price" flex="1 1 150px">
+          <_Field label="Max price" flex="1 1 150px" htmlFor="dash-price-max-input">
             <input
+              id="dash-price-max-input"
               type="text" inputMode="numeric"
+              enterKeyHint="search"
+              autoComplete="off"
               value={formatMoney(filters.priceMax)}
               onChange={e => set("priceMax", digitsOnly(e.target.value))}
               placeholder="$ Any"
@@ -2792,8 +2802,16 @@ const UnifiedSearchBar = () => {
               style={_inp}
             />
           </_Field>
-          <_Field label="Keyword" flex="1 1 170px">
+          <_Field label="Keyword" flex="1 1 170px" htmlFor="dash-keyword-input">
             <input
+              id="dash-keyword-input"
+              type="text"
+              inputMode="text"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               value={filters.keyword || ""}
               onChange={e => set("keyword", e.target.value)}
               placeholder="e.g. waterfront"
