@@ -117,15 +117,15 @@ export default function EquestrianLeadMockup() {
     let cancelled = false;
     (async () => {
       try {
-        // Real equestrian search — ≥20 acre acreage listings. `property_type=Equestrian`
-        // isn't a real MLS® classification; the backend's equestrian search uses
-        // min_acres + alr_only / has_arena filters instead (per Wave-C rebuild).
-        // We request 24 to give the rotation a healthy pool of hero-worthy shots.
-        const r = await axios.get(`${API}/api/listings`, {
+        // Dedicated equestrian endpoint — applies the CORE keyword scan
+        // (barn/stable/paddock/arena/etc.) plus the property-type allowlist
+        // that excludes condos/apartments/townhouses. min_acres + has_arena
+        // ONLY work on this endpoint (they're ignored by the generic /listings
+        // route, which was giving us $35M penthouses).
+        const r = await axios.get(`${API}/api/listings/equestrian`, {
           params: {
             min_acres: 20,
             has_arena: true,
-            exclude_property_type: "Vacant Land,Lot,Residential Commercial Mix,Mixed Use,Multi-Family,Commercial",
             sort: "price_desc",
             limit: 24,
           },
@@ -510,6 +510,37 @@ export default function EquestrianLeadMockup() {
               }}
             >🏡 View matching listings →</Link>
           </div>
+
+          {/* Compliance note — appears only when the visitor picks a region
+              outside Doug's direct service area. Keeps BCFSA framing honest
+              at the point of intent (chip click) without cluttering the
+              default in-area experience. */}
+          {["okanagan","vancouver-island","kootenays","northern-bc"].includes(region) && (
+            <div
+              data-testid="chip-out-of-area-note"
+              style={{
+                marginTop:12, padding:"10px 14px",
+                background:"rgba(15,42,91,0.05)",
+                border:`1px dashed ${BRAND.navy}`,
+                borderRadius:10,
+                fontSize:"0.82rem", color:BRAND.navy,
+                display:"flex", alignItems:"center", gap:10, flexWrap:"wrap",
+              }}
+            >
+              <span>ℹ️ <strong>Doug refers this region.</strong> He'll connect you with a BCFSA-licensed local REALTOR® — you approve each intro.</span>
+              <Link
+                to={`/referral-request?context=Equestrian%20-%20${encodeURIComponent(region)}`}
+                data-testid="chip-out-of-area-referral"
+                style={{
+                  marginLeft:"auto",
+                  background:"white", color:BRAND.navy,
+                  border:`1px solid ${BRAND.navy}`,
+                  padding:"6px 14px", borderRadius:999,
+                  fontWeight:700, fontSize:"0.78rem", textDecoration:"none",
+                }}
+              >🤝 Request a REALTOR® in that area →</Link>
+            </div>
+          )}
         </div>
       </div>
 
