@@ -290,6 +290,11 @@ class BuyerLead(BaseModel):
     notes: Optional[str] = ""
     casl_consent: bool
     pipa_ack: bool
+    # BCFSA Disclosure of Representation in Trading Services acknowledgment.
+    # Optional at the API boundary (older client builds may not send it) —
+    # but the current frontend renders a required checkbox on every lead
+    # form, so any lead created after Feb 2026 will carry this ack.
+    dorts_ack: Optional[bool] = False
     source: str = "buyer_form"
     status: str = "new"
     form_lang: Optional[str] = "en"
@@ -312,6 +317,9 @@ class SellerLead(BaseModel):
     reason: Optional[str] = ""
     casl_consent: bool
     pipa_ack: bool
+    # BCFSA Disclosure of Representation in Trading Services acknowledgment.
+    # Optional at the API boundary — see note on BuyerLead.
+    dorts_ack: Optional[bool] = False
     source: str = "seller_form"
     status: str = "new"
     form_lang: Optional[str] = "en"
