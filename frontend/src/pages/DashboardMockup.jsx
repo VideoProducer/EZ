@@ -2003,6 +2003,26 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height 
   const officeMarkerRef = useRef(null);       // persistent gold-star office pin
   const markerByKeyRef = useRef({});   // listing_key → Leaflet marker
   const centerCacheRef = useRef({});
+  // BC community list — fetched once, used to resolve partial city input
+  // (e.g. user types "osoyo" → uniquely matches "Osoyoos"). Without this
+  // fuzzy resolution, Nominatim returns [] for "osoyo" and the map falls
+  // back to Doug's office anchor (Vancouver), stranding the visitor far
+  // from their intended search.
+  const bcCitiesRef = useRef([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/communities`);
+        const j = await r.json();
+        if (cancelled) return;
+        const list = [];
+        Object.values(j || {}).forEach(arr => (arr || []).forEach(name => list.push(name)));
+        bcCitiesRef.current = list;
+      } catch { /* leave list empty; recenter falls back to Nominatim only */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // When the parent switches between split/map/list layouts the map's
   // container size changes underneath Leaflet. Nudge Leaflet to redraw its
@@ -2072,44 +2092,70 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height 
   // typing "Osoyoos" could recentre on Vancouver Island because the first
   // stale listing happened to be there):
   //   1. Cached geocode for this exact city string
-  //   2. Nominatim geocode (authoritative — city name wins over stale pins)
-  //   3. Listing lat/lon from a listing whose city actually matches
-  //   4. Doug's default coords
+  //   2. Prefix-resolve partial input against known BC city list (Feb 2026)
+  //      — "osoyo" → "Osoyoos" when the prefix is unique. Prevents Nominatim
+  //      returning [] and stranding the map on Doug's office.
+  //   3. Nominatim geocode (authoritative — city name wins over stale pins)
+  //   4. Listing lat/lon from a listing whose city actually matches
+  //   5. If nothing resolves, LEAVE THE MAP WHERE IT IS (don't jump to
+  //      Vancouver mid-typing). Only fall back to the office anchor when
+  //      the city field is fully cleared.
+  //
+  // Debounced 500 ms so every keystroke doesn't spam Nominatim and jerk
+  // the map around while the visitor is still typing.
   useEffect(() => {
-    (async () => {
-      const map = mapRef.current;
-      if (!map) return;
-      if (!city) {
-        // No city selected → return to the office anchor at friendly zoom.
-        map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 13, { animate: true, duration: 0.8 });
+    const map = mapRef.current;
+    if (!map) return;
+    if (!city) {
+      // City field cleared → return to the office anchor at friendly zoom.
+      map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 13, { animate: true, duration: 0.8 });
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const raw = city.trim();
+      if (!raw || cancelled) return;
+      const key = raw.toLowerCase();
+      // Prefix-resolve short/partial input against the known BC city list.
+      // If the input UNIQUELY prefixes exactly one city, treat that full
+      // name as the target. Otherwise use whatever the user typed.
+      let queryName = raw;
+      const cities = bcCitiesRef.current || [];
+      const prefixMatches = cities.filter(n => n.toLowerCase().startsWith(key));
+      const exact = cities.find(n => n.toLowerCase() === key);
+      if (!exact && prefixMatches.length === 1) {
+        queryName = prefixMatches[0];
+      } else if (!exact && prefixMatches.length > 1) {
+        // Ambiguous prefix (e.g. "van" → Vancouver / North Vancouver / West
+        // Vancouver) — wait for more input rather than guessing.
+        return;
+      } else if (!exact && prefixMatches.length === 0 && raw.length < 4) {
+        // Too short to resolve anything — leave the map where it is.
         return;
       }
-      const key = city.toLowerCase().trim();
-      let center = centerCacheRef.current[key];
+      const cacheKey = queryName.toLowerCase();
+      let center = centerCacheRef.current[cacheKey];
       if (!center) {
-        // Authoritative source: Nominatim geocode for the exact city name
         try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ", British Columbia, Canada")}&format=json&limit=1`);
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryName + ", British Columbia, Canada")}&format=json&limit=1`);
           const j = await r.json();
-          if (j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 13 };
+          if (!cancelled && j && j.length) center = { lat: parseFloat(j[0].lat), lon: parseFloat(j[0].lon), zoom: 13 };
         } catch { /* fall through */ }
       }
       if (!center) {
-        // Last-resort fallback: use lat/lon from a listing whose `city` field
-        // actually matches the searched city (case-insensitive). Never use
-        // a stale unrelated listing — that was the Osoyoos → Vancouver Island bug.
-        const hit = (listings || []).find(l => l.lat && l.lon && l.city && l.city.toLowerCase().trim() === key);
+        const hit = (listings || []).find(l => l.lat && l.lon && l.city && l.city.toLowerCase().trim() === cacheKey);
         if (hit) center = { lat: hit.lat, lon: hit.lon, zoom: 13 };
       }
+      if (cancelled) return;
       if (center) {
-        centerCacheRef.current[key] = center;
+        centerCacheRef.current[cacheKey] = center;
         map.flyTo([center.lat, center.lon], center.zoom || 13, { animate: true, duration: 0.9 });
-      } else {
-        // Geocode failed and no matching listing — fall back to the office
-        // anchor rather than leaving the map stranded on the previous city.
-        map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 10, { animate: true, duration: 0.8 });
       }
-    })();
+      // If still no center: LEAVE THE MAP WHERE IT IS. Do not fly to the
+      // office — that's what caused the "type 'osoyo' → map jumps to
+      // Vancouver" bug.
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [city, listings]);
 
   // Redraw listing markers whenever listings change
