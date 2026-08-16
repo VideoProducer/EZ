@@ -388,12 +388,9 @@ export default function EquestrianLeadMockup() {
             <Link to="/" style={{color:"#fff", textDecoration:"none"}}>Home</Link> / <Link to="/specialties/equestrian" style={{color:"#fff", textDecoration:"none"}}>Equestrian</Link>
           </nav>
           <div style={{fontSize:"0.72rem", letterSpacing:"0.16em", color:BRAND.gold, fontWeight:700}}>BC'S HORSE COUNTRY</div>
-          <h1 style={{fontSize:"clamp(2rem, 5.4vw, 3.4rem)", fontFamily:"'Sora',sans-serif", fontWeight:800, lineHeight:1.05, margin:"6px 0 14px", maxWidth:900}}>
-            Buy your next equestrian home with a REALTOR® who reads every covenant, verifies every water licence, and speaks fluent ALR.
+          <h1 style={{fontSize:"clamp(1.4rem, 3vw, 2rem)", fontFamily:"'Sora',sans-serif", fontWeight:500, lineHeight:1.4, margin:"6px 0 24px", maxWidth:820, opacity:0.98}}>
+            From ALR designation, arena setback bylaws to water-licence flow rates. Doug helps you navigate the ins and outs of equestrian properties.
           </h1>
-          <p style={{fontSize:"1.05rem", lineHeight:1.6, maxWidth:720, opacity:0.95, marginBottom:24}}>
-            Doug LeMaire runs a 40-point due-diligence checklist on every horse property — so you don't buy a "5-acre acreage" only to discover a restrictive covenant that forbids livestock. Free consultation, no obligation, no CASL spam.
-          </p>
 
           <div style={{display:"flex", gap:14, alignItems:"center", flexWrap:"wrap", marginBottom:26}}>
             <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
