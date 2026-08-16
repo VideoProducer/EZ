@@ -615,23 +615,32 @@ export default function DashboardMockup({ homeVariant = "search" }) {
   // history entry the visitor "goes back to" is whichever page they came
   // from, and this Home URL just updates in-place.
   const _lastSyncedQsRef = useRef("");
+  // Sync filters → URL. Debounced so a rapid typist doesn't push a
+  // history entry (or trigger iOS Safari's URL-bar animation) per
+  // keystroke — that per-keystroke URL churn was the root cause of
+  // the "typing in Keyword takes me to the map" bug on iPhone (Feb
+  // 2026). 380ms strikes a balance between deep-linkable URLs and
+  // not fighting the on-screen keyboard.
   useEffect(() => {
-    try {
-      const urlNext = {};
-      if (filters.q) urlNext.q = filters.q;
-      if (filters.city) urlNext.city = filters.city;
-      if (filters.beds) urlNext.beds_min = filters.beds;
-      if (filters.baths) urlNext.baths_min = filters.baths;
-      if (filters.priceMin) urlNext.price_min = filters.priceMin;
-      if (filters.priceMax) urlNext.price_max = filters.priceMax;
-      if (filters.propertyType) urlNext.property_type = filters.propertyType;
-      if (filters.keyword) urlNext.features = filters.keyword;
-      if (filters.sort && filters.sort !== "newest") urlNext.sort = filters.sort;
-      const nextQs = new URLSearchParams(urlNext).toString();
-      if (_lastSyncedQsRef.current === nextQs) return;
-      _lastSyncedQsRef.current = nextQs;
-      setUrlParams(urlNext, { replace: true });
-    } catch { /* older browsers — no-op */ }
+    const t = setTimeout(() => {
+      try {
+        const urlNext = {};
+        if (filters.q) urlNext.q = filters.q;
+        if (filters.city) urlNext.city = filters.city;
+        if (filters.beds) urlNext.beds_min = filters.beds;
+        if (filters.baths) urlNext.baths_min = filters.baths;
+        if (filters.priceMin) urlNext.price_min = filters.priceMin;
+        if (filters.priceMax) urlNext.price_max = filters.priceMax;
+        if (filters.propertyType) urlNext.property_type = filters.propertyType;
+        if (filters.keyword) urlNext.features = filters.keyword;
+        if (filters.sort && filters.sort !== "newest") urlNext.sort = filters.sort;
+        const nextQs = new URLSearchParams(urlNext).toString();
+        if (_lastSyncedQsRef.current === nextQs) return;
+        _lastSyncedQsRef.current = nextQs;
+        setUrlParams(urlNext, { replace: true });
+      } catch { /* older browsers — no-op */ }
+    }, 380);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
@@ -2636,36 +2645,16 @@ const UnifiedSearchBar = () => {
     })();
   }, []);
 
-  // Mobile keyboard-scroll helper. iOS Safari does not honour
-  // `scroll-margin-top` on nested inputs — when a field deep inside the
-  // FILTER LISTINGS card is focused, the on-screen keyboard covers it
-  // instead of scrolling it into view. This handler runs on every input
-  // focus and manually centres the field above the keyboard once the
-  // keyboard finishes opening (~350ms). Only fires on touch devices so
-  // desktop focus behaviour is unchanged.
-  const focusScrollInput = React.useCallback((e) => {
-    if (typeof window === "undefined") return;
-    // Only fire on narrow viewports (mobile / small tablet). Coarse-pointer
-    // media queries don't match reliably on all iOS Safari versions, so
-    // we key off inner width — same threshold as the SearchPanel isMobile
-    // branch that reorders the search card above the map.
-    if (window.innerWidth >= 768) return;
-    const el = e.target;
-    // Only scroll for text-entry controls — not selects (which iOS renders
-    // as native pickers) or buttons (which would jitter the layout).
-    if (!el || !(el.tagName === "INPUT" || el.tagName === "TEXTAREA")) return;
-    if (typeof el.scrollIntoView !== "function") return;
-    setTimeout(() => {
-      try {
-        // block:'start' with scroll-margin-top:96 on the input keeps the
-        // active label + input above the keyboard on iOS. block:'center'
-        // is unreliable when the field is near the bottom of the page —
-        // iOS reverts to native "just above keyboard" positioning which
-        // hides the label.
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch {}
-    }, 350);
-  }, []);
+  // Note (Feb 2026): Removed the manual onFocus scroll handler here.
+  // Previous versions called `scrollIntoView({block:'start'})` 350ms
+  // after any input focus, which fought iOS Safari's own native
+  // "scroll focused input above keyboard" behaviour and left users
+  // staring at whatever content sat below the input (map, active
+  // chips, Apply button).  iOS handles keyboard-visibility scroll
+  // reliably on its own so long as the input has a large-enough font
+  // (16px prevents auto-zoom) and `scroll-margin-top` for headroom —
+  // both are already set in `_inp`.
+  const focusScrollInput = React.useCallback(() => {}, []);
 
 
   const set = (k, v) => ctx?.setFilters && ctx.setFilters(prev => ({ ...prev, [k]: v }));
