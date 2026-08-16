@@ -1,28 +1,55 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // FeatureSheet.jsx — Public feature sheet panel for a single listing.
 //
-// Displays every CREA DDF® field we already sync into Mongo as a grouped
-// 2-column "feature sheet" under the About This Property section. Rows with
-// null / empty / zero values are hidden — the sheet degrades gracefully on
-// legacy listings that don't yet carry every field.
+// Renders a magazine-style feature sheet card under "About This Property":
 //
-// Section order (matches how paper feature sheets read):
-//   1. Property Details         — MLS #, type, status, year built, floor area
-//   2. Interior                 — beds, baths, half-baths, interior feature chips
-//   3. Exterior                 — view / waterfront / pool chips, virtual tour flag
-//   4. Lot                      — lot size + units, region, postal code
-//   5. Parking                  — parsed from `features` chips (parking-2plus)
-//   6. Data & Attribution       — source, originating board, last DDF sync ts
+//   ┌──────────────────────────────────────────────────────────────────┐
+//   │  FEATURE SHEET                                                   │
+//   │  ────────────────────────────────────────────────────────────    │
+//   │                                                                  │
+//   │  Hero stats strip:  3 BED · 4 BATH · 2,354 sqft · Built 1928     │
+//   │                                                                  │
+//   │  ┌──────────────┬──────────────┬──────────────┐                  │
+//   │  │ 🏠 Property   │ 🛋 Interior   │ 🌳 Exterior   │                  │
+//   │  │ Details      │              │              │                  │
+//   │  ├──────────────┼──────────────┼──────────────┤                  │
+//   │  │ 🌾 Lot        │ 🚗 Parking    │              │                  │
+//   │  └──────────────┴──────────────┴──────────────┘                  │
+//   │                                                                  │
+//   │  ─── data & compliance one-liner ─────────────────────────       │
+//   │  CREA DDF® · FVREB · updated Jul 3, 2026 · View on REALTOR.ca ↗ │
+//   └──────────────────────────────────────────────────────────────────┘
+//
+// Design:
+//   • Navy → cream gradient background with subtle gold accent line.
+//   • Playfair Display for headings, Inter for body.
+//   • Each section becomes its own bordered card with an icon badge.
+//   • A dense "hero stats" row at the top highlights the four numbers
+//     visitors care about most (beds, baths, floor area, year built).
+//   • Rows with null/empty/zero values are hidden — the sheet degrades
+//     gracefully on legacy listings that don't yet carry every field.
+//   • Attribution footer is a single compact line (Feb 2026 update)
+//     containing every value strictly required by CREA DDF® Rules
+//     §3.6/§3.9 and GVR/FVREB inter-board display rules.
 //
 // DDF Compliance:
 //   • Every value shown here is either a factual RESO-standard field OR the
 //     `PublicRemarks` description — both approved for public display under
 //     CREA DDF® Rules §3.1 (Public Display of Data).
-//   • MLS® number and REALTOR.ca URL are attributed exactly as CREA requires.
-//   • Missing fields (nulls) are silently omitted rather than shown as
-//     "Unknown" — matches how MLS® paper feature sheets omit blank rows.
+//   • MLS® number and REALTOR.ca URL are attributed as CREA requires.
 // ═══════════════════════════════════════════════════════════════════════════
 import React from "react";
+import {
+  Home,
+  Sofa,
+  TreePine,
+  MapPin,
+  Car,
+  Bed,
+  Bath,
+  Ruler,
+  CalendarDays,
+} from "lucide-react";
 
 // -------------------- helpers --------------------
 const _isEmpty = (v) =>
@@ -30,8 +57,7 @@ const _isEmpty = (v) =>
   (typeof v === "number" && !isFinite(v)) ||
   (Array.isArray(v) && v.length === 0);
 
-// Pretty-print an area value + units. CREA returns living_area/lot_size as
-// numbers with a separate units field ("square feet", "acres", "square meters").
+// Pretty-print an area value + units.
 const _fmtArea = (n, units) => {
   if (_isEmpty(n)) return null;
   const num = Number(n);
@@ -53,15 +79,15 @@ const _fmtDate = (iso) => {
   } catch { return null; }
 };
 
-// Map the compact DDF `features` array (fireplace/pool/basement/view/...)
-// to human-readable labels. Chips arrive from services/ddf_sync.py:_feature_flags.
+// Feature-chip label map (DDF `features` → human-readable, bucketed by
+// which section they belong in).
 const _FEATURE_LABELS = {
-  "fireplace":   { section: "interior", label: "Fireplace" },
-  "basement":    { section: "interior", label: "Basement" },
-  "pool":        { section: "exterior", label: "Pool" },
-  "waterfront":  { section: "exterior", label: "Waterfront" },
-  "view":        { section: "exterior", label: "Ocean / mountain view" },
-  "parking-2plus": { section: "parking", label: "2+ parking spots" },
+  "fireplace":     { section: "interior", label: "Fireplace" },
+  "basement":      { section: "interior", label: "Basement" },
+  "pool":          { section: "exterior", label: "Pool" },
+  "waterfront":    { section: "exterior", label: "Waterfront" },
+  "view":          { section: "exterior", label: "Ocean / mountain view" },
+  "parking-2plus": { section: "parking",  label: "2+ parking spots" },
 };
 const _bucketFeatures = (features) => {
   const out = { interior: [], exterior: [], parking: [] };
@@ -72,13 +98,84 @@ const _bucketFeatures = (features) => {
   return out;
 };
 
-// -------------------- row + section primitives --------------------
 const _row = (label, value) => {
   if (_isEmpty(value)) return null;
   return { label, value };
 };
 
-const _Section = ({ title, rows, chips, testid }) => {
+// -------------------- palette --------------------
+const NAVY = "#0F2A5B";
+const GOLD = "#E8B93B";
+const INK = "#0F172A";
+const MUTED = "#64748B";
+const CREAM_1 = "#FDFCF7";
+const CREAM_2 = "#F5F0E1";
+
+// -------------------- hero stat pill --------------------
+const _HeroStat = ({ icon: Icon, label, value, testid }) => {
+  if (_isEmpty(value)) return null;
+  return (
+    <div
+      data-testid={testid}
+      style={{
+        flex: "1 1 140px",
+        minWidth: 120,
+        padding: "0.9rem 1.1rem",
+        background: "#fff",
+        border: "1px solid rgba(15,42,91,0.08)",
+        borderRadius: 12,
+        boxShadow: "0 1px 2px rgba(15,42,91,0.04)",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: `linear-gradient(135deg,${NAVY} 0%,#1A3A73 100%)`,
+          color: GOLD,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Icon size={18} strokeWidth={2.2}/>
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: "0.7rem",
+            textTransform: "uppercase",
+            letterSpacing: 0.8,
+            color: MUTED,
+            fontWeight: 700,
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "1.35rem",
+            color: NAVY,
+            lineHeight: 1.1,
+            fontWeight: 700,
+          }}
+        >
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------- section card --------------------
+const _Section = ({ title, icon: Icon, rows, chips, testid }) => {
   const validRows = (rows || []).filter(Boolean);
   const validChips = (chips || []).filter(Boolean);
   if (validRows.length === 0 && validChips.length === 0) return null;
@@ -87,30 +184,52 @@ const _Section = ({ title, rows, chips, testid }) => {
       data-testid={testid}
       style={{
         breakInside: "avoid",
-        marginBottom: "1.25rem",
+        padding: "1.1rem 1.2rem",
+        background: "#fff",
+        border: "1px solid rgba(15,42,91,0.08)",
+        borderRadius: 14,
+        boxShadow: "0 1px 2px rgba(15,42,91,0.03)",
       }}
     >
       <h4
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.55rem",
           fontFamily: "'Playfair Display', serif",
           fontSize: "1.05rem",
-          margin: "0 0 0.65rem",
-          color: "var(--brand-navy)",
-          borderBottom: "2px solid #E8B93B",
-          paddingBottom: "0.35rem",
+          margin: "0 0 0.85rem",
+          color: NAVY,
           letterSpacing: 0.2,
         }}
       >
+        <span
+          aria-hidden="true"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            background: `linear-gradient(135deg,${GOLD} 0%,#D9A927 100%)`,
+            color: NAVY,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {Icon ? <Icon size={15} strokeWidth={2.4}/> : null}
+        </span>
         {title}
       </h4>
+
       {validRows.length > 0 && (
         <dl
           style={{
             margin: 0,
             display: "grid",
-            gridTemplateColumns: "minmax(120px,auto) 1fr",
+            gridTemplateColumns: "minmax(110px,auto) 1fr",
             columnGap: "1rem",
-            rowGap: "0.4rem",
+            rowGap: "0.5rem",
             fontFamily: "Inter, system-ui, sans-serif",
             fontSize: "0.9rem",
             lineHeight: 1.5,
@@ -118,18 +237,10 @@ const _Section = ({ title, rows, chips, testid }) => {
         >
           {validRows.map((r) => (
             <React.Fragment key={r.label}>
-              <dt
-                style={{
-                  color: "var(--muted, #64748B)",
-                  fontWeight: 500,
-                  margin: 0,
-                }}
-              >
+              <dt style={{ color: MUTED, fontWeight: 500, margin: 0 }}>
                 {r.label}
               </dt>
-              <dd
-                style={{ color: "var(--ink, #0F172A)", fontWeight: 600, margin: 0, wordBreak: "break-word" }}
-              >
+              <dd style={{ color: INK, fontWeight: 600, margin: 0, wordBreak: "break-word" }}>
                 {r.value}
               </dd>
             </React.Fragment>
@@ -139,7 +250,7 @@ const _Section = ({ title, rows, chips, testid }) => {
       {validChips.length > 0 && (
         <div
           style={{
-            marginTop: validRows.length ? "0.65rem" : 0,
+            marginTop: validRows.length ? "0.85rem" : 0,
             display: "flex",
             flexWrap: "wrap",
             gap: "0.4rem",
@@ -149,13 +260,14 @@ const _Section = ({ title, rows, chips, testid }) => {
             <span
               key={c}
               style={{
-                background: "#F5F0E1",
-                color: "var(--brand-navy)",
+                background: CREAM_2,
+                color: NAVY,
                 padding: "0.28rem 0.75rem",
                 borderRadius: 999,
-                fontSize: "0.8rem",
+                fontSize: "0.78rem",
                 fontFamily: "Inter, system-ui, sans-serif",
                 fontWeight: 600,
+                border: `1px solid rgba(232,185,59,0.35)`,
               }}
             >
               {c}
@@ -175,17 +287,14 @@ const FeatureSheet = ({ listing }) => {
 
   const chips = _bucketFeatures(listing.features);
 
-  // ------ 1. Property Details ------
+  // Section rows -----------------------------------------------------------
   const propertyRows = [
     _row("MLS® #", listing.mls_number || listing.listing_key),
     _row("Property Type", listing.property_type),
     _row("Status", listing.status),
-    _row("Year Built", listing.year_built),
-    _row("Floor Area", _fmtArea(listing.living_area, listing.living_area_units)),
     _row("Photos", listing.photo_count),
   ];
 
-  // ------ 2. Interior ------
   const bathsStr = (() => {
     if (_isEmpty(listing.baths)) return null;
     return listing.half_baths
@@ -197,7 +306,6 @@ const FeatureSheet = ({ listing }) => {
     _row("Bathrooms", bathsStr),
   ];
 
-  // ------ 3. Exterior ------
   const exteriorRows = [
     _row(
       "Virtual Tour",
@@ -215,7 +323,6 @@ const FeatureSheet = ({ listing }) => {
     ),
   ];
 
-  // ------ 4. Lot ------
   const lotRows = [
     _row("Lot Size", _fmtArea(listing.lot_size_area, listing.lot_size_units)),
     _row("Neighbourhood", listing.region),
@@ -223,89 +330,195 @@ const FeatureSheet = ({ listing }) => {
     _row("Postal Code", listing.postal_code),
   ];
 
-  // ------ 5. Parking ------ (currently only 1 signal from DDF: parking-2plus)
-  // Section shows only if we have a positive signal.
-
-  // ------ 6. Data & Attribution ------
-  const attrRows = [
-    _row("Listing Board", listing.originating_system),
-    _row("Data Source", listing.source === "CREA_DDF" ? "CREA DDF® feed" : listing.source),
-    _row("Last Updated", _fmtDate(listing.modified_at || listing.synced_at)),
-    _row(
-      "REALTOR.ca",
-      listing.realtor_ca_url ? (
-        <a
-          href={listing.realtor_ca_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="feature-sheet-realtor-ca"
-          style={{ color: "var(--brand-blue, #0F2A5B)", textDecoration: "underline" }}
-        >
-          View on REALTOR.ca ↗
-        </a>
-      ) : null
-    ),
-  ];
+  // Attribution one-liner (Feb 2026) — every element on this line is
+  // required by CREA DDF® / GVR / FVREB — do NOT remove.
+  const attrPieces = [
+    listing.source === "CREA_DDF" ? "CREA DDF®" : (listing.source || null),
+    listing.originating_system || null,
+    _fmtDate(listing.modified_at || listing.synced_at)
+      ? `updated ${_fmtDate(listing.modified_at || listing.synced_at)}`
+      : null,
+  ].filter(Boolean);
 
   return (
     <section
       data-testid="listing-feature-sheet"
       aria-label="Feature sheet"
       style={{
-        marginTop: "1.5rem",
-        padding: "1.35rem 1.5rem",
-        background: "linear-gradient(180deg,#FDFCF7 0%,#F8F5EC 100%)",
-        border: "1px solid rgba(15,42,91,0.08)",
-        borderRadius: 14,
+        marginTop: "1.75rem",
+        padding: "1.75rem",
+        background: `linear-gradient(180deg,${CREAM_1} 0%,${CREAM_2} 100%)`,
+        border: "1px solid rgba(15,42,91,0.1)",
+        borderRadius: 18,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      <h3
+      {/* Gold accent line at the very top */}
+      <div
+        aria-hidden="true"
         style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: "1.2rem",
-          margin: "0 0 1rem",
-          color: "var(--brand-navy)",
-          letterSpacing: 0.3,
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          height: 3,
+          background: `linear-gradient(90deg,transparent 0%,${GOLD} 20%,${GOLD} 80%,transparent 100%)`,
+        }}
+      />
+
+      {/* Header row — title + subtle "at a glance" tag */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: "1rem",
+          marginBottom: "1.1rem",
+          flexWrap: "wrap",
         }}
       >
-        Feature Sheet
-      </h3>
+        <h3
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: "1.55rem",
+            margin: 0,
+            color: NAVY,
+            letterSpacing: 0.3,
+          }}
+        >
+          Feature Sheet
+        </h3>
+        <span
+          style={{
+            fontFamily: "Inter, system-ui, sans-serif",
+            fontSize: "0.7rem",
+            textTransform: "uppercase",
+            letterSpacing: 1.2,
+            color: GOLD,
+            fontWeight: 800,
+          }}
+        >
+          At a glance
+        </span>
+      </div>
 
-      {/* Two-column responsive grid. On viewports < 640px collapses to one. */}
+      {/* Hero stats strip — 4 highlight pills */}
+      <div
+        data-testid="feature-sheet-hero-strip"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.65rem",
+          marginBottom: "1.35rem",
+        }}
+      >
+        <_HeroStat
+          icon={Bed}
+          label="Bedrooms"
+          value={listing.beds}
+          testid="feature-sheet-hero-beds"
+        />
+        <_HeroStat
+          icon={Bath}
+          label="Bathrooms"
+          value={bathsStr}
+          testid="feature-sheet-hero-baths"
+        />
+        <_HeroStat
+          icon={Ruler}
+          label="Floor Area"
+          value={_fmtArea(listing.living_area, listing.living_area_units)}
+          testid="feature-sheet-hero-sqft"
+        />
+        <_HeroStat
+          icon={CalendarDays}
+          label="Year Built"
+          value={listing.year_built}
+          testid="feature-sheet-hero-year"
+        />
+      </div>
+
+      {/* Section grid — auto-fit tiles */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
-          columnGap: "2.25rem",
-          rowGap: "0.25rem",
+          gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))",
+          gap: "0.9rem",
         }}
       >
-        <_Section title="Property Details" rows={propertyRows} testid="feature-sheet-details"/>
-        <_Section title="Interior" rows={interiorRows} chips={chips.interior} testid="feature-sheet-interior"/>
-        <_Section title="Exterior" rows={exteriorRows} chips={chips.exterior} testid="feature-sheet-exterior"/>
-        <_Section title="Lot" rows={lotRows} testid="feature-sheet-lot"/>
-        <_Section title="Parking" chips={chips.parking} testid="feature-sheet-parking"/>
-        <_Section title="Data & Attribution" rows={attrRows} testid="feature-sheet-attribution"/>
+        <_Section
+          title="Property Details"
+          icon={Home}
+          rows={propertyRows}
+          testid="feature-sheet-details"
+        />
+        <_Section
+          title="Interior"
+          icon={Sofa}
+          rows={interiorRows}
+          chips={chips.interior}
+          testid="feature-sheet-interior"
+        />
+        <_Section
+          title="Exterior"
+          icon={TreePine}
+          rows={exteriorRows}
+          chips={chips.exterior}
+          testid="feature-sheet-exterior"
+        />
+        <_Section
+          title="Lot"
+          icon={MapPin}
+          rows={lotRows}
+          testid="feature-sheet-lot"
+        />
+        <_Section
+          title="Parking"
+          icon={Car}
+          chips={chips.parking}
+          testid="feature-sheet-parking"
+        />
       </div>
 
+      {/* Compact data & compliance one-liner (Feb 2026). Every element on
+          this line is required by CREA DDF® / GVR / FVREB — do NOT remove.
+          MLS® number lives in the Property Details tile above. */}
       <p
+        data-testid="feature-sheet-attribution"
         style={{
           fontFamily: "Inter, system-ui, sans-serif",
-          fontSize: "0.75rem",
-          color: "var(--muted, #64748B)",
-          lineHeight: 1.5,
-          margin: "1rem 0 0",
+          fontSize: "0.72rem",
+          color: MUTED,
+          lineHeight: 1.65,
+          margin: "1.35rem 0 0",
+          paddingTop: "1rem",
+          borderTop: `1px dashed rgba(15,42,91,0.14)`,
         }}
       >
-        The information above is sourced directly from the CREA DDF® feed and
-        provided for informational purposes only. Room dimensions, taxes,
-        strata fees, and full property disclosures are available on{" "}
+        <span style={{ fontWeight: 700, color: NAVY, letterSpacing: 0.2 }}>
+          {attrPieces.join(" · ")}
+        </span>
+        {attrPieces.length > 0 && listing.realtor_ca_url ? " · " : ""}
+        {listing.realtor_ca_url && (
+          <a
+            href={listing.realtor_ca_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="feature-sheet-realtor-ca"
+            style={{ color: NAVY, textDecoration: "underline", fontWeight: 700 }}
+          >
+            View on REALTOR.ca ↗
+          </a>
+        )}
+        <br/>
+        Sourced from the CREA DDF® feed for informational purposes. Room
+        dimensions, taxes, strata fees, and full property disclosures are
+        available on{" "}
         {listing.realtor_ca_url ? (
           <a
             href={listing.realtor_ca_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "var(--brand-blue, #0F2A5B)", textDecoration: "underline" }}
+            style={{ color: NAVY, textDecoration: "underline" }}
           >
             REALTOR.ca
           </a>
