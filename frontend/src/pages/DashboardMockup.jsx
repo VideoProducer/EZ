@@ -5348,7 +5348,7 @@ const HomeComplianceBanner = () => {
 // ──────────────────────────────────────────────────────────────────────────
 const FEATURED_HOME_LISTING = {
   enabled: true,
-  mls_auto_detect: true,          // hide until DDF confirms MLS is live
+  mls_auto_detect: false,         // ⚡ LAUNCHED Feb 17 2026 — render snapshot immediately, no wait for DDF sync
   status: "JUST LISTED",
   address: "3015 141 Street",
   city: "Surrey",
@@ -5363,18 +5363,13 @@ const FEATURED_HOME_LISTING = {
   lot_acres: 0.36,                // explicit override — takes precedence over calculated value
   property_type: "Detached Home",
   year_built: null,               // let DDF fill in
-  mls: "R2851234",                // ← Doug: replace Monday AM with real MLS#
+  mls: "R3156192",                // ⚡ GVR-assigned MLS® — LIVE
   headline: "Quality, Location, Lasting Value",
   description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
-    // Front elevation from Doug's photoshoot — first photo shown on the
-    // homepage hero and social share OG card. DDF live sync will provide
-    // the full gallery Monday; this photo remains the pinned #1 image
-    // because it's the intended marketing hero.
-    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ar5fqtu0_Front%20of%20House.webp",
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
-    "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
-    "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80",
+    // Dusk hero — approved marketing shot. Interior gallery will be appended
+    // by DDF live sync once photographer's set is uploaded to the MLS® feed.
+    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/73477bl0_Front%20of%20House%20Dusk.webp",
   ],
   open_house: null,               // No public open house — showings by appointment only
   // Video walkthrough — Vimeo. We use click-to-load so no third-party
