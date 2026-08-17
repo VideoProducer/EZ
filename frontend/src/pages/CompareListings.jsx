@@ -26,6 +26,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { X, ArrowLeft, Home } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const COMPARE_KEY = "ez_compare_keys";
@@ -187,6 +188,17 @@ export default function CompareListings() {
       fontFamily: "'Inter', system-ui, sans-serif",
       color: C.ink,
     }} data-testid="compare-page">
+      <Helmet>
+        {/* Traditional SEO on /compare — long-tail keyword-loaded title
+            + meta so the page is discoverable when visitors search for
+            "compare BC MLS listings" or similar side-by-side queries.
+            noindex so we don't index empty-selection pages that would
+            dilute the site's average-quality signal. */}
+        <title>Compare BC MLS® Listings Side-by-Side — Price, Beds, Baths, Lot | EZtoFind.ca</title>
+        <meta name="description" content="Compare up to 5 British Columbia MLS® listings side-by-side — list price, beds, baths, square footage, lot size, year built, and features. Live CREA DDF® data, BCFSA-licensed REALTOR® Doug LeMaire."/>
+        <link rel="canonical" href="https://eztofind.ca/compare"/>
+        <meta name="robots" content={rows.length === 0 ? "noindex,follow" : "index,follow"}/>
+      </Helmet>
       {/* Header band */}
       <div style={{
         background: "#fff",

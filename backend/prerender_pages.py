@@ -141,6 +141,18 @@ async def render_glossary(db):
 
     from glossary_sources import get_sources_for_term
 
+    # Build a category → [terms] index once so each page can emit an
+    # internal "Related terms in this category" block without a per-page
+    # DB round-trip. This is the primary SEO internal-linking mechanism
+    # for the glossary (feeds LLM topical clusters + Googlebot depth-of-
+    # crawl signals).  Terms are sorted alphabetically for stable output.
+    by_category: dict = {}
+    for t in rows:
+        c = t.get("category") or "General"
+        by_category.setdefault(c, []).append({"slug": t.get("slug"), "term": t.get("term", "")})
+    for c in by_category:
+        by_category[c].sort(key=lambda x: (x["term"] or "").lower())
+
     for t in rows:
         slug = t.get("slug")
         if not slug: continue
@@ -155,8 +167,23 @@ async def render_glossary(db):
         faqs = t.get("faqs", []) if t.get("faqs_approved") else []
 
         canonical = f"{SITE}/glossary/{slug}"
-        title = f"{term} — BC Real Estate Glossary | EZtoFind.ca"
-        desc = (defn or f"Learn about {term} in BC real estate.")[:200]
+        # Long-tail SEO title: question-format phrasing that matches how
+        # visitors actually search ("what is X in BC real estate?") plus
+        # the category and site brand.  Truncated to <60 chars where
+        # possible so Google doesn't ellipsise the SERP snippet.
+        if len(term) <= 30:
+            title = f"What is {term} in BC Real Estate? — Definition & FAQs | EZtoFind.ca"
+        else:
+            title = f"{term} — BC Real Estate | EZtoFind.ca"
+        # Meta description: leads with the definition (answer-first),
+        # includes primary keyword + BC locale + Doug's authority signal.
+        # Kept under 160 chars for SERP compliance.
+        _defn_slice = (defn or f"Learn about {term} in BC real estate.").strip().replace("\n", " ")
+        desc = (
+            f"{_defn_slice[:120]}"
+            + (" " if _defn_slice and not _defn_slice.endswith(".") else "")
+            + "BCFSA-licensed REALTOR® guidance for BC buyers & sellers."
+        )[:160]
 
         # JSON-LD schema
         schema_blocks = []
@@ -208,12 +235,25 @@ async def render_glossary(db):
                 src_html += f'<li><a href="{esc(s["url"])}" rel="noopener noreferrer">{esc(s["title"])} ↗</a><span class="publisher">{esc(s.get("publisher",""))}</span></li>'
             src_html += '</ul></div>'
 
+        # Related-terms block — internal linking within the same category.
+        # Google + LLMs use these adjacency links to cluster topical
+        # authority; up to 8 sibling terms are shown, excluding the
+        # current one. Skipped when the category has no other terms.
+        related_html = ""
+        siblings = [s for s in by_category.get(cat or "General", []) if s.get("slug") and s["slug"] != slug]
+        if siblings:
+            related_html = f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">Related BC Real Estate Terms — {esc(cat or "General")}</div><ul style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.5rem 1.25rem">'
+            for sib in siblings[:8]:
+                related_html += f'<li><a href="/glossary/{esc(sib["slug"])}" style="color:#0EA5E9;font-weight:600;text-decoration:none">{esc(sib["term"])} →</a></li>'
+            related_html += '</ul></div>'
+
         body = f"""
 <div class="eyebrow">{esc(cat)}</div>
 <h1>{esc(term)}</h1>
 <p style="font-size:1.08rem;line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(defn)}</p>
 {faq_html}
 {src_html}
+{related_html}
 """
         head_data = {
             "title": esc(title),
@@ -245,7 +285,11 @@ async def render_communities(db):
         for name in names:
             slug = slugify(name)
             canonical = f"{SITE}/community/{slug}"
-            title = f"{name}, BC — Community Profile with Live Climate Data | EZtoFind.ca"
+            # Long-tail SEO title: names the community, region, key content
+            # types (MLS® listings + climate + FAQs) and the site brand.
+            # Truncated to keep the primary "{name}, BC real estate"
+            # keyword above 60 chars.
+            title = f"{name}, BC Real Estate — {region} MLS® Listings, Climate & FAQs | EZtoFind.ca"
 
             # Cached synopsis (approved only)
             syn = await db.community_synopses.find_one({"slug": slug}, {"_id":0})
@@ -263,7 +307,19 @@ async def render_communities(db):
                 if cached and cached.get("monthly"):
                     climate = {"station": station, "monthly": cached["monthly"], "period_begin": cached.get("period_begin"), "period_end": cached.get("period_end"), "station_name_ecc": cached.get("station_name")}
 
-            desc = (synopsis or f"Community profile for {name}, British Columbia ({region}). Real Environment Canada climate normals and REALTOR® coverage.")[:200]
+            # Long-tail meta description: leads with community + region,
+            # names concrete content types visitors search for (climate,
+            # MLS® listings, REALTOR® guidance), and ends with the site
+            # brand + BCFSA licence identifier for E-E-A-T. Kept under
+            # 160 chars for SERP compliance.
+            _syn_slice = (synopsis or "").strip().replace("\n", " ")
+            if _syn_slice:
+                desc = (f"{name}, BC ({region}) — {_syn_slice}")[:160]
+            else:
+                desc = (
+                    f"{name}, BC ({region}) real estate — live MLS® listings, "
+                    f"Environment Canada climate normals, and REALTOR® guidance from Doug LeMaire, BCFSA #167790."
+                )[:160]
 
             # Schema — Place + BreadcrumbList (Home > Communities > <region> > <name>)
             place_schema = {
@@ -334,6 +390,30 @@ async def render_communities(db):
             for s in wsrcs:
                 body_html += f'<li><a href="{esc(s["url"])}" rel="noopener noreferrer">{esc(s["title"])} ↗</a><span class="publisher">{esc(s.get("publisher",""))}</span></li>'
             body_html += '</ul></div>'
+
+            # Related-communities block — internal linking to same-region
+            # peers (matches the on-site /community/{slug}/nearby API and
+            # feeds LLM topical clustering + Googlebot crawl depth).  Up
+            # to 8 peers, alphabetised, excludes the current community.
+            peers = sorted([n for n in names if n and n != name])[:8]
+            if peers:
+                body_html += f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">Nearby BC Communities in {esc(region)}</div><ul style="list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.5rem 1.25rem">'
+                for peer in peers:
+                    peer_slug = slugify(peer)
+                    body_html += f'<li><a href="/community/{esc(peer_slug)}" style="color:#0EA5E9;font-weight:600;text-decoration:none">{esc(peer)}, BC →</a></li>'
+                body_html += '</ul></div>'
+
+            # Cross-link to the region hub + the province-wide MLS® search
+            # so LLMs + Google can navigate the site's hierarchy.
+            region_slug = re.sub(r'[^a-z0-9]+', '-', region.lower()).strip('-')
+            body_html += (
+                f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">More BC Real Estate</div>'
+                f'<ul style="list-style:none;padding:0;margin:0">'
+                f'<li><a href="/regions/{region_slug}" style="color:#0EA5E9;font-weight:600">{esc(region)} region overview →</a></li>'
+                f'<li><a href="/listings?city={esc(name)}" style="color:#0EA5E9;font-weight:600">Live MLS® listings in {esc(name)}, BC →</a></li>'
+                f'<li><a href="/glossary" style="color:#0EA5E9;font-weight:600">BC Real Estate Glossary — 439 statute-cited terms →</a></li>'
+                f'</ul></div>'
+            )
 
             head_data = {
                 "title": esc(title),

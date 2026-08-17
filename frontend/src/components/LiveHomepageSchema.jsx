@@ -219,6 +219,12 @@ export default function LiveHomepageSchema() {
 
   return (
     <Helmet>
+      {/* Traditional SEO — long-tail keyword-loaded title + meta description
+          that name the primary intents (buy · sell · MLS® · community
+          profiles · glossary) and BC locale.  These feed Google SERPs +
+          LLM entity-graph disambiguation.  ~60/160 char targets. */}
+      <title>BC Real Estate — Live MLS® Listings, Community Profiles & Glossary | EZtoFind.ca</title>
+      <meta name="description" content={`British Columbia real estate research — search live MLS® listings from CREA DDF®, browse ${FACTS.community_count} community profiles with Environment Canada climate data, and ${FACTS.glossary_count} statute-cited glossary terms. BCFSA-licensed REALTOR® Doug LeMaire (#${FACTS.bcfsa_licence_individual}).`}/>
       <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       <link rel="canonical" href={`${FACTS.origin}/`}/>
       <meta property="og:type" content="website"/>
