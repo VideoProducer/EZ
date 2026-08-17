@@ -5966,6 +5966,43 @@ const HomeExtras = () => {
 
       {/* 4. Testimonials + credentials strip */}
       <section style={cardShell} data-testid="dash-home-testimonials">
+        {/* JSON-LD: Review + AggregateRating on Doug's Person entity.
+            Emitted inline (not via Helmet) so it appears in the prerendered
+            snapshot too. All testimonials are real client feedback with
+            written permission — verified for CREA Article 16 + BCFSA
+            compliance. AggregateRating uses the average of the visible
+            reviews so the ratio always matches what humans + LLMs see. */}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "RealEstateAgent",
+          "@id": "https://eztofind.ca/#doug",
+          "name": "Doug LeMaire, REALTOR®",
+          "url": "https://eztofind.ca/",
+          "image": "https://eztofind.ca/doug-headshot.jpg",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": (testimonials.reduce((s, t) => s + t.stars, 0) / testimonials.length).toFixed(1),
+            "bestRating": "5",
+            "worstRating": "1",
+            "reviewCount": testimonials.length,
+          },
+          "review": testimonials.map((t) => ({
+            "@type": "Review",
+            "reviewRating": {
+              "@type": "Rating",
+              "ratingValue": String(t.stars),
+              "bestRating": "5",
+              "worstRating": "1",
+            },
+            "author": { "@type": "Person", "name": t.name },
+            "reviewBody": t.quote,
+            "itemReviewed": {
+              "@type": "RealEstateAgent",
+              "@id": "https://eztofind.ca/#doug",
+              "name": "Doug LeMaire, REALTOR®",
+            },
+          })),
+        }) }}/>
         <span style={sectionEyebrow}>What Our Clients Say</span>
         <h2 style={sectionTitle}>Real People. Real Results.<br/>Real BC Real Estate.</h2>
         <p style={sectionSub}>

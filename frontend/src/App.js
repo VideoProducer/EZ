@@ -73,6 +73,7 @@ import { autoGlossaryLink } from "./lib/autoGlossaryLink";
 import TourNarration from "./components/TourNarration";
 import RoomLabelPill from "./components/RoomLabelPill";
 import FeatureSheet from "./components/FeatureSheet";
+import SiteWideSchema from "./components/SiteWideSchema";
 import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
@@ -11963,6 +11964,12 @@ function App() {
         wrap in AppLayout). Kept inside AppLayout too as a belt-and-braces
         no-op safety for lazy-loaded async content. */}
     <ScrollToTop/>
+    {/* Sitewide entity graph (Organization + Person + WebSite) — injected
+        on every route so LLM crawlers landing on any page can link back
+        to Doug's REALTOR® identity + brokerage. Page-specific schemas
+        (LiveHomepageSchema, prerendered Article/Place/BreadcrumbList)
+        layer on top of this baseline. */}
+    <SiteWideSchema/>
     {/* Admin-only "🔴 LIVE: {meeting label}" fixed pill — appears whenever
         Doug has an active cast session in this tab. Silent for anonymous
         visitors. */}

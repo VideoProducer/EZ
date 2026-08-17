@@ -171,6 +171,16 @@ async def render_glossary(db):
             "about":{"@type":"Place","name":"British Columbia, Canada"}
         }
         schema_blocks.append(f'<script type="application/ld+json">{json.dumps(article_schema)}</script>')
+        # BreadcrumbList — required for LLM/AEO trail: Home > Glossary > <term>
+        breadcrumb_schema = {
+            "@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE}/"},
+                {"@type": "ListItem", "position": 2, "name": "BC Real Estate Glossary", "item": f"{SITE}/glossary"},
+                {"@type": "ListItem", "position": 3, "name": term, "item": canonical},
+            ],
+        }
+        schema_blocks.append(f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>')
         if faqs:
             faq_schema = {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":f.get("q",""),"acceptedAnswer":{"@type":"Answer","text":f.get("a","")}} for f in faqs]}
             schema_blocks.append(f'<script type="application/ld+json">{json.dumps(faq_schema)}</script>')
@@ -255,14 +265,28 @@ async def render_communities(db):
 
             desc = (synopsis or f"Community profile for {name}, British Columbia ({region}). Real Environment Canada climate normals and REALTOR® coverage.")[:200]
 
-            # Schema
-            schema = {
+            # Schema — Place + BreadcrumbList (Home > Communities > <region> > <name>)
+            place_schema = {
                 "@context":"https://schema.org","@type":"Place",
                 "name": f"{name}, British Columbia",
                 "containedInPlace":{"@type":"AdministrativeArea","name":region},
-                "description": desc
+                "description": desc,
+                "url": f"{SITE}/community/{slug}",
             }
-            schema_blocks = f'<script type="application/ld+json">{json.dumps(schema)}</script>'
+            region_slug = re.sub(r'[^a-z0-9]+', '-', region.lower()).strip('-')
+            breadcrumb_schema = {
+                "@context": "https://schema.org", "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE}/"},
+                    {"@type": "ListItem", "position": 2, "name": "BC Communities", "item": f"{SITE}/communities"},
+                    {"@type": "ListItem", "position": 3, "name": region, "item": f"{SITE}/regions/{region_slug}"},
+                    {"@type": "ListItem", "position": 4, "name": name, "item": f"{SITE}/community/{slug}"},
+                ],
+            }
+            schema_blocks = (
+                f'<script type="application/ld+json">{json.dumps(place_schema)}</script>'
+                f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>'
+            )
 
             # Body
             body_html = f'<div class="eyebrow">{esc(region)}</div><h1>{esc(name)}, BC</h1>'
