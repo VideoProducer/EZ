@@ -7,7 +7,7 @@ export const FLAGSHIP = {
   city: "Surrey",
   province: "BC",
   price: 3000000,  // update once MLS is live
-  mls_number: null,  // ← paste MLS # here tomorrow
+  mls_number: "R3156192",  // GVR-assigned MLS® number for 3015 141 Street
   launch_at: "2026-02-17T17:00:00Z",  // Feb 17 2026 · 9:00 AM PT = 17:00 UTC
   ribbon_days: 7,
   hero_image: "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/ar5fqtu0_Front%20of%20House.webp",

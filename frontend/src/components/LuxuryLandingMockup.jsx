@@ -204,7 +204,7 @@ const btnGold = {
 };
 
 // ── Main page ────────────────────────────────────────────────────────
-export default function LuxuryLandingMockup({ live = false } = {}) {
+export default function LuxuryLandingMockup({ live = false, previewFlagship = false } = {}) {
   const [openListing, setOpenListing] = useState(null);
   const [corridor, setCorridor] = useState("all");
   const [sellerSubmitted, setSellerSubmitted] = useState(false);
@@ -589,8 +589,8 @@ export default function LuxuryLandingMockup({ live = false } = {}) {
 
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
       <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
-        {/* Parked until flagship launch (tomorrow 9:00 AM PT) — do not remove */}
-        {false && <LuxuryFlagshipCard/>}
+        {/* Parked until flagship launch — pass previewFlagship={true} for pre-launch review only */}
+        {previewFlagship && <LuxuryFlagshipCard/>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>

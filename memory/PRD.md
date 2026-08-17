@@ -49,6 +49,15 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 
 - Licence #167790 in top nav, footer, contact block, and copyright line on every page
 
+
+### Phase 6 — Flagship 3015 141 Street pre-launch preview (Feb 17, 2026)
+- **MLS® number R3156192** assigned to 3015 141 Street in `frontend/src/config/flagshipListing.js`
+- Two unlisted preview routes added (noindex, nofollow, robots blocked, banner-marked):
+  - `/preview/flagship-home` — renders the homepage lead-gen mockup with `FeaturedComingSoonListing` switched to `just_listed` mode, showing full address, price ($3M), MLS® R3156192, hero photo, description, "View Full Listing" + "Request a Private Showing" CTAs, and Matterport play button
+  - `/preview/flagship-luxury` — renders the luxury landing page with `LuxuryFlagshipCard` un-parked so Doug can preview the Playfair-Display gold-bordered flagship card above the magazine grid
+- Public routes (`/`, `/dashboard-mockup`, `/mockups/home-v2`, `/specialties/luxury`) remain in **parked/coming-soon** state; nothing public changes until Doug flips the switch
+- Prop-based gating: `HomepageLeadGenMockup previewFlagship={true}` and `LuxuryLandingMockup previewFlagship={true}` — a one-line flip un-parks both when ready
+
 ### Phase 3 — Performance / device (Feb 2026)
 - Verified: 0px horizontal overflow at 390px viewport
 - Verified: touch targets meet WCAG 2.5.5 (inline text-link exception applied)

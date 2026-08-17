@@ -41,6 +41,8 @@ const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
 const ListingMagazine3015 = lazy(() => import("./pages/ListingMagazine3015"));
+// UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
+import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
 const TVDisplayPage = lazy(() => import("./pages/TVDisplayPage"));
 // Family Viewing Party — lead-gen landing page that showcases the TV
@@ -12006,6 +12008,9 @@ function App() {
       <Route path="/mockups/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianLeadMockup/></Suspense>}/>
       <Route path="/mockups/home-v2" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><HomepageLeadGenMockup/></Suspense>}/>
       <Route path="/mockups/magazine-3015-141-st" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center"}}>Loading magazine…</div>}><ListingMagazine3015/></Suspense>}/>
+      {/* ─── FLAGSHIP LAUNCH PREVIEW (Doug only) — noindex, unlisted, robots blocked ─── */}
+      <Route path="/preview/flagship-home" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading preview…</div>}><><UnlistedMockupBanner label="Flagship — Homepage Feature Preview"/><HomepageLeadGenMockup previewFlagship={true}/></></Suspense>}/>
+      <Route path="/preview/flagship-luxury" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading preview…</div>}><><UnlistedMockupBanner label="Flagship — Luxury Landing Preview"/><LuxuryLandingMockup live={true} previewFlagship={true}/></></Suspense>}/>
       {/* TV pairing target — bare-bones big-screen viewer, no AppLayout chrome. */}
       <Route path="/tv" element={<Suspense fallback={<div style={{minHeight:"100vh",background:"#0F2A5B",color:"#fff",display:"grid",placeItems:"center",fontFamily:"Inter,sans-serif"}}>Loading TV mode…</div>}><TVDisplayPage/></Suspense>}/>
       {/* Family Viewing Party — indexable acquisition landing page. */}

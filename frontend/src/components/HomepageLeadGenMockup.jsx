@@ -30,6 +30,7 @@ import { DoogieFilterHeader } from "./DoogieFilterHeader";
 import { TurnstileWidget, getTurnstileToken } from "../App";
 import FeaturedComingSoonListing from "./FeaturedComingSoonListing";
 import ReferralAsk from "./ReferralAsk";
+import { FLAGSHIP } from "../config/flagshipListing";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -144,7 +145,7 @@ const NotAdviceBumper = ({ inline = false }) => (
 );
 
 // ── The page ───────────────────────────────────────────────────────
-export default function HomepageLeadGenMockup() {
+export default function HomepageLeadGenMockup({ previewFlagship = false } = {}) {
   const nav = useNavigate();
   const [stats, setStats] = useState({ total: 0, minPrice: 0, maxPrice: 0 });
 
@@ -396,18 +397,35 @@ export default function HomepageLeadGenMockup() {
       </div>
 
       {/* ═════ § FEATURED COMING-SOON LISTING — FOMO / return-visit hook ═════ */}
-      <FeaturedComingSoonListing
-        mode="coming_soon"
-        area="Fraser Valley"
-        home_type="Detached family home"
-        price_band="Priced under $2M"
-        beds_band="3–4 bedrooms"
-        baths_band="2–3 bathrooms"
-        sqft_band="Approx. 1,800–2,400 sqft"
-        eta_line="Coming to market next week"
-        description="A cared-for detached home in a family-friendly BC neighbourhood — quiet street, mature landscaping, walk-to-schools. Serious pre-MLS® enquiries only. Full address, exact price, MLS® number, and photos are published here the moment the listing is officially input to the Multiple Listing Service® under GVR/CREA rules."
-        video_url=""
-      />
+      {previewFlagship ? (
+        <FeaturedComingSoonListing
+          mode="just_listed"
+          listing_key={FLAGSHIP.mls_number}
+          address={`${FLAGSHIP.address}, ${FLAGSHIP.city}, ${FLAGSHIP.province}`}
+          price={FLAGSHIP.price}
+          photo_url={FLAGSHIP.hero_image}
+          mls_number={FLAGSHIP.mls_number}
+          area={FLAGSHIP.city}
+          brokerage="Fraser Property Management Realty Services Ltd."
+          description={FLAGSHIP.description}
+          video_url={FLAGSHIP.matterport}
+          video_poster={FLAGSHIP.hero_image}
+          showing_link="/contact"
+        />
+      ) : (
+        <FeaturedComingSoonListing
+          mode="coming_soon"
+          area="Fraser Valley"
+          home_type="Detached family home"
+          price_band="Priced under $2M"
+          beds_band="3–4 bedrooms"
+          baths_band="2–3 bathrooms"
+          sqft_band="Approx. 1,800–2,400 sqft"
+          eta_line="Coming to market next week"
+          description="A cared-for detached home in a family-friendly BC neighbourhood — quiet street, mature landscaping, walk-to-schools. Serious pre-MLS® enquiries only. Full address, exact price, MLS® number, and photos are published here the moment the listing is officially input to the Multiple Listing Service® under GVR/CREA rules."
+          video_url=""
+        />
+      )}
 
       {/* ═════ § 3 FUN PATH CARDS — each with a Doogie mascot ═════ */}
       <Section tone="paper">
