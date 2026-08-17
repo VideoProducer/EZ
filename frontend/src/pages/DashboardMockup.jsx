@@ -5835,6 +5835,22 @@ const DashboardFeaturedListing = () => {
             fontFamily: "'Playfair Display', serif", fontSize: 22,
             color: C.navy, margin: "2px 0 6px", lineHeight: 1.2, fontWeight: 800,
           }} data-testid="dash-featured-address">{merged.address}</h3>
+          {merged.mls && (
+            <div style={{ margin: "0 0 8px" }}>
+              <span
+                data-testid="dash-featured-mls-badge"
+                style={{
+                  display: "inline-block",
+                  background: "#DABF7A", color: C.navy,
+                  fontFamily: "Inter, sans-serif", fontSize: 11,
+                  fontWeight: 700, letterSpacing: 1.4,
+                  padding: "4px 10px", borderRadius: 4,
+                  border: "1px solid rgba(15,42,91,0.15)",
+                  textTransform: "uppercase",
+                }}
+              >MLS® {merged.mls}</span>
+            </div>
+          )}
           <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
             {merged.headline}
           </p>

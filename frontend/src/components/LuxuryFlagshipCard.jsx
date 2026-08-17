@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { FLAGSHIP, isFlagshipRibbonActive } from "../config/flagshipListing";
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -30,16 +29,6 @@ export default function LuxuryFlagshipCard() {
   if (!FLAGSHIP.active) return null;
   const showRibbon = isFlagshipRibbonActive();
 
-  // Route "View Full Listing" — prefer the internal detail page once the
-  // DDF hydration lands (per-listing gallery, share OG, etc.), otherwise
-  // fall back to Doug's branded magazine spread.
-  const detailHref = live
-    ? `/listings/${encodeURIComponent(FLAGSHIP.mls_number)}`
-    : "/mockups/magazine-3015-141-st";
-  const realtorCaSearch = FLAGSHIP.mls_number
-    ? `https://www.realtor.ca/map#view=list&Sort=6-D&GeoName=Surrey%2C%20BC&Keywords=${encodeURIComponent(FLAGSHIP.mls_number)}`
-    : null;
-
   // Merged fields — DDF wins when present, snapshot fills the gaps.
   const heroImage = (live?.photos?.[0]?.url || live?.photos?.[0]) || FLAGSHIP.hero_image;
   const address = live?.address || FLAGSHIP.address;
@@ -64,6 +53,22 @@ export default function LuxuryFlagshipCard() {
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.95rem", color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
             {FLAGSHIP.tagline}
           </div>
+          {FLAGSHIP.mls_number && (
+            <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
+              <span
+                data-testid="luxury-flagship-mls-badge"
+                style={{
+                  display: "inline-block",
+                  background: "#DABF7A", color: "#0F2A5B",
+                  fontFamily: "Inter, sans-serif", fontSize: "0.78rem",
+                  fontWeight: 700, letterSpacing: "0.14em",
+                  padding: "6px 14px", borderRadius: 4,
+                  border: "1px solid rgba(15,42,91,0.15)",
+                  textTransform: "uppercase",
+                }}
+              >MLS® {FLAGSHIP.mls_number}</span>
+            </div>
+          )}
           {live && (beds || baths || sqft || price) && (
             <div data-testid="luxury-flagship-specs" style={{
               marginTop: 14, display: "inline-flex", flexWrap: "wrap", gap: "6px 22px",
@@ -104,10 +109,6 @@ export default function LuxuryFlagshipCard() {
                 {description}
               </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
-                <Link to={detailHref} data-testid="flagship-detail-cta" style={{
-                  background: "#DABF7A", color: "#0F2A5B", padding: "12px 24px", borderRadius: 999,
-                  fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none",
-                }}>View Full Listing →</Link>
                 <a href={FLAGSHIP.matterport} target="_blank" rel="noopener noreferrer" data-testid="flagship-matterport" style={{
                   background: "rgba(255,255,255,0.15)", color: "white", padding: "12px 24px", borderRadius: 999,
                   border: "1px solid rgba(255,255,255,0.5)",
@@ -118,13 +119,6 @@ export default function LuxuryFlagshipCard() {
                   border: "1px solid rgba(255,255,255,0.5)",
                   fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
                 }}>Virtual Tour ↗</a>
-                {realtorCaSearch && (
-                  <a href={realtorCaSearch} target="_blank" rel="noopener noreferrer" data-testid="flagship-realtor-ca" style={{
-                    background: "transparent", color: "rgba(255,255,255,0.8)", padding: "12px 20px", borderRadius: 999,
-                    border: "1px dashed rgba(255,255,255,0.35)",
-                    fontFamily: "Sora,sans-serif", fontWeight: 500, fontSize: "0.82rem", textDecoration: "none",
-                  }}>View MLS® on realtor.ca ↗</a>
-                )}
               </div>
             </div>
           </div>
