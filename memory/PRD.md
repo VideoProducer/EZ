@@ -58,6 +58,16 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Public routes (`/`, `/dashboard-mockup`, `/mockups/home-v2`, `/specialties/luxury`) remain in **parked/coming-soon** state; nothing public changes until Doug flips the switch
 - Prop-based gating: `HomepageLeadGenMockup previewFlagship={true}` and `LuxuryLandingMockup previewFlagship={true}` — a one-line flip un-parks both when ready
 
+### Phase 7 — FLAGSHIP LAUNCH · 3015 141 Street LIVE (Feb 17, 2026)
+- **Approved & launched publicly** by Doug at asking price **$3,297,000 CAD**
+- Homepage feature (`/mockups/home-v2` a.k.a. `home-v2` renderer): `HomepageLeadGenMockup` now defaults `previewFlagship = FLAGSHIP.active` → the "Just Listed · Doug's Featured" panel is public. Shows dusk hero image, MLS® R3156192, $3,297,000, description, "View Full Listing" + "Request a Private Showing" CTAs
+- Luxury landing (`/specialties/luxury`): `LuxuryLandingMockup` renders `<LuxuryFlagshipCard/>` gated on `previewFlagship || FLAGSHIP.active`. Playfair-Display flagship card sits above the "Currently in market" magazine grid with 3D Matterport + Virtual Tour buttons
+- Doogie AI (`DOOGIE_SYSTEM` in `backend/server.py`): added a **Featured Listing** section so Doogie mentions 3015 141 Street naturally when users ask about featured homes, luxury Surrey properties, or homes under $3.5M in the Fraser Valley. Points to `/listings/R3156192` and `/contact` for private showings
+- Single-toggle rollback: flip `FLAGSHIP.active` to `false` in `frontend/src/config/flagshipListing.js` to un-launch instantly (both public renderers gate on it)
+- The `/preview/flagship-home` and `/preview/flagship-luxury` noindex routes remain live for future dry-runs
+- Asking-price hex sampling and pricing display confirmed via screenshot on both public routes
+
+
 ### Phase 3 — Performance / device (Feb 2026)
 - Verified: 0px horizontal overflow at 390px viewport
 - Verified: touch targets meet WCAG 2.5.5 (inline text-link exception applied)

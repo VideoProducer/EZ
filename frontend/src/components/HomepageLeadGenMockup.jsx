@@ -145,7 +145,7 @@ const NotAdviceBumper = ({ inline = false }) => (
 );
 
 // ── The page ───────────────────────────────────────────────────────
-export default function HomepageLeadGenMockup({ previewFlagship = false } = {}) {
+export default function HomepageLeadGenMockup({ previewFlagship = FLAGSHIP.active } = {}) {
   const nav = useNavigate();
   const [stats, setStats] = useState({ total: 0, minPrice: 0, maxPrice: 0 });
 
