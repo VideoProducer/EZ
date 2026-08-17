@@ -13,7 +13,7 @@ export const FLAGSHIP = {
   hero_image: "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/73477bl0_Front%20of%20House%20Dusk.webp",
   virtual_tour_iframe: "https://tours.cotala.com/87725",
   matterport: "https://my.matterport.com/show/?m=RsuVitX8BKc&dh=0",
-  description: "Quality, location, and lasting value. A distinguished residence in the heart of Surrey — hand-crafted craftsmanship, wrap-around porch, and grounds designed for entertaining. Represented exclusively by Doug LeMaire, REALTOR® (BCFSA #167790).",
+  description: "Quality, location, and lasting value. A distinguished residence in the heart of Surrey — craftsmanship, wrap-around porch, and grounds designed for entertaining. Represented exclusively by Doug LeMaire, REALTOR® (BCFSA #167790).",
   tagline: "Quality, location, and lasting value.",
 };
 
