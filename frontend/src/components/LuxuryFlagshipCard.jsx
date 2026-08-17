@@ -1,20 +1,56 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FLAGSHIP, isFlagshipRibbonActive } from "../config/flagshipListing";
 
+const API = process.env.REACT_APP_BACKEND_URL;
+
 // Full-width "Doug's Featured Listing" flagship card. Rendered above the
-// Luxury magazine grid. Auto-shows "NEW LISTING · JUST ACTIVE" ribbon for
-// the first 7 days after FLAGSHIP.launch_at (then quietly fades).
+// Luxury magazine grid. Hydrates from CREA DDF® (via /api/listings/{mls})
+// when available — falling back to the FLAGSHIP snapshot config so the card
+// always renders even on first paint. Auto-shows "NEW LISTING · JUST ACTIVE"
+// ribbon for the first 7 days after FLAGSHIP.launch_at.
 export default function LuxuryFlagshipCard() {
+  const [live, setLive] = useState(null);
+
+  useEffect(() => {
+    if (!FLAGSHIP.active || !FLAGSHIP.mls_number) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API}/api/listings/${encodeURIComponent(FLAGSHIP.mls_number)}`);
+        if (r.ok && !cancelled) {
+          const data = await r.json();
+          setLive(data);
+        }
+      } catch { /* silent — snapshot still renders */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   if (!FLAGSHIP.active) return null;
   const showRibbon = isFlagshipRibbonActive();
-  // Route to Doug's custom magazine page (rich branded marketing spread) —
-  // independent of the CREA DDF® sync so the chip always resolves. Once the
-  // DDF feed catches up we'll swap this to `/listings/{mls_number}`.
-  const detailHref = "/mockups/magazine-3015-141-st";
+
+  // Route "View Full Listing" — prefer the internal detail page once the
+  // DDF hydration lands (per-listing gallery, share OG, etc.), otherwise
+  // fall back to Doug's branded magazine spread.
+  const detailHref = live
+    ? `/listings/${encodeURIComponent(FLAGSHIP.mls_number)}`
+    : "/mockups/magazine-3015-141-st";
   const realtorCaSearch = FLAGSHIP.mls_number
     ? `https://www.realtor.ca/map#view=list&Sort=6-D&GeoName=Surrey%2C%20BC&Keywords=${encodeURIComponent(FLAGSHIP.mls_number)}`
     : null;
+
+  // Merged fields — DDF wins when present, snapshot fills the gaps.
+  const heroImage = (live?.photos?.[0]?.url || live?.photos?.[0]) || FLAGSHIP.hero_image;
+  const address = live?.address || FLAGSHIP.address;
+  const city = live?.city || FLAGSHIP.city;
+  const description = FLAGSHIP.tagline_long
+    || (live?.description ? `${FLAGSHIP.tagline} ${live.description}` : FLAGSHIP.description);
+  const beds = live?.bedrooms ?? live?.beds;
+  const baths = live?.bathrooms ?? live?.baths;
+  const sqft = live?.square_feet ?? live?.living_area;
+  const price = live?.price ?? live?.list_price;
+
   return (
     <section data-testid="luxury-flagship" style={{ background: "#FAF7F0", padding: "60px 0 30px" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 32px" }}>
@@ -23,11 +59,25 @@ export default function LuxuryFlagshipCard() {
             Doug's Featured Listing
           </div>
           <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "2.2rem", color: "#0F2A5B", marginTop: 6 }}>
-            {FLAGSHIP.address}, {FLAGSHIP.city}
+            {address}, {city}
           </div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.95rem", color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
             {FLAGSHIP.tagline}
           </div>
+          {live && (beds || baths || sqft || price) && (
+            <div data-testid="luxury-flagship-specs" style={{
+              marginTop: 14, display: "inline-flex", flexWrap: "wrap", gap: "6px 22px",
+              justifyContent: "center",
+              fontFamily: "Inter, sans-serif", fontSize: "0.86rem", color: "#0F2A5B",
+              letterSpacing: "0.04em",
+            }}>
+              {beds ? <span><strong>{beds}</strong> BR</span> : null}
+              {baths ? <span><strong>{baths}</strong> BA</span> : null}
+              {sqft ? <span><strong>{Number(sqft).toLocaleString("en-CA")}</strong> sq ft</span> : null}
+              {price ? <span><strong>${Number(price).toLocaleString("en-CA")}</strong></span> : null}
+              <span style={{ color: "#8A6D2E" }}>MLS® {FLAGSHIP.mls_number}</span>
+            </div>
+          )}
         </div>
         <div style={{ position: "relative", border: "3px solid #DABF7A", borderRadius: 4, overflow: "hidden", boxShadow: "0 20px 60px rgba(15,42,91,0.15)" }}>
           {showRibbon && (
@@ -39,14 +89,19 @@ export default function LuxuryFlagshipCard() {
             }}>NEW · JUST ACTIVE</div>
           )}
           <div style={{
-            backgroundImage: `url(${FLAGSHIP.hero_image})`,
+            backgroundImage: `url(${heroImage})`,
             backgroundSize: "cover", backgroundPosition: "center",
             height: 560, position: "relative",
           }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(15,42,91,0.85) 100%)" }} />
             <div style={{ position: "absolute", bottom: 32, left: 40, right: 40, color: "white" }}>
-              <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.6rem", marginBottom: 8 }}>
-                {FLAGSHIP.description}
+              <div style={{
+                fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.15rem",
+                marginBottom: 8, lineHeight: 1.55, maxWidth: 900,
+                display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}>
+                {description}
               </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
                 <Link to={detailHref} data-testid="flagship-detail-cta" style={{

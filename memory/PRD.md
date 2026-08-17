@@ -67,6 +67,18 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - The `/preview/flagship-home` and `/preview/flagship-luxury` noindex routes remain live for future dry-runs
 - Asking-price hex sampling and pricing display confirmed via screenshot on both public routes
 
+### Phase 8 — CREA DDF® direct import for flagship listing (Feb 17, 2026)
+- Added `fetch_by_mls_number()` in `backend/services/ddf_sync.py` — targeted single-listing pull from CREA DDF® by MLS® number (ListingId), with fallback to ListingKey lookup, mapping via `_map_property()`, and Mongo upsert. Respects the same BC filter + display-flag rules as the scheduled sync
+- New admin endpoint `POST /api/admin/listings/fetch-by-mls/{mls_number}` (behind `verify_admin`). Hydrates a just-listed property immediately without waiting for the next scheduled incremental sync cycle
+- `GET /api/listings/{key}` now falls back to `mls_number` lookup when `listing_key` misses. Buyers, share links, and printed marketing can all reference the paper MLS® number
+- Imported **R3156192** — 25+ high-res DDF photos, full public remarks, 5 BR / 7 BA / 6,129 sq ft, year 2001, lot 14,636 sq ft, lat/lon, features (pool, fireplace, parking-2plus, basement)
+- **Frontend hydration**:
+  - `DashboardMockup.jsx` (`/`) → `mls_auto_detect: true` re-enabled, section always renders snapshot first then swaps in live DDF fields (photos, price, description, beds/baths/sqft, year built). Removed the "hide until DDF returns 200" gate that caused a blank slot on launch
+  - `LuxuryFlagshipCard.jsx` (`/specialties/luxury`) → fetches `/api/listings/R3156192` on mount, hydrates hero image, address, description (DDF public remarks prefixed with Doug's tagline), plus a new BR · BA · sq ft · price · MLS® spec strip below the address
+- Snapshot config still lives in `flagshipListing.js` + `DashboardMockup FEATURED_HOME_LISTING` as a safe fallback if DDF ever times out. DDF wins when present, snapshot fills gaps
+- Verified on both public routes via screenshot — flagship now displays full CREA DDF photo + description + spec set
+
+
 
 ### Phase 3 — Performance / device (Feb 2026)
 - Verified: 0px horizontal overflow at 390px viewport

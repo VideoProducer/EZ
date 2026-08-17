@@ -5348,7 +5348,7 @@ const HomeComplianceBanner = () => {
 // ──────────────────────────────────────────────────────────────────────────
 const FEATURED_HOME_LISTING = {
   enabled: true,
-  mls_auto_detect: false,         // ⚡ LAUNCHED Feb 17 2026 — render snapshot immediately, no wait for DDF sync
+  mls_auto_detect: true,          // ⚡ LIVE — hydrates from /api/listings/R3156192 (CREA DDF® imported). Snapshot below is fallback until fetch resolves.
   status: "JUST LISTED",
   address: "3015 141 Street",
   city: "Surrey",
@@ -5362,8 +5362,8 @@ const FEATURED_HOME_LISTING = {
   lot_sqft: 14636,                // 0.36 acre (see lot_acres override below)
   lot_acres: 0.36,                // explicit override — takes precedence over calculated value
   property_type: "Detached Home",
-  year_built: null,               // let DDF fill in
-  mls: "R3156192",                // ⚡ GVR-assigned MLS® — LIVE
+  year_built: 2001,
+  mls: "R3156192",                // ⚡ GVR-assigned MLS® — LIVE on DDF (listing_key 30162312)
   headline: "Quality, Location, Lasting Value",
   description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, seven bathrooms, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
@@ -5598,7 +5598,10 @@ const DashboardFeaturedListing = () => {
   }, [previewOverride, live, L.enabled]);
 
   if (!L.enabled) return null;
-  if (L.mls_auto_detect && !live && !previewOverride) return null;
+  // Section always renders once enabled — snapshot shows immediately, then
+  // live DDF® data hydrates the `merged` object once the fetch resolves.
+  // (Previously this hid the whole section until DDF returned 200, which
+  // meant an empty homepage feature slot on launch day.)
 
   const _photos = (live?.photos?.length ? live.photos.map(p => p.url || p) : L.photos) || [];
   const merged = {

@@ -374,3 +374,82 @@ async def reconcile_withdrawals(db, seen_keys: set) -> int:
         return 0
     res = await db.listings.delete_many({"source": "CREA_DDF", "listing_key": {"$nin": list(seen_keys)}})
     return res.deleted_count
+
+
+
+async def fetch_by_mls_number(db, mls_number: str) -> dict:
+    """Targeted fetch: pull a single listing from CREA DDF® by MLS® number
+    (ListingId) and upsert to Mongo. Returns a status dict with the mapped
+    listing under `listing`. Used by the admin endpoint to hydrate a
+    just-listed property immediately without waiting for the next incremental
+    sync cycle. Respects the same BC filter + display-flag rules as the
+    scheduled sync.
+    """
+    mls_number = (mls_number or "").strip()
+    result: dict = {"mls_number": mls_number, "found": False, "upserted": False, "listing": None, "errors": []}
+    if not mls_number:
+        result["errors"].append("empty_mls_number")
+        return result
+    if not credentials_ready():
+        result["errors"].append("ddf_credentials_missing")
+        return result
+
+    from urllib.parse import quote
+    try:
+        token = await _get_token()
+    except Exception as e:
+        result["errors"].append(f"token: {e}")
+        return result
+
+    # DDF exposes MLS® number as ListingId (ListingKey is the CREA-internal
+    # composite ID). Query by ListingId to match Doug's paper MLS number.
+    filters = [f"ListingId eq '{mls_number}'"]
+    if DDF_PROVINCE_FILTER:
+        filters.append(f"StateOrProvince eq '{DDF_PROVINCE_FILTER}'")
+    filter_str = " and ".join(filters)
+    url = f"{DDF_ODATA_BASE}/Property?$top=1&$filter={quote(filter_str)}"
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            page = await _fetch_page(client, url, token)
+    except Exception as e:
+        result["errors"].append(f"fetch: {e}")
+        return result
+
+    rows = page.get("value", []) or []
+    if not rows:
+        # Fallback: some feeds map MLS# to ListingKey directly
+        filters2 = [f"ListingKey eq '{mls_number}'"]
+        if DDF_PROVINCE_FILTER:
+            filters2.append(f"StateOrProvince eq '{DDF_PROVINCE_FILTER}'")
+        url2 = f"{DDF_ODATA_BASE}/Property?$top=1&$filter={quote(' and '.join(filters2))}"
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                page = await _fetch_page(client, url2, token)
+            rows = page.get("value", []) or []
+        except Exception as e:
+            result["errors"].append(f"fetch_fallback: {e}")
+
+    if not rows:
+        result["errors"].append("mls_not_found_in_ddf")
+        return result
+
+    result["found"] = True
+    mapped = _map_property(rows[0])
+    if not mapped:
+        result["errors"].append("listing_filtered_by_display_flags")
+        return result
+
+    now_iso_str = datetime.now(timezone.utc).isoformat()
+    try:
+        await db.listings.update_one(
+            {"listing_key": mapped["listing_key"]},
+            {"$set": mapped, "$setOnInsert": {"created_at": now_iso_str}},
+            upsert=True,
+        )
+        result["upserted"] = True
+        result["listing"] = mapped
+    except Exception as e:
+        result["errors"].append(f"upsert: {e}")
+
+    return result

@@ -8754,6 +8754,7 @@ from services.ddf_sync import (
     credentials_ready as _ddf_ready,
     sync_incremental as _ddf_sync,
     test_connection as _ddf_test,
+    fetch_by_mls_number as _ddf_fetch_by_mls,
 )
 
 
@@ -10008,6 +10009,13 @@ async def get_listing(request: Request, listing_key: str):
         pass  # never block a legitimate visitor on a rate-limit book-keeping failure
 
     d = await db.listings.find_one({"listing_key": listing_key})
+    if not d:
+        # Fallback: allow the same endpoint to resolve by MLS® number
+        # (ListingId). Some CREA feeds surface listings whose ListingKey
+        # is a CREA-internal composite ID while the public/paper MLS® number
+        # is stored under mls_number. Buyers, share links, and printed
+        # marketing all reference the MLS® number — so accept both.
+        d = await db.listings.find_one({"mls_number": listing_key})
     if not d:
         # Item · Return 410 Gone (not 404) for unknown listing_keys that
         # were once valid. This tells Google to permanently drop the URL
@@ -11764,6 +11772,18 @@ async def admin_ddf_sync_now(request: Request, _=Depends(verify_admin)):
             await db.ddf_sync_log.update_one({"_id": marker_id}, {"$set": {"status": "error", "finished_at": now_iso(), "errors": [str(e)]}})
     asyncio.create_task(_run())
     return {"status": "started", "started_at": marker["started_at"]}
+
+@api.post("/admin/listings/fetch-by-mls/{mls_number}")
+async def admin_ddf_fetch_by_mls(mls_number: str, _=Depends(verify_admin)):
+    """Targeted DDF® fetch — pull a single listing by MLS® number (ListingId)
+    and upsert to Mongo immediately. Used to hydrate a just-listed property
+    without waiting for the next scheduled sync cycle. Returns the mapped
+    listing on success, or a structured error on failure."""
+    if not _ddf_ready():
+        return {"ok": False, "errors": ["ddf_credentials_missing"]}
+    result = await _ddf_fetch_by_mls(db, mls_number)
+    return {"ok": result.get("upserted", False), **result}
+
 
 @api.get("/admin/listings/sync-log")
 async def admin_ddf_sync_log(_=Depends(verify_admin)):
