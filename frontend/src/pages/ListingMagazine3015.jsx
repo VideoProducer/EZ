@@ -94,7 +94,7 @@ export default function ListingMagazine3015() {
               <p style={{ marginTop: 8 }}>Add a heated pool, a full-size sports court, and more than 1,400 square feet of covered outdoor living, and you have a home your family will actually <em>use</em>, every day, in every season.</p>
               <p style={{ marginTop: 8 }}>Welcome to 3015 141 Street.</p>
             </Body>
-            <Callout>5 bedrooms · 5 bathrooms · 6,129 finished sq ft · Pool + Sports Court · 782 sq ft garage</Callout>
+            <Callout>5 bedrooms · 7 bathrooms · 6,129 finished sq ft · Pool + Sports Court · 782 sq ft garage</Callout>
           </div>
         </Page>
 
@@ -236,7 +236,7 @@ export default function ListingMagazine3015() {
               <p style={{ margin: 0 }}>The garage runs <strong>20′9″ × 41′8″</strong> — <strong>782 finished square feet</strong>, roughly a triple-length two-car with room for the mud-room bins, the seasonal storage, and the vehicles. The mud room connects it directly to the main-floor laundry, so groceries land where they belong.</p>
               <p style={{ marginTop: 8 }}>Nine-foot ceilings on the main. Eight-foot ceilings on the two other floors. A <strong>55′ × 6′1″ front porch</strong> that means the house never looks small from the street.</p>
             </Body>
-            <Specs>Total 6,129 · Main 2,252 · Upper 1,806 · Law Suite level 2,071 · Garage 782 · Extras 4,033 · 5 bed · 5 bath · 3 levels · 9′/8′/8′</Specs>
+            <Specs>Total 6,129 · Main 2,252 · Upper 1,806 · Law Suite level 2,071 · Garage 782 · Extras 4,033 · 5 bed · 7 bath · 3 levels · 9′/8′/8′</Specs>
           </div>
         </Page>
 

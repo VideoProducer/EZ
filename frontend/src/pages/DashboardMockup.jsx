@@ -5356,7 +5356,7 @@ const FEATURED_HOME_LISTING = {
   province: "BC",
   price: 3297000,
   beds: 5,
-  baths: 5,
+  baths: 7,
   half_baths: 0,
   sqft: 6129,
   lot_sqft: 14636,                // 0.36 acre (see lot_acres override below)
@@ -5365,7 +5365,7 @@ const FEATURED_HOME_LISTING = {
   year_built: null,               // let DDF fill in
   mls: "R3156192",                // ⚡ GVR-assigned MLS® — LIVE
   headline: "Quality, Location, Lasting Value",
-  description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, five full baths, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
+  description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, seven bathrooms, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
     // Dusk hero — approved marketing shot. Interior gallery will be appended
     // by DDF live sync once photographer's set is uploaded to the MLS® feed.
