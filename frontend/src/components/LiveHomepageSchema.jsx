@@ -36,7 +36,7 @@ const FACTS = {
   years_experience: 13,
   glossary_count:   439,
   community_count:  240,
-  bcfsa_licence_individual: "PENDING",
+  bcfsa_licence_individual: "167790",
   bcfsa_licence_brokerage:  "PENDING",
   practice_areas: "Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor (to Whistler)",
   referral_boards: "VIREB, IAR, KAR, BCNREB, CADREB",
