@@ -32,6 +32,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
+import FeaturedListingPointer from "../components/FeaturedListingPointer";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
@@ -2427,6 +2428,7 @@ const SearchPanel = () => {
   const pinCount  = (results?.listings || []).filter(l => l.lat && l.lon).length;
   return (
     <>
+      <FeaturedListingPointer/>
       <HeroIntro/>
       {/* View mode toggle — sits directly above the map/list block. Lets
           the visitor collapse to List-only for a scanning-heavy session or

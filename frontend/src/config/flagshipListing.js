@@ -15,6 +15,10 @@ export const FLAGSHIP = {
   matterport: "https://my.matterport.com/show/?m=RsuVitX8BKc&dh=0",
   description: "Quality, location, and lasting value. A distinguished residence in the heart of Surrey — craftsmanship, wrap-around porch, and grounds designed for entertaining. Represented exclusively by Doug LeMaire, REALTOR® (BCFSA #167790).",
   tagline: "Quality, location, and lasting value.",
+  // realtor.ca is the canonical CREA DDF® presentation for this listing.
+  // The homepage + luxury pointer strip links straight to it. Set to `null`
+  // to hide the pointer everywhere without touching component code.
+  realtor_ca_url: "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
 };
 
 export const isFlagshipRibbonActive = () => {

@@ -17,6 +17,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import LuxuryFlagshipCard from "./LuxuryFlagshipCard";
+import FeaturedListingPointer from "./FeaturedListingPointer";
 import { FLAGSHIP } from "../config/flagshipListing";
 import { Helmet } from "react-helmet-async";
 
@@ -587,6 +588,9 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
           ))}
         </div>
       </Section>
+
+      {/* Featured listing pointer — subtle strip linking to realtor.ca */}
+      <FeaturedListingPointer/>
 
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
       <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
