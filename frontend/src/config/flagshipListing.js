@@ -2,7 +2,7 @@
 // Update MLS_NUMBER tomorrow (Feb 17 2026, 9:00 AM PT) once GVR assigns it.
 // Everything else is pre-staged and ready to render.
 export const FLAGSHIP = {
-  active: false,  // ⚡ FEATURE REMOVED per Doug — realtor.ca (listing 30162312) is now the canonical frame for R3156192
+  active: true,  // ⚡ RE-ENABLED — feature listing card now at the top of /specialties/luxury
   address: "3015 141 Street",
   city: "Surrey",
   province: "BC",

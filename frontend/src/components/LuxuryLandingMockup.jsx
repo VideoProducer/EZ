@@ -17,7 +17,6 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import LuxuryFlagshipCard from "./LuxuryFlagshipCard";
-import FeaturedListingPointer from "./FeaturedListingPointer";
 import { FLAGSHIP } from "../config/flagshipListing";
 import { Helmet } from "react-helmet-async";
 
@@ -457,6 +456,9 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
       </Helmet>
       {!live && <UnlistedMockupBanner label="Luxury Listings landing page" />}
 
+      {/* Flagship listing 3015 141 Street — surfaced at the top of the luxury page. Gated on FLAGSHIP.active in config/flagshipListing.js */}
+      {(previewFlagship || FLAGSHIP.active) && <LuxuryFlagshipCard/>}
+
       {/* ═══════ §1 CINEMATIC HERO ═══════════════════════════════════════ */}
       <section style={{
         background: BRAND.ink,
@@ -589,13 +591,8 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
         </div>
       </Section>
 
-      {/* Featured listing pointer — subtle strip linking to realtor.ca */}
-      <FeaturedListingPointer/>
-
       {/* ═══════ §3 MAGAZINE GRID ════════════════════════════════════════ */}
       <Section tone="paper" pad="20px 0 80px" id="luxury-magazine-grid">
-        {/* Flagship listing 3015 141 Street — gated on FLAGSHIP.active in config/flagshipListing.js */}
-        {(previewFlagship || FLAGSHIP.active) && <LuxuryFlagshipCard/>}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
             <Kicker>The portfolio · CREA DDF® · $3M+ verified</Kicker>

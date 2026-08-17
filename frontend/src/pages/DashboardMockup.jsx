@@ -32,7 +32,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
-import FeaturedListingPointer from "../components/FeaturedListingPointer";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
@@ -2428,7 +2427,7 @@ const SearchPanel = () => {
   const pinCount  = (results?.listings || []).filter(l => l.lat && l.lon).length;
   return (
     <>
-      <FeaturedListingPointer/>
+      <DashboardFeaturedListing/>
       <HeroIntro/>
       {/* View mode toggle — sits directly above the map/list block. Lets
           the visitor collapse to List-only for a scanning-heavy session or
@@ -5380,7 +5379,7 @@ const HomeComplianceBanner = () => {
 // to review layout before launch.
 // ──────────────────────────────────────────────────────────────────────────
 const FEATURED_HOME_LISTING = {
-  enabled: false,                 // ⚡ FEATURE REMOVED per Doug — realtor.ca (listing 30162312) is now the canonical frame
+  enabled: true,                  // ⚡ RE-ENABLED — feature listing card now at the top of /
   mls_auto_detect: true,
   status: "JUST LISTED",
   address: "3015 141 Street",
@@ -5941,10 +5940,6 @@ const HomeExtras = () => {
   ];
   return (
     <div style={wrap} data-testid="dash-home-extras">
-      {/* Doug's Featured Listing — hidden until MLS goes live (unless
-          preview mode is engaged via ?featured=preview). */}
-      <DashboardFeaturedListing/>
-
       {/* Item #38 · Weekly Just-Sold Digest signup — the primary
           return-visit hook. Every Friday morning subscribers get a
           curated list of BC listings that closed in the last 7 days
