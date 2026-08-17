@@ -6,7 +6,7 @@ export const FLAGSHIP = {
   address: "3015 141 Street",
   city: "Surrey",
   province: "BC",
-  price: 3000000,  // update once MLS is live
+  price: 3297000,  // asking price · GVR-listed
   mls_number: "R3156192",  // GVR-assigned MLS® number for 3015 141 Street
   launch_at: "2026-02-17T17:00:00Z",  // Feb 17 2026 · 9:00 AM PT = 17:00 UTC
   ribbon_days: 7,
