@@ -2660,6 +2660,37 @@ const UnifiedSearchBar = () => {
   // both are already set in `_inp`.
   const focusScrollInput = React.useCallback(() => {}, []);
 
+  // Debounced live routing: mirror the visitor's typed query into
+  // ctx.filters (`city` for a known community, otherwise `q`) so the
+  // parent's 380ms filter→runSearch debounce fires automatically. Without
+  // this, typing "R3156192" or "Kelowna" in the unified search input just
+  // updated local state and required a manual Apply-filters tap to fire —
+  // every other filter (beds/baths/price/keyword) already auto-searches.
+  // First-render guard skips the initial mount so we don't overwrite a
+  // restored session filter with an empty string.
+  const _firstValSyncRef = React.useRef(true);
+  React.useEffect(() => {
+    if (_firstValSyncRef.current) {
+      _firstValSyncRef.current = false;
+      return;
+    }
+    if (!ctx?.setFilters) return;
+    const t = setTimeout(() => {
+      const v = (val || "").trim();
+      const isCommunity = v && knownCommunities.some(
+        c => c && c.toLowerCase() === v.toLowerCase()
+      );
+      ctx.setFilters(prev => ({
+        ...(prev || {}),
+        q: isCommunity ? "" : v,
+        city: isCommunity ? v : "",
+      }));
+      // The parent effect that watches `filters` picks up the change and
+      // fires runSearch 380ms later — no need to call runSearch here.
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [val, knownCommunities]);
 
   const set = (k, v) => ctx?.setFilters && ctx.setFilters(prev => ({ ...prev, [k]: v }));
   const digitsOnly = (s) => String(s || "").replace(/[^\d]/g, "");
@@ -5347,8 +5378,8 @@ const HomeComplianceBanner = () => {
 // to review layout before launch.
 // ──────────────────────────────────────────────────────────────────────────
 const FEATURED_HOME_LISTING = {
-  enabled: true,
-  mls_auto_detect: true,          // ⚡ LIVE — hydrates from /api/listings/R3156192 (CREA DDF® imported). Snapshot below is fallback until fetch resolves.
+  enabled: false,                 // ⚡ FEATURE REMOVED per Doug — realtor.ca (listing 30162312) is now the canonical frame
+  mls_auto_detect: true,
   status: "JUST LISTED",
   address: "3015 141 Street",
   city: "Surrey",
