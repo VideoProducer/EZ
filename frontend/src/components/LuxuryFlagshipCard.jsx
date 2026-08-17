@@ -8,7 +8,13 @@ import { FLAGSHIP, isFlagshipRibbonActive } from "../config/flagshipListing";
 export default function LuxuryFlagshipCard() {
   if (!FLAGSHIP.active) return null;
   const showRibbon = isFlagshipRibbonActive();
-  const detailHref = FLAGSHIP.mls_number ? `/listings/${FLAGSHIP.mls_number}` : "#flagship-viewing";
+  // Route to Doug's custom magazine page (rich branded marketing spread) —
+  // independent of the CREA DDF® sync so the chip always resolves. Once the
+  // DDF feed catches up we'll swap this to `/listings/{mls_number}`.
+  const detailHref = "/mockups/magazine-3015-141-st";
+  const realtorCaSearch = FLAGSHIP.mls_number
+    ? `https://www.realtor.ca/map#view=list&Sort=6-D&GeoName=Surrey%2C%20BC&Keywords=${encodeURIComponent(FLAGSHIP.mls_number)}`
+    : null;
   return (
     <section data-testid="luxury-flagship" style={{ background: "#FAF7F0", padding: "60px 0 30px" }}>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "0 32px" }}>
@@ -57,6 +63,13 @@ export default function LuxuryFlagshipCard() {
                   border: "1px solid rgba(255,255,255,0.5)",
                   fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
                 }}>Virtual Tour ↗</a>
+                {realtorCaSearch && (
+                  <a href={realtorCaSearch} target="_blank" rel="noopener noreferrer" data-testid="flagship-realtor-ca" style={{
+                    background: "transparent", color: "rgba(255,255,255,0.8)", padding: "12px 20px", borderRadius: 999,
+                    border: "1px dashed rgba(255,255,255,0.35)",
+                    fontFamily: "Sora,sans-serif", fontWeight: 500, fontSize: "0.82rem", textDecoration: "none",
+                  }}>View MLS® on realtor.ca ↗</a>
+                )}
               </div>
             </div>
           </div>
