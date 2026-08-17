@@ -5379,9 +5379,9 @@ const FEATURED_HOME_LISTING = {
   video_provider: "vimeo",
 };
 
-const fmtPriceShort = (n) => (n >= 1e6)
-  ? `$${(n/1e6).toFixed(n % 1e6 === 0 ? 0 : 2).replace(/\.?0+$/, "")}M`
-  : `$${(n || 0).toLocaleString("en-CA")}`;
+// CREA DDF® / BCFSA best practice — quote the exact asking price to two
+// decimals. Never round up or down; buyers deserve the factual figure.
+const fmtPriceShort = (n) => `$${Number(n || 0).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // ── Luxury Share Bar ──────────────────────────────────────────────────────
 // Subtle, elegant share row tuned for high-end property sharing. NOT the

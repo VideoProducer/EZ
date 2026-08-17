@@ -74,7 +74,7 @@ export default function LuxuryFlagshipCard() {
               {beds ? <span><strong>{beds}</strong> BR</span> : null}
               {baths ? <span><strong>{baths}</strong> BA</span> : null}
               {sqft ? <span><strong>{Number(sqft).toLocaleString("en-CA")}</strong> sq ft</span> : null}
-              {price ? <span><strong>${Number(price).toLocaleString("en-CA")}</strong></span> : null}
+              {price ? <span><strong>${Number(price).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span> : null}
               <span style={{ color: "#8A6D2E" }}>MLS® {FLAGSHIP.mls_number}</span>
             </div>
           )}
