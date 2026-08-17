@@ -38,6 +38,15 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Telephone + email + PostalAddress added to all RealEstateAgent schemas
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
+
+### Phase 5 — Global logo unification (Feb 17, 2026)
+- **EZtoFind.ca wordmark** unified across the entire site to: solid **BrandBlue (#0A3D99)** for "EZtoFind" + **BrandGold (#F9BD00)** for ".ca"
+- Removed the older 3–4-color split variants (green "EZ" + navy "to" + blue "Find" + gold ".ca")
+- Fonts preserved per location (Playfair Display on hero + sidebar; sans on nav bar)
+- On dark backgrounds (footer, mobile top bar), the "EZtoFind" portion is rendered in **white** for legibility while the ".ca" stays BrandGold — same brand pattern, dark-mode variant
+- Updated locations: `App.js` nav header, `App.js` footer, `App.js` hero `<h1>` tagline, `DashboardMockup.jsx` (hero, sidebar, mobile top bar, home tile), `MyJourney.jsx`
+- Data-testids added: `nav-wordmark`, `footer-wordmark`, `sidebar-wordmark`, `mobile-header-wordmark`, `myjourney-wordmark`
+
 - Licence #167790 in top nav, footer, contact block, and copyright line on every page
 
 ### Phase 3 — Performance / device (Feb 2026)

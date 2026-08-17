@@ -56,7 +56,7 @@ const OtpPrompt = ({ token, meta, onVerified }) => {
       <NoIndex/>
       <div className="container-x" style={{maxWidth:"32rem",padding:"3rem 1.5rem"}}>
         <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
-          <div style={{fontSize:"1.4rem",fontWeight:800,color:"var(--brand-navy)",letterSpacing:"-0.01em"}}>EZtoFind.ca</div>
+          <div style={{fontSize:"1.4rem",fontWeight:800,letterSpacing:"-0.01em"}} data-testid="myjourney-wordmark"><span style={{color:"#0A3D99"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></div>
           <div style={{fontSize:"0.9rem",fontWeight:600,color:"var(--brand-navy)",marginTop:"0.15rem"}}>Doug LeMaire, REALTOR®</div>
           <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.1rem",fontFamily:"Inter,sans-serif"}}>Fraser Property Management Realty Services Ltd.</div>
         </div>

@@ -239,8 +239,8 @@ const HeroIntro = () => {
           fontFamily: "'Playfair Display', serif", margin: 0, lineHeight: 1.08,
           fontSize: "clamp(28px, 3.4vw, 40px)", fontWeight: 800,
         }}>
-          <span style={{ color: C.brandGreen }}>Real estate,</span><br/>
-          <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
+          <span style={{ color: C.brandBlue }}>Real estate,</span><br/>
+          <span style={{ color: C.brandBlue }}>made EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
         </h1>
         <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
           EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
@@ -814,11 +814,8 @@ export default function DashboardMockup({ homeVariant = "search" }) {
                 display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13,
               }}
             >☰ Menu</button>
-            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16, lineHeight: 1 }}>
-              <span style={{ color: C.brandGreen }}>EZ </span>
-              <span style={{ color: "#fff" }}>to </span>
-              <span style={{ color: C.brandBlue, background: "#fff", padding: "0 4px", borderRadius: 3 }}>Find</span>
-              <span style={{ color: C.brandGold }}>.ca</span>
+            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16, lineHeight: 1 }} data-testid="mobile-header-wordmark">
+              <span style={{ color: "#fff" }}>EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
             </span>
           </div>
         )}
@@ -943,11 +940,8 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
           onError={e => { e.currentTarget.style.display = "none"; }}
         />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, lineHeight: 1 }}>
-            <span style={{ color: C.brandGreen }}>EZ </span>
-            <span style={{ color: C.navy }}>to </span>
-            <span style={{ color: C.brandBlue }}>Find</span>
-            <span style={{ color: C.brandGold }}>.ca</span>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, lineHeight: 1 }} data-testid="sidebar-wordmark">
+            <span style={{ color: C.brandBlue }}>EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
           </div>
           <div style={{ fontSize: 10, color: C.navy, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>Doug LeMaire · REALTOR®</div>
           <div style={{ fontSize: 9, color: C.muted, marginTop: 2, lineHeight: 1.2 }}>Fraser Property Management Realty Services Ltd</div>
@@ -1783,7 +1777,7 @@ const DashboardHomeTiles = ({ setSection, onAsk }) => {
         <img loading="lazy" decoding="async" src={DOOGIE.head} alt="Doogie" style={{ width: 380, height: 380, objectFit: "contain", display: "block", margin: 0 }} onError={e => e.currentTarget.style.display = "none"}/>
         <div>
           <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 800, color: C.navy, lineHeight: 1.05 }}>
-            <span style={{ color: C.brandGreen }}>Real estate,</span> <span style={{ color: C.brandGreen }}>made </span><span style={{ color: C.brandBlue }}>EZ to Find</span><span style={{ color: C.brandGold }}>.ca</span>
+            <span style={{ color: C.brandBlue }}>Real estate,</span> <span style={{ color: C.brandBlue }}>made EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
           </div>
           <div style={{ fontSize: 16, color: C.ink, marginTop: 8, lineHeight: 1.45, maxWidth: 720 }}>
             Live BC market signals from CREA DDF® — refreshed every 4 hours. General information only, never advice.
