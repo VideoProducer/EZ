@@ -12109,6 +12109,33 @@ function App() {
       <Route path="/admin/campaigns" element={<AdminCampaigns/>}/>
       <Route path="/admin/copycat-detector" element={<AdminCopycatDetector/>}/>
       <Route path="/admin/cease-desist" element={<AdminCeaseDesist/>}/>
+      {/* Catch-all 404 — no matching route.  Renders a NotFound view that
+          emits <meta name="robots" content="noindex,follow"> and a proper
+          404 heading so crawlers stop indexing bogus / typo / stale URLs.
+          Prevents the "soft-404" pattern React SPAs are prone to (200 OK
+          on every path is technically correct for SPA hydration but
+          confuses Googlebot and dilutes the site's average quality
+          signal). Also injects an X-Robots-Tag equivalent via meta. */}
+      <Route path="*" element={
+        <AppLayout>
+          <Helmet>
+            <title>Page not found — EZtoFind.ca</title>
+            <meta name="robots" content="noindex,follow"/>
+          </Helmet>
+          <div style={{ padding: "5rem 2rem", textAlign: "center", fontFamily: "Inter, system-ui, sans-serif" }} data-testid="notfound-view">
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "2.5rem", color: "#0F2A5B", margin: "0 0 1rem" }}>404 · Page not found</h1>
+            <p style={{ fontSize: "1.05rem", color: "#64748B", lineHeight: 1.6, maxWidth: 560, margin: "0 auto 2rem" }}>
+              The page you're looking for has moved, been retired, or was mistyped.  Try one of the entry points below or head back to the homepage.
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12 }}>
+              <a href="/" style={{ background: "#0F2A5B", color: "#fff", padding: "12px 26px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }} data-testid="notfound-home">Home</a>
+              <a href="/listings" style={{ background: "#E8B93B", color: "#0F2A5B", padding: "12px 26px", borderRadius: 10, fontWeight: 700, textDecoration: "none" }} data-testid="notfound-listings">Search MLS® Listings</a>
+              <a href="/glossary" style={{ background: "#fff", color: "#0F2A5B", padding: "12px 26px", borderRadius: 10, fontWeight: 700, textDecoration: "none", border: "1px solid #0F2A5B" }} data-testid="notfound-glossary">BC Real Estate Glossary</a>
+              <a href="/communities" style={{ background: "#fff", color: "#0F2A5B", padding: "12px 26px", borderRadius: 10, fontWeight: 700, textDecoration: "none", border: "1px solid #0F2A5B" }} data-testid="notfound-communities">Communities</a>
+            </div>
+          </div>
+        </AppLayout>
+      }/>
     </Routes>
     <PIPACookieBanner/>
   </BrowserRouter>);
