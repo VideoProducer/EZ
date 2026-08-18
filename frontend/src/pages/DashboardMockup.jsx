@@ -32,6 +32,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
+import { FLAGSHIP } from "../config/flagshipListing";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
@@ -5854,8 +5855,12 @@ const DashboardFeaturedListing = () => {
           }} data-testid="dash-featured-address">{merged.address}</h3>
           {merged.mls && (
             <div style={{ margin: "0 0 8px" }}>
-              <span
+              <a
+                href={FLAGSHIP.realtor_ca_url}
+                target="_blank"
+                rel="noopener noreferrer"
                 data-testid="dash-featured-mls-badge"
+                title="View this listing on realtor.ca"
                 style={{
                   display: "inline-block",
                   background: "#DABF7A", color: C.navy,
@@ -5864,8 +5869,12 @@ const DashboardFeaturedListing = () => {
                   padding: "4px 10px", borderRadius: 4,
                   border: "1px solid rgba(15,42,91,0.15)",
                   textTransform: "uppercase",
+                  textDecoration: "none", cursor: "pointer",
+                  transition: "transform 120ms ease, box-shadow 120ms ease",
                 }}
-              >MLS® {merged.mls}</span>
+                onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15,42,91,0.18)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+              >MLS® {merged.mls} ↗</a>
             </div>
           )}
           <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>

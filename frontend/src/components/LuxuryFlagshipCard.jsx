@@ -55,8 +55,12 @@ export default function LuxuryFlagshipCard() {
           </div>
           {FLAGSHIP.mls_number && (
             <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
-              <span
+              <a
+                href={FLAGSHIP.realtor_ca_url}
+                target="_blank"
+                rel="noopener noreferrer"
                 data-testid="luxury-flagship-mls-badge"
+                title="View this listing on realtor.ca"
                 style={{
                   display: "inline-block",
                   background: "#DABF7A", color: "#0F2A5B",
@@ -65,8 +69,12 @@ export default function LuxuryFlagshipCard() {
                   padding: "6px 14px", borderRadius: 4,
                   border: "1px solid rgba(15,42,91,0.15)",
                   textTransform: "uppercase",
+                  textDecoration: "none", cursor: "pointer",
+                  transition: "transform 120ms ease, box-shadow 120ms ease",
                 }}
-              >MLS® {FLAGSHIP.mls_number}</span>
+                onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15,42,91,0.18)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+              >MLS® {FLAGSHIP.mls_number} ↗</a>
             </div>
           )}
           {live && (beds || baths || sqft || price) && (
