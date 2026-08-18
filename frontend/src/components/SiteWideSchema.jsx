@@ -181,6 +181,67 @@ export default function SiteWideSchema() {
           "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
         ],
       },
+      // ── Featured Listing: 3015 141 Street, Surrey (R3156192) ─────────
+      // RealEstateListing / SingleFamilyResidence graph node so AI
+      // assistants can answer "what's Doug's featured listing" or "what
+      // homes are for sale in Elgin Chantrell" with the canonical facts.
+      {
+        "@type": ["RealEstateListing", "Product"],
+        "@id": `${SITE_FACTS.origin}/#flagship-r3156192`,
+        "name": "3015 141 Street, Surrey, BC",
+        "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
+        "identifier": "R3156192",
+        "mlsNumber": "R3156192",
+        "sku": "R3156192",
+        "description": "5 BR · 7 BA · 6,129 sq ft detached residence on 0.36 acre in Elgin Chantrell, South Surrey. Pool, sports court, wrap-around porch, folding patio doors to a west-facing backyard, radiant floor heating, solar panels, in-law suite. Represented exclusively by Doug LeMaire, REALTOR®.",
+        "image": [
+          "https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg",
+        ],
+        "brand": { "@id": `${SITE_FACTS.origin}/#organization` },
+        "seller": { "@id": `${SITE_FACTS.origin}/#doug` },
+        "offers": {
+          "@type": "Offer",
+          "price": 3297000,
+          "priceCurrency": "CAD",
+          "availability": "https://schema.org/InStock",
+          "seller": { "@id": `${SITE_FACTS.origin}/#doug` },
+          "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
+        },
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "3015 141 Street",
+          "addressLocality": "Surrey",
+          "addressRegion": "BC",
+          "postalCode": "V4P 2J4",
+          "addressCountry": "CA",
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 49.056886,
+          "longitude": -122.831239,
+        },
+        "numberOfRooms": 5,
+        "numberOfBathroomsTotal": 7,
+        "floorSize": {
+          "@type": "QuantitativeValue",
+          "value": 6129,
+          "unitCode": "FTK", // square foot
+        },
+        "lotSize": {
+          "@type": "QuantitativeValue",
+          "value": 14636,
+          "unitCode": "FTK",
+        },
+        "yearBuilt": 2001,
+        "amenityFeature": [
+          { "@type": "LocationFeatureSpecification", "name": "Swimming Pool" },
+          { "@type": "LocationFeatureSpecification", "name": "Sports Court" },
+          { "@type": "LocationFeatureSpecification", "name": "In-Law Suite" },
+          { "@type": "LocationFeatureSpecification", "name": "Wrap-Around Porch" },
+          { "@type": "LocationFeatureSpecification", "name": "Radiant Floor Heating" },
+          { "@type": "LocationFeatureSpecification", "name": "Solar Panels" },
+        ],
+      },
     ],
   }), []);
 

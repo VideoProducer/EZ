@@ -296,6 +296,57 @@
           ]
         }
         </script>
+
+        <!-- ═════ Doug's Featured Listing (R3156192) — RealEstateListing JSON-LD ═════
+             Injected in static HTML so non-JS-executing AI crawlers (GPTBot,
+             ClaudeBot, PerplexityBot, older Googlebot mobile) see the featured
+             listing facts without needing to render the SPA. Client-side
+             `<SiteWideSchema/>` re-emits the same data for JS-executing bots. -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": ["RealEstateListing", "Product"],
+          "@id": "https://eztofind.ca/#flagship-r3156192",
+          "name": "3015 141 Street, Surrey, BC",
+          "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
+          "identifier": "R3156192",
+          "mlsNumber": "R3156192",
+          "sku": "R3156192",
+          "description": "5 BR · 7 BA · 6,129 sq ft detached residence on 0.36 acre in Elgin Chantrell, South Surrey. Pool, sports court, wrap-around porch, folding patio doors to a west-facing backyard, radiant floor heating, solar panels, in-law suite. Represented exclusively by Doug LeMaire, REALTOR® (BCFSA #167790).",
+          "image": ["https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg"],
+          "brand": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+          "seller": { "@type": "Person", "name": "Doug LeMaire", "jobTitle": "REALTOR®", "identifier": "BCFSA #167790" },
+          "offers": {
+            "@type": "Offer",
+            "price": 3297000,
+            "priceCurrency": "CAD",
+            "availability": "https://schema.org/InStock",
+            "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey"
+          },
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "3015 141 Street",
+            "addressLocality": "Surrey",
+            "addressRegion": "BC",
+            "postalCode": "V4P 2J4",
+            "addressCountry": "CA"
+          },
+          "geo": { "@type": "GeoCoordinates", "latitude": 49.056886, "longitude": -122.831239 },
+          "numberOfRooms": 5,
+          "numberOfBathroomsTotal": 7,
+          "floorSize": { "@type": "QuantitativeValue", "value": 6129, "unitCode": "FTK" },
+          "lotSize": { "@type": "QuantitativeValue", "value": 14636, "unitCode": "FTK" },
+          "yearBuilt": 2001,
+          "amenityFeature": [
+            { "@type": "LocationFeatureSpecification", "name": "Swimming Pool" },
+            { "@type": "LocationFeatureSpecification", "name": "Sports Court" },
+            { "@type": "LocationFeatureSpecification", "name": "In-Law Suite" },
+            { "@type": "LocationFeatureSpecification", "name": "Wrap-Around Porch" },
+            { "@type": "LocationFeatureSpecification", "name": "Radiant Floor Heating" },
+            { "@type": "LocationFeatureSpecification", "name": "Solar Panels" }
+          ]
+        }
+        </script>
     </head>
     <body style="margin:0;background:#FAF7F0;color:#0F2A5B;">
         <noscript>You need to enable JavaScript to run this app.</noscript>
