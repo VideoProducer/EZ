@@ -33,6 +33,7 @@ import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { FLAGSHIP } from "../config/flagshipListing";
+import ListingPhotoLightbox from "../components/ListingPhotoLightbox";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
@@ -5597,6 +5598,8 @@ const LuxuryShareBar = ({ url, ogPreviewUrl, title, text, mls, address, city }) 
 
 const DashboardFeaturedListing = () => {
   const [active, setActive] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [live, setLive] = useState(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const sectionRef = useRef(null);
@@ -5754,7 +5757,8 @@ const DashboardFeaturedListing = () => {
             <>
               <img src={hero} alt={`${merged.address}, ${merged.city}`}
                 loading="lazy" decoding="async"
-                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block" }}
+                onClick={() => { setLightboxIndex(active); setLightboxOpen(true); }}
+                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block", cursor: "pointer" }}
                 data-testid="dash-featured-hero"/>
               {video && (
                 <button
@@ -5827,7 +5831,7 @@ const DashboardFeaturedListing = () => {
                   display: "flex", flexDirection: "column", gap: 6,
                 }}>
                   {merged.photos.slice(0, 4).map((p, i) => (
-                    <button key={i} onClick={() => setActive(i)}
+                    <button key={i} onClick={() => { setActive(i); setLightboxIndex(i); setLightboxOpen(true); }}
                       data-testid={`dash-featured-thumb-${i}`}
                       style={{
                         width: 52, height: 40, padding: 0,
@@ -5837,6 +5841,23 @@ const DashboardFeaturedListing = () => {
                       <img src={p} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }}/>
                     </button>
                   ))}
+                  {merged.photos.length > 4 && (
+                    <button
+                      onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
+                      data-testid="dash-featured-view-all-photos"
+                      title="View all photos"
+                      style={{
+                        width: 52, height: 40, padding: 0,
+                        border: "2px solid rgba(255,255,255,0.6)",
+                        borderRadius: 5, cursor: "pointer",
+                        background: "rgba(15,42,91,0.7)",
+                        color: "#fff",
+                        fontFamily: "Inter,sans-serif",
+                        fontSize: 12, fontWeight: 700,
+                        letterSpacing: 0.4,
+                      }}
+                    >+{merged.photos.length - 4}</button>
+                  )}
                 </div>
               )}
             </>
@@ -5953,6 +5974,13 @@ const DashboardFeaturedListing = () => {
           </div>
         </div>
       </div>
+      <ListingPhotoLightbox
+        photos={merged.photos}
+        startIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        listingLabel={`${merged.address}, ${merged.city}`}
+      />
     </section>
   );
 };

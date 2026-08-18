@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FLAGSHIP, isFlagshipRibbonActive } from "../config/flagshipListing";
+import ListingPhotoLightbox from "./ListingPhotoLightbox";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -10,6 +11,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 // ribbon for the first 7 days after FLAGSHIP.launch_at.
 export default function LuxuryFlagshipCard() {
   const [live, setLive] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!FLAGSHIP.active || !FLAGSHIP.mls_number) return;
@@ -31,6 +33,7 @@ export default function LuxuryFlagshipCard() {
 
   // Merged fields — DDF wins when present, snapshot fills the gaps.
   const heroImage = (live?.photos?.[0]?.url || live?.photos?.[0]) || FLAGSHIP.hero_image;
+  const galleryPhotos = (live?.photos?.length ? live.photos : [FLAGSHIP.hero_image]);
   const address = live?.address || FLAGSHIP.address;
   const city = live?.city || FLAGSHIP.city;
   const description = FLAGSHIP.tagline_long
@@ -101,7 +104,14 @@ export default function LuxuryFlagshipCard() {
               letterSpacing: "0.14em", zIndex: 10, boxShadow: "0 3px 10px rgba(0,0,0,0.3)",
             }}>NEW · JUST ACTIVE</div>
           )}
-          <div style={{
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setLightboxOpen(true)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setLightboxOpen(true); } }}
+            data-testid="luxury-flagship-hero"
+            aria-label={`Open ${galleryPhotos.length}-photo gallery for ${address}`}
+            style={{
             backgroundImage: `url(${heroImage})`,
             backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
             backgroundColor: "#0F2A5B",
@@ -109,7 +119,7 @@ export default function LuxuryFlagshipCard() {
             // the full front elevation is visible without cropping the tree
             // canopy or landscape lighting at the base of the frame.
             aspectRatio: "3 / 2", minHeight: 260, maxHeight: 720,
-            position: "relative",
+            position: "relative", cursor: "pointer",
           }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 55%, rgba(15,42,91,0.85) 100%)", pointerEvents: "none" }} />
             {FLAGSHIP.mls_number && FLAGSHIP.realtor_ca_url && (
@@ -130,6 +140,20 @@ export default function LuxuryFlagshipCard() {
               >MLS® {FLAGSHIP.mls_number} ↗</a>
             )}
             <div style={{ position: "absolute", bottom: 32, left: 40, right: 40, color: "white" }}>
+              {galleryPhotos.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
+                  data-testid="luxury-flagship-view-photos"
+                  style={{
+                    background: "rgba(255,255,255,0.18)", color: "white",
+                    border: "1px solid rgba(255,255,255,0.5)",
+                    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
+                    fontFamily: "Inter,sans-serif", fontSize: "0.78rem",
+                    fontWeight: 600, letterSpacing: "0.06em",
+                    backdropFilter: "blur(4px)", marginBottom: 12,
+                  }}
+                >📷 View all {galleryPhotos.length} photos</button>
+              )}
               <div style={{
                 fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.15rem",
                 marginBottom: 8, lineHeight: 1.55, maxWidth: 900,
@@ -154,6 +178,13 @@ export default function LuxuryFlagshipCard() {
           </div>
         </div>
       </div>
+      <ListingPhotoLightbox
+        photos={galleryPhotos}
+        startIndex={0}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        listingLabel={`${address}, ${city}`}
+      />
     </section>
   );
 }
