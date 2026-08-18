@@ -332,21 +332,9 @@ section.section { padding: clamp(3rem, 5vw, 5rem) 0; }
 @media(max-width: 900px) { .featured-grid { grid-template-columns: 1fr !important; } }
 
 /* Homepage flagship feature card — stack the image + details on mobile
-   so the photo can breathe and the MLS® chip stays above the fold.
-   Also enforce a proper 3:2 aspect for the image column using a padding
-   trick so iOS Safari <15 (which doesn't honour `aspect-ratio` on grid
-   items reliably) still gets a properly-shaped photo frame. */
+   so the photo can breathe and the MLS® chip stays above the fold. */
 @media(max-width: 720px) {
   .dash-featured-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-  .dash-featured-grid > div:first-child {
-    aspect-ratio: 3 / 2 !important;
-    height: auto !important;
-    min-height: auto !important;
-  }
-  .dash-featured-grid > div:first-child::before {
-    content: ""; display: block; padding-top: 66.6667%;
-    grid-column: 1; grid-row: 1;
-  }
 }
 
 /* Footer */

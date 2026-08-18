@@ -5737,10 +5737,12 @@ const DashboardFeaturedListing = () => {
         {/* Image column — 3/2 to match the native aspect ratio of the
             marketing photography (DSLR 3:2). Photo uses object-fit: contain
             so the full front elevation is centred and never cropped, even
-            when the user's viewport is a different aspect. */}
+            when the user's viewport is a different aspect. min-height is
+            a safety net for browsers that don't honour aspect-ratio on
+            grid items (falls back to a visible frame instead of 0px). */}
         <div style={{
           position: "relative", background: C.navy, borderRadius: 14,
-          overflow: "hidden", aspectRatio: "3/2",
+          overflow: "hidden", aspectRatio: "3/2", minHeight: 260,
         }}>
           {videoLoaded && video ? (
             <iframe
