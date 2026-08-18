@@ -103,14 +103,32 @@ export default function LuxuryFlagshipCard() {
           )}
           <div style={{
             backgroundImage: `url(${heroImage})`,
-            backgroundSize: "cover", backgroundPosition: "center",
-            // 16/9 on mobile so the hero shows in a natural landscape frame
-            // that matches marketing tours; fixed 560px on ≥900px screens
-            // to preserve the desktop magazine look.
-            aspectRatio: "16 / 9", minHeight: 260, maxHeight: 560,
+            backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+            backgroundColor: "#0F2A5B",
+            // Aspect ratio matches typical DSLR 3:2 marketing photography so
+            // the full front elevation is visible without cropping the tree
+            // canopy or landscape lighting at the base of the frame.
+            aspectRatio: "3 / 2", minHeight: 260, maxHeight: 720,
             position: "relative",
           }}>
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(15,42,91,0.85) 100%)" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 55%, rgba(15,42,91,0.85) 100%)", pointerEvents: "none" }} />
+            {FLAGSHIP.mls_number && FLAGSHIP.realtor_ca_url && (
+              <a
+                href={FLAGSHIP.realtor_ca_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="luxury-flagship-photo-mls-chip"
+                title="View this listing on realtor.ca"
+                style={{
+                  position: "absolute", top: 16, right: 16,
+                  background: "#DABF7A", color: "#0F2A5B",
+                  fontFamily: "Inter,sans-serif", fontSize: "0.72rem", fontWeight: 700,
+                  letterSpacing: "0.14em", padding: "6px 12px", borderRadius: 4,
+                  textTransform: "uppercase", textDecoration: "none",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+                }}
+              >MLS® {FLAGSHIP.mls_number} ↗</a>
+            )}
             <div style={{ position: "absolute", bottom: 32, left: 40, right: 40, color: "white" }}>
               <div style={{
                 fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.15rem",

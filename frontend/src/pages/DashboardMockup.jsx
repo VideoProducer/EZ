@@ -5730,14 +5730,13 @@ const DashboardFeaturedListing = () => {
         display: "grid", gridTemplateColumns: "minmax(280px, 1.2fr) minmax(260px, 1fr)",
         gap: 20, alignItems: "stretch",
       }} className="dash-featured-grid">
-        {/* Image column — 16/9 to match the native aspect ratio of the
-            Vimeo walkthrough. Previously used 4/3 which letterboxed the
-            widescreen video with navy bars top and bottom on mobile. Hero
-            photo still fills via object-fit: cover, so nothing looks
-            cropped when the video isn't playing. */}
+        {/* Image column — 3/2 to match the native aspect ratio of the
+            marketing photography (DSLR 3:2). Photo uses object-fit: contain
+            so the full front elevation is centred and never cropped, even
+            when the user's viewport is a different aspect. */}
         <div style={{
           position: "relative", background: C.navy, borderRadius: 14,
-          overflow: "hidden", aspectRatio: "16/9",
+          overflow: "hidden", aspectRatio: "3/2",
         }}>
           {videoLoaded && video ? (
             <iframe
@@ -5755,7 +5754,7 @@ const DashboardFeaturedListing = () => {
             <>
               <img src={hero} alt={`${merged.address}, ${merged.city}`}
                 loading="lazy" decoding="async"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block" }}
                 data-testid="dash-featured-hero"/>
               {video && (
                 <button
@@ -5803,10 +5802,22 @@ const DashboardFeaturedListing = () => {
                       fontSize: 30, color: "#fff", lineHeight: 1,
                       textShadow: "0 2px 10px rgba(0,0,0,0.55)",
                     }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
-                    <div style={{
-                      fontSize: 12, color: "rgba(255,255,255,0.92)", marginTop: 4,
-                      textShadow: "0 1px 4px rgba(0,0,0,0.6)", fontWeight: 600,
-                    }}>MLS® {merged.mls}</div>
+                    <a
+                      href={FLAGSHIP.realtor_ca_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid="dash-featured-photo-mls-chip"
+                      title="View this listing on realtor.ca"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 6,
+                        background: C.brandGold, color: C.navy,
+                        fontFamily: "Inter, sans-serif", fontSize: 11.5, fontWeight: 700,
+                        letterSpacing: 1.4, padding: "4px 10px", borderRadius: 4,
+                        textTransform: "uppercase", textDecoration: "none",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                      }}
+                    >MLS® {merged.mls} ↗</a>
                   </div>
                 </div>
               )}
