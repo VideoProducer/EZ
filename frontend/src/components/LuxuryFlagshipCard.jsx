@@ -56,30 +56,6 @@ export default function LuxuryFlagshipCard() {
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.95rem", color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
             {FLAGSHIP.tagline}
           </div>
-          {FLAGSHIP.mls_number && (
-            <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
-              <a
-                href={FLAGSHIP.realtor_ca_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="luxury-flagship-mls-badge"
-                title="View this listing on realtor.ca"
-                style={{
-                  display: "inline-block",
-                  background: "#DABF7A", color: "#0F2A5B",
-                  fontFamily: "Inter, sans-serif", fontSize: "0.78rem",
-                  fontWeight: 700, letterSpacing: "0.14em",
-                  padding: "6px 14px", borderRadius: 4,
-                  border: "1px solid rgba(15,42,91,0.15)",
-                  textTransform: "uppercase",
-                  textDecoration: "none", cursor: "pointer",
-                  transition: "transform 120ms ease, box-shadow 120ms ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15,42,91,0.18)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
-              >MLS® {FLAGSHIP.mls_number} ↗</a>
-            </div>
-          )}
           {live && (beds || baths || sqft || price) && (
             <div data-testid="luxury-flagship-specs" style={{
               marginTop: 14, display: "inline-flex", flexWrap: "wrap", gap: "6px 22px",
@@ -121,12 +97,12 @@ export default function LuxuryFlagshipCard() {
             aspectRatio: "3 / 2", minHeight: 260, maxHeight: 720,
             position: "relative", cursor: "pointer",
           }}>
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 55%, rgba(15,42,91,0.85) 100%)", pointerEvents: "none" }} />
             {FLAGSHIP.mls_number && FLAGSHIP.realtor_ca_url && (
               <a
                 href={FLAGSHIP.realtor_ca_url}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 data-testid="luxury-flagship-photo-mls-chip"
                 title="View this listing on realtor.ca"
                 style={{
@@ -139,43 +115,35 @@ export default function LuxuryFlagshipCard() {
                 }}
               >MLS® {FLAGSHIP.mls_number} ↗</a>
             )}
-            <div style={{ position: "absolute", bottom: 32, left: 40, right: 40, color: "white" }}>
-              {galleryPhotos.length > 1 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-                  data-testid="luxury-flagship-view-photos"
-                  style={{
-                    background: "rgba(255,255,255,0.18)", color: "white",
-                    border: "1px solid rgba(255,255,255,0.5)",
-                    padding: "6px 14px", borderRadius: 999, cursor: "pointer",
-                    fontFamily: "Inter,sans-serif", fontSize: "0.78rem",
-                    fontWeight: 600, letterSpacing: "0.06em",
-                    backdropFilter: "blur(4px)", marginBottom: 12,
-                  }}
-                >📷 View all {galleryPhotos.length} photos</button>
-              )}
-              <div style={{
-                fontFamily: "'Playfair Display',Georgia,serif", fontSize: "1.15rem",
-                marginBottom: 8, lineHeight: 1.55, maxWidth: 900,
-                display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}>
-                {description}
-              </div>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 20 }}>
-                <a href={FLAGSHIP.matterport} target="_blank" rel="noopener noreferrer" data-testid="flagship-matterport" style={{
-                  background: "rgba(255,255,255,0.15)", color: "white", padding: "12px 24px", borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.5)",
-                  fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
-                }}>3D Matterport Tour ↗</a>
-                <a href={FLAGSHIP.virtual_tour_iframe} target="_blank" rel="noopener noreferrer" data-testid="flagship-cotala" style={{
-                  background: "rgba(255,255,255,0.15)", color: "white", padding: "12px 24px", borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.5)",
-                  fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
-                }}>Virtual Tour ↗</a>
-              </div>
-            </div>
           </div>
+        </div>
+        {/* Tour actions — moved below the photo to keep the image clean. */}
+        <div style={{
+          display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center",
+          marginTop: 24,
+        }}>
+          <a href={FLAGSHIP.matterport} target="_blank" rel="noopener noreferrer" data-testid="flagship-matterport" style={{
+            background: "#0F2A5B", color: "white", padding: "12px 24px", borderRadius: 999,
+            fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
+          }}>3D Matterport Tour ↗</a>
+          <a href={FLAGSHIP.virtual_tour_iframe} target="_blank" rel="noopener noreferrer" data-testid="flagship-cotala" style={{
+            background: "transparent", color: "#0F2A5B",
+            border: "1px solid rgba(15,42,91,0.35)",
+            padding: "12px 24px", borderRadius: 999,
+            fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none",
+          }}>Virtual Tour ↗</a>
+          {galleryPhotos.length > 1 && (
+            <button
+              onClick={() => setLightboxOpen(true)}
+              data-testid="luxury-flagship-view-photos"
+              style={{
+                background: "transparent", color: "#0F2A5B",
+                border: "1px solid rgba(15,42,91,0.35)",
+                padding: "12px 24px", borderRadius: 999, cursor: "pointer",
+                fontFamily: "Sora,sans-serif", fontWeight: 600, fontSize: "0.9rem",
+              }}
+            >📷 View all {galleryPhotos.length} photos</button>
+          )}
         </div>
       </div>
       <ListingPhotoLightbox
