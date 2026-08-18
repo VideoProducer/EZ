@@ -7029,6 +7029,9 @@ async def startup():
     # after boot to avoid colliding with any admin-triggered sync.
     async def _ddf_auto_sync_loop():
         import asyncio as _a
+        # Small startup grace period so we don't race the token acquisition
+        # against the flagship-hydrate loop's first fetch.
+        await _a.sleep(60)
         while True:
             try:
                 if _ddf_ready():
@@ -7078,8 +7081,41 @@ async def startup():
                     logger.info("DDF auto-sync: credentials not configured, skipping")
             except Exception as e:
                 logger.error(f"DDF auto-sync loop iteration failed: {e}")
-            await _a.sleep(4 * 3600)  # every 4 hours
-    asyncio.create_task(asyncio.sleep(600)).add_done_callback(lambda _: asyncio.create_task(_ddf_auto_sync_loop()))
+            await _a.sleep(60 * 60)  # every 1 hour (was 4 hours — too slow to keep up with a live MLS)
+    # Kick off immediately so redeploys don't keep resetting a 10-min
+    # startup timer that never fires on a container that gets redeployed
+    # every 20 minutes. Any admin-triggered sync racing us is guarded by
+    # the `running` check inside the loop.
+    asyncio.create_task(_ddf_auto_sync_loop())
+
+    # ── Flagship hydration loop — keeps Doug's featured listings fresh ─────
+    # Doug's own listings (comma-separated MLS® numbers in the FEATURED_MLS
+    # env var) are re-pulled every 15 minutes so photo/price/description
+    # edits from GVR reflect on EZtoFind within the hour, and any newly-
+    # activated flagship is searchable immediately — no waiting on the
+    # 4-hour incremental cycle. Runs once at boot then loops.
+    async def _flagship_hydrate_loop():
+        import asyncio as _a
+        featured_env = (os.environ.get("FEATURED_MLS_NUMBERS") or "R3156192").strip()
+        mls_list = [m.strip() for m in featured_env.split(",") if m.strip()]
+        if not mls_list:
+            return
+        # 30-sec initial delay so the DDF token is ready and doesn't race
+        # the incremental sync's first token acquisition.
+        await _a.sleep(30)
+        while True:
+            if _ddf_ready():
+                for mls in mls_list:
+                    try:
+                        r = await _ddf_fetch_by_mls(db, mls)
+                        if r.get("upserted"):
+                            logger.info(f"flagship hydrate: {mls} upserted (photos={len(r.get('listing',{}).get('photos') or [])})")
+                        elif r.get("errors"):
+                            logger.warning(f"flagship hydrate: {mls} errors={r.get('errors')}")
+                    except Exception as e:
+                        logger.warning(f"flagship hydrate {mls} failed: {e}")
+            await _a.sleep(15 * 60)  # every 15 min
+    asyncio.create_task(_flagship_hydrate_loop())
 
     # Weekly evidence-chain snapshot — creates a SHA-256 fingerprint of all
     # site content and emails the digest to Doug. Tamper-evident timeline for
