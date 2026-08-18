@@ -5418,11 +5418,12 @@ const FEATURED_HOME_LISTING = {
   headline: "Quality, Location, Lasting Value",
   description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, seven bathrooms, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
-    // New approved dusk marketing hero — front elevation with lit dormers,
-    // wrap-around porch, illuminated garden path, mature trees. Interior
-    // gallery will be appended by DDF live sync once photographer's set is
-    // uploaded to the MLS® feed.
-    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/jn8y5oyx_1.webp",
+    // Realtor.ca hero photo (R3156192_1.jpg) — matches the first photo on
+    // the public CREA DDF® listing page. Snapshot fallback: this same URL
+    // is served regardless of whether the DDF feed sync is complete, so
+    // the homepage feature and the realtor.ca listing always agree on the
+    // hero image. Additional interior/exterior photos come from DDF hydration.
+    "https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg",
   ],
   open_house: null,               // No public open house — showings by appointment only
   // Video walkthrough intentionally disabled — the feature card now shows
@@ -5896,30 +5897,6 @@ const DashboardFeaturedListing = () => {
             fontFamily: "'Playfair Display', serif", fontSize: 22,
             color: C.navy, margin: "2px 0 6px", lineHeight: 1.2, fontWeight: 800,
           }} data-testid="dash-featured-address">{merged.address}</h3>
-          {merged.mls && (
-            <div style={{ margin: "0 0 8px" }}>
-              <a
-                href={FLAGSHIP.realtor_ca_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="dash-featured-mls-badge"
-                title="View this listing on realtor.ca"
-                style={{
-                  display: "inline-block",
-                  background: "#DABF7A", color: C.navy,
-                  fontFamily: "Inter, sans-serif", fontSize: 11,
-                  fontWeight: 700, letterSpacing: 1.4,
-                  padding: "4px 10px", borderRadius: 4,
-                  border: "1px solid rgba(15,42,91,0.15)",
-                  textTransform: "uppercase",
-                  textDecoration: "none", cursor: "pointer",
-                  transition: "transform 120ms ease, box-shadow 120ms ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(15,42,91,0.18)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
-              >MLS® {merged.mls} ↗</a>
-            </div>
-          )}
           <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
             {merged.headline}
           </p>
