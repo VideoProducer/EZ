@@ -5727,10 +5727,14 @@ const DashboardFeaturedListing = () => {
         display: "grid", gridTemplateColumns: "minmax(280px, 1.2fr) minmax(260px, 1fr)",
         gap: 20, alignItems: "stretch",
       }} className="dash-featured-grid">
-        {/* Image column */}
+        {/* Image column — 16/9 to match the native aspect ratio of the
+            Vimeo walkthrough. Previously used 4/3 which letterboxed the
+            widescreen video with navy bars top and bottom on mobile. Hero
+            photo still fills via object-fit: cover, so nothing looks
+            cropped when the video isn't playing. */}
         <div style={{
           position: "relative", background: C.navy, borderRadius: 14,
-          overflow: "hidden", minHeight: 320, aspectRatio: "4/3",
+          overflow: "hidden", aspectRatio: "16/9",
         }}>
           {videoLoaded && video ? (
             <iframe

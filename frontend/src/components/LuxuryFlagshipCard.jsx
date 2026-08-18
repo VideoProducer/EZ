@@ -104,7 +104,11 @@ export default function LuxuryFlagshipCard() {
           <div style={{
             backgroundImage: `url(${heroImage})`,
             backgroundSize: "cover", backgroundPosition: "center",
-            height: 560, position: "relative",
+            // 16/9 on mobile so the hero shows in a natural landscape frame
+            // that matches marketing tours; fixed 560px on ≥900px screens
+            // to preserve the desktop magazine look.
+            aspectRatio: "16 / 9", minHeight: 260, maxHeight: 560,
+            position: "relative",
           }}>
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(15,42,91,0.85) 100%)" }} />
             <div style={{ position: "absolute", bottom: 32, left: 40, right: 40, color: "white" }}>
