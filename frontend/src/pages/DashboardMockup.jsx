@@ -5417,16 +5417,19 @@ const FEATURED_HOME_LISTING = {
   headline: "Quality, Location, Lasting Value",
   description: "A rare Elgin Chantrell offering — 6,129 sq ft of thoughtfully designed living on a private 0.36-acre lot. Five bedrooms, seven bathrooms, and gracious entertaining spaces set in one of South Surrey's most sought-after enclaves. Minutes to Semiahmoo, Crescent Beach, and top-rated schools.",
   photos: [
-    // Dusk hero — approved marketing shot. Interior gallery will be appended
-    // by DDF live sync once photographer's set is uploaded to the MLS® feed.
-    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/73477bl0_Front%20of%20House%20Dusk.webp",
+    // New approved dusk marketing hero — front elevation with lit dormers,
+    // wrap-around porch, illuminated garden path, mature trees. Interior
+    // gallery will be appended by DDF live sync once photographer's set is
+    // uploaded to the MLS® feed.
+    "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/jn8y5oyx_1.webp",
   ],
   open_house: null,               // No public open house — showings by appointment only
-  // Video walkthrough — Vimeo. We use click-to-load so no third-party
-  // network calls hit Vimeo until the visitor opts in (PIPA-friendly).
-  video_url: "https://vimeo.com/1218107137",
-  video_duration: "4:42",
-  video_provider: "vimeo",
+  // Video walkthrough intentionally disabled — the feature card now shows
+  // a still photo only (per Doug, Feb 17 2026). Reinstate by setting
+  // `video_url` to a Vimeo/YouTube URL.
+  video_url: null,
+  video_duration: null,
+  video_provider: null,
 };
 
 // CREA DDF® / BCFSA best practice — quote the exact asking price to two
