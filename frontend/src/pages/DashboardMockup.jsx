@@ -2263,15 +2263,17 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height 
         m._listPrice = l.list_price;
         markerByKeyRef.current[l.listing_key] = m;
       });
-      // Fit to markers (but don't override too aggressively — cap zoom).
-      // Only fit when the city filter is active AND we have >1 listing;
-      // otherwise honor the recenter effect above (which flies to the city
-      // or back to the office). Include the office pin in the bounds only
-      // if the office is close enough to the listings that it wouldn't
-      // stretch the viewport into the ocean.
-      if (city && pts.length > 1) {
+      // Fit to markers on any set of visible results (not just when a city
+      // filter is active). Previously we required `city` — which meant a
+      // free-text search like "yale bc" (routed to `q`) never re-centered
+      // the map, leaving buyers looking at the last-viewed area while
+      // their matches sat far off-screen. Cap zoom so single-listing
+      // fits don't slam the viewport all the way in.
+      if (pts.length > 1) {
         const b = pts.reduce((acc, p) => { acc.push([p.lat, p.lon]); return acc; }, []);
         map.fitBounds(b, { maxZoom: 13, padding: [30, 30] });
+      } else if (pts.length === 1) {
+        map.setView([pts[0].lat, pts[0].lon], 13);
       }
     })();
   }, [listings, onHoverKey]);
@@ -2678,13 +2680,21 @@ const UnifiedSearchBar = () => {
     if (!ctx?.setFilters) return;
     const t = setTimeout(() => {
       const v = (val || "").trim();
-      const isCommunity = v && knownCommunities.some(
-        c => c && c.toLowerCase() === v.toLowerCase()
+      // Normalize the visitor's query for community matching: strip common
+      // provincial suffixes like ", BC" / " bc" / " b.c." / ", canada" so
+      // "yale bc" or "Kelowna, BC" resolves to the community filter instead
+      // of falling through to a keyword search.
+      const normalized = v
+        .replace(/,\s*(british columbia|bc|b\.c\.|canada)\s*$/i, "")
+        .replace(/\s+(bc|b\.c\.)\s*$/i, "")
+        .trim();
+      const isCommunity = normalized && knownCommunities.some(
+        c => c && c.toLowerCase() === normalized.toLowerCase()
       );
       ctx.setFilters(prev => ({
         ...(prev || {}),
         q: isCommunity ? "" : v,
-        city: isCommunity ? v : "",
+        city: isCommunity ? normalized : "",
       }));
       // The parent effect that watches `filters` picks up the change and
       // fires runSearch 380ms later — no need to call runSearch here.
