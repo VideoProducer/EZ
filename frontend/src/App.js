@@ -18,6 +18,7 @@ import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
+import AdminHydrateListing from "./pages/AdminHydrateListing";
 import DashboardMockup from "./pages/DashboardMockup";
 import MarketReport from "./pages/MarketReport"; // route removed 2026-08-08 per Doug; keep import so the component compiles if we re-enable later
 import CompareListings from "./pages/CompareListings";
@@ -12090,6 +12091,7 @@ function App() {
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" exportKind="buyer" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" exportKind="seller" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/lead-triage" element={<AdminLeadTriage AdminShell={AdminShell}/>}/>
+      <Route path="/admin/hydrate-listing" element={<AdminShell active="hydrate-listing"><AdminHydrateListing/></AdminShell>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>
       <Route path="/admin/reminders" element={<AdminReminders/>}/>
