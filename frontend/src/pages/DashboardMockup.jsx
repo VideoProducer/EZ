@@ -2173,8 +2173,12 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height 
     const map = mapRef.current;
     if (!map) return;
     if (!city) {
-      // City field cleared → return to the office anchor at friendly zoom.
-      map.flyTo([DOUG_ADDRESS.lat, DOUG_ADDRESS.lon], 13, { animate: true, duration: 0.8 });
+      // City cleared → LEAVE THE MAP WHERE IT IS and let the listings
+      // effect below decide where to centre based on the actual result
+      // pins. Previously this snapped the map back to Doug's office on
+      // every non-city search (MLS#, postal, keyword, address, or a query
+      // that didn't match a community exactly), which is exactly the
+      // behaviour Doug reported: "listings not showing up on the map".
       return;
     }
     let cancelled = false;
@@ -2233,7 +2237,10 @@ const ListingsMap = ({ city, listings, hoveredKey, onHoverKey, focusKey, height 
       const L = (await import("leaflet")).default;
       layer.clearLayers();
       markerByKeyRef.current = {};
-      const pts = (listings || []).filter(l => l.lat && l.lon);
+      const pts = (listings || []).filter(l =>
+        Number.isFinite(l?.lat) && Number.isFinite(l?.lon) &&
+        Math.abs(l.lat) > 0.001 && Math.abs(l.lon) > 0.001
+      );
       if (!pts.length) return;
       const priceIcon = (price, active) => L.divIcon({
         className: "eztofind-price-marker" + (active ? " is-active" : ""),
