@@ -5792,9 +5792,29 @@ const DashboardFeaturedListing = () => {
           )}
           {!videoLoaded && (
             <>
-              {/* Price + MLS# overlay — only shown once the DDF feed confirms
-                  the listing is live. In preview mode we intentionally hide
-                  this so a placeholder MLS# never displays to the public. */}
+              {/* Prominent MLS® gold chip — top-left corner of the photo so
+                  it's always in the visible viewport, even on portrait mobile
+                  screens where the price/overlay at the bottom-left would be
+                  clipped below the fold. Links to realtor.ca. */}
+              {merged.mls && (
+                <a
+                  href={FLAGSHIP.realtor_ca_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="dash-featured-photo-mls-chip"
+                  title="View this listing on realtor.ca"
+                  style={{
+                    position: "absolute", top: 12, left: 12,
+                    background: C.brandGold, color: C.navy,
+                    fontFamily: "Inter, sans-serif", fontSize: 11.5, fontWeight: 700,
+                    letterSpacing: 1.4, padding: "6px 12px", borderRadius: 4,
+                    textTransform: "uppercase", textDecoration: "none",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+                    zIndex: 5,
+                  }}
+                >MLS® {merged.mls} ↗</a>
+              )}
+              {/* Price overlay — bottom-left of the photo. */}
               {live && (
                 <div style={{
                   position: "absolute", inset: "auto 12px 12px", display: "flex",
@@ -5806,22 +5826,6 @@ const DashboardFeaturedListing = () => {
                       fontSize: 30, color: "#fff", lineHeight: 1,
                       textShadow: "0 2px 10px rgba(0,0,0,0.55)",
                     }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
-                    <a
-                      href={FLAGSHIP.realtor_ca_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid="dash-featured-photo-mls-chip"
-                      title="View this listing on realtor.ca"
-                      style={{
-                        display: "inline-block",
-                        marginTop: 6,
-                        background: C.brandGold, color: C.navy,
-                        fontFamily: "Inter, sans-serif", fontSize: 11.5, fontWeight: 700,
-                        letterSpacing: 1.4, padding: "4px 10px", borderRadius: 4,
-                        textTransform: "uppercase", textDecoration: "none",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-                      }}
-                    >MLS® {merged.mls} ↗</a>
                   </div>
                 </div>
               )}
