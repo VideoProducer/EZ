@@ -252,6 +252,7 @@ Disallow: /listing/
 Disallow: /mockups/
 
 Sitemap: https://eztofind.ca/sitemap.xml
+Sitemap: https://eztofind.ca/sitemap-ai.xml
 Sitemap: https://eztofind.ca/sitemap-snapshots.xml
 Sitemap: https://eztofind.ca/sitemap-index.xml
 
