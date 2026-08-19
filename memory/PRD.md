@@ -86,6 +86,40 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Verified: 2-font pruning already saved ~150KB / ~1300ms
 - Verified: PWA-ready manifest + favicon set + apple-touch-icon
 
+### Phase 6 — Lead-Gen P0 sprint (Feb 19, 2026)
+Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL / PIPA compliant.
+
+**1. Article 16 hard-block extended to `/valuation` and `/referral-request`**
+- Both forms now render an under-contract checkbox (`data-testid="valuation-currently-listed"`, `data-testid="referral-under-contract"`)
+- On tick: submit disabled + amber warning block referring the visitor back to their existing REALTOR® + link to `/communities` + `/glossary` for general info
+- Buyer + seller forms already had this — pattern now consistent across all four intake surfaces
+
+**2. CASL unbundled + default-unchecked + NOT required (CASL s.10)**
+- Every lead form (buyer, seller, valuation, referral) now has a **dedicated CASL card** — visually separated from PIPA + DoRTS acknowledgements
+- `defaultChecked={false}` verified on all four via Playwright
+- `required` attribute REMOVED from CASL input (required = bundled/coerced consent, void under CASL s.10)
+- Updated wording: "Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time."
+- Sub-label: "Optional — Doug will still respond to this specific request even if you leave this unchecked (CASL s.10(9)(a))."
+- i18n key `consent.casl_optional_note` added (English; other languages inherit fallback until translated)
+- Backend `/leads/buyer` + `/leads/seller` now REJECT `pipa_ack=false` but ACCEPT `casl_consent=false` (was: rejected both)
+
+**3. `consent_type` + `consent_expiry` on lead schema**
+- New helper `compute_consent_fields()` classifies every lead as:
+  - `express`         — CASL box ticked → 730 day expiry + `casl_consent_at` timestamp
+  - `implied_inquiry` — form submitted without CASL box → 183 day expiry (CASL s.10(9)(a))
+  - `none`            — PIPA missing → rejected upstream, kept for schema completeness
+- Fields written to both `db.buyer_leads` and `db.seller_leads` on every insert alongside existing `consent_ip` / `consent_ua` / `consent_at`
+- Marketing campaign auto-enrollment (`welcome_series`, `seller_updates`) NOW gated on `casl_consent=True` — implied consent no longer opts users into nurture (was: blanket opt-in)
+- Nightly loop `_casl_consent_expiry_loop()` runs every 24h, flips `consent_type` to `"expired"` past `consent_expiry` so nurture crons naturally skip expired records
+
+**4. Behaviour-triggered SavedSearchModal on `/listings`**
+- `/listing/{key}` detail page writes a rolling 24-hour view log to `localStorage.ez_listing_views`
+- `/listings` on mount checks for 3+ distinct listings viewed → auto-opens `SavedSearchModal`
+- ALSO: 90-second dwell trigger after last filter change → auto-opens modal
+- Modal close writes `localStorage.ez_saved_search_dismissed = Date.now()` — suppresses auto-open for 30 days
+- Manual "🔔 Get alerts for this search" button remains available regardless of dismissal state
+- Playwright E2E verified: (a) 3-view auto-open, (b) dismissal timestamp recorded, (c) 2nd visit after dismissal does NOT re-fire
+
 ### Earlier waves (before this session)
 - 240 community pages with dynamic `isFocus` compliance switch
 - Live CREA DDF® MLS® integration with agent-name display fix

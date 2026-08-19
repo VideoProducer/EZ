@@ -1147,6 +1147,36 @@ def get_consent_meta(request: Request) -> dict:
     return {"consent_ip": ip, "consent_ua": ua, "consent_at": now_iso()}
 
 
+# ── CASL consent classification (Feb 2026 · P0 audit ticket) ──────────────
+# CASL s.10 (express) vs s.10(9)(a) (implied — the visitor asked for info):
+#   • express         — user actively ticked the marketing-CEM checkbox.
+#                       Valid for 2 years from consent date (transaction proxy).
+#   • implied_inquiry — user submitted a lead form WITHOUT ticking marketing
+#                       consent. CASL s.10(9)(a) implies consent for 6 months
+#                       from the inquiry date so Doug can reply about THIS
+#                       specific request. Not valid for broader marketing.
+#   • none            — neither (bounced by validation before write; kept for
+#                       schema completeness).
+# `consent_expiry` is computed at submit time and stored ISO-string. The
+# nightly _casl_consent_expiry_loop() flips `consent_type` to "expired" once
+# the expiry is passed so nurture crons naturally skip.
+def compute_consent_fields(casl_consent: bool, pipa_ack: bool) -> dict:
+    now = datetime.now(timezone.utc)
+    if not pipa_ack:
+        return {"consent_type": "none", "consent_expiry": None, "casl_consent_at": None}
+    if casl_consent:
+        return {
+            "consent_type": "express",
+            "consent_expiry": (now + timedelta(days=730)).isoformat(),   # 2 years
+            "casl_consent_at": now.isoformat(),
+        }
+    return {
+        "consent_type": "implied_inquiry",
+        "consent_expiry": (now + timedelta(days=183)).isoformat(),       # 6 months
+        "casl_consent_at": None,
+    }
+
+
 async def _translate_to_english(text: str, source_lang: str) -> str:
     """Translate a short free-text field to English for Doug's CRM. Best-effort;
     on failure returns empty string. Called as a fire-and-forget background task
@@ -1444,24 +1474,32 @@ async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: s
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
     await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
-    if not lead.casl_consent or not lead.pipa_ack:
-        raise HTTPException(400, "Consent required")
+    # CASL s.10 (Feb 2026 audit): CASL consent is now OPTIONAL — requiring it
+    # would be bundled/coerced and void. PIPA remains required (privacy ack)
+    # and DoRTS remains required (BCFSA representation ack).
+    if not lead.pipa_ack:
+        raise HTTPException(400, "PIPA privacy acknowledgement required")
     if lead.working_with_realtor:
         raise HTTPException(400, "Because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
-    doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
+    doc = {
+        **lead.model_dump(),
+        **get_consent_meta(request),
+        **compute_consent_fields(lead.casl_consent, lead.pipa_ack),
+        "unsubscribed": False,
+    }
     doc.pop("turnstile_token", None)  # don't persist the CAPTCHA token
     await db.buyer_leads.insert_one(doc)
-    # CASL: auto-enroll into welcome_series based on the blanket consent given
-    # via the form's "I consent to receive commercial electronic messages" checkbox.
-    # welcome_series is a category of commercial message, so this is covered by
-    # that express consent. Recorded here for audit; user can opt out anytime via
-    # /email-preferences.
-    try:
-        await campaign_record_consent(lead.email, "welcome_series", request,
-            opt_in_text="Buyer lead form — I consent to receive commercial electronic messages (CASL).",
-            source="buyer_leads")
-    except Exception as e:
-        logger.warning(f"[campaigns] auto-opt welcome_series failed for buyer_leads: {e}")
+    # CASL: only enroll into marketing campaigns when the user gave EXPRESS
+    # opt-in. Without it, Doug may still reply to THIS specific inquiry
+    # under CASL s.10(9)(a) (implied consent), but cannot add them to a
+    # nurture list.
+    if lead.casl_consent:
+        try:
+            await campaign_record_consent(lead.email, "welcome_series", request,
+                opt_in_text="Buyer lead form — I consent to receive commercial electronic messages (CASL).",
+                source="buyer_leads")
+        except Exception as e:
+            logger.warning(f"[campaigns] auto-opt welcome_series failed for buyer_leads: {e}")
     # Background translation of the visitor's free-text note (non-EN forms)
     if (lead.form_lang or "en") != "en" and (lead.notes or "").strip():
         asyncio.create_task(_translate_lead_notes("buyer_leads", lead.id, "notes", lead.notes or "", lead.form_lang or "en"))
@@ -1512,23 +1550,32 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
 @api.post("/leads/seller")
 async def create_seller_lead(lead: SellerLead, request: Request):
     await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
-    if not lead.casl_consent or not lead.pipa_ack:
-        raise HTTPException(400, "Consent required")
+    # CASL s.10 (Feb 2026 audit): CASL consent is now OPTIONAL. See notes
+    # on /leads/buyer above.
+    if not lead.pipa_ack:
+        raise HTTPException(400, "PIPA privacy acknowledgement required")
     if lead.currently_listed:
         raise HTTPException(400, "Because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
-    doc = {**lead.model_dump(), **get_consent_meta(request), "unsubscribed": False}
+    doc = {
+        **lead.model_dump(),
+        **get_consent_meta(request),
+        **compute_consent_fields(lead.casl_consent, lead.pipa_ack),
+        "unsubscribed": False,
+    }
     doc.pop("turnstile_token", None)
     await db.seller_leads.insert_one(doc)
-    # CASL: auto-enroll into welcome_series + seller_updates based on the blanket
-    # consent given via the form. Seller leads are the primary target for the
-    # monthly market update campaign — that's why they filled out a seller form.
-    try:
-        for c in ("welcome_series", "seller_updates"):
-            await campaign_record_consent(lead.email, c, request,
-                opt_in_text="Seller lead form — I consent to receive commercial electronic messages (CASL).",
-                source="seller_leads")
-    except Exception as e:
-        logger.warning(f"[campaigns] auto-opt seller_leads failed: {e}")
+    # CASL: only enroll into marketing campaigns when the user gave EXPRESS
+    # opt-in (unbundled checkbox). Without it, Doug can still reply to this
+    # specific valuation/seller inquiry under CASL s.10(9)(a) but cannot
+    # broadcast market updates.
+    if lead.casl_consent:
+        try:
+            for c in ("welcome_series", "seller_updates"):
+                await campaign_record_consent(lead.email, c, request,
+                    opt_in_text="Seller lead form — I consent to receive commercial electronic messages (CASL).",
+                    source="seller_leads")
+        except Exception as e:
+            logger.warning(f"[campaigns] auto-opt seller_leads failed: {e}")
     if (lead.form_lang or "en") != "en" and (lead.reason or "").strip():
         asyncio.create_task(_translate_lead_notes("seller_leads", lead.id, "reason", lead.reason or "", lead.form_lang or "en"))
     logger.info(f"Seller lead from {lead.email} (lang={lead.form_lang})")
@@ -6752,6 +6799,37 @@ async def startup():
                 logger.error(f"sunday_night_digest_loop outer failed: {e}")
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(300)).add_done_callback(lambda _: asyncio.create_task(_sunday_night_digest_loop()))
+
+    # ── CASL consent expiry loop (Feb 2026 · P0 audit ticket) ──────────────
+    # Every 24h, flip `consent_type` to "expired" on any lead whose
+    # `consent_expiry` has passed. Nurture crons already filter on
+    # `consent_type IN ('express')` so this is the single choke-point that
+    # keeps outreach CASL-compliant automatically. Runs 20 min after boot
+    # so the loop is up shortly after a redeploy, then daily thereafter.
+    async def _casl_consent_expiry_loop():
+        import asyncio as _a
+        while True:
+            try:
+                now_iso_str = datetime.now(timezone.utc).isoformat()
+                total_expired = 0
+                for coll in ("buyer_leads", "seller_leads"):
+                    try:
+                        r = await db[coll].update_many(
+                            {
+                                "consent_expiry": {"$lt": now_iso_str, "$ne": None},
+                                "consent_type": {"$in": ["express", "implied_inquiry"]},
+                            },
+                            {"$set": {"consent_type": "expired"}},
+                        )
+                        total_expired += r.modified_count
+                    except Exception as e:
+                        logger.warning(f"casl_expiry: {coll} pass failed: {e}")
+                if total_expired:
+                    logger.info(f"casl_expiry: {total_expired} lead(s) flipped to expired")
+            except Exception as e:
+                logger.error(f"casl_consent_expiry_loop iteration failed: {e}")
+            await _a.sleep(24 * 3600)
+    asyncio.create_task(asyncio.sleep(1200)).add_done_callback(lambda _: asyncio.create_task(_casl_consent_expiry_loop()))
 
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
     # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community

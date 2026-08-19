@@ -3313,6 +3313,42 @@ const Listings = () => {
       try { window.history.replaceState(null, "", window.location.pathname + window.location.search); } catch {}
     }
   }, []);
+  // Feb 2026 · P0 audit — behaviour-triggered soft capture.
+  //   1. 3+ distinct /listing/{key} views in the last 24h → auto-open modal.
+  //   2. 90 s of active filtering (dwell after last filter change) → auto-open.
+  // Both respect `ez_saved_search_dismissed` — modal stays quiet for 30 days
+  // after any close.
+  const dismissedRecently = () => {
+    try {
+      const d = parseInt(window.localStorage.getItem("ez_saved_search_dismissed") || "0", 10);
+      return d && (Date.now() - d) < 30 * 24 * 3600 * 1000;
+    } catch { return false; }
+  };
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (dismissedRecently()) return;
+    try {
+      const raw = JSON.parse(window.localStorage.getItem("ez_listing_views") || "[]");
+      const now = Date.now();
+      const distinct = new Set(raw.filter(v => v && v.ts && (now - v.ts) < 24 * 3600 * 1000).map(v => v.key)).size;
+      if (distinct >= 3) {
+        setAlertOpen(true);
+      }
+    } catch {}
+  }, []);
+  // The 90-second dwell trigger — resets whenever filters change so it
+  // fires only after the visitor has stopped tweaking their search.
+  const filterDwellRef = useRef(null);
+  const armDwellTrigger = () => {
+    if (typeof window === "undefined") return;
+    if (dismissedRecently()) return;
+    if (filterDwellRef.current) clearTimeout(filterDwellRef.current);
+    filterDwellRef.current = setTimeout(() => {
+      if (!dismissedRecently()) setAlertOpen(true);
+    }, 90 * 1000);
+  };
+  useEffect(() => () => { if (filterDwellRef.current) clearTimeout(filterDwellRef.current); }, []);
+  // (Dwell-arm useEffect placed AFTER filters state declaration below.)
   const [filters, setFilters] = useState({
     q: rawQ,
     city: params.get("city") || params.get("community") || "",
@@ -3333,6 +3369,13 @@ const Listings = () => {
     min_acres: params.get("min_acres") || "",
     sort: params.get("sort") || "newest",
   });
+  // Feb 2026 · P0 audit — arm the 90 s dwell trigger any time the visitor
+  // changes a filter and has NOT dismissed the prompt in the last 30 days.
+  // Placed AFTER `filters` is declared to satisfy the temporal-dead-zone.
+  useEffect(() => {
+    armDwellTrigger();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
   const [nlBanner, setNlBanner] = useState(null); // { original, extracted }
   const [clarify, setClarify] = useState(null);    // { prompt, options, original }
   const [results, setResults] = useState({ total: 0, listings: [], using_mock_data: false, compliance: {} });
@@ -3559,7 +3602,11 @@ const Listings = () => {
       <div className="notice" style={{marginTop:"2rem"}}>
         {results.compliance?.trademark_notice || "MLS®, Multiple Listing Service®, and the associated logos are owned by The Canadian Real Estate Association (CREA). REALTOR® is a trademark of REALTOR® Canada Inc. Data © CREA DDF®."}
       </div>
-      <SavedSearchModal open={alertOpen} onClose={()=>setAlertOpen(false)} currentFilters={filters}/>
+      <SavedSearchModal open={alertOpen} onClose={()=>{
+        setAlertOpen(false);
+        // Record dismissal so the behaviour-trigger stays quiet for 30 days.
+        try { window.localStorage.setItem("ez_saved_search_dismissed", String(Date.now())); } catch {}
+      }} currentFilters={filters}/>
     </div></section>
     </TermsGate>
   );
@@ -4347,6 +4394,20 @@ const ListingDetail = () => {
   const [presentOpen, setPresentOpen] = useState(false);
   useEffect(() => {
     axios.get(`${API}/listings/${key}`).then(r => setListing(r.data)).catch(() => setNotFound(true));
+  }, [key]);
+  // Feb 2026 · P0 audit — behaviour-trigger the SavedSearchModal.
+  // Track each unique /listing/{key} view in localStorage (24h rolling
+  // window). Once the visitor has seen 3+ distinct listings the /listings
+  // page auto-opens the "Get alerts" modal on their next return.
+  useEffect(() => {
+    if (typeof window === "undefined" || !key) return;
+    try {
+      const now = Date.now();
+      const raw = JSON.parse(window.localStorage.getItem("ez_listing_views") || "[]");
+      const pruned = raw.filter(v => v && v.ts && (now - v.ts) < 24 * 3600 * 1000 && v.key !== key);
+      pruned.push({ key, ts: now });
+      window.localStorage.setItem("ez_listing_views", JSON.stringify(pruned.slice(-20)));
+    } catch {}
   }, [key]);
   if (notFound) return <section className="section"><div className="container-x"><h1 className="section-title">Listing not found</h1><p><Link to="/listings" style={{color:"var(--brand-blue)"}}>← Back to all listings</Link></p></div></section>;
   if (!listing) return <section className="section"><div className="container-x"><div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading listing…</div></div></section>;
@@ -5571,8 +5632,13 @@ const BuyerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>setF({...f,first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
       <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("buyer.under_contract_block")}</div>}
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
+      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
+      <div className="paper" data-testid="buyer-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label>
+        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="buyer-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
       <TurnstileWidget/>
@@ -5624,8 +5690,13 @@ const SellerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
       {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("seller.currently_listed_block")}</div>}
       <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>setF({...f,reason:e.target.value})}/></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> {t("consent.casl")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
+      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
+      <div className="paper" data-testid="seller-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="seller-casl"/> {t("consent.casl")}</label>
+        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")}</label></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="seller-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
@@ -8299,12 +8370,20 @@ const Valuation = () => {
         <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
         <div className="field"><label>When are you thinking of selling?</label><select value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just curious</option></select></div>
       </div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> I consent to receive commercial electronic messages (CASL).</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
+      {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern */}
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
+      {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Because your property is currently listed with another REALTOR®, Doug isn't able to prepare a market estimate for you — please continue to work with your existing REALTOR®. Feel free to browse the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link> for general information.</div>}
+      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
+      <div className="paper" data-testid="valuation-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="valuation-casl"/> Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time.</label>
+        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>Optional — Doug will still respond to this specific request even if you leave this unchecked (CASL s.10(9)(a)).</div>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="valuation-dorts"/> I have read the BCFSA Disclosure of Representation in Trading Services and understand my options for representation. <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
-      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="valuation-submit">Get My Market Estimate</button>
+      <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
     </form>
   </div></section>);
 };
@@ -8341,12 +8420,20 @@ const ReferralRequest = () => {
         <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
       </div>
       <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})}/> {t("consent.casl")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
+      {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
+      {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Because you're already under contract with another REALTOR®, Doug's referral network isn't able to place you with a new REALTOR® — please continue to work with your existing REALTOR®. Feel free to browse the <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link> for general information.</div>}
+      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
+      <div className="paper" data-testid="referral-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
+        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="referral-casl"/> {t("consent.casl")}</label>
+        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
+      </div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
       <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="referral-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
-      <button type="submit" className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="referral-submit">{t("ref.submit")}</button>
+      <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="referral-submit">{t("ref.submit")}</button>
     </form>
   </div></section>);
 };

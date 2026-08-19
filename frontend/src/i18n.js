@@ -27,7 +27,8 @@ const en = {
   "bcfsa.dorts_link": "Disclosure of Representation in Trading Services (DoRTS)",
   "bcfsa.notice_after": "before providing real estate services.",
   // Consents
-  "consent.casl": "I consent to receive commercial electronic messages from EZtoFind.ca (CASL). I can unsubscribe anytime.",
+  "consent.casl": "Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time.",
+  "consent.casl_optional_note": "Optional — Doug will still respond to this specific request even if you leave this unchecked (CASL s.10(9)(a)).",
   "consent.pipa": "I acknowledge the Privacy Policy (PIPA).",
   "consent.dorts": "I have read the BCFSA Disclosure of Representation in Trading Services and understand my options for representation.",
   // Buyer form
