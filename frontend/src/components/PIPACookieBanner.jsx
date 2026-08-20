@@ -24,7 +24,16 @@ export default function PIPACookieBanner() {
     try {
       const skip = /^\/(compliance|privacy|terms)/i.test(window.location.pathname);
       if (skip) return;
-      if (!localStorage.getItem(KEY)) {
+      // Never show alongside the fuller <CookieBanner/> which already
+      // contains the PIPA collection-notice text + granular consent
+      // buttons. First-time visitors (ez_cookie absent) see CookieBanner
+      // only. This banner remains as a compliance fallback for edge
+      // cases where PIPA_ACK has been cleared but ez_cookie was set.
+      const hasCookieAck  = !!localStorage.getItem("ez_cookie");
+      const hasPipaAck    = !!localStorage.getItem(KEY);
+      // Show ONLY when the newer CookieBanner is dismissed AND our own
+      // PIPA acknowledgement is missing.
+      if (hasCookieAck && !hasPipaAck) {
         const t = setTimeout(() => setShow(true), 700);
         return () => clearTimeout(t);
       }
@@ -47,19 +56,25 @@ export default function PIPACookieBanner() {
       aria-label="Privacy collection notice"
       className="safe-bottom"
       style={{
+        // Left-anchored floating card. Prior full-width strip intercepted
+        // clicks on the Doogie FAB / drawer send button (bottom-right).
+        // Constraining to a max-width and hugging bottom-left keeps the
+        // right edge of the viewport clickable at all times.
         position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
+        bottom: 16,
+        left: 16,
+        right: "auto",
+        maxWidth: "min(560px, calc(100vw - 32px))",
+        zIndex: 9990,
         background: "#0F2A5B",
         color: "white",
         padding: "16px 20px",
-        boxShadow: "0 -8px 32px rgba(0,0,0,0.30)",
-        borderTop: "2px solid #F5A623",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.38)",
+        border: "2px solid #F5A623",
+        borderRadius: 14,
         display: "grid",
         gridTemplateColumns: "1fr auto",
-        gap: 16,
+        gap: 14,
         alignItems: "center",
         fontFamily: "Inter, sans-serif",
       }}

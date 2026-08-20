@@ -36,6 +36,7 @@ export default function LuxuryFlagshipCard() {
   const galleryPhotos = (live?.photos?.length ? live.photos : [FLAGSHIP.hero_image]);
   const address = live?.address || FLAGSHIP.address;
   const city = live?.city || FLAGSHIP.city;
+  const community = live?.community || live?.neighbourhood || FLAGSHIP.community || null;
   const description = FLAGSHIP.tagline_long
     || (live?.description ? `${FLAGSHIP.tagline} ${live.description}` : FLAGSHIP.description);
   const beds = live?.bedrooms ?? live?.beds;
@@ -50,8 +51,8 @@ export default function LuxuryFlagshipCard() {
           <div style={{ fontSize: "0.72rem", letterSpacing: "0.16em", color: "#DABF7A", fontWeight: 700, textTransform: "uppercase" }}>
             Doug's Featured Listing
           </div>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "2.2rem", color: "#0F2A5B", marginTop: 6 }}>
-            {address}, {city}
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "2.2rem", color: "#0F2A5B", marginTop: 6 }} data-testid="luxury-flagship-address">
+            {address}{community ? <> · <span style={{ color: "#8A6D2E" }}>{community}</span></> : null} · {city}
           </div>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.95rem", color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
             {FLAGSHIP.tagline}

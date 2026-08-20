@@ -4,6 +4,7 @@
 export const FLAGSHIP = {
   active: true,  // ⚡ RE-ENABLED — feature listing card now at the top of /specialties/luxury
   address: "3015 141 Street",
+  community: "Elgin Chantrell",  // Enclave / neighbourhood — surfaced in address lines beside city
   city: "Surrey",
   province: "BC",
   price: 3297000,  // asking price · GVR-listed

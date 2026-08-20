@@ -401,7 +401,7 @@ export default function HomepageLeadGenMockup({ previewFlagship = FLAGSHIP.activ
         <FeaturedComingSoonListing
           mode="just_listed"
           listing_key={FLAGSHIP.mls_number}
-          address={`${FLAGSHIP.address}, ${FLAGSHIP.city}, ${FLAGSHIP.province}`}
+          address={`${FLAGSHIP.address}, ${FLAGSHIP.community ? FLAGSHIP.community + ", " : ""}${FLAGSHIP.city}, ${FLAGSHIP.province}`}
           price={FLAGSHIP.price}
           photo_url={FLAGSHIP.hero_image}
           mls_number={FLAGSHIP.mls_number}

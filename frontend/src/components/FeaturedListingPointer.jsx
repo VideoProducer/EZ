@@ -49,7 +49,9 @@ export default function FeaturedListingPointer({ tone = "paper" } = {}) {
 
         <span style={{ color: primary, fontSize: "0.92rem", fontWeight: 600 }}>
           {FLAGSHIP.address}
-          <span style={{ color: secondary, fontWeight: 400 }}>, {FLAGSHIP.city}, {FLAGSHIP.province}</span>
+          <span style={{ color: secondary, fontWeight: 400 }}>
+            {FLAGSHIP.community ? <>, {FLAGSHIP.community}</> : null}, {FLAGSHIP.city}, {FLAGSHIP.province}
+          </span>
         </span>
 
         <span style={{ color: secondary, fontSize: "0.82rem", letterSpacing: "0.02em" }}>

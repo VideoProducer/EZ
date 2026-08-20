@@ -39,6 +39,13 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 6 — PIPA Overlay Fix + Flagship Enclave Backfill (Feb 2026 — this session)
+- **PIPA banner overlay bug fix** — `PIPACookieBanner` was a full-width `bottom:0`, `z-index:9999` strip intercepting clicks on the Doogie FAB / drawer send button + `cookie-accept-all`. Reshaped into a left-anchored floating card (`bottom:16, left:16, maxWidth:min(560px, calc(100vw-32px))`, `zIndex:9990`), and suppressed entirely on first visit whenever the fuller `<CookieBanner/>` is showing (checks `ez_cookie` in localStorage) so first-time visitors see one banner, not two.
+- **Flagship community enclave label** — added `community: "Elgin Chantrell"` to `FLAGSHIP` config (`/frontend/src/config/flagshipListing.js`) and updated the 3 rendering surfaces to insert it into the address line when present:
+  - `LuxuryFlagshipCard` — hero header now reads `3015 141 Street · Elgin Chantrell · Surrey`
+  - `FeaturedListingPointer` — top-nav pointer strip
+  - `HomepageLeadGenMockup` — preview-flagship variant
+
 ### Phase 5 — Glossary Discovery + Conversion Surfaces (Feb 2026 — this session)
 - **Popular Terms footer row** — 8 config-driven links (PTT, GST, ALR, Subject Removal, 2-5-10 Warranty, Form B, Amortization, FTB Exemption) added to:
   - Sitewide App.js Footer (`data-testid="footer-popular-terms"` column)
