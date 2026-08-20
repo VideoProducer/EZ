@@ -15742,10 +15742,16 @@ def _sanitize_tour_url(url: str) -> str:
         m = re.search(r"drive\.google\.com/file/d/([a-zA-Z0-9_-]+)", url)
         if m:
             return f"https://drive.google.com/file/d/{m.group(1)}/preview"
-        # YouTube: watch?v=X, /shorts/X, youtu.be/X  →  /embed/X
-        m = re.search(r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([a-zA-Z0-9_-]{11})", url)
+        # YouTube: watch?v=X, /shorts/X, youtu.be/X  →  privacy-enhanced
+        # embed at youtube-nocookie.com. Safari's Intelligent Tracking
+        # Prevention (Feb 2026) blocks 3rd-party cookies aggressively —
+        # especially in Private mode — which caused the standard
+        # youtube.com/embed URL to fail with error 101 for some viewers.
+        # youtube-nocookie.com sets no cookies until playback, so it works
+        # under ITP while still respecting owner-side embed restrictions.
+        m = re.search(r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/|youtube-nocookie\.com/embed/)([a-zA-Z0-9_-]{11})", url)
         if m:
-            return f"https://www.youtube.com/embed/{m.group(1)}"
+            return f"https://www.youtube-nocookie.com/embed/{m.group(1)}?rel=0&modestbranding=1&enablejsapi=1"
         # Vimeo: vimeo.com/{id}  →  player.vimeo.com/video/{id}
         m = re.search(r"^https?://(?:www\.)?vimeo\.com/(\d+)", url)
         if m:
@@ -15763,6 +15769,7 @@ def _sanitize_tour_url(url: str) -> str:
 # will surface an "Open in new tab" affordance more prominently.
 _EMBEDDABLE_TOUR_HOSTS = {
     "drive.google.com", "www.youtube.com", "youtube.com",
+    "www.youtube-nocookie.com", "youtube-nocookie.com",
     "player.vimeo.com", "my.matterport.com", "matterport.com",
     "kuula.co", "www.kuula.co", "youriguide.com", "www.youriguide.com",
     "tour.giraffe360.com", "hommati.com", "www.hommati.com",
