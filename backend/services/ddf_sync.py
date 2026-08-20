@@ -30,6 +30,55 @@ import httpx
 
 logger = logging.getLogger("ddf_sync")
 
+# ── BC neighbourhoods / enclaves map (Feb 2026, Phase 7) ─────────────
+# Loaded once at import time from /app/backend/data/bc_neighborhoods.json.
+# Used by `_derive_community()` below to backfill each listing's
+# `community` field on ingest, matching enclave names against the
+# feed's `PublicRemarks`, `UnparsedAddress`, and `CityRegion` values.
+# See /api/admin/backfill-enclaves for the one-shot backfill endpoint.
+import json as _json_bc
+from pathlib import Path as _Path_bc
+
+_BC_ENCLAVES_MAP: dict[str, list[str]] = {}
+try:
+    _p_bc = _Path_bc(__file__).resolve().parents[1] / "data" / "bc_neighborhoods.json"
+    _BC_ENCLAVES_MAP = _json_bc.loads(_p_bc.read_text())
+except Exception as _e_bc:  # pragma: no cover — startup safeguard only
+    logger.warning(f"bc_neighborhoods.json load failed: {_e_bc}")
+
+
+def _derive_community(mapped: dict) -> str:
+    """Return the best-match enclave name for a listing's city, or "".
+
+    Rules (in order):
+      1. If CREA's own `CityRegion` (mapped["region"]) is non-empty, trust it.
+      2. Otherwise scan `unparsed_address + street_address + description`
+         for any known enclave of the listing's city and return the
+         first match (longest alias first so "South Surrey" wins over
+         "Surrey" when both would match).
+      3. Return "" when nothing matches.
+    """
+    region = (mapped.get("region") or "").strip()
+    if region:
+        return region
+    city = (mapped.get("city") or "").strip()
+    if not city:
+        return ""
+    enclaves = _BC_ENCLAVES_MAP.get(city) or []
+    if not enclaves:
+        return ""
+    hay = " ".join([
+        mapped.get("unparsed_address") or "",
+        mapped.get("street_address") or "",
+        mapped.get("description") or "",
+    ]).lower()
+    # Longest first so "South Surrey" wins over "Surrey" substring.
+    for name in sorted(enclaves, key=len, reverse=True):
+        if name.lower() in hay:
+            return name
+    return ""
+
+
 # Read from env — never hard-code
 DDF_TOKEN_URL     = os.environ.get("CREA_DDF_TOKEN_URL", "https://identity.crea.ca/connect/token")
 DDF_ENDPOINT      = os.environ.get("CREA_DDF_ENDPOINT", "https://ddfapi.realtor.ca").rstrip("/")
@@ -254,6 +303,17 @@ def _map_property(p: dict) -> Optional[dict]:
     }
 
 
+def _apply_community(mapped: dict) -> dict:
+    """Populate `mapped["community"]` (enclave label) using CREA's
+    `CityRegion` when present, else fuzzy-match against
+    `bc_neighborhoods.json`. Idempotent — safe to run on ingest AND
+    inside the admin backfill endpoint."""
+    if mapped is None:
+        return mapped
+    mapped["community"] = _derive_community(mapped)
+    return mapped
+
+
 # ---------------- Sync ----------------
 async def _fetch_page(client: httpx.AsyncClient, url: str, token: str) -> dict:
     r = await client.get(url, headers={
@@ -326,6 +386,7 @@ async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int 
                 mapped = _map_property(p)
                 if not mapped:
                     continue
+                _apply_community(mapped)
                 seen_keys.add(mapped["listing_key"])
                 ops.append(UpdateOne(
                     {"listing_key": mapped["listing_key"]},
@@ -439,6 +500,7 @@ async def fetch_by_mls_number(db, mls_number: str) -> dict:
     if not mapped:
         result["errors"].append("listing_filtered_by_display_flags")
         return result
+    _apply_community(mapped)
 
     now_iso_str = datetime.now(timezone.utc).isoformat()
     try:

@@ -4075,6 +4075,10 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
           {l.beds != null && <span>{l.beds}bd</span>}
           {l.baths != null && <span>· {l.baths}ba</span>}
           {l.property_type && <span>· {l.property_type}</span>}
+          {/* Enclave label — populated by the DDF ingest hook + backfill
+              endpoint. When present, shown BEFORE the city so the user
+              sees "Elgin Chantrell, Surrey" instead of just "Surrey". */}
+          {l.community && <span style={{ color: "#8A6D2E", fontWeight: 700 }} data-testid={`dash-listing-community-${l.listing_key}`}>· {l.community}</span>}
           {l.city && <span>· {l.city}</span>}
         </div>
       </div>

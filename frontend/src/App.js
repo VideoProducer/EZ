@@ -12,6 +12,7 @@ axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./utils/glossary";
+import { buildTLDR, TLDRBlock, KeyPointsBlock, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
 import MyJourney from "./pages/MyJourney";
 import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
@@ -2989,7 +2990,10 @@ const ListingCard = ({ listing }) => {
       <div style={{padding:"1rem 1.15rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.35rem",fontWeight:700,color:"var(--brand-navy)"}}>${price}</div>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--ink)",marginTop:"0.15rem"}}>{listing.street_address}</div>
-        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)"}}>{listing.city}, BC · {listing.region}</div>
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)"}}>
+          {listing.community ? <><span data-testid={`listing-card-community-${listing.listing_key}`} style={{color:"#8A6D2E",fontWeight:600}}>{listing.community}</span> · </> : null}
+          {listing.city}, BC{listing.region ? ` · ${listing.region}` : ""}
+        </div>
         <div style={{display:"flex",gap:"0.85rem",marginTop:"0.6rem",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--ink)"}}>
           <span>🛏 {listing.beds}</span>
           <span>🛁 {listing.baths}{listing.half_baths ? `+${listing.half_baths}` : ""}</span>
@@ -5743,6 +5747,18 @@ const GlossaryTerm = () => {
       What is {t.term} in British Columbia?
     </h2>
 
+    {/* Phase 7 answer-first upgrade — TL;DR (≤65 words, itemProp="abstract")
+        + Key Points bullets derived from FAQ question titles. LLM
+        overview engines (Google SGE, Perplexity, ChatGPT web) preferentially
+        extract these blocks for the "quick answer" surface. */}
+    <TLDRBlock text={buildTLDR(t.definition)} testId="glossary-tldr"/>
+    {(t.faqs && t.faqs.length > 0) && (
+      <KeyPointsBlock
+        points={t.faqs.slice(0, 5).map(f => f.q)}
+        testId="glossary-key-points"
+      />
+    )}
+
     <p style={{fontFamily:"Inter,sans-serif",fontSize:"1.05rem",lineHeight:1.75,color:"var(--ink)"}} itemProp="articleBody" dangerouslySetInnerHTML={{__html: autoGlossaryLink(t.definition, glossaryTerms, {currentSlug: t.slug})}}></p>
 
     {/* FIX-01 speakable disclaimer — bundled into the SpeakableSpecification
@@ -5799,6 +5815,11 @@ const GlossaryTerm = () => {
     <YouMayAlsoBeLookingFor sourceType="glossary" sourceId={t.slug} limit={6} testId="glossary-you-may-also"/>
 
     <div className="notice" style={{marginTop:"1.5rem"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
+
+    {/* Phase 7 answer-first — mandatory compliance strip (BCFSA / CREA /
+        CASL / PIPA / GVR®). Duplicated on every AEO-critical page so
+        single-page indexers still capture the disclosure. */}
+    <AEOComplianceStrip testId="glossary-compliance-strip"/>
 
     <AiCitationFooter
       title={`${t.term} — BC Real Estate Definition`}

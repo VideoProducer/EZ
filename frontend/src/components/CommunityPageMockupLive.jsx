@@ -16,6 +16,7 @@ import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import { GlossaryPageProvider, GlossaryProse } from "../utils/glossary";
+import { TLDRBlock, ComplianceStrip } from "../utils/answerFirst";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -577,6 +578,14 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           </div>
         </div>
 
+        {/* Phase 7 answer-first upgrade — TL;DR at top of the body so
+            LLM overviews grab a clean, ≤65-word answer to "What is buying
+            in {community} like?" as the direct AI answer. */}
+        <TLDRBlock
+          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B. Doug LeMaire, REALTOR® ${isFocus ? "covers " + community + " directly" : "refers out-of-area buyers to a local " + community + " REALTOR® at no cost"}.`}
+          testId="community-tldr"
+        />
+
         {/* Term-linked intro paragraph — first-mention glossary chips (Feb 2026) */}
         <div data-testid="community-glossary-intro" style={{marginTop:24,padding:"18px 22px",background:"white",border:"1px solid #E5E7EB",borderRadius:12,fontSize:"0.94rem",lineHeight:1.7,color:BRAND.ink}}>
           <GlossaryProse text={`Buying in ${community} typically involves Property Transfer Tax at closing, a possible First Time Home Buyers' Program exemption for qualifying first-timers, GST New Housing Rebate math on new construction, and — for any strata unit — reviewing a current Form B — Strata Information Certificate before Subject Removal. New builds carry the mandatory 2-5-10 Home Warranty. Rural or acreage parcels around ${community} may sit within the Agricultural Land Reserve, which restricts subdivision and non-farm use. Your monthly payment depends on your Amortization Period and the OSFI B-20 stress test.`}/>
@@ -737,6 +746,10 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         <div style={{marginTop:40,padding:"18px 20px",background:BRAND.paper,borderRadius:10,fontSize:"0.72rem",color:BRAND.muted,lineHeight:1.6}}>
           © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · MLS® data © CREA DDF® · Climate © Environment and Climate Change Canada · Population © Statistics Canada. General information only — not real-estate, legal, tax, or financial advice.
         </div>
+
+        {/* Phase 7 answer-first — mandatory compliance strip (BCFSA · CREA
+            · CASL · PIPA · GVR®). Duplicated on every AEO-critical page. */}
+        <ComplianceStrip testId="community-compliance-strip"/>
       </div>
       </GlossaryPageProvider>
       )}

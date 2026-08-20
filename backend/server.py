@@ -2383,6 +2383,70 @@ async def admin_run_price_drop_watch(_=Depends(verify_admin)):
     result = await run_price_drop_watch(db)
     return {"ok": True, **result}
 
+
+@api.post("/admin/backfill-enclaves")
+async def admin_backfill_enclaves(_=Depends(verify_admin)):
+    """One-shot backfill — populates the `community` (enclave) field on
+    every existing listing that's missing it.
+
+    Uses `services.ddf_sync._derive_community` so the ingest hook and
+    the backfill agree on the mapping. Returns a per-city breakdown so
+    Doug can spot-check which communities got labels vs. which need a
+    manual override in `/admin/hydrate-listing`.
+
+    Idempotent: skips any listing whose `community` is already populated.
+    """
+    from services.ddf_sync import _derive_community as _derive
+    scanned = 0
+    updated = 0
+    skipped = 0
+    by_city: dict[str, dict[str, int]] = {}
+    from pymongo import UpdateOne  # type: ignore
+    ops: list = []
+    cursor = db.listings.find(
+        {},
+        {
+            "_id": 0,
+            "listing_key": 1, "city": 1, "region": 1,
+            "unparsed_address": 1, "street_address": 1, "description": 1,
+            "community": 1,
+        },
+    )
+    async for l in cursor:
+        scanned += 1
+        city = (l.get("city") or "").strip()
+        by_city.setdefault(city or "(unknown)", {"scanned": 0, "matched": 0, "skipped": 0})
+        by_city[city or "(unknown)"]["scanned"] += 1
+        existing = (l.get("community") or "").strip()
+        if existing:
+            skipped += 1
+            by_city[city or "(unknown)"]["skipped"] += 1
+            continue
+        enclave = _derive(l)
+        if not enclave:
+            continue
+        ops.append(UpdateOne(
+            {"listing_key": l["listing_key"]},
+            {"$set": {"community": enclave, "community_backfilled_at": now_iso()}},
+        ))
+        by_city[city or "(unknown)"]["matched"] += 1
+        # Flush in batches of 500 to keep memory bounded on very large collections.
+        if len(ops) >= 500:
+            r = await db.listings.bulk_write(ops, ordered=False)
+            updated += r.modified_count
+            ops = []
+    if ops:
+        r = await db.listings.bulk_write(ops, ordered=False)
+        updated += r.modified_count
+    return {
+        "ok": True,
+        "scanned": scanned,
+        "updated": updated,
+        "skipped_existing": skipped,
+        "by_city": by_city,
+    }
+
+
 # ── Referral-CTA click analytics ──────────────────────────────────────────
 # Fired by the "Referral REALTOR® link →" button on non-focus community
 # pages (§7 Get Connected + hero mini-link). Helps Doug see which BC
