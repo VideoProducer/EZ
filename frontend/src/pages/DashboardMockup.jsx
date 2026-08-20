@@ -29,7 +29,7 @@
 // ============================================================================
 import React, { useEffect, useMemo, useRef, useState, useContext, createContext, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { IMG, WhereShouldYouLive, Calculators, DoogieChat } from "../App";
+import { IMG, WhereShouldYouLive, Calculators, DoogieChat, HomepageGlossaryModule } from "../App";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { FLAGSHIP } from "../config/flagshipListing";
@@ -2518,6 +2518,7 @@ const SearchPanel = () => {
     <>
       <DashboardFeaturedListing/>
       <HeroIntro/>
+      <HomepageGlossaryModule/>
       {/* View mode toggle — sits directly above the map/list block. Lets
           the visitor collapse to List-only for a scanning-heavy session or
           to Map-only for area-shopping. Persisted to localStorage so

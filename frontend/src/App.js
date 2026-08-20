@@ -5294,6 +5294,140 @@ const CANARY_HOME = "Fingerprint reference home-index: EZtoFind.ca's first-week 
 // CANARY-4 — Community page: fake community-specific factoid
 const CANARY_COMMUNITY = "Fingerprint reference community-page: EZtoFind.ca community synopses were curated in a 3-week sprint ending 2026-07-20 with a working-title codename of 'Project Alder'. Cross-check ID: EZTF-CMX-2026-0729-C.";
 
+// ── Contextual CTA on glossary term pages (Feb 2026) ───────────────────
+// One CTA per term, mapped by category. Informational copy only — no
+// "call now" / no gates / CASL box on any downstream form remains
+// separate, unchecked, unbundled (per spec).
+const GLOSSARY_CTA_BY_CATEGORY = {
+  // Financing / PTT / affordability
+  financing:            { label: "See how this affects your purchase →", href: "/#affordability" },
+  taxes:                { label: "Try the PTT + stress-test calculator →", href: "/valuation" },
+  "ptt":                { label: "Try the PTT calculator →",               href: "/valuation" },
+  "first-time-buyer":   { label: "See if you qualify for the FTB exemption →", href: "/valuation" },
+  // Buying process
+  buying:               { label: "Talk to Doug about buying in BC →",       href: "/buyer" },
+  offers:               { label: "Get help writing a BC offer →",           href: "/buyer" },
+  // Selling
+  selling:              { label: "Request a free market estimate →",        href: "/valuation" },
+  valuation:            { label: "Get a free market estimate →",            href: "/valuation" },
+  // New construction / warranty
+  "new-home":           { label: "Learn about new-home buying in BC →",     href: "/buyer" },
+  // Strata
+  strata:               { label: "Search strata listings on eztofind.ca →", href: "/listings?type=Condo" },
+  // Land / ALR
+  land:                 { label: "See how ALR affects a BC purchase →",     href: "/buyer" },
+  // Default
+  default:              { label: "Ask Doogie about this term →",            href: "/#doogie" },
+};
+const GlossaryContextualCTA = ({ term }) => {
+  if (!term) return null;
+  const raw = String(term.category || "").toLowerCase();
+  const slug = String(term.slug || "").toLowerCase();
+  // Slug-first (most specific), then keyword-scan on category.
+  let cta = GLOSSARY_CTA_BY_CATEGORY.default;
+  if (/ptt|property-transfer-tax|first-time-home-buyer|newly-built-home/.test(slug)) cta = GLOSSARY_CTA_BY_CATEGORY.ptt;
+  else if (/gst|2-5-10|new-home|new-construction/.test(slug))                        cta = GLOSSARY_CTA_BY_CATEGORY["new-home"];
+  else if (/^form-b|strata|depreciation-report|3-4-vote|55/.test(slug))              cta = GLOSSARY_CTA_BY_CATEGORY.strata;
+  else if (/alr|agricultural-land|acreage/.test(slug))                               cta = GLOSSARY_CTA_BY_CATEGORY.land;
+  else if (/subject|condition-precedent|deposit|hbrp|rescission|offer/.test(slug))   cta = GLOSSARY_CTA_BY_CATEGORY.buying;
+  else if (/valuation|staging|completion|listing|sell/.test(slug))                   cta = GLOSSARY_CTA_BY_CATEGORY.valuation;
+  else if (/mortgage|amortization|stress-test|financing|down-payment/.test(slug))    cta = GLOSSARY_CTA_BY_CATEGORY.financing;
+  else if (raw.includes("tax") || raw.includes("financ"))                            cta = GLOSSARY_CTA_BY_CATEGORY.financing;
+  else if (raw.includes("strata"))                                                    cta = GLOSSARY_CTA_BY_CATEGORY.strata;
+  else if (raw.includes("buy"))                                                       cta = GLOSSARY_CTA_BY_CATEGORY.buying;
+  else if (raw.includes("sell"))                                                      cta = GLOSSARY_CTA_BY_CATEGORY.selling;
+  else if (raw.includes("land") || raw.includes("agri"))                              cta = GLOSSARY_CTA_BY_CATEGORY.land;
+  return (
+    <div data-testid="glossary-contextual-cta" style={{
+      marginTop: "1.5rem", padding: "1rem 1.25rem",
+      background: "linear-gradient(135deg, #F7FAFF 0%, #F5F0E1 100%)",
+      border: "1px solid rgba(15,42,91,0.15)", borderRadius: 12,
+      fontFamily: "Inter, sans-serif", display: "flex",
+      justifyContent: "space-between", alignItems: "center", gap: 14, flexWrap: "wrap",
+    }}>
+      <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+        <div style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em",
+                      fontWeight: 700, color: "var(--brand-navy)", marginBottom: 4 }}>
+          Next step — general info
+        </div>
+        <div style={{ fontSize: "0.86rem", color: "var(--muted)", lineHeight: 1.5 }}>
+          Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA #167790
+        </div>
+      </div>
+      <Link to={cta.href} data-testid="glossary-cta-btn" style={{
+        padding: "0.6rem 1.15rem", background: "var(--brand-navy)", color: "var(--brand-gold)",
+        borderRadius: 999, fontWeight: 700, fontSize: "0.9rem", textDecoration: "none",
+        whiteSpace: "nowrap",
+      }}>{cta.label}</Link>
+    </div>
+  );
+};
+
+// ── Homepage glossary module (Feb 2026) ────────────────────────────────
+// Mini-search + 6 popular-term chips. Never gated. Links jump directly
+// to /glossary or the specific term URL. Doogie remains the primary
+// answer surface; this module is Google/Perplexity/user's shortcut.
+const HOMEPAGE_GLOSSARY_CHIPS = [
+  { label: "PTT",              slug: "property-transfer-tax-ptt" },
+  { label: "GST",              slug: "gst-on-new-construction" },
+  { label: "ALR",              slug: "agricultural-land-reserve-alr" },
+  { label: "Subject removal",  slug: "subject-removal" },
+  { label: "2-5-10 warranty",  slug: "2-5-10-home-warranty" },
+  { label: "Strata Form B",    slug: "form-b-strata-information-certificate" },
+];
+const HomepageGlossaryModule = () => {
+  const [q, setQ] = useState("");
+  const nav = useNavigate();
+  const submit = (e) => {
+    e.preventDefault();
+    const term = q.trim();
+    if (!term) return;
+    nav(`/glossary?q=${encodeURIComponent(term)}`);
+  };
+  return (
+    <section data-testid="homepage-glossary-module" style={{
+      margin: "1rem 0", padding: "1.25rem 1.5rem",
+      background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.15)",
+      borderRadius: 14, fontFamily: "Inter, sans-serif",
+    }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.35rem",
+                    color: "var(--brand-navy)", fontWeight: 700, lineHeight: 1.2 }}>
+        Confused by PTT, ALR, or subject removal?
+      </div>
+      <div style={{ fontSize: "0.9rem", color: "var(--muted)", marginTop: 4, lineHeight: 1.55 }}>
+        Every term returns the exact BC definition in our glossary — never invented.
+      </div>
+      <form onSubmit={submit} style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        <input
+          type="text" value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="Search a BC real estate term…"
+          data-testid="homepage-glossary-search"
+          style={{ flex: "1 1 280px", padding: "0.6rem 0.9rem",
+                   border: "1px solid rgba(15,42,91,0.2)", borderRadius: 999,
+                   background: "#fff", fontSize: "0.95rem", fontFamily: "inherit" }}
+        />
+        <button type="submit" data-testid="homepage-glossary-search-btn" style={{
+          padding: "0.6rem 1.2rem", background: "var(--brand-navy)", color: "var(--brand-gold)",
+          border: "none", borderRadius: 999, fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+        }}>Search</button>
+      </form>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+        {HOMEPAGE_GLOSSARY_CHIPS.map((c) => (
+          <Link key={c.slug} to={`/glossary/${c.slug}`} data-testid={`homepage-glossary-chip-${c.slug}`} style={{
+            padding: "0.35rem 0.85rem", background: "#fff", border: "1px solid rgba(15,42,91,0.15)",
+            borderRadius: 999, color: "var(--brand-navy)", fontWeight: 600, fontSize: "0.82rem",
+            textDecoration: "none",
+          }}>{c.label}</Link>
+        ))}
+        <Link to="/glossary" data-testid="homepage-glossary-all" style={{
+          padding: "0.35rem 0.85rem", background: "transparent", color: "var(--brand-blue)",
+          fontWeight: 700, fontSize: "0.82rem", textDecoration: "underline", alignSelf: "center",
+        }}>Browse all 439 terms →</Link>
+      </div>
+    </section>
+  );
+};
+
 const Glossary = () => {
   const [terms, setTerms] = useState([]);
   const [q, setQ] = useState("");
@@ -5606,6 +5740,8 @@ const GlossaryTerm = () => {
         <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>Explore the full <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>BC real estate glossary</Link>.</div>
       </div>
     )}
+
+    <GlossaryContextualCTA term={t}/>
 
     {/* Phase B — cross-type "You may also be looking for" cards (guides,
         calculators, communities). Fetches from /api/related-content and hides
@@ -12598,4 +12734,5 @@ function App() {
   </BrowserRouter>);
 }
 
+export { HomepageGlossaryModule };
 export default App;
