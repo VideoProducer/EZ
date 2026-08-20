@@ -6086,7 +6086,7 @@ const HomeExtras = () => {
       quote: "Doug helped me find my new townhouse. He did all of the research and was available when I needed to look for properties. He made sure that the listings fitted to what I was looking for. He wasn't pushy and didn't try to get me into a place I didn't like or couldn't afford. I would go with Doug again.",
     },
     {
-      stars: 5, initials: "MB", name: "Martin B.", role: "Client",
+      stars: 5, initials: "MB", name: "Martin B.", role: "Buyer",
       quote: "I can clearly say my experience with Doug has been excellent. I would have no problem either working with Doug again, or recommending him to others.",
     },
     {
