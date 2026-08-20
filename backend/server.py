@@ -2384,6 +2384,137 @@ async def admin_run_price_drop_watch(_=Depends(verify_admin)):
     return {"ok": True, **result}
 
 
+@api.get("/admin/enclaves-for-city")
+async def admin_enclaves_for_city(city: str, _=Depends(verify_admin)):
+    """Return the enclave / neighbourhood list for a given BC city, sourced
+    from `/app/backend/data/bc_neighborhoods.json` (48 cities). Used by the
+    `/admin/hydrate-listing` community override picker so Doug can pick the
+    correct enclave for a listing the fuzzy matcher couldn't auto-tag."""
+    from services.ddf_sync import _BC_ENCLAVES_MAP  # local map (source of truth)
+    key = (city or "").strip()
+    enclaves = _BC_ENCLAVES_MAP.get(key) or []
+    return {"ok": True, "city": key, "enclaves": enclaves, "count": len(enclaves)}
+
+
+class ListingCommunityOverrideIn(BaseModel):
+    community: str = Field(default="", max_length=80)
+
+
+@api.patch("/admin/listings/{key}/community")
+async def admin_set_listing_community(
+    key: str,
+    body: ListingCommunityOverrideIn,
+    _=Depends(verify_admin),
+):
+    """Manually override a listing's `community` (enclave) label.
+
+    Sets `community_manual_override=true` so the nightly DDF ingest
+    respects the manual pick and doesn't overwrite it with the auto-
+    derived value on the next re-sync. Passing an empty string clears
+    the override and lets the mapper resume ownership.
+    """
+    val = (body.community or "").strip()[:80]
+    now = now_iso()
+    if val:
+        update = {
+            "$set": {
+                "community": val,
+                "community_manual_override": True,
+                "community_override_at": now,
+            }
+        }
+    else:
+        # Empty string → clear the override + let the auto-mapper take back over.
+        update = {
+            "$set": {"community_manual_override": False, "community_override_at": now},
+            "$unset": {"community": ""},
+        }
+    r = await db.listings.update_one({"listing_key": key}, update)
+    if r.matched_count == 0:
+        return {"ok": False, "error": "listing_not_found", "listing_key": key}
+    return {
+        "ok": True,
+        "listing_key": key,
+        "community": val,
+        "cleared": not bool(val),
+        "modified": r.modified_count,
+    }
+
+
+@api.post("/admin/ai-discovery/indexnow")
+async def admin_ai_discovery_indexnow(_=Depends(verify_admin)):
+    """Push every URL listed in `/frontend/public/sitemap-ai.xml` (the AEO-safe
+    canonical sitemap) to IndexNow so Bing, Yandex, Naver, and Seznam re-crawl
+    them within minutes. Bing is the search backend that ChatGPT + Copilot
+    query, and Perplexity's fallback retrieval taps Bing as well, so a fresh
+    IndexNow push is effectively the closest thing to a "Perplexity discovery
+    ping" that a public-facing website can do.
+
+    Returns the count pushed, the IndexNow response status, and a Mongo audit
+    row id so Doug can see every ping he's ever fired from the admin panel.
+    """
+    from indexnow import notify_indexnow, HOST as INDEXNOW_HOST
+    from pathlib import Path as _Path
+    import re as _re
+
+    # 1. Read sitemap-ai.xml from the frontend public dir. This is regenerated
+    #    nightly by sitemap_generator._build_ai_sitemap so the URL set is
+    #    always fresh.
+    sitemap_path = _Path("/app/frontend/public/sitemap-ai.xml")
+    if not sitemap_path.exists():
+        return {"ok": False, "error": "sitemap-ai.xml_not_found", "path": str(sitemap_path)}
+
+    xml_body = sitemap_path.read_text(encoding="utf-8", errors="ignore")
+    urls = _re.findall(r"<loc>(.*?)</loc>", xml_body)
+    urls = [u.strip() for u in urls if u.strip()]
+
+    # 2. Fire the IndexNow POST. `notify_indexnow` handles the 10k batch cap
+    #    itself; for larger sitemaps we chunk manually so we don't drop any.
+    results = []
+    for i in range(0, len(urls), 10000):
+        chunk = urls[i : i + 10000]
+        r = await notify_indexnow(chunk)
+        results.append(r)
+
+    # 3. Audit log so Doug can see the discovery-ping history from the admin
+    #    panel. Cheap TTL — auto-expires in 180 days.
+    audit_row = {
+        "kind": "indexnow_sitemap_ai_push",
+        "sitemap": "sitemap-ai.xml",
+        "url_count": len(urls),
+        "host": INDEXNOW_HOST,
+        "results": results,
+        "at": now_iso(),
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=180),
+    }
+    try:
+        ins = await db.ai_discovery_pings.insert_one(audit_row)
+        audit_id = str(ins.inserted_id)
+    except Exception as e:
+        audit_id = None
+        logger.warning(f"ai_discovery_pings insert failed: {e}")
+
+    ok = all(r.get("ok") for r in results) if results else False
+    return {
+        "ok": ok,
+        "url_count": len(urls),
+        "batches": len(results),
+        "indexnow_results": results,
+        "audit_id": audit_id,
+    }
+
+
+@api.get("/admin/ai-discovery/history")
+async def admin_ai_discovery_history(limit: int = 20, _=Depends(verify_admin)):
+    """Recent IndexNow / AI discovery pings — read from ai_discovery_pings.
+    Shown in the admin panel as an audit trail so Doug can see when each
+    sitemap-ai.xml push fired and how many URLs it covered."""
+    rows = []
+    async for r in db.ai_discovery_pings.find({}, {"_id": 0, "expires_at": 0}).sort("at", -1).limit(max(1, min(limit, 100))):
+        rows.append(r)
+    return {"ok": True, "count": len(rows), "rows": rows}
+
+
 @api.post("/admin/backfill-enclaves")
 async def admin_backfill_enclaves(_=Depends(verify_admin)):
     """One-shot backfill — populates the `community` (enclave) field on
@@ -2409,7 +2540,7 @@ async def admin_backfill_enclaves(_=Depends(verify_admin)):
             "_id": 0,
             "listing_key": 1, "city": 1, "region": 1,
             "unparsed_address": 1, "street_address": 1, "description": 1,
-            "community": 1,
+            "community": 1, "community_manual_override": 1,
         },
     )
     async for l in cursor:
@@ -2417,6 +2548,11 @@ async def admin_backfill_enclaves(_=Depends(verify_admin)):
         city = (l.get("city") or "").strip()
         by_city.setdefault(city or "(unknown)", {"scanned": 0, "matched": 0, "skipped": 0})
         by_city[city or "(unknown)"]["scanned"] += 1
+        # Never overwrite a listing Doug has manually corrected.
+        if l.get("community_manual_override"):
+            skipped += 1
+            by_city[city or "(unknown)"]["skipped"] += 1
+            continue
         existing = (l.get("community") or "").strip()
         if existing:
             skipped += 1

@@ -388,9 +388,27 @@ async def sync_incremental(db, since: Optional[datetime] = None, max_pages: int 
                     continue
                 _apply_community(mapped)
                 seen_keys.add(mapped["listing_key"])
+                # Separate `community` so we can conditionally preserve a
+                # manual override (community_manual_override=true) via an
+                # aggregation-pipeline update.
+                new_community = mapped.pop("community", "")
                 ops.append(UpdateOne(
                     {"listing_key": mapped["listing_key"]},
-                    {"$set": mapped, "$setOnInsert": {"created_at": now_iso_str}},
+                    [
+                        {"$set": {**{k: v for k, v in mapped.items()}}},
+                        {"$set": {
+                            "community": {
+                                "$cond": [
+                                    {"$eq": ["$community_manual_override", True]},
+                                    {"$ifNull": ["$community", new_community]},
+                                    new_community,
+                                ]
+                            }
+                        }},
+                        {"$set": {
+                            "created_at": {"$ifNull": ["$created_at", now_iso_str]},
+                        }},
+                    ],
                     upsert=True,
                 ))
             if ops:
@@ -504,11 +522,26 @@ async def fetch_by_mls_number(db, mls_number: str) -> dict:
 
     now_iso_str = datetime.now(timezone.utc).isoformat()
     try:
+        new_community = mapped.pop("community", "")
         await db.listings.update_one(
             {"listing_key": mapped["listing_key"]},
-            {"$set": mapped, "$setOnInsert": {"created_at": now_iso_str}},
+            [
+                {"$set": {**mapped}},
+                {"$set": {
+                    "community": {
+                        "$cond": [
+                            {"$eq": ["$community_manual_override", True]},
+                            {"$ifNull": ["$community", new_community]},
+                            new_community,
+                        ]
+                    }
+                }},
+                {"$set": {"created_at": {"$ifNull": ["$created_at", now_iso_str]}}},
+            ],
             upsert=True,
         )
+        # Restore for the response payload so the caller sees the enclave.
+        mapped["community"] = new_community
         result["upserted"] = True
         result["listing"] = mapped
     except Exception as e:

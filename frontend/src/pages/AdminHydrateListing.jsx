@@ -88,6 +88,17 @@ export default function AdminHydrateListing() {
   const [gbpCopied, setGbpCopied] = useState(false);
   const [gbpBusy, setGbpBusy] = useState(false);
 
+  // ── Community override picker (Feb 2026) ─────────────────────────────
+  const [enclaves, setEnclaves] = useState([]);
+  const [communityDraft, setCommunityDraft] = useState("");
+  const [communityBusy, setCommunityBusy] = useState(false);
+  const [communityMsg, setCommunityMsg] = useState("");
+
+  // ── AI discovery IndexNow ping (Feb 2026) ────────────────────────────
+  const [pingBusy, setPingBusy] = useState(false);
+  const [pingResult, setPingResult] = useState(null);
+  const [pingHistory, setPingHistory] = useState([]);
+
   const submit = async (e) => {
     e?.preventDefault();
     const cleaned = (mls || "").trim().toUpperCase();
@@ -152,6 +163,68 @@ export default function AdminHydrateListing() {
     }
   };
 
+  // Load the enclave list for the freshly-hydrated listing's city so the
+  // override picker is a one-tap dropdown, not free text.
+  React.useEffect(() => {
+    const city = listing?.city;
+    if (!city) return;
+    setEnclaves([]);
+    setCommunityDraft(listing?.community || "");
+    setCommunityMsg("");
+    axios
+      .get(`${API}/admin/enclaves-for-city?city=${encodeURIComponent(city)}`, { withCredentials: true, validateStatus: () => true })
+      .then(r => {
+        if (r.status === 200 && Array.isArray(r.data?.enclaves)) {
+          setEnclaves(r.data.enclaves);
+        }
+      })
+      .catch(() => {});
+  }, [listing?.city, listing?.community, listing?.listing_key]);
+
+  const saveCommunityOverride = async () => {
+    if (!listing) return;
+    const key = listing.mls_number || listing.listing_key;
+    setCommunityBusy(true); setCommunityMsg("");
+    try {
+      const r = await axios.patch(
+        `${API}/admin/listings/${encodeURIComponent(key)}/community`,
+        { community: communityDraft.trim() },
+        { withCredentials: true, validateStatus: () => true },
+      );
+      if (r.status !== 200 || !r.data?.ok) {
+        setCommunityMsg(`⚠ Save failed: ${r.data?.error || r.status}`);
+        return;
+      }
+      setCommunityMsg(communityDraft.trim() ? `✓ Locked to "${communityDraft.trim()}" (manual override on)` : "✓ Cleared — auto-mapper takes back over");
+    } catch (e) {
+      setCommunityMsg(`⚠ ${e?.message || e}`);
+    } finally {
+      setCommunityBusy(false);
+    }
+  };
+
+  const runIndexNowPing = async () => {
+    setPingBusy(true); setPingResult(null);
+    try {
+      const r = await axios.post(`${API}/admin/ai-discovery/indexnow`, {}, { withCredentials: true, validateStatus: () => true });
+      setPingResult(r.data || { error: `HTTP ${r.status}` });
+      // Refresh the history list.
+      const h = await axios.get(`${API}/admin/ai-discovery/history?limit=5`, { withCredentials: true, validateStatus: () => true });
+      if (h.status === 200) setPingHistory(h.data?.rows || []);
+    } catch (e) {
+      setPingResult({ error: String(e?.message || e) });
+    } finally {
+      setPingBusy(false);
+    }
+  };
+
+  React.useEffect(() => {
+    // Load recent history on mount so Doug sees when the last ping fired.
+    axios.get(`${API}/admin/ai-discovery/history?limit=5`, { withCredentials: true, validateStatus: () => true })
+      .then(r => { if (r.status === 200) setPingHistory(r.data?.rows || []); })
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ maxWidth: 720, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, system-ui, sans-serif", color: "#0F2A5B" }}>
       <div style={{ marginBottom: 20, fontSize: 12, opacity: 0.7 }}>
@@ -163,6 +236,64 @@ export default function AdminHydrateListing() {
         just-listed home needs to be searchable on EZtoFind immediately,
         before the next scheduled DDF sync cycle catches it.
       </p>
+
+      {/* ── AI Discovery IndexNow ping (Feb 2026, Phase 9) ─────────────
+          Push every URL in /sitemap-ai.xml to IndexNow so Bing (and by
+          extension ChatGPT / Copilot / Perplexity fallback retrieval)
+          re-crawls the freshly-optimised AEO pages. Perplexity has no
+          public sitemap-submission endpoint of its own — IndexNow via
+          Bing is the closest working proxy. */}
+      <div data-testid="ai-discovery-panel" style={{
+        marginBottom: 24, padding: 16, borderRadius: 10,
+        background: "#F5F0E1", border: "1px solid rgba(15,42,91,0.15)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.05rem", fontWeight: 700 }}>AI Discovery — IndexNow push</div>
+            <div style={{ fontSize: 12, opacity: 0.72, marginTop: 2 }}>
+              Submits <code>/sitemap-ai.xml</code> to Bing / Yandex / Naver / Seznam. Perplexity + ChatGPT re-crawl on the same Bing feed.
+            </div>
+          </div>
+          <button
+            onClick={runIndexNowPing}
+            disabled={pingBusy}
+            data-testid="ai-discovery-ping-btn"
+            style={{
+              padding: "10px 16px", borderRadius: 8, border: "none",
+              background: pingBusy ? "#94A3B8" : "#0F2A5B", color: "#DABF7A",
+              fontWeight: 700, fontSize: 13, cursor: pingBusy ? "wait" : "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >{pingBusy ? "Submitting…" : "Ping IndexNow now"}</button>
+        </div>
+        {pingResult && (
+          <div data-testid="ai-discovery-ping-result" style={{
+            marginTop: 12, padding: "10px 12px", borderRadius: 8,
+            background: pingResult.ok ? "#ECFDF5" : "#FEE2E2",
+            color: pingResult.ok ? "#065F46" : "#991B1B",
+            border: `1px solid ${pingResult.ok ? "#6EE7B7" : "#FCA5A5"}`,
+            fontSize: 13, lineHeight: 1.5,
+          }}>
+            {pingResult.ok
+              ? <>✓ Pushed <strong>{pingResult.url_count}</strong> URLs across {pingResult.batches} batch(es). Audit id: <code>{pingResult.audit_id || "—"}</code></>
+              : <>⚠ {pingResult.error || "Ping failed. Check backend logs."}</>}
+          </div>
+        )}
+        {pingHistory.length > 0 && (
+          <details style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Recent pings ({pingHistory.length})</summary>
+            <ul style={{ margin: "8px 0 0", paddingLeft: 20 }} data-testid="ai-discovery-history-list">
+              {pingHistory.map((h, i) => (
+                <li key={i} style={{ marginBottom: 4 }}>
+                  <code>{h.at?.slice(0, 19).replace("T", " ")}</code>
+                  {" · "}{h.url_count} URLs
+                  {" · "}HTTP {h.results?.[0]?.status_code || "?"}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
 
       <form onSubmit={submit} style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         <input
@@ -217,6 +348,81 @@ export default function AdminHydrateListing() {
           <div style={{ marginTop: 12 }}>
             <a href={`/listings/${listing.mls_number || listing.listing_key}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0F2A5B", fontWeight: 600 }}>View on EZtoFind →</a>
           </div>
+        </div>
+      )}
+
+      {/* ── Community / enclave override picker (Feb 2026, Phase 9) ─────
+          When the auto-mapper couldn't derive a community from the DDF
+          payload (~37% of ingested listings) Doug picks the right
+          neighbourhood here. Sets `community_manual_override=true` so the
+          nightly ingest never overwrites the manual pick. */}
+      {listing && (
+        <div data-testid="community-override-panel" style={{
+          marginTop: 24, padding: 20, borderRadius: 10,
+          background: "white", border: "1px solid rgba(15,42,91,0.15)",
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>Enclave / community override</div>
+          <div style={{ fontSize: 12, opacity: 0.72, marginBottom: 12 }}>
+            City: <strong>{listing.city || "—"}</strong>{" · "}
+            Currently: <strong data-testid="community-override-current">{listing.community || "(not set)"}</strong>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              list="enclave-suggestions"
+              type="text"
+              value={communityDraft}
+              onChange={(e) => setCommunityDraft(e.target.value)}
+              placeholder={`Pick or type an enclave in ${listing.city || "this city"}…`}
+              data-testid="community-override-input"
+              disabled={communityBusy}
+              style={{
+                flex: "1 1 260px", minWidth: 200,
+                padding: "10px 14px", borderRadius: 8,
+                border: "1px solid rgba(15,42,91,0.25)",
+                fontSize: 14, fontFamily: "inherit", color: "inherit",
+                background: "white",
+              }}
+            />
+            <datalist id="enclave-suggestions">
+              {enclaves.map(e => <option key={e} value={e}/>)}
+            </datalist>
+            <button
+              onClick={saveCommunityOverride}
+              disabled={communityBusy}
+              data-testid="community-override-save"
+              style={{
+                padding: "10px 16px", borderRadius: 8, border: "none",
+                background: communityBusy ? "#94A3B8" : "#DABF7A", color: "#0F2A5B",
+                fontWeight: 700, fontSize: 13, cursor: communityBusy ? "wait" : "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >{communityBusy ? "Saving…" : "Save override"}</button>
+            {communityDraft && (
+              <button
+                onClick={() => { setCommunityDraft(""); }}
+                disabled={communityBusy}
+                data-testid="community-override-clear"
+                title="Clear the manual override so the auto-mapper resumes ownership"
+                style={{
+                  padding: "10px 14px", borderRadius: 8,
+                  background: "transparent", color: "#0F2A5B",
+                  border: "1px solid rgba(15,42,91,0.25)",
+                  fontWeight: 600, fontSize: 12, cursor: "pointer",
+                }}
+              >Clear</button>
+            )}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
+            {enclaves.length} known enclaves in {listing.city}. Empty save = clear override.
+          </div>
+          {communityMsg && (
+            <div data-testid="community-override-msg" style={{
+              marginTop: 10, padding: "8px 12px", borderRadius: 6,
+              background: communityMsg.startsWith("⚠") ? "#FEE2E2" : "#ECFDF5",
+              color: communityMsg.startsWith("⚠") ? "#991B1B" : "#065F46",
+              fontSize: 13,
+            }}>{communityMsg}</div>
+          )}
         </div>
       )}
 
