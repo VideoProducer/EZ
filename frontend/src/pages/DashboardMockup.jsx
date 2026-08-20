@@ -3865,6 +3865,7 @@ const SyncCardGrid = ({ items }) => {
 };
 
 const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
+  const nav = useNavigate();
   const price = l.list_price ? `$${Number(l.list_price).toLocaleString()}` : "—";
   const addr = l.unparsed_address || l.street_address || l.address || l.listing_key;
   const cover = (l.photos && l.photos[0]) || (l.Media && l.Media[0]?.MediaURL);
@@ -4035,15 +4036,27 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
             Icon: Play,
           });
           return badges.map((b, i) => (
-            <div
+            <button
+              type="button"
               key={b.key}
               data-testid={`dash-listing-tour-${b.key}-${l.listing_key}`}
               aria-label={b.title}
               title={b.title}
+              // Prevent the parent card <Link/> from swallowing the click.
+              // Instead, jump straight to the listing detail with a
+              // #virtual-tour anchor so ListingDetail can scroll the tour
+              // section into view and (optionally) auto-open it.
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (l.listing_key) {
+                  nav(`/listings/${l.listing_key}#virtual-tour`);
+                }
+              }}
               style={{
                 position: "absolute", right: pinOffset + i * 62, top: 8, height: 32,
                 padding: "0 10px", borderRadius: 999, border: "none",
-                background: b.bg, color: b.fg,
+                background: b.bg, color: b.fg, cursor: "pointer",
                 display: "inline-flex", alignItems: "center", gap: 4,
                 fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
                 boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
@@ -4051,7 +4064,7 @@ const ListingCard = ({ l, isHovered, onHoverKey, onFocusMap }) => {
               }}
             >
               <b.Icon size={12} strokeWidth={2.5}/> {b.label}
-            </div>
+            </button>
           ));
         })()}
       </div>

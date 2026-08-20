@@ -4436,6 +4436,22 @@ const ListingDetail = () => {
       window.localStorage.setItem("ez_listing_views", JSON.stringify(pruned.slice(-20)));
     } catch {}
   }, [key]);
+  // Auto-scroll to the Virtual Tour section when the URL carries the
+  // #virtual-tour hash (set by the "Video" / "3D" pills on listing cards).
+  // Fires only after the listing payload has hydrated so the section
+  // exists in the DOM.
+  useEffect(() => {
+    if (!listing) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#virtual-tour") return;
+    const t = setTimeout(() => {
+      const el = document.querySelector('[data-testid="listing-virtual-tour"]');
+      if (el && typeof el.scrollIntoView === "function") {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [listing]);
   if (notFound) return <section className="section"><div className="container-x"><h1 className="section-title">Listing not found</h1><p><Link to="/listings" style={{color:"var(--brand-blue)"}}>← Back to all listings</Link></p></div></section>;
   if (!listing) return <section className="section"><div className="container-x"><div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading listing…</div></div></section>;
   const price = (listing.list_price || 0).toLocaleString("en-CA");

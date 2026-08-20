@@ -39,6 +39,10 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 7 — Video-Pill Navigation Fix + Price Pill Contrast (Feb 2026 — this session)
+- **Search-card "Video" pill fix** — the Matterport/Video badges on `DashboardMockup` `ListingCard` were `<div>` elements inside the outer `<Link/>`, so tapping them bubbled up to the parent link. Converted them to real `<button>` elements that `preventDefault()` + `stopPropagation()` and navigate to `/listings/{key}#virtual-tour` on click. Added a matching `useEffect` in `ListingDetail` that scrolls the `#virtual-tour` section into view once the listing has hydrated so the user lands exactly at the walk-through.
+- **Flagship price contrast** — wrapped the `$3,297,000.00` price in `LuxuryFlagshipCard` in a solid navy pill with gold text (`data-testid="luxury-flagship-price"`) so it stands out regardless of background — previously blended into the cream `#FAF7F0` surface.
+
 ### Phase 6 — PIPA Overlay Fix + Flagship Enclave Backfill (Feb 2026 — this session)
 - **PIPA banner overlay bug fix** — `PIPACookieBanner` was a full-width `bottom:0`, `z-index:9999` strip intercepting clicks on the Doogie FAB / drawer send button + `cookie-accept-all`. Reshaped into a left-anchored floating card (`bottom:16, left:16, maxWidth:min(560px, calc(100vw-32px))`, `zIndex:9990`), and suppressed entirely on first visit whenever the fuller `<CookieBanner/>` is showing (checks `ez_cookie` in localStorage) so first-time visitors see one banner, not two.
 - **Flagship community enclave label** — added `community: "Elgin Chantrell"` to `FLAGSHIP` config (`/frontend/src/config/flagshipListing.js`) and updated the 3 rendering surfaces to insert it into the address line when present:

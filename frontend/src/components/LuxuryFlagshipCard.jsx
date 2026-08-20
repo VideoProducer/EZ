@@ -60,14 +60,34 @@ export default function LuxuryFlagshipCard() {
           {live && (beds || baths || sqft || price) && (
             <div data-testid="luxury-flagship-specs" style={{
               marginTop: 14, display: "inline-flex", flexWrap: "wrap", gap: "6px 22px",
-              justifyContent: "center",
+              justifyContent: "center", alignItems: "center",
               fontFamily: "Inter, sans-serif", fontSize: "0.86rem", color: "#0F2A5B",
               letterSpacing: "0.04em",
             }}>
               {beds ? <span><strong>{beds}</strong> BR</span> : null}
               {baths ? <span><strong>{baths}</strong> BA</span> : null}
               {sqft ? <span><strong>{Number(sqft).toLocaleString("en-CA")}</strong> sq ft</span> : null}
-              {price ? <span><strong>${Number(price).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></span> : null}
+              {price ? (
+                <span
+                  data-testid="luxury-flagship-price"
+                  style={{
+                    // Solid navy pill so the asking price always stands
+                    // out regardless of the parent surface (cream, dark
+                    // hero backdrop, or listing card ground-tile bleed).
+                    background: "#0F2A5B",
+                    color: "#F5A623",
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    fontFamily: "'Sora', sans-serif",
+                    fontSize: "1rem",
+                    fontWeight: 800,
+                    letterSpacing: "0.04em",
+                    boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+                  }}
+                >
+                  ${Number(price).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : null}
               <span style={{ color: "#8A6D2E" }}>MLS® {FLAGSHIP.mls_number}</span>
             </div>
           )}
