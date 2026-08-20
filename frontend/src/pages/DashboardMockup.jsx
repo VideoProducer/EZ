@@ -6082,7 +6082,7 @@ const HomeExtras = () => {
       quote: "As a home seller, deciding which agent to work with can seem daunting. There are so many agents that sound great on paper, but will they truly understand YOUR needs and work to fulfill YOUR goals. Doug LeMaire is a real estate agent of an elite caliber who truly cares about his clients and will not stop until YOU are satisfied. Doug sold my home as an off sale listing, demonstrating to me that he never stopped working on my behalf, even when the home was not actually listed for sale. He did so by establishing strong connections with buyer agents and got the sale done. We are now looking to buy a home and will be using Doug for our next move. Thank you Doug for all your help.",
     },
     {
-      stars: 5, initials: "JC", name: "Joe C.", role: "Buyer — Townhouse",
+      stars: 5, initials: "JC", name: "Joe C.", role: "Buyer",
       quote: "Doug helped me find my new townhouse. He did all of the research and was available when I needed to look for properties. He made sure that the listings fitted to what I was looking for. He wasn't pushy and didn't try to get me into a place I didn't like or couldn't afford. I would go with Doug again.",
     },
     {
