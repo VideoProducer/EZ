@@ -6003,6 +6003,30 @@ const HomeExtras = () => {
       stars: 5, initials: "MC", name: "M.C.", role: "Seller",
       quote: "As a home seller, deciding which agent to work with can seem daunting. There are so many agents that sound great on paper, but will they truly understand YOUR needs and work to fulfill YOUR goals. Doug LeMaire is a real estate agent of an elite caliber who truly cares about his clients and will not stop until YOU are satisfied. Doug sold my home as an off sale listing, demonstrating to me that he never stopped working on my behalf, even when the home was not actually listed for sale. He did so by establishing strong connections with buyer agents and got the sale done. We are now looking to buy a home and will be using Doug for our next move. Thank you Doug for all your help.",
     },
+    {
+      stars: 5, initials: "JC", name: "Joe C.", role: "Buyer — Townhouse",
+      quote: "Doug helped me find my new townhouse. He did all of the research and was available when I needed to look for properties. He made sure that the listings fitted to what I was looking for. He wasn't pushy and didn't try to get me into a place I didn't like or couldn't afford. I would go with Doug again.",
+    },
+    {
+      stars: 5, initials: "MB", name: "Martin B.", role: "Client",
+      quote: "I can clearly say my experience with Doug has been excellent. I would have no problem either working with Doug again, or recommending him to others.",
+    },
+    {
+      stars: 5, initials: "CC", name: "Carol C.", role: "Buyer — Pitt Meadows Condo",
+      quote: "Doug helped me purchase my beautiful condo in Pitt Meadows. He was very patient while I was looking for my dream condo. He helped negotiate a good price and was very professional. I would recommend him to anyone who is also searching for their dream home.",
+    },
+    {
+      stars: 5, initials: "MS", name: "Michael S.", role: "Buyer",
+      quote: "It took six months for me to find a satisfactory home; Doug showed endless patience with my lack of experience and the vagaries of the changing house market. I would recommend his expertise.",
+    },
+    {
+      stars: 5, initials: "MN", name: "Mo & Naz N.", role: "Sellers",
+      quote: "Doug was an absolute pleasure to work with. He was very professional from the time we met to the completion of our sale. He was very patient and hard working at all times. I am a stay-at-home mom and he was very understanding about my schedule and worked around the times I needed to give to my children. It was nice to be able to relax and know that we had a really good realtor who was working hard on our behalf. Thank you Doug!",
+    },
+    {
+      stars: 5, initials: "AM", name: "Anne M.", role: "Repeat Client",
+      quote: "I have owned several homes in BC and Doug is the kindest, hardest working and best REALTOR® I have ever had. I have no problem referring him. He was Super!",
+    },
   ];
   const credentialStrip = [
     { icon: "🛡️", label: "Licensed REALTOR®",  sub: "Fraser Property Management Realty Services Ltd." },
