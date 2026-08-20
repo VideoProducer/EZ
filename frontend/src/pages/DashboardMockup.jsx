@@ -95,6 +95,67 @@ const SECTIONS = [
   { key: "ask",       label: "Ask Doogie",     icon: MessageCircle },
 ];
 
+// ── Featured pull-quotes (Feb 2026, homepage hero rotation) ─────────────
+// Short, ~15–25-word excerpts of the real client testimonials shown lower
+// on the page in <TestimonialsSection>. Rotates one per page-load so
+// above-the-fold visitors get instant social proof without scrolling.
+// Every quote here MUST already exist verbatim in the full testimonials
+// array below — the badge is a highlight, not a source of new claims.
+const HERO_PULL_QUOTES = [
+  { initials: "AM", name: "Anne M.",   excerpt: "The kindest, hardest working and best REALTOR® I have ever had." },
+  { initials: "MB", name: "Martin B.", excerpt: "My experience with Doug has been excellent — I'd recommend him to others." },
+  { initials: "CC", name: "Carol C.",  excerpt: "Very patient — helped negotiate a good price and was very professional." },
+  { initials: "MS", name: "Michael S.",excerpt: "Endless patience with my lack of experience and the changing market." },
+  { initials: "MN", name: "Mo & Naz N.",excerpt: "Nice to relax and know we had a really good realtor working hard on our behalf." },
+  { initials: "JC", name: "Joe C.",    excerpt: "He wasn't pushy — he made sure the listings fit what I was looking for." },
+  { initials: "JM", name: "J&M",       excerpt: "Doug's attention to detail made the experience smooth and stress-free." },
+  { initials: "MC", name: "M.C.",      excerpt: "A real estate agent of an elite caliber who truly cares about his clients." },
+];
+
+// Small, elegant hero-adjacent trust strip. Uses useMemo with a fresh
+// Math.random on each fresh page load (module state is not persisted), so
+// every visit surfaces a different quote — great for repeat visitors and
+// for SEO/AEO variety in the rendered HTML snapshot.
+const HeroPullQuoteBadge = () => {
+  const q = useMemo(() => HERO_PULL_QUOTES[Math.floor(Math.random() * HERO_PULL_QUOTES.length)], []);
+  return (
+    <div data-testid="hero-pull-quote" style={{
+      marginTop: 14,
+      display: "flex", alignItems: "center", gap: 10,
+      padding: "8px 14px 8px 10px",
+      background: "rgba(255,255,255,0.65)",
+      border: "1px solid rgba(218,191,122,0.55)",
+      borderRadius: 999,
+      maxWidth: 640,
+      fontFamily: "Inter, sans-serif",
+      backdropFilter: "blur(4px)",
+    }}>
+      <div style={{
+        width: 30, height: 30, borderRadius: "50%",
+        background: C.navy, color: C.brandGold,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 800, flexShrink: 0,
+        fontFamily: "'Sora', sans-serif",
+      }}>{q.initials}</div>
+      <div style={{minWidth: 0, flex: 1}}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          fontSize: 11, color: C.gold, letterSpacing: 1,
+        }}>
+          <span aria-label="5 out of 5 stars" title="5 out of 5 stars">★★★★★</span>
+          <span style={{ color: C.muted, fontWeight: 600, fontSize: 10.5 }}>— {q.name}</span>
+        </div>
+        <div style={{
+          fontSize: 12.5, color: C.ink, fontStyle: "italic",
+          lineHeight: 1.35, marginTop: 2,
+          overflow: "hidden", textOverflow: "ellipsis",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        }}>"{q.excerpt}"</div>
+      </div>
+    </div>
+  );
+};
+
 // ── Hero (introduces Doogie + BCFSA context) ──────────────────────────────
 const HeroIntro = () => {
   const ctx = useContext(SearchFiltersContext);
@@ -253,6 +314,7 @@ const HeroIntro = () => {
         <p style={{ color: C.muted, marginTop: 10, marginBottom: 0, fontSize: 12, lineHeight: 1.5, maxWidth: 720 }}>
           Real Estate services are provided by <strong>Doug LeMaire, REALTOR®</strong> of Fraser Property Management Realty Services Ltd. — a BCFSA-licensed real estate professional who specializes in detached homes, luxury properties, equestrian &amp; acreage estates, estate sales/probate, and residential stratas. Primary practice areas: <strong>Greater Vancouver, Fraser Valley &amp; the Sea-to-Sky Corridor of BC</strong>.
         </p>
+        <HeroPullQuoteBadge/>
       </div>
     </section>
   );
