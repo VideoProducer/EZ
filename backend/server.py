@@ -6470,6 +6470,79 @@ async def community_climate_normals(slug: str):
     }
 
 
+# =============== BC PUBLIC DATA SOURCES (Feb 2026) ===============
+# Educational-only integrations from the approved public source list:
+#   • BC Laws statute refs (per glossary term)
+#   • BC Address Geocoder (autocomplete on /valuation)
+#   • BC OpenMaps WFS layers (ALR / Flood / Municipality — Phase 2)
+#   • Statistics Canada WDS demographics (Phase 2)
+#   • PTT + OSFI stress-test calculator (hardcoded, "as of" dated)
+# Every payload carries `fetch_date` + attribution. Never presented as
+# advice — general information / estimate only.
+from services.bc_data_sources import (
+    get_bclaws_refs_for_slug,
+    bc_geocoder_autocomplete,
+    ptt_calculate,
+    stress_test_qualifying_rate,
+    PTT_CONFIG,
+    OSFI_STRESS_TEST,
+)
+
+
+@api.get("/glossary/{slug}/statute-refs")
+async def glossary_statute_refs(slug: str):
+    """Return frozen BC Laws canonical URLs for a glossary term."""
+    payload = get_bclaws_refs_for_slug(slug)
+    # Persist a lightweight audit trail (fetch_date, source_ids) for CMS traceability.
+    try:
+        await db.bclaws_refs_audit.update_one(
+            {"slug": slug},
+            {"$set": {"slug": slug, "source_ids": payload.get("source_ids", []), "last_seen": now_iso()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
+    return payload
+
+
+@api.get("/valuation/geocode")
+async def valuation_geocode(q: str, max_results: int = 5):
+    """BC Address Geocoder autocomplete passthrough (address field on /valuation)."""
+    q = (q or "").strip()
+    if len(q) < 3:
+        return {"available": False, "results": [], "note": "Type at least 3 characters."}
+    return await bc_geocoder_autocomplete(q, max_results=max_results)
+
+
+@api.get("/valuation/ptt-rates")
+async def valuation_ptt_rates_config():
+    """Return the hardcoded PTT + OSFI configuration so the frontend can
+    render exact tiers, exemption thresholds, and 'as of' date without
+    duplicating any numbers client-side."""
+    return {
+        "ptt": PTT_CONFIG,
+        "stress_test": OSFI_STRESS_TEST,
+        "disclaimer": "General information / estimate only — not filing, tax, or financial advice. Confirm exact amounts with your lawyer, notary, or lender before closing.",
+    }
+
+
+@api.get("/valuation/ptt-calculate")
+async def valuation_ptt_calculate(
+    price: float,
+    ftb: bool = False,
+    newly_built: bool = False,
+    foreign_taxable: bool = False,
+):
+    """Compute PTT for a purchase price + toggles. Educational only."""
+    return ptt_calculate(price, is_ftb=ftb, is_newly_built=newly_built, is_foreign_taxable=foreign_taxable)
+
+
+@api.get("/valuation/stress-test")
+async def valuation_stress_test(rate: float):
+    """Compute OSFI B-20 qualifying rate for a given contract rate (%)."""
+    return stress_test_qualifying_rate(rate)
+
+
 # =============== PUBLIC INGEST API (Lovable.dev integration) ===============
 # Secure API-key-gated endpoints for a partner site (e.g. a Lovable.dev
 # curation app) to push verified glossary edits + authoritative sources

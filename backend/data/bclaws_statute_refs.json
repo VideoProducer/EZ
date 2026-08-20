@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "description": "Frozen BC Laws canonical URLs for glossary terms. King's Printer of British Columbia — Unofficial consolidation. When BC Laws restructures a doc_id, update the entry here (not the code). Slugs match /api/glossary as of Feb 2026.",
+    "publisher": "King's Printer of British Columbia (BC Laws)",
+    "attribution": "King's Printer of British Columbia (BC Laws). Unofficial consolidation.",
+    "url_pattern": "https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/{doc_id}",
+    "fetch_policy": "URLs are stable canonical citations — cached forever, no re-fetch.",
+    "last_reviewed": "2026-02-19"
+  },
+  "refs": {
+    "property-transfer-tax-ptt": [
+      {"label": "Property Transfer Tax Act",                 "doc_id": "96378_01", "note": "Governing statute"},
+      {"label": "Property Transfer Tax Regulation",          "doc_id": "74_88",    "note": "Rates, exemptions, forms"}
+    ],
+    "additional-property-transfer-tax-foreign-buyer-ptt": [{"label": "Property Transfer Tax Act — Part 2 (Additional Tax)", "doc_id": "96378_01"}],
+    "first-time-home-buyers-program-ptt":  [{"label": "Property Transfer Tax Act — First Time Home Buyers' Program", "doc_id": "96378_01"}],
+    "newly-built-home-exemption":          [{"label": "Property Transfer Tax Act — Newly Built Home Exemption", "doc_id": "96378_01"}],
+
+    "strata-property-act":                 [{"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "strata-fees":                         [{"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "strata-fee-schedule":                 [{"label": "Strata Property Act — s. 99 Contributions", "doc_id": "98043_01"}],
+    "strata-budget":                       [{"label": "Strata Property Act — s. 103 Annual Budget", "doc_id": "98043_01"}],
+    "strata-bylaws":                       [{"label": "Strata Property Act — Bylaws", "doc_id": "98043_01"}],
+    "strata-rules":                        [{"label": "Strata Property Act — Rules", "doc_id": "98043_01"}],
+    "strata-corporation":                  [{"label": "Strata Property Act — Part 2 Strata Corporation", "doc_id": "98043_01"}],
+    "strata-council":                      [{"label": "Strata Property Act — s. 25 Strata Council", "doc_id": "98043_01"}],
+    "strata-minutes":                      [{"label": "Strata Property Act — s. 35 Records", "doc_id": "98043_01"}],
+    "strata-plan":                         [{"label": "Strata Property Act — Part 12 Plans", "doc_id": "98043_01"}, {"label": "Land Title Act — Deposit of Plans", "doc_id": "96250_01"}],
+    "registered-strata-plan-amendment":    [{"label": "Strata Property Act — Part 12 Amendments to Strata Plan", "doc_id": "98043_01"}],
+    "phased-strata-plan":                  [{"label": "Strata Property Act — Part 13 Phased Strata Plans", "doc_id": "98043_01"}],
+    "strata-lot":                          [{"label": "Strata Property Act — s. 1 Definitions", "doc_id": "98043_01"}],
+    "strata-management":                   [{"label": "Real Estate Services Act — Strata Management Services", "doc_id": "04042_01"}, {"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "strata-insurance":                    [{"label": "Strata Property Act — s. 149 Insurance", "doc_id": "98043_01"}],
+    "strata-insurance-deductible-bylaw":   [{"label": "Strata Property Act — s. 158 Deductibles", "doc_id": "98043_01"}],
+    "insurance-summary-strata-insurance-certificate":  [{"label": "Strata Property Act — Insurance Regs", "doc_id": "98043_01"}],
+    "strata-rental-restrictions":          [{"label": "Strata Property Amendment Act, 2022 — Bill 44", "doc_id": "22011"}, {"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "short-term-rental-restrictions-strata": [{"label": "Short-Term Rental Accommodations Act", "doc_id": "23032"}, {"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "pet-restriction-bylaws-strata":       [{"label": "Strata Property Act — s. 123 Bylaws re Pets", "doc_id": "98043_01"}],
+    "form-b-strata-information-certificate":  [{"label": "Strata Property Act — s. 59 Form B", "doc_id": "98043_01"}],
+    "bare-land-strata":                    [{"label": "Bare Land Strata Regulation", "doc_id": "75_78"}, {"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "freehold-strata":                     [{"label": "Strata Property Act", "doc_id": "98043_01"}],
+    "leasehold-strata":                    [{"label": "Strata Property Act — Part 12 Leasehold", "doc_id": "98043_01"}],
+    "half-duplex-strata-vs-non-strata":    [{"label": "Strata Property Act", "doc_id": "98043_01"}, {"label": "Land Title Act", "doc_id": "96250_01"}],
+
+    "foreclosure":                         [{"label": "Law and Equity Act — Part 5 Mortgages", "doc_id": "96253_01"}, {"label": "Supreme Court Civil Rules", "doc_id": "168_2009"}],
+
+    "homeowner-grant":                     [{"label": "Home Owner Grant Act", "doc_id": "96471_01"}],
+
+    "bc-land-title-and-survey-authority-ltsa": [{"label": "Land Title Act", "doc_id": "96250_01"}, {"label": "Land Title and Survey Authority Act", "doc_id": "04066_01"}],
+    "land-title-office":                   [{"label": "Land Title Act", "doc_id": "96250_01"}],
+
+    "redma-7-day-rescission-right":        [{"label": "REDMA — s. 21 Right to Rescind", "doc_id": "04041_01"}],
+    "disclosure-statement-redma":          [{"label": "REDMA — s. 14 Disclosure Statement", "doc_id": "04041_01"}],
+    "deposit-protection-redma":            [{"label": "REDMA — s. 18 Deposits", "doc_id": "04041_01"}],
+
+    "agricultural-land-reserve-alr":       [{"label": "Agricultural Land Commission Act", "doc_id": "02036_01"}, {"label": "Agricultural Land Reserve General Regulation", "doc_id": "171_2002"}],
+
+    "residential-tenancy-branch-rtb":      [{"label": "Residential Tenancy Act", "doc_id": "02078_01"}],
+    "manufactured-home":                   [{"label": "Manufactured Home Act", "doc_id": "96280_01"}],
+    "speculation-and-vacancy-tax":         [{"label": "Speculation and Vacancy Tax Act", "doc_id": "18046_01"}],
+
+    "probate-sale":                        [{"label": "Wills, Estates and Succession Act (WESA) — Part 6", "doc_id": "09013_01"}],
+
+    "home-buyer-rescission-period-hbrp":   [{"label": "Property Law Act — s. 42 HBRP", "doc_id": "96377_01"}, {"label": "Home Buyer Rescission Period Regulation", "doc_id": "184_2022"}]
+  }
+}

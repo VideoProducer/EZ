@@ -5329,6 +5329,57 @@ const Glossary = () => {
 };
 // Glossary index canary (CANARY-2) — invisible fingerprint at page end
 const GlossaryWithCanary = () => (<><Glossary/><Canary phrase={CANARY_GLOSSARY} testId="canary-glossary"/></>);
+// ── BC Laws — frozen statute references per glossary term (Feb 2026) ──
+// Fetches from /api/glossary/{slug}/statute-refs which returns canonical
+// King's Printer URLs for the governing Acts and Regulations. Only renders
+// the card if we have at least one mapped citation; otherwise silent so
+// unmapped terms don't produce empty blocks.
+const BCLawsStatuteRefs = ({slug}) => {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`${API}/glossary/${slug}/statute-refs`)
+      .then(r => { if (alive) setData(r.data); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!data || !data.available) return null;
+  return (
+    <div data-testid="bclaws-refs" style={{
+      marginTop: "1.5rem",
+      padding: "1rem 1.15rem",
+      background: "#F7FAFF",
+      border: "1px solid rgba(15,42,91,0.15)",
+      borderRadius: 10,
+      fontFamily: "Inter,sans-serif",
+    }}>
+      <div style={{
+        fontSize: "0.75rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+        fontWeight: 700,
+        color: "var(--brand-navy)",
+        marginBottom: "0.5rem",
+      }}>Verify with official BC source</div>
+      <ul style={{margin: 0, paddingLeft: "1.15rem", fontSize: "0.92rem", lineHeight: 1.6}}>
+        {data.refs.map((r, i) => (
+          <li key={i} style={{marginBottom: "0.25rem"}}>
+            <a href={r.url} target="_blank" rel="noopener noreferrer"
+               data-testid={`bclaws-ref-${i}`}
+               style={{color: "var(--brand-blue)", fontWeight: 600, textDecoration: "none"}}>
+              {r.label} ↗
+            </a>
+            {r.note && <span style={{color: "var(--muted)", fontSize: "0.85rem"}}> — {r.note}</span>}
+          </li>
+        ))}
+      </ul>
+      <div style={{marginTop: "0.65rem", fontSize: "0.72rem", color: "var(--muted)", fontStyle: "italic", lineHeight: 1.55}}>
+        Source: {data.attribution} · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
+      </div>
+    </div>
+  );
+};
+
 const GlossaryTerm = () => {
   const {slug} = useParams();
   const [t, setT] = useState(null);
@@ -5518,6 +5569,8 @@ const GlossaryTerm = () => {
     <p data-testid="glossary-speakable-disclaimer" style={{fontFamily:"Inter,sans-serif",fontSize:"0.82rem",color:"var(--muted)",fontStyle:"italic",marginTop:"0.75rem",lineHeight:1.55}}>
       General information only — not legal, financial, tax, or real-estate advice. For your situation consult a licensed BC REALTOR®, lawyer, notary, or accountant.
     </p>
+
+    <BCLawsStatuteRefs slug={slug}/>
 
     <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>Frequently Asked Questions</h2>
     {(t.faqs && t.faqs.length>0) ? <div className="faq">{t.faqs.map((f,i)=><details key={i}>
@@ -8348,6 +8401,137 @@ const CommunityPage = () => {
   </div></section>);
 };
 
+// ── PTT + OSFI stress-test panel (Feb 2026) ────────────────────────────
+// Educational calculator for /valuation. Hardcoded BC rates and OSFI
+// B-20 qualifying-rate rule with an explicit "as of" date + deep links
+// to gov.bc.ca and OSFI. Never presented as advice — every output line
+// carries the "General information / estimate only" disclaimer. Rates
+// come from the backend so any future rate change updates the calc
+// without a frontend deploy.
+const PttStressTestPanel = () => {
+  const [cfg, setCfg] = useState(null);
+  const [price, setPrice] = useState("");
+  const [rate, setRate] = useState("");
+  const [ftb, setFtb] = useState(false);
+  const [newlyBuilt, setNewlyBuilt] = useState(false);
+  const [foreign, setForeign] = useState(false);
+  const [pttOut, setPttOut] = useState(null);
+  const [stressOut, setStressOut] = useState(null);
+  useEffect(() => {
+    axios.get(`${API}/valuation/ptt-rates`).then(r => setCfg(r.data)).catch(() => {});
+  }, []);
+  useEffect(() => {
+    const p = Number(price);
+    if (!p || p <= 0) { setPttOut(null); return; }
+    const h = setTimeout(() => {
+      axios.get(`${API}/valuation/ptt-calculate`, {params:{price: p, ftb, newly_built: newlyBuilt, foreign_taxable: foreign}})
+        .then(r => setPttOut(r.data)).catch(() => setPttOut(null));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [price, ftb, newlyBuilt, foreign]);
+  useEffect(() => {
+    const r = Number(rate);
+    if (!r || r <= 0) { setStressOut(null); return; }
+    const h = setTimeout(() => {
+      axios.get(`${API}/valuation/stress-test`, {params:{rate: r}})
+        .then(res => setStressOut(res.data)).catch(() => setStressOut(null));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [rate]);
+  const fmt = (n) => (n == null ? "—" : `$${Number(n).toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2})}`);
+  return (
+    <div data-testid="ptt-stress-panel" style={{
+      marginTop: "3rem", padding: "1.5rem 1.25rem 1.25rem",
+      background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.15)",
+      borderRadius: 14, fontFamily: "Inter,sans-serif",
+    }}>
+      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.4rem", color:"var(--brand-navy)", fontWeight:700}}>
+        BC Property Transfer Tax + Mortgage Stress-Test
+      </div>
+      <div style={{fontSize:"0.85rem", color:"var(--muted)", marginTop:"0.2rem", marginBottom:"1rem", lineHeight:1.55}}>
+        General information / estimate only — <strong>not filing, tax, or financial advice</strong>. Rates as of <strong>{cfg?.ptt?.as_of || "—"}</strong> (PTT) and <strong>{cfg?.stress_test?.as_of || "—"}</strong> (OSFI B-20).
+      </div>
+
+      {/* PTT block */}
+      <div style={{padding:"1rem 1rem 0.85rem", background:"#fff", border:"1px solid rgba(15,42,91,0.10)", borderRadius:10}}>
+        <div style={{fontFamily:"Sora,sans-serif", fontSize:"0.78rem", fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:"var(--brand-navy)", marginBottom:"0.6rem"}}>Property Transfer Tax (PTT)</div>
+        <div className="form-grid">
+          <div className="field">
+            <label>Purchase price (CAD)</label>
+            <input type="number" placeholder="e.g. 1250000" min="0" value={price} onChange={e=>setPrice(e.target.value)} data-testid="ptt-price-input"/>
+          </div>
+          <div className="field" style={{alignSelf:"end"}}>
+            <label style={{visibility:"hidden"}}>Options</label>
+            <div style={{display:"flex",flexDirection:"column",gap:"0.35rem",fontSize:"0.87rem"}}>
+              <label className="check"><input type="checkbox" checked={ftb} onChange={e=>{setFtb(e.target.checked); if (e.target.checked) setNewlyBuilt(false);}} data-testid="ptt-ftb"/> First-Time Home Buyer</label>
+              <label className="check"><input type="checkbox" checked={newlyBuilt} onChange={e=>{setNewlyBuilt(e.target.checked); if (e.target.checked) setFtb(false);}} data-testid="ptt-newly-built"/> Newly-Built Home</label>
+              <label className="check"><input type="checkbox" checked={foreign} onChange={e=>setForeign(e.target.checked)} data-testid="ptt-foreign"/> Foreign entity / taxable trustee (specified area)</label>
+            </div>
+          </div>
+        </div>
+
+        {pttOut && !pttOut.error && (
+          <div data-testid="ptt-result" style={{marginTop:"0.9rem", padding:"0.75rem 1rem", background:"#F5F0E1", borderRadius:8, fontSize:"0.92rem"}}>
+            {pttOut.breakdown.map((b, i) => (
+              <div key={i} style={{display:"flex", justifyContent:"space-between", color:"var(--ink)", padding:"0.15rem 0"}}>
+                <span>{b.label}</span><span style={{fontFamily:"'SF Mono', monospace"}}>{fmt(b.tax)}</span>
+              </div>
+            ))}
+            <div style={{borderTop:"1px solid rgba(15,42,91,0.15)", marginTop:"0.5rem", paddingTop:"0.4rem", fontWeight:700, color:"var(--brand-navy)", display:"flex", justifyContent:"space-between"}}>
+              <span>PTT before exemptions</span><span data-testid="ptt-before" style={{fontFamily:"'SF Mono', monospace"}}>{fmt(pttOut.ptt_before_exemption)}</span>
+            </div>
+            {pttOut.exemption && (
+              <div style={{color:"#065F46", display:"flex", justifyContent:"space-between", marginTop:"0.15rem"}}>
+                <span>{pttOut.exemption.kind}</span>
+                <span data-testid="ptt-exemption" style={{fontFamily:"'SF Mono', monospace"}}>–{fmt(pttOut.exemption.reduces_ptt_by)}</span>
+              </div>
+            )}
+            {pttOut.additional_ptt > 0 && (
+              <div style={{color:"#B91C1C", display:"flex", justifyContent:"space-between", marginTop:"0.15rem"}}>
+                <span>Additional PTT (foreign)</span>
+                <span data-testid="ptt-additional" style={{fontFamily:"'SF Mono', monospace"}}>+{fmt(pttOut.additional_ptt)}</span>
+              </div>
+            )}
+            <div style={{borderTop:"2px solid var(--brand-navy)", marginTop:"0.55rem", paddingTop:"0.45rem", fontWeight:700, color:"var(--brand-navy)", display:"flex", justifyContent:"space-between", fontSize:"1.05rem"}}>
+              <span>Estimated PTT payable</span>
+              <span data-testid="ptt-total" style={{fontFamily:"'SF Mono', monospace"}}>{fmt(pttOut.total_ptt_payable)}</span>
+            </div>
+            <div style={{fontSize:"0.75rem", color:"var(--muted)", fontStyle:"italic", marginTop:"0.5rem", lineHeight:1.5}}>{pttOut.disclaimer}</div>
+          </div>
+        )}
+        <div style={{marginTop:"0.7rem", fontSize:"0.78rem", color:"var(--muted)", lineHeight:1.55}}>
+          Authority: <a href={cfg?.ptt?.authority_url || "https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax"} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>gov.bc.ca — Property Transfer Tax ↗</a>
+          {" · "}<a href={cfg?.ptt?.additional_ptt_url || "https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax/additional-property-transfer-tax"} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>Additional PTT ↗</a>
+        </div>
+      </div>
+
+      {/* Stress-test block */}
+      <div style={{marginTop:"1rem", padding:"1rem 1rem 0.85rem", background:"#fff", border:"1px solid rgba(15,42,91,0.10)", borderRadius:10}}>
+        <div style={{fontFamily:"Sora,sans-serif", fontSize:"0.78rem", fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:"var(--brand-navy)", marginBottom:"0.6rem"}}>Mortgage Stress-Test (OSFI B-20)</div>
+        <div className="field">
+          <label>Your contract mortgage rate (% APR)</label>
+          <input type="number" step="0.05" placeholder="e.g. 5.19" min="0" max="20" value={rate} onChange={e=>setRate(e.target.value)} data-testid="stress-rate-input"/>
+        </div>
+        {stressOut && !stressOut.error && (
+          <div data-testid="stress-result" style={{marginTop:"0.6rem", padding:"0.75rem 1rem", background:"#F5F0E1", borderRadius:8, fontSize:"0.95rem"}}>
+            <div style={{display:"flex", justifyContent:"space-between", color:"var(--brand-navy)", fontWeight:700}}>
+              <span>Qualifying rate</span>
+              <span data-testid="stress-qualifying" style={{fontFamily:"'SF Mono', monospace"}}>{stressOut.qualifying_rate_pct.toFixed(2)}%</span>
+            </div>
+            <div style={{fontSize:"0.8rem", color:"var(--muted)", marginTop:"0.35rem", lineHeight:1.5}}>
+              max(contract + {stressOut.stress_add_pct}%, {stressOut.floor_rate_pct}% floor). {stressOut.note}
+            </div>
+            <div style={{fontSize:"0.75rem", color:"var(--muted)", fontStyle:"italic", marginTop:"0.45rem"}}>{stressOut.disclaimer}</div>
+          </div>
+        )}
+        <div style={{marginTop:"0.7rem", fontSize:"0.78rem", color:"var(--muted)", lineHeight:1.55}}>
+          Authority: <a href={cfg?.stress_test?.authority_url || "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/residential-mortgage-underwriting-practices-procedures-guideline-b-20"} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>OSFI Guideline B-20 ↗</a>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Market Estimate ---
 const Valuation = () => {
   const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false,dorts_ack:false});
@@ -8385,6 +8569,7 @@ const Valuation = () => {
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
     </form>
+    <PttStressTestPanel/>
   </div></section>);
 };
 
