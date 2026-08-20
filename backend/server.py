@@ -2514,6 +2514,15 @@ async def admin_ai_discovery_indexnow(_=Depends(verify_admin)):
     Returns the count pushed, the IndexNow response status, and a Mongo audit
     row id so Doug can see every ping he's ever fired from the admin panel.
     """
+    return await _push_sitemap_ai_to_indexnow(trigger="admin_manual")
+
+
+async def _push_sitemap_ai_to_indexnow(trigger: str = "admin_manual") -> dict:
+    """Shared helper — read `/app/frontend/public/sitemap-ai.xml`, push every
+    URL to IndexNow, and log an audit row to `ai_discovery_pings`. Called by
+    both the admin manual endpoint and the nightly 3 AM PT sitemap cron so
+    both paths report identically in the discovery-ping history.
+    """
     from indexnow import notify_indexnow, HOST as INDEXNOW_HOST
     from pathlib import Path as _Path
     import re as _re
@@ -2541,6 +2550,7 @@ async def admin_ai_discovery_indexnow(_=Depends(verify_admin)):
     #    panel. Cheap TTL — auto-expires in 180 days.
     audit_row = {
         "kind": "indexnow_sitemap_ai_push",
+        "trigger": trigger,   # "admin_manual" | "nightly_cron"
         "sitemap": "sitemap-ai.xml",
         "url_count": len(urls),
         "host": INDEXNOW_HOST,
@@ -2562,6 +2572,7 @@ async def admin_ai_discovery_indexnow(_=Depends(verify_admin)):
         "batches": len(results),
         "indexnow_results": results,
         "audit_id": audit_id,
+        "trigger": trigger,
     }
 
 
@@ -7356,19 +7367,19 @@ async def startup():
     asyncio.create_task(asyncio.sleep(1200)).add_done_callback(lambda _: asyncio.create_task(_casl_consent_expiry_loop()))
 
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
-    # ~04:00 UTC (≈20:00 PST / 21:00 PDT) so new glossary terms, community
-    # profiles, and MLS listings from the day's CREA DDF® sync show up in
-    # Bing / Yandex / Naver instantly and are queued for Google's next
-    # crawl. First run fires 15 min after boot so the sitemap is always
-    # fresh even after a redeploy.
+    # 11:00 UTC = 3:00 AM PST / 4:00 AM PDT — the "quiet window" for BC
+    # traffic — so new glossary terms, community profiles, and MLS listings
+    # from the day's CREA DDF® sync show up in Bing / Yandex / Naver
+    # instantly and are queued for Google's next crawl. First run fires
+    # 15 min after boot so the sitemap is always fresh after a redeploy.
     async def _nightly_sitemap_loop():
         import asyncio as _a
         from datetime import datetime as _dt, timedelta as _td, timezone as _tz
         while True:
             try:
                 now = _dt.now(_tz.utc)
-                # Target next 04:00 UTC — 8pm Pacific standard / 9pm Pacific daylight
-                target = now.replace(hour=4, minute=0, second=0, microsecond=0)
+                # Target next 11:00 UTC — 3 AM PST / 4 AM PDT.
+                target = now.replace(hour=11, minute=0, second=0, microsecond=0)
                 if target <= now:
                     target = target + _td(days=1)
                 delay = max(60, int((target - now).total_seconds()))
@@ -7377,9 +7388,10 @@ async def startup():
                     from sitemap_generator import generate_sitemap
                     from indexnow import notify_indexnow, HOST
                     result = await generate_sitemap(db)
-                    # Push the freshest URLs to IndexNow — top-level pages plus
-                    # the 200 most recently curated glossary terms and the 200
-                    # most recently reviewed community synopses.
+                    # 1) Fast priority ping — top-level pages plus the 200
+                    #    most recently curated glossary terms and 200 most
+                    #    recently reviewed community synopses. This is a tiny
+                    #    high-signal batch that hits Bing / Yandex fastest.
                     priority = [
                         f"https://{HOST}/",
                         f"https://{HOST}/communities",
@@ -7392,7 +7404,19 @@ async def startup():
                     recent_syn = await db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(200).to_list(200)
                     priority += [f"https://{HOST}/community/{s['slug']}" for s in recent_syn if s.get("slug")]
                     idx = await notify_indexnow(priority)
-                    logger.info(f"nightly_sitemap: regen ok ({result.get('total')} urls) · indexnow: {idx.get('count')} pushed / status {idx.get('status_code')}")
+                    logger.info(f"nightly_sitemap: regen ok ({result.get('total')} urls) · priority indexnow: {idx.get('count')} pushed / status {idx.get('status_code')}")
+
+                    # 2) Full sitemap-ai.xml push — every URL in the AEO
+                    #    canonical sitemap (listings + communities +
+                    #    glossary + specialty pages). Mirrors the manual
+                    #    /api/admin/ai-discovery/indexnow endpoint and
+                    #    writes the same audit row so Doug can see the
+                    #    nightly run in the admin discovery-ping history.
+                    try:
+                        full = await _push_sitemap_ai_to_indexnow(trigger="nightly_cron")
+                        logger.info(f"nightly_sitemap: sitemap-ai indexnow: {full.get('url_count')} urls / {full.get('batches')} batches / ok={full.get('ok')}")
+                    except Exception as e:
+                        logger.error(f"nightly_sitemap: sitemap-ai indexnow push failed: {e}")
                 except Exception as e:
                     logger.error(f"nightly_sitemap: task failed: {e}")
             except Exception as e:

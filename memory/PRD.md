@@ -39,6 +39,14 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 14.2 — Nightly IndexNow Auto-Ping (Feb 20 2026)
+- Extracted the `sitemap-ai.xml → IndexNow` push into a shared helper (`_push_sitemap_ai_to_indexnow(trigger=...)`) so both the manual admin endpoint (`/api/admin/ai-discovery/indexnow`) and the nightly cron log identical audit rows to `ai_discovery_pings`.
+- Wired the helper into the nightly sitemap cron (`_nightly_sitemap_loop` in `server.py`):
+  - Cron time moved from `04:00 UTC` → **`11:00 UTC` = 3:00 AM PST / 4:00 AM PDT** (the "3 AM" quiet window Doug asked for).
+  - After the nightly `generate_sitemap()` runs, the cron now (1) pushes the ~405-URL priority batch (top-level + recent glossary + recent community synopses) AND (2) fires the full `sitemap-ai.xml` push (~1,868 URLs) to Bing/Yandex/Naver/Seznam.
+  - Every nightly run writes an audit row with `trigger: "nightly_cron"` (admin manual pushes tag as `trigger: "admin_manual"`) so Doug can distinguish them in the discovery-ping history.
+- Manually verified: `/api/admin/ai-discovery/indexnow` returns `ok: true, url_count: 1868, batches: 1, status 200`.
+
 ### Phase 14.1 — Flagship price contrast + Cotala embed reconfirm (Feb 20 2026)
 - **Bold, high-contrast pricing** on both flagship surfaces so the asking price is legible on any device (including bright mobile screens where the previous white-text-on-photo washed out).
   - Homepage flagship (`DashboardFeaturedListing`): swapped washed-out white text overlay for a solid **gold pill** (`clamp(20-32px)`, Sora 900) at the bottom-left of the hero photo — no longer gated on live DDF hydration. Added a second **navy-pill inline price** in the details column so the price stays visible even when the hero swaps to the tour iframe.
