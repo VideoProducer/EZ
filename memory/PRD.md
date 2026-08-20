@@ -39,6 +39,11 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 13 — Direct YouTube Walkthrough Embed (Feb 2026 — this session)
+- **Homepage**: `FEATURED_HOME_LISTING.video_url` set to `https://youtu.be/JS_oWYNOdTU?si=NL6IK_KVmkQjPbkf`. The existing tap-to-play player in `DashboardFeaturedListing` already routes YouTube URLs through `youtube-nocookie.com/embed/{id}?autoplay=1&rel=0` so no player-level changes were needed.
+- **Luxury flagship page** (`/specialties/luxury`): new reusable `<YouTubeEmbed>` component (`/frontend/src/components/YouTubeEmbed.jsx`, 16:9 responsive, no cookies until play, matches Doug's requested iframe attributes) inserted directly below the hero photo. Renders as `https://www.youtube-nocookie.com/embed/JS_oWYNOdTU?rel=0&modestbranding=1&enablejsapi=1`.
+- **Rationale**: The DDF-supplied Vimeo (`1218107137`) has domain-restricted embeds only Fraser can whitelist. Doug provided this YouTube URL as the permanent walkthrough so both marketing surfaces (home + luxury) show a working video regardless of the Vimeo situation.
+
 ### Phase 12 — Host-Aware Tour Fallback + Vimeo dnt Fix (Feb 2026 — this session)
 - **Mis-labelled Vimeo failure**: Doug reported that on mobile LTE, the flagship (Vimeo-hosted) tour was showing a fallback that hardcoded "YouTube channel" copy. Root cause: fallback strings weren't reading the actual host. Now `<VirtualTourEmbed>` inspects `embed.url_raw`, detects `youtube.com`/`youtu.be`/`vimeo.com`, and renders host-specific copy — "This Vimeo tour won't embed here / Vimeo has domain-restricted embeds" vs "This YouTube tour won't embed here / channel blocks or content-blocker".
 - **Mobile deep-link**: added an **"Open in the YouTube app"** button (URI scheme `vnd.youtube://{id}`) that only renders for YouTube tours. Tapping hands playback to the native YouTube app on iOS/Android which honors sign-in state and bypasses in-browser content blockers.

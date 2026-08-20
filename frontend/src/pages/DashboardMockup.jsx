@@ -5552,12 +5552,12 @@ const FEATURED_HOME_LISTING = {
     "https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg",
   ],
   open_house: null,               // No public open house — showings by appointment only
-  // Video walkthrough intentionally disabled — the feature card now shows
-  // a still photo only (per Doug, Feb 17 2026). Reinstate by setting
-  // `video_url` to a Vimeo/YouTube URL.
-  video_url: null,
+  // Video walkthrough — YouTube (owner-controlled Vimeo blocked embeds
+  // in Feb 2026 so Doug switched to YouTube). The existing player logic
+  // parses this URL, so nothing else needs to change.
+  video_url: "https://youtu.be/JS_oWYNOdTU?si=NL6IK_KVmkQjPbkf",
   video_duration: null,
-  video_provider: null,
+  video_provider: "youtube",
 };
 
 // CREA DDF® / BCFSA best practice — quote the exact asking price to two
