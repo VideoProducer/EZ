@@ -7,6 +7,12 @@ export const FLAGSHIP = {
   community: "Elgin Chantrell",  // Enclave / neighbourhood — surfaced in address lines beside city
   city: "Surrey",
   province: "BC",
+  // Hosted tour URL — Cotala serves an embed-safe iframe purpose-built
+  // for real-estate tours. Both the homepage featured card and the
+  // /specialties/luxury flagship page read from this single source of
+  // truth, so swapping tours is a one-line change. Cotala embeds are
+  // NOT subject to YouTube/Vimeo owner-side "disable embedding" toggles.
+  tour_embed_url: "https://tours.cotala.com/87725",
   price: 3297000,  // asking price · GVR-listed
   mls_number: "R3156192",  // GVR-assigned MLS® number for 3015 141 Street
   launch_at: "2026-02-17T17:00:00Z",  // Feb 17 2026 · 9:00 AM PT = 17:00 UTC

@@ -5552,12 +5552,16 @@ const FEATURED_HOME_LISTING = {
     "https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg",
   ],
   open_house: null,               // No public open house — showings by appointment only
-  // Video walkthrough — YouTube (owner-controlled Vimeo blocked embeds
-  // in Feb 2026 so Doug switched to YouTube). The existing player logic
-  // parses this URL, so nothing else needs to change.
-  video_url: "https://youtu.be/JS_oWYNOdTU?si=NL6IK_KVmkQjPbkf",
+  // Video walkthrough — Cotala hosted tour (Phase 14, Feb 2026).
+  // Cotala is a real-estate-tour host with no owner-side "disable
+  // embedding" toggle, unlike YouTube/Vimeo which repeatedly broke this
+  // card when the video owner changed their permissions. Kept the
+  // legacy `video_url` field so the play-button UX stays identical
+  // even though the actual iframe now points at the hosted tour.
+  tour_embed_url: "https://tours.cotala.com/87725",
+  video_url: null,
   video_duration: null,
-  video_provider: "youtube",
+  video_provider: "cotala",
 };
 
 // CREA DDF® / BCFSA best practice — quote the exact asking price to two
@@ -5754,6 +5758,11 @@ const DashboardFeaturedListing = () => {
     return null;
   };
   const video = parseVideo(L.video_url);
+  // Hosted tour (Cotala / Matterport / Kuula) — embed-safe by design.
+  // When both are set, hosted-tour wins over legacy YouTube/Vimeo since
+  // it can't be broken by an owner-side permission flip.
+  const tourEmbedUrl = (L.tour_embed_url || "").trim() || null;
+  const hasPlayableTour = Boolean(tourEmbedUrl || video);
 
   useEffect(() => {
     if (!L.enabled || !L.mls_auto_detect || !L.mls) return;
@@ -5870,15 +5879,18 @@ const DashboardFeaturedListing = () => {
           position: "relative", background: C.navy, borderRadius: 14,
           overflow: "hidden", aspectRatio: "3/2", minHeight: 260,
         }}>
-          {videoLoaded && video ? (
+          {videoLoaded && (tourEmbedUrl || video) ? (
             <iframe
-              title={`Video walkthrough — ${merged.address}, ${merged.city}`}
-              src={video.provider === "vimeo"
-                ? `https://player.vimeo.com/video/${video.id}?autoplay=1&title=0&byline=0&portrait=0&dnt=1`
-                : `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0`}
+              title={`Walk-through — ${merged.address}, ${merged.city}`}
+              src={tourEmbedUrl
+                ? tourEmbedUrl
+                : (video.provider === "vimeo"
+                    ? `https://player.vimeo.com/video/${video.id}?autoplay=1&title=0&byline=0&portrait=0&dnt=1`
+                    : `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0`)}
               frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; xr-spatial-tracking; accelerometer; gyroscope"
               allowFullScreen
+              scrolling="no"
               style={{ width: "100%", height: "100%", display: "block", border: 0 }}
               data-testid="dash-featured-video-iframe"
             />
@@ -5889,10 +5901,10 @@ const DashboardFeaturedListing = () => {
                 onClick={() => { setLightboxIndex(active); setLightboxOpen(true); }}
                 style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", display: "block", cursor: "pointer" }}
                 data-testid="dash-featured-hero"/>
-              {video && (
+              {hasPlayableTour && (
                 <button
                   onClick={() => setVideoLoaded(true)}
-                  aria-label={`Play video walkthrough (${L.video_duration || "video"})`}
+                  aria-label={`Play walk-through${L.video_duration ? " (" + L.video_duration + ")" : ""}`}
                   data-testid="dash-featured-video-play"
                   style={{
                     position: "absolute", top: "50%", left: "50%",

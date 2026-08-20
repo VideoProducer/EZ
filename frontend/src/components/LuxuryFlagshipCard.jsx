@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FLAGSHIP, isFlagshipRibbonActive } from "../config/flagshipListing";
 import ListingPhotoLightbox from "./ListingPhotoLightbox";
-import { YouTubeEmbed } from "./YouTubeEmbed";
+import { HostedTourEmbed } from "./HostedTourEmbed";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -140,17 +140,20 @@ export default function LuxuryFlagshipCard() {
           </div>
         </div>
 
-        {/* Property walk-through — YouTube embed (Phase 13, Feb 2026).
-            Owner-controlled Vimeo restricted embeds forced us to switch
-            to this YouTube URL. Rendered under the hero photo so it's
-            the second thing a visitor sees on /specialties/luxury. */}
-        <div style={{ maxWidth: 960, margin: "24px auto 0" }}>
-          <YouTubeEmbed
-            videoId="JS_oWYNOdTU"
-            title={`Walk-through — ${FLAGSHIP.address}, ${FLAGSHIP.city}`}
-            testId="luxury-flagship-video"
-          />
-        </div>
+        {/* Property walk-through — hosted Cotala tour (Phase 14, Feb 2026).
+            Purpose-built real-estate tour host. Not subject to
+            YouTube/Vimeo owner-side "disable embedding" toggles that
+            broke previous walk-throughs. Single source of truth lives in
+            FLAGSHIP.tour_embed_url so swapping tours is one line. */}
+        {FLAGSHIP.tour_embed_url && (
+          <div style={{ maxWidth: 960, margin: "24px auto 0" }}>
+            <HostedTourEmbed
+              url={FLAGSHIP.tour_embed_url}
+              title={`Walk-through — ${FLAGSHIP.address}, ${FLAGSHIP.city}`}
+              testId="luxury-flagship-tour"
+            />
+          </div>
+        )}
 
         {/* Tour actions — moved below the photo to keep the image clean. */}
         <div style={{

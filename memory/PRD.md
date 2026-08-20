@@ -39,6 +39,12 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 14 — Cotala Hosted Tour (Permanent Fix) (Feb 2026 — this session)
+- **Root cause**: Both the DDF-supplied Vimeo (`1218107137`) AND the fallback YouTube (`JS_oWYNOdTU`) had their embed permissions flipped OFF by the respective video owners. YouTube/Vimeo enforce owner-set embed restrictions server-side — no URL parameter, embed domain, or client-side trick can bypass them. Every DDF site hits the same wall the moment an owner flips the switch.
+- **Permanent fix**: switched both marketing surfaces (`/` homepage featured card, `/specialties/luxury` flagship page) to a hosted Cotala tour (`https://tours.cotala.com/87725`). Cotala is purpose-built for real-estate tour embedding — no owner-side "disable embedding" toggle, no domain allowlist mechanism — so embeds cannot be broken by a permission flip.
+- **Architecture**: new `<HostedTourEmbed>` component (`/frontend/src/components/HostedTourEmbed.jsx`, responsive 16:9). Single source of truth in `FLAGSHIP.tour_embed_url`; homepage `FEATURED_HOME_LISTING.tour_embed_url` mirrors it. Swapping tours in the future is a one-line config edit.
+- **Doogie narration untouched** — narration reads our own property description (not the video's audio track), so Doogie keeps narrating photos + tour context regardless of the tour host.
+
 ### Phase 13 — Direct YouTube Walkthrough Embed (Feb 2026 — this session)
 - **Homepage**: `FEATURED_HOME_LISTING.video_url` set to `https://youtu.be/JS_oWYNOdTU?si=NL6IK_KVmkQjPbkf`. The existing tap-to-play player in `DashboardFeaturedListing` already routes YouTube URLs through `youtube-nocookie.com/embed/{id}?autoplay=1&rel=0` so no player-level changes were needed.
 - **Luxury flagship page** (`/specialties/luxury`): new reusable `<YouTubeEmbed>` component (`/frontend/src/components/YouTubeEmbed.jsx`, 16:9 responsive, no cookies until play, matches Doug's requested iframe attributes) inserted directly below the hero photo. Renders as `https://www.youtube-nocookie.com/embed/JS_oWYNOdTU?rel=0&modestbranding=1&enablejsapi=1`.
