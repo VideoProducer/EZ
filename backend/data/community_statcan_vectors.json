@@ -1,0 +1,15 @@
+{
+  "_meta": {
+    "description": "Locked StatCan WDS vector IDs per community. Empty values mean 'not yet mapped — endpoint returns not-available gracefully'. Doug fills these from a spreadsheet source ledger. Vector IDs must map to 2021 Census (or equivalent) at the Census Subdivision (CSD) or lowest-available geography. Do NOT include median dwelling value — see spec (avoid confusion with a current valuation).",
+    "last_reviewed": "2026-02-19",
+    "metrics_slot_order": ["population_2021", "population_growth_5yr_pct", "median_household_income_2020", "median_age_2021"],
+    "attribution_template": "Statistics Canada, {table} — Reference period {period}. Open Government Licence — Canada."
+  },
+  "communities": {
+    "Maple Ridge":       {"population_2021": null, "population_growth_5yr_pct": null, "median_household_income_2020": null, "median_age_2021": null, "geo_ref_note": "CSD 5915022"},
+    "Vancouver":         {"population_2021": null, "population_growth_5yr_pct": null, "median_household_income_2020": null, "median_age_2021": null, "geo_ref_note": "CSD 5915022"},
+    "Surrey":            {"population_2021": null, "population_growth_5yr_pct": null, "median_household_income_2020": null, "median_age_2021": null, "geo_ref_note": "CSD 5915004"},
+    "Langley":           {"population_2021": null, "population_growth_5yr_pct": null, "median_household_income_2020": null, "median_age_2021": null, "geo_ref_note": "CSD 5915001"},
+    "White Rock":        {"population_2021": null, "population_growth_5yr_pct": null, "median_household_income_2020": null, "median_age_2021": null, "geo_ref_note": "CSD 5915007"}
+  }
+}

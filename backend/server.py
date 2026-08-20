@@ -6482,11 +6482,22 @@ async def community_climate_normals(slug: str):
 from services.bc_data_sources import (
     get_bclaws_refs_for_slug,
     bc_geocoder_autocomplete,
+    statcan_fetch_vectors,
+    bc_wfs_intersect_point,
+    WFS_DISCLAIMERS,
     ptt_calculate,
     stress_test_qualifying_rate,
     PTT_CONFIG,
     OSFI_STRESS_TEST,
 )
+
+
+# Load once at import time; reload via SIGHUP if the file changes (not
+# critical — Doug redeploys after editing).
+try:
+    _STATCAN_VECTORS_MAP = json.loads((ROOT_DIR / "data" / "community_statcan_vectors.json").read_text())
+except Exception:
+    _STATCAN_VECTORS_MAP = {"_meta": {}, "communities": {}}
 
 
 @api.get("/glossary/{slug}/statute-refs")
@@ -6541,6 +6552,122 @@ async def valuation_ptt_calculate(
 async def valuation_stress_test(rate: float):
     """Compute OSFI B-20 qualifying rate for a given contract rate (%)."""
     return stress_test_qualifying_rate(rate)
+
+
+# ── Helper: geocode a community's centroid (cached forever in Mongo) ──
+async def _community_centroid(name: str) -> Optional[Dict[str, float]]:
+    """Look up (lat, lng) for a BC community, caching the first geocode hit
+    in `db.bc_community_geocode` so we never re-hit DataBC for the same
+    community. This is used by the WFS layers endpoint to intersect
+    ALR/Flood/Muni polygons at the community's approximate centre."""
+    cached = await db.bc_community_geocode.find_one({"name": name}, {"_id": 0})
+    if cached and cached.get("lat") and cached.get("lng"):
+        return {"lat": cached["lat"], "lng": cached["lng"], "cached": True}
+    payload = await bc_geocoder_autocomplete(name, max_results=1)
+    top = (payload.get("results") or [None])[0]
+    if not top or top.get("lat") is None:
+        return None
+    await db.bc_community_geocode.update_one(
+        {"name": name},
+        {"$set": {"name": name, "lat": top["lat"], "lng": top["lng"],
+                  "full_address": top.get("full_address"), "fetch_date": now_iso()}},
+        upsert=True,
+    )
+    return {"lat": top["lat"], "lng": top["lng"], "cached": False}
+
+
+@api.get("/community/{slug}/demographics")
+async def community_demographics(slug: str):
+    """Return locked StatCan WDS demographics for a community. Vector IDs
+    are stored in /data/community_statcan_vectors.json — an empty slot
+    (null) means 'not yet mapped', and we return `available=False` with a
+    clean note instead of surfacing partial data.
+
+    Educational only — every number labelled with the source table and
+    reference period so it can never be mistaken for a live valuation.
+    """
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if _community_slug(c) == slug:
+                name = c; region = r; break
+        if name: break
+    if not name:
+        raise HTTPException(404, "Community not found")
+
+    cfg = (_STATCAN_VECTORS_MAP.get("communities") or {}).get(name) or {}
+    vector_ids = [v for k, v in cfg.items() if k != "geo_ref_note" and isinstance(v, int)]
+
+    if not vector_ids:
+        return {
+            "community": name,
+            "region": region,
+            "available": False,
+            "note": "Demographic vector IDs for this community are being locked in from the Statistics Canada 2021 Census. Check back shortly.",
+            "attribution": "Statistics Canada — Open Government Licence — Canada.",
+            "fetch_date": now_iso(),
+        }
+
+    payload = await statcan_fetch_vectors(vector_ids, latest_n=1)
+    return {
+        "community": name,
+        "region": region,
+        **payload,
+        "config_slot_map": {k: v for k, v in cfg.items() if k != "geo_ref_note"},
+        "geo_ref_note": cfg.get("geo_ref_note"),
+    }
+
+
+@api.get("/community/{slug}/layers")
+async def community_layers(slug: str):
+    """Return BC OpenMaps WFS intersect for the community centroid:
+    Agricultural Land Reserve (ALR), Historical Floodplain, Municipal
+    boundary. Each layer carries its own disclaimer (ALR digital vs legal,
+    flood historical vs current, etc.).
+    """
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    name = None; region = None
+    for r, lst in all_comm.items():
+        for c in lst:
+            if _community_slug(c) == slug:
+                name = c; region = r; break
+        if name: break
+    if not name:
+        raise HTTPException(404, "Community not found")
+
+    centroid = await _community_centroid(name)
+    if not centroid:
+        return {
+            "community": name,
+            "region": region,
+            "available": False,
+            "note": "Could not resolve a canonical centroid for this community — layers unavailable.",
+            "fetch_date": now_iso(),
+        }
+    # 24h cache to respect DataBC rate limits
+    cache_doc = await db.bc_wfs_cache.find_one({"slug": slug}, {"_id": 0})
+    from datetime import datetime, timezone
+    if cache_doc and cache_doc.get("fetch_date"):
+        try:
+            age_h = (datetime.now(timezone.utc) - datetime.fromisoformat(cache_doc["fetch_date"])).total_seconds() / 3600.0
+            if age_h < 24:
+                return {**cache_doc, "cached": True}
+        except Exception:
+            pass
+
+    out = await bc_wfs_intersect_point(centroid["lat"], centroid["lng"])
+    result = {
+        "community": name,
+        "region": region,
+        "available": True,
+        **out,
+    }
+    try:
+        await db.bc_wfs_cache.update_one({"slug": slug}, {"$set": {"slug": slug, **result}}, upsert=True)
+    except Exception:
+        pass
+    return result
 
 
 # =============== PUBLIC INGEST API (Lovable.dev integration) ===============

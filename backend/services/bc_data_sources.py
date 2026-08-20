@@ -210,6 +210,15 @@ WFS_LAYERS = {
     "muni":  "pub:WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_MUNICIPALITIES_SP",
 }
 
+# DataBC WFS layers do NOT use a consistent geometry attribute — some are
+# GEOMETRY, others SHAPE. Confirmed by empirical DescribeFeatureType + a
+# 400/200 differential test against each layer's schema.
+WFS_GEOM_ATTR = {
+    "alr":   "GEOMETRY",
+    "flood": "GEOMETRY",
+    "muni":  "SHAPE",
+}
+
 WFS_DISCLAIMERS = {
     "alr":   "Digital ALR is not the official legal boundary. Confirm with the Agricultural Land Commission.",
     "flood": "Historical mapped floodplain extent only. Not a current hazard determination — check your local government's up-to-date flood mapping.",
@@ -226,6 +235,7 @@ async def bc_wfs_intersect_point(lat: float, lng: float, layers: Optional[List[s
     results = {}
     for key in layers:
         type_name = WFS_LAYERS.get(key)
+        geom_attr = WFS_GEOM_ATTR.get(key, "GEOMETRY")
         if not type_name:
             continue
         params = {
@@ -236,7 +246,7 @@ async def bc_wfs_intersect_point(lat: float, lng: float, layers: Optional[List[s
             "srsName": "EPSG:4326",
             "typeNames": type_name,
             "count": 1,
-            "cql_filter": f"INTERSECTS(SHAPE,POINT({lng} {lat}))",
+            "cql_filter": f"INTERSECTS({geom_attr},SRID=4326;POINT({lng} {lat}))",
         }
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
@@ -244,10 +254,15 @@ async def bc_wfs_intersect_point(lat: float, lng: float, layers: Optional[List[s
                 r.raise_for_status()
                 data = r.json()
             features = data.get("features", []) or []
+            hit_info = None
+            if features and key == "muni":
+                p = features[0].get("properties", {}) or {}
+                hit_info = p.get("ADMIN_AREA_NAME") or p.get("ADMIN_AREA_ABBREVIATION")
             results[key] = {
                 "hit": len(features) > 0,
                 "count": len(features),
                 "type_name": type_name,
+                "hit_info": hit_info,
                 "disclaimer": WFS_DISCLAIMERS[key],
                 "attribution": ATTRIBUTIONS[f"bc_wfs_{key}"] if f"bc_wfs_{key}" in ATTRIBUTIONS else ATTRIBUTIONS["bc_wfs_muni"],
             }

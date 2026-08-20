@@ -8080,6 +8080,99 @@ const CommunitySizzleReel = ({ slug, community }) => {
   );
 };
 
+// ── BC OpenMaps WFS layers card (Feb 2026) ─────────────────────────────
+// Renders ALR / Historical Floodplain / Municipality intersect status for
+// a community's centroid. Every hit carries the source disclaimer inline
+// (digital ALR ≠ legal boundary, flood is HISTORICAL only, muni is
+// current-as-of DataBC refresh). Hidden entirely if the endpoint says
+// unavailable — never render an empty card.
+const CommunityLayersCard = ({slug}) => {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`${API}/community/${slug}/layers`).then(r => { if (alive) setData(r.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!data || data.available === false) return null;
+  const layers = data.layers || {};
+  const Row = ({label, l, id}) => (
+    <div style={{padding:"0.75rem 0", borderTop:"1px solid rgba(15,42,91,0.08)", display:"flex", flexDirection:"column", gap:"0.25rem"}} data-testid={`layer-${id}`}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+        <span style={{fontWeight:700, color:"var(--brand-navy)"}}>{label}</span>
+        <span style={{fontSize:"0.85rem", color: l.hit ? "#065F46" : "var(--muted)", fontWeight:600}}>
+          {l.hit === true ? (l.hit_info ? `Inside · ${l.hit_info}` : "Yes — intersects centroid")
+            : l.hit === false ? "No intersect at centroid"
+            : "Unavailable"}
+        </span>
+      </div>
+      <div style={{fontSize:"0.72rem", color:"var(--muted)", fontStyle:"italic", lineHeight:1.5}}>{l.disclaimer}</div>
+    </div>
+  );
+  return (
+    <div data-testid="community-layers-card" style={{
+      marginTop:"1.5rem",
+      padding:"1rem 1.15rem 0.75rem",
+      background:"#F7FAFF",
+      border:"1px solid rgba(15,42,91,0.15)",
+      borderRadius:12,
+      fontFamily:"Inter,sans-serif",
+    }}>
+      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.2rem", color:"var(--brand-navy)", fontWeight:700}}>
+        BC Land-Use Layers
+      </div>
+      <div style={{fontSize:"0.78rem", color:"var(--muted)", marginTop:"0.2rem", marginBottom:"0.5rem", lineHeight:1.55}}>
+        Point-intersect at the community's canonical centroid ({data.point?.lat?.toFixed(3)}, {data.point?.lng?.toFixed(3)}). General information / estimate only.
+      </div>
+      {layers.muni  && <Row label="Municipal boundary"                  l={layers.muni}  id="muni"/>}
+      {layers.alr   && <Row label="Agricultural Land Reserve (ALR)"     l={layers.alr}   id="alr"/>}
+      {layers.flood && <Row label="Historical mapped floodplain"        l={layers.flood} id="flood"/>}
+      <div style={{marginTop:"0.65rem", fontSize:"0.7rem", color:"var(--muted)", fontStyle:"italic", lineHeight:1.55}}>
+        Source: DataBC OpenMaps WFS · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
+      </div>
+    </div>
+  );
+};
+
+// ── Community Demographics card (Feb 2026, StatCan WDS) ────────────────
+// Renders locked vector IDs pulled from /data/community_statcan_vectors.json.
+// Vector IDs are null until Doug's spreadsheet is imported; until then we
+// show a discreet "being locked in" strip that Google's crawler + human
+// visitors both understand — no partial/misleading numbers.
+const CommunityDemographicsCard = ({slug}) => {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`${API}/community/${slug}/demographics`).then(r => { if (alive) setData(r.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!data) return null;
+  return (
+    <div data-testid="community-demographics-card" style={{
+      marginTop:"1.5rem", padding:"1rem 1.15rem",
+      background:"#F5F0E1", border:"1px solid rgba(218,191,122,0.35)",
+      borderRadius:12, fontFamily:"Inter,sans-serif",
+    }}>
+      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.2rem", color:"var(--brand-navy)", fontWeight:700}}>
+        Community Demographics
+      </div>
+      {data.available === false ? (
+        <div style={{fontSize:"0.87rem", color:"var(--muted)", marginTop:"0.4rem", lineHeight:1.6}}>
+          {data.note || "Being locked in from the Statistics Canada 2021 Census. Check back shortly."}
+        </div>
+      ) : (
+        <div style={{marginTop:"0.5rem"}}>
+          <pre style={{fontSize:"0.78rem", color:"var(--ink)", background:"#fff", padding:"0.75rem", borderRadius:8, overflow:"auto", maxHeight:180}}>
+            {JSON.stringify(data.raw, null, 2).slice(0, 800)}
+          </pre>
+        </div>
+      )}
+      <div style={{marginTop:"0.65rem", fontSize:"0.7rem", color:"var(--muted)", fontStyle:"italic", lineHeight:1.55}}>
+        Source: {data.attribution || "Statistics Canada"} · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
+      </div>
+    </div>
+  );
+};
+
 const CommunityPage = () => {
   const {slug} = useParams();
   const [data, setData] = useState({});
@@ -8331,6 +8424,8 @@ const CommunityPage = () => {
       {(climate?.available || (!loadingWx && wx?.weather)) && wx?.sources && wx.sources.length>0 && <SourcesBlock title="Authoritative Sources — Climate & Weather" intro={`Verify current weather, alerts, and historical climate records with Environment and Climate Change Canada:`} sources={wx.sources} testid="weather-sources"/>}
       {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact/>}
       {!loadingWx && wx?.note && !climate?.available && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
+      <CommunityLayersCard slug={slug}/>
+      <CommunityDemographicsCard slug={slug}/>
 
       {articleLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(articleLd)}}/>}
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(jsonLd)}}/>}
@@ -8399,6 +8494,82 @@ const CommunityPage = () => {
       </div>
     )}
   </div></section>);
+};
+
+// ── BC Address Geocoder autocomplete (Feb 2026) ───────────────────────
+// 300 ms-debounced live typeahead against DataBC's Physical Address
+// Geocoder via /api/valuation/geocode. No fallback map or listing lookup —
+// address only, per spec. When the user picks a suggestion we also
+// auto-fill the sibling `city` field via the onChange meta object.
+const BcGeocoderAutocomplete = ({value, onChange, required=false, testid="bc-geocoder"}) => {
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const q = (value || "").trim();
+    if (q.length < 3) { setResults([]); return; }
+    setBusy(true);
+    const h = setTimeout(() => {
+      axios.get(`${API}/valuation/geocode`, {params: {q, max_results: 5}})
+        .then(r => { setResults(r.data?.results || []); setOpen(true); })
+        .catch(() => setResults([]))
+        .finally(() => setBusy(false));
+    }, 300);
+    return () => clearTimeout(h);
+  }, [value]);
+  useEffect(() => {
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+  const pick = (r) => {
+    setOpen(false);
+    onChange(r.full_address, {locality: r.locality, lat: r.lat, lng: r.lng, site_id: r.site_id});
+  };
+  return (
+    <div ref={boxRef} style={{position:"relative"}}>
+      <input
+        type="text" required={required}
+        value={value || ""}
+        onChange={e => onChange(e.target.value, null)}
+        onFocus={() => value && value.length >= 3 && setOpen(true)}
+        placeholder="Start typing your BC address…"
+        data-testid={`${testid}-input`}
+        autoComplete="off"
+      />
+      {open && results.length > 0 && (
+        <div data-testid={`${testid}-results`} style={{
+          position:"absolute", top:"100%", left:0, right:0, zIndex:20,
+          background:"#fff", border:"1px solid rgba(15,42,91,0.2)", borderRadius:8,
+          marginTop:2, boxShadow:"0 6px 20px rgba(15,42,91,0.15)", overflow:"hidden",
+        }}>
+          {results.map((r, i) => (
+            <button
+              type="button"
+              key={i}
+              onClick={() => pick(r)}
+              data-testid={`${testid}-result-${i}`}
+              style={{
+                display:"block", width:"100%", padding:"0.6rem 0.9rem", textAlign:"left",
+                background: "transparent", border:"none", cursor:"pointer",
+                fontFamily:"Inter,sans-serif", fontSize:"0.92rem", color:"var(--ink)",
+                borderTop: i > 0 ? "1px solid rgba(15,42,91,0.08)" : "none",
+              }}
+              onMouseOver={e => e.currentTarget.style.background = "#F5F0E1"}
+              onMouseOut={e => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{fontWeight:600}}>{r.full_address}</div>
+              {r.locality && <div style={{fontSize:"0.78rem", color:"var(--muted)"}}>{r.locality} · match {Math.round(r.score || 0)}%</div>}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{fontSize:"0.7rem", color:"var(--muted)", marginTop:"0.35rem", fontStyle:"italic"}}>
+        {busy ? "Looking up address…" : "Powered by BC Physical Address Geocoder — DataBC. General information only."}
+      </div>
+    </div>
+  );
 };
 
 // ── PTT + OSFI stress-test panel (Feb 2026) ────────────────────────────
@@ -8549,7 +8720,14 @@ const Valuation = () => {
         <div className="field"><label>Phone *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
         <div className="field"><label>City (BC) *</label><input required value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Property Address *</label><input required value={f.property_address} onChange={e=>setF({...f,property_address:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>Property Address * <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(BC Geocoder autocomplete)</span></label>
+        <BcGeocoderAutocomplete
+          value={f.property_address}
+          onChange={(addr, meta) => setF({...f, property_address: addr, ...(meta?.locality ? {city: meta.locality} : {})})}
+          required
+          testid="valuation-address"
+        />
+      </div>
       <div className="form-grid" style={{marginTop:"1rem"}}>
         <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
         <div className="field"><label>When are you thinking of selling?</label><select value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just curious</option></select></div>

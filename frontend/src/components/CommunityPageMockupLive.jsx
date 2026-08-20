@@ -120,6 +120,73 @@ const fmtMoney = (n) => {
   return `$${n.toLocaleString("en-CA")}`;
 };
 
+// ── BC OpenMaps WFS layers + StatCan demographics (Feb 2026) ─────────
+// Inline components local to the live community page.
+function CommunityLayersInline({ slug }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`${API}/api/community/${slug}/layers`).then(r => { if (alive) setData(r.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!data || data.available === false) return null;
+  const layers = data.layers || {};
+  const Row = ({label, l, id}) => (
+    <div style={{padding:"10px 0", borderTop:"1px solid rgba(15,42,91,0.08)"}} data-testid={`layer-${id}`}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}>
+        <span style={{fontWeight:700, color:BRAND.navy, fontSize:"0.94rem"}}>{label}</span>
+        <span style={{fontSize:"0.85rem", color: l.hit ? "#065F46" : BRAND.muted, fontWeight:600}}>
+          {l.hit === true ? (l.hit_info ? `Inside · ${l.hit_info}` : "Yes — intersects centroid")
+            : l.hit === false ? "No intersect at centroid"
+            : "Unavailable"}
+        </span>
+      </div>
+      <div style={{fontSize:"0.72rem", color:BRAND.muted, fontStyle:"italic", lineHeight:1.5, marginTop:4}}>{l.disclaimer}</div>
+    </div>
+  );
+  return (
+    <div data-testid="community-layers-card" style={{marginTop:20, padding:"18px 20px 14px", background:"#F7FAFF", border:"1px solid rgba(15,42,91,0.15)", borderRadius:14, maxWidth:820}}>
+      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.15rem", color:BRAND.navy, fontWeight:700}}>BC Land-Use Layers</div>
+      <div style={{fontSize:"0.78rem", color:BRAND.muted, marginTop:4, marginBottom:6, lineHeight:1.55}}>
+        Point-intersect at the community's canonical centroid ({data.point?.lat?.toFixed(3)}, {data.point?.lng?.toFixed(3)}). General information / estimate only.
+      </div>
+      {layers.muni  && <Row label="Municipal boundary"              l={layers.muni}  id="muni"/>}
+      {layers.alr   && <Row label="Agricultural Land Reserve (ALR)" l={layers.alr}   id="alr"/>}
+      {layers.flood && <Row label="Historical mapped floodplain"    l={layers.flood} id="flood"/>}
+      <div style={{marginTop:10, fontSize:"0.7rem", color:BRAND.muted, fontStyle:"italic", lineHeight:1.55}}>
+        Source: DataBC OpenMaps WFS · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
+      </div>
+    </div>
+  );
+}
+
+function CommunityDemographicsInline({ slug }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    axios.get(`${API}/api/community/${slug}/demographics`).then(r => { if (alive) setData(r.data); }).catch(() => {});
+    return () => { alive = false; };
+  }, [slug]);
+  if (!data) return null;
+  return (
+    <div data-testid="community-demographics-card" style={{marginTop:16, padding:"16px 20px", background:"#F5F0E1", border:"1px solid rgba(218,191,122,0.35)", borderRadius:14, maxWidth:820}}>
+      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.15rem", color:BRAND.navy, fontWeight:700}}>Community Demographics</div>
+      {data.available === false ? (
+        <div style={{fontSize:"0.87rem", color:BRAND.muted, marginTop:6, lineHeight:1.6}}>
+          {data.note || "Being locked in from the Statistics Canada 2021 Census. Check back shortly."}
+        </div>
+      ) : (
+        <pre style={{fontSize:"0.78rem", color:BRAND.ink, background:"#fff", padding:"10px", borderRadius:8, overflow:"auto", maxHeight:180, marginTop:8}}>
+          {JSON.stringify(data.raw, null, 2).slice(0, 800)}
+        </pre>
+      )}
+      <div style={{marginTop:10, fontSize:"0.7rem", color:BRAND.muted, fontStyle:"italic", lineHeight:1.55}}>
+        Source: {data.attribution || "Statistics Canada"} · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ──────────────────────────────────────────────────
 export default function CommunityPageMockupLive({ live = false } = {}) {
   // Slug source depends on how the component is mounted:
@@ -606,6 +673,10 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         ) : (
           <div style={{fontSize:"0.85rem",color:BRAND.muted}}>Climate summary not available for this community.</div>
         )}
+
+        {/* ── § BC LAND-USE LAYERS + DEMOGRAPHICS (Feb 2026) ────────── */}
+        <CommunityLayersInline slug={slug}/>
+        <CommunityDemographicsInline slug={slug}/>
 
         {/* ── § FAQ ─────────────────────────────────────────────────── */}
         <SectionH kicker="§6 · FAQ">Frequently asked about {community}</SectionH>
