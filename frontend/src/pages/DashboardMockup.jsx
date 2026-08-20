@@ -6090,7 +6090,7 @@ const HomeExtras = () => {
       quote: "I can clearly say my experience with Doug has been excellent. I would have no problem either working with Doug again, or recommending him to others.",
     },
     {
-      stars: 5, initials: "CC", name: "Carol C.", role: "Buyer — Pitt Meadows Condo",
+      stars: 5, initials: "CC", name: "Carol C.", role: "Buyer",
       quote: "Doug helped me purchase my beautiful condo in Pitt Meadows. He was very patient while I was looking for my dream condo. He helped negotiate a good price and was very professional. I would recommend him to anyone who is also searching for their dream home.",
     },
     {
