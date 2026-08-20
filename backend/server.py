@@ -985,6 +985,59 @@ async def _build_doogie_routing_hint(message: str, session_id: str) -> tuple[str
     return _DOOGIE_ROUTING_HINTS.get(intent, ""), routing_meta
 
 
+# ── Glossary citation extractor for Doogie (Feb 2026) ──────────────────
+# Scans an assistant reply against a curated list of BC-real-estate
+# glossary term aliases and returns chip metadata for the frontend to
+# render "→ /glossary/{slug}" citation chips beneath the reply. First
+# match per slug wins; results retain match order so the top-cited term
+# appears first. Kept module-level (no LLM roundtrip) so it adds < 1 ms
+# to the /doogie/chat SSE stream.
+_DOOGIE_GLOSSARY_CITATIONS: list[dict] = [
+    {"slug": "property-transfer-tax-ptt",              "label": "PTT",              "aliases": [r"Property Transfer Tax", r"\bPTT\b"]},
+    {"slug": "gst-new-housing-rebate-bc",              "label": "GST Rebate",       "aliases": [r"GST New Housing Rebate", r"GST rebate"]},
+    {"slug": "agricultural-land-reserve-alr",          "label": "ALR",              "aliases": [r"Agricultural Land Reserve", r"\bALR\b"]},
+    {"slug": "subject-removal",                        "label": "Subject Removal",  "aliases": [r"Subject Removal", r"subject removal"]},
+    {"slug": "2-5-10-home-warranty",                   "label": "2-5-10 Warranty",  "aliases": [r"2-5-10 Home Warranty", r"2-5-10 warranty", r"\b2-5-10\b"]},
+    {"slug": "form-b-strata-information-certificate",  "label": "Form B",           "aliases": [r"Form B — Strata Information Certificate", r"\bForm B\b"]},
+    {"slug": "amortization-period",                    "label": "Amortization",     "aliases": [r"Amortization Period", r"\bamortization\b"]},
+    {"slug": "first-time-home-buyers-program-ptt",     "label": "FTB Exemption",    "aliases": [r"First Time Home Buyers'? Program", r"First-Time Home Buyer Exemption"]},
+    {"slug": "disclosure-of-representation-in-trading-services-dorts", "label": "DORTS",           "aliases": [r"Disclosure of Representation in Trading Services", r"\bDORTS\b"]},
+    {"slug": "strata-property-act",                    "label": "Strata Property Act", "aliases": [r"Strata Property Act"]},
+    {"slug": "bcfsa",                                   "label": "BCFSA",            "aliases": [r"\bBCFSA\b"]},
+    {"slug": "mls",                                    "label": "MLS®",             "aliases": [r"\bMLS®?\b"]},
+    {"slug": "crea-ddf",                               "label": "CREA DDF®",        "aliases": [r"CREA DDF®?"]},
+    {"slug": "casl",                                   "label": "CASL",             "aliases": [r"\bCASL\b"]},
+    {"slug": "pipa",                                   "label": "PIPA",             "aliases": [r"\bPIPA\b"]},
+]
+
+
+def _extract_doogie_citations(text: str) -> list[dict]:
+    """Return list of {slug,label,url} citations for glossary terms
+    mentioned in `text`. Deduped by slug; max 6 chips per reply."""
+    if not text:
+        return []
+    seen: set[str] = set()
+    out: list[dict] = []
+    for entry in _DOOGIE_GLOSSARY_CITATIONS:
+        if entry["slug"] in seen:
+            continue
+        for pat in entry["aliases"]:
+            try:
+                if re.search(pat, text, re.IGNORECASE):
+                    seen.add(entry["slug"])
+                    out.append({
+                        "slug":  entry["slug"],
+                        "label": entry["label"],
+                        "url":   f"/glossary/{entry['slug']}",
+                    })
+                    break
+            except re.error:
+                continue
+        if len(out) >= 6:
+            break
+    return out
+
+
 def _stream_cached_doogie_reply(cached_text: str, session_id: str) -> StreamingResponse:
     """Emit a cached Doogie reply as an SSE stream so the UX still feels
     natural (~40-char chunks, ~15ms apart) and log the assistant message."""
@@ -994,6 +1047,11 @@ def _stream_cached_doogie_reply(cached_text: str, session_id: str) -> StreamingR
         for i in range(0, len(text), CHUNK):
             yield f"data: {json.dumps({'delta': text[i:i+CHUNK]})}\n\n"
             await asyncio.sleep(0.015)   # ~15ms between chunks
+        # Emit glossary citations before 'done' so the frontend can render
+        # citation chips beneath the streamed reply.
+        cites = _extract_doogie_citations(text)
+        if cites:
+            yield f"data: {json.dumps({'citations': cites})}\n\n"
         await db.chat_messages.insert_one({
             "session_id": session_id, "role": "assistant",
             "content": text, "ts": now_iso(), "cached": True,
@@ -1061,6 +1119,11 @@ def _stream_live_doogie_reply(chat, original_message: str, session_id: str,
             # with no PII. Sits behind a helper so we can tweak the eligibility rule
             # in one place. Cache key uses the redacted message (safe to key on).
             await _save_doogie_cache(redacted_msg, lang, prior_count, pii_flags, redacted_reply)
+            # Emit glossary citations before 'done' so the frontend can
+            # render citation chips beneath the streamed reply.
+            cites = _extract_doogie_citations(full)
+            if cites:
+                yield f"data: {json.dumps({'citations': cites})}\n\n"
             yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'pii_redacted': bool(pii_flags)})}\n\n"
         except Exception as e:
             logger.error(f"Doogie error: {e}")

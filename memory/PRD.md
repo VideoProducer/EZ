@@ -39,6 +39,17 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 5 — Glossary Discovery + Conversion Surfaces (Feb 2026 — this session)
+- **Popular Terms footer row** — 8 config-driven links (PTT, GST, ALR, Subject Removal, 2-5-10 Warranty, Form B, Amortization, FTB Exemption) added to:
+  - Sitewide App.js Footer (`data-testid="footer-popular-terms"` column)
+  - DashboardMockup homepage ComplianceFooter (chip row above compliance columns)
+- **Inline auto-linked term chips** — `<GlossaryProse text="…"/>` component (`/frontend/src/utils/glossary.jsx`) auto-underlines the first mention of each popular term with a dotted underline linking to `/glossary/{slug}`. Applied to `/buyer`, `/seller`, `/valuation` form hero intros; `/community/{slug}` intro card; and `/listing/{key}` "About This Property" primer
+- **Doogie citation chips** — backend `/api/doogie/chat` SSE now emits a `{"citations":[...]}` event before `done` for any reply containing a curated glossary term. Chips render on BOTH Doogie surfaces:
+  - App.js `DoogieChat` FAB widget → `data-testid="doogie-citation-chip-{slug}"`
+  - DashboardMockup `AskDoogieDrawer` sidebar (homepage) → `data-testid="dash-ask-citation-chip-{slug}"`
+- **Brokerage licence #167790 baked into schema graph** — replaced "PENDING" placeholder in `SiteWideSchema.jsx` + `LiveHomepageSchema.jsx` so BCFSA JSON-LD is fully populated for both Person and Organization entities
+
+
 ### Phase 5 — Global logo unification (Feb 17, 2026)
 - **EZtoFind.ca wordmark** unified across the entire site to: solid **BrandBlue (#0A3D99)** for "EZtoFind" + **BrandGold (#F9BD00)** for ".ca"
 - Removed the older 3–4-color split variants (green "EZ" + navy "to" + blue "Find" + gold ".ca")

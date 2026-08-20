@@ -11,6 +11,7 @@ import axios from "axios";
 axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
+import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./utils/glossary";
 import MyJourney from "./pages/MyJourney";
 import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
@@ -1048,6 +1049,12 @@ const Nav = () => {
   );
 };
 
+// ── Popular Glossary Terms (Feb 2026) ───────────────────────────────────
+// Config + <GlossaryProse/> component live in ./utils/glossary and are
+// imported at the top of this file (see imports section) so sibling
+// files (CommunityPageMockupLive, ListingMagazine3015) can share them
+// without pulling in App.js.
+
 const Footer = () => (
   <footer><div className="container-x">
     <div className="footer-grid">
@@ -1067,6 +1074,11 @@ const Footer = () => (
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Market Estimate</Link></li>
+      </ul></div>
+      <div data-testid="footer-popular-terms"><h4>Popular Terms</h4><ul>
+        {POPULAR_GLOSSARY_TERMS.map(t => (
+          <li key={t.slug}><Link to={`/glossary/${t.slug}`} data-testid={`footer-glossary-${t.slug}`}>{t.label}</Link></li>
+        ))}
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
         <li><Link to="/realtor-network">REALTOR® Network</Link></li>
@@ -1565,6 +1577,11 @@ export const DoogieChat = ({ mode = "fab" }) => {
           try {
             const j = JSON.parse(line.slice(5).trim());
             if(j.delta) { gotAnyContent = true; setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], role:"assistant",content:(c[c.length-1].content||"")+j.delta}; return c; }); }
+            else if(j.citations) {
+              // Backend-detected glossary term chips — appended below the streamed reply.
+              const cites = Array.isArray(j.citations) ? j.citations : [];
+              setMsgs(m => { const c=[...m]; c[c.length-1] = {...c[c.length-1], citations: cites}; return c; });
+            }
             else if(j.done) {
               // Capture the fully-streamed text OUTSIDE the state setter so
               // we can speak it exactly once. Ref-guard prevents ANY re-fire
@@ -1656,7 +1673,17 @@ export const DoogieChat = ({ mode = "fab" }) => {
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
           </div>);
         }
-        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-assisted retrieval from EZtoFind.ca's approved content · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}{m.role==="assistant" && i > 0 && (() => { const prev = msgs.slice(0, i).reverse().find(x => x.role === "user"); return prev && prev.content ? <DoogieRelatedChips query={prev.content} testIdPrefix={`doogie-chip-${i}`}/> : null; })()}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
+        return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && Array.isArray(m.citations) && m.citations.length > 0 && (
+          <div data-testid={`doogie-citations-${i}`} style={{display:"flex",gap:"0.35rem",flexWrap:"wrap",marginTop:"0.55rem"}}>
+            {m.citations.map(c => (
+              <Link key={c.slug} to={c.url} data-testid={`doogie-citation-chip-${c.slug}`}
+                style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",fontWeight:600,color:"var(--brand-navy)",background:"rgba(15,42,91,0.08)",border:"1px solid rgba(15,42,91,0.15)",padding:"0.2rem 0.55rem",borderRadius:999,textDecoration:"none",whiteSpace:"nowrap"}}
+                title={`Open ${c.label} in the glossary`}>
+                → {c.label}
+              </Link>
+            ))}
+          </div>
+        )}{m.role==="assistant" && i > 0 && <div style={{fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic",opacity:0.8}}>🤖 AI-assisted retrieval from EZtoFind.ca's approved content · General information only · <Link to={`/privacy${langQS(lang)}`} style={{color:"var(--muted)"}}>Privacy</Link></div>}{m.role==="assistant" && i > 0 && (() => { const prev = msgs.slice(0, i).reverse().find(x => x.role === "user"); return prev && prev.content ? <DoogieRelatedChips query={prev.content} testIdPrefix={`doogie-chip-${i}`}/> : null; })()}</> : (busy && i===msgs.length-1 ? "…" : "")}</div>;
       })}</div>
       <form onSubmit={send} style={{display:"flex",gap:"0.35rem",alignItems:"center",padding:"0.5rem"}}>
         <button type="button" onClick={toggleMic} data-testid="doogie-mic"
@@ -4415,6 +4442,7 @@ const ListingDetail = () => {
   const q = encodeURIComponent(`${listing.street_address}, ${listing.city}, BC, Canada`);
   return (
     <TermsGate>
+    <GlossaryPageProvider>
     <section className="section"><div className="container-x">
       <Link to="/listings" data-testid="back-to-listings" style={{fontFamily:"Inter,sans-serif",color:"var(--brand-blue)",fontSize:"0.9rem"}}>← All listings</Link>
       <Breadcrumbs items={[
@@ -4516,6 +4544,10 @@ const ListingDetail = () => {
           </div>
           <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
+          {/* Term-linked buyer-cost primer — first mention of PTT/GST/etc auto-links to glossary (Feb 2026). */}
+          <div data-testid="listing-glossary-primer" style={{marginTop:"1rem",padding:"14px 18px",background:"rgba(15,42,91,0.04)",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.86rem",lineHeight:1.65,color:"var(--muted)"}}>
+            <GlossaryProse text={"Typical closing considerations for this property: Property Transfer Tax at completion (with the First Time Home Buyers' Program if eligible), GST New Housing Rebate on new construction, and — for strata units — a fresh Form B — Strata Information Certificate reviewed before Subject Removal. New builds carry the 2-5-10 Home Warranty. Rural acreages may fall inside the Agricultural Land Reserve. Your monthly payment turns on your Amortization Period and the OSFI B-20 stress test."}/>
+          </div>
           <FeatureSheet listing={listing}/>
           {listing.virtual_tour_embed?.url && (
             <div style={{marginTop:"1.75rem"}} data-testid="listing-virtual-tour">
@@ -4641,6 +4673,7 @@ const ListingDetail = () => {
     </div></section>
     {/* Present Mode overlay — full-screen slideshow for TV casting / meetings */}
     {presentOpen && <ListingPresentMode listing={listing} onExit={() => setPresentOpen(false)}/>}
+    </GlossaryPageProvider>
     </TermsGate>
   );
 };
@@ -5804,6 +5837,10 @@ const BuyerForm = () => {
       ]
     })}}/>
     <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
+    <GlossaryPageProvider>
+    <div data-testid="buyer-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
+      <GlossaryProse text={"Buying a home in BC involves seven checkpoints — pre-approval under OSFI B-20, DORTS disclosure with your REALTOR®, live MLS® search, offer with standard subjects (financing, inspection, and — for strata units — the Form B — Strata Information Certificate), Subject Removal, deposit, and closing with your lawyer. Common line items you'll budget for include the Property Transfer Tax (with the First Time Home Buyers' Program exemption if eligible), GST New Housing Rebate on new builds, and the 2-5-10 Home Warranty on new construction. If you're looking rural, watch for Agricultural Land Reserve status. Your Amortization Period drives the monthly payment. Ask Doogie any term — Doug will guide the transaction."}/>
+    </div>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
       <div className="form-grid">
@@ -5833,6 +5870,7 @@ const BuyerForm = () => {
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">{t("common.submit")}</button>
     </form>
+    </GlossaryPageProvider>
   </div></section>);
 };
 
@@ -5862,6 +5900,10 @@ const SellerForm = () => {
       ]
     })}}/>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
+    <GlossaryPageProvider>
+    <div data-testid="seller-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
+      <GlossaryProse text={"Selling a home in BC starts with a Comparative Market Analysis, then a listing contract + DORTS. You'll complete the Property Disclosure Statement, stage and photograph, and go live on MLS® with your Amortization Period assumptions in mind for pricing (rate-sensitive buyers). Common considerations: Property Transfer Tax borne by the buyer, GST New Housing Rebate if you built new, Agricultural Land Reserve status if the parcel is rural, and — for strata — a fresh Form B — Strata Information Certificate. After offer negotiation, buyer completes Subject Removal, delivers deposit, and closes with a lawyer or notary."}/>
+    </div>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">
       <div className="form-grid">
@@ -5891,6 +5933,7 @@ const SellerForm = () => {
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">{t("common.submit")}</button>
     </form>
+    </GlossaryPageProvider>
   </div></section>);
 };
 
@@ -8849,6 +8892,10 @@ const Valuation = () => {
     <img loading="lazy" decoding="async" src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
     <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">Curious what your home could be worth?</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get a free market estimate from Doug within 24 hours.</p>
+    <GlossaryPageProvider>
+    <div data-testid="valuation-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
+      <GlossaryProse text={"Your home's market estimate accounts for recent comparable sales, the property's condition, current buyer demand, and — for buyers reading listings today — mortgage math tied to their Amortization Period and the OSFI B-20 stress test. Buyer closing costs (Property Transfer Tax, potential GST New Housing Rebate on a new build, 2-5-10 Home Warranty on new construction, and — for strata — a fresh Form B — Strata Information Certificate) shape what a buyer can afford. Rural parcels are also affected by Agricultural Land Reserve status. Once we agree on price, a buyer's Subject Removal is the next milestone. Free, no obligation."}/>
+    </div>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
       <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
@@ -8884,6 +8931,7 @@ const Valuation = () => {
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
     </form>
     <PttStressTestPanel/>
+    </GlossaryPageProvider>
   </div></section>);
 };
 

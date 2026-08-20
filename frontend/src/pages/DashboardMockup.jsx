@@ -35,6 +35,7 @@ import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { FLAGSHIP } from "../config/flagshipListing";
 import ListingPhotoLightbox from "../components/ListingPhotoLightbox";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
+import { POPULAR_GLOSSARY_TERMS } from "../utils/glossary";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
 import ReferralAsk from "../components/ReferralAsk";
@@ -5242,7 +5243,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
   const send = async () => {
     if (!q.trim() || busy) return;
     const question = q.trim();
-    setHistory(h => [...h, { role: "user", text: question }, { role: "doogie", text: "", routing: null }]);
+    setHistory(h => [...h, { role: "user", text: question }, { role: "doogie", text: "", routing: null, citations: [] }]);
     setQ(""); setBusy(true);
     try {
       const res = await fetch(`${API}/doogie/chat`, {
@@ -5255,6 +5256,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
       let buffer = "";
       let acc = "";
       let routing = null;
+      let citations = [];
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { value, done } = await reader.read();
@@ -5273,21 +5275,29 @@ const AskDoogieDrawer = ({ open, onClose }) => {
               routing = j.routing;
               setHistory(h => {
                 const copy = [...h];
-                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing, citations };
+                return copy;
+              });
+            } else if (Array.isArray(j.citations)) {
+              // Backend-detected glossary term chips — appended below the reply.
+              citations = j.citations;
+              setHistory(h => {
+                const copy = [...h];
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing, citations };
                 return copy;
               });
             } else if (typeof j.delta === "string") {
               acc += j.delta;
               setHistory(h => {
                 const copy = [...h];
-                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing, citations };
                 return copy;
               });
             } else if (typeof j.error === "string") {
               acc += `\n\n⚠️ ${j.error}`;
               setHistory(h => {
                 const copy = [...h];
-                copy[copy.length - 1] = { role: "doogie", text: acc, routing };
+                copy[copy.length - 1] = { role: "doogie", text: acc, routing, citations };
                 return copy;
               });
             }
@@ -5297,7 +5307,7 @@ const AskDoogieDrawer = ({ open, onClose }) => {
       if (!acc) {
         setHistory(h => {
           const copy = [...h];
-          copy[copy.length - 1] = { role: "doogie", text: "I couldn't reach my brain just now — try again in a moment.", routing };
+          copy[copy.length - 1] = { role: "doogie", text: "I couldn't reach my brain just now — try again in a moment.", routing, citations };
           return copy;
         });
       }
@@ -5365,6 +5375,26 @@ const AskDoogieDrawer = ({ open, onClose }) => {
                 </div>
               )}
               {m.role === "user" ? m.text : <DoogieMessage text={m.text}/>}
+              {m.role === "doogie" && Array.isArray(m.citations) && m.citations.length > 0 && (
+                <div data-testid={`dash-ask-citations-${i}`} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                  {m.citations.map(c => (
+                    <Link
+                      key={c.slug}
+                      to={c.url}
+                      data-testid={`dash-ask-citation-chip-${c.slug}`}
+                      onClick={onClose}
+                      style={{
+                        fontSize: 11, fontWeight: 700, color: C.navy,
+                        background: "rgba(15,42,91,0.08)",
+                        border: "1px solid rgba(15,42,91,0.15)",
+                        padding: "3px 9px", borderRadius: 999,
+                        textDecoration: "none", whiteSpace: "nowrap",
+                      }}
+                      title={`Open ${c.label} in the glossary`}
+                    >→ {c.label}</Link>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
           {busy && <div style={{ color: C.muted, fontStyle: "italic" }}>Doogie is thinking…</div>}
@@ -6240,6 +6270,28 @@ const ComplianceFooter = () => (
   <footer data-testid="dash-compliance-footer" style={{
     background: C.navy, color: "#fff", padding: "18px 32px", fontSize: 11, lineHeight: 1.6,
   }}>
+    {/* Popular Terms row — glossary discovery on the highest-traffic page */}
+    <div data-testid="footer-popular-terms" style={{
+      display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10,
+      marginBottom: 16, paddingBottom: 14,
+      borderBottom: "1px solid rgba(255,255,255,0.15)",
+    }}>
+      <strong style={{ color: C.gold, marginRight: 6 }}>Popular Terms:</strong>
+      {POPULAR_GLOSSARY_TERMS.map(t => (
+        <Link
+          key={t.slug}
+          to={`/glossary/${t.slug}`}
+          data-testid={`footer-glossary-${t.slug}`}
+          style={{
+            color: "#fff", background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            padding: "3px 10px", borderRadius: 999,
+            textDecoration: "none", fontSize: 11, fontWeight: 600,
+            whiteSpace: "nowrap",
+          }}
+        >{t.label}</Link>
+      ))}
+    </div>
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 24, opacity: 0.9 }}>
       <div>
         <strong style={{ color: C.gold }}>CREA Compliance</strong><br/>

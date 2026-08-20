@@ -15,6 +15,7 @@ import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom"
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
+import { GlossaryPageProvider, GlossaryProse } from "../utils/glossary";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -524,6 +525,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
       )}
 
       {!loading && !error && (
+      <GlossaryPageProvider>
       <div style={{maxWidth:"1100px",margin:"0 auto",padding:"28px 20px",fontFamily:"Inter,sans-serif"}}>
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
@@ -573,6 +575,11 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>🏡 View {active.toLocaleString()} listings</Link>
           </div>
+        </div>
+
+        {/* Term-linked intro paragraph — first-mention glossary chips (Feb 2026) */}
+        <div data-testid="community-glossary-intro" style={{marginTop:24,padding:"18px 22px",background:"white",border:"1px solid #E5E7EB",borderRadius:12,fontSize:"0.94rem",lineHeight:1.7,color:BRAND.ink}}>
+          <GlossaryProse text={`Buying in ${community} typically involves Property Transfer Tax at closing, a possible First Time Home Buyers' Program exemption for qualifying first-timers, GST New Housing Rebate math on new construction, and — for any strata unit — reviewing a current Form B — Strata Information Certificate before Subject Removal. New builds carry the mandatory 2-5-10 Home Warranty. Rural or acreage parcels around ${community} may sit within the Agricultural Land Reserve, which restricts subdivision and non-farm use. Your monthly payment depends on your Amortization Period and the OSFI B-20 stress test.`}/>
         </div>
 
         {/* ── § SPATIAL ─────────────────────────────────────────────── */}
@@ -731,6 +738,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           © 2026 EZtoFind.ca · Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · MLS® data © CREA DDF® · Climate © Environment and Climate Change Canada · Population © Statistics Canada. General information only — not real-estate, legal, tax, or financial advice.
         </div>
       </div>
+      </GlossaryPageProvider>
       )}
     </div>
   );
