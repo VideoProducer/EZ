@@ -36,6 +36,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { HostedTourEmbed } from "./HostedTourEmbed";
 
 // Design tokens — kept local so the tile is self-contained.
 const C = {
@@ -70,6 +71,7 @@ export default function FeaturedComingSoonListing({
   description = "A cared-for home in a family-friendly BC neighbourhood.  Full details, photos, and MLS® number will be posted here the moment the listing goes live.",
   video_url = "",                    // direct mp4/webm URL or YouTube/Vimeo link
   video_poster = "",                 // optional poster image before the user clicks play
+  hosted_tour_url = "",              // Cotala / Matterport / iGuide embed-safe URL (takes priority over video_url)
   // Just-listed mode props (used only when mode === "just_listed"):
   listing_key = null,                // once live, drive from this
   address = "",                      // full address (post-MLS only)
@@ -120,7 +122,28 @@ export default function FeaturedComingSoonListing({
             <h2 id="featured-listing-h2" style={{ fontFamily: "Sora,sans-serif", color: "#fff", fontSize: "clamp(1.6rem, 3.6vw, 2.2rem)", fontWeight: 800, margin: "12px 0 10px", lineHeight: 1.15 }}>
               {address}
             </h2>
-            <div style={{ fontFamily: "Sora,sans-serif", color: C.gold, fontSize: "2rem", fontWeight: 800, marginBottom: 12 }}>
+            <div
+              data-testid="featured-listing-price"
+              style={{
+                // Solid gold pill on the navy hero — maximum contrast so
+                // the asking price is legible on every device including
+                // sunlight-viewed mobile screens. Sora 900 weight +
+                // dark inner shadow prevents the gold from washing out
+                // against the light-gold text colour.
+                display: "inline-block",
+                background: C.gold,
+                color: C.navy,
+                fontFamily: "Sora,sans-serif",
+                fontSize: "clamp(1.65rem, 4.4vw, 2.4rem)",
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                padding: "6px 18px",
+                borderRadius: 10,
+                marginBottom: 14,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.35), inset 0 -3px 0 rgba(15,42,91,0.15)",
+                textShadow: "0 1px 0 rgba(255,255,255,0.35)",
+              }}
+            >
               ${(price || 0).toLocaleString("en-CA")}
             </div>
             <div style={{ color: "#fff", opacity: 0.9, fontSize: "0.95rem", marginBottom: 8 }}>
@@ -145,11 +168,20 @@ export default function FeaturedComingSoonListing({
               </div>
             )}
           </div>
-          <VideoBlock
-            url={video_url} poster={video_poster || photo_url} playing={videoPlaying}
-            onPlay={() => setVideoPlaying(true)} fallbackPoster={photo_url}
-            ariaLabel={`Video walk-through of ${address}`}
-          />
+          {hosted_tour_url ? (
+            <HostedTourEmbed
+              url={hosted_tour_url}
+              title={`Walk-through — ${address}`}
+              testId="featured-listing-hosted-tour"
+              aspectRatio="75%"
+            />
+          ) : (
+            <VideoBlock
+              url={video_url} poster={video_poster || photo_url} playing={videoPlaying}
+              onPlay={() => setVideoPlaying(true)} fallbackPoster={photo_url}
+              ariaLabel={`Video walk-through of ${address}`}
+            />
+          )}
         </div>
       </section>
     );

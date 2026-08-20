@@ -75,15 +75,18 @@ export default function LuxuryFlagshipCard() {
                     // Solid navy pill so the asking price always stands
                     // out regardless of the parent surface (cream, dark
                     // hero backdrop, or listing card ground-tile bleed).
+                    // Bumped weight to 900 + larger clamp so it reads
+                    // clearly on mobile hero surfaces without washing.
                     background: "#0F2A5B",
                     color: "#F5A623",
-                    padding: "6px 14px",
+                    padding: "8px 18px",
                     borderRadius: 999,
                     fontFamily: "'Sora', sans-serif",
-                    fontSize: "1rem",
-                    fontWeight: 800,
-                    letterSpacing: "0.04em",
-                    boxShadow: "0 4px 12px rgba(15,42,91,0.25)",
+                    fontSize: "clamp(1.05rem, 2.6vw, 1.35rem)",
+                    fontWeight: 900,
+                    letterSpacing: "0.02em",
+                    boxShadow: "0 6px 18px rgba(15,42,91,0.35)",
+                    textShadow: "0 1px 0 rgba(0,0,0,0.35)",
                   }}
                 >
                   ${Number(price).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

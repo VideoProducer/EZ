@@ -5955,19 +5955,34 @@ const DashboardFeaturedListing = () => {
                   }}
                 >MLS® {merged.mls} ↗</a>
               )}
-              {/* Price overlay — bottom-left of the photo. */}
-              {live && (
+              {/* Price overlay — bottom-left of the photo. Rendered on
+                  snapshot data too (not gated on live hydration) so the
+                  asking price is always visible above-the-fold — even
+                  before DDF resolves. Solid gold pill delivers maximum
+                  contrast against any hero photo so it never washes out
+                  on bright / mobile screens. */}
+              {merged.price && (
                 <div style={{
                   position: "absolute", inset: "auto 12px 12px", display: "flex",
                   justifyContent: "flex-start", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
                 }}>
-                  <div>
-                    <div style={{
-                      fontFamily: "'Playfair Display', serif", fontWeight: 800,
-                      fontSize: 30, color: "#fff", lineHeight: 1,
-                      textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-                    }} data-testid="dash-featured-price">{fmtPriceShort(merged.price)}</div>
-                  </div>
+                  <div
+                    data-testid="dash-featured-price"
+                    style={{
+                      display: "inline-block",
+                      background: C.brandGold,
+                      color: C.navy,
+                      fontFamily: "'Sora', sans-serif",
+                      fontWeight: 900,
+                      fontSize: "clamp(20px, 4.5vw, 32px)",
+                      lineHeight: 1,
+                      letterSpacing: "-0.01em",
+                      padding: "10px 18px",
+                      borderRadius: 10,
+                      boxShadow: "0 10px 26px rgba(0,0,0,0.45), inset 0 -3px 0 rgba(15,42,91,0.15)",
+                      textShadow: "0 1px 0 rgba(255,255,255,0.4)",
+                    }}
+                  >{fmtPriceShort(merged.price)}</div>
                 </div>
               )}
               {merged.photos.length > 1 && (
@@ -6040,6 +6055,30 @@ const DashboardFeaturedListing = () => {
           <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
             {merged.headline}
           </p>
+
+          {merged.price && (
+            <div
+              data-testid="dash-featured-price-inline"
+              style={{
+                display: "inline-block",
+                background: C.navy,
+                color: C.brandGold,
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 900,
+                fontSize: "clamp(22px, 4vw, 30px)",
+                lineHeight: 1.05,
+                letterSpacing: "-0.01em",
+                padding: "8px 16px",
+                borderRadius: 10,
+                boxShadow: "0 6px 18px rgba(15,42,91,0.35)",
+                textShadow: "0 1px 0 rgba(0,0,0,0.35)",
+                marginBottom: 14,
+                alignSelf: "flex-start",
+              }}
+            >
+              {fmtPriceShort(merged.price)}
+            </div>
+          )}
 
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12,

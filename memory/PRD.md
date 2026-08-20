@@ -39,6 +39,14 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 14.1 — Flagship price contrast + Cotala embed reconfirm (Feb 20 2026)
+- **Bold, high-contrast pricing** on both flagship surfaces so the asking price is legible on any device (including bright mobile screens where the previous white-text-on-photo washed out).
+  - Homepage flagship (`DashboardFeaturedListing`): swapped washed-out white text overlay for a solid **gold pill** (`clamp(20-32px)`, Sora 900) at the bottom-left of the hero photo — no longer gated on live DDF hydration. Added a second **navy-pill inline price** in the details column so the price stays visible even when the hero swaps to the tour iframe.
+  - `LuxuryFlagshipCard` price pill: font-weight boosted to 900, `clamp(1.05-1.35rem)`, deeper shadow.
+  - `FeaturedComingSoonListing` just-listed mode: solid gold pill (Sora 900, `clamp(1.65-2.4rem)`).
+- **New `hosted_tour_url` prop** on `FeaturedComingSoonListing` — renders `<HostedTourEmbed/>` (Cotala/Matterport-safe) in place of the click-to-play VideoBlock when set.
+- Cotala tour URL confirmed on all flagship surfaces: `https://tours.cotala.com/87725` (R3156192).
+
 ### Phase 14 — Cotala Hosted Tour (Permanent Fix) (Feb 2026 — this session)
 - **Root cause**: Both the DDF-supplied Vimeo (`1218107137`) AND the fallback YouTube (`JS_oWYNOdTU`) had their embed permissions flipped OFF by the respective video owners. YouTube/Vimeo enforce owner-set embed restrictions server-side — no URL parameter, embed domain, or client-side trick can bypass them. Every DDF site hits the same wall the moment an owner flips the switch.
 - **Permanent fix**: switched both marketing surfaces (`/` homepage featured card, `/specialties/luxury` flagship page) to a hosted Cotala tour (`https://tours.cotala.com/87725`). Cotala is purpose-built for real-estate tour embedding — no owner-side "disable embedding" toggle, no domain allowlist mechanism — so embeds cannot be broken by a permission flip.

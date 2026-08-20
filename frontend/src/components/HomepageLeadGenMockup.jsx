@@ -408,6 +408,7 @@ export default function HomepageLeadGenMockup({ previewFlagship = FLAGSHIP.activ
           area={FLAGSHIP.city}
           brokerage="Fraser Property Management Realty Services Ltd."
           description={FLAGSHIP.description}
+          hosted_tour_url={FLAGSHIP.tour_embed_url}
           video_url={FLAGSHIP.matterport}
           video_poster={FLAGSHIP.hero_image}
           showing_link="/contact"
