@@ -129,7 +129,23 @@ const HeroPullQuoteBadge = () => {
       maxWidth: 640,
       fontFamily: "Inter, sans-serif",
       backdropFilter: "blur(4px)",
+      opacity: 0,
+      animation: "ez-pull-quote-fade 400ms ease-out 120ms forwards",
+      willChange: "opacity, transform",
     }}>
+      <style>{`
+        @keyframes ez-pull-quote-fade {
+          0%   { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-testid="hero-pull-quote"] {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
       <div style={{
         width: 30, height: 30, borderRadius: "50%",
         background: C.navy, color: C.brandGold,
