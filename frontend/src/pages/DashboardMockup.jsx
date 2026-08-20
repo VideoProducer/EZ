@@ -6102,7 +6102,7 @@ const HomeExtras = () => {
       quote: "Doug was an absolute pleasure to work with. He was very professional from the time we met to the completion of our sale. He was very patient and hard working at all times. I am a stay-at-home mom and he was very understanding about my schedule and worked around the times I needed to give to my children. It was nice to be able to relax and know that we had a really good realtor who was working hard on our behalf. Thank you Doug!",
     },
     {
-      stars: 5, initials: "AM", name: "Anne M.", role: "Repeat Client",
+      stars: 5, initials: "AM", name: "Anne M.", role: "Seller",
       quote: "I have owned several homes in BC and Doug is the kindest, hardest working and best REALTOR® I have ever had. I have no problem referring him. He was Super!",
     },
   ];
