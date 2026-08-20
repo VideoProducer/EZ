@@ -99,6 +99,12 @@ export default function AdminHydrateListing() {
   const [pingResult, setPingResult] = useState(null);
   const [pingHistory, setPingHistory] = useState([]);
 
+  // ── Virtual Tour URL override (Feb 2026) ─────────────────────────────
+  const [tourUrlDraft, setTourUrlDraft] = useState("");
+  const [tourBranded, setTourBranded] = useState(false);
+  const [tourBusy, setTourBusy] = useState(false);
+  const [tourMsg, setTourMsg] = useState("");
+
   const submit = async (e) => {
     e?.preventDefault();
     const cleaned = (mls || "").trim().toUpperCase();
@@ -224,6 +230,47 @@ export default function AdminHydrateListing() {
       .then(r => { if (r.status === 200) setPingHistory(r.data?.rows || []); })
       .catch(() => {});
   }, []);
+
+  // Seed the tour override draft with any existing override URL so Doug
+  // can edit-in-place instead of re-typing every time.
+  React.useEffect(() => {
+    const existing = listing?.virtual_tour_url_override;
+    if (existing && typeof existing === "object") {
+      setTourUrlDraft(existing.url || "");
+      setTourBranded(!!existing.is_branded);
+    } else {
+      setTourUrlDraft("");
+      setTourBranded(false);
+    }
+    setTourMsg("");
+  }, [listing?.listing_key]);
+
+  const saveTourOverride = async () => {
+    if (!listing) return;
+    const key = listing.mls_number || listing.listing_key;
+    const url = tourUrlDraft.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      setTourMsg("⚠ URL must start with http:// or https://");
+      return;
+    }
+    setTourBusy(true); setTourMsg("");
+    try {
+      const r = await axios.patch(
+        `${API}/admin/listings/${encodeURIComponent(key)}/virtual-tour`,
+        { url, is_branded: tourBranded, category: "Virtual Tour" },
+        { withCredentials: true, validateStatus: () => true },
+      );
+      if (r.status !== 200 || !r.data?.ok) {
+        setTourMsg(`⚠ Save failed: ${r.data?.error || r.status}`);
+        return;
+      }
+      setTourMsg(url ? "✓ Tour override saved — the DDF video is replaced site-wide" : "✓ Cleared — DDF-supplied tour takes back over");
+    } catch (e) {
+      setTourMsg(`⚠ ${e?.message || e}`);
+    } finally {
+      setTourBusy(false);
+    }
+  };
 
   return (
     <div style={{ maxWidth: 720, margin: "40px auto", padding: "0 20px", fontFamily: "Inter, system-ui, sans-serif", color: "#0F2A5B" }}>
@@ -422,6 +469,93 @@ export default function AdminHydrateListing() {
               color: communityMsg.startsWith("⚠") ? "#991B1B" : "#065F46",
               fontSize: 13,
             }}>{communityMsg}</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Virtual Tour URL override (Feb 2026, Phase 11) ────────────
+          When the CREA DDF® feed hands us a brokerage branding card
+          instead of the actual property walkthrough (as it did for
+          3015 141 Street), Doug pastes the real Vimeo / YouTube /
+          Matterport URL here. Backend prepends it to virtual_tour_urls
+          so it wins the "picked" selection — the DDF-supplied tour
+          stays as a fallback in the "All tours" list. */}
+      {listing && (
+        <div data-testid="tour-override-panel" style={{
+          marginTop: 24, padding: 20, borderRadius: 10,
+          background: "white", border: "1px solid rgba(15,42,91,0.15)",
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>Virtual Tour URL override</div>
+          <div style={{ fontSize: 12, opacity: 0.72, marginBottom: 12 }}>
+            Currently:{" "}
+            <strong data-testid="tour-override-current">
+              {listing.virtual_tour_url_override?.url
+                ? "Manual override → " + listing.virtual_tour_url_override.url.slice(0, 70) + (listing.virtual_tour_url_override.url.length > 70 ? "…" : "")
+                : (listing.virtual_tour_embed?.url_raw || "(DDF-supplied — none)")}
+            </strong>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="url"
+              value={tourUrlDraft}
+              onChange={(e) => setTourUrlDraft(e.target.value)}
+              placeholder="https://vimeo.com/… or https://www.youtube.com/watch?v=…"
+              data-testid="tour-override-input"
+              disabled={tourBusy}
+              style={{
+                flex: "1 1 320px", minWidth: 240,
+                padding: "10px 14px", borderRadius: 8,
+                border: "1px solid rgba(15,42,91,0.25)",
+                fontSize: 14, fontFamily: "inherit", color: "inherit",
+                background: "white",
+              }}
+            />
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, opacity: 0.8 }}>
+              <input
+                type="checkbox"
+                checked={tourBranded}
+                onChange={(e) => setTourBranded(e.target.checked)}
+                data-testid="tour-override-branded"
+                disabled={tourBusy}
+              />
+              Branded (agent-branded)
+            </label>
+            <button
+              onClick={saveTourOverride}
+              disabled={tourBusy}
+              data-testid="tour-override-save"
+              style={{
+                padding: "10px 16px", borderRadius: 8, border: "none",
+                background: tourBusy ? "#94A3B8" : "#DABF7A", color: "#0F2A5B",
+                fontWeight: 700, fontSize: 13, cursor: tourBusy ? "wait" : "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >{tourBusy ? "Saving…" : "Save tour override"}</button>
+            {tourUrlDraft && (
+              <button
+                onClick={() => setTourUrlDraft("")}
+                disabled={tourBusy}
+                data-testid="tour-override-clear"
+                title="Clear the override so the DDF-supplied tour takes back over"
+                style={{
+                  padding: "10px 14px", borderRadius: 8,
+                  background: "transparent", color: "#0F2A5B",
+                  border: "1px solid rgba(15,42,91,0.25)",
+                  fontWeight: 600, fontSize: 12, cursor: "pointer",
+                }}
+              >Clear</button>
+            )}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
+            Supports Vimeo, YouTube, Matterport, Kuula, and any embeddable tour host. Doogie's narration + keyframe pipeline re-runs automatically on the next detail view.
+          </div>
+          {tourMsg && (
+            <div data-testid="tour-override-msg" style={{
+              marginTop: 10, padding: "8px 12px", borderRadius: 6,
+              background: tourMsg.startsWith("⚠") ? "#FEE2E2" : "#ECFDF5",
+              color: tourMsg.startsWith("⚠") ? "#991B1B" : "#065F46",
+              fontSize: 13,
+            }}>{tourMsg}</div>
           )}
         </div>
       )}

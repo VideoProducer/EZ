@@ -2400,6 +2400,16 @@ class ListingCommunityOverrideIn(BaseModel):
     community: str = Field(default="", max_length=80)
 
 
+class ListingTourOverrideIn(BaseModel):
+    """Manual replacement for the DDF-supplied virtual tour URL.
+    Doug pastes a real property-walkthrough Vimeo/YouTube/Matterport
+    URL when the CREA feed shipped a placeholder or brokerage
+    branding card instead of an actual tour."""
+    url: str = Field(default="", max_length=500)
+    is_branded: bool = Field(default=False)
+    category: str = Field(default="Virtual Tour", max_length=64)
+
+
 @api.patch("/admin/listings/{key}/community")
 async def admin_set_listing_community(
     key: str,
@@ -2436,6 +2446,57 @@ async def admin_set_listing_community(
         "ok": True,
         "listing_key": key,
         "community": val,
+        "cleared": not bool(val),
+        "modified": r.modified_count,
+    }
+
+
+@api.patch("/admin/listings/{key}/virtual-tour")
+async def admin_set_listing_virtual_tour(
+    key: str,
+    body: ListingTourOverrideIn,
+    _=Depends(verify_admin),
+):
+    """Override the virtual-tour URL surfaced on a listing.
+
+    Written to `virtual_tour_url_override` — a field DDF ingest never
+    touches, so the override survives every re-sync automatically. Passing
+    an empty string clears the override and lets the DDF-supplied
+    `virtual_tour_urls[0]` take back over.
+
+    The read endpoint (`GET /api/listings/{key}`) prepends the override
+    to `virtual_tour_urls` so the frontend picks it up as the primary
+    tour, and `virtual_tour_embed` derives from it via the same
+    `_sanitize_tour_url` + `_tour_host_family` path as the DDF entries.
+    """
+    val = (body.url or "").strip()[:500]
+    now = now_iso()
+    if val:
+        # Reject anything that isn't obviously http(s) so we don't
+        # accidentally store a Matterport `mps-share://` URI or worse.
+        if not (val.startswith("http://") or val.startswith("https://")):
+            return {"ok": False, "error": "invalid_url", "url": val}
+        update = {
+            "$set": {
+                "virtual_tour_url_override": {
+                    "url": val,
+                    "is_branded": bool(body.is_branded),
+                    "category": (body.category or "Virtual Tour").strip()[:64],
+                },
+                "virtual_tour_override_at": now,
+                "virtual_tour_override_by": "manual",
+            }
+        }
+    else:
+        # Empty string clears the override — DDF payload takes back over.
+        update = {"$unset": {"virtual_tour_url_override": "", "virtual_tour_override_by": ""}, "$set": {"virtual_tour_override_at": now}}
+    r = await db.listings.update_one({"listing_key": key}, update)
+    if r.matched_count == 0:
+        return {"ok": False, "error": "listing_not_found", "listing_key": key}
+    return {
+        "ok": True,
+        "listing_key": key,
+        "url": val,
         "cleared": not bool(val),
         "modified": r.modified_count,
     }
@@ -10630,6 +10691,22 @@ async def get_listing(request: Request, listing_key: str):
     #     URL (like R3118660 → threeharbourgreenph.com) still surfaces.
     try:
         tours = d.get("virtual_tour_urls") or []
+        # If Doug set a manual tour override (via /admin/hydrate-listing),
+        # promote it to the front of the list so it wins the "picked"
+        # selection below — the DDF-supplied tour drops to second place
+        # but stays as a fallback if the override URL ever fails.
+        override = d.get("virtual_tour_url_override") or None
+        if isinstance(override, dict) and (override.get("url") or "").strip():
+            tours = [{
+                "url":        (override.get("url") or "").strip(),
+                "category":   override.get("category") or "Virtual Tour",
+                "is_branded": bool(override.get("is_branded", False)),
+                "source":     "manual_override",
+            }] + [t for t in tours if (t.get("url") or "") != (override.get("url") or "")]
+            # Re-expose the merged list on the response so the frontend
+            # "All tours" affordance still enumerates every option.
+            d["virtual_tour_urls"] = tours
+            d["has_virtual_tour"] = True
         embeddable = []
         external = []
         for t in tours:  # already unbranded-first thanks to ddf_sync

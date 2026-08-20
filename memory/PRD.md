@@ -39,6 +39,11 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 11 — Virtual Tour URL Override (Feb 2026 — this session)
+- **Root cause**: The CREA DDF® feed for `3015 141 Street` (and similar listings) ships a Vimeo URL containing only the Fraser Property Management branding card — no property footage. It's the media file the brokerage submitted, not a code bug.
+- **Fix**: New `PATCH /api/admin/listings/{key}/virtual-tour` endpoint accepts `{ url, is_branded, category }` and stores under `virtual_tour_url_override` — a field DDF ingest never touches, so the override survives every re-sync. Empty string clears the override. Read endpoint prepends the override to `virtual_tour_urls` so it wins the `virtual_tour_embed` selection; DDF-supplied tour stays as fallback in the "All tours" list. Verified live via curl: set override → YouTube nocookie embed served; clear → Vimeo fallback restored.
+- **Admin UI**: added Virtual Tour URL override panel below the community picker on `/admin/hydrate-listing` — URL input, "Branded" checkbox, save/clear buttons, current-tour indicator. Doogie's narration + keyframe pipeline auto-regenerates on the next detail view.
+
 ### Phase 10 — YouTube Embed → Privacy-Enhanced (Feb 2026 — this session)
 - **Virtual Tour embed switched to `youtube-nocookie.com`** — Doug reported the flagship-adjacent YouTube tours were falling through to the "no external embeds" fallback in Safari Private mode. Root cause: Safari's Feb 2026 ITP tightening blocks 3rd-party cookies YouTube's regular embed relies on. Fix: `_sanitize_tour_url` in `server.py` now rewrites `youtube.com/watch?v=X` and `youtu.be/X` to `https://www.youtube-nocookie.com/embed/X?rel=0&modestbranding=1&enablejsapi=1`, and `_EMBEDDABLE_TOUR_HOSTS` allows the `youtube-nocookie.com` netloc. Verified live: 3 sample listings (25344727, 25427719, 25523475) now return the nocookie embed URL while `url_raw` retains the original YouTube URL for the "Open in new tab" fallback.
 
