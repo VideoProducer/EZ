@@ -15830,9 +15830,13 @@ def _sanitize_tour_url(url: str) -> str:
         if m:
             return f"https://www.youtube-nocookie.com/embed/{m.group(1)}?rel=0&modestbranding=1&enablejsapi=1"
         # Vimeo: vimeo.com/{id}  →  player.vimeo.com/video/{id}
+        # `dnt=1` disables Vimeo's session cookies + analytics, which lets
+        # the player load under Safari ITP / mobile ad-blockers that would
+        # otherwise strip player scripts. `transparent=0` avoids a
+        # rare transparent-background rendering bug on iOS 17+.
         m = re.search(r"^https?://(?:www\.)?vimeo\.com/(\d+)", url)
         if m:
-            return f"https://player.vimeo.com/video/{m.group(1)}"
+            return f"https://player.vimeo.com/video/{m.group(1)}?dnt=1&transparent=0"
         # Force https on any bare http:// URL (mixed-content block in the browser)
         if url.startswith("http://"):
             return "https://" + url[7:]

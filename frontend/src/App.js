@@ -4193,6 +4193,23 @@ const VirtualTourFrame = ({ listing }) => {
   }
 
   if (status === "blocked") {
+    // Host-aware copy — the DDF-supplied tour can be YouTube, Vimeo, or a
+    // one-off tour host. The fallback wording used to hardcode "YouTube"
+    // even when the actual failure was a Vimeo `PrivacyError` (as with
+    // the flagship's Fraser-hosted Vimeo). Detect the host from the raw
+    // URL so we tell the visitor precisely which platform blocked us.
+    const rawUrl = embed.url_raw || openInNewTab || "";
+    const isYT   = /youtube\.com|youtu\.be/i.test(rawUrl);
+    const isVim  = /vimeo\.com/i.test(rawUrl);
+    const hostLabel  = isYT ? "YouTube" : (isVim ? "Vimeo" : "the video host");
+    const reasonCopy = isVim
+      ? `The listing brokerage's Vimeo has domain-restricted embeds — it plays on their own website but not on eztofind.ca. It also plays fine on ${hostLabel} directly. You can also request a private in-person tour with Doug:`
+      : `The listing brokerage's ${hostLabel} channel (or a strict network / VPN / content blocker) is blocking playback inside eztofind.ca. It plays fine on ${hostLabel} directly — you can also request a private in-person tour with Doug:`;
+    // Mobile deep-link: on iOS/Android, tapping "Open in YouTube app"
+    // hands playback to the native YouTube app which bypasses embed
+    // restrictions and content blockers. Only useful for YouTube.
+    const ytIdMatch = isYT ? rawUrl.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([a-zA-Z0-9_-]{11})/) : null;
+    const ytDeepLink = ytIdMatch ? `vnd.youtube://${ytIdMatch[1]}` : null;
     return (
       <div
         data-testid="listing-virtual-tour-fallback"
@@ -4211,15 +4228,11 @@ const VirtualTourFrame = ({ listing }) => {
         <h3 style={{
           margin: "0 0 0.5rem", color: "var(--brand-navy, #0F2A5B)",
           fontSize: "1.1rem", fontFamily: '"Playfair Display", serif',
-        }}>This video is set to "no external embeds" by its owner.</h3>
+        }}>This {hostLabel} tour won't embed here.</h3>
         <p style={{
           margin: "0 0 1.1rem", fontFamily: "Inter, sans-serif",
           color: "#334155", fontSize: "0.92rem", lineHeight: 1.55,
-        }}>
-          The listing brokerage's YouTube channel (or a strict network / VPN)
-          is blocking playback inside eztofind.ca. It plays fine on YouTube
-          directly — you can also request a private in-person tour with Doug:
-        </p>
+        }}>{reasonCopy}</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1rem" }}>
           <a
             href={openInNewTab}
@@ -4233,6 +4246,19 @@ const VirtualTourFrame = ({ listing }) => {
               boxShadow: "0 4px 10px rgba(30,79,207,0.28)",
             }}
           >▶ Open the tour in a new tab ↗</a>
+          {ytDeepLink && (
+            <a
+              href={ytDeepLink}
+              data-testid="listing-virtual-tour-open-yt-app"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "#FF0000", color: "#fff",
+                padding: "0.65rem 1.1rem", borderRadius: 999, textDecoration: "none",
+                fontWeight: 700, fontSize: "0.88rem",
+                boxShadow: "0 4px 10px rgba(255,0,0,0.28)",
+              }}
+            >▶ Open in the YouTube app</a>
+          )}
           <Link
             to={`/referral-request?context=${encodeURIComponent(`Private tour request — ${listing.street_address || listing.listing_key || "listing"}`)}`}
             data-testid="listing-request-tour-btn"
