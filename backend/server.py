@@ -10742,7 +10742,7 @@ async def get_listing(request: Request, listing_key: str):
             entry = {
                 "url": sanitised,
                 "url_raw": raw,
-                "host": host if host in ("matterport", "youtube", "vimeo") else "external",
+                "host": host if host in ("matterport", "youtube", "vimeo", "cotala") else "external",
                 "is_branded": bool(t.get("is_branded", False)),
                 "category": t.get("category") or "",
             }
@@ -15777,7 +15777,7 @@ async def listings_with_virtual_tours(limit: int = 12, city: str | None = None):
                 continue
             sanitised = _sanitize_tour_url(raw)
             host = _tour_host_family(sanitised)
-            if host in ("matterport", "youtube", "vimeo"):
+            if host in ("matterport", "youtube", "vimeo", "cotala"):
                 picked = (t, sanitised, host)
                 break
         if not picked:
@@ -15809,21 +15809,23 @@ async def listings_with_virtual_tours(limit: int = 12, city: str | None = None):
         "city": city,
         "notice": (
             "MLS® data licensed from CREA DDF®. Virtual tours restricted to "
-            "Matterport, YouTube and Vimeo (all iframe-embeddable). Unbranded "
-            "sources prioritised for RESA compliance."
+            "Matterport, YouTube, Vimeo and Cotala (all iframe-embeddable). "
+            "Unbranded sources prioritised for RESA compliance."
         ),
     }
 
 
 def _tour_host_family(url: str) -> str:
     """Classify a sanitised tour URL into a coarse provider family so the
-    /api/tours/library endpoint can restrict to Matterport / YouTube / Vimeo."""
+    /api/tours/library endpoint can restrict to Matterport / YouTube / Vimeo
+    / Cotala (all of which are safely iframe-embeddable by design)."""
     try:
         from urllib.parse import urlparse
         host = (urlparse(url or "").netloc or "").lower()
         if "matterport" in host: return "matterport"
         if "youtube" in host or "youtu.be" in host: return "youtube"
         if "vimeo" in host: return "vimeo"
+        if "cotala.com" in host: return "cotala"
     except Exception:
         pass
     return "other"
@@ -15861,6 +15863,14 @@ def _sanitize_tour_url(url: str) -> str:
         m = re.search(r"^https?://(?:www\.)?vimeo\.com/(\d+)", url)
         if m:
             return f"https://player.vimeo.com/video/{m.group(1)}?dnt=1&transparent=0"
+        # Cotala: any bare `tours.cotala.com/{id}` or `share.cotala.com/{id}`
+        # URL is already iframe-safe by design (Cotala is a purpose-built
+        # embed host with no X-Frame-Options restrictions). Normalise to
+        # https and strip any trailing tracking params so the embed URL is
+        # canonical and cache-friendly.
+        m = re.search(r"^https?://(?:tours|share|www)\.cotala\.com/(\d+)(?:[/?#].*)?$", url or "", re.IGNORECASE)
+        if m:
+            return f"https://tours.cotala.com/{m.group(1)}"
         # Force https on any bare http:// URL (mixed-content block in the browser)
         if url.startswith("http://"):
             return "https://" + url[7:]
@@ -15883,6 +15893,10 @@ _EMBEDDABLE_TOUR_HOSTS = {
     "urbanimmersive.com", "www.urbanimmersive.com",
     "listingslab.com", "app.cloudpano.com", "www.tourwizard.net",
     "asteroom.com", "www.asteroom.com",
+    # Cotala — purpose-built for iframe embeds, no X-Frame-Options
+    # restrictions. Added Feb 2026 when we swapped the R3156192 flagship
+    # tour to a hosted Cotala walkthrough.
+    "tours.cotala.com", "share.cotala.com", "cotala.com",
 }
 
 

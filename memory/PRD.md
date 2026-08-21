@@ -39,6 +39,18 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 14.4 — Per-Listing Cotala Override + TV QR (Feb 20 2026)
+- **Cotala is now a first-class embed host**, alongside Matterport / YouTube / Vimeo:
+  - `server.py`: `_tour_host_family()` now returns `"cotala"` for any `*.cotala.com` URL. `_sanitize_tour_url()` normalises variants (`tours.` / `share.` / `www.` + trailing tracking params) to the canonical `https://tours.cotala.com/{id}` embed form. `_EMBEDDABLE_TOUR_HOSTS` includes cotala. Both listing detail and `/api/tours/library` accept `cotala` as embeddable → renders as an inline iframe instead of the "external" click-out card.
+  - Verified end-to-end via curl: `PATCH /admin/listings/{key}/virtual-tour` with a Cotala URL → `GET /listings/{key}` returns `virtual_tour_embed.host = "cotala"`.
+- **Admin override UI (`AdminHydrateListing.jsx`)** now:
+  - Shows a live host-detection badge (✅ Cotala / Matterport / YouTube / Vimeo / Kuula / iGuide, or ⚠️ external click-out) the moment Doug pastes a URL.
+  - Renders a live 16:9 iframe preview for any recognised embed-safe URL so Doug sees exactly what the buyer will see, before saving.
+  - Placeholder updated to lead with Cotala: `"https://tours.cotala.com/… · https://vimeo.com/… · https://youtu.be/…"`.
+- **QR on `/tv`** (`TVDisplayPage.jsx`):
+  - Prominent QR block on the idle "Enter the code" screen — big 160×160 SVG QR with a "📱 Scan to browse on your phone" callout. Points at `origin/?utm_source=tv-showing&utm_medium=qr&utm_campaign=eztofind-tv` so walk-in scans are attributable in the CRM export.
+  - Small 78×78 sidecar QR always visible on the connected listing viewer so guests standing in front of the TV can save any listing to their own phone.
+
 ### Phase 14.3 — EZtoFind TV pairing UX fixes (Feb 20 2026)
 - **Cross-env bug**: `TVPairingBlock.jsx` was hard-coding the TV URL to `https://eztofind.ca/tv`, so a code minted on preview sent the TV browser to production (different DB → session not found). Now uses `window.location.origin` dynamically.
 - **Apple TV callout**: Added an explainer in the pairing block clarifying Apple TV / Chromecast have no browser, so use iPhone Screen Mirroring instead.

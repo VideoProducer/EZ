@@ -13,8 +13,18 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { QRCodeSVG } from "qrcode.react";
 
 const API = process.env.REACT_APP_BACKEND_URL;
+
+// URL the on-screen QR opens when a walk-in guest scans it with their
+// phone. Points at the site homepage (never at /tv itself, which is a
+// pairing-only screen useless on a phone) with a UTM tag so Doug can
+// track how many showings scanned it, cross-referenced against lead
+// form submissions in the CRM export.
+const QR_TARGET = (typeof window !== "undefined" && window.location?.origin
+  ? `${window.location.origin}/?utm_source=tv-showing&utm_medium=qr&utm_campaign=eztofind-tv`
+  : "https://eztofind.ca/?utm_source=tv-showing&utm_medium=qr&utm_campaign=eztofind-tv");
 
 const C = { navy: "#0F2A5B", gold: "#F5A623", ink: "#1F2937", muted: "#9CA3AF", cream: "#F5F0E1" };
 const fmtMoney = n => !n ? "" : n >= 1e6 ? `$${(n/1e6).toFixed(n>=1e7?0:2)}M` : n >= 1e3 ? `$${Math.round(n/1e3)}K` : `$${n.toLocaleString("en-CA")}`;
@@ -273,6 +283,34 @@ export default function TVDisplayPage() {
           Stuck? On your phone, tap <strong>Cast</strong> on any listing → <strong>Get a TV pairing code</strong>.
           Codes expire after 20 min — if the digits don't work, ask the phone for a fresh code.
         </div>
+
+        {/* ── Walk-in QR ─────────────────────────────────────────────────
+            Prominent QR at the bottom of the idle screen so anyone at an
+            open house or private showing can scan straight into EZtoFind
+            on their phone instead of typing the URL with a TV remote.
+            Points at the homepage with UTM tags so Doug can see, in the
+            CRM export, how many walk-in scans converted into lead-form
+            submissions. */}
+        <div data-testid="tv-display-qr" style={{
+          marginTop: "3rem", display: "flex", alignItems: "center", gap: "1.5rem",
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          padding: "1.25rem 1.75rem", borderRadius: 16,
+          boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
+        }}>
+          <div style={{ background: "#fff", padding: 10, borderRadius: 10, lineHeight: 0 }}>
+            <QRCodeSVG value={QR_TARGET} size={160} level="M" fgColor={C.navy} bgColor="#fff"/>
+          </div>
+          <div style={{ maxWidth: 300 }}>
+            <div style={{ fontFamily: "Sora,sans-serif", fontSize: "1.35rem", fontWeight: 800, marginBottom: 4 }}>
+              📱 Scan to browse on your phone
+            </div>
+            <div style={{ fontSize: "0.85rem", opacity: 0.85, lineHeight: 1.5 }}>
+              Point any phone camera at this code — EZtoFind opens instantly,
+              no typing needed on the TV remote.
+            </div>
+          </div>
+        </div>
         <div style={{ position: "absolute", bottom: "1.5rem", fontSize: "0.85rem", opacity: 0.6 }}>
           eztofind.ca/tv · No app needed · Works on any TV browser
         </div>
@@ -503,6 +541,29 @@ export default function TVDisplayPage() {
           </p>
         )}
         <div style={{ flex: 1 }}/>
+        {/* Sidecar QR — tiny, discreet, always visible while a listing
+            is on the big screen. Lets an interested walk-in scan straight
+            into EZtoFind on their phone to save this listing / trigger
+            the mortgage calculator. UTM tag ties the resulting web
+            session back to the TV touchpoint in the CRM export. */}
+        <div data-testid="tv-display-qr-sidecar" style={{
+          display: "flex", alignItems: "center", gap: "0.85rem",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          padding: "0.6rem 0.85rem", borderRadius: 12, marginBottom: "0.75rem",
+        }}>
+          <div style={{ background: "#fff", padding: 6, borderRadius: 6, lineHeight: 0 }}>
+            <QRCodeSVG value={QR_TARGET} size={78} level="M" fgColor={C.navy} bgColor="#fff"/>
+          </div>
+          <div style={{ fontSize: "0.82rem", lineHeight: 1.4, opacity: 0.9 }}>
+            <div style={{ fontFamily: "Sora,sans-serif", fontWeight: 800, fontSize: "0.95rem" }}>
+              📱 Save this on your phone
+            </div>
+            <div style={{ opacity: 0.75 }}>
+              Scan to browse listings + save favourites.
+            </div>
+          </div>
+        </div>
         {brokerage && (
           <div style={{ fontSize: "0.85rem", opacity: 0.7, borderTop: "1px solid rgba(255,255,255,0.2)", paddingTop: "0.75rem", marginTop: "1rem", lineHeight: 1.5 }}>
             Listing courtesy of <strong>{brokerage}</strong>.<br/>

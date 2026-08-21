@@ -477,10 +477,39 @@ export default function AdminHydrateListing() {
           When the CREA DDF® feed hands us a brokerage branding card
           instead of the actual property walkthrough (as it did for
           3015 141 Street), Doug pastes the real Vimeo / YouTube /
-          Matterport URL here. Backend prepends it to virtual_tour_urls
-          so it wins the "picked" selection — the DDF-supplied tour
-          stays as a fallback in the "All tours" list. */}
-      {listing && (
+          Matterport / Cotala URL here. Backend prepends it to
+          virtual_tour_urls so it wins the "picked" selection — the
+          DDF-supplied tour stays as a fallback in the "All tours"
+          list. */}
+      {listing && (() => {
+        // Detect the host from the current draft input so Doug gets an
+        // instant "we recognise this as a Cotala tour" affordance before
+        // saving. Mirrors backend `_tour_host_family` so admin preview
+        // matches what will actually render on the detail page.
+        const detectHost = (u) => {
+          try {
+            const url = new URL(u);
+            const h = url.hostname.toLowerCase();
+            if (h.includes("cotala.com"))     return { host: "cotala",     label: "Cotala",     embeddable: true };
+            if (h.includes("matterport"))     return { host: "matterport", label: "Matterport", embeddable: true };
+            if (h.includes("youtube") || h.includes("youtu.be")) return { host: "youtube", label: "YouTube", embeddable: true };
+            if (h.includes("vimeo"))          return { host: "vimeo",      label: "Vimeo",      embeddable: true };
+            if (h.includes("kuula"))          return { host: "kuula",      label: "Kuula",      embeddable: true };
+            if (h.includes("youriguide"))     return { host: "iguide",     label: "iGuide",     embeddable: true };
+            return { host: "external", label: url.hostname, embeddable: false };
+          } catch { return null; }
+        };
+        // Normalise a Cotala URL to the canonical embed form so the
+        // preview iframe never breaks on a URL variant. Mirrors backend
+        // `_sanitize_tour_url`.
+        const normaliseCotala = (u) => {
+          const m = /^https?:\/\/(?:tours|share|www)\.cotala\.com\/(\d+)/i.exec(u || "");
+          return m ? `https://tours.cotala.com/${m[1]}` : u;
+        };
+        const previewUrl = tourUrlDraft.trim();
+        const detected = previewUrl ? detectHost(previewUrl) : null;
+        const iframeUrl = detected?.host === "cotala" ? normaliseCotala(previewUrl) : previewUrl;
+        return (
         <div data-testid="tour-override-panel" style={{
           marginTop: 24, padding: 20, borderRadius: 10,
           background: "white", border: "1px solid rgba(15,42,91,0.15)",
@@ -499,7 +528,7 @@ export default function AdminHydrateListing() {
               type="url"
               value={tourUrlDraft}
               onChange={(e) => setTourUrlDraft(e.target.value)}
-              placeholder="https://vimeo.com/… or https://www.youtube.com/watch?v=…"
+              placeholder="https://tours.cotala.com/… · https://vimeo.com/… · https://youtu.be/…"
               data-testid="tour-override-input"
               disabled={tourBusy}
               style={{
@@ -546,9 +575,49 @@ export default function AdminHydrateListing() {
               >Clear</button>
             )}
           </div>
+          {/* Host badge — instant feedback that the pasted URL is a
+              known embed-safe provider, before Doug clicks Save. */}
+          {detected && (
+            <div data-testid="tour-override-host-badge" style={{
+              marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 10px", borderRadius: 999, fontSize: 12,
+              background: detected.embeddable ? "#ECFDF5" : "#FEF3C7",
+              color:      detected.embeddable ? "#065F46" : "#92400E",
+              border: `1px solid ${detected.embeddable ? "#6EE7B7" : "#FCD34D"}`,
+              fontWeight: 600,
+            }}>
+              {detected.embeddable
+                ? <>✅ Detected <strong>{detected.label}</strong> — will embed inline on the listing page.</>
+                : <>⚠️ Detected <strong>{detected.label}</strong> — not a known embed-safe host, will render as an "Open in new tab" click-out card.</>}
+            </div>
+          )}
           <div style={{ fontSize: 11, opacity: 0.6, marginTop: 8 }}>
-            Supports Vimeo, YouTube, Matterport, Kuula, and any embeddable tour host. Doogie's narration + keyframe pipeline re-runs automatically on the next detail view.
+            Supports <strong>Cotala</strong>, Matterport, YouTube, Vimeo, Kuula, iGuide, and any embeddable tour host. Doogie's narration + keyframe pipeline re-runs automatically on the next detail view.
           </div>
+          {/* Live preview — only render for embed-safe hosts so we don't
+              blindly iframe a URL that will 404 or X-Frame-Options refuse.
+              Cotala is our default flagship provider, so a preview here
+              means Doug sees exactly what the viewer will see, before
+              saving the override to production. */}
+          {detected?.embeddable && iframeUrl && (
+            <div data-testid="tour-override-preview" style={{
+              marginTop: 14, borderRadius: 10, overflow: "hidden",
+              border: "1px solid rgba(15,42,91,0.15)",
+              background: "#000", position: "relative", paddingTop: "56.25%",
+            }}>
+              <iframe
+                src={iframeUrl}
+                title="Tour preview"
+                allow="fullscreen; xr-spatial-tracking; autoplay; vr; accelerometer; gyroscope"
+                allowFullScreen
+                loading="lazy"
+                style={{
+                  position: "absolute", inset: 0,
+                  width: "100%", height: "100%", border: 0,
+                }}
+              />
+            </div>
+          )}
           {tourMsg && (
             <div data-testid="tour-override-msg" style={{
               marginTop: 10, padding: "8px 12px", borderRadius: 6,
@@ -558,7 +627,8 @@ export default function AdminHydrateListing() {
             }}>{tourMsg}</div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Copy-for-GBP tool (Feb 2026) ─────────────────────────────── */}
       {listing && (
