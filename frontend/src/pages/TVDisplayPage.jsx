@@ -42,7 +42,7 @@ export default function TVDisplayPage() {
 
   const connect = useCallback(async (rawCode) => {
     const c = String(rawCode || code).trim();
-    if (!/^\d{6}$/.test(c)) { setErrMsg("Enter the 6-digit code shown on the phone."); return; }
+    if (!/^\d{6}$/.test(c)) { setErrMsg("Enter all 6 digits of the code shown on the phone."); return; }
     setErrMsg("");
     setPhase("connecting");
     try {
@@ -52,8 +52,21 @@ export default function TVDisplayPage() {
         body: JSON.stringify({ code: c }),
       });
       if (!r.ok) {
-        const t = await r.text();
-        throw new Error(t.includes("expired") ? "Code expired — ask the phone for a new one." : "Code not found. Double-check the digits on the phone.");
+        // Read the server's actual `detail` so the message is truthful —
+        // "expired", "not found", or a network error — instead of a
+        // generic "could not connect" that hides the real reason.
+        let detail = "";
+        try {
+          const j = await r.json();
+          detail = j?.detail || "";
+        } catch { /* body wasn't JSON */ }
+        if (r.status === 404) {
+          throw new Error(detail || "Code not found. Double-check the digits — or ask the phone to generate a fresh code (older codes expire after 20 min).");
+        }
+        if (r.status === 400) {
+          throw new Error(detail || "That doesn't look like a 6-digit code. Please re-enter it.");
+        }
+        throw new Error(detail || `Could not connect (status ${r.status}). Check your internet connection and try again.`);
       }
       const j = await r.json();
       setSessionId(j.session_id);
@@ -61,7 +74,7 @@ export default function TVDisplayPage() {
       setPhotoIdx(j.photo_index || 0);
       setPhase("connected");
     } catch (e) {
-      setErrMsg(e.message || "Could not connect.");
+      setErrMsg(e.message || "Could not connect. Please try again.");
       setPhase("enter");
     }
   }, [code]);
@@ -233,10 +246,33 @@ export default function TVDisplayPage() {
           }}
         >{phase === "connecting" ? "Connecting…" : "Connect →"}</button>
         {errMsg && (
-          <div data-testid="tv-display-error" style={{ marginTop: "1.25rem", background: "rgba(255,255,255,0.15)", padding: "0.65rem 1.25rem", borderRadius: 10, fontSize: "1rem" }}>
+          <div
+            data-testid="tv-display-error"
+            role="alert"
+            style={{
+              marginTop: "1.5rem",
+              maxWidth: "min(90vw, 640px)",
+              background: "rgba(183, 53, 27, 0.9)",   // muted red, high contrast against navy hero
+              border: "2px solid rgba(255,255,255,0.35)",
+              padding: "1rem 1.5rem",
+              borderRadius: 14,
+              fontSize: "1.15rem",
+              fontWeight: 600,
+              lineHeight: 1.5,
+              textAlign: "center",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
+            }}
+          >
             ⚠️ {errMsg}
           </div>
         )}
+        <div style={{
+          marginTop: "1rem", maxWidth: "min(90vw, 640px)",
+          fontSize: "0.82rem", opacity: 0.75, textAlign: "center", lineHeight: 1.55,
+        }}>
+          Stuck? On your phone, tap <strong>Cast</strong> on any listing → <strong>Get a TV pairing code</strong>.
+          Codes expire after 20 min — if the digits don't work, ask the phone for a fresh code.
+        </div>
         <div style={{ position: "absolute", bottom: "1.5rem", fontSize: "0.85rem", opacity: 0.6 }}>
           eztofind.ca/tv · No app needed · Works on any TV browser
         </div>
@@ -324,7 +360,23 @@ export default function TVDisplayPage() {
             style={{ maxWidth: "100%", maxHeight: "100vh", objectFit: "contain", boxShadow: "0 0 80px rgba(0,0,0,0.6)" }}
           />
         ) : (
-          <div style={{ padding: "3rem", opacity: 0.6, fontSize: "1.5rem" }}>Waiting for the phone to send a listing…</div>
+          <div
+            data-testid="tv-display-waiting"
+            style={{
+              padding: "3rem", textAlign: "center",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem",
+            }}
+          >
+            <div style={{ fontSize: "5rem" }}>✅</div>
+            <div style={{ fontSize: "1.8rem", fontFamily: "Sora,sans-serif", fontWeight: 800 }}>
+              TV connected
+            </div>
+            <div style={{ fontSize: "1.15rem", opacity: 0.75, maxWidth: 640, lineHeight: 1.55 }}>
+              Waiting for a listing from the phone. On your phone, open any listing and tap the
+              <strong> Cast → 📺 Get a TV pairing code </strong> button — the photos and price
+              will appear here automatically.
+            </div>
+          </div>
         )}
         {/* Photo counter */}
         {photos.length > 1 && (

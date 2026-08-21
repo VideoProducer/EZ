@@ -39,6 +39,14 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase 14.3 — EZtoFind TV pairing UX fixes (Feb 20 2026)
+- **Cross-env bug**: `TVPairingBlock.jsx` was hard-coding the TV URL to `https://eztofind.ca/tv`, so a code minted on preview sent the TV browser to production (different DB → session not found). Now uses `window.location.origin` dynamically.
+- **Apple TV callout**: Added an explainer in the pairing block clarifying Apple TV / Chromecast have no browser, so use iPhone Screen Mirroring instead.
+- **Loud error banner on `/tv`**: Replaced the tiny grey error text with a large red banner (2px white outline, drop-shadow) that surfaces the actual server `detail` — so users see "Pairing code not found or expired" instead of "nothing happened".
+- **Friendly waiting state**: Replaced the anxiety-inducing "Waiting for the phone…" text with a clear ✅ "TV connected" screen + instructions on what to do on the phone next.
+- **Persistent recovery hint**: Always-visible "Stuck? tap Cast on any listing → Get a TV pairing code. Codes expire after 20 min." under the input.
+- Verified both empty-code and bad-code paths render the loud red banner correctly on preview.
+
 ### Phase 14.2 — Nightly IndexNow Auto-Ping (Feb 20 2026)
 - Extracted the `sitemap-ai.xml → IndexNow` push into a shared helper (`_push_sitemap_ai_to_indexnow(trigger=...)`) so both the manual admin endpoint (`/api/admin/ai-discovery/indexnow`) and the nightly cron log identical audit rows to `ai_discovery_pings`.
 - Wired the helper into the nightly sitemap cron (`_nightly_sitemap_loop` in `server.py`):

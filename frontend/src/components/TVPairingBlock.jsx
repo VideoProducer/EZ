@@ -11,7 +11,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 const API = process.env.REACT_APP_BACKEND_URL;
-const TV_URL = "https://eztofind.ca/tv";
+// The URL we show the user + embed in the QR code. Dynamic to
+// `window.location.origin` when available so a code minted on the
+// preview environment doesn't send the TV browser to production
+// (where the pairing session doesn't exist), and vice-versa.
+const TV_URL = (typeof window !== "undefined" && window.location?.origin)
+  ? `${window.location.origin}/tv`
+  : "https://eztofind.ca/tv";
 
 // Build a compact snapshot the TV can render without needing to refetch.
 // Keeping the payload small (< 10 KB) so Mongo docs stay tiny.
@@ -163,6 +169,18 @@ const TVPairingBlock = ({ listing, listingKey, onPaired, onExit }) => {
             The listing plays full-screen on the TV — <strong>no phone mirroring</strong>.
             Works on Samsung / LG smart-TV browsers, a laptop HDMI'd to a TV, or a Chromebook.
           </p>
+          <div style={{
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: 8, padding: "0.5rem 0.7rem",
+            fontSize: "0.75rem", opacity: 0.9, marginBottom: "0.6rem",
+            lineHeight: 1.45,
+          }}>
+            <strong>Using Apple TV or Chromecast?</strong> Those don't have a web browser, so
+            they can't enter the code. Use iPhone <em>Screen Mirroring</em> instead (Control Centre
+            → Screen Mirroring → Apple TV) — your phone becomes the source and the TV mirrors
+            it 1:1.
+          </div>
           <button
             type="button"
             onClick={startPairing}
