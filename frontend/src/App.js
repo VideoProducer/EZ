@@ -13,6 +13,12 @@ import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./utils/glossary";
 import { buildTLDR, TLDRBlock, KeyPointsBlock, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
+import { IdentityLine } from "./components/IdentityLine";
+import ConversionStrip from "./components/ConversionStrip";
+import {
+  trackFormView, trackFormStart, trackFieldError, trackFormSubmit,
+  trackArticle16Block, trackThankYouView, withConversionContext,
+} from "./utils/conversionAnalytics";
 import MyJourney from "./pages/MyJourney";
 import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
@@ -8950,50 +8956,135 @@ const PttStressTestPanel = () => {
 const Valuation = () => {
   const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, turnstile_token: getTurnstileToken()}); trackConversion("home_valuation_request", { timeline: f.timeline, property_type: f.property_type, city: f.city, currently_listed: f.currently_listed, currency: "CAD" }); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", source: "valuation_page", currency: "CAD" }); setDone(true);}catch(x){setErr("Please complete required fields and consents.");} };
+  const [showDetails, setShowDetails] = useState(false);   // progressive disclosure — "What the estimate accounts for"
+  const [started, setStarted] = useState(false);           // fire form_start on first field interaction
+
+  // Phase B analytics — brief-mandated event set. form_view + thank_you_view
+  // fire on mount; form_start on first field interaction; article_16_block
+  // when the represented checkbox is toggled on; form_submit on POST.
+  useEffect(() => { trackFormView("/valuation"); }, []);
+  useEffect(() => { if (done) trackThankYouView("/valuation"); }, [done]);
+
+  // Fire form_start exactly once when the user first types into any
+  // field. This is the canonical funnel step between "form_view" and
+  // "form_submit" so we can measure completion rate per landing page.
+  const onFieldEdit = (patch) => {
+    if (!started) { trackFormStart("/valuation"); setStarted(true); }
+    setF((prev) => ({ ...prev, ...patch }));
+  };
+
+  const submit = async e => {
+    e.preventDefault(); setErr("");
+    try {
+      // Enrich the CRM payload with route + UTM + referrer + device +
+      // representation eligibility result + consent status per the
+      // brief. Backend accepts unknown fields; existing schema stays
+      // backward-compatible.
+      const enriched = withConversionContext(
+        { ...f, turnstile_token: getTurnstileToken() },
+        {
+          form_route: "/valuation",
+          representation_eligibility_result: f.currently_listed ? "represented_block" : "eligible",
+          consent_status: {
+            casl_marketing: !!f.casl_consent,
+            pipa_privacy: !!f.pipa_ack,
+            dorts_acknowledged: !!f.dorts_ack,
+          },
+        }
+      );
+      await axios.post(`${API}/leads/seller`, enriched);
+      trackFormSubmit("/valuation", { timeline: f.timeline, property_type: f.property_type, city: f.city });
+      trackConversion("home_valuation_request", { timeline: f.timeline, property_type: f.property_type, city: f.city, currently_listed: f.currently_listed, currency: "CAD" });
+      trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", source: "valuation_page", currency: "CAD" });
+      setDone(true);
+    } catch(x) {
+      trackFieldError("/valuation", "submit", "post_failed");
+      setErr("Please complete required fields and consents.");
+    }
+  };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
+
+  // ── Form-first ATF (brief Phase B) ──────────────────────────────────
+  // Order on mobile (320–390px): IdentityLine → H1 → subhead →
+  // Property Address (first actionable field) → form fields → Article 16
+  // gate → CASL/PIPA/DoRTS → submit. Educational glossary prose is moved
+  // BELOW the form into a progressive-disclosure accordion so it never
+  // pushes the first field past the mobile viewport.
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img loading="lazy" decoding="async" src={DOOGIE_POINT_L} alt="Doogie" style={{width:120,marginBottom:"1rem"}}/>
-    <div className="eyebrow">Free · No Obligation</div><h1 className="section-title">Curious what your home could be worth?</h1>
+    {/* Identity line — Doug + brokerage prominently displayed above the
+        H1 per RESA / BCFSA best practice (not footer-only). */}
+    <IdentityLine practice="REALTOR® · CMA specialist · Fraser Valley + South Surrey" size="md" testId="valuation-identity"/>
+    <div className="eyebrow">Free · No Obligation</div>
+    <h1 className="section-title">Curious what your home could be worth?</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get a free market estimate from Doug within 24 hours.</p>
     <GlossaryPageProvider>
-    <div data-testid="valuation-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
-      <GlossaryProse text={"Your home's market estimate accounts for recent comparable sales, the property's condition, current buyer demand, and — for buyers reading listings today — mortgage math tied to their Amortization Period and the OSFI B-20 stress test. Buyer closing costs (Property Transfer Tax, potential GST New Housing Rebate on a new build, 2-5-10 Home Warranty on new construction, and — for strata — a fresh Form B — Strata Information Certificate) shape what a buyer can afford. Rural parcels are also affected by Agricultural Land Reserve status. Once we agree on price, a buyer's Subject Removal is the next milestone. Free, no obligation."}/>
-    </div>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
-      <div className="form-grid">
-        <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-        <div className="field"><label>Phone *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-        <div className="field"><label>City (BC) *</label><input required value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
-      </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>Property Address * <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(BC Geocoder autocomplete)</span></label>
+      {/* Property Address — first actionable field so mobile users can
+          begin the form without scrolling past legal / process copy. */}
+      <div className="field"><label>Property Address * <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(BC Geocoder autocomplete)</span></label>
         <BcGeocoderAutocomplete
           value={f.property_address}
-          onChange={(addr, meta) => setF({...f, property_address: addr, ...(meta?.locality ? {city: meta.locality} : {})})}
+          onChange={(addr, meta) => onFieldEdit({ property_address: addr, ...(meta?.locality ? {city: meta.locality} : {}) })}
           required
           testid="valuation-address"
         />
       </div>
       <div className="form-grid" style={{marginTop:"1rem"}}>
-        <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
-        <div className="field"><label>When are you thinking of selling?</label><select value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just curious</option></select></div>
+        <div className="field"><label>City (BC) *</label><input required value={f.city} onChange={e=>onFieldEdit({city:e.target.value})}/></div>
+        <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
       </div>
-      {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern */}
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
+      <div className="form-grid" style={{marginTop:"1rem"}}>
+        <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})}/></div>
+        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})}/></div>
+      </div>
+      <div className="form-grid" style={{marginTop:"1rem"}}>
+        <div className="field"><label>Phone <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(optional — Doug replies faster if you include it)</span></label><input type="tel" value={f.phone} onChange={e=>onFieldEdit({phone:e.target.value})} data-testid="valuation-phone"/></div>
+        <div className="field"><label>When are you thinking of selling?</label><select value={f.timeline} onChange={e=>onFieldEdit({timeline:e.target.value})}><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just curious</option></select></div>
+      </div>
+      {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern. Wording preserved verbatim — MB-approved. */}
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
       {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Because your property is currently listed with another REALTOR®, Doug isn't able to prepare a market estimate for you — please continue to work with your existing REALTOR®. Feel free to browse the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link> for general information.</div>}
-      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
+      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit). Wording preserved verbatim — MB-approved. */}
       <div className="paper" data-testid="valuation-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="valuation-casl"/> Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time.</label>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="valuation-casl"/> Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time.</label>
         <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>Optional — Doug will still respond to this specific request even if you leave this unchecked (CASL s.10(9)(a)).</div>
       </div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="valuation-dorts"/> I have read the BCFSA Disclosure of Representation in Trading Services and understand my options for representation. <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="valuation-dorts"/> I have read the BCFSA Disclosure of Representation in Trading Services and understand my options for representation. <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
     </form>
+
+    {/* ── Testimonial slot (permissioned quote) ─────────────────────────
+        Rendered empty until Doug pastes a real quote — no fake proof.
+        `data-testid` reserved so the QA harness can assert its presence
+        once populated. Placeholder is hidden (display:none) to comply
+        with the brief's "no generic testimonials" rule. */}
+    <div
+      data-testid="testimonial-slot-seller"
+      data-testimonial-status="empty"
+      style={{ display: "none" }}
+      aria-hidden="true"
+    />
+
+    {/* ── Progressive disclosure: "What the estimate accounts for" ─────
+        Moved below the form so mobile 320–390px viewports see the
+        Identity line + H1 + first field ATF without scrolling past
+        educational copy. Keyboard-accessible <details>/<summary>. */}
+    <details
+      data-testid="valuation-what-included"
+      style={{ marginTop: "2rem", background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.12)", borderRadius: 10, padding: "0.85rem 1rem" }}
+      onToggle={(e) => setShowDetails(e.currentTarget.open)}
+    >
+      <summary style={{ cursor: "pointer", fontFamily: "'Sora', sans-serif", fontWeight: 700, color: "var(--brand-navy)", listStyle: "revert" }}>
+        What the market estimate accounts for
+      </summary>
+      <div data-testid="valuation-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginTop:"0.85rem"}}>
+        <GlossaryProse text={"Your home's market estimate accounts for recent comparable sales, the property's condition, current buyer demand, and — for buyers reading listings today — mortgage math tied to their Amortization Period and the OSFI B-20 stress test. Buyer closing costs (Property Transfer Tax, potential GST New Housing Rebate on a new build, 2-5-10 Home Warranty on new construction, and — for strata — a fresh Form B — Strata Information Certificate) shape what a buyer can afford. Rural parcels are also affected by Agricultural Land Reserve status. Once we agree on price, a buyer's Subject Removal is the next milestone. Free, no obligation."}/>
+      </div>
+    </details>
     <PttStressTestPanel/>
     </GlossaryPageProvider>
   </div></section>);
@@ -10898,6 +10989,7 @@ const AppLayout = ({children}) => {
         focuses this so keyboard users can jump past nav on every page. */}
     <a href="#main-content" className="skip-to-content" data-testid="skip-to-content">Skip to main content</a>
     <ComplianceStrip/>
+    <ConversionStrip/>
     <Nav/>
     <BackHomeBar/>
     <main id="main-content" tabIndex={-1}>{children}</main>

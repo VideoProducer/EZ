@@ -39,6 +39,34 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase B — /valuation elite personal-brand refactor + sitewide conversion strip (Feb 20 2026)
+
+**Goal**: turn `/valuation` into a form-first personal-brand landing page with Doug as the hero (not Doogie), while preserving 100% of the MB-approved compliance copy (Article 16 hard-block, DoRTS, PIPA, CASL). Also introduces the sitewide conversion strip and reusable IdentityLine component that Phase C (Buyer/Seller/Referral) will consume.
+
+**Shipped**:
+- **New photo**: Saved MB-approved 2026 headshot to `/frontend/public/doug-headshot-2026.jpg` (old `doug-headshot.jpg` preserved for existing schema references).
+- **Reusable components**:
+  - `components/IdentityLine.jsx` — Doug photo + "Doug LeMaire, REALTOR®" + "Fraser Property Management Realty Services Ltd." + practice line. RESA/BCFSA-compliant licensee prominence (not footer-only). Sizes: `sm` / `md` / `lg`.
+  - `components/ConversionStrip.jsx` — sitewide navy→gold header strip with two CTAs: **"What's my home worth?"** → `/valuation` (gold pill) and **"Tell Doug what you're looking for"** → `/buyer` (outline pill). Auto-hides on `/valuation`, `/buyer`, `/seller`, `/referral-request` (per brief — no competing CTAs on conversion pages). UTM-tagged for CRM attribution.
+  - `utils/conversionAnalytics.js` — `form_view` / `form_start` / `field_error` / `step_complete` / `form_submit` / `article_16_block` / `thank_you_view` / `phone_click` / `calendar_click` / `doogie_after_submit_use`. Fires into `dataLayer` + `posthog.capture`. Every event carries `route`, `landing_page` (persisted in sessionStorage), `referrer`, `device_type`, and all UTM params. Plus `withConversionContext()` helper that enriches CRM POSTs with the same attribution shape.
+- **`/valuation` refactor** (in `App.js`):
+  - **Form-first ATF**: mobile 390px sees IdentityLine → H1 → subhead → **Property Address (first actionable field)** → City / Type / Name / Email / Phone / Timeline → Article 16 gate → CASL / PIPA / DoRTS → Submit. No scrolling past legal/process copy to begin the form.
+  - **Progressive disclosure**: the "What the market estimate accounts for" glossary prose moved BELOW the form into a keyboard-accessible `<details>` accordion so it never blocks the ATF field.
+  - **Phone → optional** (matches brief): label reads `Phone (optional — Doug replies faster if you include it)`. Required `type="tel"` removed; `data-testid="valuation-phone"` retained.
+  - **Compliance preserved verbatim**: Article 16 hard-block message, CASL card wording, PIPA + DoRTS ack labels, submit button gated on `currently_listed` — **no MB-approved text was changed**.
+  - **Analytics wired**: `form_view` on mount, `form_start` on first field interaction, `article_16_block` when the represented checkbox is toggled on, `form_submit` on POST, `thank_you_view` on success screen.
+  - **CRM enrichment**: `withConversionContext()` adds `landing_page`, `current_route`, `referrer`, `device_type`, all UTM params, `representation_eligibility_result: "eligible" | "represented_block"`, and `consent_status: {casl_marketing, pipa_privacy, dorts_acknowledged}` to the `/api/leads/seller` POST body.
+  - **Testimonial slot**: `data-testid="testimonial-slot-seller"` reserved (hidden empty div) so a permissioned client quote can be dropped in without a code change.
+- **Sitewide integration**:
+  - `AppLayout` renders `<ConversionStrip/>` between `<ComplianceStrip/>` and `<Nav/>`.
+  - `DashboardMockup` (which owns `/`) also renders `<ConversionStrip/>` right under its `<HomeComplianceBanner/>` so the strip is visible above the Doogie hero on the landing page.
+- Verified:
+  - Mobile 390px `/valuation`: identity line + form ATF ✅, phone `required=false` ✅, progressive-disclosure accordion below form ✅, testimonial slot present ✅.
+  - Article 16 gate: block message renders with MB-approved copy ✅, submit disabled ✅, `article_16_block` event fires ✅.
+  - Homepage `/`: ConversionStrip visible on desktop AND mobile ✅, both CTAs carry UTM tags ✅.
+
+**Still to ship (Phase C)**: same treatment on `/buyer`, `/seller`, `/referral-request`.
+
 ### Phase 14.4 — Per-Listing Cotala Override + TV QR (Feb 20 2026)
 - **Cotala is now a first-class embed host**, alongside Matterport / YouTube / Vimeo:
   - `server.py`: `_tour_host_family()` now returns `"cotala"` for any `*.cotala.com` URL. `_sanitize_tour_url()` normalises variants (`tours.` / `share.` / `www.` + trailing tracking params) to the canonical `https://tours.cotala.com/{id}` embed form. `_EMBEDDABLE_TOUR_HOSTS` includes cotala. Both listing detail and `/api/tours/library` accept `cotala` as embeddable → renders as an inline iframe instead of the "external" click-out card.

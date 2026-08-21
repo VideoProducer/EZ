@@ -35,6 +35,7 @@ import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { FLAGSHIP } from "../config/flagshipListing";
 import ListingPhotoLightbox from "../components/ListingPhotoLightbox";
 import LiveHomepageSchema from "../components/LiveHomepageSchema";
+import ConversionStrip from "../components/ConversionStrip";
 import { POPULAR_GLOSSARY_TERMS } from "../utils/glossary";
 import WeeklyDigestSignup from "../components/WeeklyDigestSignup";
 import PlayfulEmptyState from "../components/PlayfulEmptyState";
@@ -828,6 +829,7 @@ export default function DashboardMockup({ homeVariant = "search" }) {
       )}
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <HomeComplianceBanner/>
+        <ConversionStrip/>
         <DashboardBackHomeBar resetHome={() => {
           // Clear filters + return to the visitor's landing section so tapping
           // "Home" from any nested view feels like a true reset. Kicks
