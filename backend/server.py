@@ -1543,7 +1543,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     if not lead.pipa_ack:
         raise HTTPException(400, "PIPA privacy acknowledgement required")
     if lead.working_with_realtor:
-        raise HTTPException(400, "Because you're already under contract with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
+        raise HTTPException(400, "We can't continue this request through this form. You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: /communities and /glossary.")
     doc = {
         **lead.model_dump(),
         **get_consent_meta(request),
@@ -1608,7 +1608,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         subject=f"🐾 New {kind} — {lead.full_name}" + (f" ({', '.join(lead.areas or [])})" if lead.areas else ""),
         body_html=body,
     ))
-    return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
+    return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
 
 @api.post("/leads/seller")
 async def create_seller_lead(lead: SellerLead, request: Request):
@@ -1618,7 +1618,7 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     if not lead.pipa_ack:
         raise HTTPException(400, "PIPA privacy acknowledgement required")
     if lead.currently_listed:
-        raise HTTPException(400, "Because your property is currently listed with another REALTOR®, Doug isn't able to help you directly. Feel free to ask Doogie general questions or view the Communities and Glossary pages.")
+        raise HTTPException(400, "We can't continue this request through this form. You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: /communities and /glossary.")
     doc = {
         **lead.model_dump(),
         **get_consent_meta(request),
@@ -1660,7 +1660,7 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         subject=f"🐾 New Seller Lead — {lead.full_name}",
         body_html=body,
     ))
-    return {"success": True, "id": lead.id, "message": "Thank you! Doug will be in touch within 1 business day."}
+    return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
 
 # =============== UNSUBSCRIBE (working, updates lead records) ===============
 class UnsubscribeIn(BaseModel):

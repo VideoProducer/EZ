@@ -39,6 +39,25 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase C — /buyer + /seller + /referral-request mirrored (Feb 20 2026)
+
+**Shipped (all four conversion pages `/valuation`, `/buyer`, `/seller`, `/referral-request` now identical treatment)**:
+- **IdentityLine** rendered above every H1 with Doug's 2026 headshot (`doug-headshot-2026.jpg`) + name + full brokerage + practice line.
+- **Phone → optional** on all four forms, labelled `Phone (optional — Doug replies faster if you include it)`. `required` attribute dropped, `type="tel"` retained.
+- **Response-time copy unified** to *"Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays)"* on H1 subhead, thank-you screen, and backend success response (`/api/leads/buyer` + `/api/leads/seller` return the same message).
+- **Article-16 stop-state copy updated** verbatim from the brief across all four surfaces (frontend blocks + backend 400 exceptions):
+  > *"We can't continue this request through this form. You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources."*
+- **Thank-you page** rewritten to the brief's approved copy across `/valuation`, `/buyer`, `/seller`, `/referral-request`:
+  > *"Request received. Thanks for reaching out. Doug LeMaire, REALTOR®, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship. Any representation will be explained in writing before real-estate services are provided."*
+- **"While you wait" links** added to every thank-you screen: `Save a search` / `Explore BC communities` / `Ask Doogie a research question`.
+- **Analytics events** wired on all four pages: `form_view`, `form_start`, `field_error`, `form_submit`, `article_16_block`, `thank_you_view` — each carries `route`, `landing_page`, `referrer`, `device_type`, and all UTM params.
+- **CRM enrichment** via `withConversionContext()` on every POST: `landing_page`, `current_route`, `referrer`, `device_type`, UTM params, `representation_eligibility_result: "eligible" | "represented_block"`, `consent_status: {casl_marketing, pipa_privacy, dorts_acknowledged}`.
+- **Testimonial slots** reserved on all four pages (`testimonial-slot-{seller|buyer|seller-conversation}`) — hidden empty divs ready for a permissioned client quote.
+- **Progressive disclosure**: BC-journey glossary prose on `/buyer` and `/seller` moved into keyboard-accessible `<details>` accordions below the form so the ATF stays clean on mobile 320-390px.
+
+Verified on preview at mobile 390px:
+- `/buyer`, `/seller`, `/referral-request`, `/valuation` — all four pages have IdentityLine ✅, phone `required=false` ✅, ConversionStrip auto-hidden ✅, new Article-16 wording ✅, `form_start` + `article_16_block` analytics fire correctly ✅.
+
 ### Phase B — /valuation elite personal-brand refactor + sitewide conversion strip (Feb 20 2026)
 
 **Goal**: turn `/valuation` into a form-first personal-brand landing page with Doug as the hero (not Doogie), while preserving 100% of the MB-approved compliance copy (Article 16 hard-block, DoRTS, PIPA, CASL). Also introduces the sitewide conversion strip and reusable IdentityLine component that Phase C (Buyer/Seller/Referral) will consume.

@@ -5871,6 +5871,13 @@ const BuyerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
+  const [started, setStarted] = useState(false);   // fires form_start on first field edit
+  useEffect(() => { trackFormView("/buyer"); }, []);
+  useEffect(() => { if (done) trackThankYouView("/buyer"); }, [done]);
+  const onFieldEdit = (patch) => {
+    if (!started) { trackFormStart("/buyer"); setStarted(true); }
+    setF((prev) => ({ ...prev, ...patch }));
+  };
   // Pre-fill from listing "Ask Doug about this listing" pill (?city=&mls=&address=)
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -5883,8 +5890,27 @@ const BuyerForm = () => {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const submit = async e => { e.preventDefault(); setErr(""); try { await axios.post(`${API}/leads/buyer`, {...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" }); setDone(true); } catch(x){ setErr(t("common.required")); } };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="buyer-success-home">{t("common.back_home")}</Link></div></section>;
+  const submit = async e => {
+    e.preventDefault(); setErr("");
+    try {
+      const enriched = withConversionContext(
+        { ...f, areas: f.areas.length? f.areas: [f.property_type||"Any"], form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken() },
+        {
+          form_route: "/buyer",
+          representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+        }
+      );
+      await axios.post(`${API}/leads/buyer`, enriched);
+      trackFormSubmit("/buyer", { property_type: f.property_type || "Any", budget_range: f.budget_range, timeline: f.timeline });
+      trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" });
+      setDone(true);
+    } catch(x){
+      trackFieldError("/buyer", "submit", "post_failed");
+      setErr(t("common.required"));
+    }
+  };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="buyer-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="buyer-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="buyer-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google surfaces this as a rich card for "how to buy a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
@@ -5905,40 +5931,47 @@ const BuyerForm = () => {
         {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"Your BC lawyer or notary handles title transfer, PTT payment, mortgage registration at the Land Title & Survey Authority (LTSA), and delivery of the keys on possession day.","url":"https://eztofind.ca/glossary"}
       ]
     })}}/>
+    <IdentityLine practice="REALTOR® · Buyer representation · Fraser Valley + South Surrey" size="md" testId="buyer-identity"/>
     <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
     <GlossaryPageProvider>
-    <div data-testid="buyer-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
-      <GlossaryProse text={"Buying a home in BC involves seven checkpoints — pre-approval under OSFI B-20, DORTS disclosure with your REALTOR®, live MLS® search, offer with standard subjects (financing, inspection, and — for strata units — the Form B — Strata Information Certificate), Subject Removal, deposit, and closing with your lawyer. Common line items you'll budget for include the Property Transfer Tax (with the First Time Home Buyers' Program exemption if eligible), GST New Housing Rebate on new builds, and the 2-5-10 Home Warranty on new construction. If you're looking rural, watch for Agricultural Land Reserve status. Your Amortization Period drives the monthly payment. Ask Doogie any term — Doug will guide the transaction."}/>
-    </div>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="buyer-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="buyer-form">
       <div className="form-grid">
-        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="buyer-name"/></div>
-        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="buyer-email"/></div>
-        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} data-testid="buyer-phone"/></div>
-        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})} data-testid="buyer-type"><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
-        <div className="field"><label>{t("buyer.budget_range")} *</label><select required value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("buyer.budget_u750")}</option><option value="$750K – $1.25M">{t("buyer.budget_750_1250")}</option><option value="$1.25M – $2M">{t("buyer.budget_1250_2m")}</option><option value="$2M – $3M">{t("buyer.budget_2m_3m")}</option><option value="$3M – $5M">{t("buyer.budget_3m_5m")}</option><option value="$5M+">{t("buyer.budget_5mplus")}</option></select></div>
-        <div className="field"><label>{t("buyer.timeline")} *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="0-3 months">{t("buyer.tl_0_3")}</option><option value="3-6 months">{t("buyer.tl_3_6")}</option><option value="6-12 months">{t("buyer.tl_6_12")}</option><option value="12+ months">{t("buyer.tl_12plus")}</option></select></div>
-        <div className="field"><label>{t("buyer.financing_status")} *</label><select required value={f.financing_status} onChange={e=>setF({...f,financing_status:e.target.value})}><option value="">{t("common.select")}</option><option value="Pre-approved">{t("buyer.fin_pre")}</option><option value="Working on it">{t("buyer.fin_working")}</option><option value="Cash buyer">{t("buyer.fin_cash")}</option><option value="Need information">{t("buyer.fin_need_info")}</option></select></div>
-        <div className="field"><label>{t("buyer.preferred_contact")}</label><select value={f.preferred_contact} onChange={e=>setF({...f,preferred_contact:e.target.value})}><option value="email">{t("contact.email_pref")}</option><option value="phone">{t("contact.phone_pref")}</option><option value="text">{t("contact.text_pref")}</option></select></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})} data-testid="buyer-name"/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})} data-testid="buyer-email"/></div>
+        <div className="field"><label>{t("buyer.phone")} <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(optional — Doug replies faster if you include it)</span></label><input type="tel" value={f.phone} onChange={e=>onFieldEdit({phone:e.target.value})} data-testid="buyer-phone"/></div>
+        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})} data-testid="buyer-type"><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
+        <div className="field"><label>{t("buyer.budget_range")} *</label><select required value={f.budget_range} onChange={e=>onFieldEdit({budget_range:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("buyer.budget_u750")}</option><option value="$750K – $1.25M">{t("buyer.budget_750_1250")}</option><option value="$1.25M – $2M">{t("buyer.budget_1250_2m")}</option><option value="$2M – $3M">{t("buyer.budget_2m_3m")}</option><option value="$3M – $5M">{t("buyer.budget_3m_5m")}</option><option value="$5M+">{t("buyer.budget_5mplus")}</option></select></div>
+        <div className="field"><label>{t("buyer.timeline")} *</label><select required value={f.timeline} onChange={e=>onFieldEdit({timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="0-3 months">{t("buyer.tl_0_3")}</option><option value="3-6 months">{t("buyer.tl_3_6")}</option><option value="6-12 months">{t("buyer.tl_6_12")}</option><option value="12+ months">{t("buyer.tl_12plus")}</option></select></div>
+        <div className="field"><label>{t("buyer.financing_status")} *</label><select required value={f.financing_status} onChange={e=>onFieldEdit({financing_status:e.target.value})}><option value="">{t("common.select")}</option><option value="Pre-approved">{t("buyer.fin_pre")}</option><option value="Working on it">{t("buyer.fin_working")}</option><option value="Cash buyer">{t("buyer.fin_cash")}</option><option value="Need information">{t("buyer.fin_need_info")}</option></select></div>
+        <div className="field"><label>{t("buyer.preferred_contact")}</label><select value={f.preferred_contact} onChange={e=>onFieldEdit({preferred_contact:e.target.value})}><option value="email">{t("contact.email_pref")}</option><option value="phone">{t("contact.phone_pref")}</option><option value="text">{t("contact.text_pref")}</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.areas_label")}</label><input placeholder={t("buyer.areas_placeholder")} value={f.areas.join(", ")} onChange={e=>setF({...f,areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
-      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>setF({...f,first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
-      <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
-      {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("buyer.under_contract_block")}</div>}
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.areas_label")}</label><input placeholder={t("buyer.areas_placeholder")} value={f.areas.join(", ")} onChange={e=>onFieldEdit({areas:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("buyer.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>onFieldEdit({notes:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>onFieldEdit({first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
+      <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/buyer"); }} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
+      {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
       <div className="paper" data-testid="buyer-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label>
         <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
       </div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="buyer-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="buyer-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">{t("common.submit")}</button>
     </form>
+    {/* Permissioned buyer testimonial slot — hidden until Doug pastes a real quote. */}
+    <div data-testid="testimonial-slot-buyer" data-testimonial-status="empty" style={{ display: "none" }} aria-hidden="true"/>
+    <details data-testid="buyer-glossary-details" style={{ marginTop: "2rem", background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.12)", borderRadius: 10, padding: "0.85rem 1rem" }}>
+      <summary style={{ cursor: "pointer", fontFamily: "'Sora', sans-serif", fontWeight: 700, color: "var(--brand-navy)", listStyle: "revert" }}>What happens after you submit — the 7-step BC buyer journey</summary>
+      <div data-testid="buyer-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginTop:"0.85rem"}}>
+        <GlossaryProse text={"Buying a home in BC involves seven checkpoints — pre-approval under OSFI B-20, DORTS disclosure with your REALTOR®, live MLS® search, offer with standard subjects (financing, inspection, and — for strata units — the Form B — Strata Information Certificate), Subject Removal, deposit, and closing with your lawyer. Common line items you'll budget for include the Property Transfer Tax (with the First Time Home Buyers' Program exemption if eligible), GST New Housing Rebate on new builds, and the 2-5-10 Home Warranty on new construction. If you're looking rural, watch for Agricultural Land Reserve status. Your Amortization Period drives the monthly payment. Ask Doogie any term — Doug will guide the transaction."}/>
+      </div>
+    </details>
     </GlossaryPageProvider>
   </div></section>);
 };
@@ -5947,8 +5980,34 @@ const SellerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
-  const submit = async e => { e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/seller`,{...f, form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken()}); trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("common.thank_you")}</h1><p className="section-sub">{t("common.we_reply_24h")}</p><Link to={`/${qs}`} className="btn btn-primary" style={{marginTop:"1.5rem"}} data-testid="seller-success-home">{t("common.back_home")}</Link></div></section>;
+  const [started, setStarted] = useState(false);
+  useEffect(() => { trackFormView("/seller"); }, []);
+  useEffect(() => { if (done) trackThankYouView("/seller"); }, [done]);
+  const onFieldEdit = (patch) => {
+    if (!started) { trackFormStart("/seller"); setStarted(true); }
+    setF((prev) => ({ ...prev, ...patch }));
+  };
+  const submit = async e => {
+    e.preventDefault(); setErr("");
+    try{
+      const enriched = withConversionContext(
+        { ...f, form_lang: lang, sizzle_source: (typeof window !== "undefined" && sessionStorage.getItem("ez_sizzle_last_played_slug")) || null, turnstile_token: getTurnstileToken() },
+        {
+          form_route: "/seller",
+          representation_eligibility_result: f.currently_listed ? "represented_block" : "eligible",
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+        }
+      );
+      await axios.post(`${API}/leads/seller`, enriched);
+      trackFormSubmit("/seller", { property_type: f.property_type || "Any", timeline: f.timeline, city: f.city });
+      trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" });
+      setDone(true);
+    } catch(x){
+      trackFieldError("/seller", "submit", "post_failed");
+      setErr(t("common.required"));
+    }
+  };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="seller-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="seller-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="seller-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
@@ -5968,40 +6027,47 @@ const SellerForm = () => {
         {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"After subjects are removed, your BC lawyer or notary handles title transfer at the Land Title & Survey Authority (LTSA), payout of existing mortgage(s), and disbursement of net proceeds on completion day.","url":"https://eztofind.ca/glossary"}
       ]
     })}}/>
+    <IdentityLine practice="REALTOR® · Listing / CMA specialist · Fraser Valley + South Surrey" size="md" testId="seller-identity"/>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
     <GlossaryPageProvider>
-    <div data-testid="seller-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginBottom:"1rem"}}>
-      <GlossaryProse text={"Selling a home in BC starts with a Comparative Market Analysis, then a listing contract + DORTS. You'll complete the Property Disclosure Statement, stage and photograph, and go live on MLS® with your Amortization Period assumptions in mind for pricing (rate-sensitive buyers). Common considerations: Property Transfer Tax borne by the buyer, GST New Housing Rebate if you built new, Agricultural Land Reserve status if the parcel is rural, and — for strata — a fresh Form B — Strata Information Certificate. After offer negotiation, buyer completes Subject Removal, delivers deposit, and closes with a lawyer or notary."}/>
-    </div>
     <div className="notice" style={{background:"#F0F4FB",borderColor:"rgba(15,42,91,0.15)",marginBottom:"1.5rem",fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.6}} data-testid="seller-dorts-notice"><strong>{t("bcfsa.notice_title")}</strong> {t("bcfsa.notice_body")} <Link to={`/dorts${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>{t("bcfsa.dorts_link")}</Link> {t("bcfsa.notice_after")}</div>
     <form onSubmit={submit} className="paper" data-testid="seller-form">
       <div className="form-grid">
-        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-        <div className="field"><label>{t("seller.city")} *</label><input required value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.phone")} <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(optional — Doug replies faster if you include it)</span></label><input type="tel" value={f.phone} onChange={e=>onFieldEdit({phone:e.target.value})} data-testid="seller-phone"/></div>
+        <div className="field"><label>{t("seller.city")} *</label><input required value={f.city} onChange={e=>onFieldEdit({city:e.target.value})}/></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.property_address")} *</label><input required value={f.property_address} onChange={e=>setF({...f,property_address:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.property_address")} *</label><input required value={f.property_address} onChange={e=>onFieldEdit({property_address:e.target.value})}/></div>
       <div className="form-grid" style={{marginTop:"1rem"}}>
-        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
-        <div className="field"><label>{t("seller.timeline_list")} *</label><select required value={f.timeline} onChange={e=>setF({...f,timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="ASAP">{t("seller.tl_asap")}</option><option value="1-3 months">{t("seller.tl_1_3")}</option><option value="3-6 months">{t("seller.tl_3_6")}</option><option value="6-12 months">{t("seller.tl_6_12")}</option><option value="Just exploring">{t("seller.tl_exploring")}</option></select></div>
-        <div className="field"><label>{t("seller.estimated_value")} *</label><select required value={f.estimated_value} onChange={e=>setF({...f,estimated_value:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("seller.ev_u750")}</option><option value="$750K – $1.5M">{t("seller.ev_750_1500")}</option><option value="$1.5M – $3M">{t("seller.ev_1500_3m")}</option><option value="$3M – $5M">{t("seller.ev_3m_5m")}</option><option value="$5M+">{t("seller.ev_5mplus")}</option></select></div>
+        <div className="field"><label>{t("buyer.property_type")} *</label><select required value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option value="">{t("common.select")}</option><option value="Detached">{t("buyer.pt_detached")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option><option value="Equestrian / Acreage">{t("buyer.pt_acreage")}</option><option value="Estate Sale / Probate">{t("buyer.pt_estate")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option></select></div>
+        <div className="field"><label>{t("seller.timeline_list")} *</label><select required value={f.timeline} onChange={e=>onFieldEdit({timeline:e.target.value})}><option value="">{t("common.select")}</option><option value="ASAP">{t("seller.tl_asap")}</option><option value="1-3 months">{t("seller.tl_1_3")}</option><option value="3-6 months">{t("seller.tl_3_6")}</option><option value="6-12 months">{t("seller.tl_6_12")}</option><option value="Just exploring">{t("seller.tl_exploring")}</option></select></div>
+        <div className="field"><label>{t("seller.estimated_value")} *</label><select required value={f.estimated_value} onChange={e=>onFieldEdit({estimated_value:e.target.value})}><option value="">{t("common.select")}</option><option value="Under $750K">{t("seller.ev_u750")}</option><option value="$750K – $1.5M">{t("seller.ev_750_1500")}</option><option value="$1.5M – $3M">{t("seller.ev_1500_3m")}</option><option value="$3M – $5M">{t("seller.ev_3m_5m")}</option><option value="$5M+">{t("seller.ev_5mplus")}</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>setF({...f,currently_listed:e.target.checked})} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
-      {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>{t("seller.currently_listed_block")}</div>}
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>setF({...f,reason:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/seller"); }} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
+      {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>onFieldEdit({reason:e.target.value})}/></div>
       {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
       <div className="paper" data-testid="seller-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="seller-casl"/> {t("consent.casl")}</label>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="seller-casl"/> {t("consent.casl")}</label>
         <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
       </div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="seller-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")}</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="seller-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">{t("common.submit")}</button>
     </form>
+    {/* Permissioned seller testimonial slot — hidden until Doug pastes a real quote. */}
+    <div data-testid="testimonial-slot-seller-conversation" data-testimonial-status="empty" style={{ display: "none" }} aria-hidden="true"/>
+    <details data-testid="seller-glossary-details" style={{ marginTop: "2rem", background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.12)", borderRadius: 10, padding: "0.85rem 1rem" }}>
+      <summary style={{ cursor: "pointer", fontFamily: "'Sora', sans-serif", fontWeight: 700, color: "var(--brand-navy)", listStyle: "revert" }}>What happens after you submit — the 7-step BC seller journey</summary>
+      <div data-testid="seller-glossary-intro" style={{fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.7,color:"var(--muted)",marginTop:"0.85rem"}}>
+        <GlossaryProse text={"Selling a home in BC starts with a Comparative Market Analysis, then a listing contract + DORTS. You'll complete the Property Disclosure Statement, stage and photograph, and go live on MLS® with your Amortization Period assumptions in mind for pricing (rate-sensitive buyers). Common considerations: Property Transfer Tax borne by the buyer, GST New Housing Rebate if you built new, Agricultural Land Reserve status if the parcel is rural, and — for strata — a fresh Form B — Strata Information Certificate. After offer negotiation, buyer completes Subject Removal, delivers deposit, and closes with a lawyer or notary."}/>
+      </div>
+    </details>
     </GlossaryPageProvider>
   </div></section>);
 };
@@ -9002,7 +9068,7 @@ const Valuation = () => {
       setErr("Please complete required fields and consents.");
     }
   };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">On its way!</h1><p className="section-sub">Doug will prepare a comparative market analysis and reach out within 1 business day.</p></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to="/listings" className="btn btn-primary" data-testid="valuation-ty-save-search">Save a search</Link><Link to="/communities" className="btn btn-secondary" data-testid="valuation-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="valuation-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
 
   // ── Form-first ATF (brief Phase B) ──────────────────────────────────
   // Order on mobile (320–390px): IdentityLine → H1 → subhead →
@@ -9016,7 +9082,7 @@ const Valuation = () => {
     <IdentityLine practice="REALTOR® · CMA specialist · Fraser Valley + South Surrey" size="md" testId="valuation-identity"/>
     <div className="eyebrow">Free · No Obligation</div>
     <h1 className="section-title">Curious what your home could be worth?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Get a free market estimate from Doug within 24 hours.</p>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
     <GlossaryPageProvider>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
       {/* Property Address — first actionable field so mobile users can
@@ -9043,7 +9109,7 @@ const Valuation = () => {
       </div>
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern. Wording preserved verbatim — MB-approved. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
-      {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Because your property is currently listed with another REALTOR®, Doug isn't able to prepare a market estimate for you — please continue to work with your existing REALTOR®. Feel free to browse the <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link> for general information.</div>}
+      {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link>.</div>}
       {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit). Wording preserved verbatim — MB-approved. */}
       <div className="paper" data-testid="valuation-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
@@ -9095,6 +9161,13 @@ const ReferralRequest = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [city,setCity]=useState(""); const [done,setDone]=useState(false); const [err,setErr]=useState("");
+  const [started, setStarted] = useState(false);
+  useEffect(() => { trackFormView("/referral-request"); }, []);
+  useEffect(() => { if (done) trackThankYouView("/referral-request"); }, [done]);
+  const onFieldEdit = (patch) => {
+    if (!started) { trackFormStart("/referral-request"); setStarted(true); }
+    setF((prev) => ({ ...prev, ...patch }));
+  };
   // Pre-fill from listing referral pill (?city=...&mls=...)
   const [prefillMls, setPrefillMls] = useState("");
   useEffect(() => {
@@ -9107,32 +9180,52 @@ const ReferralRequest = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const submit=async e=>{e.preventDefault(); setErr(""); try{ await axios.post(`${API}/leads/buyer`,{...f,areas:[city],notes:`OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken()}); trackConversion("generate_lead", { lead_type: "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" }); setDone(true);}catch(x){setErr(t("common.required"));} };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">{t("ref.success_title")}</h1><p className="section-sub">{t("ref.success_body")}</p></div></section>;
+  const submit=async e=>{
+    e.preventDefault(); setErr("");
+    try {
+      const enriched = withConversionContext(
+        { ...f, areas:[city], notes: `OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken() },
+        {
+          form_route: "/referral-request",
+          representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+        }
+      );
+      await axios.post(`${API}/leads/buyer`, enriched);
+      trackFormSubmit("/referral-request", { region: city, property_type: f.property_type || "Any" });
+      trackConversion("generate_lead", { lead_type: "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" });
+      setDone(true);
+    } catch(x) {
+      trackFieldError("/referral-request", "submit", "post_failed");
+      setErr(t("common.required"));
+    }
+  };
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, or — where appropriate — a licensed local referral REALTOR<sup>®</sup> on the right board will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <IdentityLine practice="REALTOR® · Referral network coordinator · Fraser Valley + South Surrey" size="md" testId="referral-identity"/>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")}</p>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")} Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
     <form onSubmit={submit} className="paper" data-testid="referral-form">
       <div className="form-grid">
-        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})}/></div>
-        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></div>
-        <div className="field"><label>{t("buyer.phone")} *</label><input required value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-        <div className="field"><label>{t("ref.city")} *</label><input required value={city} onChange={e=>setCity(e.target.value)} placeholder={t("ref.city_placeholder")}/></div>
-        <div className="field"><label>{t("buyer.property_type")}</label><select value={f.property_type} onChange={e=>setF({...f,property_type:e.target.value})}><option value="Detached">{t("buyer.pt_detached")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option><option value="Acreage / Rural">{t("buyer.pt_acreage")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option></select></div>
-        <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>setF({...f,budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
+        <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})}/></div>
+        <div className="field"><label>{t("buyer.phone")} <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(optional — Doug replies faster if you include it)</span></label><input type="tel" value={f.phone} onChange={e=>onFieldEdit({phone:e.target.value})} data-testid="referral-phone"/></div>
+        <div className="field"><label>{t("ref.city")} *</label><input required value={city} onChange={e=>{ if (!started) { trackFormStart("/referral-request"); setStarted(true); } setCity(e.target.value); }} placeholder={t("ref.city_placeholder")}/></div>
+        <div className="field"><label>{t("buyer.property_type")}</label><select value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option value="Detached">{t("buyer.pt_detached")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option><option value="Acreage / Rural">{t("buyer.pt_acreage")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option></select></div>
+        <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>onFieldEdit({budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
       </div>
-      <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>setF({...f,notes:e.target.value})}/></div>
+      <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>onFieldEdit({notes:e.target.value})}/></div>
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>setF({...f,working_with_realtor:e.target.checked})} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
-      {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}>Because you're already under contract with another REALTOR®, Doug's referral network isn't able to place you with a new REALTOR® — please continue to work with your existing REALTOR®. Feel free to browse the <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link> for general information.</div>}
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/referral-request"); }} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
+      {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
       <div className="paper" data-testid="referral-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
         <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>setF({...f,casl_consent:e.target.checked})} data-testid="referral-casl"/> {t("consent.casl")}</label>
+        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="referral-casl"/> {t("consent.casl")}</label>
         <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
       </div>
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>setF({...f,pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>setF({...f,dorts_ack:e.target.checked})} data-testid="referral-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
+      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="referral-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="referral-submit">{t("ref.submit")}</button>
