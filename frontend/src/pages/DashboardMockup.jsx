@@ -105,7 +105,6 @@ const SECTIONS = [
 // array below — the badge is a highlight, not a source of new claims.
 const HERO_PULL_QUOTES = [
   { initials: "AM", name: "Anne M.",   excerpt: "The kindest, hardest working and best REALTOR® I have ever had." },
-  { initials: "MB", name: "Martin B.", excerpt: "My experience with Doug has been excellent — I'd recommend him to others." },
   { initials: "CC", name: "Carol C.",  excerpt: "Very patient — helped negotiate a good price and was very professional." },
   { initials: "MS", name: "Michael S.",excerpt: "Endless patience with my lack of experience and the changing market." },
   { initials: "MN", name: "Mo & Naz N.",excerpt: "Nice to relax and know we had a really good realtor working hard on our behalf." },
@@ -6185,10 +6184,6 @@ const HomeExtras = () => {
     {
       stars: 5, initials: "JC", name: "Joe C.", role: "Buyer",
       quote: "Doug helped me find my new townhouse. He did all of the research and was available when I needed to look for properties. He made sure that the listings fitted to what I was looking for. He wasn't pushy and didn't try to get me into a place I didn't like or couldn't afford. I would go with Doug again.",
-    },
-    {
-      stars: 5, initials: "MB", name: "Martin B.", role: "Buyer",
-      quote: "I can clearly say my experience with Doug has been excellent. I would have no problem either working with Doug again, or recommending him to others.",
     },
     {
       stars: 5, initials: "CC", name: "Carol C.", role: "Buyer",
