@@ -459,6 +459,72 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
       {/* Flagship listing 3015 141 Street — surfaced at the top of the luxury page. Gated on FLAGSHIP.active in config/flagshipListing.js */}
       {(previewFlagship || FLAGSHIP.active) && <LuxuryFlagshipCard/>}
 
+      {/* Luxury matched CTAs (Phase D brief §5 — "specialties/luxury cannot
+          be listing-only. After or beside the featured home: matched
+          seller/buyer CTA with Doug + brokerage ID"). Sits between the
+          flagship card and the cinematic hero so the primary commercial
+          affordance is above the fold on this specialty landing surface. */}
+      <section data-testid="luxury-matched-ctas" style={{
+        background: "#F7FAFF",
+        padding: "1.5rem 1rem",
+        borderTop: "1px solid rgba(15,42,91,0.08)",
+        borderBottom: "1px solid rgba(15,42,91,0.08)",
+      }}>
+        <div style={{
+          maxWidth: 1080, margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "0.85rem", alignItems: "stretch",
+        }}>
+          <div style={{
+            padding: "0.75rem 1rem", background: "#fff",
+            border: "1px solid rgba(15,42,91,0.15)", borderRadius: 10,
+            display: "flex", alignItems: "center", gap: "0.7rem",
+            gridColumn: "1 / -1",
+          }}>
+            <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" width={52} height={52} loading="lazy" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid #DABF7A",flexShrink:0}}/>
+            <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",lineHeight:1.4}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontWeight:700,fontSize:"1rem",color:"#0F2A5B"}}>Doug LeMaire, REALTOR<sup style={{fontSize:"0.65em"}}>®</sup></div>
+              <div style={{color:"var(--muted, #4a5568)",fontSize:"0.82rem"}}>Fraser Property Management Realty Services Ltd. · Luxury / estate representation</div>
+            </div>
+          </div>
+          <Link
+            to="/valuation?utm_source=luxury-page&utm_medium=matched-cta&utm_campaign=luxury-seller"
+            data-testid="luxury-cta-seller"
+            aria-label="Sellers of luxury BC homes: request a private market estimate from Doug"
+            style={{
+              display:"flex",flexDirection:"column",gap:"0.2rem",
+              padding:"0.9rem 1.15rem",borderRadius:10,textDecoration:"none",
+              background:"linear-gradient(90deg,#0F2A5B 0%,#1b478f 100%)",color:"#fff",
+              boxShadow:"0 6px 16px rgba(15,42,91,0.25)",
+              transition:"transform 120ms ease",
+            }}
+            onMouseEnter={(e)=>e.currentTarget.style.transform="translateY(-1px)"}
+            onMouseLeave={(e)=>e.currentTarget.style.transform="translateY(0)"}
+          >
+            <span style={{fontFamily:"Sora,sans-serif",fontWeight:800,fontSize:"1.02rem"}}>Selling a luxury home?</span>
+            <span style={{fontSize:"0.8rem",opacity:0.9}}>Request a private market estimate — reply within one business day.</span>
+          </Link>
+          <Link
+            to="/buyer?utm_source=luxury-page&utm_medium=matched-cta&utm_campaign=luxury-buyer"
+            data-testid="luxury-cta-buyer"
+            aria-label="Buyers of luxury BC homes: tell Doug what you are looking for"
+            style={{
+              display:"flex",flexDirection:"column",gap:"0.2rem",
+              padding:"0.9rem 1.15rem",borderRadius:10,textDecoration:"none",
+              background:"#DABF7A",color:"#0F2A5B",
+              boxShadow:"0 6px 16px rgba(218,191,122,0.35)",
+              transition:"transform 120ms ease",
+            }}
+            onMouseEnter={(e)=>e.currentTarget.style.transform="translateY(-1px)"}
+            onMouseLeave={(e)=>e.currentTarget.style.transform="translateY(0)"}
+          >
+            <span style={{fontFamily:"Sora,sans-serif",fontWeight:800,fontSize:"1.02rem"}}>Looking for a BC luxury home?</span>
+            <span style={{fontSize:"0.8rem",opacity:0.88}}>Tell Doug what you're considering — no obligation.</span>
+          </Link>
+        </div>
+      </section>
+
       {/* ═══════ §1 CINEMATIC HERO ═══════════════════════════════════════ */}
       <section style={{
         background: BRAND.ink,

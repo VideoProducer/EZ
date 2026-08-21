@@ -79,14 +79,15 @@ export default function DoogieTour({ firstVisitToastOpen = false } = {}) {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, i]);
 
-  // Auto-play on first visit — 1.5s delay so the page settles.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(TOUR_SEEN_KEY)) return;
-      const t = setTimeout(() => setOpen(true), 1500);
-      return () => clearTimeout(t);
-    } catch { /* localStorage blocked — never auto-open */ }
-  }, []);
+  // Auto-play DISABLED (Feb 20 2026 — Phase D brief §4). The tour used to
+  // fire 1.5s after first paint on the homepage, which covered the primary
+  // conversion CTAs ("What's my home worth?" / "Tell Doug what you're
+  // looking for"). Under the brief, conversion actions must be the primary
+  // commercial affordance and tours cannot obscure them. Users can still
+  // start the tour any time via the "Take the Doogie tour" pill (below).
+  // The TOUR_SEEN_KEY localStorage flag is preserved so the pill still
+  // says "Watch again" for returning visitors.
+  useEffect(() => { /* auto-start disabled; manual pill only */ }, []);
 
   const step = STEPS[i];
 

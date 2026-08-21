@@ -39,6 +39,41 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 - Luxury landing page: full JSON-LD graph added (was ZERO structured data before)
 - Meta tag duplicate bug FIXED — removed hardcoded description/OG/Twitter tags from index.html; every route now has crawler-visible per-page previews
 
+### Phase D — elite lead-generation upgrade (Feb 20 2026)
+Ships the full brief: `/contact` rewrite, luxury matched CTAs, JSON-LD on conversion pages, step_complete analytics, homepage tour demotion, CASL confirmation email, and sitemap priority bump. Verified live on preview.
+
+- **`/contact` rewrite (`App.js`)**: replaced mailbox-first layout with:
+  - IdentityLine (Doug + Fraser Property Management Realty Services Ltd.)
+  - Two primary CTAs — "What's my home worth?" (navy pill → /valuation) + "Tell Doug what you're looking for" (outline pill → /buyer)
+  - Referral link ("Not in Greater Vancouver / Fraser Valley / Sea-to-Sky?" → /referral-request)
+  - "What happens next" 4-step block (submit → review within one business day → DoRTS before services → decline anytime)
+  - Emails demoted to a collapsed `<details>` accordion (progressive disclosure, closed by default)
+
+- **`/specialties/luxury` matched CTAs (`LuxuryLandingMockup.jsx`)**: new strip between the flagship card and the cinematic hero — Doug identity band + 2 luxury-specific CTAs ("Selling a luxury home?" → /valuation, "Looking for a BC luxury home?" → /buyer) with UTM tags `utm_source=luxury-page&utm_medium=matched-cta`.
+
+- **LocalBusiness / RealEstateAgent JSON-LD (`ConversionPageSchema.jsx`)** injected on `/valuation`, `/buyer`, `/seller`, `/referral-request`. Includes `RealEstateAgent` (Doug + jobTitle + areaServed + brokerage), `RealEstateOrganization` (Fraser Property Management Realty Services Ltd.), and a `ContactAction` with an explicit `expectsAcceptanceOf` clause quoting the "one business day" reply-time claim — so Perplexity / ChatGPT Search / Gemini / Bing Copilot can cite the exact operational commitment verbatim.
+
+- **`step_complete` analytics** now fires on all 4 conversion routes:
+  - `/valuation`: `intent` when address+type filled, `contact` when name+email filled
+  - `/buyer`: `intent` when type+budget+timeline filled, `contact` when name+email filled
+  - `/seller`: `intent` when address+city+type filled, `contact` when name+email filled
+  - `/referral-request`: `intent` when city+type filled, `contact` when name+email filled
+  - Each event fires ONCE per step (idempotent via local `stepFired` state).
+
+- **Homepage tour auto-start DISABLED (`DoogieTour.jsx`)**: the 1.5s auto-open on first visit was covering the primary conversion CTAs. Tour is now button-only — accessible via the "Take the Doogie tour" pill any time, but never launches unprompted.
+
+- **CASL-compliant confirmation email (`server.py` `_send_lead_confirmation()`)**: fires in the background from `/api/leads/buyer` and `/api/leads/seller`. `kind="transactional"` (CASL s.6(6)(b) exempt — confirms an inquiry the person initiated). Body carries: request-received message, identity of sender (Doug + brokerage), one-business-day claim, non-representation disclaimer, and "while you wait" links. No marketing content, no nurture-series enrollment. Silent-fail (background task).
+
+- **Sitemap priority bump (`sitemap_generator.py`)**:
+  - `/valuation`, `/buyer`, `/seller`, `/referral-request`: 0.7 monthly → **0.9 weekly**
+  - `/contact`: 0.6 yearly → **0.8 monthly**
+
+Verified via automated smoke test at 390px mobile + 1280px desktop:
+- `/contact`: identity ✅, both CTAs ✅, referral link ✅, next-steps block ✅, emails collapsed by default ✅
+- `/specialties/luxury`: matched CTA strip ✅, both CTAs present ✅
+- `/valuation`: JSON-LD `RealEstateAgent` + "one business day" verified in DOM ✅
+- Homepage: DoogieTour code path confirmed neutered (auto-start useEffect is a documented no-op) ✅
+
 ### Phase C — /buyer + /seller + /referral-request mirrored (Feb 20 2026)
 
 **Shipped (all four conversion pages `/valuation`, `/buyer`, `/seller`, `/referral-request` now identical treatment)**:

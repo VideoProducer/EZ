@@ -15,9 +15,10 @@ import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./u
 import { buildTLDR, TLDRBlock, KeyPointsBlock, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
 import { IdentityLine } from "./components/IdentityLine";
 import ConversionStrip from "./components/ConversionStrip";
+import ConversionPageSchema from "./components/ConversionPageSchema";
 import {
   trackFormView, trackFormStart, trackFieldError, trackFormSubmit,
-  trackArticle16Block, trackThankYouView, withConversionContext,
+  trackArticle16Block, trackThankYouView, trackStepComplete, withConversionContext,
 } from "./utils/conversionAnalytics";
 import MyJourney from "./pages/MyJourney";
 import PIPACookieBanner from "./components/PIPACookieBanner";
@@ -5872,8 +5873,21 @@ const BuyerForm = () => {
   const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);   // fires form_start on first field edit
+  const [stepFired, setStepFired] = useState({intent:false,contact:false});
   useEffect(() => { trackFormView("/buyer"); }, []);
   useEffect(() => { if (done) trackThankYouView("/buyer"); }, [done]);
+  // step_complete instrumentation (Phase D). Intent = area/type/budget +
+  // representation eligibility answered; contact = name + email captured.
+  useEffect(() => {
+    if (!stepFired.intent && f.property_type && f.budget_range && f.timeline) {
+      trackStepComplete("/buyer", "intent");
+      setStepFired((s)=>({...s,intent:true}));
+    }
+    if (!stepFired.contact && f.full_name && f.email) {
+      trackStepComplete("/buyer", "contact");
+      setStepFired((s)=>({...s,contact:true}));
+    }
+  }, [f.property_type, f.budget_range, f.timeline, f.full_name, f.email, stepFired.intent, stepFired.contact]);
   const onFieldEdit = (patch) => {
     if (!started) { trackFormStart("/buyer"); setStarted(true); }
     setF((prev) => ({ ...prev, ...patch }));
@@ -5931,6 +5945,7 @@ const BuyerForm = () => {
         {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"Your BC lawyer or notary handles title transfer, PTT payment, mortgage registration at the Land Title & Survey Authority (LTSA), and delivery of the keys on possession day.","url":"https://eztofind.ca/glossary"}
       ]
     })}}/>
+    <ConversionPageSchema route="/buyer" headline="Tell Doug what you're looking for — buyer intake" description="BC buyer search intake with Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; DoRTS provided before services."/>
     <IdentityLine practice="REALTOR® · Buyer representation · Fraser Valley + South Surrey" size="md" testId="buyer-identity"/>
     <div className="eyebrow">{t("buyer.eyebrow")}</div><h1 className="section-title">{t("buyer.title")}</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
@@ -5981,8 +5996,19 @@ const SellerForm = () => {
   const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
+  const [stepFired, setStepFired] = useState({intent:false,contact:false});
   useEffect(() => { trackFormView("/seller"); }, []);
   useEffect(() => { if (done) trackThankYouView("/seller"); }, [done]);
+  useEffect(() => {
+    if (!stepFired.intent && f.property_address && f.city && f.property_type) {
+      trackStepComplete("/seller", "intent");
+      setStepFired((s)=>({...s,intent:true}));
+    }
+    if (!stepFired.contact && f.full_name && f.email) {
+      trackStepComplete("/seller", "contact");
+      setStepFired((s)=>({...s,contact:true}));
+    }
+  }, [f.property_address, f.city, f.property_type, f.full_name, f.email, stepFired.intent, stepFired.contact]);
   const onFieldEdit = (patch) => {
     if (!started) { trackFormStart("/seller"); setStarted(true); }
     setF((prev) => ({ ...prev, ...patch }));
@@ -6027,6 +6053,7 @@ const SellerForm = () => {
         {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"After subjects are removed, your BC lawyer or notary handles title transfer at the Land Title & Survey Authority (LTSA), payout of existing mortgage(s), and disbursement of net proceeds on completion day.","url":"https://eztofind.ca/glossary"}
       ]
     })}}/>
+    <ConversionPageSchema route="/seller" headline="Start a seller conversation — Doug LeMaire, REALTOR®" description="No-obligation BC seller conversation with Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; DoRTS provided before any listing contract."/>
     <IdentityLine practice="REALTOR® · Listing / CMA specialist · Fraser Valley + South Surrey" size="md" testId="seller-identity"/>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
@@ -6193,17 +6220,73 @@ const About = () => (<section className="section"><div className="container-x" s
 const Contact = () => {
   const { t, qs, rtl } = useFormLang();
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
-    <div className="eyebrow">{t("contact.eyebrow")}</div><h1 className="section-title">{t("contact.title")}</h1>
-    <div className="paper" style={{fontFamily:"Inter,sans-serif",lineHeight:1.9}}>
-      <p><strong>{t("contact.general")}:</strong> <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}}>info@eztofind.ca</a></p>
-      <p><strong>{t("contact.realtors")}:</strong> <a href="mailto:realtor@eztofind.ca" style={{color:"var(--brand-blue)"}}>realtor@eztofind.ca</a></p>
-      <p><strong>{t("contact.referral_leads")}:</strong> <a href="mailto:referrals@eztofind.ca" style={{color:"var(--brand-blue)"}}>referrals@eztofind.ca</a></p>
-      <hr style={{margin:"1.5rem 0",border:"none",borderTop:"1px solid rgba(15,42,91,0.1)"}}/>
-      <div style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}>
-        <Link to={`/buyer${qs}`} className="btn btn-primary" data-testid="contact-buyer-link">{t("common.buyer_form")}</Link>
-        <Link to={`/seller${qs}`} className="btn btn-green" data-testid="contact-seller-link">{t("common.seller_form")}</Link>
+    {/* Identity FIRST — RESA/BCFSA prominence requirement. Doug + full brokerage before any prompt. */}
+    <IdentityLine practice="REALTOR® · Fraser Valley + South Surrey · Referral network for the rest of BC" size="md" testId="contact-identity"/>
+    <div className="eyebrow">Talk to Doug</div>
+    <h1 className="section-title">Talk to Doug — pick the fastest next step</h1>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting either request below does not create a REALTOR®-client relationship — formal representation is explained in writing before any real-estate services are provided.</p>
+
+    {/* Primary CTAs — mirror the sitewide conversion strip so contact leads
+        with a next action, not a mailbox. */}
+    <div className="paper" data-testid="contact-primary-ctas" style={{padding:"1.25rem",background:"linear-gradient(180deg,#F7FAFF 0%,#FFFFFF 100%)",border:"1px solid rgba(15,42,91,0.15)"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))",gap:"0.85rem"}}>
+        <Link
+          to={`/valuation${qs}`}
+          data-testid="contact-cta-seller"
+          aria-label="Sellers: request a free market estimate from Doug"
+          className="btn btn-primary"
+          style={{
+            display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"0.15rem",
+            padding:"0.9rem 1.15rem",textAlign:"left",lineHeight:1.3,
+          }}
+        >
+          <span style={{fontSize:"1.05rem",fontWeight:800}}>What's my home worth?</span>
+          <span style={{fontSize:"0.78rem",opacity:0.9,fontWeight:500}}>Free market estimate · reply within one business day</span>
+        </Link>
+        <Link
+          to={`/buyer${qs}`}
+          data-testid="contact-cta-buyer"
+          aria-label="Buyers: tell Doug what you are looking for"
+          className="btn btn-secondary"
+          style={{
+            display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"0.15rem",
+            padding:"0.9rem 1.15rem",textAlign:"left",lineHeight:1.3,
+            background:"#fff",border:"1.5px solid #0F2A5B",color:"#0F2A5B",
+          }}
+        >
+          <span style={{fontSize:"1.05rem",fontWeight:800}}>Tell Doug what you're looking for</span>
+          <span style={{fontSize:"0.78rem",opacity:0.85,fontWeight:500}}>Buyer-search request · reply within one business day</span>
+        </Link>
+      </div>
+      <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--muted)",fontFamily:"Inter,sans-serif"}}>
+        Not in Greater Vancouver / Fraser Valley / Sea-to-Sky?{" "}
+        <Link to={`/referral-request${qs}`} data-testid="contact-cta-referral" style={{color:"var(--brand-blue)",fontWeight:600}}>Ask Doug to connect you with a licensed REALTOR® on the correct local board →</Link>
       </div>
     </div>
+
+    {/* What happens next — sets expectation before submit, sourced from brief §3 */}
+    <div className="paper" data-testid="contact-next-steps" style={{marginTop:"1.25rem",background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",padding:"1rem 1.15rem"}}>
+      <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>What happens next</div>
+      <ol style={{margin:0,paddingLeft:"1.25rem",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",lineHeight:1.7,color:"var(--ink)"}}>
+        <li>You submit the form above.</li>
+        <li>Doug — or, for referrals, a licensed local REALTOR® on the correct board — reviews within one business day (Mon–Fri, excluding statutory holidays).</li>
+        <li>If a conversation makes sense, you'll receive the BCFSA Disclosure of Representation in Trading Services <em>before</em> any real-estate services begin.</li>
+        <li>You can decline representation, ask questions, or use our general BC research resources at any time.</li>
+      </ol>
+    </div>
+
+    {/* Emails as SECONDARY — collapsed by default, keyboard-accessible */}
+    <details data-testid="contact-emails-secondary" style={{ marginTop: "1.25rem", background: "#fff", border: "1px solid rgba(15,42,91,0.12)", borderRadius: 10, padding: "0.85rem 1rem" }}>
+      <summary style={{ cursor: "pointer", fontFamily: "'Sora', sans-serif", fontWeight: 700, color: "var(--brand-navy)", listStyle: "revert" }}>Prefer email? (secondary channel)</summary>
+      <div style={{fontFamily:"Inter,sans-serif",lineHeight:1.9,marginTop:"0.65rem",fontSize:"0.92rem"}}>
+        <p style={{margin:"0.1rem 0"}}><strong>General:</strong> <a href="mailto:info@eztofind.ca" style={{color:"var(--brand-blue)"}} data-testid="contact-email-general">info@eztofind.ca</a></p>
+        <p style={{margin:"0.1rem 0"}}><strong>REALTOR® network:</strong> <a href="mailto:realtor@eztofind.ca" style={{color:"var(--brand-blue)"}} data-testid="contact-email-realtor">realtor@eztofind.ca</a></p>
+        <p style={{margin:"0.1rem 0"}}><strong>Referral leads:</strong> <a href="mailto:referrals@eztofind.ca" style={{color:"var(--brand-blue)"}} data-testid="contact-email-referral">referrals@eztofind.ca</a></p>
+        <p style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.5rem"}}>
+          Email replies are best-effort and may be slower than the form. Emails are governed by our <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link>.
+        </p>
+      </div>
+    </details>
   </div></section>);
 };
 
@@ -9024,12 +9107,31 @@ const Valuation = () => {
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [showDetails, setShowDetails] = useState(false);   // progressive disclosure — "What the estimate accounts for"
   const [started, setStarted] = useState(false);           // fire form_start on first field interaction
+  const [stepFired, setStepFired] = useState({intent:false,contact:false});
 
   // Phase B analytics — brief-mandated event set. form_view + thank_you_view
   // fire on mount; form_start on first field interaction; article_16_block
   // when the represented checkbox is toggled on; form_submit on POST.
   useEffect(() => { trackFormView("/valuation"); }, []);
   useEffect(() => { if (done) trackThankYouView("/valuation"); }, [done]);
+
+  // Phase D step_complete instrumentation (brief §9). Two virtual steps:
+  //   intent  = property address + property_type + representation eligibility
+  //             answered (or "no" — the represented==true state fires
+  //             article_16_block separately)
+  //   contact = name + email captured
+  // Fires ONCE per step so we don't spam analytics; used to measure the
+  // intent→contact drop-off per landing page and device.
+  useEffect(() => {
+    if (!stepFired.intent && f.property_address && f.property_type) {
+      trackStepComplete("/valuation", "intent");
+      setStepFired((s)=>({...s,intent:true}));
+    }
+    if (!stepFired.contact && f.full_name && f.email) {
+      trackStepComplete("/valuation", "contact");
+      setStepFired((s)=>({...s,contact:true}));
+    }
+  }, [f.property_address, f.property_type, f.full_name, f.email, stepFired.intent, stepFired.contact]);
 
   // Fire form_start exactly once when the user first types into any
   // field. This is the canonical funnel step between "form_view" and
@@ -9079,6 +9181,7 @@ const Valuation = () => {
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Identity line — Doug + brokerage prominently displayed above the
         H1 per RESA / BCFSA best practice (not footer-only). */}
+    <ConversionPageSchema route="/valuation" headline="Curious what your home could be worth? — Doug LeMaire, REALTOR®" description="Free BC market estimate from Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; not appraisal advice."/>
     <IdentityLine practice="REALTOR® · CMA specialist · Fraser Valley + South Surrey" size="md" testId="valuation-identity"/>
     <div className="eyebrow">Free · No Obligation</div>
     <h1 className="section-title">Curious what your home could be worth?</h1>
@@ -9162,8 +9265,19 @@ const ReferralRequest = () => {
   const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
   const [city,setCity]=useState(""); const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
+  const [stepFired, setStepFired] = useState({intent:false,contact:false});
   useEffect(() => { trackFormView("/referral-request"); }, []);
   useEffect(() => { if (done) trackThankYouView("/referral-request"); }, [done]);
+  useEffect(() => {
+    if (!stepFired.intent && city && f.property_type) {
+      trackStepComplete("/referral-request", "intent");
+      setStepFired((s)=>({...s,intent:true}));
+    }
+    if (!stepFired.contact && f.full_name && f.email) {
+      trackStepComplete("/referral-request", "contact");
+      setStepFired((s)=>({...s,contact:true}));
+    }
+  }, [city, f.property_type, f.full_name, f.email, stepFired.intent, stepFired.contact]);
   const onFieldEdit = (patch) => {
     if (!started) { trackFormStart("/referral-request"); setStarted(true); }
     setF((prev) => ({ ...prev, ...patch }));
@@ -9202,6 +9316,7 @@ const ReferralRequest = () => {
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, or — where appropriate — a licensed local referral REALTOR<sup>®</sup> on the right board will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    <ConversionPageSchema route="/referral-request" headline="Out-of-area referral — Doug's licensed REALTOR® network" description="Doug LeMaire, REALTOR® introduces buyers and sellers outside the Fraser Valley / South Surrey / Sea-to-Sky corridor to a licensed local REALTOR® on the correct board. Reply within one business day."/>
     <IdentityLine practice="REALTOR® · Referral network coordinator · Fraser Valley + South Surrey" size="md" testId="referral-identity"/>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")} Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>

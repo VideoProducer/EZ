@@ -1534,6 +1534,81 @@ async def _triage_and_notify_lead(*, kind: str, collection_name: str, lead_id: s
         logger.exception(f"[triage] pipeline failed for {kind} {lead_id}: {e}")
 
 # =============== LEADS ===============
+async def _send_lead_confirmation(to_email: str, full_name: str, form_route: str) -> None:
+    """CASL-compliant confirmation email to a lead who just submitted a form.
+
+    Fires in the background from `/api/leads/buyer` and `/api/leads/seller`.
+    Kind is `transactional` — CASL s.6(6)(b) exempts this because the message
+    confirms an inquiry the person actually initiated. NO marketing content,
+    NO nurture-series enrollment, NO cross-sell — just:
+      • Confirm we received the request
+      • State the one-business-day reply window
+      • State that submission does not create a REALTOR®-client relationship
+      • Identify the sender (Doug + brokerage)
+      • Provide a working reply-to path
+
+    Copy mirrors the on-page thank-you screen so the audit trail is
+    consistent regardless of channel.
+    """
+    from services.email_sender import send_email as _send
+    import html as _html
+    name  = _html.escape(full_name or "there", quote=True)
+    route = form_route or "your request"
+    while_you_wait = (
+        '<p style="margin:16px 0 8px 0;font-size:0.9em;color:#0F2A5B;font-weight:600">While you wait, some general BC research resources you might enjoy:</p>'
+        '<ul style="margin:0 0 12px 20px;padding:0;font-size:0.9em;color:#0F2A5B">'
+        '<li><a href="https://eztofind.ca/listings" style="color:#1E4FCF">Save a search</a> on live CREA DDF® listings</li>'
+        '<li><a href="https://eztofind.ca/communities" style="color:#1E4FCF">Explore BC communities</a> (240+ profiles)</li>'
+        '<li><a href="https://eztofind.ca/glossary" style="color:#1E4FCF">Ask Doogie a research question</a> — 439 BC real-estate terms</li>'
+        '</ul>'
+    )
+    html = (
+        "<div style='font-family:Inter,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#0F2A5B'>"
+        "<h2 style='color:#0F2A5B;margin:0 0 12px 0'>🐾 Request received</h2>"
+        f"<p>Hi {name},</p>"
+        "<p>Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, or — where appropriate — a licensed local referral REALTOR<sup>®</sup> will review your request and reply <strong>within one business day</strong> (Mon–Fri, excluding statutory holidays).</p>"
+        "<p style='background:#F0F4FB;border-left:3px solid #DABF7A;padding:12px 14px;border-radius:4px;font-size:0.92em;line-height:1.55'>"
+        "Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing (BCFSA Disclosure of Representation in Trading Services) before real-estate services are provided."
+        "</p>"
+        + while_you_wait +
+        "<hr style='border:none;border-top:1px solid #E5E7EB;margin:20px 0'/>"
+        "<p style='color:#6b7280;font-size:0.82em;line-height:1.55'>"
+        "<strong>Doug LeMaire, REALTOR<sup>®</sup></strong><br/>"
+        "Fraser Property Management Realty Services Ltd.<br/>"
+        f"Reply to this email or write <a href='mailto:info@eztofind.ca' style='color:#1E4FCF'>info@eztofind.ca</a><br/>"
+        "This confirmation is transactional under CASL s.6(6)(b) — it confirms an inquiry you initiated. It does not add you to any marketing list."
+        "</p>"
+        "</div>"
+    )
+    text = (
+        f"Hi {name},\n\n"
+        "Thanks for reaching out. Doug LeMaire, REALTOR®, or — where appropriate — a "
+        "licensed local referral REALTOR® will review your request and reply within one "
+        "business day (Mon–Fri, excluding statutory holidays).\n\n"
+        "Submitting this form does not create a REALTOR®-client relationship. Any "
+        "representation will be explained in writing (BCFSA Disclosure of Representation "
+        "in Trading Services) before real-estate services are provided.\n\n"
+        "While you wait:\n"
+        "• Save a search — https://eztofind.ca/listings\n"
+        "• Explore BC communities — https://eztofind.ca/communities\n"
+        "• Ask Doogie a research question — https://eztofind.ca/glossary\n\n"
+        "— Doug LeMaire, REALTOR®\n"
+        "Fraser Property Management Realty Services Ltd.\n"
+        "info@eztofind.ca\n\n"
+        "This confirmation is transactional under CASL s.6(6)(b) — it confirms an "
+        "inquiry you initiated. It does not add you to any marketing list."
+    )
+    try:
+        await _send(
+            db, to=to_email,
+            subject="🐾 EZtoFind.ca — request received",
+            html=html, text=text,
+            kind="transactional", related_id=None,
+            unsubscribe_url=None,   # transactional; no footer needed
+        )
+    except Exception as e:
+        logger.warning(f"lead confirmation email failed for {to_email}: {e}")
+
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
     await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
@@ -1608,6 +1683,9 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         subject=f"🐾 New {kind} — {lead.full_name}" + (f" ({', '.join(lead.areas or [])})" if lead.areas else ""),
         body_html=body,
     ))
+    # CASL-compliant transactional confirmation to the lead. Fires in the
+    # background so submit latency stays sub-second.
+    asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/buyer"))
     return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
 
 @api.post("/leads/seller")
@@ -1660,6 +1738,8 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         subject=f"🐾 New Seller Lead — {lead.full_name}",
         body_html=body,
     ))
+    # CASL-compliant transactional confirmation to the lead.
+    asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/valuation-or-seller"))
     return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
 
 # =============== UNSUBSCRIBE (working, updates lead records) ===============
