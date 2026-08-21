@@ -167,7 +167,8 @@ const TVPairingBlock = ({ listing, listingKey, onPaired, onExit }) => {
         <>
           <p style={{ margin: "0 0 0.6rem", fontSize: "0.85rem", opacity: 0.9 }}>
             The listing plays full-screen on the TV — <strong>no phone mirroring</strong>.
-            Works on Samsung / LG smart-TV browsers, a laptop HDMI'd to a TV, or a Chromebook.
+            Works on <strong>Samsung, LG, Android TV / Google TV, Fire TV,</strong> any
+            laptop HDMI'd to a TV, or a Chromebook.
           </p>
           <div style={{
             background: "rgba(255,255,255,0.08)",
@@ -176,10 +177,10 @@ const TVPairingBlock = ({ listing, listingKey, onPaired, onExit }) => {
             fontSize: "0.75rem", opacity: 0.9, marginBottom: "0.6rem",
             lineHeight: 1.45,
           }}>
-            <strong>Using Apple TV or Chromecast?</strong> Those don't have a web browser, so
-            they can't enter the code. Use iPhone <em>Screen Mirroring</em> instead (Control Centre
-            → Screen Mirroring → Apple TV) — your phone becomes the source and the TV mirrors
-            it 1:1.
+            <strong>On Apple TV, bare Chromecast, or Roku?</strong> Those sticks don't have a
+            web browser, so they can't enter the code. Use <em>Screen Mirroring</em> instead:
+            iPhone → Control Centre → Screen Mirroring · Android → Cast / Smart View → pick the
+            TV. Your phone becomes the source and the TV mirrors it 1:1.
           </div>
           <button
             type="button"
