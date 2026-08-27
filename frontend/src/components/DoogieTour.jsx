@@ -197,7 +197,10 @@ export default function DoogieTour({ firstVisitToastOpen = false } = {}) {
         data-testid="doogie-tour-replay"
         aria-label="Take the Doogie tour"
         style={{
-          position: "fixed", right: 20, bottom: 20, zIndex: 90,
+          // z-index 1049 sits just under the Doogie FAB (1050) so both
+          // floating pills stack cleanly above every Leaflet map layer
+          // (see .doogie-fab in index.css for the rationale).
+          position: "fixed", right: 20, bottom: 20, zIndex: 1049,
           background: "#0F2A5B", color: "#fff", border: "none",
           padding: "10px 16px", borderRadius: 999, cursor: "pointer",
           boxShadow: "0 8px 20px rgba(15,42,91,0.35)",
