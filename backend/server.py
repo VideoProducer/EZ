@@ -2582,6 +2582,55 @@ async def admin_set_listing_virtual_tour(
     }
 
 
+@api.get("/admin/sac-analytics")
+async def admin_sac_analytics(_=Depends(verify_admin)):
+    """Aggregate every lead attributed to `utm_source=sac` across
+    buyer_leads + seller_leads. Reads the CRM-enrichment fields wired
+    into every /leads/* POST during Phase B/C (utm_source, utm_campaign,
+    form_route, landing_page). Admin-only per PIPA best practice.
+    """
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    now = _dt.now(_tz.utc)
+    d7   = (now - _td(days=7)).isoformat()
+    d30  = (now - _td(days=30)).isoformat()
+    q_sac = {"utm_source": "sac"}
+
+    async def _fetch(col):
+        rows = await db[col].find(q_sac).sort("created_at", -1).to_list(500)
+        return rows
+
+    buyer  = await _fetch("buyer_leads")
+    seller = await _fetch("seller_leads")
+    all_leads = buyer + seller
+    all_leads.sort(key=lambda r: str(r.get("created_at","")), reverse=True)
+
+    # Aggregate top campaigns
+    from collections import Counter
+    campaigns = Counter([r.get("utm_campaign") or "(no tag)" for r in all_leads])
+    top_campaigns = [{"campaign": k, "count": v} for k, v in campaigns.most_common(10)]
+
+    def _in_window(r, threshold_iso):
+        c = str(r.get("created_at", ""))
+        return c >= threshold_iso
+
+    return {
+        "total_leads": len(all_leads),
+        "buyer_count": len(buyer),
+        "seller_count": len(seller),
+        "last_7_days":  sum(1 for r in all_leads if _in_window(r, d7)),
+        "last_30_days": sum(1 for r in all_leads if _in_window(r, d30)),
+        "top_campaigns": top_campaigns,
+        "recent": [
+            {
+                "created_at": str(r.get("created_at", "")),
+                "email": r.get("email", ""),
+                "form_route": r.get("form_route") or ("/buyer" if r in buyer else "/seller"),
+                "utm_campaign": r.get("utm_campaign", ""),
+            }
+            for r in all_leads[:25]
+        ],
+    }
+
 @api.post("/admin/ai-discovery/indexnow")
 async def admin_ai_discovery_indexnow(_=Depends(verify_admin)):
     """Push every URL listed in `/frontend/public/sitemap-ai.xml` (the AEO-safe

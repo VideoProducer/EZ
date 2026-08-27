@@ -48,6 +48,9 @@ const CommunityPageMockup = lazy(() => import("./components/CommunityPageMockup"
 const CommunityPageMockupLive = lazy(() => import("./components/CommunityPageMockupLive"));
 const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
+const SacLanding = lazy(() => import("./pages/SacLanding"));
+const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
+const AdminSacAnalytics = lazy(() => import("./pages/AdminSacAnalytics"));
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
 const ListingMagazine3015 = lazy(() => import("./pages/ListingMagazine3015"));
@@ -13053,6 +13056,9 @@ function App() {
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
+      <Route path="/sac" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><SacLanding/></Suspense></AppLayout>}/>
+      <Route path="/tools/bc-buyer-cost-calculator" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><BCBuyerCostCalculator/></Suspense></AppLayout>}/>
+      <Route path="/admin/sac-analytics" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><AdminSacAnalytics/></Suspense></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
