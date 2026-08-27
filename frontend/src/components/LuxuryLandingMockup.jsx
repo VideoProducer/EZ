@@ -684,7 +684,13 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
             const city   = l.city || "British Columbia";
             const desc   = (l.description || l.public_remarks || l.desc || "").slice(0, 180);
             const photo  = l.photos?.[0];
-            const corridorLabel = CORRIDORS.find(c => (c.cities || []).some(cc => cc.toLowerCase() === (city || "").toLowerCase()))?.name || l.corridor || "Luxury Portfolio";
+            // Pill label — reflects the DDF `City` field EXACTLY so a Vancouver
+            // listing shown inside the West Vancouver Estates corridor doesn't
+            // get mis-tagged as "West Vancouver Estates". Kept as a fallback
+            // when the DDF city is missing.
+            const pillLabel = (l.city && String(l.city).trim())
+              ? String(l.city).trim().toUpperCase()
+              : (CORRIDORS.find(c => (c.cities || []).some(cc => cc.toLowerCase() === (city || "").toLowerCase()))?.name || l.corridor || "Luxury Portfolio").toUpperCase();
             return (
               <article key={key} style={{ background: "white", borderRadius: 4, overflow: "hidden", border: `1px solid ${BRAND.hairline}`, transition: "transform 0.2s ease, box-shadow 0.2s ease" }}>
                 <Link
@@ -696,7 +702,7 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
                     background: photo ? `url(${photo}) center/cover` : `linear-gradient(135deg, #DDD2B8, #F0E9D7)`,
                     height: 260, position: "relative",
                   }}>
-                    <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }}>{corridorLabel}</div>
+                    <div style={{ position: "absolute", top: 14, left: 14, background: BRAND.ink, color: "white", padding: "5px 10px", fontFamily: SANS, fontSize: "0.68rem", letterSpacing: "0.14em", fontWeight: 600, textTransform: "uppercase" }} data-testid={`luxury-city-pill-${key}`}>{pillLabel}</div>
                   </div>
                   <div style={{ padding: "24px 26px 26px" }}>
                     <div style={{ fontFamily: SERIF, fontSize: "1.45rem", lineHeight: 1.2, color: BRAND.ink }}>{addr}</div>
