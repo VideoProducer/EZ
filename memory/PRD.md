@@ -310,6 +310,13 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 
 ## Backlog (P0 → P3)
 
+### Feb 27, 2026 — Resend DNS verified · CASL emails now live-shipping
+- User added SPF, DKIM (3 CNAMEs), and DMARC records for `eztofind.ca` at Namecheap; Resend flipped domain status to Verified
+- Test send: `POST /admin/email/send-test` → `queued=false`, `provider=resend`, `provider_message_id=6eb7fe5f-25bf-4908-868b-7841a842c371` — real production send confirmed
+- Outbox flushed — 0 pending; 6 legacy failed messages remain in audit log but all are fake QA test addresses (`@example.com`), not real leads
+- `RESEND_FROM` was already pre-configured to `EZtoFind.ca <info@eztofind.ca>` — no code change needed after verification
+- **Effect:** CASL confirmation emails on Buyer / Seller / Valuation / Referral form submissions now deliver in real-time to real leads
+
 ### Feb 27, 2026 — Coming Soon upload endpoints permanently removed
 - Purged `POST /api/admin/coming-soon/upload-photo` and `POST /api/admin/coming-soon/upload-video` endpoints (they wrote to ephemeral pod-local disk which broke on deploy)
 - Removed related constants `MAX_PHOTO_BYTES`, `MAX_VIDEO_BYTES`, `PHOTO_MIMES`, `VIDEO_MIMES`
