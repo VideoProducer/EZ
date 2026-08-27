@@ -4291,37 +4291,34 @@ const VirtualTourFrame = ({ listing }) => {
     const isYT   = /youtube\.com|youtu\.be/i.test(rawUrl);
     const isVim  = /vimeo\.com/i.test(rawUrl);
     const hostLabel  = isYT ? "YouTube" : (isVim ? "Vimeo" : "the video host");
-    const reasonCopy = isVim
-      ? `The listing brokerage's Vimeo has domain-restricted embeds — it plays on their own website but not on eztofind.ca. It also plays fine on ${hostLabel} directly. You can also request a private in-person tour with Doug:`
-      : `The listing brokerage's ${hostLabel} channel (or a strict network / VPN / content blocker) is blocking playback inside eztofind.ca. It plays fine on ${hostLabel} directly — you can also request a private in-person tour with Doug:`;
     // Mobile deep-link: on iOS/Android, tapping "Open in YouTube app"
     // hands playback to the native YouTube app which bypasses embed
     // restrictions and content blockers. Only useful for YouTube.
     const ytIdMatch = isYT ? rawUrl.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([a-zA-Z0-9_-]{11})/) : null;
     const ytDeepLink = ytIdMatch ? `vnd.youtube://${ytIdMatch[1]}` : null;
+    // Calm re-frame: the tour is fine, it just prefers its own window.
+    // Feb 2026 rewrite — the previous panel used a yellow "Video didn't
+    // load" pill + alarming copy which read as "the site is broken". Doug
+    // requested a calm reframe that leads with the Play button.
     return (
       <div
         data-testid="listing-virtual-tour-fallback"
         style={{
-          borderRadius: 12, border: "1px solid rgba(15,42,91,0.15)",
-          background: "linear-gradient(135deg, #FFF9E8 0%, #F5F0E1 100%)",
+          borderRadius: 12, border: "1px solid rgba(15,42,91,0.12)",
+          background: "#F7FAFE",
           padding: "1.6rem 1.6rem 1.4rem", position: "relative",
         }}
       >
-        <div style={{
-          display: "inline-block", fontSize: "0.7rem", textTransform: "uppercase",
-          letterSpacing: "0.1em", fontWeight: 800, color: "#7A5100",
-          background: "rgba(253,184,19,0.28)", padding: "3px 10px", borderRadius: 999,
-          marginBottom: "0.6rem",
-        }}>Video didn't load</div>
         <h3 style={{
-          margin: "0 0 0.5rem", color: "var(--brand-navy, #0F2A5B)",
-          fontSize: "1.1rem", fontFamily: '"Playfair Display", serif',
-        }}>This {hostLabel} tour won't embed here.</h3>
+          margin: "0 0 0.4rem", color: "var(--brand-navy, #0F2A5B)",
+          fontSize: "1.15rem", fontFamily: '"Playfair Display", serif',
+        }}>Play this tour in a new tab</h3>
         <p style={{
           margin: "0 0 1.1rem", fontFamily: "Inter, sans-serif",
           color: "#334155", fontSize: "0.92rem", lineHeight: 1.55,
-        }}>{reasonCopy}</p>
+        }}>
+          For the best viewing, this {hostLabel} tour opens in its own window — that way the audio, chapters, and full-screen controls work perfectly. Doogie's voice-over above will keep playing here while you watch.
+        </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", marginBottom: "1rem" }}>
           <a
             href={openInNewTab}
@@ -4330,11 +4327,11 @@ const VirtualTourFrame = ({ listing }) => {
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "var(--brand-blue, #1E4FCF)", color: "#fff",
-              padding: "0.65rem 1.1rem", borderRadius: 999, textDecoration: "none",
-              fontWeight: 700, fontSize: "0.88rem",
-              boxShadow: "0 4px 10px rgba(30,79,207,0.28)",
+              padding: "0.75rem 1.4rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.95rem",
+              boxShadow: "0 4px 12px rgba(30,79,207,0.32)",
             }}
-          >▶ Open the tour in a new tab ↗</a>
+          >▶ Play tour on {hostLabel} ↗</a>
           {ytDeepLink && (
             <a
               href={ytDeepLink}
@@ -4342,9 +4339,9 @@ const VirtualTourFrame = ({ listing }) => {
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
                 background: "#FF0000", color: "#fff",
-                padding: "0.65rem 1.1rem", borderRadius: 999, textDecoration: "none",
-                fontWeight: 700, fontSize: "0.88rem",
-                boxShadow: "0 4px 10px rgba(255,0,0,0.28)",
+                padding: "0.75rem 1.4rem", borderRadius: 999, textDecoration: "none",
+                fontWeight: 700, fontSize: "0.95rem",
+                boxShadow: "0 4px 12px rgba(255,0,0,0.28)",
               }}
             >▶ Open in the YouTube app</a>
           )}
@@ -4355,29 +4352,30 @@ const VirtualTourFrame = ({ listing }) => {
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "#fff", color: "var(--brand-navy, #0F2A5B)",
               border: "2px solid var(--brand-navy, #0F2A5B)",
-              padding: "0.6rem 1.1rem", borderRadius: 999, textDecoration: "none",
-              fontWeight: 700, fontSize: "0.88rem",
+              padding: "0.7rem 1.2rem", borderRadius: 999, textDecoration: "none",
+              fontWeight: 700, fontSize: "0.9rem",
             }}
           >📅 Ask Doug for a private tour</Link>
           <button
             type="button"
             onClick={() => { clearTimeout(timerRef.current); setStatus("loading"); setTimeout(() => setStatus(prev => prev==="loading"?"blocked":prev), 7000); }}
             data-testid="listing-virtual-tour-retry"
+            aria-label="Try loading the embedded tour again"
             style={{
-              background: "transparent", border: "1px solid rgba(15,42,91,0.35)",
-              color: "var(--brand-navy, #0F2A5B)",
-              padding: "0.55rem 1rem", borderRadius: 999, cursor: "pointer",
-              fontWeight: 600, fontSize: "0.85rem",
+              background: "transparent", border: "none",
+              color: "#64748B",
+              padding: "0.55rem 0.6rem", cursor: "pointer",
+              fontWeight: 500, fontSize: "0.82rem", textDecoration: "underline",
             }}
-          >↻ Try again</button>
+          >Try embedding again</button>
         </div>
         <p style={{
           fontSize: "0.78rem", color: "#64748B",
           fontFamily: "Inter, sans-serif", margin: 0, lineHeight: 1.45,
         }}>
-          Doogie's audio walk-through above narrates every room even when the
-          video is unavailable — try pressing play at the top of this section
-          while you scroll the photos.
+          Doogie's audio walk-through above narrates every room while you
+          watch — try pressing play at the top of this section and let it
+          run alongside the tour or photos.
         </p>
       </div>
     );
