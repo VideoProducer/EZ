@@ -3,6 +3,12 @@
 // Everything else is pre-staged and ready to render.
 export const FLAGSHIP = {
   active: true,  // ⚡ RE-ENABLED — feature listing card now at the top of /specialties/luxury
+  // Current market status — "JUST LISTED" | "ACCEPTED OFFER" | "SALE PENDING" | "SOLD" | null
+  // Renders as a coloured pill on both the homepage featured card and the
+  // Luxury flagship page. `status_note` shows a short qualifier under the
+  // pill (e.g. "Accepted in 1 week"). Empty string hides both.
+  status: "ACCEPTED OFFER",
+  status_note: "Accepted in 1 week from listing — subjects pending",
   address: "3015 141 Street",
   community: "Elgin Chantrell",  // Enclave / neighbourhood — surfaced in address lines beside city
   city: "Surrey",

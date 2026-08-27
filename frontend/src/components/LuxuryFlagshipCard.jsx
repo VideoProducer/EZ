@@ -58,6 +58,44 @@ export default function LuxuryFlagshipCard() {
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: "0.95rem", color: "#6B7280", marginTop: 6, fontStyle: "italic" }}>
             {FLAGSHIP.tagline}
           </div>
+          {FLAGSHIP.status && (
+            <div data-testid="luxury-flagship-status-block" style={{
+              marginTop: 12, display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 6,
+            }}>
+              <div
+                data-testid="luxury-flagship-status"
+                style={{
+                  // Same colour system as the homepage featured card so
+                  // the sale-cycle state (Just Listed → Accepted Offer →
+                  // Sale Pending → Sold) reads consistently across
+                  // surfaces. Navy pill on the calm cream backdrop.
+                  background: /accepted|pending/i.test(FLAGSHIP.status) ? "#0F2A5B"
+                            : /sold/i.test(FLAGSHIP.status)             ? "#0F5F3A"
+                            : "#DABF7A",
+                  color:      /accepted|pending|sold/i.test(FLAGSHIP.status) ? "#F5D48A" : "#0F2A5B",
+                  padding: "6px 16px", borderRadius: 999,
+                  fontSize: "0.72rem", fontWeight: 800,
+                  textTransform: "uppercase", letterSpacing: "0.16em",
+                  fontFamily: "'Sora', sans-serif",
+                  boxShadow: "0 4px 10px rgba(15,42,91,0.2)",
+                }}
+              >{FLAGSHIP.status}</div>
+              {FLAGSHIP.status_note && (
+                <div
+                  data-testid="luxury-flagship-status-note"
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "#6B7280",
+                    fontFamily: "Inter, sans-serif",
+                    fontStyle: "italic",
+                    textAlign: "center",
+                    maxWidth: 360,
+                    lineHeight: 1.4,
+                  }}
+                >{FLAGSHIP.status_note}</div>
+              )}
+            </div>
+          )}
           {live && (beds || baths || sqft || price) && (
             <div data-testid="luxury-flagship-specs" style={{
               marginTop: 14, display: "inline-flex", flexWrap: "wrap", gap: "6px 22px",

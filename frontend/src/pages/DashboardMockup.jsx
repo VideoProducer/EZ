@@ -5527,7 +5527,12 @@ const HomeComplianceBanner = () => {
 const FEATURED_HOME_LISTING = {
   enabled: true,                  // ⚡ RE-ENABLED — feature listing card now at the top of /
   mls_auto_detect: true,
-  status: "JUST LISTED",
+  status: "ACCEPTED OFFER",
+  // Optional badge/strip shown next to the status pill and above the
+  // photo — used to celebrate a fast turnaround (or announce "Sold in
+  // N days" once subjects are removed). Kept short: renders on one line
+  // on mobile 320px, wraps to two on desktop. Set to "" to hide.
+  status_note: "Accepted in 1 week — subjects pending",
   address: "3015 141 Street",
   city: "Surrey",
   neighbourhood: "Elgin Chantrell",
@@ -5859,11 +5864,40 @@ const DashboardFeaturedListing = () => {
             fontSize: 22, fontWeight: 800, color: C.navy,
           }}>New from Doug LeMaire, REALTOR®</h2>
         </div>
-        <div style={{
-          background: C.brandGold, color: C.navy, padding: "6px 14px",
-          borderRadius: 999, fontSize: 11.5, fontWeight: 800,
-          textTransform: "uppercase", letterSpacing: 1.2,
-        }}>{merged.status}</div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+          <div
+            data-testid="dash-featured-status"
+            style={{
+              // Status pill switches from gold (JUST LISTED) → deep
+              // navy-on-cream (ACCEPTED OFFER / SALE PENDING) → strong
+              // sold-green (SOLD) so buyers scanning the homepage
+              // instantly see market velocity. Colour lookup keeps the
+              // design system consistent with the rest of the site.
+              background: /accepted|pending/i.test(merged.status||"") ? "#0F2A5B"
+                        : /sold/i.test(merged.status||"")             ? "#0F5F3A"
+                        : C.brandGold,
+              color:      /accepted|pending|sold/i.test(merged.status||"") ? "#F5D48A" : C.navy,
+              padding: "6px 14px", borderRadius: 999,
+              fontSize: 11.5, fontWeight: 800,
+              textTransform: "uppercase", letterSpacing: 1.2,
+              boxShadow: "0 4px 10px rgba(15,42,91,0.2)",
+            }}
+          >{merged.status}</div>
+          {L.status_note && (
+            <div
+              data-testid="dash-featured-status-note"
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: C.muted,
+                fontFamily: "'Inter', sans-serif",
+                textAlign: "right",
+                maxWidth: 240,
+                lineHeight: 1.35,
+              }}
+            >{L.status_note}</div>
+          )}
+        </div>
       </div>
 
       <div style={{
