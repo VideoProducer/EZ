@@ -8,7 +8,7 @@
 // Video renders via HTML5 <video> for uploaded MP4/WEBM/MOV. YouTube/Vimeo
 // URLs are auto-detected and rendered as an <iframe> embed.
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
@@ -155,7 +155,7 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [featureInput, setFeatureInput] = useState("");
-  const photoInput = useRef(); const videoInput = useRef();
+  const [photoUrlInput, setPhotoUrlInput] = useState("");
 
   const load = async () => {
     const r = await axios.get(`${API}/admin/coming-soon`, { headers });
@@ -192,33 +192,22 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
     } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
   };
 
-  const uploadPhotos = async (files) => {
-    setBusy(true); setMsg("Uploading photos…");
+  // Add an already-hosted image URL (e.g., MLS® photographer delivery link).
+  const addPhotoUrl = async () => {
+    const url = photoUrlInput.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      setMsg("⚠ Please enter a full https:// URL"); setTimeout(()=>setMsg(""), 4000); return;
+    }
+    setBusy(true);
     try {
-      const uploaded = [];
-      for (const f of files) {
-        const fd = new FormData(); fd.append("file", f);
-        const r = await axios.post(`${API}/admin/coming-soon/upload-photo`, fd, { headers: {...headers, "Content-Type": "multipart/form-data"} });
-        uploaded.push(r.data);
-      }
-      const newPhotos = [...(cs.photos || []), ...uploaded];
-      const newHero = cs.hero_photo_id || uploaded[0]?.id;
-      // Persist to DB immediately so preview sees it without waiting on Save
+      const id = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
+      const uploaded = { id, url, filename: url.split("/").pop() || "photo", size: 0, content_type: "image/external" };
+      const newPhotos = [...(cs.photos || []), uploaded];
+      const newHero = cs.hero_photo_id || id;
       await persistPartial({ photos: newPhotos, hero_photo_id: newHero });
-      setMsg(`✓ Uploaded and saved ${uploaded.length} photo${uploaded.length===1?"":"s"}`);
-      setTimeout(()=>setMsg(""), 3500);
-    } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
-    finally { setBusy(false); }
-  };
-
-  const uploadVideo = async (file) => {
-    setBusy(true); setMsg(`Uploading video (${(file.size/1024/1024).toFixed(1)} MB)… this may take a minute`);
-    try {
-      const fd = new FormData(); fd.append("file", file);
-      const r = await axios.post(`${API}/admin/coming-soon/upload-video`, fd, { headers: {...headers, "Content-Type": "multipart/form-data"} });
-      await persistPartial({ video_url: r.data.url, video_type: "file" });
-      setMsg(`✓ Uploaded and saved video`);
-      setTimeout(()=>setMsg(""), 3500);
+      setPhotoUrlInput("");
+      setMsg("✓ Photo URL added"); setTimeout(()=>setMsg(""), 3000);
     } catch (e) { setMsg("⚠ " + (e.response?.data?.detail || e.message)); }
     finally { setBusy(false); }
   };
@@ -306,8 +295,21 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
 
       <div className="paper" style={{padding:"1.5rem",marginBottom:"1rem"}}>
         <h3 style={{marginTop:0}}>Photos</h3>
-        <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif" multiple style={{display:"none"}} onChange={e=>{if(e.target.files.length) uploadPhotos([...e.target.files]); e.target.value="";}} data-testid="admin-cs-photo-input"/>
-        <button type="button" className="btn btn-primary" onClick={()=>photoInput.current?.click()} disabled={busy} data-testid="admin-cs-photo-upload">⬆ Upload photos (JPG, PNG, WEBP, HEIC — up to 20 MB each)</button>
+        <div style={{padding:"0.9rem 1rem",background:"#F0F4FB",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,fontSize:"0.85rem",fontFamily:"Inter,sans-serif",lineHeight:1.55,marginBottom:"1rem"}} data-testid="admin-cs-photo-notice">
+          <strong>Direct uploads are disabled.</strong> Paste an already-hosted image URL (e.g., from your MLS® photographer's delivery link, Google Drive share, or Emergent Object Storage) into the field below and click "+ Add photo".
+        </div>
+        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"0.75rem"}}>
+          <input
+            type="url"
+            value={photoUrlInput}
+            onChange={e=>setPhotoUrlInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addPhotoUrl();}}}
+            placeholder="https://…/photo.jpg"
+            style={{flex:"1 1 20rem"}}
+            data-testid="admin-cs-photo-url-input"
+          />
+          <button type="button" className="btn btn-primary" onClick={addPhotoUrl} disabled={busy || !photoUrlInput.trim()} data-testid="admin-cs-photo-url-add">+ Add photo</button>
+        </div>
         {cs.photos && cs.photos.length > 0 && (
           <div style={{marginTop:"1rem",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(10rem,1fr))",gap:"0.6rem"}}>
             {cs.photos.map(p => (
@@ -325,12 +327,8 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
 
       <div className="paper" style={{padding:"1.5rem",marginBottom:"1rem"}}>
         <h3 style={{marginTop:0}}>Video</h3>
-        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap",marginBottom:"1rem"}}>
-          <input ref={videoInput} type="file" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" style={{display:"none"}} onChange={e=>{if(e.target.files[0]) uploadVideo(e.target.files[0]); e.target.value="";}} data-testid="admin-cs-video-input"/>
-          <button type="button" className="btn btn-primary" onClick={()=>videoInput.current?.click()} disabled={busy} data-testid="admin-cs-video-upload">⬆ Upload video (MP4, WEBM, MOV — up to 500 MB)</button>
-        </div>
         <div className="field">
-          <label>… or paste a YouTube / Vimeo URL</label>
+          <label>Paste a YouTube or Vimeo URL</label>
           <input value={cs.video_url||""} onChange={e=>patch({video_url:e.target.value, video_type: e.target.value.includes("youtu")?"youtube":e.target.value.includes("vimeo")?"vimeo":"file"})} placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..." data-testid="admin-cs-video-url"/>
         </div>
         {cs.video_url && (
@@ -343,7 +341,7 @@ export default function AdminComingSoon({ headers, onNavAdmin }) {
       </div>
 
       <div style={{padding:"1rem",background:"#FFF8E1",border:"1px solid rgba(253,184,19,0.3)",borderRadius:8,fontSize:"0.85rem",fontFamily:"Inter,sans-serif",lineHeight:1.55,marginBottom:"2rem"}}>
-        <strong>Storage note:</strong> Uploaded files are stored on the app's disk. They survive hot reloads but may be wiped on major deploys — if a listing goes fully live, back up your final assets or move them to a proper CDN. For MP4/WEBM up to 500 MB the built-in player handles range requests so playback is fully seamless.
+        <strong>Storage note:</strong> Direct file uploads have been disabled to keep production storage clean. Coming-Soon photos + videos are managed via already-hosted URLs only (paste in above). Existing pod-hosted assets remain viewable and deletable.
       </div>
     </div>
   );

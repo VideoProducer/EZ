@@ -310,8 +310,31 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 
 ## Backlog (P0 → P3)
 
+### Feb 27, 2026 — Coming Soon upload endpoints permanently removed
+- Purged `POST /api/admin/coming-soon/upload-photo` and `POST /api/admin/coming-soon/upload-video` endpoints (they wrote to ephemeral pod-local disk which broke on deploy)
+- Removed related constants `MAX_PHOTO_BYTES`, `MAX_VIDEO_BYTES`, `PHOTO_MIMES`, `VIDEO_MIMES`
+- Frontend `ComingSoon.jsx`: removed file-picker upload UI; replaced with "paste already-hosted image URL" flow (new `addPhotoUrl` handler + `photoUrlInput` state). Video is now YouTube/Vimeo URL only.
+- `DELETE /api/admin/coming-soon/asset` retained so existing hosted assets can still be removed. `/api/uploads/*` static mount retained for backward compatibility with any pre-existing hosted assets.
+- Lint blocker resolved: ephemeral-upload-storage warning fully cleared.
+
+### Feb 27, 2026 — Lead-Attractor Toolkit + Sitewide Navigation Refresh
+**Built:**
+- `/tools/bc-buyer-cost-calculator` (existing) — PTT + FTHB + GST + closing costs
+- `/tools/ptt-estimator` (NEW) — standalone Property Transfer Tax with FTHB, new-build, foreign-buyer 20% add-on
+- `/tools/mortgage-affordability` (NEW) — SEO-indexed wrapper around the homepage `<Calculators/>` OSFI B-20 stress-test module; FAQPage + WebApplication JSON-LD
+- `/tools/first-time-buyer` (NEW canonical) — First-Time Buyer Cheat Sheet promoted from `/mockups/…` with 301 redirect
+
+**Nav / Footer:**
+- Added `Tools ▾` dropdown to top nav (`ToolsDropdown` component, App.js) between Glossary and About with 4 items
+- Added `Free BC Resources` footer column with 11 links (`data-testid="footer-free-bc-resources"`)
+
+**Sitemap:**
+- Added 4 new `/tools/*` URLs to sitemap-static.xml at priority 0.85–0.9 (static URL count now 40)
+
+**Rolled back (Feb 27, 2026):** `/tools/seller-net-sheet` page + all nav/footer/sitemap references fully removed at user request.
+
 ### P0 — Ship-blockers
-- None currently — deploy Phase 1/2/3 to production
+- None currently — deploy latest changes to production
 
 ### P1
 - Wave 1 Sub-Neighbourhood Pages (Top 30 by MLS active listings) — hyper-local AEO/SEO play. User needs to approve 3 minor flags before ship.

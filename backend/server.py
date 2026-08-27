@@ -15200,10 +15200,13 @@ from fastapi.staticfiles import StaticFiles
 import io as _io
 import shutil, mimetypes
 
-# ---- Static file serving for user uploads (coming-soon listing photos/video) ----
+# ---- Static file serving for user uploads (legacy — retained to serve
+# pre-existing coming-soon assets). New uploads have been removed; the
+# `/admin/coming-soon/upload-*` endpoints below were purged Feb 2026 to
+# eliminate ephemeral pod-local storage. Photos + videos are now managed
+# via URL (YouTube / Vimeo / already-hosted image URL) only.
 UPLOADS_ROOT = Path(__file__).parent / "uploads"
 UPLOADS_ROOT.mkdir(exist_ok=True)
-(UPLOADS_ROOT / "coming_soon").mkdir(exist_ok=True)
 # Mounted under /api/uploads so the Kubernetes ingress routes it to the
 # backend. A bare /uploads/ would be swallowed by the frontend SPA fallback.
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_ROOT)), name="uploads")
@@ -15260,48 +15263,10 @@ async def admin_update_coming_soon(body: ComingSoonUpdate, _=Depends(verify_admi
     doc.pop("_id", None)
     return doc
 
-MAX_PHOTO_BYTES = 20 * 1024 * 1024
-MAX_VIDEO_BYTES = 500 * 1024 * 1024
-PHOTO_MIMES = {"image/jpeg","image/png","image/webp","image/heic","image/heif","image/avif"}
-VIDEO_MIMES = {"video/mp4","video/webm","video/quicktime","video/x-matroska"}
-
-@api.post("/admin/coming-soon/upload-photo")
-async def admin_upload_photo(file: UploadFile = File(...), _=Depends(verify_admin)):
-    if file.content_type not in PHOTO_MIMES:
-        raise HTTPException(400, f"Unsupported image type '{file.content_type}'. Please upload JPG, PNG, WEBP, HEIC, or AVIF.")
-    file_id = str(uuid.uuid4())
-    ext = mimetypes.guess_extension(file.content_type) or ".jpg"
-    if ext == ".jpe": ext = ".jpg"
-    dest_dir = UPLOADS_ROOT / "coming_soon"; dest_dir.mkdir(exist_ok=True)
-    dest = dest_dir / f"{file_id}{ext}"
-    size = 0
-    with dest.open("wb") as f:
-        while chunk := await file.read(1024 * 1024):
-            size += len(chunk)
-            if size > MAX_PHOTO_BYTES:
-                dest.unlink(missing_ok=True)
-                raise HTTPException(413, f"Photo exceeds {MAX_PHOTO_BYTES // (1024*1024)} MB.")
-            f.write(chunk)
-    return {"id": file_id, "url": f"/api/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
-
-@api.post("/admin/coming-soon/upload-video")
-async def admin_upload_video(file: UploadFile = File(...), _=Depends(verify_admin)):
-    if file.content_type not in VIDEO_MIMES:
-        raise HTTPException(400, f"Unsupported video type '{file.content_type}'. Please upload MP4, WEBM, MOV, or MKV.")
-    file_id = str(uuid.uuid4())
-    ext = mimetypes.guess_extension(file.content_type) or ".mp4"
-    dest_dir = UPLOADS_ROOT / "coming_soon"; dest_dir.mkdir(exist_ok=True)
-    dest = dest_dir / f"{file_id}{ext}"
-    size = 0
-    with dest.open("wb") as f:
-        while chunk := await file.read(4 * 1024 * 1024):
-            size += len(chunk)
-            if size > MAX_VIDEO_BYTES:
-                dest.unlink(missing_ok=True)
-                raise HTTPException(413, f"Video exceeds {MAX_VIDEO_BYTES // (1024*1024)} MB.")
-            f.write(chunk)
-    return {"id": file_id, "url": f"/api/uploads/coming_soon/{file_id}{ext}", "filename": file.filename, "size": size, "content_type": file.content_type}
-
+# Legacy upload endpoints removed (Feb 2026). Coming-Soon photos + videos
+# are now managed via already-hosted URLs (paste-in) only — no pod-local
+# writes. Media MIME/size constants + POST upload handlers were purged
+# to eliminate the ephemeral-pod-storage compliance issue.
 @api.delete("/admin/coming-soon/asset")
 async def admin_delete_asset(path: str, _=Depends(verify_admin)):
     if not (path.startswith("/uploads/") or path.startswith("/api/uploads/")):

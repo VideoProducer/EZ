@@ -1,0 +1,70 @@
+{
+  "summary": "Frontend-only regression + feature test of the 3 new lead-attractor tools (/tools/seller-net-sheet, /tools/ptt-estimator, /tools/mortgage-affordability), the new top-nav Tools dropdown, the footer 'Free BC Resources' column, the /mockups/first-time-buyer -> /tools/first-time-buyer redirect, sitemap-static.xml, and no-regression checks on existing conversion routes + Doogie FAB. All 3 new pages render with IdentityLine + compliance strips, client-side math verified numerically, CTAs carry correct UTM params, and no console/page errors were observed. 4 issues found: (1) Tools dropdown is unusable on touch/mobile (tap opens then immediately closes), (2) /tools/first-time-buyer still renders the 'UNLISTED PREVIEW / MOCKUP' banner and a '[Unlisted]' <title> despite being canonical + in sitemap, (3) footer links to the unlisted mockup /mockups/moving-to-bc-quiz, (4) the FTHB PTT partial-exemption formula does not match the BC rule (verified against gov.bc.ca) in both PTTEstimator.jsx and BCBuyerCostCalculator.jsx.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ToolsDropdown (App.js ~line 1023)",
+        "issue": "Tools dropdown cannot be opened on touch/mobile. onMouseEnter sets openMenu=true, then the same tap fires onClick which toggles it back to false, so the menu never renders. Verified at 390x844: hamburger opens nav, 'Tools \u25be' is visible, tap -> [data-testid='nav-tools-menu'] count = 0 and clicking nav-tools-seller-net/nav-tools-fthb times out. On desktop a mouse click on the (hover-open) menu also closes it. The in-code comment says mobile renders a flat list under a section header, but that branch is not implemented.",
+        "selector": "[data-testid=\"nav-tools-toggle\"], [data-testid=\"nav-tools-menu\"]",
+        "priority": "HIGH"
+      },
+      {
+        "component": "FirstTimeBuyerCheatSheet at /tools/first-time-buyer",
+        "issue": "Now the canonical URL (nav item, footer link, sitemap priority 0.85) but still renders the yellow strip '\ud83d\udd12 UNLISTED PREVIEW \u2014 ... Not linked from any navigation, blocked from search engines, and not in the sitemap.' plus a 'MOCKUP \u00b7 REVIEW COPY' label and 'Sample rendering \u2014 final version will personalize...' copy. document.title = '[Unlisted] First-Time Buyer Grant & Rebate Cheat-Sheet \u00b7 EZtoFind.ca'. The component has no <Helmet> at all: no meta description, no page-specific canonical/robots, no JSON-LD (unlike the other 3 tools). Public-facing copy now contradicts itself.",
+        "selector": "/tools/first-time-buyer",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Footer 'Free BC Resources' column",
+        "issue": "12 links render correctly, but 'Moving to BC Quiz' points to /mockups/moving-to-bc-quiz, which renders its own 'UNLISTED PREVIEW \u2014 parked for Doug's review. Not linked from any navigation, blocked from search engines, and not in the sitemap' banner and has no site nav/footer chrome. Either promote it to a /tools/* canonical URL (as was done for first-time-buyer) or drop it from the footer.",
+        "selector": "[data-testid=\"footer-res-moving-quiz\"]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "PTTEstimator.jsx + BCBuyerCostCalculator.jsx computeFTHBExemption",
+        "issue": "FTHB exemption formula does not match the BC rule (verified on gov.bc.ca / Property Transfer Tax Act, thresholds effective Apr 1 2024 and still current). Actual rule: full exemption of the PTT on the first $500,000 (max $8,000) for FMV <= $835,000, then linear phase-out between $835,000 and $860,000 using E*((835,000+25,000-FMV)/25,000); zero above $860,000. The code instead tapers linearly from $500,000 to $835,000 and returns 0 above $835,000. Observed on /tools/ptt-estimator: price $700,000 -> waiver shown $4,836 / payable $7,164 (actual: waiver $8,000 / payable $4,000); price $840,000 -> waiver $0 / payable $14,800 (actual: waiver $6,400); price $855,000 -> waiver $0 (actual: $1,600). Understates the FTHB benefit by up to ~$6,400 on a compliance-sensitive public calculator. Same defect exists in the existing BCBuyerCostCalculator (calc-fthb-waiver) so both tools are consistently wrong.",
+        "selector": "[data-testid=\"ptt-r-fthb\"], [data-testid=\"calc-fthb-waiver\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "/mockups/first-time-buyer -> /tools/first-time-buyer",
+        "issue": "Redirect works but is client-side only (React Router <Navigate replace>); the old URL still returns HTTP 200 with the SPA shell rather than a real 301. Spec asked for 301/redirect \u2014 acceptable for users, sub-optimal for SEO/link equity. No rel=canonical is emitted on the old URL either.",
+        "affected_selectors": ["/mockups/first-time-buyer"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "New tool pages (/tools/seller-net-sheet, /tools/ptt-estimator, /tools/mortgage-affordability)",
+        "issues": [
+          "No contrast/spacing/alignment problems found; IdentityLine, headshot image, inputs, results rows and compliance strips all render cleanly at 1920 and 390 widths.",
+          "Minor: PTT estimator is reachable only from the footer \u2014 it is not in the Tools nav dropdown (matches the 5-item spec, but flagged for product decision since it is the highest-intent BC search term)."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix ToolsDropdown touch support: keep hover and click state separate (e.g. onClick={() => setOpenMenu(true)} when closed, or track pointerType), or render the flat mobile list the code comment describes. Currently mobile users cannot reach any Tools menu item.",
+    "Strip the 'UNLISTED PREVIEW' banner, 'MOCKUP \u00b7 REVIEW COPY' label and '[Unlisted]' title prefix from FirstTimeBuyerCheatSheet, and add a <Helmet> block (title, meta description, robots index, canonical, JSON-LD) now that /tools/first-time-buyer is a public 0.85 sitemap URL.",
+    "Either promote /mockups/moving-to-bc-quiz to a canonical /tools/* URL (remove its unlisted banner, add to sitemap) or remove footer-res-moving-quiz from the 'Free BC Resources' column.",
+    "Correct computeFTHBExemption to the statutory BC formula (cap $8,000 / PTT on first $500K up to $835K FMV, phase-out $835K-$860K) in PTTEstimator.jsx AND BCBuyerCostCalculator.jsx, and re-check any FTHB numbers quoted in FirstTimeBuyerCheatSheet and the affordability calculator's afford-ptt output.",
+    "Optional: add an ingress/server-level 301 for /mockups/first-time-buyer -> /tools/first-time-buyer."
+  ],
+  "critical_code_review_comments": [
+    "DRY: computePTT / computeFTHBExemption / computeNewBuildExemption are duplicated verbatim in PTTEstimator.jsx and BCBuyerCostCalculator.jsx (and PTT logic again inside App.js Calculators). Extract to src/utils/bcTax.js so a rate/threshold change is a single edit \u2014 this duplication is exactly why the FTHB formula bug now exists in two places.",
+    "Circular import: MortgageAffordabilityPage.jsx imports { Calculators } from '../App' while App.js lazy-imports MortgageAffordabilityPage. It works today only because the import is lazy/code-split; move Calculators into its own module (src/components/Calculators.jsx) to remove the cycle.",
+    "App.js is ~13,150 lines. The new nav dropdown/footer column additions keep growing it; split nav, footer and Calculators into separate modules.",
+    "FirstTimeBuyerCheatSheet is the only /tools/* page without a Helmet/SEO block while being listed in the sitemap \u2014 inconsistent with the compliance/SEO pattern used by the other three tools."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only request)", "frontend": "85%" },
+  "seed_data_creation": "none",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "not required (no auth flows touched; /app/memory/test_credentials.md not needed for this iteration)",
+  "context_for_next_testing_agent": "Verified PASS this iteration: (a) Tools dropdown on desktop \u2014 sits between Glossary and About, hover opens, exact order Free Market Estimate / Buyer Cost Calculator / Seller Net Sheet / Mortgage Affordability / First-Time Buyer Cheat Sheet, click navigates; (b) footer 'Free BC Resources' = 12 links, all 12 target routes render real content; (c) Seller Net Sheet math \u2014 $1,000,000 sale / $400,000 mortgage / 3%+3% / $2,500 penalty => comm $60,000, GST $3,000, net range $530,750-$533,100 (matches OTHER_COSTS low 1,400 / high 3,750); negotiable disclaimer + BCFSA strip present; CTAs /seller & /valuation with utm; (d) PTT tiered math \u2014 $1.2M = $22,000; FTHB @$500K => $0; new-build @$1.12M => waiver $12,240 / net $8,160; @$1.05M => full waiver; foreign @$1M => +$200,000, total $218,000; CTAs correct; (e) Mortgage affordability reuses App.js Calculators (afford-* testids all present), WebApplication + FAQPage JSON-LD both parse, compliance strip states REALTOR\u00ae not mortgage broker, live recompute income 150k->691,000 / 200k->907,000; (f) sitemap-static.xml has the 5 /tools/* URLs at 0.9 and 0.85 for first-time-buyer; (g) /valuation, /buyer, /seller, /referral-request render form-first with IdentityLine (forms NOT submitted \u2014 Turnstile); /contact is a chooser page with no form (pre-existing, not a regression); (h) doogie-fab is position:fixed z-index 1050 and visible on homepage. Note: homepage never reaches networkidle (live polling) \u2014 use wait_until='domcontentloaded'. After fixes, retest: mobile Tools dropdown at 390px, FTHB numbers at $600K/$700K/$840K/$855K on both PTT and Buyer Cost calculators, and the first-time-buyer page banner/title.",
+  "rca_of_the_issue": "ToolsDropdown mobile failure: a single openMenu state is driven by both onMouseEnter (true) and onClick (toggle). A touch tap emits a synthetic mouseover before click, so openMenu goes true -> false within the same gesture and the menu never paints; the desktop hover path masks the bug. FTHB failure: computeFTHBExemption models the exemption as a linear taper of the whole PTT from $500K to $835K, whereas the statute exempts the PTT on the first $500,000 (max $8,000) for FMV <= $835,000 and only tapers over the $835K-$860K band; the wrong helper was copy-pasted into the new PTTEstimator from BCBuyerCostCalculator. first-time-buyer failure: the component was promoted from /mockups to /tools without removing its mockup/unlisted chrome or adding SEO metadata."
+}

@@ -103,6 +103,11 @@ STATIC_URLS = [
     ("/buyer",             "0.9", "weekly"),
     ("/seller",            "0.9", "weekly"),
     ("/contact",           "0.8", "monthly"),
+    # Free BC lead-attractor tools — conversion routes at priority 0.9.
+    ("/tools/bc-buyer-cost-calculator", "0.9", "monthly"),
+    ("/tools/ptt-estimator",            "0.9", "monthly"),
+    ("/tools/mortgage-affordability",   "0.9", "monthly"),
+    ("/tools/first-time-buyer",         "0.85", "monthly"),
     ("/regions",                    "0.85", "monthly"),
     ("/regions/greater-vancouver",  "0.85", "monthly"),
     ("/regions/fraser-valley",      "0.85", "monthly"),

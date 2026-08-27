@@ -50,6 +50,8 @@ const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
 const SacLanding = lazy(() => import("./pages/SacLanding"));
 const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
+const PTTEstimator = lazy(() => import("./pages/PTTEstimator"));
+const MortgageAffordabilityPage = lazy(() => import("./pages/MortgageAffordabilityPage"));
 const AdminSacAnalytics = lazy(() => import("./pages/AdminSacAnalytics"));
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
@@ -1014,6 +1016,69 @@ const FeaturedListing = () => {
 };
 
 // --- Nav / Footer ---
+// ToolsDropdown: reusable dropdown block for the top nav. On desktop it
+// opens on hover / focus; on mobile it renders as a flat list under a
+// section header (fits the existing collapsible nav-links pattern).
+const ToolsDropdown = ({ onNavigate }) => {
+  const [openMenu, setOpenMenu] = useState(false);
+  const tools = [
+    { to: "/valuation",                        label: "Free Market Estimate",     testId: "nav-tools-valuation" },
+    { to: "/tools/bc-buyer-cost-calculator",   label: "Buyer Cost Calculator",    testId: "nav-tools-buyer-costs" },
+    { to: "/tools/mortgage-affordability",     label: "Mortgage Affordability",   testId: "nav-tools-affordability" },
+    { to: "/tools/first-time-buyer",           label: "First-Time Buyer Cheat Sheet", testId: "nav-tools-fthb" },
+  ];
+  return (
+    <div
+      className="nav-tools-wrap"
+      style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setOpenMenu(true)}
+      onMouseLeave={() => setOpenMenu(false)}
+    >
+      <button
+        type="button"
+        onClick={() => setOpenMenu((v) => !v)}
+        aria-expanded={openMenu}
+        aria-haspopup="menu"
+        data-testid="nav-tools-toggle"
+        style={{
+          background: "transparent", border: 0, cursor: "pointer",
+          color: "var(--ink)", fontFamily: "Inter,sans-serif",
+          fontSize: "0.95rem", fontWeight: 500, padding: "0.5rem 0.9rem",
+          borderRadius: 8, display: "inline-flex", alignItems: "center", gap: "0.3rem",
+        }}
+      >Tools <span aria-hidden="true" style={{ fontSize: "0.72rem", opacity: 0.7 }}>▾</span></button>
+      {openMenu && (
+        <div
+          role="menu"
+          data-testid="nav-tools-menu"
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0,
+            minWidth: 260, background: "#fff",
+            border: "1px solid rgba(15,42,91,0.12)", borderRadius: 10,
+            boxShadow: "0 14px 32px rgba(15,42,91,0.14)",
+            padding: "0.35rem", zIndex: 100,
+          }}
+        >
+          {tools.map((t) => (
+            <Link
+              key={t.to}
+              to={t.to}
+              role="menuitem"
+              onClick={() => { setOpenMenu(false); onNavigate?.(); }}
+              data-testid={t.testId}
+              style={{
+                display: "block", padding: "0.6rem 0.75rem", borderRadius: 8,
+                color: "var(--ink)", textDecoration: "none",
+                fontFamily: "Inter,sans-serif", fontSize: "0.93rem", fontWeight: 500,
+              }}
+            >{t.label}</Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Nav = () => {
   const [open, setOpen] = useState(false);
   const [favCount, setFavCount] = useState(() => _readFavs().length);
@@ -1046,6 +1111,7 @@ const Nav = () => {
         <NavLink to="/specialties/equestrian" onClick={close} data-testid="nav-equestrian">Equestrian Listings</NavLink>
         <NavLink to="/communities" onClick={close} data-testid="nav-communities">Communities</NavLink>
         <NavLink to="/glossary" onClick={close} data-testid="nav-glossary">Glossary</NavLink>
+        <ToolsDropdown onNavigate={close}/>
         <NavLink to="/about" onClick={close} data-testid="nav-about">About</NavLink>
         <NavLink to="/valuation" onClick={close} data-testid="nav-valuation">Market Estimate</NavLink>
         <NavLink to="/relocating" onClick={close} data-testid="nav-relocating">Relocating</NavLink>
@@ -1085,6 +1151,19 @@ const Footer = () => (
         <li><Link to="/communities">Communities</Link></li>
         <li><Link to="/glossary">Glossary</Link></li>
         <li><Link to="/valuation">Market Estimate</Link></li>
+      </ul></div>
+      <div data-testid="footer-free-bc-resources"><h4>Free BC Resources</h4><ul>
+        <li><Link to="/valuation" data-testid="footer-res-valuation">Free Market Estimate</Link></li>
+        <li><Link to="/tools/bc-buyer-cost-calculator" data-testid="footer-res-buyer-costs">Buyer Cost Calculator</Link></li>
+        <li><Link to="/tools/mortgage-affordability" data-testid="footer-res-affordability">Mortgage Affordability</Link></li>
+        <li><Link to="/tools/ptt-estimator" data-testid="footer-res-ptt">BC Property Transfer Tax</Link></li>
+        <li><Link to="/tools/first-time-buyer" data-testid="footer-res-fthb">First-Time Buyer Cheat Sheet</Link></li>
+        <li><Link to="/mockups/moving-to-bc-quiz" data-testid="footer-res-moving-quiz">Moving to BC Quiz</Link></li>
+        <li><Link to="/relocating" data-testid="footer-res-relocating">Relocating to BC Guide</Link></li>
+        <li><Link to="/communities" data-testid="footer-res-communities">Neighbourhood Explorer</Link></li>
+        <li><Link to="/glossary" data-testid="footer-res-glossary">BC Real Estate Glossary</Link></li>
+        <li><Link to="/family-viewing-party" data-testid="footer-res-family">Family Viewing Party</Link></li>
+        <li><Link to="/referral-request" data-testid="footer-res-referral">Referral (Out-of-Area)</Link></li>
       </ul></div>
       <div data-testid="footer-popular-terms"><h4>Popular Terms</h4><ul>
         {POPULAR_GLOSSARY_TERMS.map(t => (
@@ -13001,7 +13080,7 @@ function App() {
       {/* Lead-magnet mockups — review-only drafts. Wrapped in Suspense
           because the components themselves are lazy-loaded. */}
       <Route path="/mockups/equestrian-checklist" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><EquestrianChecklistMockup/></Suspense>}/>
-      <Route path="/mockups/first-time-buyer" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><FirstTimeBuyerCheatSheet/></Suspense>}/>
+      <Route path="/mockups/first-time-buyer" element={<Navigate to="/tools/first-time-buyer" replace/>}/>
       <Route path="/mockups/moving-to-bc-quiz" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><MovingToBcQuiz/></Suspense>}/>
       <Route path="/mockups/community-page" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><CommunityPageMockup/></Suspense>}/>
       <Route path="/mockups/community-live" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading mockup…</div>}><CommunityPageMockupLive/></Suspense>}/>
@@ -13058,6 +13137,9 @@ function App() {
       <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/sac" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><SacLanding/></Suspense></AppLayout>}/>
       <Route path="/tools/bc-buyer-cost-calculator" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><BCBuyerCostCalculator/></Suspense></AppLayout>}/>
+      <Route path="/tools/ptt-estimator" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><PTTEstimator/></Suspense></AppLayout>}/>
+      <Route path="/tools/mortgage-affordability" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><MortgageAffordabilityPage/></Suspense></AppLayout>}/>
+      <Route path="/tools/first-time-buyer" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><FirstTimeBuyerCheatSheet/></Suspense></AppLayout>}/>
       <Route path="/admin/sac-analytics" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><AdminSacAnalytics/></Suspense></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
