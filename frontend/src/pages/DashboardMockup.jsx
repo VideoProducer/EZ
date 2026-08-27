@@ -5956,36 +5956,12 @@ const DashboardFeaturedListing = () => {
                   }}
                 >MLS® {merged.mls} ↗</a>
               )}
-              {/* Price overlay — bottom-left of the photo. Rendered on
-                  snapshot data too (not gated on live hydration) so the
-                  asking price is always visible above-the-fold — even
-                  before DDF resolves. Solid gold pill delivers maximum
-                  contrast against any hero photo so it never washes out
-                  on bright / mobile screens. */}
-              {merged.price && (
-                <div style={{
-                  position: "absolute", inset: "auto 12px 12px", display: "flex",
-                  justifyContent: "flex-start", alignItems: "flex-end", gap: 8, flexWrap: "wrap",
-                }}>
-                  <div
-                    data-testid="dash-featured-price"
-                    style={{
-                      display: "inline-block",
-                      background: C.brandGold,
-                      color: C.navy,
-                      fontFamily: "'Sora', sans-serif",
-                      fontWeight: 900,
-                      fontSize: "clamp(20px, 4.5vw, 32px)",
-                      lineHeight: 1,
-                      letterSpacing: "-0.01em",
-                      padding: "10px 18px",
-                      borderRadius: 10,
-                      boxShadow: "0 10px 26px rgba(0,0,0,0.45), inset 0 -3px 0 rgba(15,42,91,0.15)",
-                      textShadow: "0 1px 0 rgba(255,255,255,0.4)",
-                    }}
-                  >{fmtPriceShort(merged.price)}</div>
-                </div>
-              )}
+              {/* Photo-overlay price removed Feb 21 2026 — Doug flagged it
+                  as duplication with the navy-pill price in the details
+                  column (see `dash-featured-price-inline` below). The
+                  navy-pill is now the single source of truth, always
+                  visible on both the photo-hero AND the tour-iframe
+                  states of the featured listing. */}
               {merged.photos.length > 1 && (
                 <div style={{
                   position: "absolute", top: 12, right: 12,
