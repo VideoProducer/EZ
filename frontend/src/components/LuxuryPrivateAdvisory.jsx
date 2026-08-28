@@ -29,7 +29,7 @@
 // here. Structured data must be added only after the visible content,
 // business details, review eligibility, and applicable licensing / data
 // permissions have been verified by the site administrator.
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { TurnstileWidget, getTurnstileToken } from "../App";
@@ -411,6 +411,35 @@ const ackRow     = { display: "grid", gridTemplateColumns: "18px 1fr", gap: 10, 
 export default function LuxuryPrivateAdvisory() {
   const [openSellerForm, setOpenSellerForm] = useState(false);
   const [openBuyerForm, setOpenBuyerForm]   = useState(false);
+  // Approved-testimonial auto-hydrate — placeholders here are replaced
+  // one-by-one as Doug adds approved reviews via /admin/testimonials.
+  // If fewer than 3 approved reviews exist, remaining slots stay as the
+  // clearly-labelled compliance placeholders. Featured reviews come
+  // first (via /api/testimonials sort). Fails silently on network error.
+  const [approvedReviews, setApprovedReviews] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await axios.get(`${API}/testimonials`);
+        if (alive && Array.isArray(r.data?.testimonials)) {
+          setApprovedReviews(r.data.testimonials.slice(0, 3));
+        }
+      } catch { /* stay with placeholders */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const placeholderSlots = [
+    { tag: "Seller testimonial placeholder",       note: "Use after obtaining written client approval. A strong seller testimonial should speak specifically to preparation, communication, campaign execution, negotiation, discretion, or the sale process." },
+    { tag: "Luxury buyer testimonial placeholder", note: "Use after obtaining written client approval. A strong buyer testimonial should speak specifically to search strategy, property evaluation, offer guidance, due diligence, responsiveness, or a complex acquisition." },
+    { tag: "Verified review placeholder",           note: "Use only where a genuine, publicly verifiable review may be reproduced in compliance with the relevant platform's policies and with proper attribution." },
+  ];
+  // Merge: real reviews first, then fill remaining slots with placeholders.
+  const socialProofSlots = [
+    ...approvedReviews.map((r) => ({ type: "review", data: r })),
+    ...placeholderSlots.slice(approvedReviews.length).map((p) => ({ type: "placeholder", data: p })),
+  ];
 
   return (
     <section
@@ -581,19 +610,42 @@ export default function LuxuryPrivateAdvisory() {
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: 18,
           }} data-testid="advisory-testimonial-placeholders">
-            {[
-              { tag: "Seller testimonial placeholder",       note: "Use after obtaining written client approval. A strong seller testimonial should speak specifically to preparation, communication, campaign execution, negotiation, discretion, or the sale process." },
-              { tag: "Luxury buyer testimonial placeholder", note: "Use after obtaining written client approval. A strong buyer testimonial should speak specifically to search strategy, property evaluation, offer guidance, due diligence, responsiveness, or a complex acquisition." },
-              { tag: "Verified review placeholder",           note: "Use only where a genuine, publicly verifiable review may be reproduced in compliance with the relevant platform's policies and with proper attribution." },
-            ].map((p, i) => (
-              <div key={i} data-testid={`advisory-testimonial-placeholder-${i}`} style={{
-                border: `1px dashed ${BRAND.hairline}`, borderRadius: 4,
-                padding: "22px 22px", background: "rgba(255,255,255,0.55)",
-              }}>
-                <div style={{ fontFamily: SANS, fontSize: "0.7rem", letterSpacing: "0.16em", textTransform: "uppercase", color: BRAND.gold, fontWeight: 700, marginBottom: 10 }}>Placeholder</div>
-                <div style={{ fontFamily: SERIF, fontSize: "1.05rem", color: BRAND.ink, marginBottom: 10, fontWeight: 500 }}>{p.tag}</div>
-                <p style={{ fontFamily: SANS, fontSize: "0.82rem", lineHeight: 1.65, color: BRAND.muted, margin: 0 }}>{p.note}</p>
-              </div>
+            {socialProofSlots.map((slot, i) => (
+              slot.type === "review" ? (
+                <article
+                  key={`r-${slot.data.id || i}`}
+                  data-testid={`advisory-real-review-${i}`}
+                  style={{
+                    border: `1px solid ${BRAND.hairline}`, borderRadius: 4,
+                    padding: "24px 24px", background: "#fff",
+                    display: "flex", flexDirection: "column",
+                  }}
+                >
+                  <div aria-label={`${slot.data.rating || 5} out of 5 stars`} style={{ color: BRAND.gold, fontSize: "0.95rem", letterSpacing: 2, marginBottom: 12 }}>
+                    {"★".repeat(slot.data.rating || 5)}{"☆".repeat(5 - (slot.data.rating || 5))}
+                  </div>
+                  <blockquote style={{
+                    fontFamily: SERIF, fontSize: "1rem", lineHeight: 1.65,
+                    color: BRAND.ink, margin: "0 0 14px", flex: 1, fontStyle: "italic",
+                  }}>
+                    "{slot.data.text}"
+                  </blockquote>
+                  <footer style={{ fontFamily: SANS, fontSize: "0.78rem", color: BRAND.muted, lineHeight: 1.6, background: "transparent" }}>
+                    — <strong style={{ color: BRAND.ink, fontStyle: "normal" }}>{slot.data.reviewer_name}</strong>
+                    {slot.data.source && <> · Client review from {slot.data.source}</>}
+                    {slot.data.date_reviewed && <> · {slot.data.date_reviewed}</>}
+                  </footer>
+                </article>
+              ) : (
+                <div key={`p-${i}`} data-testid={`advisory-testimonial-placeholder-${i}`} style={{
+                  border: `1px dashed ${BRAND.hairline}`, borderRadius: 4,
+                  padding: "22px 22px", background: "rgba(255,255,255,0.55)",
+                }}>
+                  <div style={{ fontFamily: SANS, fontSize: "0.7rem", letterSpacing: "0.16em", textTransform: "uppercase", color: BRAND.gold, fontWeight: 700, marginBottom: 10 }}>Placeholder</div>
+                  <div style={{ fontFamily: SERIF, fontSize: "1.05rem", color: BRAND.ink, marginBottom: 10, fontWeight: 500 }}>{slot.data.tag}</div>
+                  <p style={{ fontFamily: SANS, fontSize: "0.82rem", lineHeight: 1.65, color: BRAND.muted, margin: 0 }}>{slot.data.note}</p>
+                </div>
+              )
             ))}
           </div>
           <p style={{ fontFamily: SANS, fontSize: "0.82rem", color: BRAND.muted, marginTop: 20, lineHeight: 1.6 }}>
