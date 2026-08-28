@@ -70,9 +70,9 @@ export default function LuxuryFlagshipCard() {
                   // Sale Pending → Sold) reads consistently across
                   // surfaces. Navy pill on the calm cream backdrop.
                   background: /accepted|pending/i.test(FLAGSHIP.status) ? "#0F2A5B"
-                            : /sold/i.test(FLAGSHIP.status)             ? "#0F5F3A"
+                            : /sold/i.test(FLAGSHIP.status)             ? "#CE2029"
                             : "#DABF7A",
-                  color:      /accepted|pending|sold/i.test(FLAGSHIP.status) ? "#F5D48A" : "#0F2A5B",
+                  color:      /accepted|pending|sold/i.test(FLAGSHIP.status) ? "#FFFFFF" : "#0F2A5B",
                   padding: "6px 16px", borderRadius: 999,
                   fontSize: "0.72rem", fontWeight: 800,
                   textTransform: "uppercase", letterSpacing: "0.16em",
@@ -135,6 +135,44 @@ export default function LuxuryFlagshipCard() {
           )}
         </div>
         <div style={{ position: "relative", border: "3px solid #DABF7A", borderRadius: 4, overflow: "hidden", boxShadow: "0 20px 60px rgba(15,42,91,0.15)" }}>
+          {/* Fire-engine-red "SOLD" banner splash — Feb 2026. Overrides
+              the small navy/green pill above when a deal closes so the
+              status reads instantly from across the room. */}
+          {/sold/i.test(FLAGSHIP.status || "") && (
+            <div
+              data-testid="luxury-flagship-sold-banner"
+              style={{
+                position: "absolute", top: 0, left: 0, right: 0, zIndex: 12,
+                background: "#CE2029",
+                color: "#FFFFFF",
+                textAlign: "center",
+                padding: "14px 20px",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                borderBottom: "3px solid #8A1418",
+              }}
+            >
+              <div style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(2rem, 6vw, 3rem)",
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                lineHeight: 1,
+                textShadow: "0 2px 4px rgba(0,0,0,0.4)",
+              }}>SOLD!</div>
+              {FLAGSHIP.status_note && (
+                <div style={{
+                  fontFamily: "'Sora', sans-serif",
+                  fontSize: "clamp(0.85rem, 1.8vw, 1.05rem)",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  marginTop: 4,
+                  color: "#FFFFFF",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                }}>{FLAGSHIP.status_note}</div>
+              )}
+            </div>
+          )}
           {showRibbon && (
             <div style={{
               position: "absolute", top: 24, left: -50, transform: "rotate(-45deg)",

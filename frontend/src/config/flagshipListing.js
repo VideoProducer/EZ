@@ -7,8 +7,8 @@ export const FLAGSHIP = {
   // Renders as a coloured pill on both the homepage featured card and the
   // Luxury flagship page. `status_note` shows a short qualifier under the
   // pill (e.g. "Accepted in 1 week"). Empty string hides both.
-  status: "ACCEPTED OFFER",
-  status_note: "Accepted in 1 week from listing — subjects pending",
+  status: "SOLD",
+  status_note: "in less than 2 weeks",
   address: "3015 141 Street",
   community: "Elgin Chantrell",  // Enclave / neighbourhood — surfaced in address lines beside city
   city: "Surrey",

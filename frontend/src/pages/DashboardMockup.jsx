@@ -5527,12 +5527,12 @@ const HomeComplianceBanner = () => {
 const FEATURED_HOME_LISTING = {
   enabled: true,                  // ⚡ RE-ENABLED — feature listing card now at the top of /
   mls_auto_detect: true,
-  status: "ACCEPTED OFFER",
+  status: "SOLD",
   // Optional badge/strip shown next to the status pill and above the
   // photo — used to celebrate a fast turnaround (or announce "Sold in
   // N days" once subjects are removed). Kept short: renders on one line
   // on mobile 320px, wraps to two on desktop. Set to "" to hide.
-  status_note: "Accepted in 1 week — subjects pending",
+  status_note: "in less than 2 weeks",
   address: "3015 141 Street",
   city: "Surrey",
   neighbourhood: "Elgin Chantrell",
@@ -5874,9 +5874,9 @@ const DashboardFeaturedListing = () => {
               // instantly see market velocity. Colour lookup keeps the
               // design system consistent with the rest of the site.
               background: /accepted|pending/i.test(merged.status||"") ? "#0F2A5B"
-                        : /sold/i.test(merged.status||"")             ? "#0F5F3A"
+                        : /sold/i.test(merged.status||"")             ? "#CE2029"
                         : C.brandGold,
-              color:      /accepted|pending|sold/i.test(merged.status||"") ? "#F5D48A" : C.navy,
+              color:      /accepted|pending|sold/i.test(merged.status||"") ? "#FFFFFF" : C.navy,
               padding: "6px 14px", borderRadius: 999,
               fontSize: 11.5, fontWeight: 800,
               textTransform: "uppercase", letterSpacing: 1.2,
@@ -5914,6 +5914,45 @@ const DashboardFeaturedListing = () => {
           position: "relative", background: C.navy, borderRadius: 14,
           overflow: "hidden", aspectRatio: "3/2", minHeight: 260,
         }}>
+          {/* Fire-engine-red "SOLD" banner splash — Feb 2026. Overlays
+              the top of the featured card so the closed status reads
+              instantly from across the room. Matches LuxuryFlagshipCard. */}
+          {/sold/i.test(merged.status || "") && (
+            <div
+              data-testid="dash-featured-sold-banner"
+              style={{
+                position: "absolute", top: 0, left: 0, right: 0, zIndex: 14,
+                background: "#CE2029",
+                color: "#FFFFFF",
+                textAlign: "center",
+                padding: "12px 18px",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                borderBottom: "3px solid #8A1418",
+                pointerEvents: "none",
+              }}
+            >
+              <div style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "clamp(1.8rem, 5.5vw, 2.6rem)",
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                lineHeight: 1,
+                textShadow: "0 2px 4px rgba(0,0,0,0.4)",
+              }}>SOLD!</div>
+              {L.status_note && (
+                <div style={{
+                  fontFamily: "'Sora', sans-serif",
+                  fontSize: "clamp(0.78rem, 1.6vw, 0.95rem)",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  marginTop: 4,
+                  color: "#FFFFFF",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                }}>{L.status_note}</div>
+              )}
+            </div>
+          )}
           {videoLoaded && (tourEmbedUrl || video) ? (
             <iframe
               title={`Walk-through — ${merged.address}, ${merged.city}`}
