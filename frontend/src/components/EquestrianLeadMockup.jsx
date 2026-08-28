@@ -33,6 +33,7 @@ import { Helmet } from "react-helmet-async";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import ReferralAsk from "./ReferralAsk";
 import { TurnstileWidget, getTurnstileToken } from "../App";
+import EquestrianRepresentation from "./EquestrianRepresentation";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -677,6 +678,13 @@ export default function EquestrianLeadMockup() {
           context="equestrian-out-of-area"
           data-testid="referral-link"
         />
+
+        {/* ═══ §NEW EQUESTRIAN & ACREAGE REPRESENTATION (Sep 2026) ═══
+            Self-contained editorial section injected above the existing
+            compliance footer and below all existing primary page content.
+            No existing component, form, CTA, listing card, header,
+            footer, nav, or data feed is modified. */}
+        <EquestrianRepresentation/>
 
         {/* ═══ COMPLIANCE FOOTER ══════════════════════════════════════ */}
         <ComplianceFooter/>
