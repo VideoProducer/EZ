@@ -108,6 +108,8 @@ STATIC_URLS = [
     ("/tools/ptt-estimator",            "0.9", "monthly"),
     ("/tools/mortgage-affordability",   "0.9", "monthly"),
     ("/tools/first-time-buyer",         "0.85", "monthly"),
+    # Sold case studies — high-intent seller lead-gen pages.
+    ("/case-studies/3015-141-street",   "0.85", "monthly"),
     ("/regions",                    "0.85", "monthly"),
     ("/regions/greater-vancouver",  "0.85", "monthly"),
     ("/regions/fraser-valley",      "0.85", "monthly"),

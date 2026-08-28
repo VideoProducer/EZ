@@ -54,6 +54,7 @@ const SacLanding = lazy(() => import("./pages/SacLanding"));
 const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
 const PTTEstimator = lazy(() => import("./pages/PTTEstimator"));
 const MortgageAffordabilityPage = lazy(() => import("./pages/MortgageAffordabilityPage"));
+const CaseStudyPage = lazy(() => import("./pages/CaseStudyPage"));
 const AdminSacAnalytics = lazy(() => import("./pages/AdminSacAnalytics"));
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
@@ -13145,6 +13146,7 @@ function App() {
       <Route path="/tools/first-time-buyer" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><FirstTimeBuyerCheatSheet/></Suspense></AppLayout>}/>
       <Route path="/admin/sac-analytics" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><AdminSacAnalytics/></Suspense></AppLayout>}/>
       <Route path="/admin/testimonials" element={<AdminTestimonials/>}/>
+      <Route path="/case-studies/:slug" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading case study…</div>}><CaseStudyPage/></Suspense></AppLayout>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
