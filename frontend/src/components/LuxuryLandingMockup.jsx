@@ -71,7 +71,7 @@ const H = ({ level = 2, children, tone = "ink", align }) => {
 // $3M+ inventory (updated every 4 hours by the DDF sync).
 const CORRIDORS = [
   { slug: "west-van-estates",       name: "West Vancouver Estates",         median: 8250000, count: 47, hero: "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=800", editorial: "British Properties, Point Grey, and Caulfeild — heritage estates on view lots, waterfront moorage, and coach-house guest quarters.", cities: ["West Vancouver", "Vancouver"] },
-  { slug: "gv-penthouses",          name: "Greater Vancouver Penthouses",   median: 4650000, count: 63, hero: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", editorial: "Coal Harbour, Yaletown, and Kitsilano skyline residences — private elevators, floor-plate primaries, and concierge on 24-hour rotation.",         cities: ["Vancouver", "North Vancouver", "Burnaby"] },
+  { slug: "gv-penthouses",          name: "Greater Vancouver Penthouses",   median: 4650000, count: 63, propertyType: "Apartment", hero: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800", editorial: "Coal Harbour, Yaletown, and Kitsilano skyline residences — private elevators, floor-plate primaries, and concierge on 24-hour rotation.",         cities: ["Vancouver", "North Vancouver", "Burnaby"] },
   { slug: "whistler-retreats",      name: "Whistler Retreats",              median: 7100000, count: 29, hero: "https://images.unsplash.com/photo-1517320964276-a002fa203177?w=800", editorial: "Kadenwood, Sunridge Plateau, and Whistler Cay — ski-in / ski-out chalets, timber-frame wellness pavilions, and heli-touring proximity.",              cities: ["Whistler"] },
   { slug: "fraser-valley-acreages", name: "Fraser Valley Acreages",         median: 5450000, count: 38, hero: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800", editorial: "Fort Langley, Aldergrove, Mission — 10-to-100-acre gated estates, equestrian centres, and ALR-classified vineyards.",                                cities: ["Langley", "Maple Ridge", "Mission", "Aldergrove", "Abbotsford"] },
   { slug: "sea-to-sky",             name: "Sea-to-Sky Corridor",            median: 3950000, count: 18, hero: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800", editorial: "Squamish and Pemberton — glass-fronted mountain homes above Howe Sound, private helipads, and 15-minute Whistler proximity.",                          cities: ["Squamish", "Pemberton", "Britannia Beach"] },
@@ -287,7 +287,13 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
     const excl = "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
     Promise.all(CORRIDORS.map(c => {
       const cityQ = c.cities.map(encodeURIComponent).join(",");
-      return fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&limit=1`)
+      // Per-corridor property-type narrowing. Only set for corridors where
+      // "residence type" is intrinsic to the name (e.g. Penthouses must be
+      // Apartments, not detached houses). Without this the penthouse count
+      // was counting every $3M+ Vancouver detached listing as a "penthouse"
+      // and inflating from ~64 → 763 (Feb 2026 bug fix per Doug's audit).
+      const ptQ = c.propertyType ? `&property_type=${encodeURIComponent(c.propertyType)}` : "";
+      return fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}${ptQ}&limit=1`)
         .then(r => r.ok ? r.json() : null)
         .then(d => {
           if (!d) return [c.slug, null];
@@ -365,6 +371,12 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
     const targetCities = corridor === "all"
       ? Array.from(new Set(CORRIDORS.flatMap(c => c.cities)))
       : (CORRIDORS.find(c => c.slug === corridor)?.cities || []);
+    // If this corridor has an intrinsic property-type (e.g. Penthouses must
+    // be Apartments), forward that so the /listings sweep matches the count
+    // on the card. Without this, clicking "Greater Vancouver Penthouses"
+    // would land on a mixed grid of detached homes + condos.
+    const activeCorridor = corridor === "all" ? null : CORRIDORS.find(c => c.slug === corridor);
+    const ptQ = activeCorridor?.propertyType ? `&property_type=${encodeURIComponent(activeCorridor.propertyType)}` : "";
     if (!targetCities.length) {
       setLiveListings([]); setLiveListingsLoading(false);
       return;
@@ -372,7 +384,7 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
     setLiveListingsLoading(true);
     const cityQ = targetCities.map(encodeURIComponent).join(",");
     const kwQ = encodeURIComponent(excludeDescKeywords);
-    fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&exclude_description_keywords=${kwQ}&sort=price_desc&limit=48`)
+    fetch(`${API}/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&exclude_description_keywords=${kwQ}${ptQ}&sort=price_desc&limit=48`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (cancelled) return;
