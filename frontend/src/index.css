@@ -233,9 +233,9 @@ p {
   line-height: 1.6;
 }
 @media (max-width: 700px) {
-  body { font-size: 15px; }
-  .lead { font-size: 0.98rem; line-height: 1.6; }
-  p { font-size: 0.95rem; }
+  body { font-size: 16px; }
+  .lead { font-size: 1.05rem; line-height: 1.65; }
+  p { font-size: 1rem; line-height: 1.65; }
   /* Give heading text a proper mobile cap so H2/H3 never go past the h1 */
   h2 { font-size: clamp(1.5rem, 5.5vw, 2rem); }
   h3 { font-size: clamp(1.2rem, 4.5vw, 1.5rem); }
@@ -1120,5 +1120,119 @@ textarea:focus-visible,
   [data-testid="dash-unified-search-card"] form[data-testid="dash-address-mls-search"] {
     padding: 8px 10px;
   }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   iPhone / Mobile Readability Pass — Feb 28, 2026
+   -----------------------------------------------------------------------
+   Doug tested on iPhone and reported text felt too small. This block
+   raises body copy and card descriptions to a comfortable Apple-HIG
+   reading size, adds iOS notched-device safe-area support so the Doogie
+   FAB and cookie banner clear the home-indicator, and enlarges footer
+   link tap targets to WCAG 2.5.5 (44×44 CSS px min).
+   Kept LAST in the file so it wins the cascade over earlier @media
+   rules without needing !important abuse.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* iOS safe-area — respect the notch + home-indicator on iPhone 12+ */
+@supports (padding: max(0px)) {
+  .doogie-fab {
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    right:  max(1rem, env(safe-area-inset-right, 0px)) !important;
+  }
+  [data-testid="cookie-banner"] {
+    padding-bottom: max(0.85rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .doogie-panel {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  footer {
+    padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Mobile phones — comfortable reading + tap targets */
+@media (max-width: 640px) {
+  /* Body copy — larger, more readable line-height */
+  body { font-size: 16px; line-height: 1.55; }
+  p { font-size: 1rem; line-height: 1.65; }
+  .lead { font-size: 1.05rem; line-height: 1.65; }
+  .section-sub { font-size: 1rem !important; line-height: 1.6 !important; }
+
+  /* Card descriptions on communities/glossary/luxury pages — was 0.95rem */
+  .card-desc { font-size: 1rem; line-height: 1.6; }
+  .card-title { font-size: 1.25rem; }
+
+  /* Eyebrow labels — a touch bigger for legibility */
+  .eyebrow { font-size: 0.75rem; }
+
+  /* Footer link tap targets — was 0.35rem 0 padding = ~5px, too small.
+     Bump to 0.55rem min-height 40px so links are easy to tap. */
+  footer ul li { padding: 0.55rem 0; font-size: 0.95rem; line-height: 1.4; }
+  footer ul li a { display: inline-block; padding: 4px 0; min-height: 32px; }
+  footer h4 { font-size: 1.05rem; margin-bottom: 0.85rem; }
+
+  /* Hero heading — a hair bigger for immediate impact + balance */
+  .hero h1 { font-size: clamp(2rem, 8vw, 2.75rem); line-height: 1.1; }
+  .hero p.lead { font-size: 1.05rem !important; line-height: 1.55 !important; }
+
+  /* Section titles — keep 1.5rem floor but nudge line-height for readability */
+  .section-title { line-height: 1.2 !important; }
+
+  /* Compliance top strip — collapse to one-line summary on mobile.
+     The full disclaimer is repeated in /compliance so nothing is lost. */
+  .compliance-strip,
+  .compliance-banner {
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.72rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* CTA strip ("Talk to Doug — What's my home worth? · Tell Doug…") —
+     stack the two CTAs on their own lines so tap targets stop cramping */
+  [data-testid="conv-strip"],
+  [class*="conv-strip"] {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.4rem !important;
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Buttons — WCAG 2.5.5 tap-target compliance */
+  .btn { min-height: 44px; padding: 0.7rem 1.15rem; font-size: 0.95rem; }
+  a.btn, button.btn { display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Chips (glossary quick-picks under the search bar) — thumb-friendly */
+  .chip, .pill { min-height: 40px; padding: 0.55rem 0.95rem; font-size: 0.9rem; }
+
+  /* Field labels/inputs slightly larger */
+  .field label { font-size: 0.9rem; }
+  .field input, .field select, .field textarea {
+    padding: 0.85rem 0.95rem;
+    min-height: 48px;
+  }
+
+  /* Reduce big vertical padding on hero + sections so more content is above the fold */
+  .hero { padding: 1.5rem 0 2.25rem; }
+  section.section { padding: 2.25rem 0; }
+
+  /* Testimonial cards & carousels — inline blockquote text */
+  [data-testid^="testimonial-"] p,
+  [class*="testimonial"] p {
+    font-size: 0.98rem !important;
+    line-height: 1.6 !important;
+  }
+}
+
+/* Extra-small phones (≤380px, iPhone SE 1st-gen etc.) */
+@media (max-width: 380px) {
+  body { font-size: 15.5px; }
+  .hero h1 { font-size: 1.85rem !important; line-height: 1.12 !important; }
+  .hero p.lead { font-size: 1rem !important; }
+  .section-title { font-size: 1.35rem !important; }
+  footer ul li { font-size: 0.9rem; }
+  .btn { padding: 0.65rem 1rem; font-size: 0.9rem; }
 }
 
