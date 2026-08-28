@@ -19,6 +19,7 @@ import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import LuxuryFlagshipCard from "./LuxuryFlagshipCard";
 import { FLAGSHIP } from "../config/flagshipListing";
 import { Helmet } from "react-helmet-async";
+import LuxuryPrivateAdvisory from "./LuxuryPrivateAdvisory";
 
 const BRAND = {
   ink: "#0B0F1A",           // near-black for editorial
@@ -903,6 +904,14 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
           </p>
         </div>
       </Section>
+
+      {/* ═══════ §8 PRIVATE ESTATE ADVISORY (Sep 2026) ══════════════════
+          Self-contained editorial section injected below the PIPA banner
+          and above the site footer. All logic + styles live inside the
+          component file — this line is the sole entry point. No existing
+          section, form, CTA, listing card, header, footer, navigation,
+          or AI assistant has been modified. */}
+      <LuxuryPrivateAdvisory/>
 
       {/* Footer */}
       <div style={{ background: BRAND.ink, color: "rgba(255,255,255,0.65)", padding: "36px 24px", fontFamily: SANS, fontSize: "0.75rem", textAlign: "center", lineHeight: 1.7 }}>
