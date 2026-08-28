@@ -23,13 +23,25 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // from the DDF-hydrated Mongo doc — no hand-typed numbers. If a field is
 // missing the line is omitted rather than showing "—".
 //
-// Compliance:
+// Variants (Feb 2026 update):
+//   • "just-listed"       — original launch post (default)
+//   • "just-sold"         — post-close celebration. No sold price is
+//                           surfaced by default — CREA rules require
+//                           client consent before publishing sold prices,
+//                           and BC brokerage advertising norms generally
+//                           avoid it. Doug can hand-add the sold price
+//                           after obtaining client written consent.
+//   • "open-house"        — upcoming public showing announcement.
+//   • "price-improvement" — updated list price post.
+//
+// Compliance (applies to every variant):
 //   • Listing REALTOR® + brokerage + BCFSA licence# on every post
 //   • Article 16 disclaimer on every post
 //   • No rounded prices (factual formatting per user directive)
-//   • Interior description sentence left blank for Doug to fill in — we do
-//     NOT invent copy, that would violate BCFSA advertising truthfulness.
-function formatGbpPost(l) {
+//   • Descriptive lines that require judgement are left as placeholders
+//     for Doug to fill in — we do NOT invent copy, that would violate
+//     BCFSA advertising truthfulness.
+function formatGbpPost(l, variant = "just-listed") {
   if (!l) return "";
   const price = Number(l.list_price || l.price || 0);
   const priceStr = price ? `$${price.toLocaleString("en-CA")}` : "";
@@ -45,20 +57,104 @@ function formatGbpPost(l) {
   const vimeoId = vimeo ? (vimeo.match(/(\d{5,})/) || [])[1] : "";
   const photoCount = Array.isArray(l.photos) ? l.photos.length : 0;
   const isSurreyElginChantrell = /elgin.*chantrell/i.test(community) || /141.*street/i.test(street);
+  const locationLine = [street, city && community ? `${city} (${community})` : city].filter(Boolean).join(", ");
+  const statsLineJustListed = [priceStr, beds ? `${beds} Bed` : null, baths ? `${baths} Bath` : null,
+                     sqft ? `${sqft.toLocaleString("en-CA")} sqft` : null,
+                     lot ? `${lot.toLocaleString("en-CA")} sqft lot` : null,
+                     community || null].filter(Boolean).join(" · ");
+  const statsLineNoPrice = [beds ? `${beds} Bed` : null, baths ? `${baths} Bath` : null,
+                     sqft ? `${sqft.toLocaleString("en-CA")} sqft` : null,
+                     lot ? `${lot.toLocaleString("en-CA")} sqft lot` : null,
+                     community || null].filter(Boolean).join(" · ");
+  const brokerageLine = "Listed by Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).";
+  const article16 = "Not intended to solicit buyers currently under contract with another REALTOR®.";
+  const permalink = mls ? `Full listing → eztofind.ca/listings/${mls}` : "";
+
+  // ── JUST SOLD variant ───────────────────────────────────────────────
+  if (variant === "just-sold") {
+    const soldHook = [
+      isSurreyElginChantrell ? "Another Elgin Chantrell estate sold — thank you to the seller for entrusting me with the sale." : "",
+      !isSurreyElginChantrell && community ? `Another ${community} home sold — thank you to the seller for entrusting me with the sale.` : "",
+      !community ? "Thank you to the seller for entrusting me with this sale." : "",
+    ].filter(Boolean)[0] || "";
+    const lines = [
+      `🎉 JUST SOLD — ${locationLine}`,
+      "",
+      statsLineNoPrice,
+      "",
+      soldHook,
+      "",
+      `[Optional: add offer velocity ("Sold in N days" / "Multiple offers") — factual only, with seller consent.]`,
+      "",
+      "Considering a sale on your street? I'll pull the real comparables and give you a straight-talk range — no obligation.",
+      "",
+      "Get a free market estimate → eztofind.ca/valuation",
+      "",
+      brokerageLine,
+      "",
+      "Sold prices are shared only with client written consent per CREA rules. Every sale is unique — past results are not indicative of future outcomes.",
+      "",
+      article16,
+    ].filter(x => x !== null);
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  // ── OPEN HOUSE variant ──────────────────────────────────────────────
+  if (variant === "open-house") {
+    const lines = [
+      `📅 OPEN HOUSE — ${locationLine}`,
+      "",
+      `[Add date + time here, e.g. "Saturday, March 8 · 1–3 PM"]`,
+      "",
+      statsLineJustListed,
+      "",
+      "[Add 1–2 sentences of interior description here — kitchen, primary suite, standout features.]",
+      "",
+      "Everyone welcome — no appointment needed. Sign in on arrival (BCFSA requires all attendees to register).",
+      "",
+      permalink,
+      "",
+      brokerageLine,
+      "",
+      article16,
+    ].filter(x => x !== null);
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  // ── PRICE IMPROVEMENT variant ───────────────────────────────────────
+  if (variant === "price-improvement") {
+    const lines = [
+      `💰 NEW PRICE — ${locationLine}`,
+      "",
+      `Now offered at ${priceStr || "[updated price]"}.`,
+      "",
+      statsLineNoPrice,
+      "",
+      `[Add 1 sentence explaining what changed if useful — e.g. "Motivated seller, all reasonable offers considered." Keep factual.]`,
+      "",
+      photoCount ? `Full details, ${photoCount}+ photos, floor plans, and interactive map on eztofind.ca.` : "Full details and interactive map on eztofind.ca.",
+      "",
+      vimeoId ? `Video tour: vimeo.com/${vimeoId}` : null,
+      vimeoId ? "" : null,
+      brokerageLine,
+      "",
+      permalink,
+      "",
+      article16,
+    ].filter(x => x !== null);
+    return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  // ── JUST LISTED variant (default, unchanged) ────────────────────────
   const hookLine = [
     community && `Elgin Chantrell`.includes(community.split(" ")[0]) ? "Rare estate-sized lot in one of South Surrey's most sought-after enclaves." : "",
     !isSurreyElginChantrell && lot >= 10000 ? "Rare estate-sized lot." : "",
   ].filter(Boolean).join(" ");
 
-  const statsLine = [priceStr, beds ? `${beds} Bed` : null, baths ? `${baths} Bath` : null,
-                     sqft ? `${sqft.toLocaleString("en-CA")} sqft` : null,
-                     lot ? `${lot.toLocaleString("en-CA")} sqft lot` : null,
-                     community || null].filter(Boolean).join(" · ");
-
   const lines = [
-    `🏡 JUST LISTED — ${[street, city && community ? `${city} (${community})` : city].filter(Boolean).join(", ")}`,
+    `🏡 JUST LISTED — ${locationLine}`,
     "",
-    statsLine,
+    statsLineJustListed,
     "",
     hookLine || "",
     hookLine ? "" : null,
@@ -68,12 +164,12 @@ function formatGbpPost(l) {
     "",
     vimeoId ? `Video tour: vimeo.com/${vimeoId}` : null,
     vimeoId ? "" : null,
-    "Listed by Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).",
+    brokerageLine,
     "",
-    mls ? `Full listing → eztofind.ca/listings/${mls}` : "",
+    permalink,
     "",
-    "Not intended to solicit buyers currently under contract with another REALTOR®.",
-  ].filter(l => l !== null);
+    article16,
+  ].filter(x => x !== null);
 
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -87,6 +183,12 @@ export default function AdminHydrateListing() {
   const [gbpText, setGbpText] = useState("");
   const [gbpCopied, setGbpCopied] = useState(false);
   const [gbpBusy, setGbpBusy] = useState(false);
+  // Feb 2026 · GBP variant picker — Just Listed / Just Sold / Open House
+  // / Price Improvement. Reformats the textarea from the last-loaded
+  // listing doc without re-hitting the API. Doug can hand-edit the copy
+  // in the textarea; switching variants overwrites unsaved edits (a
+  // warning is shown in the panel so it doesn't surprise him).
+  const [gbpVariant, setGbpVariant] = useState("just-listed");
 
   // ── Community override picker (Feb 2026) ─────────────────────────────
   const [enclaves, setEnclaves] = useState([]);
@@ -148,12 +250,24 @@ export default function AdminHydrateListing() {
       const r = await axios.get(`${API}/listings/${encodeURIComponent(mlsNum)}`, { validateStatus: () => true });
       const doc = r.status === 200 ? r.data : listing;
       setGbpFull(doc);
-      setGbpText(formatGbpPost(doc));
+      setGbpText(formatGbpPost(doc, gbpVariant));
     } catch {
       setGbpFull(listing);
-      setGbpText(formatGbpPost(listing));
+      setGbpText(formatGbpPost(listing, gbpVariant));
     } finally {
       setGbpBusy(false);
+    }
+  };
+
+  // Instant-reformat when Doug picks a different variant — uses the
+  // already-hydrated `gbpFull` doc so there's no API roundtrip. Only
+  // fires when Doug already generated at least one variant so we don't
+  // pop the textarea open unexpectedly.
+  const switchGbpVariant = (nextVariant) => {
+    setGbpVariant(nextVariant);
+    if (gbpFull) {
+      setGbpText(formatGbpPost(gbpFull, nextVariant));
+      setGbpCopied(false);
     }
   };
 
@@ -637,7 +751,7 @@ export default function AdminHydrateListing() {
           background: "#F7FAFF", border: "1px solid rgba(15,42,91,0.15)",
           fontSize: 14, lineHeight: 1.55,
         }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
             <div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", color: "#0F2A5B", fontWeight: 700 }}>Copy for Google Business Profile</div>
               <div style={{ fontSize: 12, opacity: 0.72, marginTop: 2 }}>
@@ -658,6 +772,52 @@ export default function AdminHydrateListing() {
               >{gbpBusy ? "Loading…" : "Generate GBP post"}</button>
             )}
           </div>
+
+          {/* Variant toggle — Just Listed · Just Sold · Open House · Price
+              Improvement. Rendered as a segmented control so Doug sees
+              every option at a glance. Sold variant is highlighted red
+              because it's the milestone post. Hides until a doc is
+              hydrated to avoid confusing the empty state. */}
+          {(gbpFull || gbpText) && (
+            <div
+              data-testid="gbp-variant-toggle"
+              role="tablist"
+              aria-label="GBP post variant"
+              style={{
+                display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4, marginBottom: 8,
+                padding: 4, background: "white", borderRadius: 10,
+                border: "1px solid rgba(15,42,91,0.15)",
+              }}
+            >
+              {[
+                { id: "just-listed",       label: "🏡 Just Listed",       active: "#0F2A5B", ink: "#DABF7A" },
+                { id: "just-sold",         label: "🎉 Just Sold",         active: "#CE2029", ink: "#FFFFFF" },
+                { id: "open-house",        label: "📅 Open House",        active: "#0F2A5B", ink: "#DABF7A" },
+                { id: "price-improvement", label: "💰 Price Improvement", active: "#0F2A5B", ink: "#DABF7A" },
+              ].map(v => {
+                const isActive = gbpVariant === v.id;
+                return (
+                  <button
+                    key={v.id}
+                    role="tab"
+                    aria-selected={isActive}
+                    data-testid={`gbp-variant-${v.id}`}
+                    onClick={() => switchGbpVariant(v.id)}
+                    disabled={gbpBusy}
+                    style={{
+                      padding: "8px 14px", borderRadius: 8, border: "none",
+                      background: isActive ? v.active : "transparent",
+                      color: isActive ? v.ink : "#0F2A5B",
+                      fontWeight: isActive ? 800 : 600, fontSize: 13,
+                      cursor: gbpBusy ? "wait" : "pointer",
+                      transition: "background 0.15s ease",
+                      whiteSpace: "nowrap",
+                    }}
+                  >{v.label}</button>
+                );
+              })}
+            </div>
+          )}
 
           {gbpText && (
             <>
@@ -714,7 +874,28 @@ export default function AdminHydrateListing() {
                 >{gbpBusy ? "…" : "Regenerate from live API"}</button>
               </div>
               <div style={{ marginTop: 14, padding: 12, borderRadius: 6, background: "#FEFCE8", border: "1px solid #FDE68A", fontSize: 12, lineHeight: 1.55, color: "#78350F" }}>
-                <strong>Before posting:</strong> Replace the <code>[Add 1–2 sentences…]</code> placeholder with your own interior description. Do <em>not</em> invent details — BCFSA advertising rule requires factual accuracy. Everything else (price, beds, baths, sqft, lot, MLS, brokerage, licence #, Article 16 disclaimer) is pulled live from CREA DDF® and safe to post as-is.
+                <strong>Before posting:</strong> Replace any <code>[bracketed]</code> placeholder with your own factual copy. Do <em>not</em> invent details — BCFSA advertising rule requires factual accuracy.
+                {gbpVariant === "just-sold" && (
+                  <>
+                    <br/><br/>
+                    <strong>Just Sold specifics:</strong> Sold prices are <em>not</em> included by default — CREA rules require written client consent before publishing a sold price. If you have consent and want to add it, edit the textarea. Offer velocity (e.g. "Sold in 12 days", "Multiple offers") is also opt-in and must be factual.
+                  </>
+                )}
+                {gbpVariant === "open-house" && (
+                  <>
+                    <br/><br/>
+                    <strong>Open House specifics:</strong> Fill in the exact date + time slot. BCFSA requires all open-house attendees to sign in — the post already mentions this so buyers aren't surprised on arrival.
+                  </>
+                )}
+                {gbpVariant === "price-improvement" && (
+                  <>
+                    <br/><br/>
+                    <strong>Price Improvement specifics:</strong> The listed price pulled from CREA DDF® is factual. If you're going to explain the change, keep it neutral — avoid urgency phrases that BCFSA might flag as pressure tactics.
+                  </>
+                )}
+                {gbpVariant === "just-listed" && (
+                  <>Everything else (price, beds, baths, sqft, lot, MLS, brokerage, licence #, Article 16 disclaimer) is pulled live from CREA DDF® and safe to post as-is.</>
+                )}
               </div>
             </>
           )}
