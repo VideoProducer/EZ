@@ -501,10 +501,13 @@ export default function LuxuryPrivateAdvisory() {
             {/* BUYER — Campbell Valley */}
             <CardShell data-testid="advisory-selected-buyer">
               <div style={{ fontFamily: SANS, fontSize: "0.72rem", letterSpacing: "0.16em", textTransform: "uppercase", color: BRAND.gold, marginBottom: 12, fontWeight: 700 }}>
-                Recently Acquired · Buyer Representation · Campbell Valley, South Langley
+                Selected Acreage Representation · Buyer Representation · Campbell Valley · South Langley
               </div>
               <p style={{ fontFamily: SANS, fontSize: "0.94rem", lineHeight: 1.75, color: BRAND.ink, margin: "0 0 12px" }}>
-                Doug LeMaire represented the purchaser in the acquisition of 17.9 private acres backing onto the Irene Pearce Trail and connecting to Campbell Valley Park. This rare South Langley property offered the privacy, land, and legacy potential sought by discerning purchasers envisioning a private estate or equestrian lifestyle. Doug provided strategic guidance and discreet representation throughout the acquisition.
+                Doug represented the purchaser in the acquisition of 17.9 private acres near Campbell Valley Park and the Irene Pearce Trail — an exceptional South Langley holding with open fields, privacy, and potential for a future estate or equestrian-oriented lifestyle. The representation focused on evaluating the property's long-term potential, land-use considerations, and acquisition strategy through completion.
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: "0.82rem", lineHeight: 1.65, color: BRAND.muted, margin: "0 0 12px" }}>
+                Doug helps clients identify questions, obtain relevant property records, and coordinate a practical diligence plan. Legal, land-use, environmental, water, septic, appraisal, and building advice should be obtained from the appropriate qualified professional.
               </p>
               <p style={{ fontFamily: SANS, fontSize: "0.75rem", lineHeight: 1.6, color: BRAND.muted, margin: "0 0 18px", fontStyle: "italic" }}>
                 Property details are presented as a completed buyer-representation result. Transaction details and marketing permissions are subject to applicable brokerage, client-consent, and advertising requirements.
