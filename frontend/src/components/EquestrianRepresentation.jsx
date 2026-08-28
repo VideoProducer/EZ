@@ -9,7 +9,7 @@
 //     compliance-footer. No professional-status claims made here.
 //   • CREA Article 16 disclaimer is inherited from the parent page and
 //     also included on every lead submission below.
-//   • $3.397M Campbell Valley card is explicitly BUYER REPRESENTATION.
+//   • Campbell Valley card is explicitly BUYER REPRESENTATION.
 //     No address, MLS® #, listing media, seller/buyer identity, or
 //     equestrian-use claim is made.
 //   • No fabricated testimonials — visible placeholder only.
@@ -541,7 +541,7 @@ export default function EquestrianRepresentation() {
             Selected Acreage Representation
           </div>
           <h3 style={{ fontFamily: SERIF, fontSize: "clamp(1.35rem, 2.4vw, 1.85rem)", color: BRAND.navy, margin: "0 0 16px", fontWeight: 600 }}>
-            Buyer Representation | South Langley | $3.397M
+            Buyer Representation | South Langley
           </h3>
           <p style={{ fontFamily: SANS, fontSize: "0.98rem", lineHeight: 1.75, color: BRAND.ink, margin: "0 0 14px", maxWidth: 820 }}>
             Doug represented the purchaser in the acquisition of 17.9 private acres near Campbell Valley Park and the Irene Pearce Trail — an exceptional South Langley holding with open fields, privacy, and potential for a future estate or equestrian-oriented lifestyle. The representation focused on evaluating the property's long-term potential, land-use considerations, and acquisition strategy through completion.
