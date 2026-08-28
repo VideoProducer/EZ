@@ -28,6 +28,8 @@ import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
 import AdminHydrateListing from "./pages/AdminHydrateListing";
+import AdminTestimonials from "./pages/AdminTestimonials";
+import TestimonialCarousel from "./components/TestimonialCarousel";
 import DashboardMockup from "./pages/DashboardMockup";
 import MarketReport from "./pages/MarketReport"; // route removed 2026-08-08 per Doug; keep import so the component compiles if we re-enable later
 import CompareListings from "./pages/CompareListings";
@@ -6294,7 +6296,9 @@ const About = () => (<section className="section"><div className="container-x" s
       </div>
     ))}
   </div>
-</div></section>);
+</div>
+<TestimonialCarousel variant="compact" title="What clients say about working with Doug" testId="about-testimonials"/>
+</section>);
 
 // --- Contact ---
 const Contact = () => {
@@ -6866,7 +6870,7 @@ const _adminSignOut = async (nav) => {
   if (nav) nav("/");
 };
 
-const AdminShell = ({children,active}) => {
+export const AdminShell = ({children,active}) => {
   const nav=useNavigate();
   return (<div className="admin-shell">
     <aside className="admin-sidebar">
@@ -6880,6 +6884,7 @@ const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/client-journeys")} className={active==="client-journeys"?"active":""} data-testid="admin-nav-client-journeys">🧭 Client Journeys</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/coming-soon")} className={active==="coming-soon"?"active":""} data-testid="admin-nav-coming-soon">🏛️ Coming Soon</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/hydrate-listing")} className={active==="hydrate-listing"?"active":""} data-testid="admin-nav-hydrate-listing">🛰️ Hydrate Listing</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/testimonials")} className={active==="testimonials"?"active":""} data-testid="admin-nav-testimonials">🌟 Testimonials</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/lead-triage")} className={active==="lead-triage"?"active":""} data-testid="admin-nav-lead-triage">🎯 Lead Triage</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consultations")} className={active==="consultations"?"active":""} data-testid="admin-nav-consultations">📝 Consultations</a>
@@ -13139,6 +13144,7 @@ function App() {
       <Route path="/tools/mortgage-affordability" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><MortgageAffordabilityPage/></Suspense></AppLayout>}/>
       <Route path="/tools/first-time-buyer" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><FirstTimeBuyerCheatSheet/></Suspense></AppLayout>}/>
       <Route path="/admin/sac-analytics" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><AdminSacAnalytics/></Suspense></AppLayout>}/>
+      <Route path="/admin/testimonials" element={<AdminTestimonials/>}/>
       <Route path="/privacy" element={<AppLayout><Privacy/></AppLayout>}/>
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>

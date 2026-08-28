@@ -407,6 +407,25 @@ class GlossaryTerm(BaseModel):
     definition: str
     faqs: List[dict] = []  # [{q,a}]
 
+class Testimonial(BaseModel):
+    """Client review / testimonial — surfaces on homepage + About + AggregateRating JSON-LD.
+    Sources include Google Business Profile, RankMyAgent, Zillow, direct client letters.
+    BCFSA compliance: attribution + "past results not indicative" disclaimer is
+    rendered client-side by <TestimonialCarousel/>. Reviewer name is required
+    (no anonymous reviews) so BCFSA advertising truthfulness rule is satisfied.
+    """
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    reviewer_name: str
+    rating: int = 5  # 1-5
+    date_reviewed: str  # ISO date, e.g. "2026-02-15"
+    text: str
+    source: str = "Google"  # "Google" | "Facebook" | "RankMyAgent" | "Direct client letter"
+    source_url: Optional[str] = None  # deep link to the review, if public
+    photo_url: Optional[str] = None
+    is_published: bool = True
+    is_featured: bool = False  # feature at the top of the carousel
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 class ChatIn(BaseModel):
     session_id: str
     message: str
@@ -3713,6 +3732,49 @@ async def update_client(cid: str, c: Client, _=Depends(verify_admin)):
 @api.delete("/admin/clients/{cid}")
 async def delete_client(cid: str, _=Depends(verify_admin)):
     await db.clients.delete_one({"id": cid})
+    return {"success": True}
+
+# ─── Testimonials / Client Reviews ─────────────────────────────────────
+# Public: GET /testimonials returns only published rows sorted by
+# (is_featured desc, date_reviewed desc). Admin: full CRUD at
+# /admin/testimonials. Reviews from Google GBP, Facebook, RankMyAgent, or
+# direct client letters. Attribution + BCFSA disclaimer is rendered by
+# the frontend <TestimonialCarousel/> so the admin form is intentionally
+# minimal.
+@api.get("/testimonials")
+async def public_testimonials():
+    rows = await db.testimonials.find(
+        {"is_published": True}, {"_id": 0}
+    ).sort([("is_featured", -1), ("date_reviewed", -1)]).to_list(200)
+    # Compute aggregate rating so the homepage can render AggregateRating
+    # JSON-LD without a second roundtrip.
+    if rows:
+        avg = round(sum(r.get("rating", 5) for r in rows) / len(rows), 1)
+    else:
+        avg = None
+    return {"testimonials": rows, "count": len(rows), "average_rating": avg}
+
+@api.get("/admin/testimonials")
+async def admin_list_testimonials(_=Depends(verify_admin)):
+    return await db.testimonials.find({}, {"_id": 0}).sort([
+        ("is_featured", -1), ("date_reviewed", -1)
+    ]).to_list(500)
+
+@api.post("/admin/testimonials")
+async def admin_create_testimonial(t: Testimonial, _=Depends(verify_admin)):
+    await db.testimonials.insert_one(t.model_dump())
+    return t
+
+@api.put("/admin/testimonials/{tid}")
+async def admin_update_testimonial(tid: str, t: Testimonial, _=Depends(verify_admin)):
+    payload = t.model_dump()
+    payload["id"] = tid  # protect against id drift on edit
+    await db.testimonials.update_one({"id": tid}, {"$set": payload}, upsert=False)
+    return payload
+
+@api.delete("/admin/testimonials/{tid}")
+async def admin_delete_testimonial(tid: str, _=Depends(verify_admin)):
+    await db.testimonials.delete_one({"id": tid})
     return {"success": True}
 
 @api.get("/admin/reminders")
