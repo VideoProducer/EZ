@@ -132,9 +132,12 @@ export default function EquestrianLeadMockup() {
             // rotating hero — CREA sometimes classifies these as Detached /
             // Acreage so they slip past the property-type allowlist, and the
             // first photo is often an overlay-labelled site plan (e.g.
-            // "FULLY DEVELOPED COMMUNITY"). Pipe-separated regex patterns.
+            // "FULLY DEVELOPED COMMUNITY"). Pipe-separated literals only —
+            // MongoDB's regex engine rejects grouped-alternation patterns
+            // like `foo\s+(a|b|c)` with a "missing closing parenthesis"
+            // error (Feb 2026 bug fix: was causing HTTP 500 on this hero).
             exclude_description_keywords:
-              "land\\s+assembl|development\\s+(potential|opportunity|site|play)|developer'?s?\\s+(alert|dream|discover|attention)|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+(land|holding|opportunity)|fully\\s+developed\\s+community|land\\s+banking",
+              "land\\s+assembl|development\\s+potential|development\\s+opportunity|development\\s+site|developer'?s?\\s+alert|developer'?s?\\s+dream|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+land|investment\\s+holding|fully\\s+developed\\s+community|land\\s+banking",
           },
         });
         if (cancelled) return;

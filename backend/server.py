@@ -10309,11 +10309,23 @@ async def equestrian_keyword_search(
         }]
     if exclude_description_keywords:
         patterns = [k.strip() for k in exclude_description_keywords.split("|") if k.strip()]
-        if patterns:
+        # Pre-validate each pattern against Python `re` — Mongo's regex engine
+        # rejects grouped-alternation like `foo\s+(a|b)` with a "missing
+        # closing parenthesis" error. Any pattern that fails compilation is
+        # silently dropped so a single bad token can never HTTP 500 the
+        # endpoint (Feb 2026 hero-blank bug).
+        safe_patterns = []
+        for p in patterns:
+            try:
+                re.compile(p, re.IGNORECASE)
+                safe_patterns.append(p)
+            except re.error:
+                continue
+        if safe_patterns:
             q["$and"] = list(q.get("$and", [])) + [{
                 "$nor": [
                     {"description": {"$regex": p, "$options": "i"}}
-                    for p in patterns
+                    for p in safe_patterns
                 ],
             }]
     if min_acres and min_acres > 0:
@@ -10603,11 +10615,21 @@ async def search_listings(
     # the delimiter.
     if exclude_description_keywords:
         patterns = [k.strip() for k in exclude_description_keywords.split("|") if k.strip()]
-        if patterns:
+        # Same Python-side regex validation as the equestrian-keyword endpoint
+        # above — silently drop any pattern that fails to compile so a bad
+        # client token never HTTP 500s the whole query.
+        safe_patterns = []
+        for p in patterns:
+            try:
+                re.compile(p, re.IGNORECASE)
+                safe_patterns.append(p)
+            except re.error:
+                continue
+        if safe_patterns:
             query.setdefault("$and", []).append({
                 "$nor": [
                     {"description": {"$regex": p, "$options": "i"}}
-                    for p in patterns
+                    for p in safe_patterns
                 ],
             })
     if has_arena:
