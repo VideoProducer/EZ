@@ -636,8 +636,6 @@ export default function LuxuryPrivateAdvisory() {
                   <footer style={{ fontFamily: SANS, fontSize: "0.78rem", color: BRAND.muted, lineHeight: 1.6, background: "transparent" }}>
                     — <strong style={{ color: BRAND.ink, fontStyle: "normal" }}>{slot.data.name || slot.data.reviewer_name || "Verified client"}</strong>
                     {slot.data.context && <> · {slot.data.context}</>}
-                    {slot.data.source && <> · Client review from {slot.data.source}</>}
-                    {slot.data.date_reviewed && <> · {slot.data.date_reviewed}</>}
                   </footer>
                 </article>
               ) : (
