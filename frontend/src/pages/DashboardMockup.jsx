@@ -6167,22 +6167,6 @@ const DashboardFeaturedListing = () => {
             overflow: "hidden",
           }} data-testid="dash-featured-description">{merged.description}</p>
 
-          {/sold/i.test(merged.status || "") && (
-            <Link
-              to="/case-studies/3015-141-street"
-              data-testid="dash-featured-case-study-cta"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "#CE2029", color: "white",
-                padding: "10px 18px", borderRadius: 999,
-                fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 13,
-                textDecoration: "none",
-                boxShadow: "0 4px 12px rgba(206,32,41,0.35)",
-                marginBottom: 12,
-              }}
-            >📖 Read the case study — sold in under 2 weeks →</Link>
-          )}
-
           <LuxuryShareBar
             url={typeof window !== "undefined"
               ? `${window.location.origin}/api/share/featured${live ? `?mls=${encodeURIComponent(L.mls)}` : ""}`
