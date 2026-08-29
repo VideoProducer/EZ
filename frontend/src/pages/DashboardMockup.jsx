@@ -105,7 +105,7 @@ const SECTIONS = [
 // Every quote here MUST already exist verbatim in the full testimonials
 // array below — the badge is a highlight, not a source of new claims.
 const HERO_PULL_QUOTES = [
-  { initials: "MM", name: "Mark Melim", excerpt: "Doug was willing to do beyond what we expected — always in great hands." },
+  { initials: "MM", name: "MM", excerpt: "Doug was willing to do beyond what we expected — always in great hands." },
   { initials: "AM", name: "Anne M.",   excerpt: "The kindest, hardest working and best REALTOR® I have ever had." },
   { initials: "CC", name: "Carol C.",  excerpt: "Very patient — helped negotiate a good price and was very professional." },
   { initials: "MS", name: "Michael S.",excerpt: "Endless patience with my lack of experience and the changing market." },
@@ -5878,7 +5878,7 @@ const DashboardFeaturedListing = () => {
               // instantly see market velocity. Colour lookup keeps the
               // design system consistent with the rest of the site.
               background: /accepted|pending/i.test(merged.status||"") ? "#0F2A5B"
-                        : /sold/i.test(merged.status||"")             ? "#CE2029"
+                        : /sold/i.test(merged.status||"")             ? "#0F2A5B"
                         : C.brandGold,
               color:      /accepted|pending|sold/i.test(merged.status||"") ? "#FFFFFF" : C.navy,
               padding: "6px 14px", borderRadius: 999,
@@ -5926,12 +5926,12 @@ const DashboardFeaturedListing = () => {
               data-testid="dash-featured-sold-banner"
               style={{
                 position: "absolute", top: 0, left: 0, right: 0, zIndex: 14,
-                background: "#CE2029",
+                background: "#0F2A5B",
                 color: "#FFFFFF",
                 textAlign: "center",
                 padding: "12px 18px",
                 boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                borderBottom: "3px solid #8A1418",
+                borderBottom: "3px solid #061942",
                 pointerEvents: "none",
               }}
             >
@@ -6227,7 +6227,7 @@ const HomeExtras = () => {
   ];
   const testimonials = [
     {
-      stars: 5, initials: "MM", name: "Mark Melim", role: "Seller · Elgin Chantrell",
+      stars: 5, initials: "MM", name: "MM", role: "Seller",
       quote: "We can't say enough about how amazing Doug was from start to finish. He truly went above and beyond throughout the entire process and made what could have been a stressful experience feel much easier. Doug was always available, incredibly responsive, knowledgeable, professional, and genuinely cared about making sure everything went smoothly. We never felt like just another client — he took the time to understand what was important to us and always had our best interests in mind. What really stood out was how much Doug was willing to do beyond what we expected. His attention to detail, communication, patience, and commitment were exceptional, and we always felt that we were in great hands. We are extremely grateful for everything Doug did for us and would highly recommend him to anyone looking for a realtor. If you want someone who will truly go the extra mile and be there for you every step of the way, Doug is your guy!",
     },
     {

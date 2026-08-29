@@ -71,7 +71,7 @@ export default function LuxuryFlagshipCard() {
                   // Sale Pending → Sold) reads consistently across
                   // surfaces. Navy pill on the calm cream backdrop.
                   background: /accepted|pending/i.test(FLAGSHIP.status) ? "#0F2A5B"
-                            : /sold/i.test(FLAGSHIP.status)             ? "#CE2029"
+                            : /sold/i.test(FLAGSHIP.status)             ? "#0F2A5B"
                             : "#DABF7A",
                   color:      /accepted|pending|sold/i.test(FLAGSHIP.status) ? "#FFFFFF" : "#0F2A5B",
                   padding: "6px 16px", borderRadius: 999,
@@ -144,12 +144,12 @@ export default function LuxuryFlagshipCard() {
               data-testid="luxury-flagship-sold-banner"
               style={{
                 position: "absolute", top: 0, left: 0, right: 0, zIndex: 12,
-                background: "#CE2029",
+                background: "#0F2A5B",
                 color: "#FFFFFF",
                 textAlign: "center",
                 padding: "14px 20px",
                 boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
-                borderBottom: "3px solid #8A1418",
+                borderBottom: "3px solid #061942",
               }}
             >
               <div style={{
