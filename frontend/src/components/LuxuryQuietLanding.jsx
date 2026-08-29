@@ -463,11 +463,12 @@ export default function LuxuryQuietLanding() {
           >
             <iframe
               data-testid="luxury-film-iframe"
-              src="https://player.vimeo.com/video/1218107137?fl=tl&fe=ec"
+              src="https://player.vimeo.com/video/1218107137?app_id=122963&title=0&byline=0&portrait=0"
               title="Doug LeMaire, REALTOR® — a short film"
               frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
               allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
               style={{
                 position: "absolute",
                 inset: 0,

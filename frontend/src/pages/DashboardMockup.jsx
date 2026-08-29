@@ -5562,11 +5562,13 @@ const FEATURED_HOME_LISTING = {
   ],
   open_house: null,               // No public open house — showings by appointment only
   // Video walkthrough — Vimeo hosted tour (swapped in per Doug, Feb
-  // 2026). Vimeo signed-experience URL preserves the exact playback
-  // parameters Doug supplied (fl=tl&fe=ec). The parent container's
-  // aspect ratio was bumped from 3:2 to 1224:920 (~4:3) to match the
-  // dimensions Doug specified for the embed.
-  tour_embed_url: "https://player.vimeo.com/video/1218107137?fl=tl&fe=ec",
+  // 2026). Uses Vimeo's canonical embed URL (?app_id=122963) rather
+  // than the "Share → Copy link" signed player URL (?fl=tl&fe=ec),
+  // which returns HTTP 401 on domains other than the one that
+  // generated the signed link. The parent container's aspect ratio
+  // was bumped from 3:2 to 1224:920 (~4:3) to match the dimensions
+  // Doug specified for the embed.
+  tour_embed_url: "https://player.vimeo.com/video/1218107137?app_id=122963&title=0&byline=0&portrait=0",
   video_url: null,
   video_duration: null,
   video_provider: "vimeo",
