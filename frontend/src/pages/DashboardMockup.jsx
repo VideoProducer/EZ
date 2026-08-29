@@ -105,6 +105,7 @@ const SECTIONS = [
 // Every quote here MUST already exist verbatim in the full testimonials
 // array below — the badge is a highlight, not a source of new claims.
 const HERO_PULL_QUOTES = [
+  { initials: "MM", name: "Mark Melim", excerpt: "Doug was willing to do beyond what we expected — always in great hands." },
   { initials: "AM", name: "Anne M.",   excerpt: "The kindest, hardest working and best REALTOR® I have ever had." },
   { initials: "CC", name: "Carol C.",  excerpt: "Very patient — helped negotiate a good price and was very professional." },
   { initials: "MS", name: "Michael S.",excerpt: "Endless patience with my lack of experience and the changing market." },
@@ -6239,6 +6240,10 @@ const HomeExtras = () => {
     { slug: "sea-to-sky",        title: "Sea-to-Sky",          img: IMG.seaToSky,      desc: "Squamish, Whistler, Pemberton — mountain lifestyle real estate." },
   ];
   const testimonials = [
+    {
+      stars: 5, initials: "MM", name: "Mark Melim", role: "Seller · Elgin Chantrell",
+      quote: "We can't say enough about how amazing Doug was from start to finish. He truly went above and beyond throughout the entire process and made what could have been a stressful experience feel much easier. Doug was always available, incredibly responsive, knowledgeable, professional, and genuinely cared about making sure everything went smoothly. We never felt like just another client — he took the time to understand what was important to us and always had our best interests in mind. What really stood out was how much Doug was willing to do beyond what we expected. His attention to detail, communication, patience, and commitment were exceptional, and we always felt that we were in great hands. We are extremely grateful for everything Doug did for us and would highly recommend him to anyone looking for a realtor. If you want someone who will truly go the extra mile and be there for you every step of the way, Doug is your guy!",
+    },
     {
       stars: 5, initials: "JM", name: "J&M", role: "Buyers",
       quote: "Doug was an absolute pleasure to work with! As a buyer, we truly appreciated his patience, professionalism, and thorough approach throughout the entire process. Doug took the time to understand our needs, provided valuable insights, and guided us every step of the way with clear communication and expert advice. Doug's attention to detail and dedication made the experience smooth and stress-free. We couldn't have asked for a better realtor and highly recommend Doug to anyone looking to buy or sell a home!",
