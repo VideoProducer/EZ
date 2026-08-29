@@ -150,6 +150,12 @@ export default function EquestrianLeadMockup() {
             address: l.unparsed_address || l.street_address,
           }))
           .filter(p => p.url);
+        // Preload every photo up-front so the crossfade never stalls on
+        // network fetch. Uses the browser's native image cache; kept
+        // fire-and-forget so a slow CDN response never blocks state.
+        // Without this the first cycle would hesitate visibly while
+        // the second image starts downloading behind the crossfade.
+        pool.forEach(p => { const img = new Image(); img.src = p.url; });
         setHeroPhotos(pool);
       } catch { /* silent — hero falls back to navy gradient */ }
     })();
@@ -251,8 +257,13 @@ export default function EquestrianLeadMockup() {
     (async () => {
       setLoading(true);
       try {
-        const r = await axios.get(`${API}/api/listings`, {
-          params: { property_type: "Equestrian", limit: 4, sort: "newest", price_min: 500000 },
+        // Use the dedicated /listings/equestrian endpoint (broader
+        // equestrian classifier — matches acreage + barn/stable keywords).
+        // The generic /listings?property_type=Equestrian query returned
+        // 0 because CREA DDF® has no "Equestrian" property_type value;
+        // it's an editorial category, not a raw field (Feb 2026 fix).
+        const r = await axios.get(`${API}/api/listings/equestrian`, {
+          params: { min_acres: 5, limit: 4, sort: "price_desc" },
         });
         if (cancelled) return;
         const items = r.data.listings || [];
@@ -365,11 +376,15 @@ export default function EquestrianLeadMockup() {
             transition:"opacity 1500ms ease-in-out",
           }}/>
         ))}
-        {/* Navy tonal wash — keeps title/subtext legible regardless of
-            the photo underneath. */}
+        {/* Soft bottom vignette — keeps the eyebrow/H1/subtext legible
+            over bright photos, without masking the photograph itself.
+            The old solid navy wash (rgba(15,42,91,0.82)) was covering
+            the entire hero — Doug asked for the photo to breathe.
+            Now: transparent at the top, darkening only at the bottom
+            where the copy sits. */}
         <div aria-hidden="true" style={{
           position:"absolute", inset:0, zIndex:1,
-          background:"linear-gradient(135deg, rgba(15,42,91,0.82) 0%, rgba(15,42,91,0.58) 100%)",
+          background:"linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 42%, rgba(0,0,0,0.55) 100%)",
         }}/>
         {/* MLS® attribution — required by CREA DDF® rules whenever a
             live MLS® image is shown outside the standard listing page.
@@ -408,7 +423,13 @@ export default function EquestrianLeadMockup() {
             ))}
           </div>
         )}
-        <div style={{position:"relative", zIndex:2, maxWidth:1120, margin:"0 auto"}}>
+        <div style={{
+          position:"relative", zIndex:2, maxWidth:1120, margin:"0 auto",
+          // Text-shadow stack now that the heavy navy overlay is gone —
+          // keeps the eyebrow / H1 / subtext legible over any photo
+          // (dark barns, bright sunny paddocks, snowy fields, etc.).
+          textShadow: "0 1px 2px rgba(0,0,0,0.55), 0 2px 12px rgba(0,0,0,0.45)",
+        }}>
           <nav aria-label="Breadcrumb" style={{fontSize:"0.78rem", opacity:0.85, marginBottom:14}}>
             <Link to="/" style={{color:"#fff", textDecoration:"none"}}>Home</Link> / <Link to="/specialties/equestrian" style={{color:"#fff", textDecoration:"none"}}>Equestrian</Link>
           </nav>

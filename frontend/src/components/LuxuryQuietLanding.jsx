@@ -80,6 +80,11 @@ function RotatingHero() {
             listing_key: l.listing_key,
           }))
           .slice(0, 12);
+        // Preload every photo up-front so crossfades never stall on
+        // network fetch. Fire-and-forget: slow CDN responses never
+        // block state. Removes the visible hesitation Doug reported
+        // on the first cycle of the carousel.
+        pool.forEach((p) => { const img = new Image(); img.src = p.url; });
         setPhotos(pool);
       })
       .catch(() => {
@@ -101,7 +106,6 @@ function RotatingHero() {
   }, [photos.length]);
 
   const current = photos[idx];
-  const nextIdx = photos.length > 1 ? (idx + 1) % photos.length : 0;
 
   return (
     <section
@@ -131,15 +135,6 @@ function RotatingHero() {
           }}
         />
       ))}
-      {/* Preload the next photo invisibly so the crossfade is seamless */}
-      {photos[nextIdx] && photos[nextIdx].listing_key !== current?.listing_key && (
-        <img
-          src={photos[nextIdx].url}
-          alt=""
-          aria-hidden="true"
-          style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
-        />
-      )}
       {/* Subtle top gradient so header (if it overlaps) reads on white photos */}
       <div
         aria-hidden="true"
