@@ -51,6 +51,7 @@ const CommunityPageMockupLive = lazy(() => import("./components/CommunityPageMoc
 const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
 const LuxuryQuietLanding  = lazy(() => import("./components/LuxuryQuietLanding"));
+const LuxuryQuietContact  = lazy(() => import("./components/LuxuryQuietContact"));
 const SacLanding = lazy(() => import("./pages/SacLanding"));
 const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
 const PTTEstimator = lazy(() => import("./pages/PTTEstimator"));
@@ -13144,7 +13145,8 @@ function App() {
       <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
-      <Route path="/contact" element={<AppLayout><Contact/></AppLayout>}/>
+      <Route path="/contact" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietContact/></Suspense></AppLayout>}/>
+      <Route path="/contact-legacy" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/sac" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><SacLanding/></Suspense></AppLayout>}/>
       <Route path="/tools/bc-buyer-cost-calculator" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><BCBuyerCostCalculator/></Suspense></AppLayout>}/>
       <Route path="/tools/ptt-estimator" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><PTTEstimator/></Suspense></AppLayout>}/>

@@ -14,9 +14,12 @@
 // The old page is preserved unchanged at
 // `LuxuryLandingMockup.jsx` in case a revert is needed.
 // ═══════════════════════════════════════════════════════════════════════
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 // Restrained tonal palette — warm white, charcoal, soft slate.
 // No gold gradients. No neon CTAs.
@@ -30,6 +33,154 @@ const T = {
 
 const SERIF = 'ui-serif, Georgia, "Cormorant Garamond", "Times New Roman", serif';
 const SANS  = 'ui-sans-serif, -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
+
+// ── Rotating luxury hero ────────────────────────────────────────────
+// Cycles through live CREA DDF® listings ≥ $3M every 6 seconds with a
+// slow crossfade. Silent — no overlay copy, no motion tricks, no dots.
+// The only visible metadata is a whisper-quiet MLS® attribution pill in
+// the bottom-right corner (CREA DDF® compliance requirement). If the
+// listings API fails or returns nothing, falls back to a single
+// restrained architectural still so the page never looks broken.
+function RotatingHero() {
+  const [photos, setPhotos] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const fallback =
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=2000&q=80";
+
+  // Fetch a curated pool of live luxury listings once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    const excl =
+      "Vacant+Land,Lot,Land,Agriculture,Farm,Residential+Commercial+Mix,Mixed+Use";
+    // Pipe-separated LITERAL patterns only — MongoDB's regex engine
+    // rejects grouped-alternation like `foo\s+(a|b)`. See earlier bug fix.
+    const excludeKw = encodeURIComponent(
+      "land\\s+assembl|development\\s+potential|development\\s+opportunity|development\\s+site|developer'?s?\\s+alert|developer'?s?\\s+dream|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+land|investment\\s+holding|fully\\s+developed\\s+community|land\\s+banking|revenue\\s+propert"
+    );
+    const cities = [
+      "Vancouver","West Vancouver","North Vancouver","Burnaby","Whistler",
+      "White Rock","Surrey","Langley","Delta","Richmond","Coquitlam",
+      "Port Moody","New Westminster","Anmore","Belcarra","Lions Bay",
+      "Squamish","Pemberton",
+    ];
+    const cityQ = cities.map(encodeURIComponent).join(",");
+
+    axios
+      .get(
+        `${API}/api/listings?price_min=3000000&city=${cityQ}&exclude_property_type=${excl}&exclude_description_keywords=${excludeKw}&sort=price_desc&limit=24`
+      )
+      .then((r) => {
+        if (cancelled) return;
+        const pool = (r.data?.listings || [])
+          .filter((l) => Array.isArray(l.photos) && l.photos.length > 0)
+          .map((l) => ({
+            url: l.photos[0],
+            address: l.address,
+            city: l.city,
+            listing_key: l.listing_key,
+          }))
+          .slice(0, 12);
+        setPhotos(pool);
+      })
+      .catch(() => {
+        /* silent fallback to static still */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Advance every 6s.
+  useEffect(() => {
+    if (photos.length < 2) return;
+    const t = setInterval(
+      () => setIdx((i) => (i + 1) % photos.length),
+      6000
+    );
+    return () => clearInterval(t);
+  }, [photos.length]);
+
+  const current = photos[idx];
+  const nextIdx = photos.length > 1 ? (idx + 1) % photos.length : 0;
+
+  return (
+    <section
+      data-testid="luxury-hero"
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16 / 7",
+        overflow: "hidden",
+        background: `#000 url('${fallback}') center/cover no-repeat`,
+        borderBottom: `1px solid ${T.hairline}`,
+      }}
+    >
+      {photos.map((p, i) => (
+        <div
+          key={p.listing_key || i}
+          aria-hidden={i !== idx}
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url('${p.url}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: i === idx ? 1 : 0,
+            transition: "opacity 1600ms ease",
+            zIndex: i === idx ? 2 : 1,
+          }}
+        />
+      ))}
+      {/* Preload the next photo invisibly so the crossfade is seamless */}
+      {photos[nextIdx] && photos[nextIdx].listing_key !== current?.listing_key && (
+        <img
+          src={photos[nextIdx].url}
+          alt=""
+          aria-hidden="true"
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        />
+      )}
+      {/* Subtle top gradient so header (if it overlaps) reads on white photos */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(180deg, rgba(30,31,36,0.10) 0%, rgba(30,31,36,0.02) 60%, transparent 100%)",
+          zIndex: 3,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Whisper-quiet MLS® attribution — CREA DDF® rule compliance */}
+      {current && (
+        <div
+          data-testid="luxury-hero-mls-attribution"
+          style={{
+            position: "absolute",
+            right: 20,
+            bottom: 20,
+            zIndex: 4,
+            fontFamily: SANS,
+            fontSize: "0.7rem",
+            letterSpacing: "0.06em",
+            color: "#FFFFFF",
+            background: "rgba(30,31,36,0.55)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            padding: "6px 12px",
+            borderRadius: 999,
+            lineHeight: 1.4,
+          }}
+        >
+          {current.address ? `${current.address} · ` : ""}
+          {current.city ? `${current.city} · ` : ""}
+          MLS® #{current.listing_key}
+        </div>
+      )}
+    </section>
+  );
+}
 
 // ── SEO + Schema ────────────────────────────────────────────────────
 function SEOHead() {
@@ -116,20 +267,10 @@ export default function LuxuryQuietLanding() {
         }}
       >
         {/* ─── HERO ──────────────────────────────────────────────────
-            Restrained architectural still. Full-width, uncluttered.
-            No overlay copy — headline lives in the sitting-room block
-            below so the photo can breathe. */}
-        <section
-          data-testid="luxury-hero"
-          style={{
-            width: "100%",
-            aspectRatio: "16 / 7",
-            background:
-              "linear-gradient(180deg, rgba(30,31,36,0.10) 0%, rgba(30,31,36,0.02) 60%, transparent 100%), " +
-              "url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=2000&q=80') center/cover no-repeat",
-            borderBottom: `1px solid ${T.hairline}`,
-          }}
-        />
+            Rotating carousel of live CREA DDF® listings ≥ $3M. Full-
+            width, uncluttered, no overlay copy — the headline lives in
+            the sitting-room block below so photos can breathe. */}
+        <RotatingHero />
 
         {/* ─── SITTING ROOM ─────────────────────────────────────────
             H1 + subhead + opening. Sits on warm white, generous white
@@ -563,24 +704,6 @@ export default function LuxuryQuietLanding() {
             <span style={{ margin: "0 12px", opacity: 0.5 }}>·</span>
             <Link to="/about" style={{ color: T.muted }} data-testid="luxury-secondary-about">About</Link>
           </div>
-
-          {/* Article 16 form note — required by CREA rules and Doug's
-              existing compliance posture. */}
-          <p
-            data-testid="luxury-article-16-note"
-            style={{
-              marginTop: 40,
-              fontFamily: SANS,
-              fontSize: "0.78rem",
-              lineHeight: 1.6,
-              color: T.muted,
-              maxWidth: 620,
-              fontStyle: "italic",
-            }}
-          >
-            Forms must hard-block visitors currently under contract with
-            another REALTOR® (CREA Article 16).
-          </p>
         </section>
 
         {/* ─── PAGE-LEVEL COMPLIANCE FOOTER ─────────────────────────
