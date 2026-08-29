@@ -438,6 +438,53 @@ export default function LuxuryQuietLanding() {
           </ol>
         </section>
 
+        {/* ─── FILM ────────────────────────────────────────────────
+            A short piece of film — set below "How the work is done"
+            so it plays as a natural continuation of the argument,
+            not as a marketing interruption. Native 1224×920 aspect
+            ratio (~4:3) matches Doug's Vimeo embed spec exactly.
+            Autoplay is disabled so it never intrudes; a visitor has
+            to click into the film to hear it. */}
+        <section
+          data-testid="luxury-film"
+          style={{
+            maxWidth: 1224,
+            margin: "0 auto",
+            padding: "clamp(96px, 12vw, 144px) 28px 0",
+          }}
+        >
+          <Eyebrow>A short film</Eyebrow>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: 1224,
+              aspectRatio: "1224 / 920",
+              margin: "16px 0 0",
+              background: T.ink,
+              overflow: "hidden",
+              boxShadow: "0 8px 32px rgba(30,31,36,0.14)",
+            }}
+          >
+            <iframe
+              data-testid="luxury-film-iframe"
+              src="https://player.vimeo.com/video/1218107137?fl=tl&fe=ec"
+              title="Doug LeMaire, REALTOR® — a short film"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                border: 0,
+                display: "block",
+              }}
+            />
+          </div>
+        </section>
+
         {/* ─── PULL QUOTE ───────────────────────────────────────────
             Editorial pull-quote, not a testimonial slider. Rule bar
             on the left in muted taupe. */}

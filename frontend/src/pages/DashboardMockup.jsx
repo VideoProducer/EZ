@@ -5560,16 +5560,15 @@ const FEATURED_HOME_LISTING = {
     "https://cdn.realtor.ca/listings/TS639225244901500000/reb6/highres/2/R3156192_1.jpg",
   ],
   open_house: null,               // No public open house — showings by appointment only
-  // Video walkthrough — Cotala hosted tour (Phase 14, Feb 2026).
-  // Cotala is a real-estate-tour host with no owner-side "disable
-  // embedding" toggle, unlike YouTube/Vimeo which repeatedly broke this
-  // card when the video owner changed their permissions. Kept the
-  // legacy `video_url` field so the play-button UX stays identical
-  // even though the actual iframe now points at the hosted tour.
-  tour_embed_url: "https://tours.cotala.com/87725",
+  // Video walkthrough — Vimeo hosted tour (swapped in per Doug, Feb
+  // 2026). Vimeo signed-experience URL preserves the exact playback
+  // parameters Doug supplied (fl=tl&fe=ec). The parent container's
+  // aspect ratio was bumped from 3:2 to 1224:920 (~4:3) to match the
+  // dimensions Doug specified for the embed.
+  tour_embed_url: "https://player.vimeo.com/video/1218107137?fl=tl&fe=ec",
   video_url: null,
   video_duration: null,
-  video_provider: "cotala",
+  video_provider: "vimeo",
 };
 
 // CREA DDF® / BCFSA best practice — quote the exact asking price to two
@@ -5914,7 +5913,7 @@ const DashboardFeaturedListing = () => {
             grid items (falls back to a visible frame instead of 0px). */}
         <div style={{
           position: "relative", background: C.navy, borderRadius: 14,
-          overflow: "hidden", aspectRatio: "3/2", minHeight: 260,
+          overflow: "hidden", aspectRatio: "1224/920", minHeight: 260,
         }}>
           {/* Fire-engine-red "SOLD" banner splash — Feb 2026. Overlays
               the top of the featured card so the closed status reads
