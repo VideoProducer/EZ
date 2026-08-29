@@ -128,6 +128,12 @@ export default function EquestrianLeadMockup() {
             min_acres: 5,
             sort: "price_desc",
             limit: 8,
+            // Curated hero region — Doug's direct-practice territory only:
+            // Greater Vancouver + Fraser Valley + Sea-to-Sky. Feb 2026:
+            // Doug explicitly asked that the rotator not surface Shuswap /
+            // Okanagan / Northern BC acreages that he doesn't personally
+            // service. Backend `region_chip` resolves via REGION_CHIP_MAP.
+            region_chip: "Doug's Territory",
             // Filter development / land-assembly / holding aerials out of the
             // rotating hero — CREA sometimes classifies these as Detached /
             // Acreage so they slip past the property-type allowlist, and the
@@ -143,7 +149,14 @@ export default function EquestrianLeadMockup() {
         if (cancelled) return;
         const pool = (r.data.listings || [])
           .map(l => ({
-            url: l.photos?.[0],
+            // Skip the first photo — CREA DDF® listings routinely lead with
+            // an aerial site-plan (property boundary drawn in cyan on a
+            // satellite image), especially large-acreage Fraser Valley
+            // parcels. Photo #2 is almost always the front elevation or a
+            // proper exterior shot, which is what Doug wants in the hero.
+            // Falls back to photo[0] on the rare listing with only one
+            // uploaded photo.
+            url: (l.photos?.length > 1 ? l.photos[1] : l.photos?.[0]),
             listing_key: l.listing_key,
             city: l.city,
             price: l.list_price,

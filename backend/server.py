@@ -10038,6 +10038,14 @@ REGION_CHIP_MAP = {
     "Anywhere":         [],
     "Lower Mainland":   ["Greater Vancouver", "Fraser Valley"],
     "Fraser Valley":    ["Fraser Valley"],
+    # Doug's direct-practice territory — Greater Vancouver (acreage-friendly
+    # cities incl. Maple Ridge, Langley, Anmore, Delta, Surrey, etc.) plus
+    # Fraser Valley plus the Sea-to-Sky corridor to Whistler. Used by the
+    # curated equestrian hero rotator so the crossfade stays in Doug's
+    # personal representation zone (no more Tappen / Shuswap results).
+    "Doug's Territory": ["Greater Vancouver", "Fraser Valley", "Sea-to-Sky"],
+    "Fraser Valley + Sea-to-Sky": ["Fraser Valley", "Sea-to-Sky"],
+    "Sea-to-Sky":       ["Sea-to-Sky"],
     "Okanagan":         ["Okanagan"],
     "Vancouver Island": ["Vancouver Island & Gulf Islands"],
     "Kootenays":        ["Kootenay"],
