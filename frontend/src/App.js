@@ -52,6 +52,7 @@ const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
 const LuxuryQuietLanding  = lazy(() => import("./components/LuxuryQuietLanding"));
 const LuxuryQuietContact  = lazy(() => import("./components/LuxuryQuietContact"));
+const LuxuryQuietReferral = lazy(() => import("./components/LuxuryQuietReferral"));
 const SacLanding = lazy(() => import("./pages/SacLanding"));
 const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
 const PTTEstimator = lazy(() => import("./pages/PTTEstimator"));
@@ -13139,7 +13140,8 @@ function App() {
       <Route path="/selling-guide" element={<Navigate to="/seller" replace/>}/>
       <Route path="/search" element={<AppLayout><SearchPage/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
-      <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
+      <Route path="/referral-request" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietReferral/></Suspense></AppLayout>}/>
+      <Route path="/referral-request-legacy" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
