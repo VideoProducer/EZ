@@ -9357,7 +9357,13 @@ const Valuation = () => {
 const ReferralRequest = () => {
   const { lang, t, qs, rtl } = useFormLang();
   const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
-  const [city,setCity]=useState(""); const [done,setDone]=useState(false); const [err,setErr]=useState("");
+  const [city,setCity]=useState("");
+  // New per-Feb-2026 operating-system spec: buy vs sell + board if known.
+  // Kept as top-level state (not in `f`) so the seller path can post to
+  // /api/leads/seller with a padded schema instead of masquerading as a buyer.
+  const [intent,setIntent]=useState("buyer");   // "buyer" | "seller"
+  const [board,setBoard]=useState("Not sure");
+  const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
   useEffect(() => { trackFormView("/referral-request"); }, []);
@@ -9391,17 +9397,50 @@ const ReferralRequest = () => {
   const submit=async e=>{
     e.preventDefault(); setErr("");
     try {
-      const enriched = withConversionContext(
-        { ...f, areas:[city], notes: `OUT-OF-AREA REFERRAL REQUEST — ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`, form_lang: lang, turnstile_token: getTurnstileToken() },
-        {
-          form_route: "/referral-request",
-          representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
-          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
-        }
-      );
-      await axios.post(`${API}/leads/buyer`, enriched);
-      trackFormSubmit("/referral-request", { region: city, property_type: f.property_type || "Any" });
-      trackConversion("generate_lead", { lead_type: "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" });
+      // Enrich notes with the new operating-system fields (intent + board).
+      const richNotes = `OUT-OF-AREA REFERRAL REQUEST — ${intent === "seller" ? "SELLER" : "BUYER"} · ${city}${prefillMls ? " · MLS® " + prefillMls : ""} · Board: ${board}. ${f.notes}`;
+      // Seller-side referrals get padded to the SellerLead schema so
+      // Doug's seller inbox / CASL flow / admin panel all light up
+      // correctly rather than getting misfiled as buyer leads.
+      const isSeller = intent === "seller";
+      const path = isSeller ? "/leads/seller" : "/leads/buyer";
+      let payload;
+      if (isSeller) {
+        payload = withConversionContext(
+          {
+            full_name: f.full_name, email: f.email, phone: f.phone,
+            address: "Not specified (out-of-area referral)",
+            city: city || "Not specified",
+            property_type: f.property_type || "Not specified",
+            timeline: f.timeline || "Not specified",
+            reason: "Out-of-area referral request",
+            working_with_realtor: f.working_with_realtor,
+            notes: richNotes,
+            casl_consent: !!f.casl_consent,
+            pipa_ack: !!f.pipa_ack,
+            dorts_ack: !!f.dorts_ack,
+            form_lang: lang,
+            turnstile_token: getTurnstileToken(),
+          },
+          {
+            form_route: "/referral-request",
+            representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
+            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+          }
+        );
+      } else {
+        payload = withConversionContext(
+          { ...f, areas:[city], notes: richNotes, form_lang: lang, turnstile_token: getTurnstileToken() },
+          {
+            form_route: "/referral-request",
+            representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
+            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+          }
+        );
+      }
+      await axios.post(`${API}${path}`, payload);
+      trackFormSubmit("/referral-request", { region: city, property_type: f.property_type || "Any", intent });
+      trackConversion("generate_lead", { lead_type: isSeller ? "seller_referral" : "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" });
       setDone(true);
     } catch(x) {
       trackFieldError("/referral-request", "submit", "post_failed");
@@ -9413,8 +9452,28 @@ const ReferralRequest = () => {
     <ConversionPageSchema route="/referral-request" headline="Out-of-area referral — Doug's licensed REALTOR® network" description="Doug LeMaire, REALTOR® introduces buyers and sellers outside the Fraser Valley / South Surrey / Sea-to-Sky corridor to a licensed local REALTOR® on the correct board. Reply within one business day."/>
     <IdentityLine practice="REALTOR® · Referral network coordinator · Fraser Valley + South Surrey" size="md" testId="referral-identity"/>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>{t("ref.intro")} Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
+    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"0.75rem"}}>{t("ref.intro")} Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
+    <p data-testid="referral-no-transact-line" style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",lineHeight:1.65,marginBottom:"1.5rem",fontStyle:"italic",padding:"0.75rem 1rem",background:"#F7FAFF",borderLeft:"3px solid var(--brand-blue)",borderRadius:"4px"}}>Doug does not personally list or show property outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor. The introduction is at no cost to you — Doug earns a REALTOR®-to-REALTOR® referral fee from the local REALTOR® if a transaction completes, never from you.</p>
     <form onSubmit={submit} className="paper" data-testid="referral-form">
+      {/* Buy vs Sell — top of form per Feb 2026 operating-system spec */}
+      <div className="field" style={{marginBottom:"1.25rem"}}>
+        <label style={{marginBottom:"0.5rem",display:"block"}}>Are you buying or selling? *</label>
+        <div style={{display:"flex",gap:"0.5rem",flexWrap:"wrap"}}>
+          {[{v:"buyer",label:"Buying"},{v:"seller",label:"Selling"}].map(o => {
+            const sel = intent === o.v;
+            return (
+              <button key={o.v} type="button" data-testid={`referral-intent-${o.v}`} onClick={() => setIntent(o.v)}
+                style={{
+                  fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",
+                  color: sel ? "#FFFFFF" : "var(--brand-navy)",
+                  background: sel ? "var(--brand-blue)" : "transparent",
+                  border: `1.5px solid ${sel ? "var(--brand-blue)" : "rgba(15,42,91,0.25)"}`,
+                  padding: "10px 22px", borderRadius: 8, cursor: "pointer", transition: "all 200ms ease",
+                }}>{o.label}</button>
+            );
+          })}
+        </div>
+      </div>
       <div className="form-grid">
         <div className="field"><label>{t("buyer.full_name")} *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})}/></div>
         <div className="field"><label>{t("buyer.email")} *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})}/></div>
@@ -9422,6 +9481,7 @@ const ReferralRequest = () => {
         <div className="field"><label>{t("ref.city")} *</label><input required value={city} onChange={e=>{ if (!started) { trackFormStart("/referral-request"); setStarted(true); } setCity(e.target.value); }} placeholder={t("ref.city_placeholder")}/></div>
         <div className="field"><label>{t("buyer.property_type")}</label><select value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option value="Detached">{t("buyer.pt_detached")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option><option value="Acreage / Rural">{t("buyer.pt_acreage")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option></select></div>
         <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>onFieldEdit({budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
+        <div className="field"><label>Real-estate board (if you know it)</label><select value={board} onChange={e=>setBoard(e.target.value)} data-testid="referral-board"><option value="Not sure">Not sure</option><option value="Chilliwack & District Real Estate Board (CADREB)">Chilliwack & District (CADREB)</option><option value="Vancouver Island Real Estate Board (VIREB)">Vancouver Island (VIREB)</option><option value="Victoria Real Estate Board (VREB)">Victoria (VREB)</option><option value="Association of Interior REALTORS® (AIR)">Interior — Kelowna/Kamloops region (AIR)</option><option value="South Okanagan Real Estate Board (SOREB)">South Okanagan (SOREB)</option><option value="Kamloops & District Real Estate Association (KADREA)">Kamloops & District (KADREA)</option><option value="Kootenay Real Estate Board (KREB)">Kootenay (KREB)</option><option value="Powell River Sunshine Coast Real Estate Board">Powell River / Sunshine Coast</option><option value="BC Northern Real Estate Board">BC Northern</option></select></div>
       </div>
       <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>onFieldEdit({notes:e.target.value})}/></div>
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
@@ -13140,8 +13200,7 @@ function App() {
       <Route path="/selling-guide" element={<Navigate to="/seller" replace/>}/>
       <Route path="/search" element={<AppLayout><SearchPage/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
-      <Route path="/referral-request" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietReferral/></Suspense></AppLayout>}/>
-      <Route path="/referral-request-legacy" element={<AppLayout><ReferralRequest/></AppLayout>}/>
+      <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
