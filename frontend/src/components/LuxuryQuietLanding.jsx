@@ -177,6 +177,140 @@ function RotatingHero() {
   );
 }
 
+// ── Film section (click-to-play with Vimeo poster) ─────────────────
+// Fetches the largest available Vimeo poster frame from the oEmbed API
+// on mount and displays it as a still image with a soft-glass play
+// button. The heavy iframe (~500 KB of Vimeo player JS + tracker) only
+// loads when the visitor clicks Play, so this section costs almost
+// nothing on initial page load and shows a rich still frame instead
+// of the default black poster.
+function FilmSection() {
+  const [posterUrl, setPosterUrl] = useState(null);
+  const [playing,   setPlaying]   = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Vimeo's oEmbed endpoint supports CORS + custom width, so we can
+    // request a 1280-wide poster (the largest Vimeo will hand back for
+    // a video this height). Falls back to no poster if the network
+    // request fails — the click-to-play still works over the ink bg.
+    fetch("https://vimeo.com/api/oembed.json?url=https%3A%2F%2Fvimeo.com%2F1218107137&width=1280")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.thumbnail_url) setPosterUrl(d.thumbnail_url); })
+      .catch(() => { /* silent — page still functions without poster */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  return (
+    <section
+      data-testid="luxury-film"
+      style={{
+        maxWidth: 1224,
+        margin: "0 auto",
+        padding: "clamp(96px, 12vw, 144px) 28px 0",
+      }}
+    >
+      <Eyebrow>A short film</Eyebrow>
+      <div
+        data-testid="luxury-film-frame"
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 1224,
+          aspectRatio: "1224 / 920",
+          margin: "16px 0 0",
+          background: posterUrl
+            ? `#000 url('${posterUrl}') center/cover no-repeat`
+            : T.ink,
+          overflow: "hidden",
+          boxShadow: "0 8px 32px rgba(30,31,36,0.14)",
+          cursor: playing ? "default" : "pointer",
+        }}
+        onClick={() => { if (!playing) setPlaying(true); }}
+        role={playing ? undefined : "button"}
+        aria-label={playing ? undefined : "Play the short film"}
+        tabIndex={playing ? undefined : 0}
+        onKeyDown={(e) => {
+          if (!playing && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            setPlaying(true);
+          }
+        }}
+      >
+        {playing ? (
+          <iframe
+            data-testid="luxury-film-iframe"
+            src="https://player.vimeo.com/video/1218107137?app_id=122963&title=0&byline=0&portrait=0&autoplay=1"
+            title="Doug LeMaire, REALTOR® — a short film"
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              border: 0,
+              display: "block",
+            }}
+          />
+        ) : (
+          <>
+            {/* Subtle vignette so the play button reads on bright posters */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.30) 100%)",
+                pointerEvents: "none",
+              }}
+            />
+            {/* Play button — soft glass, taupe-ringed, restrained */}
+            <div
+              aria-hidden="true"
+              data-testid="luxury-film-play-button"
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "clamp(72px, 8vw, 108px)",
+                height: "clamp(72px, 8vw, 108px)",
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.22)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                border: `1px solid rgba(255,255,255,0.55)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.32)",
+                transition: "transform 220ms ease, background 220ms ease",
+              }}
+            >
+              {/* Play triangle — offset right so it sits optically centred */}
+              <div
+                style={{
+                  width: 0,
+                  height: 0,
+                  marginLeft: 6,
+                  borderTop: "clamp(14px, 1.6vw, 22px) solid transparent",
+                  borderBottom: "clamp(14px, 1.6vw, 22px) solid transparent",
+                  borderLeft: "clamp(22px, 2.4vw, 34px) solid #FFFFFF",
+                }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
 // ── SEO + Schema ────────────────────────────────────────────────────
 function SEOHead() {
   const jsonLdReview = {
@@ -438,48 +572,12 @@ export default function LuxuryQuietLanding() {
             so it plays as a natural continuation of the argument,
             not as a marketing interruption. Native 1224×920 aspect
             ratio (~4:3) matches Doug's Vimeo embed spec exactly.
-            Autoplay is disabled so it never intrudes; a visitor has
-            to click into the film to hear it. */}
-        <section
-          data-testid="luxury-film"
-          style={{
-            maxWidth: 1224,
-            margin: "0 auto",
-            padding: "clamp(96px, 12vw, 144px) 28px 0",
-          }}
-        >
-          <Eyebrow>A short film</Eyebrow>
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              maxWidth: 1224,
-              aspectRatio: "1224 / 920",
-              margin: "16px 0 0",
-              background: T.ink,
-              overflow: "hidden",
-              boxShadow: "0 8px 32px rgba(30,31,36,0.14)",
-            }}
-          >
-            <iframe
-              data-testid="luxury-film-iframe"
-              src="https://player.vimeo.com/video/1218107137?app_id=122963&title=0&byline=0&portrait=0"
-              title="Doug LeMaire, REALTOR® — a short film"
-              frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                border: 0,
-                display: "block",
-              }}
-            />
-          </div>
-        </section>
+            Click-to-play with a Vimeo poster frame so visitors see
+            a rich still image instead of the default black frame
+            before playback. Iframe only loads on click — protects
+            page LCP and gives Vimeo referrer context that mirrors
+            a native user gesture. */}
+        <FilmSection />
 
         {/* ─── PULL QUOTE ───────────────────────────────────────────
             Editorial pull-quote, not a testimonial slider. Rule bar
