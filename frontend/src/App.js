@@ -50,6 +50,7 @@ const CommunityPageMockup = lazy(() => import("./components/CommunityPageMockup"
 const CommunityPageMockupLive = lazy(() => import("./components/CommunityPageMockupLive"));
 const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
+const LuxuryQuietLanding  = lazy(() => import("./components/LuxuryQuietLanding"));
 const SacLanding = lazy(() => import("./pages/SacLanding"));
 const BCBuyerCostCalculator = lazy(() => import("./pages/BCBuyerCostCalculator"));
 const PTTEstimator = lazy(() => import("./pages/PTTEstimator"));
@@ -4929,7 +4930,7 @@ const SpecialtyPage = () => {
   if(!d) return <div className="section container-x"><h2>Not found</h2></div>;
   // Luxury gets a richer experience: live listings preview across the 3
   // eligible property types (Detached / Townhouse / Condo) at $3M+ BC-wide.
-  if (slug === "luxury") return <Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading portfolio…</div>}><LuxuryLandingMockup live={true}/></Suspense>;
+  if (slug === "luxury") return <Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietLanding/></Suspense>;
   if (slug === "equestrian") return <EquestrianSection intro={d}/>;
   // Detached / Condos / Townhomes: type is inherent to the page, so the
   // filter panel pre-locks Property Type and just refines city/beds/etc.
