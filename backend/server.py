@@ -982,18 +982,150 @@ def _build_doogie_language_addon(lang: str) -> str:
     )
 
 
+# ── Feb 2026 Operating-System: Doogie territory-aware closing CTA ─────────
+# Per the Feb 2026 operating-system spec, EVERY substantive Doogie reply must
+# end with either:
+#   • A farm CTA (/valuation, /seller, /buyer, /contact) — if the user mentions
+#     a city INSIDE Doug's practice area (Greater Van + Fraser Valley + Sea-to-Sky).
+#   • A referral CTA (/referral-request via "Referral REALTOR® link") — if the
+#     user mentions any other BC city (or a rest-of-BC region).
+#   • A default in-territory farm CTA — if no location is mentioned at all.
+# The city list below is the user-approved farm list (Feb 5 2026). Common
+# sub-community aliases are included so "Cloverdale" or "Yaletown" route
+# correctly. Out-of-territory list covers the major BC cities Doogie sees
+# frequently — anything not in either list falls through to the default hint.
+_DOOGIE_IN_TERRITORY_CITIES: set[str] = {
+    # Greater Vancouver + Fraser Valley + Sea-to-Sky (Doug's farm)
+    "vancouver", "burnaby", "surrey", "langley", "abbotsford", "chilliwack",
+    "squamish", "whistler", "pemberton", "white rock", "delta", "richmond",
+    "north vancouver", "west vancouver", "coquitlam", "port coquitlam",
+    "port moody", "maple ridge", "pitt meadows", "new westminster", "mission",
+    # Common in-farm sub-community aliases
+    "south surrey", "cloverdale", "walnut grove", "willoughby", "fort langley",
+    "morgan creek", "elgin chantrell", "grandview heights", "sullivan station",
+    "kitsilano", "yaletown", "kerrisdale", "point grey", "dunbar", "shaughnessy",
+    # Region names
+    "fraser valley", "greater vancouver", "sea-to-sky", "sea to sky",
+}
+
+_DOOGIE_OUT_OF_TERRITORY_CITIES: set[str] = {
+    # Okanagan + Interior
+    "kelowna", "kamloops", "penticton", "vernon", "salmon arm", "lake country",
+    "peachland", "summerland", "osoyoos", "oliver", "west kelowna",
+    # Vancouver Island
+    "victoria", "nanaimo", "duncan", "courtenay", "campbell river",
+    "port alberni", "parksville", "sooke", "sidney", "comox", "qualicum beach",
+    "tofino", "ucluelet",
+    # Kootenays
+    "nelson", "trail", "cranbrook", "fernie", "revelstoke", "golden",
+    "invermere", "kimberley", "creston", "castlegar", "rossland", "sparwood",
+    "elkford",
+    # Northern BC
+    "prince george", "quesnel", "williams lake", "smithers", "terrace",
+    "prince rupert", "dawson creek", "fort st. john", "fort st john",
+    # Sunshine Coast + Gulf Islands
+    "sunshine coast", "gibsons", "sechelt", "powell river",
+    "salt spring", "salt spring island",
+    # Rest of Fraser (outside farm)
+    "hope", "harrison hot springs", "agassiz",
+}
+
+
+def _detect_doogie_territory(message: str) -> tuple[str | None, str | None]:
+    """Scan the user's message for a BC city name.
+
+    Returns (status, matched_city_display_name):
+      • ("out", "Kelowna")     — city is outside Doug's farm
+      • ("in",  "Surrey")      — city is inside Doug's farm
+      • (None, None)           — no BC city detected
+
+    Out-of-territory takes precedence: if a user mentions both a farm city
+    AND an out-of-area city in the same turn (e.g. "moving from Vancouver
+    to Kelowna"), we route to the referral CTA — Doug can't transact there.
+    """
+    if not message:
+        return None, None
+    text = message.lower()
+    for city in _DOOGIE_OUT_OF_TERRITORY_CITIES:
+        if re.search(r"\b" + re.escape(city) + r"\b", text):
+            return "out", city.title()
+    for city in _DOOGIE_IN_TERRITORY_CITIES:
+        if re.search(r"\b" + re.escape(city) + r"\b", text):
+            return "in", city.title()
+    return None, None
+
+
+def _build_doogie_territory_hint(message: str) -> tuple[str, dict]:
+    """Build the MANDATORY closing-CTA fragment for the current turn.
+
+    Doogie's Claude prompt already contains long-form referral rules, but
+    Claude occasionally forgets to close with a CTA — especially on short
+    "what is X?" glossary answers. This function injects a deterministic,
+    per-turn override that leaves no ambiguity about which path to end on.
+    """
+    status, city = _detect_doogie_territory(message)
+    if status == "out":
+        hint = (
+            f"\n\nMANDATORY CLOSING CTA (Feb 2026 operating-system spec) — the user "
+            f"mentioned {city}, which is OUTSIDE Doug's practice area (Greater "
+            f"Vancouver, Fraser Valley, Sea-to-Sky). Your reply MUST end with the "
+            f"EXACT out-of-area referral template from your system prompt (Branch B), "
+            f"substituting '{city}' for [community] in BOTH places. Do NOT offer "
+            f"Doug's direct services (/buyer, /seller, /valuation, /contact) for "
+            f"this location. The phrase 'Referral REALTOR® link' is auto-linked to "
+            f"/referral-request by the site — do not append a second URL."
+        )
+        return hint, {"territory": "out", "city": city}
+    if status == "in":
+        hint = (
+            f"\n\nMANDATORY CLOSING CTA (Feb 2026 operating-system spec) — the user "
+            f"mentioned {city}, which is INSIDE Doug's practice area. Your reply MUST "
+            f"end with ONE farm CTA line — pick the single best fit for their "
+            f"question, use the RELATIVE path exactly, and do NOT include the "
+            f"out-of-area referral template:\n"
+            f"  • Buying intent → 'Ready to explore {city}? Head to /buyer to start.'\n"
+            f"  • Selling intent → 'Thinking of selling in {city}? Head to /seller.'\n"
+            f"  • Home-value / market curiosity → 'Curious what your {city} home is "
+            f"worth? Try /valuation.'\n"
+            f"  • General question or meeting Doug → 'Want to chat with Doug about "
+            f"{city}? /contact.'"
+        )
+        return hint, {"territory": "in", "city": city}
+    # No specific BC location detected — default to a soft in-territory farm CTA.
+    hint = (
+        "\n\nMANDATORY CLOSING CTA (Feb 2026 operating-system spec) — no specific "
+        "BC city was mentioned. End your reply with ONE farm CTA line (pick the "
+        "single best fit, use the RELATIVE path exactly, never a full URL):\n"
+        "  • Buying → 'When you're ready, start at /buyer.'\n"
+        "  • Selling → 'When you're ready to sell, start at /seller.'\n"
+        "  • Home value → 'Curious what your home is worth? Try /valuation.'\n"
+        "  • General / meeting Doug → 'Want to chat with Doug? /contact.'\n"
+        "If the conversation makes clear the user is outside Doug's practice area "
+        "(Greater Vancouver, Fraser Valley, Sea-to-Sky), use the out-of-area "
+        "referral template from your system prompt instead of a farm CTA."
+    )
+    return hint, {"territory": "unknown", "city": None}
+
+
 async def _build_doogie_routing_hint(message: str, session_id: str) -> tuple[str, dict | None]:
     """Run the fast Haiku 4.5 intent classifier and return the routing-hint
     fragment (may be empty) + the routing metadata dict (may be None on
     failure). Low-confidence hits (<0.55) are downgraded to 'clarify' so
-    Sonnet asks one focused follow-up question instead of guessing."""
+    Sonnet asks one focused follow-up question instead of guessing.
+
+    The returned hint ALWAYS includes the mandatory territory-aware closing
+    CTA (Feb 2026 operating-system spec) — even if the intent classifier
+    fails, so every reply still ends with a farm or referral CTA."""
+    # Territory-aware closing CTA is deterministic and does not depend on
+    # the classifier — build it up front so it survives classifier failures.
+    territory_hint, territory_meta = _build_doogie_territory_hint(message)
     try:
         routing_meta = await _classify_doogie_intent(message, session_id)
     except Exception as e:
         logger.warning(f"Doogie intent classifier failed for {session_id}: {e}")
-        return "", None
+        return territory_hint, {"territory": territory_meta}
     if not routing_meta:
-        return "", None
+        return territory_hint, {"territory": territory_meta}
     intent = routing_meta.get("intent") or "general"
     confidence = float(routing_meta.get("confidence") or 0.0)
     if confidence < 0.55 and intent not in ("clarify", "general"):
@@ -1001,7 +1133,8 @@ async def _build_doogie_routing_hint(message: str, session_id: str) -> tuple[str
         routing_meta["low_confidence_original"] = intent
         routing_meta["intent"] = "clarify"
         intent = "clarify"
-    return _DOOGIE_ROUTING_HINTS.get(intent, ""), routing_meta
+    routing_meta["territory"] = territory_meta
+    return _DOOGIE_ROUTING_HINTS.get(intent, "") + territory_hint, routing_meta
 
 
 # ── Glossary citation extractor for Doogie (Feb 2026) ──────────────────
@@ -1159,7 +1292,7 @@ def _stream_live_doogie_reply(chat, original_message: str, session_id: str,
 # Cache saves LLM $$ on the highest-volume repeat questions. TTL is 7 days so
 # even time-sensitive answers stay fresh; if content changes we can bump the
 # cache version prefix below to hard-invalidate everything.
-_DOOGIE_CACHE_VERSION = "v3"  # bumped Jul 27 2026 — invalidates cached responses so new out-of-area template ("As a smaller BC community…") takes effect
+_DOOGIE_CACHE_VERSION = "v4"  # bumped Feb 2026 — Doogie Routing Sweep: every reply must end with a farm CTA (in-territory) or referral CTA (out-of-area)
 _DOOGIE_CACHE_TTL_DAYS = 7
 # Signals that a query is personal / stateful and should NOT be cached even if
 # other rules pass. Prevents "hi doug!" or "for MY 500k budget…" bleeding

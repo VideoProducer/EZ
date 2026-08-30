@@ -24,6 +24,17 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — Referral form simplification + Doogie Routing Sweep (this session)
+- **/referral-request board dropdown REMOVED** (`App.js` `ReferralRequest`) — the 10-item BC real-estate board select (CADREB, VIREB, VREB, AIR, SOREB, KADREA, KREB, Powell River / Sunshine Coast, BC Northern + "Not sure") was cut per Feb 2026 OS spec. Board is now inferred by Doug from the submitted city — one less field for buyers/sellers to think about. Buy/Sell toggle, Article 16 hard-block, CASL/PIPA/DORTS consents, and BC City/Community field all retained.
+- **Doogie Routing Sweep (`server.py`)** — every substantive Doogie reply now ends with a MANDATORY CTA:
+  - **In-territory city** (Vancouver, Burnaby, Surrey, Langley, Abbotsford, Chilliwack, Squamish, Whistler, Pemberton, White Rock, Delta, Richmond, N/W Vancouver, Coquitlam, Port Coquitlam, Port Moody, Maple Ridge, Pitt Meadows, New Westminster, Mission + common sub-community aliases + region names) → farm CTA (`/buyer`, `/seller`, `/valuation`, or `/contact`)
+  - **Out-of-area city** (Kelowna, Kamloops, Victoria, Nanaimo, Prince George, Nelson, Fernie, Revelstoke, Sunshine Coast, Salt Spring, etc.) → referral CTA (`/referral-request` via "Referral REALTOR® link")
+  - **No city detected** → default in-territory farm CTA
+  - Implementation: new `_DOOGIE_IN_TERRITORY_CITIES` + `_DOOGIE_OUT_OF_TERRITORY_CITIES` sets, `_detect_doogie_territory()` deterministic scanner, `_build_doogie_territory_hint()` returns per-turn mandatory closing hint that is appended to the routing hint in `_build_doogie_routing_hint()`. Out-of-territory always takes precedence when both are mentioned.
+  - Cache invalidation: `_DOOGIE_CACHE_VERSION` bumped `v3` → `v4` so old cached replies (without the new CTA discipline) can't leak through.
+  - Verified via curl: "What is a PTT?" (no city) → `/contact`; "buy a townhouse in Langley" → `/buyer`; "relocating to Kelowna" → `/referral-request`.
+
+
 
 ### Phase 1 — Compliance sweep (Feb 2026)
 - BCFSA DORTS acknowledgment checkbox on Buyer, Seller, Valuation, Referral forms

@@ -9362,7 +9362,6 @@ const ReferralRequest = () => {
   // Kept as top-level state (not in `f`) so the seller path can post to
   // /api/leads/seller with a padded schema instead of masquerading as a buyer.
   const [intent,setIntent]=useState("buyer");   // "buyer" | "seller"
-  const [board,setBoard]=useState("Not sure");
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
@@ -9398,7 +9397,7 @@ const ReferralRequest = () => {
     e.preventDefault(); setErr("");
     try {
       // Enrich notes with the new operating-system fields (intent + board).
-      const richNotes = `OUT-OF-AREA REFERRAL REQUEST — ${intent === "seller" ? "SELLER" : "BUYER"} · ${city}${prefillMls ? " · MLS® " + prefillMls : ""} · Board: ${board}. ${f.notes}`;
+      const richNotes = `OUT-OF-AREA REFERRAL REQUEST — ${intent === "seller" ? "SELLER" : "BUYER"} · ${city}${prefillMls ? " · MLS® " + prefillMls : ""}. ${f.notes}`;
       // Seller-side referrals get padded to the SellerLead schema so
       // Doug's seller inbox / CASL flow / admin panel all light up
       // correctly rather than getting misfiled as buyer leads.
@@ -9481,7 +9480,6 @@ const ReferralRequest = () => {
         <div className="field"><label>{t("ref.city")} *</label><input required value={city} onChange={e=>{ if (!started) { trackFormStart("/referral-request"); setStarted(true); } setCity(e.target.value); }} placeholder={t("ref.city_placeholder")}/></div>
         <div className="field"><label>{t("buyer.property_type")}</label><select value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option value="Detached">{t("buyer.pt_detached")}</option><option value="Condo">{t("buyer.pt_condo")}</option><option value="Townhouse">{t("buyer.pt_townhouse")}</option><option value="Acreage / Rural">{t("buyer.pt_acreage")}</option><option value="Luxury">{t("buyer.pt_luxury")}</option></select></div>
         <div className="field"><label>{t("buyer.budget_range")}</label><select value={f.budget_range} onChange={e=>onFieldEdit({budget_range:e.target.value})}><option value="Under $500K">Under $500K</option><option value="$500K – $1M">$500K – $1M</option><option value="$1M – $2M">$1M – $2M</option><option value="$2M+">$2M+</option><option value="Not sure">Not sure</option></select></div>
-        <div className="field"><label>Real-estate board (if you know it)</label><select value={board} onChange={e=>setBoard(e.target.value)} data-testid="referral-board"><option value="Not sure">Not sure</option><option value="Chilliwack & District Real Estate Board (CADREB)">Chilliwack & District (CADREB)</option><option value="Vancouver Island Real Estate Board (VIREB)">Vancouver Island (VIREB)</option><option value="Victoria Real Estate Board (VREB)">Victoria (VREB)</option><option value="Association of Interior REALTORS® (AIR)">Interior — Kelowna/Kamloops region (AIR)</option><option value="South Okanagan Real Estate Board (SOREB)">South Okanagan (SOREB)</option><option value="Kamloops & District Real Estate Association (KADREA)">Kamloops & District (KADREA)</option><option value="Kootenay Real Estate Board (KREB)">Kootenay (KREB)</option><option value="Powell River Sunshine Coast Real Estate Board">Powell River / Sunshine Coast</option><option value="BC Northern Real Estate Board">BC Northern</option></select></div>
       </div>
       <div style={{marginTop:"1rem"}} className="field"><label>{t("ref.notes")}</label><textarea rows="3" value={f.notes} onChange={e=>onFieldEdit({notes:e.target.value})}/></div>
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
