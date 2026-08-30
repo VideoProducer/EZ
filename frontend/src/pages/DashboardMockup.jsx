@@ -6184,7 +6184,7 @@ const DashboardFeaturedListing = () => {
           <div style={{
             fontSize: 10.5, color: C.muted, marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
           }}>
-            Listed by <strong style={{ color: C.navy, fontStyle: "normal" }}>Doug LeMaire, REALTOR®</strong> · Fraser Property Management Realty Services Ltd. Not intended to solicit buyers currently under contract with another REALTOR®.
+            Not intended to solicit or induce an agreement already in place.
           </div>
         </div>
       </div>
