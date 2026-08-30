@@ -277,6 +277,14 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
    (effective viewport ~1024px on a 1280px screen). Fixing shrink+wrap keeps
    the two flex children (brand + links) cleanly separated. */
 .nav-inner > a:first-child { flex-shrink: 0; white-space: nowrap; }
+/* On mobile the hamburger takes over the right side, so the brand block has
+   room to wrap the long brokerage name onto a second line rather than
+   overflowing the viewport (previously "Fraser Property Management Realty
+   Services Ltd." clipped ~16px past the right edge on iPhone-width screens). */
+@media (max-width: 700px) {
+  .nav-inner > a:first-child { white-space: normal; min-width: 0; flex: 1 1 auto; }
+  .nav-inner > a:first-child [data-testid="nav-brokerage-name"] { white-space: normal; word-break: break-word; }
+}
 .nav a { color: var(--ink); text-decoration: none; font-family: 'Inter',sans-serif; font-size: 0.95rem; font-weight: 500; padding: 0.5rem 0.9rem; border-radius: 8px; transition: all 0.2s; }
 .nav a:hover { background: rgba(30,79,207,0.08); color: var(--brand-blue); }
 .nav a.active { color: var(--brand-blue); }
