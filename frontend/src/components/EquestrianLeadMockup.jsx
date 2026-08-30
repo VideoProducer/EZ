@@ -370,6 +370,29 @@ export default function EquestrianLeadMockup() {
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
+      {/* Back / Home nav bar — matches the DashboardBackHomeBar pattern used
+          on the dashboard shell so classic AppLayout pages surface the same
+          two-button navigation in the same visual location. Sits above the
+          hero so it doesn't interrupt the photo. */}
+      <div data-testid="equestrian-back-home-bar" style={{
+        background:"#fff", borderBottom:"1px solid rgba(15,42,91,0.06)",
+        padding:"8px 20px",
+        display:"flex", gap:8, alignItems:"center", flexWrap:"wrap",
+      }}>
+        <button onClick={() => navigate(-1)} data-testid="equestrian-btn-back" style={{
+          background:"transparent", border:"1px solid #DDE6FA", color:BRAND.navy,
+          padding:"5px 14px", borderRadius:999,
+          fontSize:13, fontWeight:700,
+          cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4,
+        }}>← Back</button>
+        <Link to="/" data-testid="equestrian-btn-home" style={{
+          background:"transparent", border:"1px solid #DDE6FA", color:BRAND.navy,
+          padding:"5px 14px", borderRadius:999,
+          fontSize:13, fontWeight:700,
+          textDecoration:"none", display:"inline-flex", alignItems:"center", gap:4,
+        }}>🏠 Home</Link>
+      </div>
+
       {/* ═══ HERO ═══════════════════════════════════════════════════ */}
       <div style={{
         position:"relative", overflow:"hidden",
