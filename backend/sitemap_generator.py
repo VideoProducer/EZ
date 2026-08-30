@@ -95,6 +95,7 @@ STATIC_URLS = [
     ("/communities",       "0.9", "weekly"),
     ("/neighbourhoods",    "0.85", "weekly"),
     ("/glossary",          "0.9", "weekly"),
+    ("/glossary/a-z",      "0.85", "weekly"),
     ("/valuation",         "0.9", "weekly"),
     ("/relocating",        "0.9", "weekly"),
     ("/about",             "0.7", "monthly"),

@@ -7710,8 +7710,16 @@ async def startup():
                 await _a.sleep(delay)
                 try:
                     from sitemap_generator import generate_sitemap
+                    from rss_generator import generate_rss
                     from indexnow import notify_indexnow, HOST
                     result = await generate_sitemap(db)
+                    # Also refresh feed.xml so Feedly / Inoreader / Bing see
+                    # the same publish cadence as the sitemap ping below.
+                    try:
+                        rss_res = await generate_rss(db)
+                        logger.info(f"nightly_sitemap: feed.xml ok ({rss_res.get('total')} items)")
+                    except Exception as e:
+                        logger.error(f"nightly_sitemap: feed.xml regen failed: {e}")
                     # 1) Fast priority ping — top-level pages plus the 200
                     #    most recently curated glossary terms and 200 most
                     #    recently reviewed community synopses. This is a tiny
@@ -8147,6 +8155,20 @@ async def startup():
         logger.info(f"sitemap.xml regenerated: {stats['total']} URLs ({stats['static']} static + {stats['glossary']} glossary + {stats['communities']} communities + {stats.get('neighbourhoods',0)} micro-neighbourhoods + {stats.get('listings',0)} listings)")
     except Exception as e:
         logger.error(f"sitemap generation failed: {e}")
+
+    # Generate feed.xml (RSS 2.0) on startup so Feedly / Inoreader / Bing
+    # (via IndexNow-adjacent RSS crawling) get a fresh snapshot of the
+    # latest editorial edits. Cheap enough (~40 KB write) to do every boot.
+    try:
+        from rss_generator import generate_rss
+        rss_stats = await generate_rss(db)
+        logger.info(
+            f"feed.xml regenerated: {rss_stats['total']} items "
+            f"({rss_stats['glossary']} glossary + {rss_stats['communities']} communities "
+            f"+ {rss_stats['case_studies']} case-studies)"
+        )
+    except Exception as e:
+        logger.error(f"rss feed generation failed: {e}")
 
     # ---- MLS / CREA DDF® listings — indexes only ----
     # Mock-seed logic removed 2026-07-27: DDF® feed is live with 53k+ BC listings,

@@ -5634,7 +5634,17 @@ const Glossary = () => {
       description="Comprehensive glossary of 396 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
       path="/glossary"
     />
-    <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Term's you may encounter buying or selling in British Columbia — with 10 FAQs per term.</p></div>
+    <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Term's you may encounter buying or selling in British Columbia — with 10 FAQs per term.</p>
+      <div style={{marginTop:"1rem"}}>
+        <Link to="/glossary/a-z" data-testid="glossary-view-az" style={{
+          display:"inline-flex", alignItems:"center", gap:6,
+          padding:"0.5rem 1rem", borderRadius:999,
+          background:"var(--brand-navy)", color:"white",
+          fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:600,
+          textDecoration:"none",
+        }}>View A–Z Index →</Link>
+      </div>
+    </div>
     <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search glossary — term, definition, or category…" style={{width:"100%",maxWidth:560,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}} data-testid="glossary-search"/>
     {filtered.length===0 && <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>No terms match your search.</p>}
     {orderedCats.map(cat => (
@@ -5654,6 +5664,165 @@ const Glossary = () => {
 };
 // Glossary index canary (CANARY-2) — invisible fingerprint at page end
 const GlossaryWithCanary = () => (<><Glossary/><Canary phrase={CANARY_GLOSSARY} testId="canary-glossary"/></>);
+
+// ── A–Z Glossary Hub ────────────────────────────────────────────────────
+// Alphabet-indexed sister page to /glossary. Groups every term by first
+// letter (0-9 → "#") and renders a sticky letter jump-nav at the top.
+// Purpose: dense internal-link fabric for Google to crawl in a single
+// pass — clicking any letter jumps to its section, and every term is a
+// direct <Link> to /glossary/{slug}. This is the single highest-density
+// internal-linking surface on the site and materially boosts crawl depth
+// for the money pages that the glossary links out to.
+const GlossaryAZ = () => {
+  const [terms, setTerms] = useState([]);
+  const [q, setQ] = useState("");
+  useEffect(() => { axios.get(`${API}/glossary`).then(r => setTerms(r.data)).catch(()=>{}); }, []);
+  const filtered = terms.filter(t => !q || t.term.toLowerCase().includes(q.toLowerCase()));
+  const buckets = {};
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  alphabet.forEach(l => { buckets[l] = []; });
+  buckets["#"] = [];
+  filtered.forEach(t => {
+    const first = (t.term || "").trim().charAt(0).toUpperCase();
+    const key = /[A-Z]/.test(first) ? first : "#";
+    buckets[key].push(t);
+  });
+  Object.values(buckets).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
+  const letters = ["#", ...alphabet].filter(l => buckets[l].length > 0);
+  return (
+    <section className="section"><div className="container-x">
+      <SEO
+        title={`BC Real Estate Terms A–Z — ${terms.length} Definitions with BC Statute Citations | EZtoFind.ca`}
+        description={`Every British Columbia real-estate term Doug LeMaire, REALTOR® defines, organized A–Z. ${terms.length} entries covering Strata Property Act, PTT, foreclosure, ALR, and more — each with citations to the governing BC statute or regulator.`}
+        path="/glossary/a-z"
+      />
+      <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
+        <div className="eyebrow">Knowledge Hub · A–Z Index</div>
+        <h1 className="section-title">BC Real Estate Terms A–Z</h1>
+        <p className="section-sub">
+          Alphabet-indexed hub of every term in Doug's BC real-estate glossary — {terms.length} definitions,
+          each linked to the governing statute or regulator. Jump to a letter, or
+          <Link to="/glossary" style={{color:"var(--brand-blue)",textDecoration:"underline",marginLeft:4}}>browse by category</Link>.
+        </p>
+      </div>
+      <input
+        value={q}
+        onChange={e=>setQ(e.target.value)}
+        placeholder="Filter terms…"
+        data-testid="glossary-az-search"
+        style={{width:"100%",maxWidth:560,margin:"0 auto 1.25rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}}
+      />
+      {/* Sticky alphabet jump-nav. Uses anchor hashes so Google crawls each
+          letter as a separate DOM anchor, and the letter shows in the URL
+          bar when clicked — nice UX + additional deep-link surface. */}
+      <div
+        data-testid="glossary-az-nav"
+        style={{
+          position:"sticky", top:64, zIndex:5,
+          background:"rgba(253,252,248,0.94)", backdropFilter:"blur(10px)",
+          borderRadius:12, padding:"0.75rem 0.5rem",
+          boxShadow:"0 4px 14px rgba(15,42,91,0.06)",
+          marginBottom:"2rem",
+          display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center",
+        }}
+      >
+        {letters.map(l => (
+          <a
+            key={l}
+            href={`#letter-${l === "#" ? "hash" : l.toLowerCase()}`}
+            data-testid={`glossary-az-jump-${l === "#" ? "hash" : l.toLowerCase()}`}
+            style={{
+              minWidth:32, height:32, display:"inline-flex", alignItems:"center", justifyContent:"center",
+              borderRadius:8, textDecoration:"none",
+              background:"transparent", color:"var(--brand-navy)",
+              fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:700,
+              border:"1px solid rgba(15,42,91,0.12)",
+              transition:"all 0.15s ease",
+            }}
+            onMouseEnter={e=>{ e.currentTarget.style.background="var(--brand-navy)"; e.currentTarget.style.color="white"; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--brand-navy)"; }}
+          >{l}</a>
+        ))}
+      </div>
+      {filtered.length === 0 && (
+        <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>
+          No terms match your filter.
+        </p>
+      )}
+      {letters.map(l => {
+        const anchor = l === "#" ? "hash" : l.toLowerCase();
+        return (
+          <div
+            key={l}
+            id={`letter-${anchor}`}
+            data-testid={`glossary-az-section-${anchor}`}
+            style={{marginBottom:"2.5rem", scrollMarginTop:120}}
+          >
+            <h2
+              className="font-display"
+              style={{
+                fontSize:"2.25rem", color:"var(--brand-navy)",
+                borderBottom:"2px solid rgba(15,42,91,0.12)",
+                paddingBottom:"0.4rem", marginBottom:"1rem",
+                display:"flex", alignItems:"baseline", gap:"0.75rem",
+              }}
+            >
+              <span>{l}</span>
+              <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",fontWeight:400}}>
+                {buckets[l].length} {buckets[l].length === 1 ? "term" : "terms"}
+              </span>
+            </h2>
+            <div
+              style={{
+                display:"grid",
+                gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",
+                gap:"0.5rem 1rem",
+              }}
+            >
+              {buckets[l].map(t => (
+                <Link
+                  key={t.slug}
+                  to={`/glossary/${t.slug}`}
+                  data-testid={`glossary-az-term-${t.slug}`}
+                  style={{
+                    textDecoration:"none", color:"var(--ink)",
+                    padding:"0.35rem 0.5rem", borderRadius:6,
+                    fontFamily:"Inter,sans-serif", fontSize:"0.95rem",
+                    display:"flex", alignItems:"center", gap:6,
+                    transition:"background 0.15s ease",
+                  }}
+                  onMouseEnter={e=>{ e.currentTarget.style.background="rgba(30,79,207,0.06)"; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; }}
+                >
+                  <span>{t.term}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {/* Money-page CTAs at the bottom — every A–Z visitor sees a route
+          back into the conversion funnel. Matches the Feb 2026 OS spec. */}
+      <div style={{
+        background:"rgba(15,42,91,0.04)",
+        borderRadius:16, padding:"1.75rem",
+        marginTop:"1.5rem", textAlign:"center",
+      }}>
+        <p style={{margin:"0 0 0.75rem",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem"}}>
+          Ready to put a term to work?
+        </p>
+        <div style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
+          <Link to="/valuation" className="btn btn-primary" data-testid="glossary-az-cta-valuation">Try /valuation</Link>
+          <Link to="/buyer" className="btn btn-outline" data-testid="glossary-az-cta-buyer">Start /buyer</Link>
+          <Link to="/seller" className="btn btn-outline" data-testid="glossary-az-cta-seller">Explore /seller</Link>
+          <Link to="/contact" className="btn btn-ghost" data-testid="glossary-az-cta-contact">Contact Doug</Link>
+        </div>
+      </div>
+    </div></section>
+  );
+};
+
+const GlossaryAZWithCanary = () => (<><GlossaryAZ/><Canary phrase={CANARY_GLOSSARY} testId="canary-glossary-az"/></>);
 // ── BC Laws — frozen statute references per glossary term (Feb 2026) ──
 // Fetches from /api/glossary/{slug}/statute-refs which returns canonical
 // King's Printer URLs for the governing Acts and Regulations. Only renders
@@ -13254,6 +13423,7 @@ function App() {
       <Route path="/specialties/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><EquestrianLeadMockup/></Suspense>}/>
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
+      <Route path="/glossary/a-z" element={<AppLayout><GlossaryAZWithCanary/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
       {/* /market-report routes removed 2026-08-08 per Doug's request. Backend
           endpoints (/api/market-report, /api/market-report/{ym}) remain live

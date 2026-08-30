@@ -58,6 +58,23 @@
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
         <title>EZtoFind.ca | BC Real Estate Search</title>
+        <!-- Google Search Console site verification.
+             HOW TO ACTIVATE:
+             1) Go to https://search.google.com/search-console → Add property
+             2) Choose "URL prefix" and enter https://eztofind.ca
+             3) Google will offer several verification methods — pick "HTML tag"
+             4) Copy the content="..." value from Google's tag
+             5) Paste ONLY that string into the `content=""` attribute below
+                (replace REPLACE_ME_GSC_VERIFICATION_CODE)
+             6) Redeploy from the Emergent Workspace
+             7) Back in Search Console, click Verify
+             Bing / Yandex verification tags can be added the same way beneath. -->
+        <meta name="google-site-verification" content="REPLACE_ME_GSC_VERIFICATION_CODE" />
+        <!-- RSS 2.0 feed for Feedly, Inoreader, NewsBlur, and other feed
+             readers. Also crawled by Bing and honoured by IndexNow-adjacent
+             services. Regenerated on every server boot + at the nightly
+             sitemap cron pass so pubDates always reflect the latest edits. -->
+        <link rel="alternate" type="application/rss+xml" title="EZtoFind.ca — BC Real Estate Insights" href="/feed.xml" />
         <!-- Per-route canonical strategy (Aug 2026, post-Grok audit) —
              the previous hard-coded homepage canonical polluted 400+ glossary,
              240 community, and 500+ neighbourhood URLs (Grok SEO 58 → 78+).
