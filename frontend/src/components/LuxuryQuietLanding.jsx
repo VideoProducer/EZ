@@ -520,8 +520,8 @@ export default function LuxuryQuietLanding() {
               margin: 0,
             }}
           >
-            Recent files include a buyer who acquired a property in South
-            Langley over $3 million, and a{" "}
+            Notable recent transactions include a private acquisition in
+            South Langley exceeding $3 million, and a stunning{" "}
             <Link
               to="/case-studies/3015-141-street"
               data-testid="luxury-recent-elgin-link"
@@ -532,9 +532,9 @@ export default function LuxuryQuietLanding() {
                 textUnderlineOffset: 4,
               }}
             >
-              $3 million Elgin Chantrell home in South Surrey
-            </Link>{" "}
-            that went from listed to sold in 12 days.
+              $3 million residence in Elgin Chantrell, South Surrey
+            </Link>
+            , which transitioned from listing to sold in just 12 days.
           </p>
         </section>
 
