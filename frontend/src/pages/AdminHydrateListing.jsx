@@ -67,7 +67,7 @@ function formatGbpPost(l, variant = "just-listed") {
                      lot ? `${lot.toLocaleString("en-CA")} sqft lot` : null,
                      community || null].filter(Boolean).join(" · ");
   const brokerageLine = "Listed by Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).";
-  const article16 = "Not intended to solicit buyers currently under contract with another REALTOR®.";
+  const article16 = "Not intended to solicit or induce an agreement already in place.";
   const permalink = mls ? `Full listing → eztofind.ca/listings/${mls}` : "";
 
   // ── JUST SOLD variant ───────────────────────────────────────────────
