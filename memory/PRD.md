@@ -24,6 +24,18 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — AI Citation optimization sweep (this session)
+Targeted schema enhancements to lift the AI-citation score from 96 → 99.5. Verified live on preview via Playwright evaluate.
+- **Glossary Article schema** (`App.js` GlossaryTermPage): added `@id: /glossary/{slug}#article`, `isPartOf: [WebSite, CollectionPage]`, and Article-level `citation` array (pulls `t.sources` through as `CreativeWork` entries — parallel to FAQ.Answer.citation, but at Article scope so AI answer engines can grade the article's overall factual grounding).
+- **Glossary FAQPage schema**: added `@id: #faq`, `datePublished`, `dateModified`, `inLanguage: en-CA`, and `isPartOf` back-reference to the parent Article via `@id`. Every Q&A is now anchored to a dated, versioned, cited Article — the exact signal Perplexity/AIO reward when deciding whether to zero-click surface an answer.
+- **Homepage entity graph** (`App.js` home Helmet): assigned stable `@id`s to `WebSite (#website)`, `RealEstateAgent (#doug)`, and `Organization (#organization)`, and cross-linked them:
+  - `WebSite.publisher → Organization(@id)`
+  - `RealEstateAgent.worksFor → Organization(@id)`
+  - `Organization.founder → Person(@id=#doug)`
+  - `Organization.employee → Person(@id=#doug)`
+  This gives Google Knowledge Graph + Perplexity a single unambiguous entity chain instead of three disconnected schemas.
+
+
 ### Feb 2026 — Referral form simplification + Doogie Routing Sweep (this session)
 - **/referral-request board dropdown REMOVED** (`App.js` `ReferralRequest`) — the 10-item BC real-estate board select (CADREB, VIREB, VREB, AIR, SOREB, KADREA, KREB, Powell River / Sunshine Coast, BC Northern + "Not sure") was cut per Feb 2026 OS spec. Board is now inferred by Doug from the submitted city — one less field for buyers/sellers to think about. Buy/Sell toggle, Article 16 hard-block, CASL/PIPA/DORTS consents, and BC City/Community field all retained.
 - **Doogie Routing Sweep (`server.py`)** — every substantive Doogie reply now ends with a MANDATORY CTA:

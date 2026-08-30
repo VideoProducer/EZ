@@ -2712,12 +2712,14 @@ const Home = () => {
     <Helmet>
       <script type="application/ld+json">{JSON.stringify({
         "@context":"https://schema.org","@type":"WebSite",
+        "@id":"https://eztofind.ca/#website",
         "name":"EZtoFind.ca","url":"https://eztofind.ca","inLanguage":"en-CA",
-        "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+        "publisher":{"@id":"https://eztofind.ca/#organization"},
         "potentialAction":{"@type":"SearchAction","target":"https://eztofind.ca/listings?q={search_term_string}","query-input":"required name=search_term_string"}
       })}</script>
       <script type="application/ld+json">{JSON.stringify({
         "@context":"https://schema.org","@type":"RealEstateAgent",
+        "@id":"https://eztofind.ca/#doug",
         "name":"Doug LeMaire, REALTOR®",
         "image":"https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
         "url":"https://eztofind.ca/about",
@@ -2744,7 +2746,7 @@ const Home = () => {
             "url":"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search"
           }
         ],
-        "worksFor":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
+        "worksFor":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
         "areaServed":[
           {"@type":"AdministrativeArea","name":"Greater Vancouver, British Columbia"},
           {"@type":"AdministrativeArea","name":"Fraser Valley, British Columbia"},
@@ -2788,9 +2790,11 @@ const Home = () => {
       })}</script>
       <script type="application/ld+json">{JSON.stringify({
         "@context":"https://schema.org","@type":"Organization",
+        "@id":"https://eztofind.ca/#organization",
         "name":"EZtoFind.ca","url":"https://eztofind.ca","inLanguage":"en-CA",
         "logo":"https://eztofind.ca/images/doogie-laptop.png",
-        "founder":{"@type":"Person","name":"Doug LeMaire, REALTOR®"},
+        "founder":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®"},
+        "employee":{"@id":"https://eztofind.ca/#doug"},
         "areaServed":{"@type":"AdministrativeArea","name":"British Columbia, Canada"},
         "description":"BC real estate information and property-search platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
         "sameAs":[
@@ -5726,9 +5730,25 @@ const GlossaryTerm = () => {
   const now = new Date().toISOString();
   const dateMod = t.last_curated_at || t.updated_at || t.reviewed_at || now;
   const datePub = t.published_at || t.created_at || t.first_seen_at || dateMod;
+  // Pull the term's authoritative sources through as Article-level
+  // CreativeWork citations. AI answer engines (Perplexity, ChatGPT,
+  // Claude, Google AIO) use the top-level `citation` field to grade the
+  // article's factual grounding — currently we only expose sources on
+  // the DefinedTerm.mainEntity via `sameAs`. Lifting them to the Article
+  // level makes them first-class citations in the AEG graph.
+  const articleCitations = (t.sources || [])
+    .map(s => s && s.url ? {
+      "@type": "CreativeWork",
+      "name": s.title || s.name || s.url,
+      "url": s.url,
+      "publisher": s.publisher ? { "@type": "Organization", "name": s.publisher } : undefined,
+    } : null)
+    .filter(Boolean)
+    .slice(0, 10);
   const articleSchema = {
     "@context":"https://schema.org",
     "@type":"Article",
+    "@id":`https://eztofind.ca/glossary/${t.slug}#article`,
     "headline":`${t.term} — BC Real Estate`,
     "description":t.definition.substring(0,200),
     "datePublished": datePub,
@@ -5736,6 +5756,14 @@ const GlossaryTerm = () => {
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
     "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
+    // isPartOf — declares the article's membership in the site-wide
+    // WebSite entity + the BC Real Estate Glossary CollectionPage. Gives
+    // AI answer engines a machine-readable path back to the parent
+    // collection when they want to grade the source's breadth.
+    "isPartOf":[
+      {"@type":"WebSite","@id":"https://eztofind.ca/#website","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+      {"@type":"CollectionPage","@id":"https://eztofind.ca/glossary#collection","name":"BC Real Estate Glossary","url":"https://eztofind.ca/glossary"}
+    ],
     "mainEntity":{
       "@type":"DefinedTerm",
       "name":t.term,
@@ -5761,6 +5789,12 @@ const GlossaryTerm = () => {
     "url":`https://eztofind.ca/glossary/${t.slug}`,
     "inLanguage":"en-CA",
     "about":{"@type":"Place","name":"British Columbia, Canada"},
+    // Article-level citations — AI answer engines use this to grade the
+    // factual grounding of the whole article (in addition to the
+    // per-FAQ-answer citations added below). Duplicated from t.sources
+    // rather than referenced by @id so non-JS crawlers still see the
+    // full citation payload inline.
+    ...(articleCitations.length ? {"citation": articleCitations} : {}),
     // FIX-01 (Voice AI, Feb 2026): SpeakableSpecification tells Google
     // Assistant / Alexa / Siri exactly which chunks of the page to read
     // aloud when a user asks a voice query. We include the AEO answer
@@ -5794,6 +5828,11 @@ const GlossaryTerm = () => {
   // whether an FAQ answer can be trusted for zero-click surfacing.
   const faqSchema = (t.faqs && t.faqs.length>0) ? {
     "@context":"https://schema.org","@type":"FAQPage",
+    "@id":`https://eztofind.ca/glossary/${t.slug}#faq`,
+    "datePublished": datePub,
+    "dateModified": dateMod,
+    "inLanguage":"en-CA",
+    "isPartOf":{"@type":"Article","@id":`https://eztofind.ca/glossary/${t.slug}#article`},
     "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
     "mainEntity": t.faqs.map(f => ({
