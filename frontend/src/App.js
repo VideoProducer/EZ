@@ -2785,7 +2785,12 @@ const Home = () => {
         // Single strongest E-E-A-T signal short of editorial backlinks.
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-          "https://ez2find.ca"
+          "https://ez2find.ca",
+          "https://www.linkedin.com/in/eztofind/",
+          "https://www.youtube.com/@EZtoFindCA",
+          "https://www.facebook.com/EZtoFind.ca",
+          "https://www.instagram.com/eztofind.ca/",
+          "https://x.com/EZtoFindca"
         ]
       })}</script>
       <script type="application/ld+json">{JSON.stringify({
@@ -2799,7 +2804,12 @@ const Home = () => {
         "description":"BC real estate information and property-search platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-          "https://ez2find.ca"
+          "https://ez2find.ca",
+          "https://www.linkedin.com/in/eztofind/",
+          "https://www.youtube.com/@EZtoFindCA",
+          "https://www.facebook.com/EZtoFind.ca",
+          "https://www.instagram.com/eztofind.ca/",
+          "https://x.com/EZtoFindca"
         ]
       })}</script>
     </Helmet>
@@ -8756,16 +8766,21 @@ const CommunityPage = () => {
   const _norm = (s) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   for(const [r, list] of Object.entries(data)) { const m = list.find(c => _norm(c) === slug); if(m) { found = m; region = r; break; } }
   const isFocus = region && ["Greater Vancouver","Fraser Valley","Sea-to-Sky"].includes(region);
-  const jsonLd = found ? {"@context":"https://schema.org","@type":"Place","name":`${found}, British Columbia`,"containedInPlace":{"@type":"AdministrativeArea","name":region},"description":syn?.synopsis?.substring(0,300)} : null;
+  const jsonLd = found ? {"@context":"https://schema.org","@type":"Place","@id":`https://eztofind.ca/community/${slug}#place`,"name":`${found}, British Columbia`,"containedInPlace":{"@type":"AdministrativeArea","name":region},"description":syn?.synopsis?.substring(0,300)} : null;
   const articleLd = (found && syn?.synopsis) ? {
     "@context":"https://schema.org","@type":"Article",
+    "@id":`https://eztofind.ca/community/${slug}#article`,
     "headline":`${found}, British Columbia — Community Overview`,
-    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},"url":"https://eztofind.ca/about"},
-    "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
-    "publisher":{"@type":"Organization","name":"EZtoFind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
+    "author":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},"url":"https://eztofind.ca/about"},
+    "reviewedBy":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
+    "publisher":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"EZtoFind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
+    "isPartOf":[
+      {"@type":"WebSite","@id":"https://eztofind.ca/#website","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+      {"@type":"CollectionPage","@id":"https://eztofind.ca/communities#collection","name":"BC Community Profiles","url":"https://eztofind.ca/communities"}
+    ],
     "datePublished": syn.published_at || syn.created_at || "2026-01-12",
     "dateModified": syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || new Date().toISOString().slice(0,10),
-    "about":{"@type":"Place","name":`${found}, British Columbia`},
+    "about":{"@id":`https://eztofind.ca/community/${slug}#place`,"@type":"Place","name":`${found}, British Columbia`},
     "inLanguage":"en-CA",
     "articleBody":syn.synopsis,
     // FIX-01 Speakable (Feb 2026): voice assistants read the synopsis body
@@ -8808,8 +8823,13 @@ const CommunityPage = () => {
 
   const communityFaqLd = (found && syn?.synopsis) ? {
     "@context":"https://schema.org","@type":"FAQPage",
-    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about"},
-    "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+    "@id":`https://eztofind.ca/community/${slug}#faq`,
+    "isPartOf":{"@type":"Article","@id":`https://eztofind.ca/community/${slug}#article`},
+    "datePublished": syn.published_at || syn.created_at || "2026-01-12",
+    "dateModified": syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || new Date().toISOString().slice(0,10),
+    "inLanguage":"en-CA",
+    "author":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about"},
+    "publisher":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
     "mainEntity":[
       {"@type":"Question","name":_v(0,[`What is it like to live in ${found}, BC?`,`What's ${found}, British Columbia known for?`,`Tell me about the ${found}, BC neighbourhood.`]),"acceptedAnswer":{"@type":"Answer","text":(syn.synopsis || "").substring(0,480),"citation":{"@type":"CreativeWork","name":`${found} community profile — EZtoFind.ca`,"url":`https://eztofind.ca/community/${slug}`}}},
       {"@type":"Question","name":_v(1,[`Where is ${found} located in British Columbia?`,`Which part of BC is ${found} in?`,`How do I find ${found} on a BC map?`]),"acceptedAnswer":{"@type":"Answer","text":_v(101,[`${found} sits within ${region || "British Columbia"}. The EZtoFind.ca ${found} page has an interactive municipal-boundary map, Environment Canada climate normals, and every active MLS® listing in the area.`,`You'll find ${found} as part of the ${region || "BC"} region. Visit the ${found} community page on EZtoFind.ca for a boundary map, climate summary, and live listings from the CREA DDF® feed.`,`${found} is one of the communities that make up ${region || "British Columbia"}. Our page for ${found} includes an interactive map, monthly climate normals via Environment Canada, and the current active-listing count.`]),"citation":{"@type":"CreativeWork","name":"Statistics Canada — Census Profile","url":"https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm?Lang=E"}}},
@@ -8830,12 +8850,14 @@ const CommunityPage = () => {
   // structured facts. Human-readable landing page is this URL.
   const datasetLd = (found) ? {
     "@context":"https://schema.org","@type":"Dataset",
+    "@id":`https://eztofind.ca/community/${slug}#dataset`,
     "name":`${found}, British Columbia — Community Data`,
     "description":`Structured data for ${found}, BC: geography, Environment Canada climate normals, live MLS® listing statistics (CREA DDF®), and lifestyle indicators. Educational corpus, updated hourly.`,
     "url":`https://eztofind.ca/community/${slug}`,
+    "isPartOf":{"@type":"WebSite","@id":"https://eztofind.ca/#website"},
     "keywords":[`${found}`,`${region || "British Columbia"}`,"BC real estate","Canadian real estate","community profile","MLS listings","climate normals"],
-    "creator":{"@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
-    "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
+    "creator":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
+    "publisher":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
     "isAccessibleForFree":true,
     "inLanguage":"en-CA",
     "license":"https://eztofind.ca/ai-use",
@@ -10208,15 +10230,24 @@ const CookieBanner = () => {
 const HomeSchema = () => {
   const data = {
     "@context":"https://schema.org","@type":"RealEstateAgent",
+    // Uses the same @id as the primary RealEstateAgent schema on the
+    // homepage — JSON-LD parsers treat multiple nodes with the same @id
+    // as one merged entity, so we don't fight for identity here.
+    "@id":"https://eztofind.ca/#doug",
     "name":"Doug LeMaire — EZtoFind.ca",
     "url":"https://eztofind.ca",
     "areaServed":[{"@type":"AdministrativeArea","name":"British Columbia"}],
     "knowsAbout":["Detached homes","Luxury real estate","Equestrian properties","Estate Sales","Probate","Condos"],
-    "parentOrganization":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
+    "parentOrganization":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
     "email":"info@eztofind.ca",
     "sameAs":[
       "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-      "https://ez2find.ca"
+      "https://ez2find.ca",
+      "https://www.linkedin.com/in/eztofind/",
+      "https://www.youtube.com/@EZtoFindCA",
+      "https://www.facebook.com/EZtoFind.ca",
+      "https://www.instagram.com/eztofind.ca/",
+      "https://x.com/EZtoFindca"
     ]
   };
   return <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify(data)}}/>;

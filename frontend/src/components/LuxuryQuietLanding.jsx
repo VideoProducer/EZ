@@ -237,6 +237,46 @@ function FilmSection() {
           }
         }}
       >
+        {/* SOLD! 12 Days banner — matches homepage featured-listing splash.
+            Overlays the top of the film frame so the recent close reads
+            instantly. Sits above the poster / play button but below the
+            play iframe once video is running (pointer-events:none preserves
+            click-through to play). Hidden once the iframe is playing so it
+            doesn't distract from the film itself. */}
+        {!playing && (
+          <div
+            data-testid="luxury-film-sold-banner"
+            style={{
+              position: "absolute", top: 0, left: 0, right: 0, zIndex: 3,
+              background: "#0F2A5B",
+              color: "#FFFFFF",
+              textAlign: "center",
+              padding: "12px 18px",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+              borderBottom: "3px solid #061942",
+              pointerEvents: "none",
+            }}
+          >
+            <div style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: "clamp(1.8rem, 5.5vw, 2.6rem)",
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              lineHeight: 1,
+              textShadow: "0 2px 4px rgba(0,0,0,0.4)",
+            }}>SOLD!</div>
+            <div style={{
+              fontFamily: "'Sora', sans-serif",
+              fontSize: "clamp(0.78rem, 1.6vw, 0.95rem)",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginTop: 4,
+              color: "#FFFFFF",
+              textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+            }}>12 Days</div>
+          </div>
+        )}
         {playing ? (
           <iframe
             data-testid="luxury-film-iframe"
