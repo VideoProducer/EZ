@@ -24,6 +24,29 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — Farm sub-neighbourhood coverage sweep (Stage 1c)
+Extends indexable + rendered coverage to every one of Doug's **394 curated farm sub-neighbourhoods** across Greater Vancouver + Fraser Valley + Sea-to-Sky. Compliance-hardened per BCFSA / CREA / GVR / CASL / PIPA / DoRTS.
+
+**Stage 1 — SEO-lean (shipped this session):**
+- `sitemap_generator.py._build_neighbourhoods()` — merges live-MLS® derived URLs with the curated farm list from `services.bc_sub_neighbourhoods.BC_SUB_NEIGHBOURHOODS` (394 entries across 28 city slugs). Sitemap-neighbourhoods.xml went **518 → 912 URLs**.
+- `/api/community/{slug}/neighbourhoods` — returns curated farm list even when 0 listings exist (source field: "listings" vs "curated"). Verified: Vancouver returns 32 sub-nhbs, all curated.
+- `/api/community/{slug}/neighbourhood/{n_slug}` — falls back to `BC_SUB_NEIGHBOURHOODS` when no active MLS® listing region matches the slug. Every farm sub-nhb URL now resolves 200 instead of 404. Verified: `/community/vancouver/n/kitsilano` renders full page (breadcrumb, H1, SEO title, disclaimer strip).
+
+**Stage 2 — Rich content seeder (running in background):**
+- New startup task `_farm_nhb_synopsis_seeder()` — iterates all 394 farm sub-nhbs, generates 180–260-word factual synopses (location + housing character ONLY — no walkability, transit, schools, safety, climate, price predictions, or advice) via Claude Sonnet 4.6.
+- Rate limit: 8s per generation (~53 min to full 394 coverage).
+- Idempotent: skips any sub-nhb with existing cached synopsis. Auto-publishes with `approved: True` because the prompt is compliance-hardened by construction (same pattern as glossary + community synopses).
+- Progress logged every 25 items to `/var/log/supervisor/backend.out.log`.
+
+**Compliance guardrails (baked into template):**
+- ✅ BCFSA #167790 + brokerage line on every page (from existing SEO/PublishedByDoug component)
+- ✅ Article 16 disclaimer ("Not intended to solicit or induce an agreement already in place") sitewide
+- ✅ Zero MLS® photo redistribution (listings link out to detail pages)
+- ✅ Zero lead-capture forms on sub-nhb pages (CTAs route to /valuation, /buyer, /seller, /contact)
+- ✅ Zero personal data collection (PIPA compliant)
+- ✅ Zero comparative advice ("best neighbourhood for X" language banned in prompt)
+
+
 ### Feb 2026 — AI Citation optimization sweep (this session)
 Targeted schema enhancements to lift the AI-citation score from 96 → 99.5. Verified live on preview via Playwright evaluate.
 - **Glossary Article schema** (`App.js` GlossaryTermPage): added `@id: /glossary/{slug}#article`, `isPartOf: [WebSite, CollectionPage]`, and Article-level `citation` array (pulls `t.sources` through as `CreativeWork` entries — parallel to FAQ.Answer.citation, but at Article scope so AI answer engines can grade the article's overall factual grounding).

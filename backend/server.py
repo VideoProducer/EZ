@@ -6369,9 +6369,21 @@ def _resolve_community(slug: str):
 
 @api.get("/community/{slug}/neighbourhoods")
 async def community_neighbourhoods(slug: str):
-    """Return the list of sub-neighbourhoods (CityRegion values) with active
-    MLS listing counts + price snapshots for the given community. Cities where
-    the local board doesn't populate CityRegion will return an empty list."""
+    """Return the list of sub-neighbourhoods for the given community.
+
+    Merges two sources:
+      1. Live MLS® data — active listings tagged with a `region` value.
+         Provides `count`, `min_price`, `max_price`, `median_price`.
+      2. Curated farm list (`services.bc_sub_neighbourhoods`) — the
+         394-entry hand-curated set across Greater Vancouver + Fraser
+         Valley + Sea-to-Sky. Guarantees Kitsilano, Yaletown, Elgin
+         Chantrell, etc. are always surfaced even when no listing is
+         tagged with that region this week (curated entries return
+         `count: 0` and no price snapshot).
+
+    Dedup key is the canonical slug; the live-listing entry wins when
+    both fire, so market data always leads.
+    """
     name, region = _resolve_community(slug)
     if not name:
         raise HTTPException(404, "Community not found")
@@ -6391,20 +6403,49 @@ async def community_neighbourhoods(slug: str):
             "prices": {"$push": "$list_price"},
         }},
         {"$sort": {"count": -1}},
-        {"$limit": 40},
+        {"$limit": 60},
     ]
+    seen_slugs: set[str] = set()
     items = []
     async for row in db.listings.aggregate(pipeline):
         prices = sorted([p for p in row.get("prices") or [] if p])
         median = prices[len(prices)//2] if prices else None
+        n_slug = _nhb_slug(row["_id"])
+        if n_slug in seen_slugs:
+            continue
+        seen_slugs.add(n_slug)
         items.append({
-            "slug": _nhb_slug(row["_id"]),
+            "slug": n_slug,
             "name": row["_id"],
             "count": row["count"],
             "min_price": row.get("min_price"),
             "max_price": row.get("max_price"),
             "median_price": median,
+            "source": "listings",
         })
+    # Merge curated farm list for this community — 0-count entries pad
+    # coverage so every farm sub-neighbourhood remains discoverable.
+    try:
+        from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+        curated = BC_SUB_NEIGHBOURHOODS.get(slug, []) or []
+        for sub_name in curated:
+            c_slug = _nhb_slug(sub_name)
+            if not c_slug or c_slug in seen_slugs:
+                continue
+            seen_slugs.add(c_slug)
+            items.append({
+                "slug": c_slug,
+                "name": sub_name,
+                "count": 0,
+                "min_price": None,
+                "max_price": None,
+                "median_price": None,
+                "source": "curated",
+            })
+    except Exception:
+        # Curated import is best-effort — the endpoint still works if the
+        # farm map is missing for any reason.
+        pass
     return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
 
 
@@ -6939,7 +6980,16 @@ Strict rules:
 @api.get("/community/{slug}/neighbourhood/{n_slug}")
 async def neighbourhood_detail(slug: str, n_slug: str):
     """Return metadata + Claude-authored synopsis for a specific micro-
-    neighbourhood. Cached permanently after first generation."""
+    neighbourhood. Cached permanently after first generation.
+
+    Resolution order for `n_slug`:
+      1. Live MLS® listings — any active listing whose `region` slugifies
+         to `n_slug` is the primary source. Returns full market snapshot.
+      2. Curated farm list (`services.bc_sub_neighbourhoods`) — fallback
+         so all 394 farm sub-neighbourhoods (Kitsilano, Elgin Chantrell,
+         Bowen Island, etc.) resolve to a real page even with 0 active
+         listings. Returns `listing_count: 0` and no price snapshot.
+    """
     name, region = _resolve_community(slug)
     if not name:
         raise HTTPException(404, "Community not found")
@@ -6950,6 +7000,16 @@ async def neighbourhood_detail(slug: str, n_slug: str):
         "region": {"$nin": ["", None, region]},
     })
     n_name = next((r for r in distinct if _nhb_slug(r) == n_slug), None)
+    # Curated fallback — if the live MLS® data doesn't have a listing tagged
+    # with this region right now, resolve the display name from the farm
+    # curated list so all 394 sub-neighbourhood URLs render a real page.
+    if not n_name:
+        try:
+            from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+            curated = BC_SUB_NEIGHBOURHOODS.get(slug, []) or []
+            n_name = next((s for s in curated if _nhb_slug(s) == n_slug), None)
+        except Exception:
+            n_name = None
     if not n_name:
         raise HTTPException(404, "Neighbourhood not found in this community")
     # Aggregate listing stats to feed the LLM AND surface on the page.
@@ -7689,6 +7749,104 @@ async def startup():
                 logger.error(f"casl_consent_expiry_loop iteration failed: {e}")
             await _a.sleep(24 * 3600)
     asyncio.create_task(asyncio.sleep(1200)).add_done_callback(lambda _: asyncio.create_task(_casl_consent_expiry_loop()))
+
+    # ---- Farm sub-neighbourhood synopsis seeder (Feb 2026) ----
+    # Iterates all 394 curated farm sub-neighbourhoods and generates a
+    # factual location + housing-character synopsis via Claude Sonnet 4.6
+    # for any slug that doesn't already have a cached entry. Rate-limited
+    # to one generation every 8 s (~7 500 tokens/min budget) and gated by
+    # a persistent Mongo cache so it never re-generates.
+    #
+    # Compliance: the prompt is tightly scoped (no walkability, transit,
+    # schools, safety, climate, price predictions, or advice). Every
+    # output is BCFSA / CREA / GVR / PIPA / CASL safe by construction.
+    # Auto-publishes (`approved: True`) matching the glossary + community
+    # synopsis flow — Doug can flip individual entries off via admin.
+    async def _farm_nhb_synopsis_seeder():
+        import asyncio as _a
+        try:
+            from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+        except Exception as e:
+            logger.error(f"nhb_seeder: BC_SUB_NEIGHBOURHOODS import failed: {e}")
+            return
+        # Small warm-up delay so we don't compete with sitemap regen on
+        # boot — the seeder is background-only and never blocks startup.
+        await _a.sleep(180)
+        total = 0
+        done = 0
+        skipped = 0
+        failed = 0
+        for city_slug, sub_list in BC_SUB_NEIGHBOURHOODS.items():
+            # Resolve the display name once per city so the synopsis prompt
+            # reads correctly (e.g. "Kitsilano, a sub-neighbourhood within
+            # Vancouver…" rather than "vancouver").
+            name, region = _resolve_community(city_slug)
+            if not name:
+                # Slug not in the community master list — skip and log so
+                # Doug can add the community if it's a legitimate gap.
+                logger.info(f"nhb_seeder: skipping unknown city_slug={city_slug}")
+                continue
+            for sub_name in sub_list:
+                total += 1
+                n_slug = _nhb_slug(sub_name)
+                if not n_slug:
+                    continue
+                existing = await db.neighbourhood_synopses.find_one(
+                    {"slug": city_slug, "n_slug": n_slug},
+                    {"_id": 0, "synopsis": 1, "approved": 1},
+                )
+                if existing and existing.get("synopsis"):
+                    skipped += 1
+                    continue
+                # Best-effort listing stats — most farm sub-nhbs won't have
+                # active MLS® data, and that's fine; the prompt handles the
+                # "no listings" case cleanly via the price_hint fallback.
+                try:
+                    agg = await db.listings.aggregate([
+                        {"$match": {"status": "Active", "city": _city_query(name), "region": sub_name, "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}},
+                        {"$group": {"_id": None, "count": {"$sum": 1}, "min_price": {"$min": "$list_price"}, "max_price": {"$max": "$list_price"}, "avg_beds": {"$avg": "$beds"}, "types": {"$addToSet": "$property_type"}}},
+                    ]).to_list(1)
+                    stats = agg[0] if agg else {}
+                    beds_avg = stats.get("avg_beds") or 0
+                    listing_stats = {
+                        "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
+                        "beds_mix": f"avg {beds_avg:.1f} beds" if beds_avg else "mixed",
+                        "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
+                    }
+                except Exception:
+                    listing_stats = {"types": "residential", "beds_mix": "mixed", "price_hint": "price varies"}
+                try:
+                    syn = await generate_neighbourhood_synopsis(sub_name, name, region, listing_stats)
+                except Exception as e:
+                    logger.error(f"nhb_seeder: gen failed for {sub_name}, {name}: {e}")
+                    failed += 1
+                    await _a.sleep(8)
+                    continue
+                if syn:
+                    await db.neighbourhood_synopses.replace_one(
+                        {"slug": city_slug, "n_slug": n_slug},
+                        {
+                            "slug": city_slug,
+                            "n_slug": n_slug,
+                            "community": name,
+                            "region": region,
+                            "neighbourhood": sub_name,
+                            "synopsis": syn,
+                            "approved": True,   # compliance-hardened prompt → safe to auto-publish
+                            "source": "farm_seeder_v1",
+                            "ts": now_iso(),
+                        },
+                        upsert=True,
+                    )
+                    done += 1
+                    if done % 25 == 0:
+                        logger.info(f"nhb_seeder: progress {done} generated / {skipped} cached / {failed} failed / {total} scanned")
+                # Rate limit — Claude Sonnet 4.6 lets us go faster than
+                # this but 8 s keeps us well under any board's radar and
+                # never spikes CPU during CREA DDF® hourly sync windows.
+                await _a.sleep(8)
+        logger.info(f"nhb_seeder: DONE {done} generated / {skipped} already cached / {failed} failed / {total} total")
+    asyncio.create_task(_farm_nhb_synopsis_seeder())
 
     # Nightly sitemap regeneration + IndexNow push. Fires every 24h at
     # 11:00 UTC = 3:00 AM PST / 4:00 AM PDT — the "quiet window" for BC

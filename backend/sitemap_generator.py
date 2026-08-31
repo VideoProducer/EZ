@@ -231,8 +231,28 @@ def _build_communities() -> tuple[str, int, dict]:
     return _wrap_urlset(tags, with_image_ns=True), len(tags), slug_by_name
 
 async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
+    """Emit one <url> per sub-neighbourhood in Doug's farm.
+
+    Two sources are merged and de-duplicated by canonical slug:
+
+      1. LIVE MLS® listings — any active listing tagged with a `region`
+         value produces `/community/{city}/n/{region-slug}`. This is the
+         fresh, market-driven surface.
+
+      2. CURATED FARM LIST — `services.bc_sub_neighbourhoods` (394 entries
+         across Greater Vancouver + Fraser Valley + Sea-to-Sky). Guarantees
+         Kitsilano, Yaletown, Elgin Chantrell, Bowen Island, and every
+         other named farm micro-neighbourhood is crawlable even when no
+         listing happens to be tagged with that region this week.
+
+    Dedup key: `(city_slug, n_slug)` — the listing source wins so its
+    `<lastmod>` reflects the freshest data on days when both fire.
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    seen: set[tuple[str, str]] = set()
     tags = []
+
+    # ── 1. Live-listing derived URLs (as before) ──────────────────────
     try:
         pipeline = [
             {"$match": {"status":"Active","region":{"$nin":["", None]}}},
@@ -250,6 +270,10 @@ async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
             n_slug = re.sub(r"[^a-z0-9]+", "-", n_name.lower()).strip("-")
             if not n_slug:
                 continue
+            key = (c_slug, n_slug)
+            if key in seen:
+                continue
+            seen.add(key)
             neighbourhood_img = [{
                 "loc": f"{BASE_URL}/images/doogie-magnifying-glass.png",
                 "caption": f"{n_name}, {city}, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca",
@@ -262,6 +286,39 @@ async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
             ))
     except Exception:
         pass
+
+    # ── 2. Curated farm list — Doug's 21+ focus cities, 394 sub-nhbs ──
+    # Even if no listing fires this week, every farm sub-neighbourhood
+    # remains crawlable. Priority is slightly lower (0.55 vs 0.6) so the
+    # live-listing URLs still lead in ranking signals, but coverage is 100%.
+    try:
+        from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+        for city_slug, sub_list in BC_SUB_NEIGHBOURHOODS.items():
+            # Best-effort display-name lookup: prefer the slug_by_name reverse
+            # (which we don't have handy), so build a display name from the
+            # slug when nothing else is available.
+            display_city = city_slug.replace("-", " ").title()
+            for sub_name in sub_list:
+                n_slug = re.sub(r"[^a-z0-9]+", "-", (sub_name or "").lower()).strip("-")
+                if not n_slug:
+                    continue
+                key = (city_slug, n_slug)
+                if key in seen:
+                    continue
+                seen.add(key)
+                neighbourhood_img = [{
+                    "loc": f"{BASE_URL}/images/doogie-magnifying-glass.png",
+                    "caption": f"{sub_name}, {display_city}, BC — farm sub-neighbourhood profile with market data on EZtoFind.ca",
+                    "title": f"{sub_name}, {display_city} — BC Sub-Neighbourhood",
+                    "geo": f"{sub_name}, {display_city}, British Columbia, Canada",
+                }]
+                tags.append(_url_tag(
+                    f"{BASE_URL}/community/{city_slug}/n/{n_slug}", today, "weekly", "0.55",
+                    images=neighbourhood_img,
+                ))
+    except Exception:
+        pass
+
     return _wrap_urlset(tags, with_image_ns=True), len(tags)
 
 async def _build_market_reports(db) -> tuple[str, int]:
