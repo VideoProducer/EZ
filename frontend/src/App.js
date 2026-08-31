@@ -429,6 +429,33 @@ const NeighbourhoodPage = () => {
     </div>
     <div className="eyebrow" style={{marginTop:"1.25rem"}}>{d.community}, {d.region}</div>
     <h1 className="section-title" data-testid="neighbourhood-name">{d.neighbourhood}</h1>
+    {/* Referral banner — displayed only for provincial (non-farm) sub-
+        neighbourhoods (Kelowna, Kamloops, Victoria, etc.). Uses the
+        exact canonical wording from line 9111 of App.js so Doogie,
+        community pages, and sub-neighbourhood pages all read the same. */}
+    {d.referral_only && (
+      <div
+        data-testid="nhb-referral-banner"
+        style={{
+          marginTop:"1rem",
+          background:"linear-gradient(135deg, rgba(15,42,91,0.06), rgba(30,79,207,0.06))",
+          border:"1px solid rgba(15,42,91,0.15)",
+          borderRadius:12,
+          padding:"1rem 1.25rem",
+          fontFamily:"Inter,sans-serif",
+          fontSize:"0.95rem",
+          lineHeight:1.6,
+          color:"var(--ink)",
+        }}
+      >
+        As a smaller BC community, {d.neighbourhood} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
+        <Link
+          to={`/referral-request?city=${encodeURIComponent(d.community)}&neighbourhood=${encodeURIComponent(d.neighbourhood)}`}
+          style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}}
+          data-testid="nhb-referral-link"
+        >Referral REALTOR® link</Link>.
+      </div>
+    )}
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.02rem",lineHeight:1.7}}>
       A micro-neighbourhood within {d.community}. This page focuses on <strong>location and housing character</strong> — for walkability, transit, climate, and safety metrics see the <Link to={`/community/${slug}`} style={{color:"var(--brand-blue)"}}>{d.community} community page</Link>.
     </p>
@@ -441,7 +468,15 @@ const NeighbourhoodPage = () => {
     </div>
 
     <div style={{marginTop:"1.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
-      <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">🏡 View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
+      {d.referral_only ? (
+        <Link
+          to={`/referral-request?city=${encodeURIComponent(d.community)}&neighbourhood=${encodeURIComponent(d.neighbourhood)}`}
+          className="btn btn-primary"
+          data-testid="nhb-request-referral"
+        >Request a Referral REALTOR® in {d.community}</Link>
+      ) : (
+        <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">🏡 View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
+      )}
       <Link to={`/community/${slug}`} className="btn btn-outline">← Back to {d.community}</Link>
     </div>
 

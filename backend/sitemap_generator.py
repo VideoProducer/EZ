@@ -319,6 +319,37 @@ async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
     except Exception:
         pass
 
+    # ── 3. Provincial (non-farm) extras — Kelowna, Kamloops, Victoria etc.
+    # These pages route visitors to /referral-request instead of Doug's
+    # money-page CTAs (see NeighbourhoodPage frontend). Lower priority
+    # (0.45) than farm sub-nhbs so ranking signals still favour Doug's
+    # active practice area, but the URLs are indexable for AEO/AEG.
+    try:
+        from services.bc_provincial_sub_neighbourhoods import get_provincial_extras
+        provincial = get_provincial_extras()
+        for city_slug, sub_list in provincial.items():
+            display_city = city_slug.replace("-", " ").title()
+            for sub_name in sub_list:
+                n_slug = re.sub(r"[^a-z0-9]+", "-", (sub_name or "").lower()).strip("-")
+                if not n_slug:
+                    continue
+                key = (city_slug, n_slug)
+                if key in seen:
+                    continue
+                seen.add(key)
+                neighbourhood_img = [{
+                    "loc": f"{BASE_URL}/images/doogie-magnifying-glass.png",
+                    "caption": f"{sub_name}, {display_city}, BC — sub-neighbourhood profile with referral REALTOR® routing on EZtoFind.ca",
+                    "title": f"{sub_name}, {display_city} — BC Sub-Neighbourhood (Referral)",
+                    "geo": f"{sub_name}, {display_city}, British Columbia, Canada",
+                }]
+                tags.append(_url_tag(
+                    f"{BASE_URL}/community/{city_slug}/n/{n_slug}", today, "weekly", "0.45",
+                    images=neighbourhood_img,
+                ))
+    except Exception:
+        pass
+
     return _wrap_urlset(tags, with_image_ns=True), len(tags)
 
 async def _build_market_reports(db) -> tuple[str, int]:

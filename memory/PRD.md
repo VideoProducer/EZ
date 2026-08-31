@@ -24,6 +24,27 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — Provincial (non-farm) sub-neighbourhood referral coverage
+Extends Stage 1c to cover the 206 non-farm BC sub-neighbourhoods (Kelowna, Kamloops, Victoria, Nanaimo, Prince George, Vernon, Penticton, Oak Bay, Saanich, Sechelt, Powell River, Fort St. John, Cranbrook, Salmon Arm, Esquimalt, Gibsons, Sidney, Dawson Creek, Terrace, Prince Rupert, Nelson, Fernie, Revelstoke, Kimberley, Rossland, Trail, Castlegar). Each page routes to `/referral-request` using the canonical site wording — NO solicitation.
+
+- **Shipped:**
+  - New helper `services/bc_provincial_sub_neighbourhoods.py` — subtracts farm cities from `bc_neighborhoods.json` and caches the 27-city × 206-sub-nhb residue.
+  - `sitemap_generator._build_neighbourhoods()` — appends provincial URLs at priority 0.45 (below farm's 0.55). Sitemap-neighbourhoods.xml went **912 → 1,008 URLs** (net +96 unique after MLS® dedupe against live-listing derived slugs).
+  - `/api/community/{slug}/neighbourhoods` — merges provincial extras + emits `referral_only: true` flag when the parent community is outside the farm.
+  - `/api/community/{slug}/neighbourhood/{n_slug}` — resolves provincial slugs and returns `referral_only: true`.
+  - Frontend `NeighbourhoodPage` — when `referral_only`, renders the canonical banner (`"As a smaller BC community, {n} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas…"`) + swaps the money-page CTA (`/listings`) for a **"Request a Referral REALTOR® in {City}"** button that deep-links to `/referral-request?city={city}&neighbourhood={n}`.
+  - Stage-2 seeder loop now includes provincial extras (flattened work list) — synopses for all 600 sub-nhbs (394 farm + 206 provincial) generate at 8s/entry (~80 min from boot). Same compliance-hardened prompt.
+
+- **Compliance verified:**
+  - BCFSA: no solicitation of services Doug doesn't provide (referral-only routing)
+  - CREA Article 16: canonical "Not intended to solicit or induce an agreement already in place" boilerplate
+  - GVR / FVREB / RASTS trademarks preserved
+  - CASL: zero forms on sub-nhb pages
+  - PIPA: zero personal-info collection
+
+- **Verified live on preview:** `/community/victoria/n/fairfield-east` renders canonical referral banner + Referral CTA + zero money-page routing.
+
+
 ### Feb 2026 — Farm sub-neighbourhood coverage sweep (Stage 1c)
 Extends indexable + rendered coverage to every one of Doug's **394 curated farm sub-neighbourhoods** across Greater Vancouver + Fraser Valley + Sea-to-Sky. Compliance-hardened per BCFSA / CREA / GVR / CASL / PIPA / DoRTS.
 

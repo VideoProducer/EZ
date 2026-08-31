@@ -6446,7 +6446,37 @@ async def community_neighbourhoods(slug: str):
         # Curated import is best-effort — the endpoint still works if the
         # farm map is missing for any reason.
         pass
-    return {"community": name, "region": region, "count": len(items), "neighbourhoods": items}
+    # Merge provincial (non-farm) extras — Kelowna, Kamloops, Victoria,
+    # etc. Marked `referral_only: true` so the frontend shows the canonical
+    # referral banner and swaps money-page CTAs for /referral-request.
+    referral_only = False
+    try:
+        from services.bc_provincial_sub_neighbourhoods import get_provincial_extras, is_farm_slug
+        referral_only = not is_farm_slug(slug)
+        prov = get_provincial_extras().get(slug, []) or []
+        for sub_name in prov:
+            c_slug = _nhb_slug(sub_name)
+            if not c_slug or c_slug in seen_slugs:
+                continue
+            seen_slugs.add(c_slug)
+            items.append({
+                "slug": c_slug,
+                "name": sub_name,
+                "count": 0,
+                "min_price": None,
+                "max_price": None,
+                "median_price": None,
+                "source": "provincial",
+            })
+    except Exception:
+        pass
+    return {
+        "community": name,
+        "region": region,
+        "count": len(items),
+        "neighbourhoods": items,
+        "referral_only": referral_only,
+    }
 
 
 # ── Wave 1 auto-pick — top N sub-neighbourhoods across all focus communities ─
@@ -7002,7 +7032,8 @@ async def neighbourhood_detail(slug: str, n_slug: str):
     n_name = next((r for r in distinct if _nhb_slug(r) == n_slug), None)
     # Curated fallback — if the live MLS® data doesn't have a listing tagged
     # with this region right now, resolve the display name from the farm
-    # curated list so all 394 sub-neighbourhood URLs render a real page.
+    # curated list OR the provincial extras so all 600+ sub-neighbourhood
+    # URLs render a real page.
     if not n_name:
         try:
             from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
@@ -7011,7 +7042,23 @@ async def neighbourhood_detail(slug: str, n_slug: str):
         except Exception:
             n_name = None
     if not n_name:
+        try:
+            from services.bc_provincial_sub_neighbourhoods import get_provincial_extras
+            prov = get_provincial_extras().get(slug, []) or []
+            n_name = next((s for s in prov if _nhb_slug(s) == n_slug), None)
+        except Exception:
+            n_name = None
+    if not n_name:
         raise HTTPException(404, "Neighbourhood not found in this community")
+    # Determine referral routing for this sub-nhb. In-farm slugs use Doug's
+    # normal money-page CTAs; provincial (non-farm) slugs display the
+    # canonical "falls outside the Greater Vancouver, Fraser Valley, and
+    # Sea-to-Sky Corridor focus areas…" banner and route to /referral-request.
+    try:
+        from services.bc_provincial_sub_neighbourhoods import is_farm_slug
+        referral_only = not is_farm_slug(slug)
+    except Exception:
+        referral_only = False
     # Aggregate listing stats to feed the LLM AND surface on the page.
     agg = await db.listings.aggregate([
         {"$match": {"status":"Active","city":_city_query(name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
@@ -7050,6 +7097,7 @@ async def neighbourhood_detail(slug: str, n_slug: str):
         "median_price": median,
         "synopsis": payload.get("synopsis") if payload.get("approved") else "",
         "note": None if payload.get("approved") else "This micro-neighbourhood synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.",
+        "referral_only": referral_only,
     }
 
 
@@ -7769,6 +7817,12 @@ async def startup():
         except Exception as e:
             logger.error(f"nhb_seeder: BC_SUB_NEIGHBOURHOODS import failed: {e}")
             return
+        try:
+            from services.bc_provincial_sub_neighbourhoods import get_provincial_extras
+            provincial_extras = get_provincial_extras()
+        except Exception as e:
+            logger.warning(f"nhb_seeder: provincial extras unavailable: {e}")
+            provincial_extras = {}
         # Small warm-up delay so we don't compete with sitemap regen on
         # boot — the seeder is background-only and never blocks startup.
         await _a.sleep(180)
@@ -7776,8 +7830,18 @@ async def startup():
         done = 0
         skipped = 0
         failed = 0
+        # Build a single ordered work list so the loop is symmetric across
+        # farm + provincial. Farm entries run first because they attract
+        # transactional traffic; provincial extras hydrate afterwards.
+        work_items: list[tuple[str, str]] = []
         for city_slug, sub_list in BC_SUB_NEIGHBOURHOODS.items():
-            # Resolve the display name once per city so the synopsis prompt
+            for sub_name in sub_list:
+                work_items.append((city_slug, sub_name))
+        for city_slug, sub_list in provincial_extras.items():
+            for sub_name in sub_list:
+                work_items.append((city_slug, sub_name))
+        for city_slug, sub_name in work_items:
+            # Resolve the display name once per item so the synopsis prompt
             # reads correctly (e.g. "Kitsilano, a sub-neighbourhood within
             # Vancouver…" rather than "vancouver").
             name, region = _resolve_community(city_slug)
@@ -7786,65 +7850,64 @@ async def startup():
                 # Doug can add the community if it's a legitimate gap.
                 logger.info(f"nhb_seeder: skipping unknown city_slug={city_slug}")
                 continue
-            for sub_name in sub_list:
-                total += 1
-                n_slug = _nhb_slug(sub_name)
-                if not n_slug:
-                    continue
-                existing = await db.neighbourhood_synopses.find_one(
-                    {"slug": city_slug, "n_slug": n_slug},
-                    {"_id": 0, "synopsis": 1, "approved": 1},
-                )
-                if existing and existing.get("synopsis"):
-                    skipped += 1
-                    continue
-                # Best-effort listing stats — most farm sub-nhbs won't have
-                # active MLS® data, and that's fine; the prompt handles the
-                # "no listings" case cleanly via the price_hint fallback.
-                try:
-                    agg = await db.listings.aggregate([
-                        {"$match": {"status": "Active", "city": _city_query(name), "region": sub_name, "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}},
-                        {"$group": {"_id": None, "count": {"$sum": 1}, "min_price": {"$min": "$list_price"}, "max_price": {"$max": "$list_price"}, "avg_beds": {"$avg": "$beds"}, "types": {"$addToSet": "$property_type"}}},
-                    ]).to_list(1)
-                    stats = agg[0] if agg else {}
-                    beds_avg = stats.get("avg_beds") or 0
-                    listing_stats = {
-                        "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
-                        "beds_mix": f"avg {beds_avg:.1f} beds" if beds_avg else "mixed",
-                        "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
-                    }
-                except Exception:
-                    listing_stats = {"types": "residential", "beds_mix": "mixed", "price_hint": "price varies"}
-                try:
-                    syn = await generate_neighbourhood_synopsis(sub_name, name, region, listing_stats)
-                except Exception as e:
-                    logger.error(f"nhb_seeder: gen failed for {sub_name}, {name}: {e}")
-                    failed += 1
-                    await _a.sleep(8)
-                    continue
-                if syn:
-                    await db.neighbourhood_synopses.replace_one(
-                        {"slug": city_slug, "n_slug": n_slug},
-                        {
-                            "slug": city_slug,
-                            "n_slug": n_slug,
-                            "community": name,
-                            "region": region,
-                            "neighbourhood": sub_name,
-                            "synopsis": syn,
-                            "approved": True,   # compliance-hardened prompt → safe to auto-publish
-                            "source": "farm_seeder_v1",
-                            "ts": now_iso(),
-                        },
-                        upsert=True,
-                    )
-                    done += 1
-                    if done % 25 == 0:
-                        logger.info(f"nhb_seeder: progress {done} generated / {skipped} cached / {failed} failed / {total} scanned")
-                # Rate limit — Claude Sonnet 4.6 lets us go faster than
-                # this but 8 s keeps us well under any board's radar and
-                # never spikes CPU during CREA DDF® hourly sync windows.
+            total += 1
+            n_slug = _nhb_slug(sub_name)
+            if not n_slug:
+                continue
+            existing = await db.neighbourhood_synopses.find_one(
+                {"slug": city_slug, "n_slug": n_slug},
+                {"_id": 0, "synopsis": 1, "approved": 1},
+            )
+            if existing and existing.get("synopsis"):
+                skipped += 1
+                continue
+            # Best-effort listing stats — most farm sub-nhbs won't have
+            # active MLS® data, and that's fine; the prompt handles the
+            # "no listings" case cleanly via the price_hint fallback.
+            try:
+                agg = await db.listings.aggregate([
+                    {"$match": {"status": "Active", "city": _city_query(name), "region": sub_name, "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}}},
+                    {"$group": {"_id": None, "count": {"$sum": 1}, "min_price": {"$min": "$list_price"}, "max_price": {"$max": "$list_price"}, "avg_beds": {"$avg": "$beds"}, "types": {"$addToSet": "$property_type"}}},
+                ]).to_list(1)
+                stats = agg[0] if agg else {}
+                beds_avg = stats.get("avg_beds") or 0
+                listing_stats = {
+                    "types": ", ".join((stats.get("types") or [])[:6]) or "residential",
+                    "beds_mix": f"avg {beds_avg:.1f} beds" if beds_avg else "mixed",
+                    "price_hint": f"listings roughly ${stats.get('min_price') or 0:,.0f}–${stats.get('max_price') or 0:,.0f}" if stats.get("min_price") else "price varies",
+                }
+            except Exception:
+                listing_stats = {"types": "residential", "beds_mix": "mixed", "price_hint": "price varies"}
+            try:
+                syn = await generate_neighbourhood_synopsis(sub_name, name, region, listing_stats)
+            except Exception as e:
+                logger.error(f"nhb_seeder: gen failed for {sub_name}, {name}: {e}")
+                failed += 1
                 await _a.sleep(8)
+                continue
+            if syn:
+                await db.neighbourhood_synopses.replace_one(
+                    {"slug": city_slug, "n_slug": n_slug},
+                    {
+                        "slug": city_slug,
+                        "n_slug": n_slug,
+                        "community": name,
+                        "region": region,
+                        "neighbourhood": sub_name,
+                        "synopsis": syn,
+                        "approved": True,   # compliance-hardened prompt → safe to auto-publish
+                        "source": "farm_seeder_v1",
+                        "ts": now_iso(),
+                    },
+                    upsert=True,
+                )
+                done += 1
+                if done % 25 == 0:
+                    logger.info(f"nhb_seeder: progress {done} generated / {skipped} cached / {failed} failed / {total} scanned")
+            # Rate limit — Claude Sonnet 4.6 lets us go faster than
+            # this but 8 s keeps us well under any board's radar and
+            # never spikes CPU during CREA DDF® hourly sync windows.
+            await _a.sleep(8)
         logger.info(f"nhb_seeder: DONE {done} generated / {skipped} already cached / {failed} failed / {total} total")
     asyncio.create_task(_farm_nhb_synopsis_seeder())
 
