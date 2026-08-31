@@ -256,6 +256,14 @@ Sitemap: https://eztofind.ca/sitemap-ai.xml
 Sitemap: https://eztofind.ca/sitemap-snapshots.xml
 Sitemap: https://eztofind.ca/sitemap-index.xml
 
+# RSS 2.0 editorial feed — Feedly / Inoreader / NewsBlur crawl this
+# aggressively (often multiple times per hour), which is faster than the
+# regular sitemap crawl for new sites. Bing / DuckDuckGo also honour the
+# `pubDate` fields. Regenerated on server boot + hourly via cron.
+# Not a sitemap declaration (search engines only accept Sitemap: for XML
+# sitemaps), but listed here for feed-reader discovery.
+# Feed: https://eztofind.ca/feed.xml
+
 # Backend API surface — explicitly blocked from all crawlers. Provides live
 # CREA DDF® data under a limited board licence; scraping / redistribution is
 # prohibited by DDF® terms. Agent-callable endpoints (Doogie tools) are
