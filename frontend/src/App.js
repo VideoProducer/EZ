@@ -9717,7 +9717,7 @@ const ReferralRequest = () => {
     <IdentityLine practice="REALTOR® · Referral network coordinator · Fraser Valley + South Surrey" size="md" testId="referral-identity"/>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"0.75rem"}}>{t("ref.intro")} Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
-    <p data-testid="referral-no-transact-line" style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",lineHeight:1.65,marginBottom:"1.5rem",fontStyle:"italic",padding:"0.75rem 1rem",background:"#F7FAFF",borderLeft:"3px solid var(--brand-blue)",borderRadius:"4px"}}>Doug does not personally list or show property outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor. The introduction is at no cost to you — Doug earns a REALTOR®-to-REALTOR® referral fee from the local REALTOR® if a transaction completes, never from you.</p>
+    <p data-testid="referral-no-transact-line" style={{fontFamily:"Inter,sans-serif",fontSize:"0.9rem",color:"var(--muted)",lineHeight:1.65,marginBottom:"1.5rem",fontStyle:"italic",padding:"0.75rem 1rem",background:"#F7FAFF",borderLeft:"3px solid var(--brand-blue)",borderRadius:"4px"}}>Doug does not personally list or show property outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor.</p>
     <form onSubmit={submit} className="paper" data-testid="referral-form">
       {/* Buy vs Sell — top of form per Feb 2026 operating-system spec */}
       <div className="field" style={{marginBottom:"1.25rem"}}>

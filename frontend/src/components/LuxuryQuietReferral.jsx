@@ -223,10 +223,8 @@ export default function LuxuryQuietReferral() {
               color: T.muted, margin: 0, maxWidth: 620, fontStyle: "italic",
             }}
           >
-            Doug does not personally list or show property outside his
-            direct-practice area. The introduction is at no cost to you;
-            Doug earns a REALTOR®-to-REALTOR® referral fee from the local
-            REALTOR® if a transaction completes — never from you.
+            Doug does not personally list or show property outside Greater
+            Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor.
           </p>
         </section>
 
