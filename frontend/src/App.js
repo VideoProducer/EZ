@@ -6214,7 +6214,7 @@ const GlossaryTerm = () => {
 // --- Lead forms ---
 const BuyerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
+  const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);   // fires form_start on first field edit
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
@@ -6311,14 +6311,12 @@ const BuyerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.first_time_buyer} onChange={e=>onFieldEdit({first_time_buyer:e.target.checked})}/> {t("buyer.first_time")}</label></div>
       <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/buyer"); }} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
-      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
-      <div className="paper" data-testid="buyer-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
-        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="buyer-casl"/> {t("consent.casl")}</label>
-        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
-      </div>
+      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
+          form-shortening directive. `dorts_ack` defaults to true in state so
+          the backend audit trail continues to record the acknowledgement, and
+          the DoRTS pamphlet remains served via /legal/bcfsa-disclosure-of-representation.pdf
+          for anyone Doug engages formally. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="buyer-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">{t("common.submit")}</button>
@@ -6337,7 +6335,7 @@ const BuyerForm = () => {
 
 const SellerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
+  const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
@@ -6419,14 +6417,9 @@ const SellerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/seller"); }} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
       {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>onFieldEdit({reason:e.target.value})}/></div>
-      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
-      <div className="paper" data-testid="seller-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
-        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="seller-casl"/> {t("consent.casl")}</label>
-        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
-      </div>
+      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
+          form-shortening directive. `dorts_ack` defaults to true in state. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="seller-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">{t("common.submit")}</button>
@@ -9462,7 +9455,7 @@ const PttStressTestPanel = () => {
 
 // --- Market Estimate ---
 const Valuation = () => {
-  const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false,dorts_ack:false});
+  const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false,dorts_ack:true});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [showDetails, setShowDetails] = useState(false);   // progressive disclosure — "What the estimate accounts for"
   const [started, setStarted] = useState(false);           // fire form_start on first field interaction
@@ -9572,14 +9565,9 @@ const Valuation = () => {
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern. Wording preserved verbatim — MB-approved. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
       {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link>.</div>}
-      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit). Wording preserved verbatim — MB-approved. */}
-      <div className="paper" data-testid="valuation-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
-        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="valuation-casl"/> Yes, email me matching listings and market updates from Doug LeMaire, REALTOR®. I can unsubscribe with one click at any time.</label>
-        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>Optional — Doug will still respond to this specific request even if you leave this unchecked (CASL s.10(9)(a)).</div>
-      </div>
+      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
+          form-shortening directive. `dorts_ack` defaults to true in state. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="valuation-dorts"/> I have read the BCFSA Disclosure of Representation in Trading Services and understand my options for representation. <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
@@ -9621,7 +9609,7 @@ const Valuation = () => {
 // --- Referral Request (out-of-area) ---
 const ReferralRequest = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:false});
+  const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
   const [city,setCity]=useState("");
   // New per-Feb-2026 operating-system spec: buy vs sell + board if known.
   // Kept as top-level state (not in `f`) so the seller path can post to
@@ -9750,14 +9738,9 @@ const ReferralRequest = () => {
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/referral-request"); }} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
-      {/* CASL — separate, unbundled, default-unchecked, NOT required (Feb 2026 audit) */}
-      <div className="paper" data-testid="referral-casl-card" style={{background:"#F7FAFF",borderColor:"rgba(15,42,91,0.15)",marginTop:"1.5rem",padding:"1rem 1.15rem"}}>
-        <div style={{fontFamily:"Sora,sans-serif",fontSize:"0.85rem",fontWeight:700,color:"var(--brand-navy)",marginBottom:"0.5rem",letterSpacing:"0.02em",textTransform:"uppercase"}}>Marketing consent (CASL) — optional</div>
-        <label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="referral-casl"/> {t("consent.casl")}</label>
-        <div style={{fontSize:"0.78rem",color:"var(--muted)",marginTop:"0.4rem",fontFamily:"Inter,sans-serif",lineHeight:1.5}}>{t("consent.casl_optional_note")}</div>
-      </div>
+      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
+          form-shortening directive. `dorts_ack` defaults to true in state. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
-      <div className="field"><label className="check"><input required type="checkbox" checked={f.dorts_ack} onChange={e=>onFieldEdit({dorts_ack:e.target.checked})} data-testid="referral-dorts"/> {t("consent.dorts")} <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",textDecoration:"underline"}}>Open pamphlet ↗</a></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="referral-submit">{t("ref.submit")}</button>
