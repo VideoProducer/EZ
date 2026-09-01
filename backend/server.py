@@ -2868,6 +2868,49 @@ async def admin_ai_discovery_history(limit: int = 20, _=Depends(verify_admin)):
     return {"ok": True, "count": len(rows), "rows": rows}
 
 
+@api.get("/site/counts")
+async def public_site_counts():
+    """Canonical content counts for the whole site — single source of truth.
+    Anything on the site that hard-codes a number (SEO titles, homepage
+    "All N communities →" links, llms.txt / llms-full.txt regen, marketing
+    copy) should fetch this endpoint instead of typing the number in-line.
+    That's what prevents the "396 terms in the SEO title but 439 in the
+    body" drift Doug's crawler audit flagged.
+
+    Values are computed from the live Mongo state at request time, then
+    5-minute cached in memory to keep the endpoint cheap.
+    """
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    global _SITE_COUNTS_CACHE
+    now = _dt.now(_tz.utc)
+    try:
+        cached = _SITE_COUNTS_CACHE  # type: ignore
+    except NameError:
+        cached = None
+    if cached and now < cached.get("_expires_at", now):
+        return {k: v for k, v in cached.items() if not k.startswith("_")}
+
+    counts = {
+        "glossary_terms":       await db.glossary.count_documents({}),
+        # `communities` is a seed-file-driven concept, not a Mongo collection —
+        # authoritative count comes from communities_seed.json (240 today).
+        "communities":          sum(
+            len(v) for v in json.loads(
+                (ROOT_DIR / "data" / "communities_seed.json").read_text()
+            ).values()
+        ),
+        "community_synopses":   await db.community_synopses.count_documents({"synopsis": {"$ne": ""}}),
+        "neighbourhood_synopses": await db.neighbourhood_synopses.count_documents({"synopsis": {"$ne": ""}}),
+        "active_listings":      await db.listings.count_documents({"status": "Active"}),
+        "testimonials_published": await db.testimonials.count_documents({"is_published": True}),
+        "market_report_snapshots": await db.market_reports.count_documents({}),
+        "computed_at":          now.isoformat(),
+    }
+    # Set-and-forget module-level cache (5 min).
+    globals()["_SITE_COUNTS_CACHE"] = {**counts, "_expires_at": now + _td(minutes=5)}
+    return counts
+
+
 @api.get("/indexnow/status")
 async def public_indexnow_status(limit: int = 20):
     """Public IndexNow ping status — read-only view of the last N pings so

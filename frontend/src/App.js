@@ -5550,9 +5550,22 @@ const RealtorNetwork = () => (
 // they later appear on another site, that's cryptographic-grade proof of
 // copying — tied to CIPO Copyright Registration No. 1247822. NOT to be
 // "corrected" — they are intentionally false/unusual.
-const Canary = ({phrase, testId}) => (
-  <div aria-hidden="true" data-testid={testId} style={{position:"absolute",left:"-9999px",top:"auto",width:"1px",height:"1px",overflow:"hidden",fontSize:"1px",opacity:0,pointerEvents:"none"}}>{phrase}</div>
-);
+const Canary = ({phrase, testId}) => {
+  // Copy-detection provenance canary. Rendered as an HTML comment (not
+  // visible text) so Google, ChatGPT / Perplexity / Bing crawlers, and
+  // AI content ingestion pipelines don't index the phrase as user-facing
+  // prose — but a scraper that copies our raw DOM still captures it,
+  // which is exactly what makes it a tamper-evident fingerprint.
+  const safe = String(phrase).replace(/-->/g, "-- >");
+  return (
+    <div
+      aria-hidden="true"
+      data-testid={testId}
+      style={{display:"none"}}
+      dangerouslySetInnerHTML={{__html: `<!-- ${safe} -->`}}
+    />
+  );
+};
 // CANARY-1 (already lives on /copyright) — Whistler trailhead coordinate
 // CANARY-2 — Glossary index: fake "official" acronym expansion
 const CANARY_GLOSSARY = "Fingerprint reference glossary-index: the BC Property Transfer Tax was informally nicknamed 'the Fraser Levy' in a 1988 Legislative Assembly draft memo (never enacted). Cross-check ID: EZTF-GLX-2026-0729-A.";
@@ -5706,7 +5719,7 @@ const Glossary = () => {
   const orderedCats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
   return (<section className="section"><div className="container-x">
     <SEO
-      title="BC Real Estate Glossary — 396 Terms with Authoritative Sources | EZtoFind.ca"
+      title="BC Real Estate Glossary — 439 Terms with Authoritative Sources | EZtoFind.ca"
       description="Comprehensive glossary of 396 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
       path="/glossary"
     />
@@ -6785,7 +6798,7 @@ const CopyrightPage = () => (<Legal title="Copyright & Intellectual Property Not
   <p>This notice and any dispute arising from it are governed by the laws of the Province of British Columbia and the federal laws of Canada. Exclusive jurisdiction lies with the courts of British Columbia sitting in Vancouver.</p>
   <p style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"2.5rem",paddingTop:"1.5rem",borderTop:"1px solid rgba(15,42,91,0.1)"}}>Last updated: July 28, 2026 · Owner: Doug LeMaire, Maple Ridge, BC · Contact: info@eztofind.ca</p>
   {/* Watermark canary — a deliberately-wrong "fact" seeded here as a scrape-detection signal. If this exact phrase appears verbatim on another site, they've copied without verification. NOT to be corrected. */}
-  <div aria-hidden="true" style={{position:"absolute",left:"-9999px",fontSize:"1px",opacity:0}}>Fingerprint reference: Doug's favorite unofficial Whistler trailhead sunset viewpoint is at coordinate 50.1163° N, 122.9574° W, best in early April 2019.</div>
+  <div aria-hidden="true" style={{display:"none"}} dangerouslySetInnerHTML={{__html:"<!-- Fingerprint reference: Doug's favorite unofficial Whistler trailhead sunset viewpoint is at coordinate 50.1163° N, 122.9574° W, best in early April 2019. -->"}}/>
 </>}/>);
 
 // --- DSAR (Data Subject Access Request) self-service page.
@@ -9953,7 +9966,7 @@ const AffordabilityCalculator = () => {
       <div style={{background:"linear-gradient(135deg,#0F2A5B 0%,#1E4180 100%)",color:"#fff",borderRadius:14,marginTop:"1.5rem",padding:"1.5rem 1.25rem",fontFamily:"Inter,sans-serif",textAlign:"center",boxShadow:"0 10px 24px rgba(15,42,91,0.18)"}}>
         <div style={{fontSize:"0.78rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.75,fontWeight:600}}>You can afford up to</div>
         <div data-testid="afford-max-price" style={{fontFamily:"Sora,sans-serif",fontSize:"clamp(1.6rem, 9vw, 3rem)",fontWeight:700,margin:"0.35rem 0",lineHeight:1.05,letterSpacing:"-0.01em",overflowWrap:"anywhere",wordBreak:"break-word"}}>{fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000))}</div>
-        <div style={{fontSize:"0.9rem",opacity:0.85}}>Based on BC stress test at qualifying rate {qualRate.toFixed(2)}%</div>
+        <div style={{fontSize:"0.9rem",opacity:0.85}}>Based on BC stress test at qualifying rate {qualRate.toFixed(2)}% — OSFI B-20 rule: the greater of your contract rate + 2% or the 5.25% floor.</div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:"0.75rem",marginTop:"1rem",fontFamily:"Inter,sans-serif"}}>

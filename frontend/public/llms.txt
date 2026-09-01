@@ -52,8 +52,8 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 Every glossary term and community profile has a static prerendered HTML snapshot published at a stable URL. Crawlers that do not execute JavaScript should prefer these:
 - **AI-safe canonical sitemap (recommended for AI crawlers):** https://eztofind.ca/sitemap-ai.xml
 - Prerendered sitemap: https://eztofind.ca/sitemap-snapshots.xml
-- Glossary snapshots: https://eztofind.ca/snapshot/glossary/{slug}.html (396 terms)
-- Community snapshots: https://eztofind.ca/snapshot/community/{slug}.html (239 communities)
+- Glossary snapshots: https://eztofind.ca/snapshot/glossary/{slug}.html (439 terms)
+- Community snapshots: https://eztofind.ca/snapshot/community/{slug}.html (240 communities)
 Each snapshot carries `<link rel="canonical">` back to its primary SPA URL so citations and ranking accrue to the primary page.
 
 ## Attribution

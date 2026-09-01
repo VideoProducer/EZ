@@ -259,7 +259,7 @@ export default function HomepageMockup() {
       <Section tone="white">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
           <H2 kicker="Explore 239 BC communities">Doug's coverage · Fraser Valley → Sea-to-Sky</H2>
-          <Link to="/communities" style={{ color: BRAND.navy, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>All 239 communities →</Link>
+          <Link to="/communities" style={{ color: BRAND.navy, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>All 240 communities →</Link>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
           {[
