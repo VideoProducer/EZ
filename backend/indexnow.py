@@ -53,3 +53,35 @@ async def notify_indexnow(urls: Iterable[str]) -> dict:
     except Exception as e:
         logger.warning(f"IndexNow POST failed (silent-fail): {e}")
         return {"error": str(e), "count": len(urls), "ok": False}
+
+
+async def fire_and_log(db, urls: Iterable[str], kind: str, trigger: str = "content_update") -> dict:
+    """Ping IndexNow AND write an audit row to ai_discovery_pings.
+
+    Hook this into every mutation endpoint that changes a public URL — the
+    per-mutation audit trail lets Doug watch instant-indexing coverage from
+    the admin panel and gives us proof-of-push when Bing / ChatGPT crawl a
+    freshly-updated page within minutes instead of days.
+
+    kind    e.g. "community_synopsis_approved" | "market_report_snapshot"
+    trigger free-form call site marker ("admin_manual", "cron_nightly", …)
+    """
+    from datetime import datetime, timezone, timedelta
+    urls = [u for u in urls if u]
+    if not urls:
+        return {"skipped": True, "reason": "empty url list", "kind": kind}
+    result = await notify_indexnow(urls)
+    try:
+        await db.ai_discovery_pings.insert_one({
+            "kind": kind,
+            "trigger": trigger,
+            "urls": urls[:50],           # cap: keep the log row < 1 KB
+            "url_count": len(urls),
+            "host": HOST,
+            "result": result,
+            "at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": datetime.now(timezone.utc) + timedelta(days=180),
+        })
+    except Exception as e:
+        logger.warning(f"ai_discovery_pings insert failed (silent-fail): {e}")
+    return {**result, "kind": kind, "trigger": trigger, "url_count": len(urls)}

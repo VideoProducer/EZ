@@ -2868,6 +2868,39 @@ async def admin_ai_discovery_history(limit: int = 20, _=Depends(verify_admin)):
     return {"ok": True, "count": len(rows), "rows": rows}
 
 
+@api.get("/indexnow/status")
+async def public_indexnow_status(limit: int = 20):
+    """Public IndexNow ping status — read-only view of the last N pings so
+    anyone (or an AI crawler auditing the site) can verify EZtoFind ships
+    fresh content to Bing / Yandex / Naver / Seznam within minutes of any
+    admin edit. Returns the key location, host, and recent ping summary."""
+    from indexnow import HOST as INDEXNOW_HOST, KEY_LOCATION
+    limit = max(1, min(limit, 50))
+    rows = []
+    async for r in db.ai_discovery_pings.find(
+        {}, {"_id": 0, "expires_at": 0, "urls": 0}
+    ).sort("at", -1).limit(limit):
+        rows.append({
+            "at": r.get("at"),
+            "kind": r.get("kind"),
+            "trigger": r.get("trigger"),
+            "url_count": r.get("url_count") or (
+                r.get("results", [{}])[0].get("count") if r.get("results") else None
+            ),
+            "ok": (r.get("result") or {}).get("ok")
+                   if r.get("result") is not None
+                   else all((x or {}).get("ok") for x in (r.get("results") or [])),
+        })
+    return {
+        "ok": True,
+        "host": INDEXNOW_HOST,
+        "key_location": KEY_LOCATION,
+        "protocol": "IndexNow · Bing · Yandex · Naver · Seznam",
+        "recent_pings": rows,
+        "count": len(rows),
+    }
+
+
 @api.post("/admin/backfill-enclaves")
 async def admin_backfill_enclaves(_=Depends(verify_admin)):
     """One-shot backfill — populates the `community` (enclave) field on
@@ -3896,6 +3929,16 @@ async def admin_list_testimonials(_=Depends(verify_admin)):
 @api.post("/admin/testimonials")
 async def admin_create_testimonial(t: Testimonial, _=Depends(verify_admin)):
     await db.testimonials.insert_one(t.model_dump())
+    # IndexNow: testimonials render on the homepage + about page, so ping
+    # those so the freshly-added social-proof shows up in search snippets fast.
+    try:
+        from indexnow import fire_and_log
+        await fire_and_log(db,
+            ["https://eztofind.ca/", "https://eztofind.ca/about",
+             "https://eztofind.ca/testimonials"],
+            kind="testimonial_created", trigger="admin_create")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed (testimonial create): {e}")
     return t
 
 @api.put("/admin/testimonials/{tid}")
@@ -3903,6 +3946,14 @@ async def admin_update_testimonial(tid: str, t: Testimonial, _=Depends(verify_ad
     payload = t.model_dump()
     payload["id"] = tid  # protect against id drift on edit
     await db.testimonials.update_one({"id": tid}, {"$set": payload}, upsert=False)
+    try:
+        from indexnow import fire_and_log
+        await fire_and_log(db,
+            ["https://eztofind.ca/", "https://eztofind.ca/about",
+             "https://eztofind.ca/testimonials"],
+            kind="testimonial_updated", trigger="admin_update")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed (testimonial update): {e}")
     return payload
 
 @api.delete("/admin/testimonials/{tid}")
@@ -8174,6 +8225,31 @@ async def startup():
     async def _monthly_market_report_loop():
         import asyncio as _a
         from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        # Startup backfill: if the current month has no snapshot yet, make one
+        # right now so /market-report always has fresh content for AI / SEO
+        # crawlers arriving between the 1st-of-month scheduled runs.
+        try:
+            from services import market_report as _mr
+            _now = _dt.now(_tz.utc)
+            _ym_now = f"{_now.year:04d}-{_now.month:02d}"
+            _existing = await db.market_reports.find_one({"ym": _ym_now}, {"_id": 0, "ym": 1})
+            if not _existing:
+                _snap = await _mr.save_snapshot(db, _ym_now)
+                logger.info(f"monthly_market_report: backfill snapshot for {_ym_now} — "
+                            f"{len(_snap.get('cities', []))} cities")
+                # IndexNow: push both the index and the fresh permalink so
+                # search engines pick up the new URL within minutes.
+                try:
+                    from indexnow import fire_and_log
+                    await fire_and_log(db, [
+                        "https://eztofind.ca/market-report",
+                        f"https://eztofind.ca/market-report/{_ym_now}",
+                    ], kind="market_report_snapshot", trigger="startup_backfill")
+                except Exception as e:
+                    logger.warning(f"IndexNow ping failed (backfill): {e}")
+        except Exception as e:
+            logger.warning(f"monthly_market_report: startup backfill failed: {e}")
+
         while True:
             try:
                 now = _dt.now(_tz.utc)
@@ -8194,7 +8270,23 @@ async def startup():
                                 f"{len(snap.get('cities',[]))} cities, "
                                 f"{snap.get('totals',{}).get('active_listings')} listings")
                     # Also refresh current month.
-                    await _mr.save_snapshot(db)
+                    cur_snap = await _mr.save_snapshot(db)
+                    # IndexNow: push the freshly-frozen prior month permalink
+                    # + the current-month view + the index page so LLMs and
+                    # Bing pick up the new URL within minutes.
+                    try:
+                        from indexnow import fire_and_log
+                        cur_ym = cur_snap.get("ym") if cur_snap else None
+                        urls = [
+                            "https://eztofind.ca/market-report",
+                            f"https://eztofind.ca/market-report/{ym}",
+                        ]
+                        if cur_ym and cur_ym != ym:
+                            urls.append(f"https://eztofind.ca/market-report/{cur_ym}")
+                        await fire_and_log(db, urls, kind="market_report_snapshot",
+                                           trigger="cron_monthly")
+                    except Exception as e:
+                        logger.warning(f"IndexNow ping failed (monthly cron): {e}")
                 except Exception as e:
                     logger.error(f"monthly_market_report: task failed: {e}")
             except Exception as e:
@@ -8970,6 +9062,18 @@ async def admin_market_report_generate(ym: Optional[str] = None, _=Depends(verif
     """Manually snapshot a given month (or current if omitted)."""
     from services import market_report as _mr
     snap = await _mr.save_snapshot(db, ym)
+    # IndexNow: push both the monthly permalink AND the /market-report index
+    # so a fresh snapshot is crawled + indexed in minutes instead of days.
+    try:
+        from indexnow import fire_and_log
+        ym_slug = snap.get("ym")
+        urls = ["https://eztofind.ca/market-report"]
+        if ym_slug:
+            urls.append(f"https://eztofind.ca/market-report/{ym_slug}")
+        await fire_and_log(db, urls, kind="market_report_snapshot",
+                           trigger="admin_manual")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed (market-report manual): {e}")
     return {
         "ym": snap["ym"],
         "cities": len(snap.get("cities", [])),
@@ -9551,6 +9655,14 @@ async def approve_synopsis(body: ApproveSynopsis, _=Depends(verify_admin)):
     update = {"approved": True, "approved_at": now_iso()}
     if body.synopsis is not None: update["synopsis"] = body.synopsis
     r = await db.community_synopses.update_one({"slug": body.slug}, {"$set": update})
+    # IndexNow: push the community URL the moment its synopsis is approved so
+    # Bing / ChatGPT / Yandex crawl the fresh content within minutes.
+    try:
+        from indexnow import fire_and_log
+        await fire_and_log(db, [f"https://eztofind.ca/community/{body.slug}"],
+                           kind="community_synopsis_approved", trigger="admin_approve")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed for community/{body.slug}: {e}")
     return {"success": True, "modified": r.modified_count}
 
 @api.post("/admin/approvals/synopses/{slug}/regenerate")
@@ -9587,7 +9699,21 @@ async def approve_all_glossary(_=Depends(verify_admin)):
 
 @api.post("/admin/approvals/synopses/approve-all")
 async def approve_all_synopses(_=Depends(verify_admin)):
+    approved_slugs = await db.community_synopses.distinct(
+        "slug", {"approved": {"$ne": True}, "synopsis": {"$ne": ""}}
+    )
     r = await db.community_synopses.update_many({"approved": {"$ne": True}, "synopsis": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
+    # IndexNow: bulk-push every freshly-approved community URL so search
+    # engines re-index them in one round-trip instead of waiting on the next
+    # crawl cycle.
+    try:
+        from indexnow import fire_and_log
+        urls = [f"https://eztofind.ca/community/{s}" for s in approved_slugs if s]
+        if urls:
+            await fire_and_log(db, urls, kind="community_synopsis_bulk_approved",
+                               trigger="admin_bulk_approve")
+    except Exception as e:
+        logger.warning(f"IndexNow bulk ping failed (synopses): {e}")
     return {"success": True, "modified": r.modified_count}
 
 @api.post("/admin/approvals/weather/approve-all")
@@ -9610,11 +9736,36 @@ async def approve_neighbourhood(body: ApproveNeighbourhood, _=Depends(verify_adm
     update = {"approved": True, "approved_at": now_iso()}
     if body.synopsis is not None: update["synopsis"] = body.synopsis
     r = await db.neighbourhood_synopses.update_one({"slug": body.slug, "n_slug": body.n_slug}, {"$set": update})
+    # IndexNow: push the sub-neighbourhood URL so it's crawlable minutes after
+    # Doug approves the AI-drafted copy.
+    try:
+        from indexnow import fire_and_log
+        await fire_and_log(db,
+            [f"https://eztofind.ca/community/{body.slug}/n/{body.n_slug}"],
+            kind="neighbourhood_synopsis_approved", trigger="admin_approve")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed for neighbourhood {body.slug}/{body.n_slug}: {e}")
     return {"success": True, "modified": r.modified_count}
 
 @api.post("/admin/approvals/neighbourhoods/approve-all")
 async def approve_all_neighbourhoods(_=Depends(verify_admin)):
+    pending = await db.neighbourhood_synopses.find(
+        {"approved": {"$ne": True}, "synopsis": {"$ne": ""}},
+        {"_id": 0, "slug": 1, "n_slug": 1},
+    ).to_list(5000)
     r = await db.neighbourhood_synopses.update_many({"approved": {"$ne": True}, "synopsis": {"$ne": ""}}, {"$set": {"approved": True, "approved_at": now_iso()}})
+    # IndexNow bulk push (max 10k per POST; we're well under that).
+    try:
+        from indexnow import fire_and_log
+        urls = [
+            f"https://eztofind.ca/community/{d['slug']}/n/{d['n_slug']}"
+            for d in pending if d.get("slug") and d.get("n_slug")
+        ]
+        if urls:
+            await fire_and_log(db, urls, kind="neighbourhood_synopsis_bulk_approved",
+                               trigger="admin_bulk_approve")
+    except Exception as e:
+        logger.warning(f"IndexNow bulk ping failed (neighbourhoods): {e}")
     return {"success": True, "modified": r.modified_count}
 
 @api.post("/admin/approvals/neighbourhoods/{slug}/{n_slug}/regenerate")

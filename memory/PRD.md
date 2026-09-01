@@ -24,6 +24,13 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — Tier 1 Audit + IndexNow Auto-Ping + Monthly Market-Report Cron
+**Tier 1 audit** — Full scorecard shipped to `/app/memory/TIER1_AUDIT.md`. All 10 personally-repped farm communities (Vancouver, Surrey, Maple Ridge, Langley, Burnaby, Richmond, North Vancouver, West Vancouver, Coquitlam, Abbotsford) scored against 10 criteria. Portfolio avg **79.7/100 (B)** with 3 system-wide leaks identified: (1) sub-neighbourhood live-count binding shows 0 across every card, (2) forecast widget 502s under Open-Meteo daily-limit, (3) Abbotsford vibe grade C+ mismatches its Tier 1 status.
+
+**IndexNow auto-ping** — `indexnow.fire_and_log(db, urls, kind, trigger)` helper now wired into every content-changing endpoint (`community_synopsis_approved`, `community_synopsis_bulk_approved`, `neighbourhood_synopsis_approved`, `neighbourhood_synopsis_bulk_approved`, `testimonial_created`, `testimonial_updated`, `market_report_snapshot`). Each mutation instant-pushes affected URLs to Bing / Yandex / Naver / Seznam and writes an audit row to `ai_discovery_pings`. Public `GET /api/indexnow/status` returns the last 20 pings for transparency.
+
+**Monthly market-report cron** — `_monthly_market_report_loop` now runs a **startup backfill** (creates current-month snapshot if missing) and pings IndexNow after every snapshot (both the startup-backfill path and the 1st-of-month scheduled run). Live confirmed: 2026-09 snapshot with 60 cities / 39,796 active listings created + IndexNow `ok:true` fired on restart.
+
 ### Feb 2026 — Provincial (non-farm) sub-neighbourhood referral coverage
 Extends Stage 1c to cover the 206 non-farm BC sub-neighbourhoods (Kelowna, Kamloops, Victoria, Nanaimo, Prince George, Vernon, Penticton, Oak Bay, Saanich, Sechelt, Powell River, Fort St. John, Cranbrook, Salmon Arm, Esquimalt, Gibsons, Sidney, Dawson Creek, Terrace, Prince Rupert, Nelson, Fernie, Revelstoke, Kimberley, Rossland, Trail, Castlegar). Each page routes to `/referral-request` using the canonical site wording — NO solicitation.
 
