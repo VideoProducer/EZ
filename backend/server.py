@@ -6545,9 +6545,18 @@ async def community_synopsis(slug: str):
 
     cached = await db.community_synopses.find_one({"slug": slug}, {"_id":0})
     if cached and cached.get("synopsis"):
+        # Task 7 (Feb 2026) — surface the last-reviewed timestamp so the
+        # frontend can render a visible "Last reviewed: YYYY-MM-DD" stamp
+        # under the H1 (matches the JSON-LD dateModified in the snapshot).
+        _dm = cached.get("last_reviewed_at") or cached.get("approved_at") or cached.get("ts")
+        if _dm and not isinstance(_dm, str):
+            try:
+                _dm = _dm.isoformat()
+            except Exception:
+                _dm = str(_dm)
         if not cached.get("approved"):
-            return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.", "sources": community_srcs}
-        return {"community": name, "region": region, "synopsis": cached["synopsis"], "source":"cache", "sources": community_srcs}
+            return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.", "sources": community_srcs, "last_reviewed_at": _dm}
+        return {"community": name, "region": region, "synopsis": cached["synopsis"], "source":"cache", "sources": community_srcs, "last_reviewed_at": _dm}
 
     synopsis = await generate_community_synopsis(name, region)
     if not synopsis:
@@ -7485,9 +7494,27 @@ async def neighbourhood_detail(slug: str, n_slug: str):
 
 
 # =============== ECCC LIVE CLIMATE NORMALS ===============
-# Real 1981-2010 Canadian Climate Normals fetched from Environment and Climate
-# Change Canada's MSC GeoMet API. Cached permanently in MongoDB per station
-# (climate normals are stable 30-year averages that only change every decade).
+# Task 7 (Feb 2026): 1991-2020 Canadian Climate Normals rollout.
+#
+# ECCC publishes climate normals in 30-year periods (WMO standard). The
+# current authoritative period is 1991-2020, published station-by-station
+# on climate.weather.gc.ca since 2024. As of this build the MSC GeoMet
+# API (api.weather.gc.ca/collections/climate-normals) still serves ONLY
+# 1981-2010 records for BC stations; ECCC has not yet backfilled 1991-2020
+# into the API collection.
+#
+# Per Doug's Task 7 spec: we attempt 1991-2020 first. When the API returns
+# no 1991-2020 record for a station we DO NOT silently substitute the
+# older 1981-2010 numbers as if they were current. We surface an explicit
+# "1991-2020 Climate Normals are not published for {station}" note and
+# then, only when the client opts in, present the 1981-2010 numbers under
+# a clear older-period label. A nearby-station proxy is intentionally NOT
+# implemented — bc_stations.py does not carry distance / elevation deltas.
+#
+# Real 1981-2010 and (future-proof) 1991-2020 Canadian Climate Normals
+# fetched from Environment and Climate Change Canada's MSC GeoMet API.
+# Cached permanently in MongoDB per (station_id, period) tuple — climate
+# normals are stable 30-year averages that only change every decade.
 NORMAL_ELEMENTS = {
     1:  "mean_temp_c",       # Mean daily temperature (°C)
     5:  "max_temp_c",        # Mean daily max temperature (°C)
@@ -7497,28 +7524,45 @@ NORMAL_ELEMENTS = {
     56: "total_precip_mm",   # Total precipitation (mm)
 }
 
-async def fetch_eccc_normals(station_id: int) -> Optional[dict]:
-    """Fetch 1981-2010 climate normals for a station from ECCC MSC GeoMet API.
+# Periods we will try, in preference order. 1991-2020 is the WMO-current
+# reference period. 1981-2010 is retained as a labelled older fallback.
+CLIMATE_PERIODS = [
+    (1991, 2020),
+    (1981, 2010),
+]
 
-    Returns a dict:
+async def fetch_eccc_normals(station_id: int, period_begin: int = 1991, period_end: int = 2020) -> Optional[dict]:
+    """Fetch climate normals for a station + period from the ECCC MSC GeoMet API.
+
+    Args:
+      station_id:   ECCC STN_ID (int)
+      period_begin: first year of the 30-year normal period (1991 or 1981)
+      period_end:   last year of the 30-year normal period (2020 or 2010)
+
+    Returns a dict on success:
       {"station_name","period_begin","period_end",
        "monthly": {"mean_temp_c":[jan..dec], "max_temp_c":[...], ...}}
-    or None on failure. Cached forever after first success.
+    Returns None when the API has no record for that station+period.
     """
-    url = f"https://api.weather.gc.ca/collections/climate-normals/items?STN_ID={station_id}&f=json&limit=2000"
+    url = (
+        f"https://api.weather.gc.ca/collections/climate-normals/items"
+        f"?STN_ID={station_id}&PERIOD_BEGIN={period_begin}&PERIOD_END={period_end}"
+        f"&f=json&limit=3000"
+    )
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             r = await client.get(url)
             r.raise_for_status()
             data = r.json()
     except Exception as e:
-        logger.warning(f"ECCC normals fetch failed for STN_ID={station_id}: {e}")
+        logger.warning(f"ECCC normals fetch failed for STN_ID={station_id} {period_begin}-{period_end}: {e}")
         return None
 
     monthly = {v: [None]*12 for v in NORMAL_ELEMENTS.values()}
     station_name = None
-    period_begin = None
-    period_end = None
+    matched_period_begin = None
+    matched_period_end = None
+    matched_any = False
     for f in data.get("features", []):
         p = f.get("properties", {})
         nid = p.get("NORMAL_ID")
@@ -7526,22 +7570,26 @@ async def fetch_eccc_normals(station_id: int) -> Optional[dict]:
         if nid not in NORMAL_ELEMENTS or not month or not (1 <= month <= 12):
             continue
         station_name = p.get("STATION_NAME") or station_name
-        period_begin = p.get("PERIOD_BEGIN") or period_begin
-        period_end = p.get("PERIOD_END") or period_end
+        matched_period_begin = p.get("PERIOD_BEGIN") or matched_period_begin
+        matched_period_end = p.get("PERIOD_END") or matched_period_end
         monthly[NORMAL_ELEMENTS[nid]][month-1] = p.get("VALUE")
+        matched_any = True
 
-    if not station_name:
+    if not station_name or not matched_any:
         return None
     return {
         "station_name": station_name,
-        "period_begin": period_begin,
-        "period_end": period_end,
+        "period_begin": matched_period_begin or period_begin,
+        "period_end": matched_period_end or period_end,
         "monthly": monthly,
     }
 
 @api.get("/community/{slug}/climate-normals")
 async def community_climate_normals(slug: str):
-    """Return real ECCC 1981-2010 Canadian Climate Normals for the nearest station."""
+    """Return real ECCC Canadian Climate Normals for a community's assigned
+    ECCC station. Prefers 1991-2020 (WMO-current). Falls back to 1981-2010
+    ONLY when explicitly labelled as older normals. Never silently substitutes
+    an older period as "current" — Task 7 rule (Feb 2026, Doug's spec)."""
     all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
     name = None; region = None
     for r, lst in all_comm.items():
@@ -7555,31 +7603,46 @@ async def community_climate_normals(slug: str):
     if not station:
         return {"community": name, "region": region, "available": False, "note": "No ECCC station mapping for this community."}
 
-    # Cache check: permanent per-station cache
-    cached = await db.eccc_normals.find_one({"station_id": station["station_id"]}, {"_id":0})
-    if cached and cached.get("monthly"):
-        return {
-            "community": name,
-            "region": region,
-            "available": True,
-            "station": {
-                "id": station["station_id"],
-                "climate_id": station.get("climate_id"),
-                "name": cached.get("station_name") or station["name"],
-                "region_label": station.get("region_label"),
-                "eccc_url": eccc_station_page_url(station["station_id"]),
-            },
-            "period": {"begin": cached.get("period_begin"), "end": cached.get("period_end")},
-            "monthly": cached["monthly"],
-            "source": {
-                "title": "Environment Canada — Canadian Climate Normals 1981-2010",
-                "publisher": "Environment and Climate Change Canada (ECCC)",
-                "api": "https://api.weather.gc.ca/collections/climate-normals",
-            },
-        }
+    # Cache key now includes period so we can hold both 1991-2020 and
+    # 1981-2010 records for the same station side-by-side without churn.
+    # Try periods in preference order (1991-2020 first).
+    chosen = None
+    chosen_period = None
+    is_older_normal = False
+    tried = []
+    for (pb, pe) in CLIMATE_PERIODS:
+        tried.append(f"{pb}-{pe}")
+        cache_key = {"station_id": station["station_id"], "period_begin": pb, "period_end": pe}
+        cached = await db.eccc_normals.find_one(cache_key, {"_id": 0})
+        if cached and cached.get("monthly"):
+            chosen = cached
+            chosen_period = (pb, pe)
+            break
+        # No cache — hit the live API.
+        fetched = await fetch_eccc_normals(station["station_id"], pb, pe)
+        if fetched:
+            await db.eccc_normals.replace_one(
+                cache_key,
+                {**cache_key, **fetched, "ts": now_iso()},
+                upsert=True,
+            )
+            chosen = fetched
+            chosen_period = (pb, pe)
+            break
+        # Persist a negative cache entry for 30 days so we don't hammer the
+        # API on every request when a period is unpublished. Uses a separate
+        # collection with a TTL index (created in indexes bootstrap).
+        try:
+            await db.eccc_normals_negative.replace_one(
+                cache_key,
+                {**cache_key, "ts": now_iso(), "not_found": True},
+                upsert=True,
+            )
+        except Exception:
+            pass
 
-    normals = await fetch_eccc_normals(station["station_id"])
-    if not normals:
+    # No period returned any data at all — station has no published normals.
+    if not chosen:
         return {
             "community": name,
             "region": region,
@@ -7590,30 +7653,44 @@ async def community_climate_normals(slug: str):
                 "eccc_url": eccc_station_page_url(station["station_id"]),
                 "search_url": eccc_normals_search_url(name),
             },
-            "note": "Live climate normals could not be fetched from Environment Canada at this time.",
+            "periods_tried": tried,
+            "note": f"Neither 1991–2020 nor 1981–2010 Climate Normals are published for {station['name']} via Environment Canada's MSC API at this time.",
         }
 
-    # Persist forever
-    await db.eccc_normals.replace_one(
-        {"station_id": station["station_id"]},
-        {"station_id": station["station_id"], **normals, "ts": now_iso()},
-        upsert=True,
-    )
+    is_older_normal = (chosen_period != (1991, 2020))
+    _note_1991_2020_unavailable = None
+    if is_older_normal:
+        _note_1991_2020_unavailable = (
+            f"1991–2020 Climate Normals are not yet published for "
+            f"{chosen.get('station_name') or station['name']}. The 30-year "
+            "normals shown are from the older 1981–2010 reference period."
+        )
+
     return {
         "community": name,
         "region": region,
         "available": True,
+        "is_older_normal": is_older_normal,
+        "note_1991_2020_unavailable": _note_1991_2020_unavailable,
         "station": {
             "id": station["station_id"],
             "climate_id": station.get("climate_id"),
-            "name": normals["station_name"],
+            "name": chosen.get("station_name") or station["name"],
             "region_label": station.get("region_label"),
             "eccc_url": eccc_station_page_url(station["station_id"]),
         },
-        "period": {"begin": normals["period_begin"], "end": normals["period_end"]},
-        "monthly": normals["monthly"],
+        "period": {
+            "begin": chosen.get("period_begin"),
+            "end": chosen.get("period_end"),
+            "label": f"{chosen_period[0]}\u2013{chosen_period[1]}",
+            "is_current_wmo_reference": (chosen_period == (1991, 2020)),
+        },
+        "monthly": chosen["monthly"],
         "source": {
-            "title": "Environment Canada — Canadian Climate Normals 1981-2010",
+            "title": (
+                f"Environment Canada — Canadian Climate Normals "
+                f"{chosen_period[0]}\u2013{chosen_period[1]}"
+            ),
             "publisher": "Environment and Climate Change Canada (ECCC)",
             "api": "https://api.weather.gc.ca/collections/climate-normals",
         },

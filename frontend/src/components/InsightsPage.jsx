@@ -9,8 +9,21 @@ import React from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { INSIGHTS_CATALOG } from "../data/insightsCatalog";
+import { AnswerFirstMeta } from "../utils/answerFirst";
 
 const SITE = "https://eztofind.ca";
+
+// Curated per-slug "single official source" map for the insight pages
+// that carry factual thresholds / dollar amounts. Any slug not listed
+// here falls back to no source badge (safer than pointing to a generic
+// gov.bc.ca home page). Update when a new hard-number page is added.
+const INSIGHT_OFFICIAL_SOURCES = {
+  "cost-of-living-maple-ridge-vs-langley": { title: "BC Consumer Price Index — Statistics Canada Table 18-10-0004-01", url: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401", publisher: "Statistics Canada" },
+  "cost-of-living-maple-ridge-vs-abbotsford": { title: "BC Consumer Price Index — Statistics Canada Table 18-10-0004-01", url: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401", publisher: "Statistics Canada" },
+  "cost-of-living-white-rock-vs-south-surrey": { title: "BC Consumer Price Index — Statistics Canada Table 18-10-0004-01", url: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401", publisher: "Statistics Canada" },
+  "property-transfer-tax-first-time-buyer": { title: "First Time Home Buyers' Program — gov.bc.ca", url: "https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax/exemptions/first-time-home-buyers", publisher: "Province of British Columbia" },
+  "foreign-buyer-ban-canada-2027": { title: "Prohibition on the Purchase of Residential Property by Non-Canadians Act", url: "https://laws-lois.justice.gc.ca/eng/acts/P-25.2/", publisher: "Government of Canada" },
+};
 
 export default function InsightsPage() {
   const { slug } = useParams();
@@ -57,14 +70,22 @@ export default function InsightsPage() {
         {faqSchema && <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>}
       </Helmet>
       <div className="container-x" style={{ maxWidth: 900 }}>
-        <div style={{ marginBottom: "1.75rem" }}>
+        <div style={{ marginBottom: "1rem" }}>
           <div className="eyebrow">{item.eyebrow}</div>
           <h1 className="section-title" style={{ margin: "0.35rem 0 0.4rem" }}>{item.title}</h1>
           <p className="section-sub" style={{ marginTop: 4 }}>{item.subtitle}</p>
         </div>
-        <p style={{ fontFamily: "Inter,sans-serif", fontSize: "1.02rem", lineHeight: 1.7, color: "var(--ink)", marginBottom: "1.5rem" }}>
+        {/* Task 6 answer-first (Feb 2026): intro paragraph is the factual
+            answer, followed by the As-of / single-official-source meta row.
+            Site-wide disclaimer stays at the bottom of the page. */}
+        <p style={{ fontFamily: "Inter,sans-serif", fontSize: "1.02rem", lineHeight: 1.7, color: "var(--ink)", marginBottom: "0.5rem" }}>
           {item.intro}
         </p>
+        <AnswerFirstMeta
+          dateModified={item.dateModified || schema.dateModified}
+          source={INSIGHT_OFFICIAL_SOURCES[slug] || null}
+          testId="insights-meta"
+        />
         {item.kind === "comparison" && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>

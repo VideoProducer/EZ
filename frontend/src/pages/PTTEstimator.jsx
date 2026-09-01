@@ -16,6 +16,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { IdentityLine } from "../components/IdentityLine";
+import { AnswerFirstMeta } from "../utils/answerFirst";
 
 // General PTT (identical schedule to BCBuyerCostCalculator for consistency).
 const computePTT = (price) => {
@@ -92,9 +93,18 @@ export default function PTTEstimator() {
         <IdentityLine practice="REALTOR® · Educational calculator (not tax advice)" size="md" testId="ptt-identity"/>
         <div className="eyebrow">Free BC calculator</div>
         <h1 className="section-title">BC Property Transfer Tax Calculator (2026)</h1>
-        <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "1.25rem" }}>
+        <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "0.6rem" }}>
           Estimate your <strong>Property Transfer Tax</strong> for any BC purchase, plus <Link to="/glossary/first-time-home-buyers-program" style={{ color: "var(--brand-blue)" }}>First-Time Home Buyer</Link> and <Link to="/glossary/newly-built-home-exemption" style={{ color: "var(--brand-blue)" }}>Newly Built Home</Link> exemptions. All math runs in your browser — nothing is stored or sent to Doug.
         </p>
+        {/* Task 6 answer-first (Feb 2026) — single As-of + one official
+            source right below the answer paragraph. Detailed compliance
+            strip (FTHB residency rules, foreign-buyer regions, disclaimer)
+            follows the calculator UI instead of repeating per row. */}
+        <AnswerFirstMeta
+          dateModified="2026-02-06"
+          source={{ title: "Property Transfer Tax Act — gov.bc.ca", url: "https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax", publisher: "Province of British Columbia" }}
+          testId="ptt-meta"
+        />
 
         <div className="paper" style={{ padding: "1.25rem" }}>
           <div className="field">

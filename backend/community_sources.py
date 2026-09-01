@@ -54,26 +54,31 @@ def get_community_sources(name: str, region: str) -> list:
 
 
 def get_weather_sources(name: str, region: str) -> list:
-    """Sources that back the *climate/weather* section (climate normals, historical data)."""
+    """Sources that back the *climate/weather* section (climate normals, historical data).
+
+    Task 7 (Feb 2026): 1991\u20132020 is now the current WMO 30-year reference
+    period; list it first. 1981\u20132010 is retained as a labelled older-period
+    reference — needed until ECCC finishes backfilling 1991\u20132020 into the
+    MSC GeoMet API for every BC station."""
     n = _q(name)
     return [
         {
-            "title": f"Environment Canada — Historical Climate Data ({name} area)",
-            "url": f"https://climate.weather.gc.ca/historical_data/search_historic_data_e.html?searchType=stnName&timeframe=1&txtStationName={n}&searchMethod=contains&province=BC&provBut=Search",
-            "publisher": "Environment and Climate Change Canada (ECCC)",
-        },
-        {
-            "title": f"Environment Canada — Canadian Climate Normals 1981–2010 ({name} area)",
-            "url": f"https://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?searchType=stnName&txtStationName={n}&searchMethod=contains&province=BC&provBut=Search",
-            "publisher": "Environment and Climate Change Canada (ECCC)",
-        },
-        {
-            "title": f"Environment Canada — Canadian Climate Normals 1991–2020 ({name} area)",
+            "title": f"Environment Canada \u2014 Canadian Climate Normals 1991\u20132020 ({name} area)",
             "url": f"https://climate.weather.gc.ca/climate_normals/results_1991_2020_e.html?searchType=stnName&txtStationName={n}&searchMethod=contains&province=BC&provBut=Search",
             "publisher": "Environment and Climate Change Canada (ECCC)",
         },
         {
-            "title": "Environment Canada — Public Weather Alerts for BC",
+            "title": f"Environment Canada \u2014 Historical Climate Data ({name} area)",
+            "url": f"https://climate.weather.gc.ca/historical_data/search_historic_data_e.html?searchType=stnName&timeframe=1&txtStationName={n}&searchMethod=contains&province=BC&provBut=Search",
+            "publisher": "Environment and Climate Change Canada (ECCC)",
+        },
+        {
+            "title": f"Environment Canada \u2014 Canadian Climate Normals 1981\u20132010 ({name} area, older period reference)",
+            "url": f"https://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?searchType=stnName&txtStationName={n}&searchMethod=contains&province=BC&provBut=Search",
+            "publisher": "Environment and Climate Change Canada (ECCC)",
+        },
+        {
+            "title": "Environment Canada \u2014 Public Weather Alerts for BC",
             "url": "https://weather.gc.ca/warnings/index_e.html?prov=bc",
             "publisher": "Environment and Climate Change Canada (ECCC)",
         },

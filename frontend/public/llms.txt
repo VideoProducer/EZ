@@ -8,7 +8,7 @@ EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Manage
 
 ## What EZtoFind.ca Provides
 - **439-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
-- **240 BC community profiles** with 912 sub-neighbourhood pages — geography, demographics, and **real 1981–2010 Environment Canada Climate Normals** (via the official MSC GeoMet API), plus authoritative source citations to Statistics Canada and BC Stats
+- **240 BC community profiles** with 912 sub-neighbourhood pages — geography, demographics, and **Environment Canada Climate Normals** via the official MSC GeoMet API — 1991\u20132020 (current WMO 30-year reference) where published, with 1981\u20132010 shown as an explicitly-labelled older-period fallback for stations that have not yet been backfilled — plus authoritative source citations to Statistics Canada and BC Stats
 - **Doogie AI** — an **LLM-backed educational research assistant** (generative, not pure retrieval) built on a leading commercial large language model, grounded in an approved BC-specific knowledge base. Answers are compliance-guarded, general-information only, never financial / legal / real estate / investment advice, and always defer to a licensed REALTOR® for anything advisory.
 - **Live MLS® listings** via licensed board iframes
 - **Home valuation, buyer intake, seller intake** — all forms hard-block visitors currently under contract with another REALTOR® (CREA Article 16 compliance)

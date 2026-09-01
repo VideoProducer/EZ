@@ -103,6 +103,80 @@ export const KeyPointsBlock = ({ points, testId = "aeo-key-points" }) => {
   );
 };
 
+// <AnswerFirstMeta /> — compact one-line meta row rendered directly under
+// the TL;DR answer on every glossary term, insight, and rate page. Per Doug's
+// Feb 2026 AEO spec: every answer must be followed by a machine-readable
+// "As of" date + a SINGLE official source link so LLMs (and readers) can
+// verify the answer against primary authority without scrolling.
+//
+// Ordering rule (locked): H1 → answer → this meta row → disclaimer →
+// author box → FAQs/body. The disclaimer NEVER precedes the answer.
+//
+// Props:
+//   dateModified  ISO date string of the last reviewed date
+//   source        { title, url, publisher? } — single most authoritative
+//                 source for this page's answer (typically the governing
+//                 BC statute or CRA / BCFSA / Stats Canada page)
+//   testId        stable data-testid prefix
+export const AnswerFirstMeta = ({ dateModified, source, testId = "aeo-meta" }) => {
+  if (!dateModified && !source) return null;
+  let iso = null;
+  let human = null;
+  try {
+    if (dateModified) {
+      const d = new Date(dateModified);
+      if (!isNaN(d)) {
+        iso = d.toISOString().slice(0, 10);
+        human = d.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
+      }
+    }
+  } catch (_) {}
+  return (
+    <div
+      data-testid={testId}
+      style={{
+        margin: "0.25rem 0 1.25rem",
+        padding: "8px 14px",
+        background: "#F0F4FB",
+        border: "1px solid rgba(15,42,91,0.14)",
+        borderLeft: "3px solid #0F2A5B",
+        borderRadius: 8,
+        fontFamily: "Inter, sans-serif",
+        fontSize: "0.82rem",
+        lineHeight: 1.55,
+        color: "#374151",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "0.35rem 0.85rem",
+        alignItems: "baseline",
+      }}
+    >
+      {iso && (
+        <span data-testid={`${testId}-asof`}>
+          <span style={{ fontWeight: 700, color: "#0F2A5B" }}>As of</span>{" "}
+          <time dateTime={iso} itemProp="dateModified">{human}</time>
+        </span>
+      )}
+      {source && source.url && (
+        <span data-testid={`${testId}-source`}>
+          <span style={{ fontWeight: 700, color: "#0F2A5B" }}>Official source:</span>{" "}
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "var(--brand-blue, #0F5FB5)", fontWeight: 600, textDecoration: "underline" }}
+          >
+            {source.title || source.publisher || source.url}
+          </a>
+          {source.publisher && source.title ? (
+            <span style={{ color: "var(--muted, #6B7280)" }}> · {source.publisher}</span>
+          ) : null}
+        </span>
+      )}
+    </div>
+  );
+};
+
 // <ComplianceStrip/> — mandatory disclosure pill row. Rendered at the
 // bottom of any AEO page (glossary term or community) so that single-page
 // crawlers still capture the five governing bodies.

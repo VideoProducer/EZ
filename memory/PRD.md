@@ -448,3 +448,36 @@ After next deploy, verify on production:
 8. Run PageSpeed Insights → https://pagespeed.web.dev/analysis?url=https%3A%2F%2Feztofind.ca
 9. Google Search Console → resubmit sitemap
 10. Search "Doug LeMaire BCFSA REALTOR" on Perplexity / ChatGPT / Claude to confirm citation graph is being picked up
+
+
+---
+
+### Feb 2026 — 3-Task Compliance / AEO Sprint (Tasks 5-7)
+
+**Task 5 — robots.txt: unblock tools.json for AI agents**
+- Reordered `/app/frontend/public/robots.txt`. Top wildcard `*` group + all 35+ named bot groups (GPTBot, ChatGPT-User, OAI-SearchBot, ClaudeBot, anthropic-ai, PerplexityBot, Perplexity-User, Applebot, DuckAssistBot, cohere-ai, xAI-Bot, Grokbot, Mistral, YouBot, KagiBot, Neevabot, ManusBot, Bingbot, msnbot, AmazonQBot, Amazonbot, FacebookBot, Meta-ExternalAgent, GitHub-Copilot, GitHubCopilotChat, DuckDuckBot, Google-Extended, CCBot, AhrefsBot, AhrefsSiteAudit) now carry explicit `Allow: /api/doogie/tools.json` + `Disallow: /api/listings`.
+- Final `User-agent: *` block places longest-match `Allow:` directives BEFORE `Disallow: /api/` so tools.json + llms.txt + ai.json + ai-plugin.json stay crawlable on Google/Bing spec.
+- **Cloudflare AI Audit → "Managed robots.txt" toggle disabled** on eztofind.ca dashboard. Was overriding origin file with a stock 1.8KB CF-managed version; now origin's 9.7KB file serves correctly (verified: Content Signals column reads "Not set" for eztofind.ca + www.eztofind.ca).
+- Validated with `protego` (Google-spec compliant parser): all AI bots can fetch tools.json/llms.txt/ai.json; `/api/listings`, `/api/listings/*`, `/listing/*` blocked for all crawlers.
+
+**Task 6 — Answer-first ordering + AsOf/Source meta**
+- New reusable helper `AnswerFirstMeta` in `/app/frontend/src/utils/answerFirst.jsx` — renders `As of <time itemProp="dateModified">YYYY-MM-DD</time> · Official source: <link>` bar.
+- Locked order on every glossary term page (all 439 terms via single `GlossaryTerm` component): **H1 → H2 question → TL;DR answer → AsOf+Source → scope-of-licence disclaimer → PublishedByDoug author → statute refs → FAQs → body**. Verified via DOM inspection.
+- `InsightsPage.jsx` restructured with per-slug `INSIGHT_OFFICIAL_SOURCES` map (curated for rate/threshold pages: PTT, Foreign Buyer Ban, cost-of-living comparisons); non-mapped slugs show AsOf-only (no source guessing).
+- `PTTEstimator.jsx` gained a single AsOf+Source line (Property Transfer Tax Act — gov.bc.ca) directly below the intro paragraph. Detailed compliance strip retained at bottom (no per-row repetition).
+- Static snapshot template in `/app/backend/prerender_pages.py` mirrors the SPA order for LLM crawlers (glossary path): H1 → H2 → TL;DR → AsOf+Source → disclaimer → body → FAQs → sources.
+- Advice-flavored phrase sweep (denylist: "you should buy", "good investment", "guaranteed", "will appreciate", etc.) — 5 matches, all safe (BCFSA compliance monitors, client testimonials with attribution, filter comments). No violations.
+- Cookie banner audit: bottom-anchored `position:fixed; bottom:20; zIndex:59; maxWidth:600` — never overlaps H1 or TL;DR on first paint.
+
+**Task 7 — 1991-2020 Climate Normals + dateModified**
+- New backend behavior in `/api/community/{slug}/climate-normals`: tries **1991-2020** first (WMO current 30-year reference); falls back to 1981-2010 ONLY with explicit `is_older_normal: true` + `note_1991_2020_unavailable: "1991-2020 Climate Normals are not yet published for {STATION}"`.
+- Cache key migrated to `(station_id, period_begin, period_end)` compound so both periods co-exist without churn. Legacy `station_id`-only cache records are read once and interpreted as 1981-2010 with older-period label.
+- No nearby-station proxy — `bc_stations.py` does not carry distance/elevation deltas (per user rule).
+- Live SPA `ClimateNormalsTable` shows an `OLDER PERIOD` orange pill + amber `"1991-2020 not yet published"` note-box when serving 1981-2010 fallback.
+- Static snapshot template (`prerender_pages.py`) renders identical treatment for LLM crawlers + new visible `<time>Last reviewed: YYYY-MM-DD</time>` under H1, paired with `Place.dateModified` in JSON-LD.
+- `CommunityPageMockupLive.jsx` (live route) now shows a `Last reviewed: <date>` line directly under the TL;DR. Sourced from `/synopsis` API's new `last_reviewed_at` field.
+- `community_sources.py` reordered so 1991-2020 URL is listed first; 1981-2010 kept as labelled older-period reference.
+- `llms.txt` + `llms-full.txt` climate sentences updated to reference 1991-2020 (current WMO) with 1981-2010 fallback.
+- `/api/community/{slug}/synopsis` returns `last_reviewed_at` so frontend can render visible dateModified.
+- Note: MSC GeoMet API (`api.weather.gc.ca/collections/climate-normals`) currently returns only 1981-2010 for BC stations — ECCC has not yet backfilled 1991-2020 into the API. Fallback path is exercised for every BC station until that changes. Code is future-proof — flip to 1991-2020 automatically as ECCC publishes.
+

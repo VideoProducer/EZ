@@ -602,6 +602,23 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           testId="community-tldr"
         />
 
+        {/* Task 7 (Feb 2026): visible "Last reviewed" stamp — pairs with
+            the JSON-LD dateModified emitted by the SEO block below. When
+            the synopsis endpoint hasn't returned a timestamp yet we
+            fall back to today so crawlers always see a valid <time>. */}
+        {(() => {
+          const _dm = (data.synopsis && (data.synopsis.last_reviewed_at || data.synopsis.updated_at || data.synopsis.reviewed_at))
+            ? String(data.synopsis.last_reviewed_at || data.synopsis.updated_at || data.synopsis.reviewed_at).slice(0, 10)
+            : new Date().toISOString().slice(0, 10);
+          let humanDm = _dm;
+          try { humanDm = new Date(_dm).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" }); } catch (_) {}
+          return (
+            <div data-testid="community-last-reviewed" style={{marginTop:12,fontSize:"0.78rem",color:BRAND.muted,fontStyle:"italic"}}>
+              Last reviewed: <time dateTime={_dm} itemProp="dateModified">{humanDm}</time>
+            </div>
+          );
+        })()}
+
         {/* Term-linked intro paragraph — first-mention glossary chips (Feb 2026) */}
         <div data-testid="community-glossary-intro" style={{marginTop:24,padding:"18px 22px",background:"white",border:"1px solid #E5E7EB",borderRadius:12,fontSize:"0.94rem",lineHeight:1.7,color:BRAND.ink}}>
           <GlossaryProse text={`Buying in ${community} typically involves Property Transfer Tax at closing, a possible First Time Home Buyers' Program exemption for qualifying first-timers, GST New Housing Rebate math on new construction, and — for any strata unit — reviewing a current Form B — Strata Information Certificate before Subject Removal. New builds carry the mandatory 2-5-10 Home Warranty. Rural or acreage parcels around ${community} may sit within the Agricultural Land Reserve, which restricts subdivision and non-farm use. Your monthly payment depends on your Amortization Period and the OSFI B-20 stress test.`}/>

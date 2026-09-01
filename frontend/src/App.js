@@ -12,7 +12,7 @@ axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./utils/glossary";
-import { buildTLDR, TLDRBlock, KeyPointsBlock, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
+import { buildTLDR, TLDRBlock, KeyPointsBlock, AnswerFirstMeta, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
 import { IdentityLine } from "./components/IdentityLine";
 import ConversionStrip from "./components/ConversionStrip";
 import ConversionPageSchema from "./components/ConversionPageSchema";
@@ -753,6 +753,8 @@ const ClimateNormalsTable = ({data, community}) => {
   const m = data.monthly || {};
   const st = data.station || {};
   const period = data.period || {};
+  const isOlder = !!data.is_older_normal;
+  const periodLabel = period.label || `${period.begin}\u2013${period.end}`;
   const rows = [
     {label: "Mean daily temp (°C)",   values: m.mean_temp_c,     digits: 1},
     {label: "Mean daily max (°C)",    values: m.max_temp_c,      digits: 1},
@@ -763,13 +765,21 @@ const ClimateNormalsTable = ({data, community}) => {
   ];
   return (
     <div data-testid="climate-normals-table" style={{fontFamily:"Inter,sans-serif",marginTop:"0.5rem"}}>
-      <div style={{background:"#F0F7FF",border:"1px solid rgba(15,42,91,0.15)",borderLeft:"4px solid var(--brand-green-dark)",padding:"1rem 1.25rem",borderRadius:10,marginBottom:"1rem"}}>
-        <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,color:"var(--brand-navy)"}}>Environment Canada Climate Normals · {period.begin}–{period.end}</div>
+      <div style={{background:"#F0F7FF",border:"1px solid rgba(15,42,91,0.15)",borderLeft:`4px solid ${isOlder ? "#F59E0B" : "var(--brand-green-dark)"}`,padding:"1rem 1.25rem",borderRadius:10,marginBottom:"1rem"}}>
+        <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,color:"var(--brand-navy)"}}>
+          Environment Canada Climate Normals · {periodLabel}
+          {isOlder ? <span data-testid="climate-older-badge" style={{marginLeft:"0.6rem",padding:"1px 8px",background:"#F59E0B",color:"#fff",fontSize:"0.65rem",fontWeight:800,borderRadius:999,letterSpacing:"0.06em"}}>OLDER PERIOD</span> : null}
+        </div>
         <div style={{fontSize:"0.95rem",color:"var(--ink)",marginTop:"0.35rem"}}>
           Nearest official weather station to <strong>{community}</strong>: <strong>{st.name}</strong>{st.region_label ? <span style={{color:"var(--muted)"}}> · {st.region_label}</span> : null}
         </div>
+        {isOlder && data.note_1991_2020_unavailable && (
+          <div data-testid="climate-1991-2020-unavailable" style={{fontSize:"0.82rem",color:"#92400E",marginTop:"0.5rem",background:"#FEF3C7",border:"1px solid #F59E0B",borderRadius:8,padding:"0.55rem 0.75rem",lineHeight:1.55}}>
+            <strong>Note:</strong> {data.note_1991_2020_unavailable} 1991\u20132020 is the current WMO 30-year reference period; these older normals are shown for reference only until Environment Canada publishes 1991\u20132020 for this station.
+          </div>
+        )}
         <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.35rem"}}>
-          Source: <a href={st.eccc_url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>Environment and Climate Change Canada — Canadian Climate Normals ↗</a>
+          Source: <a href={st.eccc_url} target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)",fontWeight:600}}>Environment and Climate Change Canada — Canadian Climate Normals {periodLabel} ↗</a>
         </div>
       </div>
       <div style={{overflowX:"auto",border:"1px solid rgba(15,42,91,0.1)",borderRadius:10}}>
@@ -793,7 +803,7 @@ const ClimateNormalsTable = ({data, community}) => {
         </table>
       </div>
       <div style={{fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",lineHeight:1.5}}>
-        Values are 30-year averages calculated by Environment and Climate Change Canada from observations at station <strong>{st.name}</strong> (Climate ID {st.climate_id}) for the period {period.begin}–{period.end}. These are historical climate normals — not a current-day forecast.
+        Values are 30-year averages calculated by Environment and Climate Change Canada from observations at station <strong>{st.name}</strong> (Climate ID {st.climate_id}) for the {periodLabel} reference period. These are historical climate normals — not a current-day forecast.
       </div>
     </div>
   );
@@ -6145,12 +6155,38 @@ const GlossaryTerm = () => {
     <div className="eyebrow" style={{marginTop:"1rem"}}>{t.category}</div>
     <h1 className="section-title" itemProp="headline">{t.term}</h1>
 
-    <AuthorBlock/>
+    {/* AEO answer-first pattern (Feb 2026, Task 6 spec) — natural-language
+        question heading + TL;DR answer + machine-readable As-of / official
+        source meta row are all rendered BEFORE any disclaimer or author
+        box so LLM overview engines (Google SGE, Perplexity, ChatGPT web,
+        Claude) extract the direct answer without pulling advice-flavored
+        boilerplate into their summary. The scope-of-licence disclaimer
+        and PublishedByDoug author box follow the meta row so a curious
+        reader (or crawler) can still verify authority + limits after
+        seeing the fact. */}
+    <h2 style={{fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontWeight:600,marginTop:"0.5rem",marginBottom:"0.75rem",textTransform:"none",letterSpacing:0}} data-testid="glossary-answer-question">
+      What is {t.term} in British Columbia?
+    </h2>
 
-    {/* Category-based scope-of-licence pill — appears on any glossary term
-        whose subject matter falls outside Doug's REALTOR® licence. Repeats
-        the site-level BCFSA disclaimer at the point of consumption in case
-        the term is landed on directly from Google or an LLM citation. */}
+    {/* Phase 7 answer-first — TL;DR (≤65 words, itemProp="abstract") */}
+    <TLDRBlock text={buildTLDR(t.definition)} testId="glossary-tldr"/>
+
+    {/* Task 6 (Feb 2026) — visible "As of" + ONE official source directly
+        below the answer. Source picks the first authoritative URL from
+        t.sources (BC statute / CRA / BCFSA / Stats Canada / municipal). */}
+    <AnswerFirstMeta
+      dateModified={t.last_curated_at || t.updated_at || t.reviewed_at}
+      source={(t.sources && t.sources.length > 0) ? {
+        title: t.sources[0].title || t.sources[0].name,
+        url: t.sources[0].url,
+        publisher: t.sources[0].publisher,
+      } : null}
+      testId="glossary-meta"
+    />
+
+    {/* Category-based scope-of-licence pill — placed AFTER the answer per
+        Task 6 spec so the disclaimer never precedes the fact. Repeats
+        the site-level BCFSA disclaimer at the point of consumption. */}
     {(() => {
       const cat = (t.category || "").toLowerCase();
       const financing = /financ|mortgage/.test(cat);
@@ -6171,22 +6207,13 @@ const GlossaryTerm = () => {
       );
     })()}
 
-    {/* AEO answer-first pattern — natural-language question heading that
-        matches how users query LLMs ("What is X in BC?"), followed by the
-        definition as the direct answer. The question H2 is rendered as
-        <h2> for semantic weight (crawler/LLM extraction) but styled small
-        so it doesn't visually dominate the term H1. Marked as the
-        FAQPage.mainEntity Question via microdata for redundancy alongside
-        the JSON-LD FAQPage below. */}
-    <h2 style={{fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontWeight:600,marginTop:"0.5rem",marginBottom:"0.75rem",textTransform:"none",letterSpacing:0}} data-testid="glossary-answer-question">
-      What is {t.term} in British Columbia?
-    </h2>
+    {/* Author / Last-reviewed box — moved BELOW answer + disclaimer per
+        Task 6 spec. Still renders full E-E-A-T signal (BCFSA licence #,
+        headshot, last-reviewed date, CIPO copyright, canary) — just no
+        longer competes with the answer for above-the-fold real estate. */}
+    <AuthorBlock/>
 
-    {/* Phase 7 answer-first upgrade — TL;DR (≤65 words, itemProp="abstract")
-        + Key Points bullets derived from FAQ question titles. LLM
-        overview engines (Google SGE, Perplexity, ChatGPT web) preferentially
-        extract these blocks for the "quick answer" surface. */}
-    <TLDRBlock text={buildTLDR(t.definition)} testId="glossary-tldr"/>
+    {/* Phase 7 answer-first — Key Points bullets derived from FAQ titles */}
     {(t.faqs && t.faqs.length > 0) && (
       <KeyPointsBlock
         points={t.faqs.slice(0, 5).map(f => f.q)}
@@ -9085,7 +9112,7 @@ const CommunityPage = () => {
     "mainEntity":[
       {"@type":"Question","name":_v(0,[`What is it like to live in ${found}, BC?`,`What's ${found}, British Columbia known for?`,`Tell me about the ${found}, BC neighbourhood.`]),"acceptedAnswer":{"@type":"Answer","text":(syn.synopsis || "").substring(0,480),"citation":{"@type":"CreativeWork","name":`${found} community profile — EZtoFind.ca`,"url":`https://eztofind.ca/community/${slug}`}}},
       {"@type":"Question","name":_v(1,[`Where is ${found} located in British Columbia?`,`Which part of BC is ${found} in?`,`How do I find ${found} on a BC map?`]),"acceptedAnswer":{"@type":"Answer","text":_v(101,[`${found} sits within ${region || "British Columbia"}. The EZtoFind.ca ${found} page has an interactive municipal-boundary map, Environment Canada climate normals, and every active MLS® listing in the area.`,`You'll find ${found} as part of the ${region || "BC"} region. Visit the ${found} community page on EZtoFind.ca for a boundary map, climate summary, and live listings from the CREA DDF® feed.`,`${found} is one of the communities that make up ${region || "British Columbia"}. Our page for ${found} includes an interactive map, monthly climate normals via Environment Canada, and the current active-listing count.`]),"citation":{"@type":"CreativeWork","name":"Statistics Canada — Census Profile","url":"https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm?Lang=E"}}},
-      {"@type":"Question","name":_v(2,[`What is the weather and climate like in ${found}, BC?`,`How's the weather in ${found}, British Columbia year-round?`,`What are the climate normals for ${found}, BC?`]),"acceptedAnswer":{"@type":"Answer","text":(climate?.available && climate.summary_text) ? climate.summary_text.substring(0,480) : (wx?.weather || _v(102,[`Climate normals for ${found}, BC are published by Environment and Climate Change Canada based on the 1981-2010 reference period. The EZtoFind.ca ${found} community page shows the monthly averages inline.`,`Environment and Climate Change Canada (ECCC) publishes the official climate normals for ${found} — temperature, precipitation, and snowfall averages by month. See them on the ${found} EZtoFind page.`,`${found}'s climate summary — including the coldest and warmest months, annual rainfall, and any measurable snow — comes directly from ECCC's Canadian Climate Normals dataset. The ${found} community page renders it as a monthly chart.`])).substring(0,480),"citation":{"@type":"CreativeWork","name":"Environment and Climate Change Canada — Canadian Climate Normals 1981-2010","url":"https://climate.weather.gc.ca/climate_normals/"}}},
+      {"@type":"Question","name":_v(2,[`What is the weather and climate like in ${found}, BC?`,`How's the weather in ${found}, British Columbia year-round?`,`What are the climate normals for ${found}, BC?`]),"acceptedAnswer":{"@type":"Answer","text":(climate?.available && climate.summary_text) ? climate.summary_text.substring(0,480) : (wx?.weather || _v(102,[`Climate normals for ${found}, BC are published by Environment and Climate Change Canada. The current WMO 30-year reference period is 1991\u20132020; where ECCC has not yet published 1991\u20132020 for the assigned station the ${found} community page shows the older 1981\u20132010 normals with an explicit label. Monthly averages appear inline on the page.`,`Environment and Climate Change Canada (ECCC) publishes the official climate normals for ${found} \u2014 temperature, precipitation, and snowfall averages by month. Where the 1991\u20132020 dataset is available it is used as the current 30-year reference; otherwise 1981\u20132010 is shown labelled as an older period. See the ${found} EZtoFind page.`,`${found}'s climate summary \u2014 including the coldest and warmest months, annual rainfall, and any measurable snow \u2014 comes directly from ECCC's Canadian Climate Normals. The ${found} community page renders it as a monthly chart and marks the exact 30-year period used.`])).substring(0,480),"citation":{"@type":"CreativeWork","name":"Environment and Climate Change Canada \u2014 Canadian Climate Normals (1991\u20132020, with 1981\u20132010 fallback)","url":"https://climate.weather.gc.ca/climate_normals/"}}},
       {"@type":"Question","name":_v(3,[`Can I buy or sell a home in ${found}, BC?`,`Does Doug LeMaire, REALTOR® cover ${found}?`,`Who represents buyers and sellers in ${found}, BC?`]),"acceptedAnswer":{"@type":"Answer","text": isFocus ? _v(103,[`Yes — ${found} sits within Doug LeMaire's primary practice area (Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor). Doug is a BCFSA-licensed REALTOR® with Fraser Property Management Realty Services Ltd. and represents both buyers and sellers directly.`,`Absolutely. ${found} is in Doug LeMaire, REALTOR®'s core service area. Doug holds an active BCFSA licence with Fraser Property Management Realty Services and takes on buyer and seller representation directly across ${region}.`,`${found} is one of Doug LeMaire's primary practice communities. As a BCFSA-licensed REALTOR® at Fraser Property Management Realty Services Ltd., Doug can represent buyers, sellers, or both.`]) : _v(203,[`${found} is outside Doug's primary practice area, but EZtoFind.ca operates a province-wide referral network. Submit a request at https://eztofind.ca/referral-request and we'll connect you with a licensed REALTOR® who works ${found}.`,`Doug LeMaire doesn't cover ${found} directly — his direct-representation region is Greater Vancouver + Fraser Valley + Sea-to-Sky. For ${found}, use https://eztofind.ca/referral-request and we'll hand you off to a local BC REALTOR®.`,`For ${found}, our referral network is the right route — https://eztofind.ca/referral-request pairs you with a licensed REALTOR® who lives and works in the area. Doug's own practice is focused on Greater Vancouver, Fraser Valley, and Sea-to-Sky.`]),"citation":{"@type":"CreativeWork","name":"BCFSA REALTOR® Registrant Search","url":"https://www.bcfsa.ca/public-resources/registrant-search"}}},
       {"@type":"Question","name":_v(4,[`How do I see live MLS® listings in ${found}, BC?`,`Where can I browse current ${found} homes for sale?`,`Are ${found}, BC listings updated in real time?`]),"acceptedAnswer":{"@type":"Answer","text":_v(104,[`Active listings in ${found} appear live on eztofind.ca — data flows in through the CREA DDF® feed and refreshes every four hours. Each listing shows price, beds, baths, floor area, and photos as supplied by the listing REALTOR®.`,`Head to the ${found} community page or use the postal-code / address search — every visible listing came from CREA's Data Distribution Facility with a maximum four-hour delay, complete with price, room counts, square footage, and MLS® photos.`,`The ${found} MLS® feed on EZtoFind.ca updates 6 times a day via the CREA DDF® pipeline. You'll see the same price, bed/bath count, square footage, and photos the listing REALTOR® submitted to the source board.`]),"citation":{"@type":"CreativeWork","name":"CREA Data Distribution Facility (DDF®)","url":"https://www.crea.ca/ddf/"}}},
       {"@type":"Question","name":_v(5,[`What is the average home price in ${found}, BC?`,`How much do homes cost in ${found}, British Columbia?`,`What's the median list price in ${found} right now?`]),"acceptedAnswer":{"@type":"Answer","text":_v(105,[`Median list prices in ${found} update live from the CREA DDF® feed. Open the ${found} community page for the current median, active-listing count, and price-per-square-foot band.`,`${found}'s current median list price, listing count, and $/sqft range are computed on-the-fly from the DDF® feed. The community page shows all three figures with the timestamp of the last refresh.`,`You can see ${found}'s median asking price today on the community page — it's derived directly from CREA DDF® data and refreshes every four hours as new listings sync from the source MLS® board.`]),"citation":{"@type":"CreativeWork","name":"BC Assessment — Property Values","url":"https://www.bcassessment.ca"}}},
@@ -9212,7 +9239,7 @@ const CommunityPage = () => {
         </p>
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>All content on EZtoFind.ca, including Doogie's responses, the Glossary, Terms, FAQ's, community pages, weather, mortgage calculator, property transfer tax calculator is general information provided for educational purposes and is not a substitute for professional guidance tailored to your situation.</div>
         {syn.sources && syn.sources.length>0 && <SourcesBlock title="Authoritative Sources — Community Data" intro={`Verify official demographic, economic, and municipal information for ${found} directly with the governing authority:`} sources={syn.sources} testid="community-sources"/>}
-        <PublishedByDoug compact/>
+        <PublishedByDoug compact lastReviewed={syn.last_reviewed_at || syn.updated_at || syn.reviewed_at || syn.published_at}/>
       </>}
       {!loading && syn?.note && <div className="notice" style={{marginTop:"1rem"}}>{syn.note}</div>}
 
@@ -9227,7 +9254,7 @@ const CommunityPage = () => {
         <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.5rem",fontStyle:"italic"}}>AI-drafted climate summary. For authoritative data, see the Environment Canada sources below.</div>
       </>}
       {(climate?.available || (!loadingWx && wx?.weather)) && wx?.sources && wx.sources.length>0 && <SourcesBlock title="Authoritative Sources — Climate & Weather" intro={`Verify current weather, alerts, and historical climate records with Environment and Climate Change Canada:`} sources={wx.sources} testid="weather-sources"/>}
-      {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact/>}
+      {(climate?.available || (!loadingWx && wx?.weather)) && <PublishedByDoug compact lastReviewed={syn?.last_reviewed_at || syn?.updated_at || syn?.reviewed_at || syn?.published_at}/>}
       {!loadingWx && wx?.note && !climate?.available && <div className="notice" style={{marginTop:"1rem"}}>{wx.note}</div>}
       <CommunityLayersCard slug={slug}/>
       <CommunityDemographicsCard slug={slug}/>

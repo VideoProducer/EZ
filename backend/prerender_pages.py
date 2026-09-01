@@ -260,11 +260,53 @@ async def render_glossary(db):
                 related_html += f'<li><a href="/glossary/{esc(sib["slug"])}" style="color:#0EA5E9;font-weight:600;text-decoration:none">{esc(sib["term"])} →</a></li>'
             related_html += '</ul></div>'
 
+        # Task 6 answer-first (Feb 2026) — build 40-80 word TL;DR trimmed
+        # at the nearest sentence boundary. Renders directly under H1 so
+        # non-JS LLM crawlers extract the direct answer before any
+        # disclaimer or author box.
+        def _build_tldr(text, max_words=65):
+            if not text or not isinstance(text, str):
+                return ""
+            clean = " ".join(text.split())
+            words = clean.split(" ")
+            if len(words) <= max_words:
+                return clean
+            candidate = " ".join(words[:max_words])
+            # walk back to nearest sentence boundary
+            best_end = -1
+            for terminator in [". ", "? ", "! "]:
+                idx = candidate.rfind(terminator)
+                if idx > best_end:
+                    best_end = idx
+            if best_end > len(candidate) * 0.6:
+                return candidate[:best_end + 1]
+            return candidate + "…"
+        tldr = _build_tldr(defn)
+        primary_source = srcs[0] if srcs else None
+        source_html = ""
+        if primary_source and primary_source.get("url"):
+            _src_title = esc(primary_source.get("title") or primary_source.get("name") or primary_source["url"])
+            _src_pub = esc(primary_source.get("publisher", ""))
+            source_html = (
+                ' <span style="margin-left:0.65rem"><b>Official source:</b> '
+                f'<a href="{esc(primary_source["url"])}" rel="noopener noreferrer" '
+                'style="color:#0F5FB5;font-weight:600">' + _src_title + '</a>'
+                + (f' <span style="color:#6B7280">· {_src_pub}</span>' if _src_pub else '')
+                + '</span>'
+            )
+
         body = f"""
 <div class="eyebrow">{esc(cat)}</div>
 <h1>{esc(term)}</h1>
-<p style="font-size:0.82rem;color:#6B7280;margin:0.25rem 0 0.75rem;">Last reviewed: <time datetime="{date_modified}">{date_modified}</time></p>
-<p style="font-size:1.08rem;line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(defn)}</p>
+<h2 style="font-size:1rem;color:#6B7280;font-weight:600;margin:0.35rem 0 0.6rem">What is {esc(term)} in British Columbia?</h2>
+<aside data-tldr="true" itemprop="abstract" style="margin:0.5rem 0 0.85rem;padding:14px 18px;background:#FFF7E6;border-left:4px solid #F5A623;border-radius:10px;font-size:1rem;line-height:1.65;color:#0F2A5B">
+<span style="display:inline-block;font-size:0.7rem;letter-spacing:0.12em;font-weight:800;color:#8A6D2E;margin-right:8px">TL;DR ·</span>{esc(tldr)}
+</aside>
+<div style="margin:0.25rem 0 1.15rem;padding:8px 14px;background:#F0F4FB;border:1px solid rgba(15,42,91,0.14);border-left:3px solid #0F2A5B;border-radius:8px;font-size:0.82rem;color:#374151">
+<b>As of</b> <time datetime="{date_modified}">{date_modified}</time>{source_html}
+</div>
+<p style="font-size:0.78rem;color:#6B7280;margin:0.25rem 0 1rem;font-style:italic">General information only — not legal, tax, financial, or real-estate advice. Verify with a licensed BC professional before acting.</p>
+<p style="font-size:1.05rem;line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(defn)}</p>
 {faq_html}
 {src_html}
 {related_html}
@@ -313,13 +355,45 @@ async def render_communities(db):
             wx = await db.community_weather.find_one({"slug": slug}, {"_id":0})
             weather_text = wx.get("weather", "") if wx and wx.get("approved") else ""
 
-            # ECCC climate normals — cached per station
+            # ECCC climate normals — cached per (station, period). Task 7
+            # (Feb 2026): prefer 1991-2020 (current WMO reference); fall
+            # back to 1981-2010 only with an explicit "older period" label.
             station = get_station_for_community(name, region)
             climate = None
+            climate_period = None
+            climate_is_older = False
             if station:
-                cached = await db.eccc_normals.find_one({"station_id": station["station_id"]}, {"_id":0})
-                if cached and cached.get("monthly"):
-                    climate = {"station": station, "monthly": cached["monthly"], "period_begin": cached.get("period_begin"), "period_end": cached.get("period_end"), "station_name_ecc": cached.get("station_name")}
+                for (pb, pe) in [(1991, 2020), (1981, 2010)]:
+                    cached = await db.eccc_normals.find_one(
+                        {"station_id": station["station_id"], "period_begin": pb, "period_end": pe},
+                        {"_id": 0},
+                    )
+                    if cached and cached.get("monthly"):
+                        climate = {
+                            "station": station,
+                            "monthly": cached["monthly"],
+                            "period_begin": cached.get("period_begin", pb),
+                            "period_end": cached.get("period_end", pe),
+                            "station_name_ecc": cached.get("station_name"),
+                        }
+                        climate_period = (pb, pe)
+                        climate_is_older = (climate_period != (1991, 2020))
+                        break
+                if climate is None:
+                    # Legacy cache (pre-Task-7 schema) — station_id only.
+                    # Interpret as 1981-2010 (that's all the API served
+                    # historically) and mark as older-period fallback.
+                    cached = await db.eccc_normals.find_one({"station_id": station["station_id"]}, {"_id": 0})
+                    if cached and cached.get("monthly") and not cached.get("period_begin_labelled"):
+                        climate = {
+                            "station": station,
+                            "monthly": cached["monthly"],
+                            "period_begin": cached.get("period_begin") or "1981",
+                            "period_end": cached.get("period_end") or "2010",
+                            "station_name_ecc": cached.get("station_name"),
+                        }
+                        climate_period = (1981, 2010)
+                        climate_is_older = True
 
             # Long-tail meta description: leads with community + region,
             # names concrete content types visitors search for (climate,
@@ -336,12 +410,29 @@ async def render_communities(db):
                 )[:160]
 
             # Schema — Place + BreadcrumbList (Home > Communities > <region> > <name>)
+            # Task 7 (Feb 2026): every community page carries an explicit
+            # dateModified so LLMs + Google can rank freshness signals.
+            # Use synopsis approved_at where available, else community
+            # weather approved_at, else today.
+            _community_dm = None
+            try:
+                if syn and syn.get("approved_at"):
+                    _community_dm = str(syn["approved_at"])[:10]
+                elif syn and syn.get("last_reviewed_at"):
+                    _community_dm = str(syn["last_reviewed_at"])[:10]
+                elif wx and wx.get("approved_at"):
+                    _community_dm = str(wx["approved_at"])[:10]
+            except Exception:
+                _community_dm = None
+            if not _community_dm:
+                _community_dm = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             place_schema = {
                 "@context":"https://schema.org","@type":"Place",
                 "name": f"{name}, British Columbia",
                 "containedInPlace":{"@type":"AdministrativeArea","name":region},
                 "description": desc,
                 "url": f"{SITE}/community/{slug}",
+                "dateModified": _community_dm,
             }
             region_slug = re.sub(r'[^a-z0-9]+', '-', region.lower()).strip('-')
             breadcrumb_schema = {
@@ -360,6 +451,11 @@ async def render_communities(db):
 
             # Body
             body_html = f'<div class="eyebrow">{esc(region)}</div><h1>{esc(name)}, BC</h1>'
+            body_html += (
+                f'<p style="font-size:0.78rem;color:#6B7280;margin:0.35rem 0 1rem;font-style:italic" data-testid="community-last-reviewed">'
+                f'Last reviewed: <time datetime="{_community_dm}">{_community_dm}</time>'
+                f'</p>'
+            )
             if synopsis:
                 body_html += f'<h2>About {esc(name)}</h2><div style="white-space:pre-wrap;line-height:1.75">{esc(synopsis)}</div>'
 
@@ -378,11 +474,25 @@ async def render_communities(db):
                     ("Total snowfall (cm)",  m.get("snowfall_cm") or [], 1),
                 ]
                 station_name = climate.get("station_name_ecc") or station["name"]
+                period_label = f'{climate["period_begin"]}\u2013{climate["period_end"]}'
+                border_col = "#F59E0B" if climate_is_older else "#16A34A"
+                older_badge = ' <span style="margin-left:0.5rem;padding:1px 8px;background:#F59E0B;color:#fff;font-size:0.65rem;font-weight:800;border-radius:999px;letter-spacing:0.06em">OLDER PERIOD</span>' if climate_is_older else ''
+                older_note = ''
+                if climate_is_older:
+                    older_note = (
+                        f'<div style="font-size:0.82rem;color:#92400E;margin-top:0.5rem;background:#FEF3C7;'
+                        f'border:1px solid #F59E0B;border-radius:8px;padding:0.55rem 0.75rem;line-height:1.55">'
+                        f'<b>Note:</b> 1991\u20132020 Climate Normals are not yet published for {esc(station_name)}. '
+                        f'The 30-year normals shown are from the older 1981\u20132010 reference period. '
+                        f'1991\u20132020 is the current WMO 30-year reference period; these older normals are shown for reference only.'
+                        f'</div>'
+                    )
                 body_html += f'<h2>☀️ Weather &amp; Climate in {esc(name)}</h2>'
-                body_html += f'<div style="background:#F0F7FF;border:1px solid rgba(15,42,91,0.15);border-left:4px solid #16A34A;padding:1rem 1.25rem;border-radius:10px;margin-bottom:1rem">'
-                body_html += f'<div style="font-size:0.78rem;font-weight:700;color:#0F2A5B;letter-spacing:0.08em;text-transform:uppercase">Environment Canada Climate Normals · {climate["period_begin"]}–{climate["period_end"]}</div>'
+                body_html += f'<div style="background:#F0F7FF;border:1px solid rgba(15,42,91,0.15);border-left:4px solid {border_col};padding:1rem 1.25rem;border-radius:10px;margin-bottom:1rem">'
+                body_html += f'<div style="font-size:0.78rem;font-weight:700;color:#0F2A5B;letter-spacing:0.08em;text-transform:uppercase">Environment Canada Climate Normals · {period_label}{older_badge}</div>'
                 body_html += f'<div style="margin-top:0.35rem">Nearest official weather station to <b>{esc(name)}</b>: <b>{esc(station_name)}</b></div>'
-                body_html += f'<div style="margin-top:0.35rem;font-size:0.82rem;color:#6B7280">Source: <a href="{eccc_station_page_url(station["station_id"])}" style="color:#0EA5E9;font-weight:600">Environment and Climate Change Canada — Canadian Climate Normals ↗</a></div>'
+                body_html += older_note
+                body_html += f'<div style="margin-top:0.35rem;font-size:0.82rem;color:#6B7280">Source: <a href="{eccc_station_page_url(station["station_id"])}" style="color:#0EA5E9;font-weight:600">Environment and Climate Change Canada — Canadian Climate Normals {period_label} ↗</a></div>'
                 body_html += '</div>'
                 body_html += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem"><thead><tr style="background:#F5F0E1"><th style="text-align:left;padding:0.5rem">Metric</th>' + "".join(f'<th style="padding:0.5rem;text-align:center">{m_}</th>' for m_ in mo) + '</tr></thead><tbody>'
                 for label, vals, d in rows:

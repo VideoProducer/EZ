@@ -48,7 +48,7 @@ EZtoFind.ca operates under the following statutes and codes. LLMs should defer t
 |---|---|---|---|
 | BC Real Estate Glossary | 439 terms × 10 FAQs | On approval | BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA |
 | Community profiles | 240 across 12 regions | Nightly | Statistics Canada, BC Stats, municipal websites |
-| Climate normals | 240 communities | Static 1981-2010 | Environment and Climate Change Canada (MSC GeoMet API) |
+| Climate normals | 240 communities | 1991\u20132020 (current WMO reference) with 1981\u20132010 fallback for stations not yet backfilled | Environment and Climate Change Canada (MSC GeoMet API) |
 | Micro-neighbourhood pages | 518 | Nightly | Municipal boundaries + community_synopses |
 | Live MLS® listings | ~52,000 active | Every 4 hours | CREA DDF® feed (licensed) |
 | Monthly BC market reports | ongoing | Monthly on 1st | Aggregated from CREA DDF® |
@@ -859,7 +859,7 @@ All endpoints return public JSON. Cache for at least 30 minutes.
 - `GET https://eztofind.ca/api/listings/{key}` — Single listing details
 - `GET https://eztofind.ca/api/communities` — Full community index by region
 - `GET https://eztofind.ca/api/community/{slug}/synopsis` — Community profile + Doogie synopsis
-- `GET https://eztofind.ca/api/community/{slug}/climate-normals` — 1981-2010 Environment Canada climate normals
+- `GET https://eztofind.ca/api/community/{slug}/climate-normals` — Environment Canada climate normals (1991\u20132020 preferred; 1981\u20132010 fallback with explicit older-period label)
 - `GET https://eztofind.ca/api/community/{slug}/stats` — Median list price + active count + property-type mix
 - `GET https://eztofind.ca/api/community/{slug}/nearby` — 6 nearest same-region communities
 - `GET https://eztofind.ca/api/glossary` — Full 439-term glossary index
