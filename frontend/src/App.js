@@ -6214,7 +6214,7 @@ const GlossaryTerm = () => {
 // --- Lead forms ---
 const BuyerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
+  const [f,setF] = useState({full_name:"",email:"",phone:"",areas:[],property_type:"",budget_range:"",timeline:"",financing_status:"",first_time_buyer:false,working_with_realtor:false,preferred_contact:"email",notes:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);   // fires form_start on first field edit
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
@@ -6256,7 +6256,7 @@ const BuyerForm = () => {
         {
           form_route: "/buyer",
           representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
-          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
         }
       );
       await axios.post(`${API}/leads/buyer`, enriched);
@@ -6312,10 +6312,8 @@ const BuyerForm = () => {
       <div className="field"><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/buyer"); }} data-testid="buyer-under-contract"/> {t("buyer.under_contract")}</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="buyer-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
-          form-shortening directive. `dorts_ack` defaults to true in state so
-          the backend audit trail continues to record the acknowledgement, and
-          the DoRTS pamphlet remains served via /legal/bcfsa-disclosure-of-representation.pdf
-          for anyone Doug engages formally. */}
+          form-shortening directive. DoRTS is presented at first substantive
+          contact (before formal representation), not at lead-form stage. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
       <TurnstileWidget/>
@@ -6335,7 +6333,7 @@ const BuyerForm = () => {
 
 const SellerForm = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
+  const [f,setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"",timeline:"",estimated_value:"",currently_listed:false,reason:"",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [started, setStarted] = useState(false);
   const [stepFired, setStepFired] = useState({intent:false,contact:false});
@@ -6363,7 +6361,7 @@ const SellerForm = () => {
         {
           form_route: "/seller",
           representation_eligibility_result: f.currently_listed ? "represented_block" : "eligible",
-          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
         }
       );
       await axios.post(`${API}/leads/seller`, enriched);
@@ -6417,8 +6415,7 @@ const SellerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/seller"); }} data-testid="seller-currently-listed"/> {t("seller.currently_listed")}</label></div>
       {f.currently_listed && <div className="notice" data-testid="seller-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>onFieldEdit({reason:e.target.value})}/></div>
-      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
-          form-shortening directive. `dorts_ack` defaults to true in state. */}
+      {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")}</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
@@ -9455,7 +9452,7 @@ const PttStressTestPanel = () => {
 
 // --- Market Estimate ---
 const Valuation = () => {
-  const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false,dorts_ack:true});
+  const [f, setF] = useState({full_name:"",email:"",phone:"",property_address:"",city:"",property_type:"Detached",timeline:"3-6 months",estimated_value:"Not sure",currently_listed:false,reason:"Just curious about current value",casl_consent:false,pipa_ack:false});
   const [done,setDone]=useState(false); const [err,setErr]=useState("");
   const [showDetails, setShowDetails] = useState(false);   // progressive disclosure — "What the estimate accounts for"
   const [started, setStarted] = useState(false);           // fire form_start on first field interaction
@@ -9508,7 +9505,6 @@ const Valuation = () => {
           consent_status: {
             casl_marketing: !!f.casl_consent,
             pipa_privacy: !!f.pipa_ack,
-            dorts_acknowledged: !!f.dorts_ack,
           },
         }
       );
@@ -9565,8 +9561,7 @@ const Valuation = () => {
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern. Wording preserved verbatim — MB-approved. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
       {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link>.</div>}
-      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
-          form-shortening directive. `dorts_ack` defaults to true in state. */}
+      {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> I acknowledge the Privacy Policy (PIPA).</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
@@ -9609,7 +9604,7 @@ const Valuation = () => {
 // --- Referral Request (out-of-area) ---
 const ReferralRequest = () => {
   const { lang, t, qs, rtl } = useFormLang();
-  const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false,dorts_ack:true});
+  const [f,setF]=useState({full_name:"",email:"",phone:"",areas:[],property_type:"Detached",budget_range:"Not sure",timeline:"3-6 months",financing_status:"Working on it",first_time_buyer:false,working_with_realtor:false,notes:"",casl_consent:false,pipa_ack:false});
   const [city,setCity]=useState("");
   // New per-Feb-2026 operating-system spec: buy vs sell + board if known.
   // Kept as top-level state (not in `f`) so the seller path can post to
@@ -9670,14 +9665,13 @@ const ReferralRequest = () => {
             notes: richNotes,
             casl_consent: !!f.casl_consent,
             pipa_ack: !!f.pipa_ack,
-            dorts_ack: !!f.dorts_ack,
             form_lang: lang,
             turnstile_token: getTurnstileToken(),
           },
           {
             form_route: "/referral-request",
             representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
-            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
           }
         );
       } else {
@@ -9686,7 +9680,7 @@ const ReferralRequest = () => {
           {
             form_route: "/referral-request",
             representation_eligibility_result: f.working_with_realtor ? "represented_block" : "eligible",
-            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack, dorts_acknowledged: !!f.dorts_ack },
+            consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
           }
         );
       }
@@ -9738,8 +9732,7 @@ const ReferralRequest = () => {
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/referral-request"); }} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
-      {/* CASL marketing-consent card + BCFSA DoRTS checkbox removed per Feb 2026
-          form-shortening directive. `dorts_ack` defaults to true in state. */}
+      {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> {t("consent.pipa")}</label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
