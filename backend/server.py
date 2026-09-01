@@ -6728,19 +6728,61 @@ async def community_neighbourhoods(slug: str):
             todo = [it for it in items
                     if it.get("source") in ("curated", "provincial")
                     and it.get("count", 0) == 0]
+
+            # Common BC sub-nhb suffixes/prefixes — dropped when the full
+            # name misses so a local nickname like "Cliff Avenue Estates"
+            # also finds listings tagged only with "Cliff Avenue". Kept
+            # conservative: only strip when the residue is still ≥ 6 chars
+            # AND contains a distinctive token so we don't false-positive
+            # on stopwords like "Heights" or "Ridge".
+            _NHB_STOP_SUFFIXES = {"estates", "estate", "heights", "park", "village",
+                                  "ridge", "manor", "place", "terrace", "court",
+                                  "gardens", "villa", "villas", "meadows"}
+            _NHB_STOP_PREFIXES = {"the", "upper", "lower", "north", "south",
+                                  "east", "west", "old", "new"}
+
+            def _nhb_variants(nm: str) -> list[str]:
+                """Return the full name + reasonable trimmed variants."""
+                out = [nm]
+                toks = [t for t in re.split(r"\s+", nm.strip()) if t]
+                if len(toks) >= 2:
+                    # Strip trailing suffix (e.g. "Estates")
+                    if toks[-1].lower() in _NHB_STOP_SUFFIXES:
+                        v = " ".join(toks[:-1])
+                        if len(v) >= 6:
+                            out.append(v)
+                    # Strip leading direction/qualifier (e.g. "Upper")
+                    if toks[0].lower() in _NHB_STOP_PREFIXES:
+                        v = " ".join(toks[1:])
+                        if len(v) >= 6:
+                            out.append(v)
+                # Deduplicate while preserving order
+                seen = set(); dedup = []
+                for v in out:
+                    k = v.lower()
+                    if k in seen: continue
+                    seen.add(k); dedup.append(v)
+                return dedup
+
             async def _count_one(it):
-                _n_esc = re.escape(it["name"])
+                # Build a widened $or that tries every reasonable variant
+                # of the sub-neighbourhood name. Each variant is regex-
+                # escaped so nothing user-supplied is interpreted as regex.
+                or_clauses = []
+                for variant in _nhb_variants(it["name"]):
+                    v_esc = re.escape(variant)
+                    or_clauses.extend([
+                        {"region":           {"$regex": f"^{v_esc}$", "$options": "i"}},
+                        {"unparsed_address": {"$regex": v_esc,        "$options": "i"}},
+                        {"street_address":   {"$regex": v_esc,        "$options": "i"}},
+                        {"description":      {"$regex": v_esc,        "$options": "i"}},
+                    ])
                 return it["slug"], await db.listings.count_documents({
                     "status": "Active",
                     "city": _city_query(name),
                     "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
                     "list_price": {"$gt": 0},
-                    "$or": [
-                        {"region":           {"$regex": f"^{_n_esc}$", "$options": "i"}},
-                        {"unparsed_address": {"$regex": _n_esc,        "$options": "i"}},
-                        {"street_address":   {"$regex": _n_esc,        "$options": "i"}},
-                        {"description":      {"$regex": _n_esc,        "$options": "i"}},
-                    ],
+                    "$or": or_clauses,
                 })
             if todo:
                 results = await asyncio.gather(*[_count_one(it) for it in todo], return_exceptions=True)
@@ -8276,6 +8318,61 @@ async def startup():
                 logger.error(f"nightly_sitemap_loop iteration failed: {e}")
                 await _a.sleep(3600)
     asyncio.create_task(asyncio.sleep(15 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_sitemap_loop()))
+
+    # ---- Nightly sub-neighbourhood live-count warm-up (03:00 UTC) ----
+    # Rebuilds `neighbourhood_live_counts` for every BC community so the
+    # first user of the day never eats a 3-5 s cold-cache hit on the
+    # community neighbourhood grid. Runs at 03:00 UTC (≈19:00 PST /
+    # 20:00 PDT) — the quietest window before Doug's Doogie sizzle cron
+    # (03:15 UTC) and the daily sitemap regen (11:00 UTC).
+    async def _nightly_nhb_count_warmup_loop():
+        import asyncio as _a
+        import httpx as _httpx
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        while True:
+            try:
+                now = _dt.now(_tz.utc)
+                target = now.replace(hour=3, minute=0, second=0, microsecond=0)
+                if target <= now:
+                    target = target + _td(days=1)
+                delay = max(60, int((target - now).total_seconds()))
+                await _a.sleep(delay)
+                try:
+                    # Wipe stale caches so the recompute fires fresh.
+                    del_res = await db.neighbourhood_live_counts.delete_many({})
+                    # Iterate every BC community from communities_seed.json
+                    # and hit the neighbourhoods endpoint via loopback so
+                    # the existing enrichment logic runs. httpx is used so
+                    # we get the same request lifecycle (rate limits, etc.)
+                    # a real user would trigger.
+                    seed_path = ROOT_DIR / "data" / "communities_seed.json"
+                    all_comm = json.loads(seed_path.read_text())
+                    warmed = 0
+                    failed = 0
+                    async with _httpx.AsyncClient(timeout=90.0) as _cx:
+                        for _region, _cities in all_comm.items():
+                            for _name in _cities:
+                                _slug = re.sub(r"[^a-z0-9]+", "-", _name.lower()).strip("-")
+                                if not _slug:
+                                    continue
+                                try:
+                                    r = await _cx.get(f"http://127.0.0.1:8001/api/community/{_slug}/neighbourhoods")
+                                    if r.status_code == 200:
+                                        warmed += 1
+                                    else:
+                                        failed += 1
+                                except Exception:
+                                    failed += 1
+                    logger.info(
+                        f"nightly_nhb_warmup: wiped {del_res.deleted_count} caches, "
+                        f"warmed {warmed} communities, failed {failed}"
+                    )
+                except Exception as e:
+                    logger.error(f"nightly_nhb_warmup: task failed: {e}")
+            except Exception as e:
+                logger.error(f"nightly_nhb_warmup_loop iteration failed: {e}")
+                await _a.sleep(3600)
+    asyncio.create_task(asyncio.sleep(20 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_nhb_count_warmup_loop()))
 
     # ---- Bot Prerender Service (headless Chromium + Mongo TTL cache) ----
     # Renders SPA pages to static HTML for LLM/search-engine crawlers with
