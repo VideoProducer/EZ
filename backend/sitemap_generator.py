@@ -84,14 +84,16 @@ BRAND_IMAGES = {
 }
 
 # ── STATIC_URLS ───────────────────────────────────────────────────────────
-# NOTE: `/listings` is intentionally OMITTED from the static sitemap.
-# Rationale: `/listings` is Disallow'd for every AI crawler in robots.txt
-# (CREA DDF® §8 — MLS® data is licensed, non-canonical, hourly-refreshed).
-# The page is still fully linked from the homepage and other nav, so
-# Google/Bing find it via internal links; keeping it out of the sitemap
-# eliminates the sitemap↔robots mismatch flagged in the Feb 2026 audit.
+# `/listings` (search hub) IS included below per Task 2 (Feb 2026 audit):
+# it's Allow'd for general search engines in robots.txt (only the AI-training
+# bots block it), it contains NO MLS® detail data (only filters + a link to
+# the DDF search), and it's a valuable landing surface for queries like
+# "bc real estate search" / "maple ridge homes for sale". Individual
+# `/listing/{id}` pages remain Disallow'd site-wide and are NOT sitemapped
+# — see `_build_listings()` below for the rationale.
 STATIC_URLS = [
     ("/",                  "1.0", "daily"),
+    ("/listings",          "0.9", "hourly"),
     ("/communities",       "0.9", "weekly"),
     ("/neighbourhoods",    "0.85", "weekly"),
     ("/glossary",          "0.9", "weekly"),
@@ -408,33 +410,25 @@ async def _build_market_reports(db) -> tuple[str, int]:
 # 4 h stale. NO photos are included (CREA DDF® terms forbid bulk
 # redistribution) — only the canonical listing detail URL and its modtime.
 async def _build_listings(db) -> tuple[str, int]:
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    tags = []
-    try:
-        # Only Active listings — Sold/Expired records get de-indexed by
-        # simply not appearing on the next crawl. Cap at 50 000 (Google's
-        # per-sitemap hard limit is 50 000 URLs / 50 MB).
-        cursor = db.listings.find(
-            {"status": "Active"},
-            {"listing_key": 1, "modification_ts": 1, "_id": 0},
-        ).sort("modification_ts", -1).limit(50_000)
-        async for row in cursor:
-            key = row.get("listing_key")
-            if not key:
-                continue
-            mod = row.get("modification_ts")
-            if isinstance(mod, str) and len(mod) >= 10:
-                lastmod = mod[:10]
-            elif isinstance(mod, datetime):
-                lastmod = mod.strftime("%Y-%m-%d")
-            else:
-                lastmod = today
-            tags.append(_url_tag(
-                f"{BASE_URL}/listing/{key}", lastmod, "hourly", "0.80",
-            ))
-    except Exception:
-        pass
-    return _wrap_urlset(tags), len(tags)
+    """DDF listing detail pages (`/listing/{key}`) are intentionally NOT in
+    any sitemap.
+
+    Why: CREA DDF® data-licensing restricts SEO indexing of individual
+    listing detail pages hosted on non-brokerage websites, and our
+    robots.txt already `Disallow: /listing/` for exactly this reason.
+    Submitting them via sitemap would be a direct sitemap-vs-robots
+    conflict that Google Search Console flags — AND a CREA compliance
+    breach.
+
+    The `/listings` search hub (plural) is separately included in
+    sitemap-static.xml so buyers can still discover the search
+    functionality from search engines.
+
+    Kept as a stub so existing callers (main `generate_sitemap`) don't
+    break; returns an empty urlset that is never written to the sitemap
+    index.
+    """
+    return _wrap_urlset([]), 0
 
 
 # ── AI-only sitemap (Feb 2026) ────────────────────────────────────────────
@@ -537,9 +531,18 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         pass
     market_count = 0
 
-    # Item #20 · dedicated listings sub-sitemap, refreshed nightly.
+    # Item #20 · dedicated listings sub-sitemap — INTENTIONALLY DISABLED.
+    # `/listing/{id}` pages are DDF® data-licensed content that we don't
+    # submit for indexing (robots.txt disallows the path). The `_build_listings`
+    # stub returns 0 URLs; the sub-sitemap file itself is deleted below so no
+    # stale copy lingers on disk.
     listings_xml, listings_count = await _build_listings(db)
-    _write(out_dir / "sitemap-listings.xml", listings_xml)
+    _stale_listings = out_dir / "sitemap-listings.xml"
+    if _stale_listings.exists():
+        try:
+            _stale_listings.unlink()
+        except Exception:
+            pass
 
     # Feb 2026 · AI-only canonical sitemap (advertised to Perplexity, ChatGPT,
     # Grok, Manus, Claude, Gemini, You, Kagi, Mistral, etc. via llms.txt).
@@ -591,6 +594,27 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     _write(out_dir / "sitemap-index.xml", "".join(idx_alias))
 
     total = static_count + glossary_count + community_count + neighbourhood_count + listings_count + market_count
+
+    # ── Task 1 · build assertion: llms.txt glossary count must equal
+    # sitemap-glossary.xml URL count. Fails loud if drift creeps in.
+    try:
+        llms_path = out_dir / "llms.txt"
+        if llms_path.exists():
+            _llms_text = llms_path.read_text(encoding="utf-8")
+            _m = re.search(r"(\d+)-term BC Real Estate Glossary", _llms_text)
+            if _m:
+                _claimed = int(_m.group(1))
+                if _claimed != glossary_count:
+                    raise AssertionError(
+                        f"COUNT DRIFT: llms.txt claims {_claimed}-term glossary "
+                        f"but sitemap-glossary.xml has {glossary_count} URLs. "
+                        f"Update both from the canonical /api/site/counts source."
+                    )
+    except AssertionError:
+        raise
+    except Exception as _e:
+        # Non-fatal on read errors — assertion is best-effort. Log only.
+        pass
 
     return {
         "static": static_count,

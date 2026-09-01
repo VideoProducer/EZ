@@ -185,16 +185,29 @@ async def render_glossary(db):
             + "BCFSA-licensed REALTOR® guidance for BC buyers & sellers."
         )[:160]
 
+        # dateModified — real content change date if we have it, else today.
+        # Feeds into Article schema AND the visible "Last reviewed" line at
+        # the top of the page. Task 3 (Feb 2026 audit): every snapshot
+        # needs a factual, machine + human-readable freshness signal.
+        _row_ts = t.get("last_curated_at") or t.get("updated_at") or t.get("approved_at")
+        if isinstance(_row_ts, str) and len(_row_ts) >= 10:
+            date_modified = _row_ts[:10]
+        elif isinstance(_row_ts, datetime):
+            date_modified = _row_ts.strftime("%Y-%m-%d")
+        else:
+            date_modified = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
         # JSON-LD schema
         schema_blocks = []
         article_schema = {
             "@context":"https://schema.org","@type":"Article",
             "headline":f"{term} — BC Real Estate",
             "description":desc,
-            "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":f"{SITE}/about"},
-            "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":SITE,"logo":{"@type":"ImageObject","url":f"{SITE}/images/doogie-laptop.png"}},
+            "author":{"@id":f"{SITE}/#doug"},
+            "publisher":{"@id":f"{SITE}/#organization"},
             "mainEntity":{"@type":"DefinedTerm","name":term,"description":defn,"inDefinedTermSet":{"@type":"DefinedTermSet","name":"EZtoFind.ca BC Real Estate Glossary","url":f"{SITE}/glossary"}},
             "url":canonical,"inLanguage":"en-CA",
+            "dateModified": date_modified,
             "about":{"@type":"Place","name":"British Columbia, Canada"}
         }
         schema_blocks.append(f'<script type="application/ld+json">{json.dumps(article_schema)}</script>')
@@ -250,6 +263,7 @@ async def render_glossary(db):
         body = f"""
 <div class="eyebrow">{esc(cat)}</div>
 <h1>{esc(term)}</h1>
+<p style="font-size:0.82rem;color:#6B7280;margin:0.25rem 0 0.75rem;">Last reviewed: <time datetime="{date_modified}">{date_modified}</time></p>
 <p style="font-size:1.08rem;line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(defn)}</p>
 {faq_html}
 {src_html}

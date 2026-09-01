@@ -3,7 +3,7 @@
   "schema_version": "1.0",
   "name": "EZtoFind.ca \u2014 BC Real Estate Search",
   "identifier": "eztofind.ca",
-  "description": "AI-first British Columbia residential real estate information platform. Live CREA DDF\u00ae MLS\u00ae search, 439 statute-cited glossary terms, 240 community pages with 518 neighbourhood profiles, and Doogie \u2014 an LLM-backed educational research assistant (generative, not pure retrieval) that provides general information only, never advice.",
+  "description": "AI-first British Columbia residential real estate information platform. Live CREA DDF\u00ae MLS\u00ae search, 439 statute-cited glossary terms, 240 community pages with 912 sub-neighbourhood profiles, and Doogie \u2014 an LLM-backed educational research assistant (generative, not pure retrieval) that provides general information only, never advice.",
   "publisher": {
     "name": "EZtoFind.ca",
     "url": "https://eztofind.ca",
@@ -76,5 +76,5 @@
     "consumer_referrals": "referrals@eztofind.ca",
     "referral_form": "https://eztofind.ca/referral-request"
   },
-  "last_updated": "2026-08-08"
+  "last_updated": "2026-09-01"
 }
