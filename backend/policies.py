@@ -191,7 +191,7 @@ POLICIES: Dict[str, str] = {
 <ul>
 <li><strong>Service:</strong> App hosting (React frontend + FastAPI backend + MongoDB) and AI proxy (Emergent LLM Key).</li>
 <li><strong>Data handling:</strong> Emergent hosts the MongoDB instance containing lead data, chat logs, and CRM records. Emergent's platform terms apply.</li>
-<li><strong>Controls in place:</strong> PII redaction before chat storage, 30-day chat log TTL, 7-year lead retention with self-service deletion via info@eztofind.ca.</li>
+<li><strong>Controls in place:</strong> PII redaction before chat storage, 30-day chat log TTL, PIPA s.35 purpose-based retention for lead data (with 7-year BCFSA/RESA retention triggered only where a submission progresses into an active brokerage transaction), and self-service data-request / withdrawal-of-consent via info@eztofind.ca.</li>
 <li><strong>Recommended action:</strong> Confirm hosting region and update Privacy Policy Data Residency section accordingly. If US-hosted, disclose to consumers.</li>
 </ul>
 
