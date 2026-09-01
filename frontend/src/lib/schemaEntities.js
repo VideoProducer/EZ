@@ -55,6 +55,19 @@ export const EZTOFIND_ORG = {
   logo: `${SITE_URL}/logo512.png`,
   founder: dougRef(),
   publishingPrinciples: `${SITE_URL}/about`,
+  // Task 9 (Feb 2026) — verified real profiles only. Live curl-checked
+  // at the time of add. Never add unverified or invented URLs.
+  sameAs: [
+    "https://www.fraserpropertymanagement.com/",
+    "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+    "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+    "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+    "https://www.linkedin.com/in/eztofind/",
+    "https://www.youtube.com/@EZtoFindCA",
+    "https://www.facebook.com/EZtoFind.ca",
+    "https://www.instagram.com/eztofind.ca/",
+    "https://x.com/EZtoFindca",
+  ],
   contactPoint: {
     "@type": "ContactPoint",
     telephone: "+1-604-466-7021",
@@ -92,6 +105,20 @@ export const DOUG_PERSON = {
     propertyID: "BCFSA-Licence",
     value: "167790",
   },
+  // Task 9 (Feb 2026) — verified real profiles only. Do not add
+  // unverified social handles; each URL below returns HTTP 200 or
+  // resolves to a known registrant record. Extend cautiously.
+  sameAs: [
+    "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+    "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+    "https://www.fraserpropertymanagement.com/",
+    "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+    "https://www.linkedin.com/in/eztofind/",
+    "https://www.youtube.com/@EZtoFindCA",
+    "https://www.facebook.com/EZtoFind.ca",
+    "https://www.instagram.com/eztofind.ca/",
+    "https://x.com/EZtoFindca",
+  ],
   areaServed: [
     "Maple Ridge, BC",
     "Pitt Meadows, BC",

@@ -44,8 +44,18 @@ Greater Vancouver REALTORS® (GVR), Fraser Valley Real Estate Board (FVREB), Chi
 - Consumer referral leads: referrals@eztofind.ca
 
 ## Verified Identity Graph (sameAs)
+Live-verified real profiles only (Task 9, Feb 2026). Every URL listed here has been
+live-checked and points to the same real-world entity (Doug LeMaire, REALTOR®,
+BCFSA #167790 · EZtoFind.ca · Fraser Property Management Realty Services Ltd.):
 - Google Business Profile: https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9
-- Paired brand domain: https://ez2find.ca
+- Brokerage site (Fraser Property Management): https://www.fraserpropertymanagement.com/
+- BCFSA registrant record (#167790): https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790
+- REALTOR.ca profile: https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5
+- LinkedIn: https://www.linkedin.com/in/eztofind/
+- YouTube: https://www.youtube.com/@EZtoFindCA
+- Facebook: https://www.facebook.com/EZtoFind.ca
+- Instagram: https://www.instagram.com/eztofind.ca/
+- X / Twitter: https://x.com/EZtoFindca
 - AI Use / Crawl Policy: https://eztofind.ca/ai-use
 - Copyright & IP: https://eztofind.ca/copyright (CIPO Reg. 1247822)
 

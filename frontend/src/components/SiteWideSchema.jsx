@@ -94,6 +94,21 @@ export default function SiteWideSchema() {
         "priceRange": "$",
         "founder": { "@id": `${SITE_FACTS.origin}/#doug` },
         "employee":  { "@id": `${SITE_FACTS.origin}/#doug` },
+        "sameAs": [
+          // Task 9 (Feb 2026) — live, verified real profiles only.
+          // Organization identity is anchored across the licensed
+          // brokerage web presence, its Google Business Profile, and
+          // the BCFSA registrant record for cross-referencing by AI
+          // answer engines. Extend cautiously with live profiles only.
+          "https://www.fraserpropertymanagement.com/",
+          "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+          "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+          "https://www.linkedin.com/in/eztofind/",
+          "https://www.youtube.com/@EZtoFindCA",
+          "https://www.facebook.com/EZtoFind.ca",
+          "https://www.instagram.com/eztofind.ca/",
+          "https://x.com/EZtoFindca",
+        ],
         "hasCredential": {
           "@type": "EducationalOccupationalCredential",
           "credentialCategory": "License",
@@ -178,7 +193,19 @@ export default function SiteWideSchema() {
           },
         ],
         "sameAs": [
+          // Live, verified real profiles only (Task 9, Feb 2026). Do not
+          // add invented or unverified URLs. Any new addition must return
+          // HTTP 200 (or a documented anti-bot code like LinkedIn's 999)
+          // on a live curl before landing here.
           "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+          "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+          "https://www.fraserpropertymanagement.com/",
+          "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+          "https://www.linkedin.com/in/eztofind/",
+          "https://www.youtube.com/@EZtoFindCA",
+          "https://www.facebook.com/EZtoFind.ca",
+          "https://www.instagram.com/eztofind.ca/",
+          "https://x.com/EZtoFindca",
         ],
       },
       // ── Featured Listing: 3015 141 Street, Surrey (R3156192) ─────────

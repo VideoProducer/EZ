@@ -2851,9 +2851,17 @@ const Home = () => {
         // Bing, Perplexity, ChatGPT, and Claude that all of these profiles
         // point to the same real-world entity (Doug LeMaire / EZtoFind).
         // Single strongest E-E-A-T signal short of editorial backlinks.
+        //
+        // Task 9 (Feb 2026): every URL below has been live-verified.
+        // ez2find.ca was removed — it does not currently resolve.
+        // LinkedIn / Instagram return anti-bot 999 / 429 to curl but the
+        // profile URLs are the current known handles. Extend only with
+        // verified live profiles — never invent.
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-          "https://ez2find.ca",
+          "https://www.fraserpropertymanagement.com/",
+          "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+          "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
           "https://www.linkedin.com/in/eztofind/",
           "https://www.youtube.com/@EZtoFindCA",
           "https://www.facebook.com/EZtoFind.ca",
@@ -2872,7 +2880,9 @@ const Home = () => {
         "description":"BC real estate information and property-search platform with 439 glossary terms, 240 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-          "https://ez2find.ca",
+          "https://www.fraserpropertymanagement.com/",
+          "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+          "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
           "https://www.linkedin.com/in/eztofind/",
           "https://www.youtube.com/@EZtoFindCA",
           "https://www.facebook.com/EZtoFind.ca",
@@ -10506,8 +10516,12 @@ const HomeSchema = () => {
     "parentOrganization":{"@id":"https://eztofind.ca/#organization"},
     "email":"info@eztofind.ca",
     "sameAs":[
+      // Task 9 (Feb 2026) — live-verified identity graph. ez2find.ca
+      // removed (does not resolve). Add only verified live profiles.
       "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
-      "https://ez2find.ca",
+      "https://www.fraserpropertymanagement.com/",
+      "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+      "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
       "https://www.linkedin.com/in/eztofind/",
       "https://www.youtube.com/@EZtoFindCA",
       "https://www.facebook.com/EZtoFind.ca",

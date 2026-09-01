@@ -122,7 +122,16 @@ export default function LiveHomepageSchema() {
           "identifier": FACTS.bcfsa_licence_individual,
         },
         "sameAs": [
+          // Task 9 (Feb 2026) — live-verified identity graph.
           "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+          "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+          "https://www.fraserpropertymanagement.com/",
+          "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+          "https://www.linkedin.com/in/eztofind/",
+          "https://www.youtube.com/@EZtoFindCA",
+          "https://www.facebook.com/EZtoFind.ca",
+          "https://www.instagram.com/eztofind.ca/",
+          "https://x.com/EZtoFindca",
         ],
       },
       {

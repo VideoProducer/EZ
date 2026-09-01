@@ -481,3 +481,32 @@ After next deploy, verify on production:
 - `/api/community/{slug}/synopsis` returns `last_reviewed_at` so frontend can render visible dateModified.
 - Note: MSC GeoMet API (`api.weather.gc.ca/collections/climate-normals`) currently returns only 1981-2010 for BC stations — ECCC has not yet backfilled 1991-2020 into the API. Fallback path is exercised for every BC station until that changes. Code is future-proof — flip to 1991-2020 automatically as ECCC publishes.
 
+
+### Feb 2026 — Task 9: sameAs identity graph consolidation (real URLs only)
+
+**Expanded Organization + Person `sameAs` arrays** across every JSON-LD emitter with LIVE-VERIFIED profile URLs only (no invented handles):
+- `https://www.realtor.ca/agent/2126195/...` — REALTOR.ca profile (HTTP 200)
+- `https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790` — BCFSA registrant record for licence #167790
+- `https://www.fraserpropertymanagement.com/` — brokerage site (HTTP 200)
+- `https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9` — Google Business Profile (HTTP 200 redirect to Doug LeMaire GBP)
+- `https://www.linkedin.com/in/eztofind/` — LinkedIn (HTTP 999 = LinkedIn's anti-bot code, URL known)
+- `https://www.youtube.com/@EZtoFindCA` — YouTube (HTTP 200)
+- `https://www.facebook.com/EZtoFind.ca` — Facebook (HTTP 200)
+- `https://www.instagram.com/eztofind.ca/` — Instagram (HTTP 429 rate-limited, URL known)
+- `https://x.com/EZtoFindca` — X / Twitter (HTTP 200)
+
+**Removed** — `https://ez2find.ca` from all sameAs arrays (`App.js` homepage RealEstateAgent + Organization + HomeSchema, `public/index.html` Organization). Domain does NOT resolve via DNS as of Feb 2026 (`No address associated with hostname`). Per user rule "Do not invent profiles — real URLs only."
+
+**Files touched:**
+- `frontend/src/App.js` (3 locations: homepage RealEstateAgent, homepage Organization, HomeSchema)
+- `frontend/src/lib/schemaEntities.js` (`EZTOFIND_ORG.sameAs`, `DOUG_PERSON.sameAs`)
+- `frontend/src/components/SiteWideSchema.jsx` (Organization + Person)
+- `frontend/src/components/LiveHomepageSchema.jsx` (Person sameAs)
+- `frontend/src/components/HomepageLeadGenMockup.jsx` (Person sameAs)
+- `frontend/public/index.html` (SSR baseline Organization + #agent Person)
+- `frontend/public/.well-known/ai.json` (publisher.sameAs)
+- `frontend/public/llms.txt` ("Verified Identity Graph" section)
+
+**Verified via live DOM inspection**: 4 JSON-LD nodes with sameAs on homepage (2× Organization, 2× Person), all consistent, ez2find.ca completely purged, 8-9 verified real URLs per node.
+
+
