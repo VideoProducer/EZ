@@ -1182,7 +1182,7 @@ const Footer = () => (
           <div><div className="font-display" style={{fontSize:"1.3rem",color:"white"}} data-testid="footer-wordmark"><span style={{color:"#fff"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></div>
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
-        <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
+        <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.</p>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85,marginTop:"0.75rem"}}>Doogie is an AI-assisted helper that shares general educational information about BC real estate, explains terminology, and helps visitors navigate the EZtoFind.ca platform. Doogie provides general information only — it is not legal, tax, financial, or property-specific advice, and it is not a substitute for a licensed professional. Interacting with Doogie does not create a REALTOR®–client relationship.</p>
       </div>
       <div><h4>Explore</h4><ul>
