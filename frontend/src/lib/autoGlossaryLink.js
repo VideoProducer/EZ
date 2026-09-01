@@ -44,11 +44,18 @@ const _compile = (terms) => {
 export const autoGlossaryLink = (raw, terms, opts = {}) => {
   if (!raw || !terms || !terms.length) return escapeHtml(raw || "");
   const currentSlug = opts.currentSlug || "";
+  // Google penalizes over-linking. Hard cap at 3 contextual glossary links
+  // per source block by default — Doug's Phase-G rule (Feb 2026). Callers
+  // that legitimately need more can pass a higher limit, but should be
+  // rare (glossary-body links are a separate flow).
+  const maxLinks = Number.isFinite(opts.maxLinks) ? opts.maxLinks : 3;
   const compiled = _compile(terms);
   // Escape source first so any user-supplied HTML can't slip through
   let html = escapeHtml(String(raw));
   const linkedSlugs = new Set([currentSlug]);
+  let linksAdded = 0;
   for (const { term, slug, rx } of compiled) {
+    if (linksAdded >= maxLinks) break;
     if (linkedSlugs.has(slug)) continue;
     // Only replace the first match, and skip if the surrounding context
     // already contains an anchor tag (rough check — good enough for our
@@ -62,6 +69,7 @@ export const autoGlossaryLink = (raw, terms, opts = {}) => {
       `<a href="/glossary/${slug}" class="ez-glossary-link" style="color:#0F2A5B;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:#F5A623;">${match[0]}</a>` +
       after;
     linkedSlugs.add(slug);
+    linksAdded += 1;
   }
   return html;
 };

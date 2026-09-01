@@ -24,6 +24,7 @@ import React, { useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { SEO } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -61,17 +62,16 @@ const TIMING_OPTIONS = [
 ];
 
 // ── SEO ─────────────────────────────────────────────────────────────
+// Uses the master SEO component from App.js so title / canonical / OG /
+// hreflang stay single-source-of-truth. Referral-request page has no
+// unique JSON-LD graph beyond the sitewide one, so no schema prop.
 function SEOHead() {
   return (
-    <Helmet>
-      <title>Referral Request | Out-of-Area BC | Doug LeMaire, REALTOR®</title>
-      <meta name="description" content="Buying or selling outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor? Doug LeMaire, REALTOR® will introduce you to a licensed local REALTOR® on the correct BC real-estate board." />
-      <link rel="canonical" href="https://eztofind.ca/referral-request" />
-      <meta property="og:title" content="Referral Request | Doug LeMaire, REALTOR® | EZtoFind.ca" />
-      <meta property="og:description" content="Referral network for BC buyers and sellers outside Doug's direct practice area." />
-      <meta property="og:url" content="https://eztofind.ca/referral-request" />
-      <meta property="og:type" content="website" />
-    </Helmet>
+    <SEO
+      title="Referral Request | Out-of-Area BC | Doug LeMaire, REALTOR®"
+      description="Buying or selling outside Greater Vancouver, the Fraser Valley, or the Sea-to-Sky Corridor? Doug LeMaire, REALTOR® will introduce you to a licensed local REALTOR® on the correct BC real-estate board."
+      path="/referral-request"
+    />
   );
 }
 

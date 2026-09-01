@@ -25,8 +25,8 @@ Run after every deploy that changes glossary content or community list:
   python3 /app/backend/prerender_pages.py
 
 Output:
-  /app/frontend/public/snapshot/glossary/{slug}.html   (396 files)
-  /app/frontend/public/snapshot/community/{slug}.html  (239 files)
+  /app/frontend/public/snapshot/glossary/{slug}.html   (~440 files, live count from db.glossary)
+  /app/frontend/public/snapshot/community/{slug}.html  (~240 files, live count from communities_seed.json)
 
 These snapshots live under /snapshot/ so they DON'T conflict with the
 React Router SPA. Real users navigating /glossary/{slug} still get the

@@ -21,6 +21,7 @@ import React, { useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { SEO } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -37,17 +38,15 @@ const SERIF = 'ui-serif, Georgia, "Cormorant Garamond", "Times New Roman", serif
 const SANS  = 'ui-sans-serif, -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
 
 // ── SEO ─────────────────────────────────────────────────────────────
+// Uses the master SEO component from App.js so title / canonical / OG /
+// hreflang stay single-source-of-truth.
 function SEOHead() {
   return (
-    <Helmet>
-      <title>Contact Doug LeMaire, REALTOR® | EZtoFind.ca</title>
-      <meta name="description" content="Start a private conversation about luxury real estate in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor. Direct line to Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd." />
-      <link rel="canonical" href="https://eztofind.ca/contact" />
-      <meta property="og:title" content="Contact Doug LeMaire, REALTOR® | EZtoFind.ca" />
-      <meta property="og:description" content="Start a private conversation about luxury real estate in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor." />
-      <meta property="og:url" content="https://eztofind.ca/contact" />
-      <meta property="og:type" content="website" />
-    </Helmet>
+    <SEO
+      title="Contact Doug LeMaire, REALTOR® | EZtoFind.ca"
+      description="Start a private conversation about luxury real estate in Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor. Direct line to Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd."
+      path="/contact"
+    />
   );
 }
 

@@ -322,7 +322,7 @@ export default function FirstTimeBuyerCheatSheet() {
           <ul style={{fontSize:"10pt",lineHeight:1.65,paddingLeft:"18pt"}}>
             <li>Glossary — <strong>Property Transfer Tax</strong>, <strong>First-Time Home Buyers' Exemption</strong>, <strong>FHSA</strong>, <strong>CMHC Insurance</strong>, <strong>Deposit vs. Down Payment</strong></li>
             <li>Buyer's Guide — <em>10 Steps From Pre-Approval to Keys</em></li>
-            <li>Community pages — median list price, days-on-market, and community walkability scores across 239 BC communities</li>
+            <li>Community pages — median list price, days-on-market, and community walkability scores across 240 BC communities</li>
           </ul>
         </div>
 

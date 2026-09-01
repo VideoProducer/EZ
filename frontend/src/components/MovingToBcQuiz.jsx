@@ -1,6 +1,6 @@
 // Moving to BC — Community Match Quiz (interactive lead-magnet mockup).
 //
-// 5-question quiz that scores 239 BC communities against out-of-province
+// 5-question quiz that scores 240 BC communities against out-of-province
 // buyer preferences (schools, commute, climate, budget, lifestyle) and
 // produces a personalized top-3 community match. Ends with a CASL-compliant
 // email capture. Communities outside Doug's direct service area convert
@@ -148,7 +148,7 @@ export default function MovingToBcQuiz() {
           <div style={{fontSize:"0.72rem",letterSpacing:"0.16em",color:BRAND.gold,fontWeight:700}}>MOCKUP · REVIEW COPY</div>
           <div style={{fontSize:"1.85rem",fontFamily:"'Sora',sans-serif",fontWeight:800,marginTop:6,lineHeight:1.15}}>Moving to BC?</div>
           <div style={{fontSize:"1.05rem",marginTop:8,opacity:0.9,lineHeight:1.55}}>
-            Take our 90-second quiz — we'll match you with 3 BC communities that fit your climate, budget, and lifestyle across all 239 towns in our database.
+            Take our 90-second quiz — we'll match you with 3 BC communities that fit your climate, budget, and lifestyle across all 240 towns in our database.
           </div>
           {/* Progress bar */}
           <div style={{marginTop:20,background:"rgba(255,255,255,0.15)",borderRadius:999,height:6,overflow:"hidden"}}>

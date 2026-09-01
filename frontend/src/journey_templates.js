@@ -26,7 +26,7 @@ const BUYING = {
       { id:"gst-new-homes",   title:"GST on new construction",        blurb:"Federal GST rules for newly built homes vs. resale.",              href:"/glossary/gst-new-homes",                 type:"glossary" },
     ]),
     S("explore", "Explore", "Get to know BC communities before narrowing your search.", [
-      { id:"community-index", title:"Browse BC communities",          blurb:"239 community profiles with geography, climate, and lifestyle context.", href:"/communities",                    type:"community" },
+      { id:"community-index", title:"Browse BC communities",          blurb:"240 community profiles with geography, climate, and lifestyle context.", href:"/communities",                    type:"community" },
       { id:"community-match", title:"Where should you live? quiz",    blurb:"Optional 5-question exploration tool with educational match results.",   href:"/where-should-you-live",         type:"guide" },
       { id:"regions",         title:"BC regions overview",            blurb:"Greater Vancouver, Fraser Valley, Sea-to-Sky, Okanagan, VI, Kootenays, Northern BC.", href:"/regions/greater-vancouver", type:"community" },
     ]),
@@ -132,7 +132,7 @@ const BUY_AND_SELL = {
     ]),
     S("search", "Search Your Next Home", "Continue browsing MLS® inventory.", [
       { id:"listings",   title:"Browse listings",              blurb:"Live BC-wide MLS® inventory refreshed hourly.",           href:"/listings", type:"guide" },
-      { id:"communities",title:"Explore communities",           blurb:"239 community profiles with climate and lifestyle context.", href:"/communities", type:"community" },
+      { id:"communities",title:"Explore communities",           blurb:"240 community profiles with climate and lifestyle context.", href:"/communities", type:"community" },
       { id:"favorites",  title:"Save & compare favourites",    blurb:"Track prospective homes across devices.",                  href:"/favorites", type:"guide" },
     ]),
     S("closing", "Coordinating Closings", "Aligning two completion dates.", [
@@ -205,7 +205,7 @@ const FIRST_TIME = {
       { id:"ptt-basics",     title:"Property Transfer Tax basics",blurb:"The tax you pay on closing day.",                                href:"/glossary/property-transfer-tax-ptt",         type:"glossary" },
     ]),
     S("explore", "Communities on a Budget", "Lower-priced BC regions and neighbourhoods.", [
-      { id:"communities", title:"BC communities",            blurb:"Browse 239 community profiles.",                                 href:"/communities", type:"community" },
+      { id:"communities", title:"BC communities",            blurb:"Browse 240 community profiles.",                                 href:"/communities", type:"community" },
       { id:"fraser-vy",   title:"Fraser Valley",             blurb:"Abbotsford, Chilliwack, Mission — often more accessible than Metro Vancouver.", href:"/regions/fraser-valley", type:"community" },
       { id:"vi-affordable", title:"Vancouver Island (outside Victoria)", blurb:"Nanaimo, Comox Valley, Port Alberni.", href:"/regions/vancouver-island", type:"community" },
       { id:"quiz",        title:"Where should you live? quiz", blurb:"5-question exploration tool.",                                 href:"/where-should-you-live", type:"guide" },

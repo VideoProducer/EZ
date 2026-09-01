@@ -497,7 +497,7 @@ const BUYER_TERMS_QUICK = [
 const BUYER_RELATED = [
   { kind: "Journey", title: "Selling a home in BC", blurb: "The nine-step seller's guide — the flip side of this journey.", href: "/selling-guide" },
   { kind: "Tool", title: "Live MLS® listings", blurb: "Browse BC listings from the CREA DDF® feed, refreshed hourly.", href: "/listings" },
-  { kind: "Community", title: "BC community profiles", blurb: "Explore 239 community pages across the province.", href: "/communities" },
+  { kind: "Community", title: "BC community profiles", blurb: "Explore 240 community pages across the province.", href: "/communities" },
   { kind: "Glossary", title: "Full BC glossary", blurb: "439 terms explaining every concept in this guide and more.", href: "/glossary" },
   { kind: "Estimator", title: "Home valuation estimator", blurb: "General educational estimate using MLS® comparables. Not an appraisal.", href: "/valuation" },
 ];

@@ -135,6 +135,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Falls back to production so preview builds still emit the right canonical
 // pointers to the live site, but can be overridden via env for staging.
 const SITE_URL = process.env.REACT_APP_PUBLIC_URL || "https://eztofind.ca";
+export { SITE_URL };
 
 // Doug's directly-repped farm — mirrors the FOCUS_COMMUNITIES set in
 // CommunityPageMockupLive.jsx so App.js can gate compliant CTAs (the
@@ -277,6 +278,9 @@ const SEO = ({ title, description, path, image, schema }) => {
     </Helmet>
   );
 };
+// Exported so page-level components (luxury, referral, contact) can reuse
+// the same title/canonical/OG/hreflang emitter instead of duplicating it.
+export { SEO };
 
 // --- Doogie Assets ---
 // Doogie mascot assets — served locally from /public/images/doogie/ for fast
@@ -2855,7 +2859,7 @@ const Home = () => {
         "founder":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®"},
         "employee":{"@id":"https://eztofind.ca/#doug"},
         "areaServed":{"@type":"AdministrativeArea","name":"British Columbia, Canada"},
-        "description":"BC real estate information and property-search platform with 396 glossary terms, 239 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
+        "description":"BC real estate information and property-search platform with 439 glossary terms, 240 community profiles, live Environment Canada climate data, and a BC-wide REALTOR® referral network.",
         "sameAs":[
           "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
           "https://ez2find.ca",
@@ -5720,7 +5724,7 @@ const Glossary = () => {
   return (<section className="section"><div className="container-x">
     <SEO
       title="BC Real Estate Glossary — 439 Terms with Authoritative Sources | EZtoFind.ca"
-      description="Comprehensive glossary of 396 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
+      description="Comprehensive glossary of 439 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
       path="/glossary"
     />
     <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Term's you may encounter buying or selling in British Columbia — with 10 FAQs per term.</p>
@@ -6775,7 +6779,7 @@ const CopyrightPage = () => (<Legal title="Copyright & Intellectual Property Not
       <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.25rem"}}>Registered as a literary work under the Canadian Copyright Act (R.S.C., 1985, c. C-42). Owner &amp; Author: Doug LeMaire.</div>
     </div>
   </div>
-  <p>The EZtoFind.ca website, including its full content library — 396 curated glossary terms, 239 community profiles, 520 micro-neighbourhood pages, market summaries, images, illustrations, HTML/CSS/JavaScript source code, backend APIs, database compilations, natural-language search algorithms, page layouts, and the "Doogie" AI assistant character (name, likeness, dialogue style, and prompt engineering) — is a proprietary work owned by Doug LeMaire, <strong>federally registered with the Canadian Intellectual Property Office (Registration No. 1247822)</strong>, and protected under the <strong>Canadian Copyright Act (R.S.C., 1985, c. C-42)</strong>, the <strong>Trademarks Act (R.S.C., 1985, c. T-13)</strong>, and applicable international treaties including the Berne Convention.</p>
+  <p>The EZtoFind.ca website, including its full content library — 439 curated glossary terms, 240 community profiles, 520 micro-neighbourhood pages, market summaries, images, illustrations, HTML/CSS/JavaScript source code, backend APIs, database compilations, natural-language search algorithms, page layouts, and the "Doogie" AI assistant character (name, likeness, dialogue style, and prompt engineering) — is a proprietary work owned by Doug LeMaire, <strong>federally registered with the Canadian Intellectual Property Office (Registration No. 1247822)</strong>, and protected under the <strong>Canadian Copyright Act (R.S.C., 1985, c. C-42)</strong>, the <strong>Trademarks Act (R.S.C., 1985, c. T-13)</strong>, and applicable international treaties including the Berne Convention.</p>
   <h3 style={{marginTop:"2rem"}}>Prohibited Uses</h3>
   <p>The following activities are expressly prohibited without prior written permission:</p>
   <ul>
@@ -8666,8 +8670,8 @@ const Communities = () => {
   const filt = (arr) => q ? arr.filter(c => c.toLowerCase().includes(q.toLowerCase())) : arr;
   return (<section className="section"><div className="container-x">
     <SEO
-      title="BC Communities — 239 Community Profiles with Live Climate Data | EZtoFind.ca"
-      description="Explore every incorporated BC community — 239 profiles across 12 regions with real Environment Canada climate normals, geography, and referral REALTOR® coverage."
+      title="BC Communities — 240 Community Profiles with Live Climate Data | EZtoFind.ca"
+      description="Explore every incorporated BC community — 240 profiles across 12 regions with real Environment Canada climate normals, geography, and referral REALTOR® coverage."
       path="/communities"
     />
     <div style={{textAlign:"center",marginBottom:"2rem"}}>
@@ -12101,7 +12105,7 @@ const AdminFaqAudit = () => {
 
   return <AdminShell active="faq-audit">
     <h1 className="font-display" style={{fontSize:"2rem",marginTop:0}}>Glossary FAQ Audit</h1>
-    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem",maxWidth:820}}>Risk-scored review of all {items.length > 0 ? "" : "396 "}glossary terms with FAQs. High-risk terms (PTT, GST, FINTRAC, dual agency, disclosure forms, tax rules, etc.) are ranked first so you can spot-check the most legally-sensitive answers. Approve, edit inline, or regenerate any term.</p>
+    <p style={{color:"var(--muted)",marginTop:0,fontSize:"0.92rem",maxWidth:820}}>Risk-scored review of all {items.length > 0 ? "" : "439 "}glossary terms with FAQs. High-risk terms (PTT, GST, FINTRAC, dual agency, disclosure forms, tax rules, etc.) are ranked first so you can spot-check the most legally-sensitive answers. Approve, edit inline, or regenerate any term.</p>
 
     <div style={{display:"flex",gap:"0.5rem",marginTop:"1rem",marginBottom:"1rem",flexWrap:"wrap"}}>
       {[

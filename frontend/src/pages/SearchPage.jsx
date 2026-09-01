@@ -354,7 +354,7 @@ export default function SearchPage() {
         <div className="paper" style={{ padding: "1.25rem", marginBottom: "1.5rem" }}>
           <SearchBox initial={q} onSubmit={handleSubmit}/>
           <div style={{ marginTop: "0.85rem", fontSize: "0.82rem", color: BRAND.muted, fontFamily: "Inter,sans-serif", lineHeight: 1.55 }}>
-            Look up definitions, frequently asked questions, community pages, tools, and guide sections from EZtoFind.ca's <Link to="/glossary" style={{ color: BRAND.blue, fontWeight: 600 }}>439 BC glossary terms</Link>, thousands of FAQs, 239 community profiles, and the Buyer's &amp; Seller's Guides.
+            Look up definitions, frequently asked questions, community pages, tools, and guide sections from EZtoFind.ca's <Link to="/glossary" style={{ color: BRAND.blue, fontWeight: 600 }}>439 BC glossary terms</Link>, thousands of FAQs, 240 community profiles, and the Buyer's &amp; Seller's Guides.
           </div>
           <div style={{ marginTop: "0.6rem", padding: "0.6rem 0.85rem", background: "#FFF8E8", borderLeft: `3px solid ${BRAND.amber}`, fontSize: "0.78rem", color: "#1F2937", fontFamily: "Inter,sans-serif", lineHeight: 1.55, borderRadius: 4 }}>
             <strong>Educational retrieval only.</strong> This is an information look-up across EZtoFind.ca's approved content library — nothing here is legal, tax, financial, or property-specific advice. For your own situation, speak with the appropriate licensed professional.

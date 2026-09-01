@@ -4831,7 +4831,7 @@ _CATEGORY_RULES = {
     ],
     # Property-type / community-context terms → community browser + listings
     "property type": [
-        {"kind": "Community", "title": "Browse BC community profiles",          "blurb": "239 community pages covering geography, climate, and lifestyle context.",    "href": "/communities",                             "reason": "geographic-context"},
+        {"kind": "Community", "title": "Browse BC community profiles",          "blurb": "240 community pages covering geography, climate, and lifestyle context.",    "href": "/communities",                             "reason": "geographic-context"},
         {"kind": "Listings",  "title": "Live MLS® listings",                     "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",                               "reason": "next-step"},
     ],
     "acreage": [
@@ -4976,7 +4976,7 @@ async def _related_content_for_community(slug: str, limit: int = 6) -> dict:
         {"kind": "Term",      "title": "How a residential purchase works",     "blurb": "The 9 steps in a BC residential purchase from search to closing — explained by term.",         "href": "/glossary/completion-date", "reason": "next-step"},
         {"kind": "Estimator", "title": "Home valuation estimator",           "blurb": "General educational estimate using MLS® comparables. Not an appraisal.",     "href": "/valuation",            "reason": "financial-planning"},
         {"kind": "Listings",  "title": "Live MLS® listings",                  "blurb": "Live BC inventory from the CREA DDF® feed, refreshed hourly.",                "href": "/listings",             "reason": "next-step"},
-        {"kind": "Community", "title": "All BC community profiles",           "blurb": "Explore 239 community pages across the province.",                            "href": "/communities",          "reason": "geographic-context"},
+        {"kind": "Community", "title": "All BC community profiles",           "blurb": "Explore 240 community pages across the province.",                            "href": "/communities",          "reason": "geographic-context"},
         {"kind": "Glossary",  "title": "BC real estate glossary",             "blurb": "439 plain-language terms explaining every concept in BC real estate.",         "href": "/glossary",             "reason": "always-available"},
     ]
     for c in defaults:

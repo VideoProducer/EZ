@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { SEO } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -352,6 +353,9 @@ function FilmSection() {
 
 
 // ── SEO + Schema ────────────────────────────────────────────────────
+// Uses the master SEO component from App.js so title / canonical / OG /
+// Twitter / hreflang are emitted from a single source of truth — this
+// page only owns the Review JSON-LD block that's unique to it.
 function SEOHead() {
   const jsonLdReview = {
     "@context": "https://schema.org",
@@ -359,13 +363,9 @@ function SEOHead() {
     "author": { "@type": "Person", "name": "Google reviewer" },
     "itemReviewed": {
       "@type": "RealEstateAgent",
+      "@id": "https://eztofind.ca/#doug",
       "name": "Doug LeMaire, REALTOR®",
       "url": "https://eztofind.ca/",
-      "brand": "EZtoFind.ca",
-      "worksFor": {
-        "@type": "RealEstateOrganization",
-        "name": "Fraser Property Management Realty Services Ltd.",
-      },
     },
     "reviewRating": {
       "@type": "Rating",
@@ -378,16 +378,12 @@ function SEOHead() {
   };
 
   return (
-    <Helmet>
-      <title>Luxury Real Estate | South Surrey, Fraser Valley & Sea-to-Sky | EZtoFind.ca</title>
-      <meta name="description" content="Representation for significant homes in Greater Vancouver, the Fraser Valley, and Sea-to-Sky. Recent work includes an Elgin Chantrell estate sold in 12 days." />
-      <link rel="canonical" href="https://eztofind.ca/specialties/luxury" />
-      <meta property="og:title" content="Luxury Real Estate | South Surrey, Fraser Valley & Sea-to-Sky | EZtoFind.ca" />
-      <meta property="og:description" content="Representation for significant homes in Greater Vancouver, the Fraser Valley, and Sea-to-Sky. Recent work includes an Elgin Chantrell estate sold in 12 days." />
-      <meta property="og:url" content="https://eztofind.ca/specialties/luxury" />
-      <meta property="og:type" content="website" />
-      <script type="application/ld+json">{JSON.stringify(jsonLdReview)}</script>
-    </Helmet>
+    <SEO
+      title="Luxury Real Estate | South Surrey, Fraser Valley & Sea-to-Sky | EZtoFind.ca"
+      description="Representation for significant homes in Greater Vancouver, the Fraser Valley, and Sea-to-Sky. Recent work includes an Elgin Chantrell estate sold in 12 days."
+      path="/specialties/luxury"
+      schema={jsonLdReview}
+    />
   );
 }
 

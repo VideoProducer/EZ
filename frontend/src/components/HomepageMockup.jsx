@@ -205,7 +205,7 @@ export default function HomepageMockup() {
           <div>
             <div style={{ fontSize: "0.72rem", letterSpacing: "0.16em", color: BRAND.gold, fontWeight: 700 }}>ASK DOOGIE · 24/7 AI CONCIERGE</div>
             <div style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontFamily: "'Sora',sans-serif", fontWeight: 700, marginTop: 6, lineHeight: 1.15 }}>Not ready to talk to Doug yet? Ask Doogie anything about BC real estate.</div>
-            <div style={{ fontSize: "1rem", opacity: 0.9, marginTop: 12, lineHeight: 1.6 }}>Doogie is our AI research assistant — trained on 396 BC real-estate glossary terms, live MLS® data, and 239 community profiles. Ask about the Foreign Buyer Ban, ALR rules, mortgage stress-test math, or your dream neighbourhood — free, instant, and no email required.</div>
+            <div style={{ fontSize: "1rem", opacity: 0.9, marginTop: 12, lineHeight: 1.6 }}>Doogie is our AI research assistant — trained on 439 BC real-estate glossary terms, live MLS® data, and 240 community profiles. Ask about the Foreign Buyer Ban, ALR rules, mortgage stress-test math, or your dream neighbourhood — free, instant, and no email required.</div>
             <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button data-testid="ask-doogie-btn" style={{ background: BRAND.gold, color: BRAND.navy, border: "none", padding: "12px 22px", borderRadius: 999, fontWeight: 700, fontSize: "0.95rem", cursor: "pointer" }}>🐾 Ask Doogie</button>
               <Link to="/ask-doogie" style={{ color: "white", textDecoration: "underline", padding: "12px 4px", fontSize: "0.9rem", fontWeight: 600 }}>See sample questions →</Link>
@@ -258,7 +258,7 @@ export default function HomepageMockup() {
       {/* ══════════════════ § FEATURED COMMUNITIES ══════════════════ */}
       <Section tone="white">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-          <H2 kicker="Explore 239 BC communities">Doug's coverage · Fraser Valley → Sea-to-Sky</H2>
+          <H2 kicker="Explore 240 BC communities">Doug's coverage · Fraser Valley → Sea-to-Sky</H2>
           <Link to="/communities" style={{ color: BRAND.navy, fontWeight: 700, textDecoration: "none", fontSize: "0.9rem" }}>All 240 communities →</Link>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
