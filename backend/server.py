@@ -6720,8 +6720,14 @@ async def community_neighbourhoods(slug: str):
         if not cache_hit:
             # Run the per-nhb counts in parallel so a 32-tile city (Surrey,
             # Vancouver, Burnaby) resolves in ~1 s instead of ~7 s on cache-miss.
+            # Covers BOTH farm (curated) and non-farm (provincial) tiles so
+            # BC-wide discoverability shows real inventory even for Kelowna,
+            # Victoria, Prince George, etc. — provincial tiles still render
+            # as referral-only on the frontend, the count is purely for
+            # research / AEO signal.
             todo = [it for it in items
-                    if it.get("source") == "curated" and it.get("count", 0) == 0]
+                    if it.get("source") in ("curated", "provincial")
+                    and it.get("count", 0) == 0]
             async def _count_one(it):
                 _n_esc = re.escape(it["name"])
                 return it["slug"], await db.listings.count_documents({
