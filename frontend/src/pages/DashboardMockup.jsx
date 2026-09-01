@@ -325,7 +325,7 @@ const HeroIntro = () => {
           <span style={{ color: C.brandBlue }}>made EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
         </h1>
         <p style={{ color: C.ink, marginTop: 10, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
-          EZtoFind.ca is a <strong>free</strong> real estate information platform for anyone considering buying or selling residential real estate in British Columbia — now or in the future.
+          EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.
         </p>
         <p style={{ color: C.ink, marginTop: 6, marginBottom: 6, fontSize: 14, lineHeight: 1.55, maxWidth: 720 }}>
           <strong style={{ color: C.navy }}>Meet <em style={{ color: C.gold, fontStyle: "italic", fontFamily: "'Playfair Display', serif" }}>Doogie</em> — your BC real estate helper.</strong> Ask about active BC listings, neighbourhoods, or real estate terms. Doogie provides <strong>general information only, never advice</strong>.
