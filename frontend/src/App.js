@@ -136,6 +136,21 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // pointers to the live site, but can be overridden via env for staging.
 const SITE_URL = process.env.REACT_APP_PUBLIC_URL || "https://eztofind.ca";
 
+// Doug's directly-repped farm — mirrors the FOCUS_COMMUNITIES set in
+// CommunityPageMockupLive.jsx so App.js can gate compliant CTAs (the
+// listings empty-state should NOT show a referral card when the search
+// is inside Doug's own farm).
+const FARM_SLUGS = new Set([
+  "maple-ridge", "pitt-meadows", "coquitlam", "port-coquitlam", "port-moody",
+  "burnaby", "vancouver", "west-vancouver", "north-vancouver", "richmond",
+  "surrey", "delta", "langley", "langley-city", "langley-township",
+  "white-rock", "new-westminster", "mission", "abbotsford", "chilliwack",
+  "hope", "kent", "harrison-hot-springs",
+  "squamish", "whistler", "pemberton", "lions-bay", "bowen-island",
+]);
+const _cityToSlug = (name) => (name || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const isFarmCity = (cityName) => FARM_SLUGS.has(_cityToSlug(cityName));
+
 // Google Maps iframe embed — no API key required for basic q=... embed.
 // Google handles geocoding, so no client-side geocoder or rate limits needed.
 // For merged municipalities (Langley = City + Township; North Vancouver = City + District)
@@ -3748,10 +3763,32 @@ const Listings = () => {
             <div className="paper" style={{textAlign:"center",padding:"3rem 1.5rem"}}>
               <div style={{fontSize:"3rem",marginBottom:"1rem"}}>🏡</div>
               <div style={{fontFamily:"Sora,sans-serif",fontSize:"1.2rem",fontWeight:700}}>No listings match your search</div>
-              <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem",marginBottom:"1.25rem"}}>Try widening your filters — or if you're looking outside Doug's direct service area, ask for a hand-picked local REALTOR® below.</div>
-              <div style={{maxWidth:520, margin:"0 auto"}}>
-                <ReferralAsk variant="card" context="listings-empty-state"/>
-              </div>
+              {isFarmCity(filters.city) ? (
+                // In-farm: Doug reps here directly. Do NOT show a referral CTA
+                // (that would violate the "farm = direct rep" rule). Offer an
+                // alert + widen-search prompt instead.
+                <>
+                  <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem",marginBottom:"1.25rem"}}>
+                    Doug represents <strong>{filters.city}</strong> directly — inventory is just quiet in this pocket right now. Try widening your filters, or set an alert so you're first in line when a new home hits.
+                  </div>
+                  <div style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
+                    <button onClick={()=>setAlertOpen(true)} data-testid="empty-state-alert-btn" className="btn btn-primary" style={{padding:"0.75rem 1.5rem",fontSize:"0.9rem",fontFamily:"Sora,sans-serif",fontWeight:700,borderRadius:999}}>
+                      🔔 Set an alert for this search
+                    </button>
+                    <Link to={`/community/${_cityToSlug(filters.city)}`} data-testid="empty-state-community-link" className="btn btn-outline" style={{padding:"0.75rem 1.5rem",fontSize:"0.9rem",fontFamily:"Sora,sans-serif",fontWeight:700,borderRadius:999,textDecoration:"none"}}>
+                      ← Back to {filters.city}
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                // Outside Doug's farm — the compliant referral CTA is correct.
+                <>
+                  <div style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",marginTop:"0.5rem",marginBottom:"1.25rem"}}>Try widening your filters — or if you're looking outside Doug's direct service area, ask for a hand-picked local REALTOR® below.</div>
+                  <div style={{maxWidth:520, margin:"0 auto"}}>
+                    <ReferralAsk variant="card" context="listings-empty-state" area={filters.city || ""}/>
+                  </div>
+                </>
+              )}
             </div>
           )}
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"1.25rem"}} data-testid="listings-grid">

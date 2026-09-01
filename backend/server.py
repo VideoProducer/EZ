@@ -6690,6 +6690,70 @@ async def community_neighbourhoods(slug: str):
             })
     except Exception:
         pass
+    # Enrich curated sub-neighbourhoods with real counts derived from
+    # address/description text — the CREA DDF® `region` (CityRegion) field
+    # is blank for most GVR / Surrey listings, so the curated entries would
+    # otherwise all read `count: 0`. Cached per city in
+    # `neighbourhood_live_counts` (6-hour TTL) so we scan address text at
+    # most 4 times a day per city, not on every page load.
+    try:
+        cache = await db.neighbourhood_live_counts.find_one(
+            {"city_slug": slug}, {"_id": 0}
+        )
+        now_dt = datetime.now(timezone.utc)
+        counts_map: dict = {}
+        cache_hit = False
+        if cache and cache.get("expires_at"):
+            exp = cache["expires_at"]
+            if isinstance(exp, str):
+                try:
+                    exp = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+                except Exception:
+                    exp = None
+            # Mongo BSON strips tzinfo — coerce back to UTC-aware so the
+            # comparison with `now_dt` doesn't raise TypeError.
+            if isinstance(exp, datetime) and exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp and now_dt < exp:
+                counts_map = cache.get("counts", {}) or {}
+                cache_hit = True
+        if not cache_hit:
+            # Run the per-nhb counts in parallel so a 32-tile city (Surrey,
+            # Vancouver, Burnaby) resolves in ~1 s instead of ~7 s on cache-miss.
+            todo = [it for it in items
+                    if it.get("source") == "curated" and it.get("count", 0) == 0]
+            async def _count_one(it):
+                _n_esc = re.escape(it["name"])
+                return it["slug"], await db.listings.count_documents({
+                    "status": "Active",
+                    "city": _city_query(name),
+                    "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)},
+                    "list_price": {"$gt": 0},
+                    "$or": [
+                        {"region":           {"$regex": f"^{_n_esc}$", "$options": "i"}},
+                        {"unparsed_address": {"$regex": _n_esc,        "$options": "i"}},
+                        {"street_address":   {"$regex": _n_esc,        "$options": "i"}},
+                        {"description":      {"$regex": _n_esc,        "$options": "i"}},
+                    ],
+                })
+            if todo:
+                results = await asyncio.gather(*[_count_one(it) for it in todo], return_exceptions=True)
+                for r in results:
+                    if isinstance(r, tuple):
+                        counts_map[r[0]] = r[1]
+            await db.neighbourhood_live_counts.replace_one(
+                {"city_slug": slug},
+                {"city_slug": slug, "counts": counts_map,
+                 "expires_at": now_dt + timedelta(hours=6),
+                 "updated_at": now_dt.isoformat()},
+                upsert=True,
+            )
+        # Apply live counts back to the curated tiles.
+        for it in items:
+            if it.get("slug") in counts_map:
+                it["count"] = counts_map[it["slug"]]
+    except Exception as e:
+        logger.warning(f"neighbourhoods count enrichment failed for {slug}: {e}")
     return {
         "community": name,
         "region": region,
@@ -7280,8 +7344,18 @@ async def neighbourhood_detail(slug: str, n_slug: str):
     except Exception:
         referral_only = False
     # Aggregate listing stats to feed the LLM AND surface on the page.
+    # Match strategy — same widened logic as GET /api/listings so curated
+    # sub-nhb names surface real inventory even when the DDF `region`
+    # field is empty (which it is for most GVR / Surrey listings).
+    _nhb_esc = re.escape(n_name)
+    _nhb_match_or = [
+        {"region":           {"$regex": f"^{_nhb_esc}$", "$options": "i"}},
+        {"unparsed_address": {"$regex": _nhb_esc,        "$options": "i"}},
+        {"street_address":   {"$regex": _nhb_esc,        "$options": "i"}},
+        {"description":      {"$regex": _nhb_esc,        "$options": "i"}},
+    ]
     agg = await db.listings.aggregate([
-        {"$match": {"status":"Active","city":_city_query(name),"region":n_name,"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)}}},
+        {"$match": {"status":"Active","city":_city_query(name),"property_type":{"$nin":list(EXCLUDED_PROPERTY_TYPES)},"$or":_nhb_match_or}},
         {"$group": {"_id": None, "count":{"$sum":1}, "min_price":{"$min":"$list_price"}, "max_price":{"$max":"$list_price"}, "avg_beds":{"$avg":"$beds"}, "types":{"$addToSet":"$property_type"}, "prices":{"$push":"$list_price"}}},
     ]).to_list(1)
     stats = agg[0] if agg else {}
@@ -11217,7 +11291,27 @@ async def search_listings(
                       query["city"] = {"$in": [re.compile(f"^{re.escape(c)}$", re.I) for c in city_list]}
                   else:
                       query["city"] = _city_query(city)
-    if region:    query["region"] = {"$regex": f"^{re.escape(region)}$", "$options": "i"}
+    if region:
+        # Sub-neighbourhood matching. The CREA DDF® `region` (CityRegion)
+        # field is unreliable — many BC boards (notably GVR / Surrey) leave
+        # it blank, so an exact-match returned 0 listings for every curated
+        # sub-neighbourhood inside those cities. Widen to a case-insensitive
+        # substring hit against the region field OR the addresses OR the
+        # description so names like "Elgin Chantrell" surface every listing
+        # in that area even when the board never tagged CityRegion.
+        _region_esc = re.escape(region)
+        _region_clause = {"$or": [
+            {"region":           {"$regex": f"^{_region_esc}$", "$options": "i"}},
+            {"unparsed_address": {"$regex": _region_esc,        "$options": "i"}},
+            {"street_address":   {"$regex": _region_esc,        "$options": "i"}},
+            {"description":      {"$regex": _region_esc,        "$options": "i"}},
+        ]}
+        # Merge safely — some upstream code paths pre-set $or (e.g. equestrian
+        # intent). Falling back to $and preserves both filters.
+        if "$or" in query or "$and" in query:
+            query.setdefault("$and", []).append(_region_clause)
+        else:
+            query.update(_region_clause)
     # region_group: resolves a top-level BC area (e.g. "Sea-to-Sky") to the full
     # list of member cities and applies a case-insensitive $in filter. Ignored
     # if the caller also passed a specific `city` (city wins — narrower).
