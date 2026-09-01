@@ -397,16 +397,16 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   const canonical = `https://eztofind.ca/community/${slug}`;
   const pageTitle = isFocus
     ? `${community}, BC Real Estate · Doug LeMaire, REALTOR® · EZtoFind.ca`
-    : `${community}, BC — Community Profile & Referral REALTOR® · EZtoFind.ca`;
+    : `Living in ${community}, BC: Community Profile, Climate & MLS® Listings | EZtoFind.ca`;
   const pageDesc = isFocus
     ? `Live ${community}, BC listings, sub-neighbourhood breakdowns, climate, and market data. Doug LeMaire, REALTOR® with Fraser Property Management personally represents buyers and sellers in ${community}.`
-    : `${community}, BC community profile with live MLS® data, climate, and market snapshot. ${community} is outside Doug LeMaire's direct service area (Greater Vancouver, Fraser Valley, Sea-to-Sky) — Doug will connect you with a BCFSA-licensed local REALTOR® in ${community} within 24 hours at $0 cost to you.`;
+    : `Explore ${community}, BC — community profile with live MLS® listings, Environment Canada climate data, and market snapshot. Free BC real estate information from EZtoFind.ca. ${community} is outside Doug LeMaire's direct service area — a BCFSA-licensed local REALTOR® in ${community} is available via the referral network at $0 cost to you.`;
   const ogImage = `https://eztofind.ca/images/doogie-og.png?v=4`;
   const faqLd = faqs && faqs.length ? {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "author":    { "@type": "Person", "name": "Doug LeMaire, REALTOR®", "url": "https://eztofind.ca/about" },
-    "publisher": { "@type": "Organization", "name": "EZtoFind.ca", "url": "https://eztofind.ca" },
+    "author":    { "@id": "https://eztofind.ca/#doug" },
+    "publisher": { "@id": "https://eztofind.ca/#organization" },
     "mainEntity": faqs.map(f => ({
       "@type": "Question",
       "name": f.q,
@@ -433,7 +433,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           "value": "167790",
           "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
         }],
-        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+        "worksFor": { "@id": "https://eztofind.ca/#organization" },
         // In-area: emit direct areaServed for THIS community explicitly, alongside
         // the three focus regions. Signals to LLMs that Doug personally represents
         // buyers and sellers here.
@@ -460,7 +460,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           "value": "167790",
           "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
         }],
-        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+        "worksFor": { "@id": "https://eztofind.ca/#organization" },
         // Out-of-area: areaServed stays scoped to focus regions ONLY.
         "areaServed": focusAreas,
         "memberOf": [
@@ -476,7 +476,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
             "name": `Licensed REALTOR® referral for ${community}, BC`,
             "serviceType": "Real estate referral",
             "areaServed": { "@type": "City", "name": `${community}, British Columbia` },
-            "provider": { "@type": "Person", "name": "Doug LeMaire, REALTOR®" },
+            "provider": { "@id": "https://eztofind.ca/#doug" },
             "description": `Vetted introduction to a BCFSA-licensed local REALTOR® in ${community} within 24 hours. Zero cost to the consumer. Consumer approves each introduction.`,
           },
           "price": 0,

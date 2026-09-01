@@ -155,7 +155,7 @@ export default function MarketReport() {
         "@type": "Person",
         "name": "Doug LeMaire, REALTOR®",
         "url": `${site}/about`,
-        "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+        "worksFor": { "@id": "https://eztofind.ca/#organization" },
       },
       "publisher": {
         "@type": "Organization",

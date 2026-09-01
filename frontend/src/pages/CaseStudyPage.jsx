@@ -118,7 +118,7 @@ export default function CaseStudyPage() {
           "headline": cs.seoTitle,
           "description": cs.seoDesc,
           "author": { "@type": "RealEstateAgent", "name": "Doug LeMaire, REALTOR®", "url": "https://eztofind.ca/about" },
-          "publisher": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd.", "url": "https://eztofind.ca" },
+          "publisher": { "@id": "https://eztofind.ca/#organization" },
           "datePublished": cs.listedDate,
           "mainEntityOfPage": canonical,
           "image": heroPhoto || undefined,

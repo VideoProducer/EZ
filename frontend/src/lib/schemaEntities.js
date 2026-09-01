@@ -29,9 +29,12 @@
 export const SITE_URL = "https://eztofind.ca";
 
 // @id constants — reference these from every page-level block.
-export const ORG_ID = `${SITE_URL}/#org`;
+// Aligned with the canonical entity graph already emitted sitewide by
+// SiteWideSchema.jsx so existing inline references keep resolving as
+// we migrate them to @id-only.
+export const ORG_ID = `${SITE_URL}/#organization`;
 export const DOUG_ID = `${SITE_URL}/#doug`;
-export const BROKERAGE_ID = `${SITE_URL}/#brokerage`;
+export const BROKERAGE_ID = `${SITE_URL}/#organization`; // brokerage == organization here (single legal entity)
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 
 // Reference-only helpers — use these to link a page's Article / WebPage

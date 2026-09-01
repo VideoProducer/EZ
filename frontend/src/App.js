@@ -2804,7 +2804,7 @@ const Home = () => {
             "url":"https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search"
           }
         ],
-        "worksFor":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
+        "worksFor":{"@id":"https://eztofind.ca/#organization"},
         "areaServed":[
           {"@type":"AdministrativeArea","name":"Greater Vancouver, British Columbia"},
           {"@type":"AdministrativeArea","name":"Fraser Valley, British Columbia"},
@@ -6025,7 +6025,7 @@ const GlossaryTerm = () => {
     "description":t.definition.substring(0,200),
     "datePublished": datePub,
     "dateModified": dateMod,
-    "author":{"@type":"Person","name":"Doug LeMaire, REALTOR®","url":"https://eztofind.ca/about","affiliation":{"@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
+    "author":{"@id":"https://eztofind.ca/#doug"},
     "reviewedBy":{"@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     // isPartOf — declares the article's membership in the site-wide
@@ -9023,7 +9023,7 @@ const CommunityPage = () => {
     "@context":"https://schema.org","@type":"Article",
     "@id":`https://eztofind.ca/community/${slug}#article`,
     "headline":`${found}, British Columbia — Community Overview`,
-    "author":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},"url":"https://eztofind.ca/about"},
+    "author":{"@id":"https://eztofind.ca/#doug"},
     "reviewedBy":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","jobTitle":"Licensed BC REALTOR®","url":"https://eztofind.ca/about"},
     "publisher":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"EZtoFind.ca","logo":{"@type":"ImageObject","url":"https://eztofind.ca/images/doogie-laptop.png"}},
     "isPartOf":[
@@ -9108,7 +9108,7 @@ const CommunityPage = () => {
     "url":`https://eztofind.ca/community/${slug}`,
     "isPartOf":{"@type":"WebSite","@id":"https://eztofind.ca/#website"},
     "keywords":[`${found}`,`${region || "British Columbia"}`,"BC real estate","Canadian real estate","community profile","MLS listings","climate normals"],
-    "creator":{"@id":"https://eztofind.ca/#doug","@type":"Person","name":"Doug LeMaire, REALTOR®","affiliation":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."}},
+    "creator":{"@id":"https://eztofind.ca/#doug"},
     "publisher":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"EZtoFind.ca","url":"https://eztofind.ca"},
     "isAccessibleForFree":true,
     "inLanguage":"en-CA",
@@ -10476,7 +10476,7 @@ const HomeSchema = () => {
     "url":"https://eztofind.ca",
     "areaServed":[{"@type":"AdministrativeArea","name":"British Columbia"}],
     "knowsAbout":["Detached homes","Luxury real estate","Equestrian properties","Estate Sales","Probate","Condos"],
-    "parentOrganization":{"@id":"https://eztofind.ca/#organization","@type":"Organization","name":"Fraser Property Management Realty Services Ltd."},
+    "parentOrganization":{"@id":"https://eztofind.ca/#organization"},
     "email":"info@eztofind.ca",
     "sameAs":[
       "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",

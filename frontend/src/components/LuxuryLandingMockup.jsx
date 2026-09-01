@@ -439,7 +439,7 @@ export default function LuxuryLandingMockup({ live = false, previewFlagship = fa
                 "value": "167790",
                 "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/registrant-search",
               }],
-              "worksFor": { "@type": "Organization", "name": "Fraser Property Management Realty Services Ltd." },
+              "worksFor": { "@id": "https://eztofind.ca/#organization" },
               "areaServed": "British Columbia",
               "knowsAbout": ["Luxury real estate", "Waterfront estates", "Penthouses", "Ski chalets", "Vineyard estates", "Private-showing protocols"],
               "memberOf": [
