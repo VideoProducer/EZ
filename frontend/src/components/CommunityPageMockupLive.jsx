@@ -23,7 +23,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const BRAND = {
   navy: "#0F2A5B", gold: "#F5A623", cream: "#F5F0E1",
   ink: "#1F2937", muted: "#6B7280", green: "#059669",
-  blue: "#1E40AF", paper: "#FAFAF7",
+  blue: "#1E40AF", paper: "#FAFAF7", brass: "#C6A359",
 };
 
 // Doug's direct service area — everything else is out-of-area referral flow.
@@ -242,7 +242,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [data, setData] = useState({
-    stats: null, synopsis: null, neighbourhoods: [], nearby: [],
+    stats: null, synopsis: null, neighbourhoods: [], referralOnly: false, nearby: [],
     weather: null, listings: [], listingsTotal: 0,
   });
 
@@ -269,6 +269,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           stats: statsR?.data || null,
           synopsis: synR.status === "fulfilled" ? synR.value.data : null,
           neighbourhoods: hoodsR.status === "fulfilled" ? (hoodsR.value.data.neighbourhoods || []) : [],
+          referralOnly: hoodsR.status === "fulfilled" ? !!hoodsR.value.data.referral_only : false,
           nearby: nearR.status === "fulfilled" ? (nearR.value.data.items || []) : [],
           weather: wR.status === "fulfilled" ? wR.value.data : null,
           listings: listR.status === "fulfilled" ? (listR.value.data.listings || []) : [],
@@ -296,12 +297,27 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   // didn't populate CityRegion (Fraser Valley / Greater Vancouver), fall back
   // to the curated hand-tuned list keyed by community slug — clicking a chip
   // routes into /listings?q={keyword}&city={community} for a real result set.
+  //
+  // Non-farm cities (Kelowna, Victoria, Kamloops, etc.) return referral_only
+  // from the API; we honour that here by tagging every one of their sub-nhb
+  // chips as "referral" so the rendering layer can swap style + copy.
   const hoods = useMemo(() => {
-    if (data.neighbourhoods.length) return data.neighbourhoods.map(n => ({
-      slug: n.slug, name: n.name, count: n.count,
-      median_price: n.median_price, kind: "live",
-      href: `/community/${slug}/n/${n.slug}`,
-    }));
+    if (data.neighbourhoods.length) return data.neighbourhoods.map(n => {
+      // Backend `source` field:
+      //   "listings"  → live MLS aggregate; has count + median
+      //   "curated"   → farm curated (0-count okay)
+      //   "provincial"→ non-farm curated (referral-only)
+      const source = n.source || "live";
+      const isProvincial = source === "provincial" || data.referralOnly;
+      return {
+        slug: n.slug,
+        name: n.name,
+        count: n.count,
+        median_price: n.median_price,
+        kind: source === "listings" ? "live" : (isProvincial ? "referral" : "curated"),
+        href: `/community/${slug}/n/${n.slug}`,
+      };
+    });
     const curated = CURATED_HOODS[slug];
     if (!curated) return [];
     return curated.map(c => ({
@@ -309,7 +325,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
       name: c.name, kind: "curated",
       href: `/listings?city=${encodeURIComponent(community)}&q=${encodeURIComponent(c.q)}`,
     }));
-  }, [data.neighbourhoods, slug, community]);
+  }, [data.neighbourhoods, data.referralOnly, slug, community]);
 
   // Map bbox derived from listing lat/lon range for a properly-zoomed embed.
   const mapEmbed = useMemo(() => {
@@ -599,7 +615,9 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           </div>
           <div>
             <div style={{fontSize:"0.85rem",fontWeight:700,color:BRAND.navy,marginBottom:10}}>
-              Sub-neighbourhoods ({hoods.length}){hoods[0]?.kind==="curated" && <span style={{fontSize:"0.7rem",fontWeight:500,color:BRAND.muted,marginLeft:6}}>· curated · tap to filter listings</span>}
+              {data.referralOnly ? "Sub-neighbourhoods" : "Sub-neighbourhoods"} in {community} ({hoods.length})
+              {data.referralOnly && <span style={{fontSize:"0.7rem",fontWeight:600,color:BRAND.brass,marginLeft:6,padding:"2px 6px",borderRadius:4,background:"rgba(198,163,89,0.15)"}}>Referral network</span>}
+              {!data.referralOnly && hoods.some(h => h.kind === "curated") && <span style={{fontSize:"0.7rem",fontWeight:500,color:BRAND.muted,marginLeft:6}}>· curated + live</span>}
             </div>
             {hoods.length === 0 ? (
               <div style={{fontSize:"0.85rem",color:BRAND.muted,fontStyle:"italic"}}>No sub-neighbourhoods indexed yet for this community. Use the "View all listings" button above.</div>
@@ -611,16 +629,25 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
                     to={n.href}
                     data-testid={`neighbourhood-${n.slug}`}
                     style={{
-                      padding:"9px 12px",background:"white",border:"1px solid #E5E7EB",borderRadius:8,
+                      padding:"9px 12px",
+                      background: n.kind === "referral" ? "rgba(198,163,89,0.06)" : "white",
+                      border: n.kind === "referral" ? "1px solid rgba(198,163,89,0.30)" : "1px solid #E5E7EB",
+                      borderRadius:8,
                       fontSize:"0.82rem",color:BRAND.ink,fontWeight:600,textDecoration:"none",
                       display:"block",transition:"all 0.15s",
                     }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = BRAND.navy; e.currentTarget.style.background = BRAND.cream; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "white"; }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = n.kind === "referral" ? "rgba(198,163,89,0.30)" : "#E5E7EB";
+                      e.currentTarget.style.background = n.kind === "referral" ? "rgba(198,163,89,0.06)" : "white";
+                    }}
                   >
-                    📍 {n.name} <span style={{fontSize:"0.7rem",color:BRAND.navy,marginLeft:4}}>→</span>
-                    {n.kind === "live" && (
+                    {n.kind === "referral" ? "🤝" : "📍"} {n.name} <span style={{fontSize:"0.7rem",color:BRAND.navy,marginLeft:4}}>→</span>
+                    {n.kind === "live" && n.count > 0 && (
                       <div style={{fontSize:"0.7rem",color:BRAND.muted,fontWeight:400,marginTop:1}}>{n.count} listings · median {fmtMoney(n.median_price)}</div>
+                    )}
+                    {n.kind === "referral" && (
+                      <div style={{fontSize:"0.7rem",color:BRAND.brass,fontWeight:500,marginTop:1}}>Referral REALTOR® network</div>
                     )}
                   </Link>
                 ))}
