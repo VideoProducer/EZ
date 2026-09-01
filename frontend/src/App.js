@@ -2862,7 +2862,7 @@ const Home = () => {
         <div className="eyebrow">🏔️ British Columbia</div>
 
         <h1><span className="accent" style={{color:"#0A3D99",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600,fontStyle:"normal"}}>Real estate</span><span style={{color:"#0A3D99",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>,</span><br/><span style={{color:"#0A3D99",fontFamily:"'Avenir Next','Manrope',sans-serif",fontWeight:600}}>made </span><span className="brand-blue" style={{color:"#0A3D99",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>EZtoFind</span><span className="green" style={{color:"#F9BD00",fontFamily:"'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif",fontWeight:700}}>.ca</span></h1>
-        <p className="lead">EZtoFind.ca is a free real estate information platform for anyone considering buying or selling residential real estate in British Columbia now or in the future.</p>
+        <p className="lead">EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.</p>
         <p className="lead" style={{marginTop:"1.25rem",fontSize:"1.65rem",fontWeight:700,color:"var(--brand-navy)",lineHeight:1.2,fontFamily:"'Playfair Display', serif"}}>
           <Link to="/" data-testid="home-meet-doogie-link" style={{color:"inherit",textDecoration:"none"}}
             onMouseOver={e=>e.currentTarget.style.opacity="0.85"}
