@@ -2745,7 +2745,7 @@ const Home = () => {
   return (<>
     <SEO
       title="EZtoFind.ca | BC Real Estate Search"
-      description="Free BC real estate information platform: 396 glossary terms with authoritative sources, 239 community profiles with real Environment Canada climate data, and BC-wide REALTOR® referral network. By Doug LeMaire, REALTOR®."
+      description="EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready. 439 glossary terms, 240 community profiles, live MLS® search by Doug LeMaire, REALTOR®."
       path="/"
     />
     <Helmet>
@@ -6535,7 +6535,7 @@ const About = () => (<section className="section"><div className="container-x" s
     <div style={{flex:1,minWidth:280,fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}>
       <p>I'm Doug LeMaire, a licensed REALTOR® with Fraser Property Management Realty Services Ltd. For 13 years I've helped people buy and sell across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor up to Whistler.</p>
       <p>My work centres on detached homes, acreages and equestrian properties, luxury real estate, residential strata's and probate/estate sales — and it's work I genuinely enjoy.</p>
-      <p style={{marginTop:"1.25rem"}}><strong>EZtoFind.ca</strong> has been built as a British Columbia real estate information platform that provides buyers and sellers with straight answers, terminology, and information on the buying and selling process — anywhere in the province. It reflects how I like to work: informed clients make better decisions, and my job is to make good information easy to find.</p>
+      <p style={{marginTop:"1.25rem"}}><strong>EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.</strong> The site is built to give buyers and sellers straight answers, plain-language terminology, and the facts on the buying and selling process anywhere in the province. It reflects how I like to work: informed clients make better decisions, and my job is to make good information easy to find.</p>
       <p style={{marginTop:"1.25rem"}}>If you're buying or selling in Greater Vancouver, the Fraser Valley, or Sea-to-Sky, I'd be glad to help. For enquiries beyond my service area, I can connect you with a licensed REALTOR®. Ask to be referred through our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral REALTOR®</Link> link.</p>
     </div>
   </div>
