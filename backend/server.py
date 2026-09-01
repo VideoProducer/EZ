@@ -4027,6 +4027,20 @@ async def get_reminders(_=Depends(verify_admin)):
                         "years": years,
                         "auto_send": key in ("birthday", "anniversary"),
                     })
+                    # Fire an Annual Market Update alongside the possession
+                    # anniversary — same date, distinct card so Doug can
+                    # choose to send either (or both). Skipped in the first
+                    # year (no meaningful change yet).
+                    if key == "possession" and years and years >= 1:
+                        reminders.append({
+                            **base,
+                            "type": f"Annual Market Update ({years}yr)",
+                            "type_key": "annual_market_update",
+                            "date": this_year.isoformat(),
+                            "days_until": delta,
+                            "years": years,
+                            "auto_send": False,   # manual review — always Doug's call before sending
+                        })
             except Exception:
                 continue
 
@@ -4096,7 +4110,7 @@ async def get_reminders(_=Depends(verify_admin)):
     return reminders
 
 # ---------- Reminder templates ----------
-_REMINDER_TYPES = ["birthday", "anniversary", "possession", "bc_assessment", "mortgage_renewal", "christmas", "new_year"]
+_REMINDER_TYPES = ["birthday", "anniversary", "possession", "bc_assessment", "mortgage_renewal", "christmas", "new_year", "annual_market_update"]
 
 DEFAULT_REMINDER_TEMPLATES = {
     "birthday": {
@@ -4195,6 +4209,37 @@ DEFAULT_REMINDER_TEMPLATES = {
             "<p>Here's to a great year ahead,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
         ),
     },
+    # Annual Market Update — fires each year on the possession-anniversary
+    # date. Under-150-word text summary of neighbourhood value change since
+    # purchase year. Merge tags:
+    #   {{first_name}}          — client's first name
+    #   {{neighbourhood}}       — client's neighbourhood (falls back to city)
+    #   {{purchase_year}}       — 4-digit year the client took possession
+    #   {{value_at_purchase}}   — pretty-formatted median in that year (or "unknown — Doug will fill")
+    #   {{current_month_year}}  — auto-rendered "February 2026"
+    #   {{value_now}}           — pretty-formatted current median
+    #   {{pct_change}}          — signed % change (e.g. "+42%") or "n/a"
+    #   {{years_held}}          — integer years since possession
+    #   {{years_s}}             — "s" pluralizer
+    "annual_market_update": {
+        "subject": "{{first_name}}, your {{neighbourhood}} home — where values sit today",
+        "body_html": (
+            "<p>Hi {{first_name}},</p>"
+            "<p>Quick annual market check-in from Doug at EZtoFind.ca.</p>"
+            "<p>When you bought in <strong>{{neighbourhood}}</strong> in <strong>{{purchase_year}}</strong>, "
+            "the neighbourhood median sat around <strong>{{value_at_purchase}}</strong>.</p>"
+            "<p>As of <strong>{{current_month_year}}</strong>, homes in the same area are trading around "
+            "<strong>{{value_now}}</strong> — a <strong>{{pct_change}}</strong> move over "
+            "{{years_held}} year{{years_s}}.</p>"
+            "<p>No ask, no pressure — just the numbers so you can plan around the equity you've built. "
+            "If you'd like a proper CMA for your specific home (not just the neighbourhood median), "
+            "reply and I'll prepare one. And if a move, refinance, or equity take-out is on your radar, "
+            "I'm one call away.</p>"
+            "<p>Warmly,<br/>Doug LeMaire, REALTOR®<br/>Fraser Property Management Realty Services Ltd.</p>"
+            "<p style='color:#666;font-size:0.8em'>Median-value figures are neighbourhood-level snapshots, "
+            "not a formal appraisal or an opinion of your home's specific value.</p>"
+        ),
+    },
 }
 
 async def _seed_reminder_templates():
@@ -4233,11 +4278,127 @@ def _render_reminder_template(body: str, client: dict, extra: dict = None) -> st
         "lender": client.get("mortgage_lender") or "your lender",
         "days": str(extra.get("days") or ""),
         "unsubscribe_url": extra.get("unsubscribe_url") or "https://eztofind.ca/unsubscribe",
+        # Annual Market Update merge tags — resolved by
+        # _build_market_update_context() before this render runs and
+        # passed in via `extra`. Fallbacks so the template never breaks
+        # even when the market data is unavailable.
+        "neighbourhood": extra.get("neighbourhood") or client.get("neighbourhood") or client.get("city") or "your neighbourhood",
+        "purchase_year": extra.get("purchase_year") or "",
+        "value_at_purchase": extra.get("value_at_purchase") or "(Doug will fill in)",
+        "current_month_year": extra.get("current_month_year")
+            or datetime.now(timezone.utc).strftime("%B %Y"),
+        "value_now": extra.get("value_now") or "(current median unavailable)",
+        "pct_change": extra.get("pct_change") or "n/a",
+        "years_held": str(extra.get("years_held") or years or ""),
     }
     out = body
     for k, v in ctx.items():
         out = out.replace("{{" + k + "}}", str(v))
     return out
+
+
+async def _build_market_update_context(client: dict) -> dict:
+    """Compute Annual Market Update merge tags for a client.
+
+    Uses `market_reports` snapshots when the purchase year is covered;
+    otherwise falls back to a "Doug will fill in" placeholder so the
+    template still renders safely. Silent-fail on any lookup error —
+    reminders must never break a send.
+    """
+    from datetime import datetime as _dt, timezone as _tz
+    from math import isfinite as _isfinite
+    ctx: dict = {}
+    poss = client.get("possession_date")
+    if not poss:
+        return ctx
+    try:
+        pd = _dt.strptime(poss, "%Y-%m-%d").date()
+    except Exception:
+        return ctx
+
+    today = _dt.now(_tz.utc).date()
+    years_held = max(0, today.year - pd.year)
+    ctx["purchase_year"] = str(pd.year)
+    ctx["years_held"] = years_held
+    ctx["years_s"] = "s" if years_held != 1 else ""
+    ctx["current_month_year"] = today.strftime("%B %Y")
+
+    city = (client.get("city") or "").strip()
+    nhb = (client.get("neighbourhood") or "").strip()
+    ctx["neighbourhood"] = nhb or city or "your neighbourhood"
+
+    def _fmt(v):
+        try:
+            return f"${int(round(float(v))):,}"
+        except Exception:
+            return None
+
+    # Current median — read latest market_reports snapshot for the client's city
+    value_now_num = None
+    try:
+        latest = await db.market_reports.find_one(
+            {}, {"_id": 0, "ym": 1, "cities": 1}, sort=[("ym", -1)]
+        )
+        if latest:
+            for c in latest.get("cities", []):
+                if (c.get("name") or "").lower() == city.lower():
+                    value_now_num = c.get("median_price")
+                    break
+    except Exception:
+        pass
+
+    # Fall back to a live listings aggregation if no snapshot hits
+    if value_now_num is None and city:
+        try:
+            agg = await db.listings.aggregate([
+                {"$match": {"status": "Active",
+                            "city": _city_query(city) if "_city_query" in globals() else city,
+                            "list_price": {"$gt": 0}}},
+                {"$group": {"_id": None, "prices": {"$push": "$list_price"}}},
+            ]).to_list(1)
+            if agg and agg[0].get("prices"):
+                prices = sorted(agg[0]["prices"])
+                value_now_num = prices[len(prices) // 2]
+        except Exception:
+            pass
+
+    ctx["value_now"] = _fmt(value_now_num) or "(current median unavailable)"
+
+    # Value at purchase — best-effort:
+    # 1) Try a market_reports snapshot from the purchase year
+    # 2) Otherwise leave a placeholder for Doug to hand-fill
+    value_at_purchase_num = None
+    try:
+        purchase_ym_prefix = f"{pd.year:04d}-"
+        snap = await db.market_reports.find_one(
+            {"ym": {"$regex": f"^{purchase_ym_prefix}"}},
+            {"_id": 0, "cities": 1},
+        )
+        if snap and city:
+            for c in snap.get("cities", []):
+                if (c.get("name") or "").lower() == city.lower():
+                    value_at_purchase_num = c.get("median_price")
+                    break
+    except Exception:
+        pass
+
+    ctx["value_at_purchase"] = _fmt(value_at_purchase_num) or "(Doug will fill in)"
+
+    # % change (only when both endpoints known)
+    if value_at_purchase_num and value_now_num:
+        try:
+            v0 = float(value_at_purchase_num)
+            v1 = float(value_now_num)
+            if v0 > 0 and _isfinite(v0) and _isfinite(v1):
+                pct = (v1 - v0) / v0 * 100.0
+                sign = "+" if pct >= 0 else ""
+                ctx["pct_change"] = f"{sign}{pct:.0f}%"
+        except Exception:
+            pass
+    if "pct_change" not in ctx:
+        ctx["pct_change"] = "n/a"
+
+    return ctx
 
 async def _queue_reminder_email(client: dict, type_key: str, request: Request, extra: dict = None) -> dict:
     """CASL-compliant reminder send. Returns {status, log_id, reason?}.
@@ -4258,6 +4419,14 @@ async def _queue_reminder_email(client: dict, type_key: str, request: Request, e
     base = _public_base_url(request)
     unsub_url = f"{base}/api/unsubscribe/reminder/{client.get('unsubscribe_token','')}"
     extra_ctx = {**extra, "unsubscribe_url": unsub_url}
+    # Annual Market Update: enrich merge context with neighbourhood + market
+    # figures before rendering so the template resolves cleanly.
+    if type_key == "annual_market_update":
+        try:
+            mu_ctx = await _build_market_update_context(client)
+            extra_ctx = {**mu_ctx, **extra_ctx}
+        except Exception as e:
+            logger.warning(f"annual_market_update context build failed: {e}")
 
     subject = _render_reminder_template(tpl["subject"], client, extra_ctx)
     body = _render_reminder_template(tpl["body_html"] + _CASL_FOOTER_HTML, client, extra_ctx)
