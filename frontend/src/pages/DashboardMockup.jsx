@@ -6110,29 +6110,10 @@ const DashboardFeaturedListing = () => {
             {merged.headline}
           </p>
 
-          {merged.price && (
-            <div
-              data-testid="dash-featured-price-inline"
-              style={{
-                display: "inline-block",
-                background: C.navy,
-                color: C.brandGold,
-                fontFamily: "'Sora', sans-serif",
-                fontWeight: 900,
-                fontSize: "clamp(22px, 4vw, 30px)",
-                lineHeight: 1.05,
-                letterSpacing: "-0.01em",
-                padding: "8px 16px",
-                borderRadius: 10,
-                boxShadow: "0 6px 18px rgba(15,42,91,0.35)",
-                textShadow: "0 1px 0 rgba(0,0,0,0.35)",
-                marginBottom: 14,
-                alignSelf: "flex-start",
-              }}
-            >
-              {fmtPriceShort(merged.price)}
-            </div>
-          )}
+          {/* Featured-listing price pill removed per Doug Feb 2026 —
+              MLS® listing page + realtor.ca show the price; homepage
+              intentionally leads with story (Elgin Chantrell address +
+              tagline) not with the number. */}
 
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12,

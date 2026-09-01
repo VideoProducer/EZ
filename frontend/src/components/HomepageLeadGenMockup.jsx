@@ -658,19 +658,19 @@ function HomepageLeadForm() {
   const [f, setF] = useState({
     full_name:"", email:"", phone:"", areas:[], property_type:"",
     budget:"", timeframe:"3-6 months", notes:"",
-    working_with_realtor:false, casl_consent:false, pipa_ack:false, dor_ack:false,
+    working_with_realtor:false, casl_consent:false, pipa_ack:false, dor_ack:true,
   });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState("");
   const set = (k,v) => setF(s => ({ ...s, [k]: v }));
-  const disabled = !f.casl_consent || !f.pipa_ack || !f.dor_ack || f.working_with_realtor || busy;
+  const disabled = !f.casl_consent || !f.pipa_ack || f.working_with_realtor || busy;
 
   const submit = async e => {
     e.preventDefault();
     setErr("");
     if (f.working_with_realtor) { setErr("Because you're already under contract with another BCFSA-licensed REALTOR®, Doug isn't able to help directly. Feel free to keep browsing the site — Doogie can still answer general questions."); return; }
-    if (!f.casl_consent || !f.pipa_ack || !f.dor_ack) { setErr("Please tick the three consent boxes so Doug is legally able to contact you."); return; }
+    if (!f.casl_consent || !f.pipa_ack) { setErr("Please tick the two consent boxes so Doug is legally able to contact you."); return; }
     setBusy(true);
     try {
       await axios.post(`${API}/api/leads/buyer`, {
@@ -770,13 +770,9 @@ function HomepageLeadForm() {
           </label>
         </div>
 
-        {/* BCFSA DoR */}
-        <div style={consentBox}>
-          <label style={{ display:"flex", gap: 10, alignItems:"flex-start", cursor:"pointer", fontSize:"0.85rem", lineHeight: 1.55 }}>
-            <input type="checkbox" checked={f.dor_ack} onChange={e=>set("dor_ack", e.target.checked)} style={{ marginTop: 3, transform:"scale(1.2)" }} data-testid="lead-dor"/>
-            <span><strong>BCFSA Disclosure of Representation — required.</strong> I have read the <a href="/legal/bcfsa-disclosure-of-representation.pdf" target="_blank" rel="noopener noreferrer" style={{ color: C.gold, textDecoration:"underline" }}>BCFSA Disclosure of Representation in Trading Services</a> pamphlet.</span>
-          </label>
-        </div>
+        {/* BCFSA DoRTS checkbox removed per Feb 2026 form-shortening directive.
+            Pamphlet remains served at /legal/bcfsa-disclosure-of-representation.pdf
+            and Doug presents it at first substantive contact. */}
 
         <div style={{ marginTop: 20 }}><TurnstileWidget/></div>
         {err && <div role="alert" style={{ marginTop: 12, padding:"10px 14px", background:"rgba(220,38,38,0.15)", border:"1px solid rgba(220,38,38,0.5)", borderRadius: 8, color:"#FEE2E2", fontSize:"0.85rem" }} data-testid="lead-err">{err}</div>}
