@@ -47,6 +47,10 @@ const EquestrianChecklistMockup = lazy(() => import("./components/EquestrianChec
 const FirstTimeBuyerCheatSheet = lazy(() => import("./components/FirstTimeBuyerCheatSheet"));
 const MovingToBcQuiz = lazy(() => import("./components/MovingToBcQuiz"));
 const CommunityPageMockup = lazy(() => import("./components/CommunityPageMockup"));
+const InsightsPage = lazy(() => import("./components/InsightsPage"));
+const InsightsIndex = lazy(() => import("./components/InsightsIndex"));
+const PttCalculator = lazy(() => import("./pages/PttCalculator"));
+const ClosingCostEstimator = lazy(() => import("./pages/ClosingCostEstimator"));
 const CommunityPageMockupLive = lazy(() => import("./components/CommunityPageMockupLive"));
 const HomepageMockup = lazy(() => import("./components/HomepageMockup"));
 const LuxuryLandingMockup = lazy(() => import("./components/LuxuryLandingMockup"));
@@ -13435,6 +13439,10 @@ function App() {
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/a-z" element={<AppLayout><GlossaryAZWithCanary/></AppLayout>}/>
+      <Route path="/insights" element={<AppLayout><InsightsIndex/></AppLayout>}/>
+      <Route path="/insights/:slug" element={<AppLayout><InsightsPage/></AppLayout>}/>
+      <Route path="/tools/ptt-calculator-bc" element={<AppLayout><PttCalculator/></AppLayout>}/>
+      <Route path="/tools/closing-cost-estimator-bc" element={<AppLayout><ClosingCostEstimator/></AppLayout>}/>
       <Route path="/glossary/:slug" element={<AppLayout><GlossaryTerm/></AppLayout>}/>
       {/* /market-report routes removed 2026-08-08 per Doug's request. Backend
           endpoints (/api/market-report, /api/market-report/{ym}) remain live
