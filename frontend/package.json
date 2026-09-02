@@ -67,8 +67,10 @@
   },
   "scripts": {
     "start": "craco start",
+    "prebuild": "python3 ../backend/assert_inventory.py || (echo '\\n❌ Inventory drift detected. Fix counts before deploy. See stderr above.' && exit 1)",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "preflight": "python3 ../backend/assert_inventory.py"
   },
   "browserslist": {
     "production": [

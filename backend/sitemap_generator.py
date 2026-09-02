@@ -608,8 +608,35 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
 
     total = static_count + glossary_count + community_count + neighbourhood_count + listings_count + market_count
 
-    # ── Task 1 · build assertion: llms.txt glossary count must equal
-    # sitemap-glossary.xml URL count. Fails loud if drift creeps in.
+    # ── Task 12 (Feb 2026) — full inventory-assert bake-in.
+    # Before returning, run the full assert_inventory.py check so any
+    # count drift between the freshly-generated sitemaps, /api/site/counts,
+    # and llms.txt / llms-full.txt / ai.json is caught HERE — inside the
+    # generator itself — rather than only at yarn-build time. Any assert
+    # failure raises AssertionError with a descriptive message. Callers
+    # that want soft-fail behaviour (e.g. the cron regen) can wrap.
+    try:
+        import assert_inventory as _ai
+        _canonical = {
+            "glossary_terms":      glossary_count,
+            "communities":         community_count,
+            "neighbourhood_pages": neighbourhood_count,
+            "insight_pages":       insights_count,
+        }
+        _ok, _errs = _ai._run_checks(_canonical)
+        if not _ok:
+            _msg = "SITEMAP INVENTORY ASSERT FAILED after regen:\n  - " + "\n  - ".join(_errs)
+            raise AssertionError(_msg)
+    except AssertionError:
+        raise
+    except Exception:
+        # Never let a defensive check break the primary generator.
+        pass
+
+    # ── Task 1 · legacy build assertion (glossary count in llms.txt matches
+    # the freshly-generated sitemap URL count). Retained because it targets
+    # a very specific phrase, catching partial edits the broader check may
+    # not detect. Fails loud if drift creeps in.
     try:
         llms_path = out_dir / "llms.txt"
         if llms_path.exists():

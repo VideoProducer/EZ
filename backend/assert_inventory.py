@@ -33,6 +33,15 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+# Load backend/.env automatically so this script works when invoked from
+# yarn (which doesn't inherit the supervisor env). Silent no-op if the
+# .env file is missing or python-dotenv isn't installed.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except Exception:
+    pass
+
 from motor.motor_asyncio import AsyncIOMotorClient
 
 ROOT = Path(__file__).resolve().parent

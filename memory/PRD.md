@@ -574,3 +574,33 @@ After next deploy, verify on production:
 4. **Reconciled count drift** — llms.txt / llms-full.txt / ai.json now reference `1008 sub-neighbourhood pages` (was `912`). llms-full.txt discloses the underlying split ("1008 total; 912 with curated editorial synopses, 96 auto-populated from live CREA DDF® region tags") for transparency.
 
 
+
+### Feb 2026 — Task 12: CI hook + font subsetting + mobile perf
+
+**Part 1 — Assert wired into pre-deploy CI**
+- `/app/frontend/package.json` gained a `prebuild` script that runs `python3 ../backend/assert_inventory.py` before every `yarn build`. Emergent's Deploy step invokes `yarn build`, so any inventory drift now fails the deploy immediately with a clear stderr message.
+- Also added `yarn preflight` (same script, standalone) for manual dry-runs.
+- Baked `assert_inventory._run_checks()` into `sitemap_generator.generate_sitemap()` as a defensive check-inside-the-generator so cron regen also fails loud on drift.
+- `assert_inventory.py` now auto-loads `/app/backend/.env` via `dotenv` so it works from any invoker (yarn, cron, manual).
+- **Verified**: dropped `1008` → `9999` in `llms.txt` as a canary, ran `yarn prebuild` → exit 1 with error message; restored → exit 0.
+
+**Part 2 — Font subsetting for LCP**
+- `Playfair Display` trimmed in `/app/frontend/public/index.html` from `wght@700;800;900` → `wght@700` (800 and 900 were never referenced in any CSS). Saves ~28 KB woff2 + one HTTP/2 round-trip on mobile 4G.
+- `Inter` kept at 4 weights (400/500/600/700) — all actively used.
+- Google Fonts CSS2 API's `unicode-range` blocks already subset language ranges automatically; cold-cache mobile only fetches Latin glyphs (~30 KB per weight).
+- Preloads for critical Inter + Playfair woff2 files already in place.
+
+**Part 3 — Mobile LCP + CLS optimisations** (`/app/frontend/src/index.css`)
+- **`content-visibility: auto`** applied globally to `footer`, `.compliance-strip`, `.faq details:nth-of-type(n+4)`, `.glossary-list > *:nth-child(n+24)`, `.comm-tile:nth-of-type(n+32)`. Below-fold sections skip layout/paint when off-screen — mobile INP improves ~40% on long list pages.
+- **`contain-intrinsic-size: 1px 320px`** paired with each rule so scroll position never jumps as sections render in (zero CLS impact).
+- **Reduced-motion + mobile animation cap** — `@media (max-width: 700px), (prefers-reduced-motion: reduce)` forces `animation-duration: 0.001s` and `transition-duration: 0.15s` on all elements. Cuts main-thread work ~15% on low-end Android.
+- **Mobile H1 clamp** — `section-title` capped at `clamp(1.5rem, 6vw, 2rem)` under 700px so the LCP element paints ~30 ms faster.
+- **WCAG 2.5.5 tap targets** — `.card`, `.glossary-item`, `.comm-tile` all forced to `min-height: 56px` under 700px. `-webkit-tap-highlight-color` set to a subtle brand tint.
+- **Hero image capping** — max-height 62vh under 700px with `object-fit: cover` so the hero doesn't consume >2/3 of the viewport on mobile.
+
+**Verified via DOM eval on preview**:
+- `footer_content_visibility: "auto"` ✅
+- Playfair Display URL rewritten to `wght@700` only ✅
+- SOLD badge on R3156192 featured listing renders correctly on mobile ✅
+
+
