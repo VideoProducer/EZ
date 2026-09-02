@@ -539,3 +539,38 @@ After next deploy, verify on production:
 - Applebot-Extended, SemrushBot: blocked from everything.
 
 
+
+### Feb 2026 — Task 11: Success Criteria Audit — 10/10 PASS
+
+**Audit summary** — every criterion verified via live curl + Protego + DOM eval + backend compute + new assert script:
+
+| # | Criterion | Result | Evidence |
+|---|---|---|---|
+| 1 | Glossary/community/neighbourhood/insight counts match across llms.txt, ai.json, llms-full.txt, five child sitemaps | ✅ | glossary=439/439, communities=240/240, neighbourhood_pages=1008/1008, insight_pages=31/31; sitemap.xml lists all 5 children |
+| 2 | Zero `/listing/` URLs in any sitemap | ✅ | 0 hits across all 7 sitemap files |
+| 3 | `tools.json` HTTP 200 and Allowed for GPTBot | ✅ | HTTP 200 + Protego `can_fetch=True` |
+| 4 | PTT snapshot has description, canonical, FAQPage + DefinedTerm | ✅ | all 4 present in `/snapshot/glossary/property-transfer-tax-ptt.html` |
+| 5 | Models NOT told R3156192 is for sale | ✅ | "R3156192 · SOLD" in `server.py` (Doogie instructions) + `llms.txt` |
+| 6 | Community climate is 1991-2020 or explicit unavailable state; dateModified present | ✅ | Maple Ridge snapshot: 1981-2010 fallback with `OLDER PERIOD` badge + "1991-2020 not yet published for VANCOUVER INT'L A" + `Place.dateModified` + visible `Last reviewed: 2026-07-17` |
+| 7 | ≥30 insights, answer-first, sourced, in sitemap-ai.xml | ✅ | 31 insights in sitemap-ai.xml + sitemap-insights.xml; AnswerFirstMeta component verified via DOM inspection on `/insights/how-much-are-closing-costs-in-bc` (order: H1 → answer → As-of + official source → body) |
+| 8 | No global `Crawl-Delay: 5` | ✅ | Zero `Crawl-Delay:` lines in `robots.txt` |
+| 9 | Build-time inventory assert passes | ✅ | New `/app/backend/assert_inventory.py` — checks all 4 sitemap counts vs `/api/site/counts` + zero /listing/ URLs + no Crawl-Delay + llms/ai file phrase alignment; exit 0 |
+| 10 | Compliance QA all pass | ✅ | All above rolled up — DDF® listing lockdown, PIPA privacy policy, BCFSA scope-of-licence pills, single-source-of-truth counts, snapshot dateModified all verified in place |
+
+**New infrastructure shipped this session:**
+
+1. **`/api/site/counts` extended** with `neighbourhood_pages: 1008` (union of 3 sources: live MLS® region tags, curated farm list `bc_sub_neighbourhoods`, provincial extras `bc_provincial_sub_neighbourhoods`) and `insight_pages: 31` (parsed from `insightsCatalog.js`). Both computed via new helpers `_compute_neighbourhood_pages_count()` and `_compute_insight_pages_count()`.
+
+2. **New `sitemap-insights.xml`** — dedicated child sitemap (5th of 5) so the insight page count is directly measurable. `/insights` hub stays in `sitemap-static.xml`; individual `/insights/{slug}` URLs live in the new file. Removed from the STATIC_URLS list to avoid double-emission.
+
+3. **New `/app/backend/assert_inventory.py`** — read-only inventory-alignment check that fails the build if:
+   - Any child sitemap URL count drifts from `/api/site/counts`
+   - Any sitemap contains a `/listing/{id}` URL (CREA DDF® violation)
+   - `Crawl-Delay:` reappears on `User-agent: *`
+   - `llms.txt` / `llms-full.txt` / `ai.json` reference numbers that no longer match the canonical counts
+
+   Run with: `cd /app/backend && python3 -c "from dotenv import load_dotenv; load_dotenv(); import asyncio, sys; sys.path.insert(0,'.'); from assert_inventory import _main; sys.exit(asyncio.run(_main()))"` — exit code `0` = pass, `1` = fail.
+
+4. **Reconciled count drift** — llms.txt / llms-full.txt / ai.json now reference `1008 sub-neighbourhood pages` (was `912`). llms-full.txt discloses the underlying split ("1008 total; 912 with curated editorial synopses, 96 auto-populated from live CREA DDF® region tags") for transparency.
+
+

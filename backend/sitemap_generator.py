@@ -98,38 +98,11 @@ STATIC_URLS = [
     ("/neighbourhoods",    "0.85", "weekly"),
     ("/glossary",          "0.9", "weekly"),
     ("/glossary/a-z",      "0.85", "weekly"),
-    ("/insights",          "0.85", "weekly"),
-    ("/insights/south-surrey-vs-white-rock",  "0.75", "monthly"),
-    ("/insights/kitsilano-vs-yaletown",       "0.75", "monthly"),
-    ("/insights/langley-vs-abbotsford",       "0.75", "monthly"),
-    ("/insights/fort-langley-vs-walnut-grove","0.7",  "monthly"),
-    ("/insights/elgin-chantrell-vs-morgan-creek","0.75","monthly"),
-    ("/insights/whistler-vs-squamish",        "0.75", "monthly"),
-    ("/insights/north-vancouver-vs-west-vancouver","0.75","monthly"),
-    ("/insights/burnaby-north-vs-burnaby-south",   "0.7","monthly"),
-    ("/insights/richmond-central-vs-steveston",    "0.7","monthly"),
-    ("/insights/coquitlam-vs-port-moody",     "0.7",  "monthly"),
-    ("/insights/maple-ridge-vs-mission",      "0.7",  "monthly"),
-    ("/insights/surrey-vs-langley",           "0.75", "monthly"),
-    ("/insights/pitt-meadows-vs-port-coquitlam","0.65","monthly"),
-    ("/insights/delta-north-vs-tsawwassen",   "0.7",  "monthly"),
-    ("/insights/chilliwack-vs-abbotsford",    "0.7",  "monthly"),
-    ("/insights/first-time-home-buyer-bc-2026",    "0.85","weekly"),
-    ("/insights/downsizing-bc-boomers",       "0.75", "monthly"),
-    ("/insights/relocating-to-bc-from-ontario","0.75","monthly"),
-    ("/insights/newcomer-to-canada-buying-in-bc","0.8","monthly"),
-    ("/insights/can-i-buy-a-house-in-bc-without-a-realtor","0.7","monthly"),
-    ("/insights/how-much-are-closing-costs-in-bc","0.85","monthly"),
-    ("/insights/is-now-a-good-time-to-buy-in-bc","0.7","weekly"),
-    ("/insights/what-is-a-strata-depreciation-report","0.75","monthly"),
-    ("/insights/how-long-does-a-real-estate-deal-take-in-bc","0.75","monthly"),
-    ("/insights/difference-between-bcfsa-and-crea","0.7","monthly"),
-    ("/insights/do-i-need-a-realtor-to-sell-my-house-in-bc","0.75","monthly"),
-    ("/insights/what-credit-score-do-i-need-to-buy-in-bc","0.7","monthly"),
-    ("/insights/what-is-subject-removal-in-a-bc-real-estate-offer","0.75","monthly"),
-    ("/insights/what-is-a-property-disclosure-statement-in-bc","0.75","monthly"),
-    ("/insights/gvr-days-on-market-explained","0.75","weekly"),
-    ("/insights/probate-real-estate-sale-bc","0.85","monthly"),
+    # Task 11 (Feb 2026) — the 31 `/insights/{slug}` URLs previously
+    # enumerated here have been moved to `sitemap-insights.xml` (dedicated
+    # child sitemap) so their count is directly comparable to
+    # `/api/site/counts["insight_pages"]` via the build-time inventory
+    # assert. Keeping /insights hub here as it's a landing surface.
     ("/tools/ptt-calculator-bc",              "0.9",  "monthly"),
     ("/tools/closing-cost-estimator-bc",      "0.9",  "monthly"),
     ("/valuation",         "0.9", "weekly"),
@@ -403,6 +376,37 @@ async def _build_market_reports(db) -> tuple[str, int]:
     return _wrap_urlset(tags), len(tags)
 
 
+# ── Insights sub-sitemap (Task 11 · Feb 2026) ──────────────────────────
+# Extracted from sitemap-static.xml into a dedicated child so:
+#   1. Insights count is directly queryable (`grep -c '<loc>' sitemap-insights.xml`).
+#   2. Google + Bing re-crawl the fast-changing insights corpus without
+#      re-parsing the whole 50 KB static sitemap.
+#   3. The build-time inventory assert can compare
+#      `_compute_insight_pages_count()` == URL count in this file.
+#
+# Source of truth: `frontend/src/data/insightsCatalog.js` (parsed by
+# `_compute_insight_pages_count`). Every slug in the catalog gets one
+# URL here. Priorities/changefreqs are conservative — insights change
+# monthly at most (some weekly), so `weekly` covers the fastest cadence.
+def _build_insights() -> tuple[str, int]:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    catalog_path = PUBLIC_DIR.parent / "src" / "data" / "insightsCatalog.js"
+    if not catalog_path.exists():
+        return _wrap_urlset([]), 0
+    try:
+        text = catalog_path.read_text()
+    except Exception:
+        return _wrap_urlset([]), 0
+    slugs = re.findall(r'^\s{2}"([a-z0-9][a-z0-9-]*)":\s*\{$', text, re.MULTILINE)
+    # /insights hub is emitted from STATIC_URLS; this sitemap contains
+    # only the individual insight pages so its URL count matches
+    # `/api/site/counts["insight_pages"]` exactly.
+    tags = []
+    for slug in slugs:
+        tags.append(_url_tag(f"{BASE_URL}/insights/{slug}", today, "weekly", "0.75"))
+    return _wrap_urlset(tags), len(tags)
+
+
 # ── Per-listing sub-sitemap (item #20 · elite-landing-page audit) ─────────
 # Google + Bing re-crawl smaller, listing-focused sub-sitemaps 5-10× faster
 # than the monolithic index. `changefreq=hourly` is honest — the CREA DDF®
@@ -450,6 +454,7 @@ def _build_ai_sitemap(
     glossary_xml: str,
     communities_xml: str,
     neighbourhoods_xml: str,
+    insights_xml: str = "",
 ) -> tuple[str, int]:
     """Combine all AI-safe sub-sitemaps into ONE flat urlset.
 
@@ -463,7 +468,7 @@ def _build_ai_sitemap(
     url_block_re = re.compile(r"<url>.*?</url>", re.DOTALL)
 
     combined: List[str] = []
-    for src in (static_xml, glossary_xml, communities_xml, neighbourhoods_xml):
+    for src in (static_xml, glossary_xml, communities_xml, neighbourhoods_xml, insights_xml):
         for block in url_block_re.findall(src):
             # Belt-and-braces filter — nothing that looks like MLS® data.
             if ("/listing/" in block) or ("/listings" in block) or ("/api/" in block):
@@ -531,6 +536,12 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         pass
     market_count = 0
 
+    # Task 11 (Feb 2026) — dedicated insights sub-sitemap so the count is
+    # directly measurable and the build-time inventory assert can align it
+    # against `/api/site/counts["insight_pages"]`.
+    insights_xml, insights_count = _build_insights()
+    _write(out_dir / "sitemap-insights.xml", insights_xml)
+
     # Item #20 · dedicated listings sub-sitemap — INTENTIONALLY DISABLED.
     # `/listing/{id}` pages are DDF® data-licensed content that we don't
     # submit for indexing (robots.txt disallows the path). The `_build_listings`
@@ -548,6 +559,7 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     # Grok, Manus, Claude, Gemini, You, Kagi, Mistral, etc. via llms.txt).
     ai_xml, ai_count = _build_ai_sitemap(
         static_xml, glossary_xml, communities_xml, neighbourhoods_xml,
+        insights_xml,
     )
     _write(out_dir / "sitemap-ai.xml", ai_xml)
 
@@ -557,6 +569,7 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         ("sitemap-glossary.xml",       glossary_count),
         ("sitemap-communities.xml",    community_count),
         ("sitemap-neighbourhoods.xml", neighbourhood_count),
+        ("sitemap-insights.xml",       insights_count),
         ("sitemap-listings.xml",       listings_count),
         ("sitemap-market-reports.xml", market_count),
     ]

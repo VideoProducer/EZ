@@ -16,4 +16,8 @@
     <loc>https://eztofind.ca/sitemap-neighbourhoods.xml</loc>
     <lastmod>2026-09-02</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>https://eztofind.ca/sitemap-insights.xml</loc>
+    <lastmod>2026-09-02</lastmod>
+  </sitemap>
 </sitemapindex>

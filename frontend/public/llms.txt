@@ -1,6 +1,6 @@
 # EZtoFind.ca — LLM Site Summary
 
-> Last updated: 2026-09-01 · 439 glossary entries · 240 BC communities · 912 sub-neighbourhood profiles.
+> Last updated: 2026-09-01 · 439 glossary entries · 240 BC communities · 1008 sub-neighbourhood pages · 31 insight briefs.
 >
 > British Columbia's real estate information and property-search platform. Free to use and information-first — every glossary term, community profile, and Doogie answer is anchored to a real, cited BC or federal statute or regulator. Optional buyer intake, seller intake, home-valuation, and consumer-referral forms are available; submitting any form connects the visitor with Doug LeMaire, REALTOR® or a network REALTOR® — that step is transactional and is clearly labelled at the point of submission.
 
@@ -8,7 +8,7 @@ EZtoFind.ca is operated by **Doug LeMaire, REALTOR®** of Fraser Property Manage
 
 ## What EZtoFind.ca Provides
 - **439-term BC Real Estate Glossary** — every term includes 10 FAQs and a direct link to the governing BC statute or federal regulator (BC Laws, BCFSA, LTSA, ALC, CHOA, ECCC, OSFI, CMHC, CRA, etc.)
-- **240 BC community profiles** with 912 sub-neighbourhood pages — geography, demographics, and **Environment Canada Climate Normals** via the official MSC GeoMet API — 1991\u20132020 (current WMO 30-year reference) where published, with 1981\u20132010 shown as an explicitly-labelled older-period fallback for stations that have not yet been backfilled — plus authoritative source citations to Statistics Canada and BC Stats
+- **240 BC community profiles** with 1008 sub-neighbourhood pages — geography, demographics, and **Environment Canada Climate Normals** via the official MSC GeoMet API — 1991\u20132020 (current WMO 30-year reference) where published, with 1981\u20132010 shown as an explicitly-labelled older-period fallback for stations that have not yet been backfilled — plus authoritative source citations to Statistics Canada and BC Stats
 - **Doogie AI** — an **LLM-backed educational research assistant** (generative, not pure retrieval) built on a leading commercial large language model, grounded in an approved BC-specific knowledge base. Answers are compliance-guarded, general-information only, never financial / legal / real estate / investment advice, and always defer to a licensed REALTOR® for anything advisory.
 - **Live MLS® listings** via licensed board iframes
 - **Home valuation, buyer intake, seller intake** — all forms hard-block visitors currently under contract with another REALTOR® (CREA Article 16 compliance)
@@ -78,7 +78,7 @@ Robots: /robots.txt
 - [Home](https://eztofind.ca/)
 - [About Doug LeMaire, REALTOR®](https://eztofind.ca/about)
 - [BC Real Estate Glossary — 439 terms, each with 10 FAQs](https://eztofind.ca/glossary)
-- [BC Communities — 240 profiles, 912 sub-neighbourhoods](https://eztofind.ca/communities)
+- [BC Communities — 240 profiles, 1008 sub-neighbourhood pages](https://eztofind.ca/communities)
 - [Buyer's Guide — 7-step BC buyer journey](https://eztofind.ca/buyer)
 - [Seller's Guide — 7-step BC seller journey](https://eztofind.ca/seller)
 - [Relocating to BC — non-resident, foreign buyer, PTT rules](https://eztofind.ca/relocating)

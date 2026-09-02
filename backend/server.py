@@ -2866,6 +2866,89 @@ async def admin_ai_discovery_history(limit: int = 20, _=Depends(verify_admin)):
     return {"ok": True, "count": len(rows), "rows": rows}
 
 
+async def _compute_neighbourhood_pages_count() -> int:
+    """Count of `/community/{city}/n/{slug}` URLs that the sitemap will
+    actually emit. Must stay in lock-step with
+    `sitemap_generator._build_neighbourhoods` — this is the crawler-truth
+    number that goes into llms.txt / ai.json.
+
+    Sources merged and deduped by (city_slug, n_slug):
+      1. Distinct `region` values on Active listings (live-listing derived).
+      2. Every entry in services.bc_sub_neighbourhoods (curated farm list).
+    """
+    try:
+        seed = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+    except Exception:
+        return 0
+
+    slug_by_name: dict = {}
+    for region_key, comms in seed.items():
+        for c in comms:
+            c_slug = re.sub(r"[^a-z0-9]+", "-", c.lower()).strip("-")
+            slug_by_name[c.lower()] = (c_slug, region_key)
+
+    seen: set = set()
+    try:
+        pipeline = [
+            {"$match": {"status": "Active", "region": {"$nin": ["", None]}}},
+            {"$group": {"_id": {"city": "$city", "region": "$region"}}},
+        ]
+        async for row in db.listings.aggregate(pipeline):
+            city = (row["_id"].get("city") or "").strip()
+            n_name = (row["_id"].get("region") or "").strip()
+            hit = slug_by_name.get(city.lower())
+            if not hit or not n_name:
+                continue
+            c_slug, region_key = hit
+            if n_name.strip().lower() == region_key.strip().lower():
+                continue
+            n_slug = re.sub(r"[^a-z0-9]+", "-", n_name.lower()).strip("-")
+            if n_slug:
+                seen.add((c_slug, n_slug))
+    except Exception:
+        pass
+
+    try:
+        from services.bc_sub_neighbourhoods import BC_SUB_NEIGHBOURHOODS
+        for city_slug, sub_list in BC_SUB_NEIGHBOURHOODS.items():
+            for sub_name in sub_list:
+                n_slug = re.sub(r"[^a-z0-9]+", "-", (sub_name or "").lower()).strip("-")
+                if n_slug:
+                    seen.add((city_slug, n_slug))
+    except Exception:
+        pass
+
+    # 3. Provincial (non-farm) extras — must stay in lock-step with
+    # sitemap_generator._build_neighbourhoods §3.
+    try:
+        from services.bc_provincial_sub_neighbourhoods import get_provincial_extras
+        provincial = get_provincial_extras()
+        for city_slug, sub_list in provincial.items():
+            for sub_name in sub_list:
+                n_slug = re.sub(r"[^a-z0-9]+", "-", (sub_name or "").lower()).strip("-")
+                if n_slug:
+                    seen.add((city_slug, n_slug))
+    except Exception:
+        pass
+
+    return len(seen)
+
+
+def _compute_insight_pages_count() -> int:
+    """Count of `/insights/{slug}` pages published from the frontend
+    `insightsCatalog.js`. Kept in sync with the file at build time via
+    the inventory-assert script (see `assert_inventory.py`)."""
+    catalog = ROOT_DIR.parent / "frontend" / "src" / "data" / "insightsCatalog.js"
+    if not catalog.exists():
+        return 0
+    try:
+        text = catalog.read_text()
+    except Exception:
+        return 0
+    return len(re.findall(r'^\s{2}"[a-z0-9][a-z0-9-]*":\s*\{$', text, re.MULTILINE))
+
+
+
 @api.get("/site/counts")
 async def public_site_counts():
     """Canonical content counts for the whole site — single source of truth.
@@ -2899,6 +2982,13 @@ async def public_site_counts():
         ),
         "community_synopses":   await db.community_synopses.count_documents({"synopsis": {"$ne": ""}}),
         "neighbourhood_synopses": await db.neighbourhood_synopses.count_documents({"synopsis": {"$ne": ""}}),
+        # Task 11 (Feb 2026) — inventory alignment. The public-facing
+        # "sub-neighbourhood pages" number must match what the sitemap
+        # actually emits. Live-listing derived URLs + curated farm list,
+        # deduped by (city_slug, n_slug), computed the same way as
+        # sitemap_generator._build_neighbourhoods (which see).
+        "neighbourhood_pages":   await _compute_neighbourhood_pages_count(),
+        "insight_pages":         _compute_insight_pages_count(),
         "active_listings":      await db.listings.count_documents({"status": "Active"}),
         "testimonials_published": await db.testimonials.count_documents({"is_published": True}),
         "market_report_snapshots": await db.market_reports.count_documents({}),
