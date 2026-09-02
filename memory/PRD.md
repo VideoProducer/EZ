@@ -510,3 +510,32 @@ After next deploy, verify on production:
 **Verified via live DOM inspection**: 4 JSON-LD nodes with sameAs on homepage (2× Organization, 2× Person), all consistent, ez2find.ca completely purged, 8-9 verified real URLs per node.
 
 
+
+### Feb 2026 — Task 10: Crawl-Delay + robots.txt dedupe
+
+**Removed** `Crawl-Delay: 5` from the wildcard `User-agent: *` group in `/app/frontend/public/robots.txt`.
+- Well-behaved AI/search crawlers (Googlebot, Bingbot, GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot, DuckAssistBot) either ignore Crawl-Delay entirely or apply their own adaptive throttle. The 5-second directive caused indexing lag on educational content without helping anti-scraping outcomes.
+- No individual bot group had a Crawl-Delay directive (verified). Anti-scraping defense is now enforced entirely at:
+  1. Application-layer per-IP rate limits on `/api/listings` and `/listing/{key}` (server-side, unchanged).
+  2. 410-Gone responses for sold / expired MLS® records (unchanged).
+  3. Explicit `Disallow: /listing/` + `Disallow: /api/listings` for every AI user-agent (unchanged).
+
+**Deduplicated** conflicting groups:
+- **FacebookBot** — merged the two blocks (line 216 full rules + line 272 stub `Disallow: /admin/`) into a single canonical group carrying `Allow: /`, `Allow: /api/doogie/tools.json`, `Disallow: /listings`, `Disallow: /api/listings`, `Disallow: /listing/`, `Disallow: /mockups/`, `Disallow: /admin/`.
+- **Amazonbot** — same merge: full rules + `Disallow: /admin/` stub folded into one group.
+- **Meta-ExternalAgent** — same merge; the training-corpora bottom-of-file duplicate was removed and its `Disallow: /admin/` rolled up.
+- **`User-agent: *`** — merged the two wildcard groups (top general-content policy + bottom API-lockdown policy) into ONE canonical block at the top of the file. Now carries all Allow (root, /listings, 5 AI-discovery files), all specific Disallow (/api/listings, /listing/, /mockups/, /my-journey/, /admin/, /market-report), plus the broader `Disallow: /api/` guard at the end. Longest-match Allow overrides guarantee tools.json + llms.txt + ai.json remain fetchable on Google/Bing/AI bots.
+
+**Preserved** existing policy for training-only crawlers per user rule "Leave Applebot-Extended and training-only crawlers blocked unless /ai-use is explicitly changed":
+- `Applebot-Extended`, `cohere-training-data-crawler`, `ImagesiftBot`, `PetalBot`, `Timpibot`, `OmigiliBot` — all `Disallow: /` (unchanged).
+- `Meta-ExternalFetcher`, `Bytespider` — kept at `Disallow: /admin/` (unchanged from pre-Task-10 state; ai-use policy hasn't been changed to warrant tightening).
+- `Diffbot`, `MJ12bot`, `DataForSeoBot`, `ZoominfoBot`, `SemrushBot` — all `Disallow: /` (unchanged).
+
+**Validated with Protego** (Google-spec compliant robots.txt parser):
+- Zero Crawl-Delay directives on any user-agent.
+- Zero duplicate `User-agent:` lines.
+- All 10 named AI/search bots (Googlebot, Bingbot, GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Perplexity-User, Google-Extended, Applebot, DuckAssistBot) can fetch tools.json + llms.txt + .well-known/ai.json + ai-plugin.json.
+- All AI bots (including FacebookBot, Amazonbot, Meta-ExternalAgent) blocked from `/api/listings` and `/listing/{id}`.
+- Applebot-Extended, SemrushBot: blocked from everything.
+
+

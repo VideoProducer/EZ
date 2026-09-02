@@ -17,16 +17,25 @@ Disallow: /mockups/
 Disallow: /my-journey/
 Disallow: /admin/
 Disallow: /market-report
-Disallow: /mockups/
+# Backend API surface is otherwise blocked from all crawlers. Provides
+# live CREA DDF® data under a limited board licence; scraping /
+# redistribution is prohibited by DDF® terms. Longest-match Allow rules
+# above keep /api/doogie/tools.json and the AI-discovery manifests
+# fetchable even though /api/ as a whole is blocked here.
+Disallow: /api/
 
-# Crawl-Delay hardening (defense-in-depth per CREA DDF® §8 · anti-scraping).
-# Well-behaved crawlers throttle to one request every 5 seconds. Bulk
-# scrapers that ignore Disallow rules but respect Crawl-Delay get slowed
-# to a trickle; scrapers that ignore both hit the server-side per-IP rate
-# limit (3 req/sec) applied to /api/listings/{key} and 410-Gone responses
-# for sold / expired records. Together these three layers make bulk
-# harvesting of MLS® detail data operationally impractical.
-Crawl-Delay: 5
+# Task 10 (Feb 2026): Crawl-Delay directive intentionally REMOVED from
+# the wildcard group. Well-behaved AI crawlers (Googlebot, Bingbot,
+# GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Google-Extended,
+# Applebot, DuckAssistBot) either ignore Crawl-Delay entirely or apply
+# their own adaptive throttle; setting a value here caused unnecessary
+# indexing lag on the educational corpus without helping anti-scraping
+# outcomes. Bulk-scraper defense-in-depth now relies on:
+#   1. Application-level per-IP rate limits on /api/listings and
+#      /listing/{key} (still enforced server-side).
+#   2. 410-Gone responses for sold / expired records.
+#   3. Explicit Disallow: /listing/ + Disallow: /api/listings for every
+#      AI user-agent (see individual groups below).
 
 # CREA DDF® Rule 3.1: raw per-listing pages (/listing/{key}) must not be
 # machine-scraped or AI-trained. The /listings search hub, however, does
@@ -213,6 +222,7 @@ Disallow: /listings
 Disallow: /api/listings
 Disallow: /listing/
 Disallow: /mockups/
+Disallow: /admin/
 User-agent: FacebookBot
 Allow: /
 Allow: /api/doogie/tools.json
@@ -220,6 +230,7 @@ Disallow: /listings
 Disallow: /api/listings
 Disallow: /listing/
 Disallow: /mockups/
+Disallow: /admin/
 User-agent: Meta-ExternalAgent
 Allow: /
 Allow: /api/doogie/tools.json
@@ -227,6 +238,7 @@ Disallow: /listings
 Disallow: /api/listings
 Disallow: /listing/
 Disallow: /mockups/
+Disallow: /admin/
 User-agent: GitHub-Copilot
 Allow: /
 Allow: /api/doogie/tools.json
@@ -269,16 +281,16 @@ Disallow: /listings
 Disallow: /api/listings
 Disallow: /listing/
 Disallow: /mockups/
-User-agent: FacebookBot
-Disallow: /admin/
+# Training-only AI crawlers below are fully blocked.
+# (FacebookBot / Amazonbot / Meta-ExternalAgent duplicates removed
+# Task 10 (Feb 2026) — /admin/ Disallow was folded into their primary
+# groups above so each bot now has ONE canonical rule set.)
 User-agent: Meta-ExternalFetcher
 Disallow: /admin/
 User-agent: Applebot-Extended
 Disallow: /
 User-agent: cohere-training-data-crawler
 Disallow: /
-User-agent: Amazonbot
-Disallow: /admin/
 User-agent: ImagesiftBot
 Disallow: /
 User-agent: PetalBot
@@ -290,8 +302,6 @@ Disallow: /
 
 # Block SEO scrapers and data brokers (not search / AI)
 User-agent: Bytespider
-Disallow: /admin/
-User-agent: Meta-ExternalAgent
 Disallow: /admin/
 User-agent: Diffbot
 Disallow: /
@@ -341,17 +351,7 @@ Sitemap: https://eztofind.ca/sitemap-index.xml
 # sitemaps), but listed here for feed-reader discovery.
 # Feed: https://eztofind.ca/feed.xml
 
-# Backend API surface — explicitly blocked from all crawlers. Provides live
-# CREA DDF® data under a limited board licence; scraping / redistribution is
-# prohibited by DDF® terms. Agent-callable endpoints (Doogie tools) are
-# advertised only via /api/doogie/tools.json which is itself rate-limited.
-User-agent: *
-# Longest-match Allow beats broader Disallow on Google/Bing — these AI
-# discovery files must stay fetchable even though /api/ as a whole is blocked.
-Allow: /api/doogie/tools.json
-Allow: /llms.txt
-Allow: /llms-full.txt
-Allow: /.well-known/ai.json
-Allow: /.well-known/ai-plugin.json
-Disallow: /api/listings
-Disallow: /api/
+# (Task 10, Feb 2026 — the trailing `User-agent: *` API-lockdown block
+# that used to live here has been merged into the primary wildcard group
+# at the top of this file. `Disallow: /api/` with the AI-discovery
+# `Allow:` overrides now lives there.)
