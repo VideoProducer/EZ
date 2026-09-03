@@ -3707,6 +3707,15 @@ const Listings = () => {
   }, []);
   const load = (overrideFilters) => { setNlBanner(null); runSearch(overrideFilters); };
   return (
+    <>
+    {/* Task 14 (Feb 2026) — MLS® search hub SEO. Placed OUTSIDE TermsGate
+        so the browser tab title updates even before terms acceptance
+        (otherwise pre-accept visitors see the homepage title). */}
+    <SEO
+      title="Search BC MLS® Real Estate Listings — Live CREA DDF® Feed | EZtoFind.ca"
+      description="Search live MLS® listings across British Columbia — Greater Vancouver, Fraser Valley, Vancouver Island, Kootenays, and more. Prices, photos, maps, and community context refreshed every four hours direct from CREA DDF®. Served by Doug LeMaire, REALTOR® (BCFSA #167790)."
+      path="/listings"
+    />
     <TermsGate>
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"2rem"}}>
@@ -3854,6 +3863,7 @@ const Listings = () => {
       }} currentFilters={filters}/>
     </div></section>
     </TermsGate>
+    </>
   );
 };
 
@@ -4699,6 +4709,18 @@ const ListingDetail = () => {
   const price = (listing.list_price || 0).toLocaleString("en-CA");
   const q = encodeURIComponent(`${listing.street_address}, ${listing.city}, BC, Canada`);
   return (
+    <>
+    {/* Task 14 (Feb 2026) — per-listing SEO metadata. Placed OUTSIDE
+        TermsGate so the browser tab title always reflects the specific
+        listing (not the homepage default) even before terms acceptance.
+        Address and MLS® number in the title tag are the top ranking
+        signal for "3015 141 street Surrey MLS" style long-tail queries. */}
+    <SEO
+      title={`${listing.street_address || `MLS® #${listing.mls_number || listing.listing_key}`}${listing.city ? " · " + listing.city : ""}, BC — MLS® Listing | EZtoFind.ca`}
+      description={`Details, photos, and map for ${listing.street_address ? listing.street_address + (listing.city ? ", " + listing.city : "") : `MLS® #${listing.mls_number || listing.listing_key}`}${listing.list_price ? " — asking $" + Number(listing.list_price).toLocaleString() : ""}. ${listing.bedrooms ? listing.bedrooms + " bed · " : ""}${listing.bathrooms ? listing.bathrooms + " bath · " : ""}${listing.property_type || "Residential"}. BC MLS® listing served under Doug LeMaire, REALTOR® (BCFSA #167790) via CREA DDF®.`}
+      path={`/listing/${listing.listing_key || listing.mls_number || ""}`}
+      image={listing.photos && listing.photos.length ? listing.photos[0] : undefined}
+    />
     <TermsGate>
     <GlossaryPageProvider>
     <section className="section"><div className="container-x">
@@ -4933,12 +4955,19 @@ const ListingDetail = () => {
     {presentOpen && <ListingPresentMode listing={listing} onExit={() => setPresentOpen(false)}/>}
     </GlossaryPageProvider>
     </TermsGate>
+    </>
   );
 };
 
 // --- Regions ---
 const RegionsIndex = () => (
   <section className="section"><div className="container-x">
+    {/* Task 14 (Feb 2026) — SEO fix for regions index page. */}
+    <SEO
+      title="BC Real Estate by Region — Greater Vancouver, Fraser Valley, Sea-to-Sky, Vancouver Island | EZtoFind.ca"
+      description="Explore British Columbia real estate by region. Greater Vancouver (22 municipalities), Fraser Valley (Langley, Abbotsford, Chilliwack, Mission), Sea-to-Sky Corridor (Squamish, Whistler, Pemberton) — Doug LeMaire, REALTOR® primary practice. Vancouver Island + Gulf Islands (51 communities) via BC-licensed referral network."
+      path="/regions"
+    />
     <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Focus Areas</div><h1 className="section-title">Where Doug works.</h1></div>
     <div className="grid-3">
       {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,alt:"Greater Vancouver skyline at dusk — 22 municipalities from downtown high-rises to West Vancouver waterfront estates, one of Canada's most valuable residential real estate markets"},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,alt:"Fraser Valley aerial view — Langley, Abbotsford, Chilliwack farmland, acreage and equestrian properties in BC's fastest-growing residential region"},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky,alt:"Sea-to-Sky Corridor mountain landscape — Squamish, Whistler, Pemberton alpine and lakeside real estate along BC Highway 99"}].map(r =>
@@ -6365,6 +6394,15 @@ const BuyerForm = () => {
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="buyer-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="buyer-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="buyer-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    {/* Task 14 (Feb 2026) — SEO title/description/canonical for the
+        buyer lead-conversion page. Missing before, which meant visitors
+        landing here from Doogie or Google Ads saw the homepage tab
+        title. Now clearly identifies the page + boosts Ads Quality Score. */}
+    <SEO
+      title="Buyer Request — Work With Doug LeMaire, REALTOR® in Greater Vancouver / Fraser Valley | EZtoFind.ca"
+      description="Start your home search with Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790). Share your must-haves, budget, and timeline — Doug replies within one business day. BCFSA + PIPA + CASL compliant."
+      path="/buyer"
+    />
     {/* HowTo JSON-LD — Google surfaces this as a rich card for "how to buy a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
       "@context":"https://schema.org","@type":"HowTo",
@@ -6722,7 +6760,24 @@ const Contact = () => {
 };
 
 // --- Legal ---
-const Legal = ({title,body}) => (<section className="section"><div className="container-x" style={{maxWidth:"46rem",fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}><h1 className="section-title">{title}</h1>{body}</div></section>);
+// Task 14 (Feb 2026) — Legal wrapper now injects <SEO/> automatically so
+// every /privacy, /copyright, /data-request, /breach-policy, /code-of-ethics,
+// /dorts etc. gets a distinct browser tab title + canonical URL. Previously
+// they all inherited the homepage tab title, confusing visitors landing here
+// from footer links or Doogie CTAs. `description` is optional — if omitted,
+// a compliance-page default is used (still passes Google's meta-desc audit).
+const Legal = ({title, body, description}) => {
+  const loc = (typeof window !== "undefined") ? window.location.pathname : "";
+  const _seoTitle = title ? `${title} | EZtoFind.ca` : "Legal — EZtoFind.ca";
+  const _seoDesc = description || `${title || "Legal notice"} for EZtoFind.ca — the BC real estate information platform served by Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790). BCFSA + PIPA + CASL compliant.`;
+  return (
+    <section className="section"><div className="container-x" style={{maxWidth:"46rem",fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}>
+      <SEO title={_seoTitle} description={_seoDesc.slice(0, 280)} path={loc} />
+      <h1 className="section-title">{title}</h1>
+      {body}
+    </div></section>
+  );
+};
 
 // --- Copyright & IP Notice ---
 // Reinforces ownership + spells out enforcement rights. Referenced from the
@@ -9790,6 +9845,17 @@ const ReferralRequest = () => {
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, or — where appropriate — a licensed local referral REALTOR<sup>®</sup> on the right board will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+    {/* Task 14 (Feb 2026): missing <SEO/> was leaving the browser tab
+        title as the homepage default "EZtoFind.ca | BC Real Estate
+        Search" — visitors landing here from Doogie's "Referral REALTOR®
+        link" thought they'd been dumped back on the homepage. Explicit
+        per-route title + description + canonical fix that + also
+        strengthens Google Ads Quality Score on this conversion page. */}
+    <SEO
+      title="Out-of-Area REALTOR® Referral — Doug LeMaire's BC Network | EZtoFind.ca"
+      description="Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) introduces buyers and sellers outside Greater Vancouver / Fraser Valley / Sea-to-Sky to a BC-licensed REALTOR® on the correct board. One-business-day reply. BCFSA + PIPA + CASL compliant."
+      path="/referral-request"
+    />
     <ConversionPageSchema route="/referral-request" headline="Out-of-area referral — Doug's licensed REALTOR® network" description="Doug LeMaire, REALTOR® introduces buyers and sellers outside the Fraser Valley / South Surrey / Sea-to-Sky corridor to a licensed local REALTOR® on the correct board. Reply within one business day."/>
     <IdentityLine practice="REALTOR® · Referral network coordinator · Fraser Valley + South Surrey" size="md" testId="referral-identity"/>
     <div className="eyebrow">{t("ref.eyebrow")}</div><h1 className="section-title">{t("ref.title")}</h1>
