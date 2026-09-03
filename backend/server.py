@@ -2227,6 +2227,12 @@ async def listings_by_keys(keys: str = "", limit: int = 100):
     key_list = [k.strip() for k in (keys or "").split(",") if k.strip()][:min(200, limit)]
     if not key_list:
         return {"count": 0, "listings": []}
+    # Task 13 — respect the suppression list. Check both listing_key
+    # and mls_number since DDF uses different keys interchangeably.
+    _hidden = await _get_hidden_mls()
+    key_list = [k for k in key_list if k.upper() not in _hidden]
+    if not key_list:
+        return {"count": 0, "listings": []}
     docs = await db.listings.find(
         {
             "listing_key": {"$in": key_list},
@@ -2236,6 +2242,8 @@ async def listings_by_keys(keys: str = "", limit: int = 100):
         },
         {"_id": 0},
     ).to_list(len(key_list))
+    # Filter by mls_number too (in case any hidden MLS surface here)
+    docs = [d for d in docs if (d.get("mls_number") or "").upper() not in _hidden]
     # Preserve the order the user requested (their save order)
     by_key = {d["listing_key"]: d for d in docs}
     ordered = [by_key[k] for k in key_list if k in by_key]
@@ -2254,6 +2262,10 @@ async def similar_listings(key: str, limit: int = 3):
     Excludes the source listing itself. Ordered by absolute price delta from
     the source so the closest comps come first."""
     limit = max(2, min(5, int(limit or 3)))
+    # Task 13 — never return similar-listings for a suppressed source.
+    _hidden = await _get_hidden_mls()
+    if (key or "").upper() in _hidden:
+        raise HTTPException(404, "Listing not found.")
     src = await db.listings.find_one({"listing_key": key}, {"_id": 0})
     if not src:
         raise HTTPException(404, "Listing not found.")
@@ -8929,8 +8941,13 @@ async def startup():
         # the incremental sync's first token acquisition.
         await _a.sleep(30)
         while True:
+            # Task 13 (Feb 2026) — never re-hydrate a suppressed MLS.
+            # Otherwise the 15-min loop would keep resurrecting an
+            # already-sold listing that DDF hasn't withdrawn yet.
+            _hidden = await _get_hidden_mls()
+            active_flagships = [m for m in mls_list if m.strip().upper() not in _hidden]
             if _ddf_ready():
-                for mls in mls_list:
+                for mls in active_flagships:
                     try:
                         r = await _ddf_fetch_by_mls(db, mls)
                         if r.get("upserted"):
@@ -8939,6 +8956,20 @@ async def startup():
                             logger.warning(f"flagship hydrate: {mls} errors={r.get('errors')}")
                     except Exception as e:
                         logger.warning(f"flagship hydrate {mls} failed: {e}")
+                # Force-mark suppressed flagships as sold in the local DB so
+                # any stale cached row surfaces as "Sold" instead of "Active".
+                for mls in mls_list:
+                    if mls.strip().upper() in _hidden:
+                        try:
+                            await db.listings.update_many(
+                                {"$or": [
+                                    {"listing_key": mls},
+                                    {"mls_number": mls},
+                                ]},
+                                {"$set": {"status": "Sold"}},
+                            )
+                        except Exception:
+                            pass
             await _a.sleep(15 * 60)  # every 15 min
     asyncio.create_task(_flagship_hydrate_loop())
 
@@ -10718,6 +10749,55 @@ PROPERTY_TYPE_UI_OPTIONS = [
     "Townhouse",
 ]
 
+# ── Hidden / Suppressed MLS® numbers ────────────────────────────────────
+# Task 13 (Feb 2026) — an MLS® key here is force-hidden from EVERY public
+# listing surface (search, listing detail, homepage tiles, featured card,
+# similar-listings, sitemap-listings, DDF hydrator) regardless of what
+# DDF returns. Use for:
+#   * Recently-sold listings that DDF has not yet withdrawn from the
+#     feed (48-hour lag is common — CREA "Sold" status only surfaces on
+#     the next full sync after the pending-conditional).
+#   * Any listing Doug wants pulled immediately (privacy request, legal
+#     hold, brokerage transfer).
+#
+# Source of truth: `HIDDEN_MLS_NUMBERS` env var (comma-separated). Merged
+# at runtime with any keys in the `hidden_listings` Mongo collection so
+# the admin panel can add/remove entries without a deploy.
+#
+# Query pattern: `{"listing_key": {"$nin": list(_get_hidden_mls())}}` is
+# spliced into every public listing query below.
+_HIDDEN_MLS_ENV = {
+    k.strip().upper()
+    for k in (os.environ.get("HIDDEN_MLS_NUMBERS") or "R3156192").split(",")
+    if k.strip()
+}
+
+async def _get_hidden_mls(_db=None) -> set[str]:
+    """Union of env-var suppressed MLS® keys + any keys the admin panel
+    has added to the `hidden_listings` collection. Cached 60 s in-process
+    so the extra Mongo hit on every /listings call is a rounding error."""
+    import time as _time
+    now = _time.time()
+    cache = globals().get("_HIDDEN_MLS_CACHE")
+    if cache and cache.get("_expires", 0) > now:
+        return cache["keys"]
+    keys = set(_HIDDEN_MLS_ENV)
+    try:
+        target_db = _db if _db is not None else db
+        async for row in target_db.hidden_listings.find({}, {"_id": 0, "listing_key": 1}):
+            k = (row.get("listing_key") or "").strip().upper()
+            if k:
+                keys.add(k)
+    except Exception:
+        pass
+    globals()["_HIDDEN_MLS_CACHE"] = {"keys": keys, "_expires": now + 60}
+    return keys
+
+def _hidden_mls_sync() -> set[str]:
+    """Non-async caller for spots that can't await (module-level filters).
+    Returns just the env-var set; DB layer is skipped."""
+    return set(_HIDDEN_MLS_ENV)
+
 def _sanitize_listing(doc: dict) -> dict:
     doc.pop("_id", None)
     # CREA compliance: brokerage name is required. Listing agent is per-listing (from feed).
@@ -11531,6 +11611,21 @@ async def search_listings(
             if v:
                 _excluded.add(v)
     query: dict = {"status": "Active", "property_type": {"$nin": sorted(_excluded)}, "list_price": {"$gt": 0}}
+
+    # Task 13 (Feb 2026) — force-hide any MLS® on the suppression list
+    # (HIDDEN_MLS_NUMBERS env var + hidden_listings collection). Applies
+    # here first because /listings is the search backbone; every other
+    # public listing endpoint filters through this pattern too.
+    # Match on BOTH listing_key (CREA internal id) and mls_number
+    # (public GVR MLS® number) — DDF exposes both and depending on the
+    # sync path either can be the canonical identifier for a row.
+    _hidden_now = await _get_hidden_mls()
+    if _hidden_now:
+        _h = list(_hidden_now)
+        query["$and"] = query.get("$and", []) + [{
+            "listing_key": {"$nin": _h},
+            "mls_number": {"$nin": _h},
+        }]
     # ── Detect Canadian postal codes and street-address-like queries ──────
     # Mongo `$text` tokenises on word boundaries and matches ANY token — so
     # "930 Josephine Rd" matches every listing whose street contains "Rd".
@@ -12000,6 +12095,15 @@ async def get_listing(request: Request, listing_key: str):
         # is stored under mls_number. Buyers, share links, and printed
         # marketing all reference the MLS® number — so accept both.
         d = await db.listings.find_one({"mls_number": listing_key})
+    # Task 13 (Feb 2026) — suppression list respects both listing_key and
+    # mls_number lookups. Returns 410 Gone so Google drops the URL from
+    # its index within days rather than the usual weeks for a 404.
+    _hidden = await _get_hidden_mls()
+    if d and _hidden:
+        _lk = (d.get("listing_key") or "").upper()
+        _mn = (d.get("mls_number") or "").upper()
+        if _lk in _hidden or _mn in _hidden or listing_key.upper() in _hidden:
+            raise HTTPException(410, "This listing is no longer available on the MLS® (sold, expired, or withdrawn).")
     if not d:
         # Item · Return 410 Gone (not 404) for unknown listing_keys that
         # were once valid. This tells Google to permanently drop the URL

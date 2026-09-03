@@ -2,7 +2,13 @@
 // Update MLS_NUMBER tomorrow (Feb 17 2026, 9:00 AM PT) once GVR assigns it.
 // Everything else is pre-staged and ready to render.
 export const FLAGSHIP = {
-  active: true,  // ⚡ RE-ENABLED — feature listing card now at the top of /specialties/luxury
+  // Feb 2026 · Task 13 — flagship SOLD 2+ weeks ago and DDF hasn't
+  // yet withdrawn it from the active feed. `active: false` hides
+  // the featured hero card on the homepage + Luxury landing pages.
+  // The MLS® number stays server-side on the HIDDEN_MLS_NUMBERS
+  // suppression list so it also disappears from search/tile results.
+  // Case study at /case-studies/3015-141-street remains live.
+  active: false,
   // Current market status — "JUST LISTED" | "ACCEPTED OFFER" | "SALE PENDING" | "SOLD" | null
   // Renders as a coloured pill on both the homepage featured card and the
   // Luxury flagship page. `status_note` shows a short qualifier under the
