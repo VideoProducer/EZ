@@ -4960,25 +4960,10 @@ const ListingDetail = () => {
 };
 
 // --- Regions ---
-const RegionsIndex = () => (
-  <section className="section"><div className="container-x">
-    {/* Task 14 (Feb 2026) — SEO fix for regions index page. */}
-    <SEO
-      title="BC Real Estate by Region — Greater Vancouver, Fraser Valley, Sea-to-Sky, Vancouver Island | EZtoFind.ca"
-      description="Explore British Columbia real estate by region. Greater Vancouver (22 municipalities), Fraser Valley (Langley, Abbotsford, Chilliwack, Mission), Sea-to-Sky Corridor (Squamish, Whistler, Pemberton) — Doug LeMaire, REALTOR® primary practice. Vancouver Island + Gulf Islands (51 communities) via BC-licensed referral network."
-      path="/regions"
-    />
-    <div style={{textAlign:"center",marginBottom:"3rem"}}><div className="eyebrow">Focus Areas</div><h1 className="section-title">Where Doug works.</h1></div>
-    <div className="grid-3">
-      {[{s:"greater-vancouver",t:"Greater Vancouver",i:IMG.vancouver,alt:"Greater Vancouver skyline at dusk — 22 municipalities from downtown high-rises to West Vancouver waterfront estates, one of Canada's most valuable residential real estate markets"},{s:"fraser-valley",t:"Fraser Valley",i:IMG.fraserValley,alt:"Fraser Valley aerial view — Langley, Abbotsford, Chilliwack farmland, acreage and equestrian properties in BC's fastest-growing residential region"},{s:"sea-to-sky",t:"Sea-to-Sky Corridor",i:IMG.seaToSky,alt:"Sea-to-Sky Corridor mountain landscape — Squamish, Whistler, Pemberton alpine and lakeside real estate along BC Highway 99"}].map(r =>
-        <Link to={`/regions/${r.s}`} key={r.s} className="card"><img loading="lazy" decoding="async" src={r.i} className="card-img" alt={r.alt} width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">{r.t}</h3></div></Link>)}
-    </div>
-    <div style={{textAlign:"center",marginTop:"3.5rem",marginBottom:"2rem"}}><div className="eyebrow">Referral Network</div><h2 className="section-title" style={{fontSize:"1.8rem"}}>Covered by our REALTORS® across BC</h2></div>
-    <div className="grid-3">
-      <Link to="/regions/vancouver-island" className="card" data-testid="region-card-vancouver-island"><img loading="lazy" decoding="async" src={IMG.vancouverIsland} className="card-img" alt="Vancouver Island coastal cliffs and Pacific ocean view — 51 communities from Victoria's heritage character to Tofino's surf coast and the Gulf Islands, served by EZtoFind's licensed BC REALTOR® referral network" width="800" height="480" itemProp="image"/><div className="card-body"><h3 className="card-title">Vancouver Island &amp; Gulf Islands</h3><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.5rem"}}>51 communities — Victoria to Port Hardy, Tofino to Sidney</p></div></Link>
-    </div>
-  </div></section>
-);
+// NOTE (Feb 2026): The `/regions` INDEX page ("Focus Areas — Where Doug works")
+// was unshipped per user request. Child pages `/regions/:slug` remain live
+// (they're linked from other hubs and hold SEO value). The RegionsIndex
+// component and its route have been removed.
 
 const REGION_DATA = {
   "greater-vancouver": {title:"Greater Vancouver", img:IMG.vancouver, key:"Greater Vancouver", copy:"The Greater Vancouver market spans 22 municipalities, from downtown Vancouver highrises to West Vancouver waterfront estates and the sprawling suburbs of Surrey and Coquitlam. It's Canada's most valuable real estate corridor — and one of the most tightly regulated. Doug's local expertise means you get someone who reads Form B's daily and knows every community's zoning quirks."},
@@ -4992,7 +4977,7 @@ const RegionPage = () => {
   const [communities, setCommunities] = useState({});
   useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)); }, []);
   const d = REGION_DATA[slug];
-  if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/regions">Back</Link></div>;
+  if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/">Back to Home</Link></div>;
   const list = communities[d.key] || [];
   return (<section className="section"><div className="container-x">
     <img loading="lazy" decoding="async" src={d.img} alt={`${d.title} — ${d.copy.slice(0,140)}`} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}} width="1200" height="400" itemProp="image"/>
@@ -13593,7 +13578,7 @@ function App() {
       <Route path="/community/:slug/zoning" element={<AppLayout><CommunityZoning/></AppLayout>}/>
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-neighbourhood-legacy"/></AppLayout>}/>
-      <Route path="/regions" element={<AppLayout><RegionsIndex/></AppLayout>}/>
+      {/* /regions index unshipped (Feb 2026) — child /regions/:slug pages remain live */}
       <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
       <Route path="/specialties/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><EquestrianLeadMockup/></Suspense>}/>

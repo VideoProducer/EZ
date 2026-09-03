@@ -138,12 +138,6 @@
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://eztofind.ca/regions</loc>
-    <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
     <loc>https://eztofind.ca/regions/greater-vancouver</loc>
     <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>

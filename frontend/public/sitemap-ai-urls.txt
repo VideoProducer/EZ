@@ -10,7 +10,6 @@ https://eztofind.ca/referral-request
 https://eztofind.ca/buyer
 https://eztofind.ca/seller
 https://eztofind.ca/contact
-https://eztofind.ca/regions
 https://eztofind.ca/regions/greater-vancouver
 https://eztofind.ca/regions/fraser-valley
 https://eztofind.ca/regions/sea-to-sky

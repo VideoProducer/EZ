@@ -24,6 +24,10 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 ---
 
 ## Implemented so far (Feb 2026 recap)
+### Feb 2026 — Task 15: `/regions` INDEX ("Focus Areas — Where Doug works") Unshipped
+Per user request the `/regions` INDEX hub was fully removed: (1) `<Route path="/regions">` deleted from `App.js`, (2) `RegionsIndex` component removed, (3) internal "Region not found" fallback link retargeted from `/regions` → `/`, (4) URL scrubbed from `sitemap_generator.py`, `sitemap-static.xml`, `sitemap-ai.xml`, and `sitemap-ai-urls.txt`. Child `/regions/:slug` pages (Greater Vancouver, Fraser Valley, Sea-to-Sky, Vancouver Island, Okanagan) remain live — they carry independent SEO value and are still linked from other hubs. Verified: `/regions` now renders branded 404 (`Page not found — EZtoFind.ca`); `/regions/fraser-valley` still returns 200.
+
+
 ### Feb 2026 — Tier 1 Audit + IndexNow Auto-Ping + Monthly Market-Report Cron
 **Tier 1 audit** — Full scorecard shipped to `/app/memory/TIER1_AUDIT.md`. All 10 personally-repped farm communities (Vancouver, Surrey, Maple Ridge, Langley, Burnaby, Richmond, North Vancouver, West Vancouver, Coquitlam, Abbotsford) scored against 10 criteria. Portfolio avg **79.7/100 (B)** with 3 system-wide leaks identified: (1) sub-neighbourhood live-count binding shows 0 across every card, (2) forecast widget 502s under Open-Meteo daily-limit, (3) Abbotsford vibe grade C+ mismatches its Tier 1 status.
 

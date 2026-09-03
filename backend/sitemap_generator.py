@@ -120,7 +120,7 @@ STATIC_URLS = [
     ("/tools/first-time-buyer",         "0.85", "monthly"),
     # Sold case studies — high-intent seller lead-gen pages.
     ("/case-studies/3015-141-street",   "0.85", "monthly"),
-    ("/regions",                    "0.85", "monthly"),
+    # /regions index unshipped (Feb 2026) — child /regions/:slug pages remain in sitemap.
     ("/regions/greater-vancouver",  "0.85", "monthly"),
     ("/regions/fraser-valley",      "0.85", "monthly"),
     ("/regions/sea-to-sky",         "0.85", "monthly"),
