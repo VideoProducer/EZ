@@ -935,9 +935,49 @@ const FirstVisitToast = ({ onDismiss, setSection }) => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
   const isNarrow = viewW < 900;
+  // Feb 2026 — on mobile the full card was blocking ~40% of the viewport on
+  // first visit. Collapse to a compact "avatar-only" pill in the corner by
+  // default; tap it to expand into the full welcome card.
+  const [collapsed, setCollapsed] = useState(isNarrow);
+  // If the viewport crosses the breakpoint after mount (rotation), re-sync.
+  useEffect(() => { if (isNarrow) setCollapsed(true); else setCollapsed(false); }, [isNarrow]);
   const pos = isNarrow
-    ? { left: 8, right: 8, bottom: 16, maxWidth: "none", width: "auto" }
+    ? (collapsed
+        ? { right: 14, bottom: 90, width: "auto", maxWidth: "none" }
+        : { left: 8, right: 8, bottom: 16, maxWidth: "none", width: "auto" })
     : { left: 274, bottom: 24, maxWidth: 360 };
+  // Collapsed pill — just Doogie's face inside a gold ring, plus a subtle
+  // "Woof!" caption bubble. Tapping either expands to the full card.
+  if (isNarrow && collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        data-testid="dash-first-visit-toast"
+        aria-label="Open Doogie welcome"
+        style={{
+          position: "fixed", zIndex: 60,
+          background: "#fff", border: "2px solid " + C.gold, borderRadius: 999,
+          padding: "6px 12px 6px 6px",
+          boxShadow: "0 8px 22px rgba(15,42,91,0.28)",
+          display: "flex", gap: 8, alignItems: "center",
+          animation: "toast-slide 0.35s cubic-bezier(0.16,1,0.3,1)",
+          cursor: "pointer",
+          ...pos,
+        }}
+      >
+        <img src={DOOGIE.head} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain", flexShrink: 0 }} loading="lazy" decoding="async"/>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 800, color: C.navy }}>Woof! 🐾</span>
+        <span
+          onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+          data-testid="dash-first-visit-close"
+          aria-label="Dismiss Doogie intro"
+          role="button"
+          tabIndex={0}
+          style={{ marginLeft: 4, color: C.muted || "#6B7280", fontSize: 16, lineHeight: 1, padding: "2px 4px" }}
+        >×</span>
+      </button>
+    );
+  }
   return (
   <div
     data-testid="dash-first-visit-toast"
@@ -5478,7 +5518,7 @@ const DashboardBackHomeBar = ({ resetHome }) => {
         fontSize: isMobile ? 11 : 13, fontWeight: 800,
         textDecoration: "none", display: "inline-flex", alignItems: "center",
         letterSpacing: 0.3,
-      }}>{isMobile ? "REALTOR® Net" : "REALTOR® Network"}</Link>
+      }}>{isMobile ? "Referrals" : "REALTOR® Network"}</Link>
     </div>
   );
 };
@@ -5489,14 +5529,14 @@ const HomeComplianceBanner = () => {
   return (
     <div data-testid="dash-home-compliance-banner" style={{
       background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
-      padding: isMobile ? "8px 12px" : "10px 32px",
+      padding: isMobile ? "5px 12px" : "10px 32px",
       fontFamily: "'Inter', system-ui, sans-serif",
-      color: C.ink, fontSize: isMobile ? 11 : 12.5,
-      lineHeight: isMobile ? 1.4 : 1.5, textAlign: "center",
+      color: C.ink, fontSize: isMobile ? 10.5 : 12.5,
+      lineHeight: isMobile ? 1.35 : 1.5, textAlign: "center",
     }}>
       {isMobile ? (
         <>
-          <strong style={{ color: C.navy }}>EZtoFind.ca</strong> — general BC real estate info only. <em>Not</em> legal, tax, or financial advice.
+          <strong style={{ color: C.navy }}>EZtoFind.ca</strong> — general BC info. <em>Not</em> legal, tax, or financial advice.
         </>
       ) : (
         <><strong style={{ color: C.navy }}>EZtoFind.ca</strong> provides general educational information about BC real estate — <em>not</em> legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.</>

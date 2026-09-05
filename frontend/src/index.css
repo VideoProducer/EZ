@@ -360,8 +360,14 @@ footer ul li { padding: 0.35rem 0; font-size: 0.9rem; }
    never hidden by a full-width `<ListingsMap/>` on the homepage / search
    view. Kept below the DoogieTour spotlight (2000) and any modal / cookie
    overlays so critical interactions can still take precedence. */
-.doogie-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050; width: 72px; height: 72px; border-radius: 50%; background: white; border: 3px solid var(--brand-gold); cursor: pointer; box-shadow: 0 12px 28px rgba(15,42,91,0.35); display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0; animation: bob 3s ease-in-out infinite; }
-@keyframes bob { 0%,100% {transform: translateY(0)} 50% {transform: translateY(-6px)} }
+.doogie-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050; width: 72px; height: 72px; border-radius: 50%; background: white; border: 3px solid var(--brand-gold); cursor: pointer; box-shadow: 0 12px 28px rgba(15,42,91,0.35); display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0; animation: bob 3s ease-in-out infinite; will-change: transform; transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); }
+@keyframes bob { 0%,100% {transform: translate3d(0,0,0)} 50% {transform: translate3d(0,-6px,0)} }
+/* Feb 2026 — kill the bob animation on touch devices (iPhone 16 etc.) where
+   translating a shadowed circle causes subpixel shimmer that looks like the
+   mascot is shaking. Also honour prefers-reduced-motion for accessibility. */
+@media (hover: none) and (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .doogie-fab { animation: none !important; transform: none !important; }
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 /* Gold pulsing ring — used by the Whistler sizzle-reel play button so the
    visitor's eye is drawn to it on first paint. Fades to nothing so the

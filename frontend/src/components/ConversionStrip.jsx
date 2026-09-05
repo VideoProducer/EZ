@@ -10,7 +10,12 @@
 // pass `variant="hidden"` via context to hide it, so we don't compete
 // with the page's own primary CTA. For now we keep it visible everywhere
 // because the current homepage has no equivalent above-the-fold CTA.
-import React from "react";
+//
+// Feb 2026 — Mobile auto-hide: on narrow viewports (<700px), the strip
+// slides up out of view when the user scrolls down and slides back in
+// when they scroll up. Buys back ~90px of above-the-fold real estate on
+// phones without removing the CTA from the page.
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const HIDE_ON = new Set([
@@ -19,6 +24,30 @@ const HIDE_ON = new Set([
 
 export const ConversionStrip = () => {
   const { pathname } = useLocation();
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Only auto-hide on phone-width viewports — desktop keeps it pinned.
+    if (window.innerWidth >= 700) return;
+    let lastY = window.scrollY || 0;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const y = window.scrollY || 0;
+        // Small threshold so a 1-2px jitter doesn't flip visibility.
+        if (Math.abs(y - lastY) > 6) {
+          if (y > lastY && y > 80) setHidden(true);   // scrolling down past hero
+          else setHidden(false);                       // scrolling up
+          lastY = y;
+        }
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   if (HIDE_ON.has(pathname)) return null;
 
   return (
@@ -41,6 +70,14 @@ export const ConversionStrip = () => {
         boxShadow: "0 4px 12px rgba(15,42,91,0.2)",
         fontFamily: "'Inter', sans-serif",
         fontSize: "0.9rem",
+        // Mobile auto-hide — slides out of layout when scrolling down.
+        maxHeight: hidden ? 0 : 200,
+        paddingTop: hidden ? 0 : "0.6rem",
+        paddingBottom: hidden ? 0 : "0.6rem",
+        overflow: "hidden",
+        opacity: hidden ? 0 : 1,
+        transform: hidden ? "translateY(-4px)" : "translateY(0)",
+        transition: "max-height 220ms ease, opacity 200ms ease, padding 220ms ease, transform 220ms ease",
       }}
     >
       <span

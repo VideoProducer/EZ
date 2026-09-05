@@ -6028,7 +6028,7 @@ const GlossaryTerm = () => {
       </p>
     </section>
   );
-  if(!t) return <div className="section container-x"><h2>Term not found</h2><Link to="/glossary">← Back</Link></div>;
+  if(!t) return <div className="section container-x" style={{padding:"2rem 1rem"}}><h2 style={{fontFamily:"'Playfair Display',serif",color:"var(--brand-navy)"}}>Term not found</h2><Link to="/glossary">← Back</Link></div>;
 
   const AuthorBlock = ({compact=false}) => <PublishedByDoug compact={compact} lastReviewed={t.faqs_approved_at || t.last_curated_at || t.updated_at}/>;
 
