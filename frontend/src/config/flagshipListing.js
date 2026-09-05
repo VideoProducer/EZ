@@ -7,7 +7,8 @@ export const FLAGSHIP = {
   // the featured hero card on the homepage + Luxury landing pages.
   // The MLS® number stays server-side on the HIDDEN_MLS_NUMBERS
   // suppression list so it also disappears from search/tile results.
-  // Case study at /case-studies/3015-141-street remains live.
+  // Case study page for this listing was retired Feb 2026 at owner request;
+  // the Flagship listing card itself remains live on /luxury and the homepage.
   active: false,
   // Current market status — "JUST LISTED" | "ACCEPTED OFFER" | "SALE PENDING" | "SOLD" | null
   // Renders as a coloured pill on both the homepage featured card and the

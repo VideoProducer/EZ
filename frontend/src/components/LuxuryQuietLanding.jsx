@@ -495,9 +495,10 @@ export default function LuxuryQuietLanding() {
         </section>
 
         {/* ─── RECENT WORK ──────────────────────────────────────────
-            Two-sentence outcome paragraph. The Elgin Chantrell home
-            links quietly to the /case-studies/3015-141-street file
-            since a dedicated community profile does not yet exist. */}
+            Two-sentence outcome paragraph. The Elgin Chantrell home was
+            previously linked to a dedicated case-study page; the case
+            study was retired at owner request (Feb 2026), so the mention
+            is now plain text. */}
         <section
           data-testid="luxury-recent-work"
           style={{
@@ -517,20 +518,9 @@ export default function LuxuryQuietLanding() {
             }}
           >
             Notable recent transactions include a private acquisition in
-            South Langley exceeding $3 million, and a stunning{" "}
-            <Link
-              to="/case-studies/3015-141-street"
-              data-testid="luxury-recent-elgin-link"
-              style={{
-                color: T.ink,
-                textDecoration: "underline",
-                textDecorationColor: T.hairline,
-                textUnderlineOffset: 4,
-              }}
-            >
-              $3 million residence in Elgin Chantrell, South Surrey
-            </Link>
-            , which transitioned from listing to sold in just 12 days.
+            South Langley exceeding $3 million, and a stunning $3 million
+            residence in Elgin Chantrell, South Surrey, which transitioned
+            from listing to sold in just 12 days.
           </p>
         </section>
 

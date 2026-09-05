@@ -262,18 +262,8 @@ export default function LuxuryFlagshipCard() {
               }}
             >📷 View all {galleryPhotos.length} photos</button>
           )}
-          {/sold/i.test(FLAGSHIP.status || "") && (
-            <Link
-              to="/case-studies/3015-141-street"
-              data-testid="luxury-flagship-case-study-cta"
-              style={{
-                background: "#CE2029", color: "white",
-                padding: "12px 24px", borderRadius: 999,
-                fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "0.9rem",
-                textDecoration: "none", boxShadow: "0 4px 12px rgba(206,32,41,0.35)",
-              }}
-            >📖 Read the case study →</Link>
-          )}
+          {/* "Read the case study" CTA removed Feb 2026 — 3015 141 Street
+              case study page was retired at owner request. */}
         </div>
       </div>
       <ListingPhotoLightbox
