@@ -228,9 +228,28 @@ const renderChatContent = (raw, lang) => {
   //     inline to /referral-request. Also strip any bare "/referral-request"
   //     mentions elsewhere in the same message that survived rule 4's negative
   //     lookahead — this prevents the double-CTA the user flagged.
-  s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link)/gi,
+  //
+  //     Two patterns:
+  //       (a) "Referral REALTOR® link: <city>"  → href pre-fills ?city=<city>
+  //       (b) bare "Referral REALTOR® link"     → plain href="/referral-request"
+  //     The city capture stops at newline / `<` / end so multi-word cities like
+  //     "Salt Spring Island" and "Fort St. John" are captured whole. Trailing
+  //     punctuation on the city is trimmed before encoding.
+  s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link):\s*([^<\n]+?)(?=[<\n]|$)/gi,
+    (m, phrase, cityRaw) => {
+      const city = (cityRaw || "").replace(/[.,;:!?\s]+$/, "").trim();
+      const q = city ? `?city=${encodeURIComponent(city)}` : "";
+      const label = city ? `${phrase}: ${city}` : phrase;
+      return `<a href="/referral-request${q}" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">${label}</a>`;
+    });
+  s = s.replace(/(Referral REALTOR(?:®|&reg;|®|®)?\s+link)(?!:|<\/a>)/gi,
     '<a href="/referral-request" style="color:var(--brand-blue);font-weight:600;text-decoration:underline">$1</a>');
-  s = s.replace(/(?<![>a-zA-Z0-9])\/referral-request(?![a-z0-9\-])/g, "");
+  // Feb 2026 bug-fix: the negative lookbehind must also exclude attribute
+  // delimiters (" ' =) so this strip cannot nuke the href value that rule 4b
+  // just built. Previously `href="/referral-request"` was being reduced to
+  // `href=""`, which made every out-of-area referral link "go to the
+  // homepage" (empty href = reload current URL).
+  s = s.replace(/(?<![>a-zA-Z0-9"'=])\/referral-request(?![a-z0-9\-])/g, "");
   // 4c. If a non-English chat language is active, append ?lang=xx to lead conversion routes.
   s = _appendLangToHref(s, lang);
   // 4d. Referral CTAs render INLINE (underlined hyperlink) rather than as a
