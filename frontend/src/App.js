@@ -13528,6 +13528,38 @@ const AdminReferrals = () => {
 // inside the token-gated Client Journey at /my-journey/:token.
 
 
+// ── WhereShouldILivePage ────────────────────────────────────────────────
+// Feb 2026 — standalone URL for the CommunityFinderQuiz. The same quiz is
+// still embedded inside /relocating; this page exists so the "Where Should
+// I Live?" CTA on the Buyer Insights sync panel (and any other inbound
+// link) resolves to a real page instead of the branded 404. Compliance is
+// preserved verbatim by the quiz component itself.
+const WhereShouldILivePage = () => (
+  <section className="section">
+    <div className="container-x" style={{maxWidth: 900}}>
+      <SEO
+        title="Where Should I Live? — BC Community Finder Quiz | EZtoFind.ca"
+        description="Answer six lifestyle questions and see suggested BC communities that fit your commute, budget, and priorities. Suggestions only — not recommendations, not advice. Data from CREA DDF®. Speak with a licensed REALTOR® before making housing decisions."
+        path="/where-should-i-live"
+      />
+      <div className="eyebrow" style={{textAlign:"center"}}>Free Tool · No Signup</div>
+      <h1 className="section-title" data-testid="wsil-title" style={{textAlign:"center", fontSize:"clamp(1.6rem, 3.4vw, 2.2rem)", lineHeight:1.25}}>
+        <strong>Where should I live in BC?</strong>
+      </h1>
+      <p style={{textAlign:"center", color:"var(--muted)", maxWidth:640, margin:"0.75rem auto 0", lineHeight:1.55, fontSize:"0.98rem"}}>
+        Six lifestyle questions → shortlist of BC communities that match your
+        commute, budget, and priorities. Suggestions only — not
+        recommendations, not advice. Please speak with a licensed REALTOR®
+        and, where relevant, a BC lawyer or notary, accountant, and mortgage
+        broker before making any housing decision.
+      </p>
+      <div style={{ margin: "1.75rem -1rem 0", padding: 0 }}>
+        <CommunityFinderQuiz/>
+      </div>
+    </div>
+  </section>
+);
+
 
 function App() {
   return (<BrowserRouter>
@@ -13620,6 +13652,11 @@ function App() {
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/buying-guide" element={<Navigate to="/buyer" replace/>}/>
       <Route path="/selling-guide" element={<Navigate to="/seller" replace/>}/>
+      {/* Feb 2026 — dedicated URL for the "Where Should I Live?" lifestyle
+          quiz so the CTA on the Buyer Insights sync panel resolves and the
+          tool gets its own indexable page. Same CommunityFinderQuiz that's
+          embedded inside /relocating. */}
+      <Route path="/where-should-i-live" element={<AppLayout><WhereShouldILivePage/></AppLayout>}/>
       <Route path="/search" element={<AppLayout><SearchPage/></AppLayout>}/>
       <Route path="/valuation" element={<AppLayout><Valuation/></AppLayout>}/>
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>

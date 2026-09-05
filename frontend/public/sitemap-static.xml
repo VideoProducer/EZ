@@ -132,6 +132,12 @@
     <priority>0.85</priority>
   </url>
   <url>
+    <loc>https://eztofind.ca/where-should-i-live</loc>
+    <lastmod>2026-09-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
     <loc>https://eztofind.ca/regions/greater-vancouver</loc>
     <lastmod>2026-09-05</lastmod>
     <changefreq>monthly</changefreq>

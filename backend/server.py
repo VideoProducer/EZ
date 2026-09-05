@@ -18262,7 +18262,7 @@ def _buyer_bundle(insights: dict | None, community: str | None) -> dict:
     from urllib.parse import quote_plus
     stub = community or ""
     tools = [
-        {"kind": "Tool", "title": "What Can I Afford?", "blurb": "Estimate your BC purchase ceiling using down payment, income, and current rates.", "href": "/tools/what-can-i-afford"},
+        {"kind": "Tool", "title": "What Can I Afford?", "blurb": "Estimate your BC purchase ceiling using down payment, income, and current rates.", "href": "/tools/mortgage-affordability"},
         {"kind": "Tool", "title": "Where Should I Live?", "blurb": "Answer six lifestyle questions and see suggested BC communities. Suggested, not recommended.", "href": "/where-should-i-live"},
         {"kind": "Tool", "title": "Property Transfer Tax (PTT) — BC rates", "blurb": "Tiered 1% / 2% / 3% / 5% BC provincial transfer tax explained.", "href": "/glossary/property-transfer-tax-ptt"},
         {"kind": "Guide", "title": "The Buying Journey — 9 steps", "blurb": "From pre-approval to key handover. Plain-language walkthrough of every BC step.", "href": "/buying-guide"},
