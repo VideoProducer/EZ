@@ -6188,19 +6188,11 @@ const DashboardFeaturedListing = () => {
             overflow: "hidden",
           }} data-testid="dash-featured-description">{merged.description}</p>
 
-          <LuxuryShareBar
-            url={typeof window !== "undefined"
-              ? `${window.location.origin}/api/share/featured${live ? `?mls=${encodeURIComponent(L.mls)}` : ""}`
-              : ""}
-            ogPreviewUrl={typeof window !== "undefined"
-              ? `${window.location.origin}/api/og/featured-listing.png?photo=${encodeURIComponent(merged.photos[0] || "")}&address=${encodeURIComponent(merged.address)}&city=${encodeURIComponent(merged.city)}&province=${encodeURIComponent(merged.province)}&neighbourhood=${encodeURIComponent(merged.neighbourhood)}&headline=${encodeURIComponent(L.headline || "")}&status=${encodeURIComponent(L.status || "JUST LISTED")}&price=${merged.price || 0}&is_live=${live ? "true" : "false"}`
-              : ""}
-            title={`${merged.address}, ${merged.city} — ${fmtPriceShort(merged.price)}`}
-            text={`${merged.address}, ${merged.city} · ${fmtPriceShort(merged.price)} · ${merged.beds} bed / ${merged.baths} bath · ${(merged.sqft || 0).toLocaleString("en-CA")} sq ft — Featured by Doug LeMaire, REALTOR®`}
-            mls={merged.mls}
-            address={merged.address}
-            city={merged.city}
-          />
+          {/* Feb 2026 — "Share this listing" bar (Copy link / Email / WhatsApp /
+              Facebook) removed from the home page featured card at owner
+              request. The `LuxuryShareBar` component definition is retained
+              in this file so it can be re-mounted here (or elsewhere) later
+              without a re-import. */}
 
           <div style={{
             fontSize: 10.5, color: C.muted, marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
