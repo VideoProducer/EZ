@@ -5851,44 +5851,55 @@ const GlossaryAZ = () => {
           <Link to="/glossary" style={{color:"var(--brand-blue)",textDecoration:"underline",marginLeft:4}}>browse by category</Link>.
         </p>
       </div>
-      <input
-        value={q}
-        onChange={e=>setQ(e.target.value)}
-        placeholder="Filter terms…"
-        data-testid="glossary-az-search"
-        style={{width:"100%",maxWidth:560,margin:"0 auto 1.25rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}}
-      />
-      {/* Sticky alphabet jump-nav. Uses anchor hashes so Google crawls each
-          letter as a separate DOM anchor, and the letter shows in the URL
-          bar when clicked — nice UX + additional deep-link surface. */}
+      {/* Feb 2026 — Sticky search + jump-nav wrapper. On mobile the /glossary/a-z
+          page can be 70k+ pixels tall; without a sticky search input at the
+          top, users have to scroll all the way back to filter. Wrapping the
+          input + letter nav in a single sticky container solves that. */}
       <div
-        data-testid="glossary-az-nav"
+        data-testid="glossary-az-sticky-bar"
         style={{
           position:"sticky", top:64, zIndex:5,
-          background:"rgba(253,252,248,0.94)", backdropFilter:"blur(10px)",
-          borderRadius:12, padding:"0.75rem 0.5rem",
+          background:"rgba(253,252,248,0.96)", backdropFilter:"blur(10px)",
+          padding:"0.75rem 0.5rem", borderRadius:12,
           boxShadow:"0 4px 14px rgba(15,42,91,0.06)",
           marginBottom:"2rem",
-          display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center",
         }}
       >
-        {letters.map(l => (
-          <a
-            key={l}
-            href={`#letter-${l === "#" ? "hash" : l.toLowerCase()}`}
-            data-testid={`glossary-az-jump-${l === "#" ? "hash" : l.toLowerCase()}`}
-            style={{
-              minWidth:32, height:32, display:"inline-flex", alignItems:"center", justifyContent:"center",
-              borderRadius:8, textDecoration:"none",
-              background:"transparent", color:"var(--brand-navy)",
-              fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:700,
-              border:"1px solid rgba(15,42,91,0.12)",
-              transition:"all 0.15s ease",
-            }}
-            onMouseEnter={e=>{ e.currentTarget.style.background="var(--brand-navy)"; e.currentTarget.style.color="white"; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--brand-navy)"; }}
-          >{l}</a>
-        ))}
+        <input
+          value={q}
+          onChange={e=>setQ(e.target.value)}
+          placeholder={`Filter ${terms.length} terms…`}
+          data-testid="glossary-az-search"
+          aria-label="Filter glossary terms"
+          style={{width:"100%",maxWidth:560,margin:"0 auto 0.6rem",display:"block",padding:"0.7rem 1.1rem",fontFamily:"Inter,sans-serif",fontSize:"16px",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white",boxSizing:"border-box"}}
+        />
+        {/* Alphabet jump-nav. Uses anchor hashes so Google crawls each
+            letter as a separate DOM anchor, and the letter shows in the URL
+            bar when clicked. */}
+        <div
+          data-testid="glossary-az-nav"
+          style={{
+            display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center",
+          }}
+        >
+          {letters.map(l => (
+            <a
+              key={l}
+              href={`#letter-${l === "#" ? "hash" : l.toLowerCase()}`}
+              data-testid={`glossary-az-jump-${l === "#" ? "hash" : l.toLowerCase()}`}
+              style={{
+                minWidth:32, height:32, display:"inline-flex", alignItems:"center", justifyContent:"center",
+                borderRadius:8, textDecoration:"none",
+                background:"transparent", color:"var(--brand-navy)",
+                fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:700,
+                border:"1px solid rgba(15,42,91,0.12)",
+                transition:"all 0.15s ease",
+              }}
+              onMouseEnter={e=>{ e.currentTarget.style.background="var(--brand-navy)"; e.currentTarget.style.color="white"; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--brand-navy)"; }}
+            >{l}</a>
+          ))}
+        </div>
       </div>
       {filtered.length === 0 && (
         <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>
@@ -11785,6 +11796,53 @@ const AppLayout = ({children}) => {
   </>);
 };
 
+// ── BackToTopFAB — floating up-arrow that appears on long pages ────────
+// Feb 2026 — mobile visitors spend most of their time on pages that scroll
+// 5-70k px (home, glossary A-Z, community). This lightweight FAB appears
+// once the visitor has scrolled ≥ 1.5 screens and smooth-scrolls back to
+// the top on tap. Bottom-LEFT so it never fights the Doogie/Chat FAB in
+// the bottom-right.
+function BackToTopFAB() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        setVisible((window.scrollY || 0) > window.innerHeight * 1.5);
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      data-testid="back-to-top-fab"
+      aria-label="Back to top"
+      style={{
+        position: "fixed", zIndex: 1040,
+        bottom: "1.5rem", left: "1.5rem",
+        width: 44, height: 44, borderRadius: "50%",
+        background: "var(--brand-navy)", color: "#fff",
+        border: "2px solid var(--brand-gold)",
+        boxShadow: "0 8px 20px rgba(15,42,91,0.32)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", padding: 0,
+        fontSize: 20, fontWeight: 700, lineHeight: 1,
+        animation: "fadeInUp 0.25s ease-out",
+      }}
+    >
+      <span aria-hidden="true">↑</span>
+    </button>
+  );
+}
+
 // Every SPA navigation lands at the top of the page. Preserves scroll ONLY
 // when the URL includes a hash anchor (so /page#faq still jumps to the anchor).
 function ScrollToTop() {
@@ -13568,6 +13626,10 @@ function App() {
         wrap in AppLayout). Kept inside AppLayout too as a belt-and-braces
         no-op safety for lazy-loaded async content. */}
     <ScrollToTop/>
+    {/* Back-to-top FAB — appears once the user has scrolled ≥ 1.5 screens.
+        Mounted here at the router root so it renders on EVERY page
+        including DashboardMockup (`/`) which does not use AppLayout. */}
+    <BackToTopFAB/>
     {/* Sitewide entity graph (Organization + Person + WebSite) — injected
         on every route so LLM crawlers landing on any page can link back
         to Doug's REALTOR® identity + brokerage. Page-specific schemas

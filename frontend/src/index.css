@@ -284,6 +284,16 @@ h1,h2,h3,h4 { font-family: 'Fraunces','Playfair Display',Georgia,serif; letter-s
 @media (max-width: 700px) {
   .nav-inner > a:first-child { white-space: normal; min-width: 0; flex: 1 1 auto; }
   .nav-inner > a:first-child [data-testid="nav-brokerage-name"] { white-space: normal; word-break: break-word; }
+  /* Feb 2026 — compress the site-wide brand block on mobile so the tiny
+     BCFSA/brokerage/REALTOR lines don't push page content below the fold.
+     Keep the wordmark visible (identity) and preserve BCFSA prominence
+     (brokerage name ≥ 50% of wordmark). Wordmark 1.15rem, brokerage
+     0.72rem (>= 50%), REALTOR line 0.62rem — all with tighter line-height. */
+  .nav-inner > a:first-child img:first-child { width: 40px !important; height: 40px !important; }
+  .nav-inner > a:first-child [data-testid="nav-wordmark"] { font-size: 1.15rem !important; }
+  .nav-inner > a:first-child [data-testid="nav-brokerage-name"] { font-size: 0.72rem !important; margin-top: 0.15rem !important; line-height: 1.2 !important; }
+  .nav-inner > a:first-child [data-testid="nav-brokerage-name"] + div { font-size: 0.62rem !important; margin-top: 0.05rem !important; line-height: 1.2 !important; }
+  .nav-inner { padding: 0.7rem 0 !important; gap: 0.6rem !important; }
 }
 .nav a { color: var(--ink); text-decoration: none; font-family: 'Inter',sans-serif; font-size: 0.95rem; font-weight: 500; padding: 0.5rem 0.9rem; border-radius: 8px; transition: all 0.2s; }
 .nav a:hover { background: rgba(30,79,207,0.08); color: var(--brand-blue); }
@@ -362,6 +372,7 @@ footer ul li { padding: 0.35rem 0; font-size: 0.9rem; }
    overlays so critical interactions can still take precedence. */
 .doogie-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1050; width: 72px; height: 72px; border-radius: 50%; background: white; border: 3px solid var(--brand-gold); cursor: pointer; box-shadow: 0 12px 28px rgba(15,42,91,0.35); display:flex; align-items:center; justify-content:center; overflow:hidden; padding:0; animation: bob 3s ease-in-out infinite; will-change: transform; transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; -webkit-transform: translateZ(0); }
 @keyframes bob { 0%,100% {transform: translate3d(0,0,0)} 50% {transform: translate3d(0,-6px,0)} }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 /* Feb 2026 — kill the bob animation on touch devices (iPhone 16 etc.) where
    translating a shadowed circle causes subpixel shimmer that looks like the
    mascot is shaking. Also honour prefers-reduced-motion for accessibility. */
@@ -585,8 +596,9 @@ footer,
   .doogie-fab { width: 60px; height: 60px; bottom: 1rem; right: 1rem; }
   /* Cookie banner stacks above chat FAB */
   [data-testid="cookie-banner"] { left: 0.5rem !important; right: 0.5rem !important; bottom: 5.5rem !important; max-width: none !important; padding: 0.85rem 1rem !important; font-size: 0.85rem !important; }
-  /* Compliance strip — shorter text on mobile */
-  .compliance-strip { font-size: 0.7rem !important; padding: 0.5rem 1rem !important; }
+  /* Compliance strip — Feb 2026: bumped from 0.7rem to 0.8rem (11.2px → 12.8px)
+     so BC PIPA compliance copy is readable on mobile without a magnifier. */
+  .compliance-strip { font-size: 0.8rem !important; padding: 0.5rem 1rem !important; line-height: 1.4 !important; }
 }
 
 /* Compliance strip — hide long lead-in on mobile + iOS auto-zoom prevention */
@@ -1277,12 +1289,14 @@ textarea:focus-visible,
   .section-title { line-height: 1.2 !important; }
 
   /* Compliance top strip — collapse to one-line summary on mobile.
-     The full disclaimer is repeated in /compliance so nothing is lost. */
+     The full disclaimer is repeated in /compliance so nothing is lost.
+     Feb 2026 — font bumped from 0.72rem (11.5px) to 0.8rem (12.8px) so BC
+     PIPA compliance copy is readable on phones without pinch-zooming. */
   .compliance-strip,
   .compliance-banner {
-    padding: 0.45rem 0.85rem !important;
-    font-size: 0.72rem !important;
-    line-height: 1.4 !important;
+    padding: 0.5rem 0.9rem !important;
+    font-size: 0.8rem !important;
+    line-height: 1.45 !important;
   }
 
   /* CTA strip ("Talk to Doug — What's my home worth? · Tell Doug…") —

@@ -5529,10 +5529,10 @@ const HomeComplianceBanner = () => {
   return (
     <div data-testid="dash-home-compliance-banner" style={{
       background: "#FBF6E7", borderBottom: "1px solid rgba(245,166,35,0.30)",
-      padding: isMobile ? "5px 12px" : "10px 32px",
+      padding: isMobile ? "6px 12px" : "10px 32px",
       fontFamily: "'Inter', system-ui, sans-serif",
-      color: C.ink, fontSize: isMobile ? 10.5 : 12.5,
-      lineHeight: isMobile ? 1.35 : 1.5, textAlign: "center",
+      color: C.ink, fontSize: isMobile ? 12.5 : 12.5,
+      lineHeight: isMobile ? 1.4 : 1.5, textAlign: "center",
     }}>
       {isMobile ? (
         <>
