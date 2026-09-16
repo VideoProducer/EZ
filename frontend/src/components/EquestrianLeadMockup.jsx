@@ -148,15 +148,21 @@ export default function EquestrianLeadMockup() {
         });
         if (cancelled) return;
         const pool = (r.data.listings || [])
+          // Feb 2026 — Doug flagged a grey-gradient / aerial-survey hero
+          // slide. Root cause: CREA DDF® 20+ acre equestrian farms often
+          // lead with 3-4 aerial site-plans (property boundary in cyan on
+          // a satellite view) before the first real exterior photo.
+          // Filter out any listing with fewer than 6 uploaded photos so
+          // we only rotate hero slides from listings that clearly have a
+          // proper photo shoot behind them.
+          .filter(l => (l.photos || []).length >= 6)
           .map(l => ({
-            // Skip the first photo — CREA DDF® listings routinely lead with
-            // an aerial site-plan (property boundary drawn in cyan on a
-            // satellite image), especially large-acreage Fraser Valley
-            // parcels. Photo #2 is almost always the front elevation or a
-            // proper exterior shot, which is what Doug wants in the hero.
-            // Falls back to photo[0] on the rare listing with only one
-            // uploaded photo.
-            url: (l.photos?.length > 1 ? l.photos[1] : l.photos?.[0]),
+            // Take photo[4] — that's past the typical 3-photo aerial/site-plan
+            // block CREA DDF® 20+ acre farms lead with, and reliably lands
+            // on the first exterior / interior shot. Falls back through
+            // [3] → [2] → [1] → [0] for the rare listing with a leaner
+            // photo pool that still passed the >=6-photo filter.
+            url: (l.photos?.[4] || l.photos?.[3] || l.photos?.[2] || l.photos?.[1] || l.photos?.[0]),
             listing_key: l.listing_key,
             city: l.city,
             price: l.list_price,
