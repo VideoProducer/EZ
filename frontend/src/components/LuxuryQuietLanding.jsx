@@ -238,7 +238,7 @@ function FilmSection() {
           }
         }}
       >
-        {/* SOLD! 12 Days banner — matches homepage featured-listing splash.
+        {/* SOLD! 10 Days banner — matches homepage featured-listing splash.
             Overlays the top of the film frame so the recent close reads
             instantly. Sits above the poster / play button but below the
             play iframe once video is running (pointer-events:none preserves
@@ -275,7 +275,7 @@ function FilmSection() {
               marginTop: 4,
               color: "#FFFFFF",
               textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-            }}>12 Days</div>
+            }}>10 Days</div>
           </div>
         )}
         {playing ? (
@@ -380,7 +380,7 @@ function SEOHead() {
   return (
     <SEO
       title="Luxury Real Estate | South Surrey, Fraser Valley & Sea-to-Sky | EZtoFind.ca"
-      description="Representation for significant homes in Greater Vancouver, the Fraser Valley, and Sea-to-Sky. Recent work includes an Elgin Chantrell estate sold in 12 days."
+      description="Representation for significant homes in Greater Vancouver, the Fraser Valley, and Sea-to-Sky. Recent work includes an Elgin Chantrell estate sold in 10 days."
       path="/specialties/luxury"
       schema={jsonLdReview}
     />
@@ -520,7 +520,7 @@ export default function LuxuryQuietLanding() {
             Notable recent transactions include a private acquisition in
             South Langley exceeding $3 million, and a stunning $3 million
             residence in Elgin Chantrell, South Surrey, which transitioned
-            from listing to sold in just 12 days.
+            from listing to sold in just 10 days.
           </p>
         </section>
 

@@ -5575,7 +5575,7 @@ const FEATURED_HOME_LISTING = {
   // photo — used to celebrate a fast turnaround (or announce "Sold in
   // N days" once subjects are removed). Kept short: renders on one line
   // on mobile 320px, wraps to two on desktop. Set to "" to hide.
-  status_note: "12 Days",
+  status_note: "10 Days",
   address: "3015 141 Street",
   city: "Surrey",
   neighbourhood: "Elgin Chantrell",
