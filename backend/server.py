@@ -3207,8 +3207,10 @@ async def share_featured_landing(request: Request, mls: Optional[str] = None):
     province = "BC"
     neighbourhood = "Elgin Chantrell"
     headline = "Quality, Location, Lasting Value"
-    price = 3297000
-    status = "JUST LISTED"
+    # R3156192 is SOLD — represented by Doug LeMaire · sold in 10 days.
+    # Do NOT expose the former asking price on social previews (audit G1).
+    price = 0
+    status = "SOLD"
 
     is_live = False
     if mls:

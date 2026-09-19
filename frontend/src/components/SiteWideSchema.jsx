@@ -226,11 +226,14 @@ export default function SiteWideSchema() {
         ],
         "brand": { "@id": `${SITE_FACTS.origin}/#organization` },
         "seller": { "@id": `${SITE_FACTS.origin}/#doug` },
+        // R3156192 is SOLD (represented by Doug LeMaire · sold in 10 days).
+        // Schema MUST mark this listing as SoldOut and MUST NOT expose the
+        // former asking price — quoting a sold price is a BCFSA/CREA
+        // material-misrepresentation risk (audit G1 · Feb 2026).
         "offers": {
           "@type": "Offer",
-          "price": 3297000,
           "priceCurrency": "CAD",
-          "availability": "https://schema.org/InStock",
+          "availability": "https://schema.org/SoldOut",
           "seller": { "@id": `${SITE_FACTS.origin}/#doug` },
           "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
         },

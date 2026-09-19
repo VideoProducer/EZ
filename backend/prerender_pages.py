@@ -48,7 +48,7 @@ the CDN/ingress layer during production deploy:
        }
 """
 from __future__ import annotations
-import asyncio, os, re, html, json
+import asyncio, os, re, html, json, subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -556,6 +556,378 @@ async def render_communities(db):
     print(f"  ✓ {count} community snapshots written to {PUBLIC_DIR}/snapshot/community/")
 
 
+# ── Insight prerender snapshots (audit G6 · Feb 2026) ─────────────────────
+# The /insights/{slug} React routes (31 pages) are already live and listed
+# in sitemap-insights.xml, but non-JS crawlers (older Bing, some LLM bots)
+# hit an empty <div id="root"></div> because they don't execute React.
+# This function writes a static HTML mirror of each insight to
+# /snapshot/insights/{slug}.html so the same CDN/Nginx bot-rewrite rule
+# that already serves /snapshot/glossary/ + /snapshot/community/ can serve
+# insights too. Content is sourced from frontend/src/data/insightsCatalog.js
+# (single source of truth) via a Node subprocess so we never drift.
+def _load_insights_catalog() -> dict:
+    """Read INSIGHTS_CATALOG from the JS module via Node subprocess.
+    Returns an empty dict on any error so the prerender step degrades
+    gracefully rather than blocking the whole build."""
+    try:
+        script = Path(__file__).parent / "_dump_insights_catalog.mjs"
+        if not script.exists():
+            return {}
+        result = subprocess.run(
+            ["node", str(script)],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode != 0:
+            print(f"  ! insights catalog dump failed rc={result.returncode}: {result.stderr[:400]}")
+            return {}
+        return json.loads(result.stdout)
+    except Exception as e:
+        print(f"  ! insights catalog load exception: {e}")
+        return {}
+
+
+async def render_insights(_db):
+    catalog = _load_insights_catalog()
+    if not catalog:
+        print("Rendering 0 insight snapshots (catalog empty or load failed)")
+        return 0
+    print(f"Rendering {len(catalog)} insight snapshots…")
+
+    date_modified = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    out_dir = PUBLIC_DIR / "snapshot" / "insights"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    for slug, entry in catalog.items():
+        kind = entry.get("kind") or "article"
+        eyebrow = entry.get("eyebrow") or "BC Real Estate Insight"
+        title_txt = entry.get("title") or slug.replace("-", " ").title()
+        subtitle = entry.get("subtitle") or ""
+        intro = entry.get("intro") or ""
+
+        canonical = f"{SITE}/insights/{slug}"
+        # SEO title — question-format or comparison-format, kept under
+        # ~65 chars where possible; falls back to title alone for long ones.
+        if len(title_txt) <= 45:
+            title = f"{title_txt} — BC Real Estate Insight | EZtoFind.ca"
+        else:
+            title = f"{title_txt} | EZtoFind.ca"
+        _intro_slice = (intro or "").strip().replace("\n", " ")
+        desc = ((_intro_slice[:145] + "…") if len(_intro_slice) > 148 else _intro_slice) or (
+            f"{title_txt}. BCFSA-licensed REALTOR® perspective on British Columbia real estate."
+        )
+        desc = desc[:160]
+
+        # JSON-LD schema — Article + BreadcrumbList
+        article_schema = {
+            "@context": "https://schema.org", "@type": "Article",
+            "headline": title_txt,
+            "description": desc,
+            "author": {"@id": f"{SITE}/#doug"},
+            "publisher": {"@id": f"{SITE}/#organization"},
+            "url": canonical, "inLanguage": "en-CA",
+            "dateModified": date_modified,
+            "about": {"@type": "Place", "name": "British Columbia, Canada"},
+        }
+        breadcrumb_schema = {
+            "@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE}/"},
+                {"@type": "ListItem", "position": 2, "name": "BC Real Estate Insights", "item": f"{SITE}/insights"},
+                {"@type": "ListItem", "position": 3, "name": title_txt, "item": canonical},
+            ],
+        }
+        schema_blocks_list = [
+            f'<script type="application/ld+json">{json.dumps(article_schema)}</script>',
+            f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>',
+        ]
+
+        # Body — render by kind
+        body = f'<div class="eyebrow">{esc(eyebrow)}</div>'
+        body += f'<h1>{esc(title_txt)}</h1>'
+        if subtitle:
+            body += f'<h2 style="font-size:1rem;color:#6B7280;font-weight:600;margin:0.35rem 0 0.6rem">{esc(subtitle)}</h2>'
+        body += (
+            f'<div style="margin:0.25rem 0 1.15rem;padding:8px 14px;background:#F0F4FB;border:1px solid rgba(15,42,91,0.14);border-left:3px solid #0F2A5B;border-radius:8px;font-size:0.82rem;color:#374151">'
+            f'<b>As of</b> <time datetime="{date_modified}">{date_modified}</time>'
+            f'</div>'
+        )
+        body += '<p style="font-size:0.78rem;color:#6B7280;margin:0.25rem 0 1rem;font-style:italic">General information only — not legal, tax, financial, or real-estate advice. Verify with a licensed BC professional before acting.</p>'
+        if intro:
+            body += f'<p style="font-size:1.05rem;line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(intro)}</p>'
+
+        if kind == "comparison":
+            left = entry.get("left") or {}
+            right = entry.get("right") or {}
+            facets = entry.get("facets") or []
+            body += '<h2>At a Glance</h2>'
+            body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">'
+            for side in (left, right):
+                body += (
+                    f'<div style="background:#F5F0E1;border-radius:12px;padding:1rem 1.25rem">'
+                    f'<div class="brand" style="font-size:1.1rem;margin-bottom:0.35rem">{esc(side.get("name",""))}</div>'
+                    f'<div style="font-size:0.85rem;color:#6B7280">Municipality: <b style="color:#1F2937">{esc(side.get("muni",""))}</b></div>'
+                    f'<div style="font-size:0.85rem;color:#6B7280">Population: <b style="color:#1F2937">{esc(side.get("pop",""))}</b></div>'
+                    f'<div style="margin-top:0.5rem;font-size:0.9rem;line-height:1.55">{esc(side.get("housing",""))}</div>'
+                    f'</div>'
+                )
+            body += '</div>'
+            if facets:
+                body += '<h2>Factual Differences</h2>'
+                body += '<table style="width:100%;border-collapse:collapse;font-size:0.92rem;margin-bottom:1.25rem"><thead><tr style="background:#F5F0E1">'
+                body += f'<th style="text-align:left;padding:0.6rem">Metric</th><th style="text-align:left;padding:0.6rem">{esc(left.get("name",""))}</th><th style="text-align:left;padding:0.6rem">{esc(right.get("name",""))}</th></tr></thead><tbody>'
+                for f in facets:
+                    body += (
+                        f'<tr style="border-bottom:1px solid rgba(15,42,91,0.06)">'
+                        f'<td style="padding:0.55rem;font-weight:600">{esc(f.get("label",""))}</td>'
+                        f'<td style="padding:0.55rem">{esc(f.get("left",""))}</td>'
+                        f'<td style="padding:0.55rem">{esc(f.get("right",""))}</td>'
+                        f'</tr>'
+                    )
+                body += '</tbody></table>'
+        elif kind in ("funnel", "faq"):
+            sections = entry.get("sections") or entry.get("qas") or []
+            if sections:
+                body += ('<h2>Key Facts</h2>' if kind == "funnel" else '<h2>Answers</h2>')
+                for sec in sections:
+                    h_txt = sec.get("h") or sec.get("q") or ""
+                    b_txt = sec.get("body") or sec.get("a") or ""
+                    if h_txt:
+                        body += f'<h3>{esc(h_txt)}</h3>'
+                    if b_txt:
+                        body += f'<p style="line-height:1.75;color:#1F2937;white-space:pre-wrap">{esc(b_txt)}</p>'
+
+            # FAQPage schema when kind is faq — LLMs + Google FAQ rich
+            # results both consume this.
+            if kind == "faq" and sections:
+                faq_schema = {
+                    "@context": "https://schema.org", "@type": "FAQPage",
+                    "mainEntity": [
+                        {"@type": "Question",
+                         "name": s.get("h") or s.get("q") or "",
+                         "acceptedAnswer": {"@type": "Answer", "text": s.get("body") or s.get("a") or ""}}
+                        for s in sections if (s.get("h") or s.get("q"))
+                    ],
+                }
+                schema_blocks_list.append(
+                    f'<script type="application/ld+json">{json.dumps(faq_schema)}</script>'
+                )
+
+        # Cross-links — help LLMs traverse the insights corpus + funnel
+        # visitors to Doug's conversion surfaces on the live SPA.
+        body += (
+            '<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">More BC Real Estate</div>'
+            '<ul style="list-style:none;padding:0;margin:0">'
+            f'<li><a href="/insights" style="color:#0EA5E9;font-weight:600">All BC Real Estate Insights →</a></li>'
+            f'<li><a href="/glossary" style="color:#0EA5E9;font-weight:600">BC Real Estate Glossary — 439 statute-cited terms →</a></li>'
+            f'<li><a href="/contact" style="color:#0EA5E9;font-weight:600">Ask Doug LeMaire, REALTOR® — BCFSA #167790 →</a></li>'
+            '</ul></div>'
+        )
+
+        head_data = {
+            "title": esc(title),
+            "description": esc(desc.replace("\n", " ")),
+            "canonical": canonical,
+            "og_type": "article",
+            "og_image": f"{SITE}/images/og-default.png",
+            "schema_blocks": "\n".join(schema_blocks_list),
+        }
+        page = HEADER_HTML.format(**head_data) + body + FOOTER_HTML
+        (out_dir / f"{slug}.html").write_text(page, encoding="utf-8")
+
+    print(f"  ✓ {len(catalog)} insight snapshots written to {PUBLIC_DIR}/snapshot/insights/")
+    return len(catalog)
+
+
+# ── Conversion-page snapshots (audit G5 · Feb 2026) ───────────────────────
+# The /valuation, /buyer, /seller, /contact, /referral-request pages are
+# lead-capture surfaces. Non-JS crawlers previously received the generic
+# root <title>EZtoFind.ca | BC Real Estate Search</title> because React
+# Helmet only fires after the JS bundle hydrates. We now emit a static
+# mirror with the correct <title> + meta description + canonical + brief
+# on-page copy so search engines can index these conversion routes with
+# their real keywords, driving qualified organic traffic.  The pages
+# themselves stay SPA-hosted at their live routes; a CDN worker/Nginx
+# map rewrites bot user-agents to the snapshot HTML (same pattern as
+# /snapshot/glossary and /snapshot/community).
+CONVERSION_PAGES = {
+    "valuation": {
+        "title": "Free Home Valuation in Surrey & South Surrey BC | EZ to Find",
+        "description": "Get a REALTOR®-prepared home valuation for your Surrey, South Surrey, White Rock or Fraser Valley BC property — comparable-sales research, no charge, no obligation.",
+        "h1": "Free Home Valuation — Surrey, South Surrey & Fraser Valley BC",
+        "eyebrow": "For Sellers",
+        "body": (
+            "Considering selling in Surrey, South Surrey, White Rock or the Fraser Valley? "
+            "Request a REALTOR®-prepared valuation from Doug LeMaire (BCFSA #167790). "
+            "You'll receive a comparable-sales analysis based on recent MLS® activity in "
+            "your immediate neighbourhood — no charge, no obligation, and no sales pressure. "
+            "This is general market information, not an appraisal for lending or legal purposes."
+        ),
+        "cta": "Request a home valuation on /valuation",
+    },
+    "buyer": {
+        "title": "BC Home Buyers — Search MLS® & Get Buyer Representation | EZ to Find",
+        "description": "Buyer representation from a BCFSA-licensed REALTOR® across Surrey, South Surrey, White Rock, Langley, Delta and the Fraser Valley. Search live MLS® listings and set up custom alerts.",
+        "h1": "For Buyers — Search BC MLS® Listings with a Local REALTOR®",
+        "eyebrow": "For Buyers",
+        "body": (
+            "Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.) "
+            "represents home buyers across Surrey, South Surrey, White Rock, Langley, Delta, Cloverdale "
+            "and the Fraser Valley. Search live MLS® listings, set up custom email alerts, and get "
+            "REALTOR®-only comparable-sales data before you write an offer. If you're buying outside "
+            "Doug's practice area, request an out-of-area referral to a licensed local REALTOR® in "
+            "our BC-wide network."
+        ),
+        "cta": "Start your BC home search on /buyer",
+    },
+    "seller": {
+        "title": "BC Home Sellers — Listing Strategy & Marketing Plan | EZ to Find",
+        "description": "Selling in Surrey, South Surrey, White Rock or the Fraser Valley? Doug LeMaire, REALTOR® builds a comparable-sales-based pricing strategy and a targeted marketing plan for BC sellers.",
+        "h1": "For Sellers — Strategic Listing & Marketing in BC",
+        "eyebrow": "For Sellers",
+        "body": (
+            "A successful BC sale in 2026 combines comparable-sales-based pricing, professional "
+            "photography, targeted online distribution (MLS®, REALTOR.ca, syndicated portals), and "
+            "clear communication with qualifying buyers' agents. Doug LeMaire, REALTOR® (BCFSA "
+            "#167790) prepares a written listing strategy for every seller — pricing, presentation, "
+            "and market cadence — before any listing agreement is signed. Ask about Doug's recent "
+            "Elgin Chantrell sale (R3156192 · sold in 10 days)."
+        ),
+        "cta": "Book a listing consultation on /seller",
+    },
+    "contact": {
+        "title": "Contact Doug LeMaire, REALTOR® — Surrey & Fraser Valley BC | EZ to Find",
+        "description": "Get in touch with Doug LeMaire, REALTOR® (BCFSA #167790, Fraser Property Management Realty Services Ltd.) for BC real estate questions, buyer representation, listing consultations, or out-of-area referrals.",
+        "h1": "Contact Doug LeMaire, REALTOR®",
+        "eyebrow": "Contact",
+        "body": (
+            "Doug LeMaire, REALTOR® is licensed with BCFSA (#167790) at Fraser Property Management "
+            "Realty Services Ltd. and represents buyers and sellers across Surrey, South Surrey, "
+            "White Rock, Langley, Delta, Cloverdale and the Fraser Valley. For questions outside "
+            "these areas, Doug can arrange a referral to a licensed local REALTOR® anywhere in "
+            "British Columbia through EZ to Find's BC-wide referral network."
+        ),
+        "cta": "Send Doug a message on /contact",
+    },
+    "referral-request": {
+        "title": "BC Out-of-Area Referral Request — Licensed REALTOR® Network | EZ to Find",
+        "description": "Buying or selling outside Surrey, South Surrey, White Rock or the Fraser Valley? Request a referral to a licensed local BC REALTOR® in EZ to Find's province-wide network.",
+        "h1": "Out-of-Area Referral Request — Licensed BC REALTORS®",
+        "eyebrow": "Referrals",
+        "body": (
+            "If your BC real estate transaction is outside Doug LeMaire's practice area (Surrey, "
+            "South Surrey, White Rock, Langley, Delta, Cloverdale and the Fraser Valley), "
+            "EZ to Find can arrange a referral to a licensed local REALTOR® in your community. "
+            "Doug's referral network spans Greater Vancouver REALTORS® (GVR), Fraser Valley Real "
+            "Estate Board (FVREB), Chilliwack & District (CADREB), BC Northern (BCNREB), Interior "
+            "(IAR), Kootenay (KAR), and Vancouver Island (VIREB). Every referred REALTOR® is "
+            "BCFSA-licensed and independently verified."
+        ),
+        "cta": "Request an out-of-area referral on /referral-request",
+    },
+}
+
+
+async def render_conversion_pages():
+    print(f"Rendering {len(CONVERSION_PAGES)} conversion-page snapshots…")
+    date_modified = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    out_dir = PUBLIC_DIR / "snapshot"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    count = 0
+    for slug, meta in CONVERSION_PAGES.items():
+        canonical = f"{SITE}/{slug}"
+        # Article schema — leads to trust signals from Doug + brokerage
+        article_schema = {
+            "@context": "https://schema.org", "@type": "WebPage",
+            "name": meta["title"],
+            "description": meta["description"],
+            "url": canonical, "inLanguage": "en-CA",
+            "dateModified": date_modified,
+            "publisher": {"@id": f"{SITE}/#organization"},
+            "author": {"@id": f"{SITE}/#doug"},
+            "about": {"@type": "Place", "name": "British Columbia, Canada"},
+        }
+        breadcrumb_schema = {
+            "@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE}/"},
+                {"@type": "ListItem", "position": 2, "name": meta["eyebrow"], "item": canonical},
+            ],
+        }
+        schema_blocks = (
+            f'<script type="application/ld+json">{json.dumps(article_schema)}</script>'
+            f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>'
+        )
+        body = (
+            f'<div class="eyebrow">{esc(meta["eyebrow"])}</div>'
+            f'<h1>{esc(meta["h1"])}</h1>'
+            f'<div style="margin:0.25rem 0 1.15rem;padding:8px 14px;background:#F0F4FB;border:1px solid rgba(15,42,91,0.14);border-left:3px solid #0F2A5B;border-radius:8px;font-size:0.82rem;color:#374151">'
+            f'<b>As of</b> <time datetime="{date_modified}">{date_modified}</time></div>'
+            f'<p style="font-size:0.78rem;color:#6B7280;margin:0.25rem 0 1rem;font-style:italic">General information only — not legal, tax, financial, or real-estate advice. Verify with a licensed BC professional before acting.</p>'
+            f'<p style="font-size:1.05rem;line-height:1.75;color:#1F2937">{esc(meta["body"])}</p>'
+            f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">Next Step</div>'
+            f'<p style="margin:0"><a href="/{slug}" style="color:#0EA5E9;font-weight:600">{esc(meta["cta"])} →</a></p></div>'
+        )
+        head_data = {
+            "title": esc(meta["title"]),
+            "description": esc(meta["description"].replace("\n", " ")),
+            "canonical": canonical,
+            "og_type": "website",
+            "og_image": f"{SITE}/images/og-default.png",
+            "schema_blocks": schema_blocks,
+        }
+        page = HEADER_HTML.format(**head_data) + body + FOOTER_HTML
+        (out_dir / f"{slug}.html").write_text(page, encoding="utf-8")
+        count += 1
+    print(f"  ✓ {count} conversion-page snapshots written to {PUBLIC_DIR}/snapshot/")
+    return count
+
+
+# ── sitemap-snapshots.xml writer (audit G5+G6 · Feb 2026) ─────────────────
+# Globs every HTML file under /app/frontend/public/snapshot/ and emits a
+# fresh sitemap-snapshots.xml. Called at the end of main() so glossary +
+# community + insights + conversion snapshots all land in the same
+# sub-sitemap, which is already advertised via robots.txt, llms.txt, and
+# the top-level sitemap-index.xml. Priority band by folder mirrors how
+# insight/conversion pages should rank in the crawl frontier.
+def write_snapshots_sitemap():
+    snap_root = PUBLIC_DIR / "snapshot"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    priority_by_folder = {
+        # Higher for lead-capture conversion routes so bots prioritise them.
+        "": ("weekly", "0.9"),               # /snapshot/{slug}.html (conversion pages)
+        "insights": ("weekly", "0.8"),
+        "glossary": ("weekly", "0.7"),
+        "community": ("weekly", "0.7"),
+    }
+    urls: list[str] = []
+    if snap_root.exists():
+        for html_file in sorted(snap_root.rglob("*.html")):
+            rel = html_file.relative_to(PUBLIC_DIR)  # e.g. snapshot/insights/foo.html
+            parts = rel.parts  # ("snapshot", ...folders..., "file.html")
+            folder = parts[1] if len(parts) > 2 else ""
+            changefreq, priority = priority_by_folder.get(folder, ("weekly", "0.7"))
+            loc = f"{SITE}/{rel.as_posix()}"
+            urls.append(
+                "  <url>\n"
+                f"    <loc>{loc}</loc>\n"
+                f"    <lastmod>{today}</lastmod>\n"
+                f"    <changefreq>{changefreq}</changefreq>\n"
+                f"    <priority>{priority}</priority>\n"
+                "  </url>\n"
+            )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<!-- EZtoFind.ca · prerendered snapshot sitemap · regenerated {today} · '
+        f'{len(urls)} URLs (glossary + community + insights + conversion pages) -->\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(urls)
+        + '</urlset>\n'
+    )
+    (PUBLIC_DIR / "sitemap-snapshots.xml").write_text(xml, encoding="utf-8")
+    print(f"  ✓ sitemap-snapshots.xml written with {len(urls)} URLs")
+    return len(urls)
+
+
 async def main():
     import sys
     sys.path.insert(0, '/app/backend')
@@ -564,6 +936,9 @@ async def main():
     print(f"Prerender starting · {datetime.now(timezone.utc).isoformat()}")
     await render_glossary(db)
     await render_communities(db)
+    await render_insights(db)
+    await render_conversion_pages()
+    write_snapshots_sitemap()
     print("Prerender complete.")
 
 if __name__ == "__main__":

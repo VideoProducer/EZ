@@ -13,6 +13,23 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 
 ---
 
+## Implemented so far (Feb 2026 recap)
+
+### Feb 2026 — Audit-batch fixes (G1, G2, G5, G6, G9)
+Batch of five audit-uncovered issues shipped in one pass. Verified via curl against the live preview URL.
+
+- **G1 · R3156192 schema conflict (P0)** — Both the client-side `SiteWideSchema.jsx` component and the STATIC JSON-LD embedded in `frontend/public/index.html` (served to non-JS crawlers) marked the SOLD flagship listing as `schema.org/InStock` with a live `$3,297,000` price. Both flipped to `schema.org/SoldOut` with the numeric price removed (priceCurrency retained). The `/featured-listing` OG-preview endpoint in `server.py` also switched from `status="JUST LISTED"` to `status="SOLD"` and `price=0` so Facebook/Twitter/LinkedIn shares no longer surface the old asking price. Verified live: homepage JSON-LD now emits `"availability": "https://schema.org/SoldOut"` with no `"price"` key.
+
+- **G2 · "12 days" drift (P1)** — `llms.txt` still said "sold in 12 days" for R3156192; `server.py` Doogie prompt already said "10 days". Aligned `llms.txt` lines 26-27 to "10 days" so AI answer engines cite the same figure visitors see on-site.
+
+- **G5 · Conversion page prerender coverage (P1)** — Non-JS crawlers hitting `/valuation`, `/buyer`, `/seller`, `/contact`, `/referral-request` used to receive the generic `<title>EZtoFind.ca | BC Real Estate Search</title>` (root index.html) because React Helmet only runs post-hydration. Extended `prerender_pages.py` with a `render_conversion_pages()` function + a `CONVERSION_PAGES` metadata map (descriptive/keyword-rich titles per user choice a). Snapshots now land at `/snapshot/{slug}.html` with unique title, meta description, canonical, `WebPage` + `BreadcrumbList` JSON-LD, and body copy. Same bot-rewrite CDN/Nginx path that already serves `/snapshot/glossary/*` and `/snapshot/community/*` can serve these.
+
+- **G6 · Insight snapshot coverage (P1)** — The 31 `/insights/{slug}` React routes were live and listed in `sitemap-insights.xml`, but had no static HTML snapshots for non-JS crawlers. Added `render_insights()` in `prerender_pages.py` which reads the JS source of truth (`frontend/src/data/insightsCatalog.js`) via a Node helper (`_dump_insights_catalog.mjs`) and renders per-kind HTML (comparison / funnel / faq) with `Article` + `BreadcrumbList` + optional `FAQPage` JSON-LD. Snapshots land at `/snapshot/insights/{slug}.html`. Also added `write_snapshots_sitemap()` which globs `/app/frontend/public/snapshot/**/*.html` and rebuilds `sitemap-snapshots.xml` (now 719 URLs = 439 glossary + 244 community + 31 insights + 5 conversion; up from 635 stale).
+
+- **G9 · GSC placeholder removed (P1)** — `eztofind.ca` is already verified in Google Search Console via **Domain-name-provider DNS TXT record**, so the literal `<meta name="google-site-verification" content="REPLACE_ME_GSC_VERIFICATION_CODE"/>` was safe to remove. Replaced with a comment explaining the DNS-verified status and where to paste a future HTML-tag backup code if ever needed.
+
+---
+
 ## User personas
 
 - **BC buyer / seller** in Greater Vancouver, Fraser Valley, or Sea-to-Sky (Doug's direct service area) — direct client

@@ -63,17 +63,14 @@
         -->
         <title>EZtoFind.ca | BC Real Estate Search</title>
         <!-- Google Search Console site verification.
-             HOW TO ACTIVATE:
-             1) Go to https://search.google.com/search-console → Add property
-             2) Choose "URL prefix" and enter https://eztofind.ca
-             3) Google will offer several verification methods — pick "HTML tag"
-             4) Copy the content="..." value from Google's tag
-             5) Paste ONLY that string into the `content=""` attribute below
-                (replace REPLACE_ME_GSC_VERIFICATION_CODE)
-             6) Redeploy from the Emergent Workspace
-             7) Back in Search Console, click Verify
-             Bing / Yandex verification tags can be added the same way beneath. -->
-        <meta name="google-site-verification" content="REPLACE_ME_GSC_VERIFICATION_CODE" />
+             STATUS (Feb 2026 · audit G9): eztofind.ca is already verified
+             via DNS TXT record (Domain-name-provider method), which covers
+             the entire domain + all subdomains. The old placeholder meta
+             tag was removed to avoid shipping a literal placeholder string
+             (audit G9). If the DNS method is ever revoked, paste the
+             HTML-tag verification code Google supplies from Search Console
+             → Settings → Ownership verification → HTML tag directly below
+             this comment. -->
         <!-- RSS 2.0 feed for Feedly, Inoreader, NewsBlur, and other feed
              readers. Also crawled by Bing and honoured by IndexNow-adjacent
              services. Regenerated on every server boot + at the nightly
@@ -357,9 +354,8 @@
           "seller": { "@type": "Person", "name": "Doug LeMaire", "jobTitle": "REALTOR®", "identifier": "BCFSA #167790" },
           "offers": {
             "@type": "Offer",
-            "price": 3297000,
             "priceCurrency": "CAD",
-            "availability": "https://schema.org/InStock",
+            "availability": "https://schema.org/SoldOut",
             "url": "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey"
           },
           "address": {
