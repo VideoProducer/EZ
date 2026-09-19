@@ -361,10 +361,6 @@ export default function EquestrianLeadMockup() {
         <meta name="description" content={`Browse ${stats.total ? stats.total.toLocaleString() : "1,000+"} active equestrian MLS® listings across British Columbia. Free 40-point equestrian buyer checklist. Doug LeMaire, REALTOR® — BCFSA Licence #167790. PIPA + CASL compliant.`}/>
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1"/>
         <link rel="canonical" href="https://eztofind.ca/specialties/equestrian"/>
-        {/* Feb 2026 — preload the equestrian poster so it renders on the very
-            first paint. Prevents the blank white flash Doug flagged before
-            the live MLS® photos crossfade in on top. */}
-        <link rel="preload" as="image" href="/specialties/equestrian.png" fetchpriority="high"/>
         {/* Open Graph */}
         <meta property="og:type" content="website"/>
         <meta property="og:site_name" content="EZtoFind.ca"/>
@@ -408,19 +404,13 @@ export default function EquestrianLeadMockup() {
         position:"relative", overflow:"hidden",
         color:"white", padding:"48px 20px 60px",
         minHeight: "88vh",
-        // Feb 2026 — Doug flagged a blank/white first paint before DDF® photos
-        // loaded. Give the hero an instant on-brand background so there is
-        // NEVER a blank slab: (1) the /specialties/equestrian.png OG image
-        // preloads as an equestrian poster, and (2) a Doug's-navy gradient
-        // sits beneath it so if the poster fails to fetch the container still
-        // reads as an intentional dark hero, not a broken load.
-        backgroundColor: BRAND.navy,
-        backgroundImage:
-          `linear-gradient(180deg, rgba(15,42,91,0.35) 0%, rgba(15,42,91,0.15) 40%, rgba(11,15,26,0.65) 100%),` +
-          `url('/specialties/equestrian.png')`,
-        backgroundSize: "cover, cover",
-        backgroundPosition: "center, center",
-        backgroundRepeat: "no-repeat, no-repeat",
+        // Feb 2026 — the static /specialties/equestrian.png poster was
+        // removed at Doug's request; users now go straight from the navy
+        // gradient into the first live DDF® listing photo. Navy stays as
+        // the base color so the container never renders as a blank white
+        // slab during the sub-second DDF® fetch.
+        background:
+          `linear-gradient(180deg, ${BRAND.navy} 0%, #0b1428 100%)`,
       }}>
         {/* Rotating live MLS® photo layer — 20+ acre equestrian listings
             from the CREA DDF® feed. Crossfade 1500ms between photos.
