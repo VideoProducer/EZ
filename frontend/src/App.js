@@ -27,6 +27,7 @@ import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
 import AdminContentRelations from "./pages/AdminContentRelations";
 import SearchPage from "./pages/SearchPage";
 import AdminLeadTriage from "./pages/AdminLeadTriage";
+import AdminContacts from "./pages/AdminContacts";
 import AdminHydrateListing from "./pages/AdminHydrateListing";
 import AdminTestimonials from "./pages/AdminTestimonials";
 import TestimonialCarousel from "./components/TestimonialCarousel";
@@ -7304,6 +7305,7 @@ export const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/testimonials")} className={active==="testimonials"?"active":""} data-testid="admin-nav-testimonials">🌟 Testimonials</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/lead-triage")} className={active==="lead-triage"?"active":""} data-testid="admin-nav-lead-triage">🎯 Lead Triage</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/contacts")} className={active==="contacts"?"active":""} data-testid="admin-nav-contacts">📇 Contacts</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consultations")} className={active==="consultations"?"active":""} data-testid="admin-nav-consultations">📝 Consultations</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/buyers")} className={active==="buyers"?"active":""} data-testid="admin-nav-buyers">🏠 Buyer Leads</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/sellers")} className={active==="sellers"?"active":""} data-testid="admin-nav-sellers">🔑 Seller Leads</a>
@@ -13775,6 +13777,7 @@ function App() {
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" exportKind="buyer" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" exportKind="seller" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/lead-triage" element={<AdminLeadTriage AdminShell={AdminShell}/>}/>
+      <Route path="/admin/contacts" element={<AdminContacts/>}/>
       <Route path="/admin/hydrate-listing" element={<AdminShell active="hydrate-listing"><AdminHydrateListing/></AdminShell>}/>
       <Route path="/admin/realtors" element={<AdminList title="REALTOR® Applications" url="/admin/realtors" active="realtors" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["brokerage","Brokerage"],["realtor_number","REALTOR® #"],["stage","Stage"],["status","Status"]]}/>}/>
       <Route path="/admin/clients" element={<AdminClients/>}/>

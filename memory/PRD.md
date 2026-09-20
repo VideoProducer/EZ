@@ -15,6 +15,28 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 
 ## Implemented so far (Feb 2026 recap)
 
+### Feb 2026 — Command Center Phase 1 · Slice 1 — Unified `/admin/contacts`
+Ships a single, paginated, filterable view across every lead-capture surface Doug uses today. Foundation for Slices 2-5 (contact detail timeline, Twilio speed-to-lead, Resend broadcast, attribution reports).
+
+- **Backend** (`server.py:3477+`):
+  - `GET /api/admin/contacts?source_type=&stage=&q=&date_from=&date_to=&limit=&offset=` — UNIONs `buyer_leads` + `seller_leads` + legacy `referral_requests`, normalizes to a uniform row shape, applies filters, returns paginated list + stage/source counters.
+  - Buyer leads whose `notes` lead with the `"OUT-OF-AREA REFERRAL REQUEST"` marker (set by `/api/leads/buyer`) are surfaced under `source_type=referral` so the referral conversion surface is distinct from direct buyer intent even though they share the underlying collection.
+  - `PATCH /api/admin/contacts/{source_type}/{contact_id}/stage` — upserts pipeline stage.
+  - New Mongo collection `contact_stages` — parallel record keyed by `(source_type, contact_id)`, values in `("new", "contacted", "nurturing", "active", "won", "lost")`. **Never mutates the source lead document** — preserves BCFSA / CASL / PIPA audit trail on the original submission.
+  - All admin routes protected by existing `Depends(verify_admin)` (HttpOnly JWT cookie).
+
+- **Frontend** (`/app/frontend/src/pages/AdminContacts.jsx`, ~430 lines):
+  - New `/admin/contacts` route + sidebar link ("📇 Contacts") in `AdminShell`.
+  - Filter row: source (all/buyer/seller/referral), stage (all/6 stages), search-by-name-email-phone (debounced 250ms), date range, clear-all button with active-filter count.
+  - Counter chips: total + per-source + per-stage — all reflect the filtered set.
+  - Table with inline stage dropdown that PATCHes optimistically + shows ✓ / ⚠ feedback.
+  - Click-to-mail / click-to-call links on email/phone cells.
+  - Consent column shows CASL ✓ / opted-out / — states so Doug never emails an opted-out contact by accident.
+  - CSV export button (client-side) with proper quote-escaping.
+  - Paginator (100 rows/page).
+
+- **Verified**: Seeded 3 test contacts (buyer/seller/referral). Confirmed union, source filter, search, PATCH stage, invalid-stage rejection, stage_counts update, dropdown reflecting backend, desktop + mobile screenshots. Test data cleaned up.
+
 ### Feb 2026 — Audit-batch fixes (G1, G2, G5, G6, G9)
 Batch of five audit-uncovered issues shipped in one pass. Verified via curl against the live preview URL.
 

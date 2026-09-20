@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request, BackgroundTasks, Body
 from fastapi.responses import StreamingResponse, HTMLResponse, Response, JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -3473,6 +3473,191 @@ async def list_buyer_leads(_=Depends(verify_admin)):
 @api.get("/admin/leads/seller")
 async def list_seller_leads(_=Depends(verify_admin)):
     return await db.seller_leads.find({}, {"_id":0}).sort("created_at", -1).to_list(1000)
+
+
+# ── Unified Contacts API — Command Center Phase 1 · Slice 1 (Feb 2026) ──
+# Ships one paginated, filterable, searchable view across every lead-capture
+# surface Doug uses today: buyer_leads (which currently doubles as the
+# referral-request inbox via the "OUT-OF-AREA REFERRAL REQUEST" note marker
+# set by /leads/buyer), seller_leads, and the legacy referral_requests
+# collection (kept for backwards-compat reads even though no code writes
+# to it any more).
+#
+# Pipeline stages ("new" → "contacted" → "nurturing" → "active" → "won" /
+# "lost") live in a separate `contact_stages` collection keyed by
+# (source_type, contact_id) so we NEVER mutate the source lead documents.
+# This preserves the raw consent/CASL/PIPA-audited record while letting
+# Doug move contacts through his funnel non-destructively.
+CONTACT_STAGES = ("new", "contacted", "nurturing", "active", "won", "lost")
+_REFERRAL_MARKER = "OUT-OF-AREA REFERRAL REQUEST"
+
+
+def _contact_source_bucket(kind: str, doc: dict) -> str:
+    """Classify a lead doc as buyer / seller / referral.
+    Buyer leads whose notes lead with the OUT-OF-AREA REFERRAL REQUEST
+    marker are surfaced under `referral` so Doug sees the two conversion
+    surfaces distinctly even though they share the buyer_leads collection."""
+    if kind == "seller":
+        return "seller"
+    if kind == "referral":
+        return "referral"
+    notes = (doc.get("notes") or "").upper()
+    return "referral" if notes.startswith(_REFERRAL_MARKER) else "buyer"
+
+
+def _normalize_contact(kind: str, doc: dict, stage_map: dict) -> dict:
+    """Return a wire-format contact row: minimal, uniform fields across
+    all three source types plus the pipeline stage from contact_stages."""
+    source_type = _contact_source_bucket(kind, doc)
+    contact_id = doc.get("id")
+    stage_row = stage_map.get(f"{source_type}:{contact_id}") or {}
+    # Build a human-readable "headline" per source: buyer=area,
+    # seller=address/city, referral=target area (with fallback chain).
+    headline = ""
+    if source_type == "seller":
+        headline = doc.get("property_address") or doc.get("city") or "—"
+    else:
+        areas = doc.get("areas") or []
+        headline = (
+            (areas[0] if areas else None)
+            or doc.get("target_area")
+            or doc.get("city")
+            or "—"
+        )
+    return {
+        "id": contact_id,
+        "source_type": source_type,
+        "full_name": doc.get("full_name") or "",
+        "email": doc.get("email") or "",
+        "phone": doc.get("phone") or "",
+        "headline": headline,
+        "stage": stage_row.get("stage") or "new",
+        "stage_updated_at": stage_row.get("updated_at"),
+        "created_at": doc.get("created_at"),
+        "source": doc.get("source") or "",
+        "unsubscribed": bool(doc.get("unsubscribed", False)),
+        "casl_consent": bool(doc.get("casl_consent", False)),
+    }
+
+
+@api.get("/admin/contacts")
+async def list_admin_contacts(
+    source_type: Optional[str] = None,
+    stage: Optional[str] = None,
+    q: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+    _=Depends(verify_admin),
+):
+    """Unified contact list — buyer_leads + seller_leads + referral_requests
+    normalized into one paginated stream sorted newest-first.
+    Filters: source_type (buyer|seller|referral|all), stage (any of
+    CONTACT_STAGES or 'all'), q (search across name/email/phone),
+    date_from/date_to (ISO8601, inclusive on created_at)."""
+
+    # ── 1. Build a broad Mongo query so we push as much filter work
+    # down to the DB as possible before we hit the union step.
+    proj = {
+        "_id": 0, "id": 1, "full_name": 1, "email": 1, "phone": 1,
+        "areas": 1, "city": 1, "property_address": 1, "target_area": 1,
+        "notes": 1, "source": 1, "created_at": 1,
+        "unsubscribed": 1, "casl_consent": 1,
+    }
+    mongo_q: dict = {}
+    if date_from or date_to:
+        rng: dict = {}
+        if date_from: rng["$gte"] = date_from
+        if date_to:   rng["$lte"] = date_to
+        mongo_q["created_at"] = rng
+    if q:
+        # Case-insensitive substring match across contact identifiers.
+        rx = {"$regex": re.escape(q), "$options": "i"}
+        mongo_q["$or"] = [
+            {"full_name": rx}, {"email": rx}, {"phone": rx},
+        ]
+
+    src = (source_type or "all").lower()
+    # Only hit the collections we need for the requested source bucket.
+    buyer_docs: list = []
+    seller_docs: list = []
+    referral_docs: list = []
+    if src in ("all", "buyer", "referral"):
+        buyer_docs = await db.buyer_leads.find(mongo_q, proj).sort("created_at", -1).to_list(3000)
+    if src in ("all", "seller"):
+        seller_docs = await db.seller_leads.find(mongo_q, proj).sort("created_at", -1).to_list(3000)
+    if src in ("all", "referral") and "referral_requests" in await db.list_collection_names():
+        referral_docs = await db.referral_requests.find(mongo_q, proj).sort("created_at", -1).to_list(3000)
+
+    # ── 2. Load all stage overrides in one shot to avoid N+1.
+    stages_cursor = db.contact_stages.find({}, {"_id": 0})
+    stage_map: dict = {}
+    async for s in stages_cursor:
+        key = f"{s.get('source_type')}:{s.get('contact_id')}"
+        stage_map[key] = s
+
+    # ── 3. Normalize + union + apply post-filters that need the
+    # normalized shape (source-bucket split of buyer_leads, stage).
+    rows = (
+        [_normalize_contact("buyer",    d, stage_map) for d in buyer_docs]
+      + [_normalize_contact("seller",   d, stage_map) for d in seller_docs]
+      + [_normalize_contact("referral", d, stage_map) for d in referral_docs]
+    )
+    if src in ("buyer", "seller", "referral"):
+        rows = [r for r in rows if r["source_type"] == src]
+    if stage and stage.lower() != "all":
+        if stage.lower() not in CONTACT_STAGES:
+            raise HTTPException(400, f"Invalid stage; must be one of {list(CONTACT_STAGES)}")
+        rows = [r for r in rows if r["stage"] == stage.lower()]
+
+    # Sort newest first, then paginate. Aggregate stats reflect the
+    # filtered set BEFORE pagination so counters stay honest.
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    total = len(rows)
+    stage_counts: dict = {s: 0 for s in CONTACT_STAGES}
+    source_counts = {"buyer": 0, "seller": 0, "referral": 0}
+    for r in rows:
+        stage_counts[r["stage"]] = stage_counts.get(r["stage"], 0) + 1
+        source_counts[r["source_type"]] = source_counts.get(r["source_type"], 0) + 1
+    paged = rows[offset : offset + max(1, min(limit, 500))]
+    return {
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "stages": list(CONTACT_STAGES),
+        "stage_counts": stage_counts,
+        "source_counts": source_counts,
+        "results": paged,
+    }
+
+
+@api.patch("/admin/contacts/{source_type}/{contact_id}/stage")
+async def update_contact_stage(
+    source_type: str,
+    contact_id: str,
+    payload: dict = Body(...),
+    admin=Depends(verify_admin),
+):
+    """Upsert the pipeline stage for a contact. `contact_stages` never
+    mutates the underlying lead document — it's an append-friendly
+    parallel record so consent/PIPA/BCFSA audit trails on the source
+    stay pristine."""
+    stage = (payload or {}).get("stage", "").strip().lower()
+    if source_type not in ("buyer", "seller", "referral"):
+        raise HTTPException(400, "source_type must be buyer|seller|referral")
+    if stage not in CONTACT_STAGES:
+        raise HTTPException(400, f"stage must be one of {list(CONTACT_STAGES)}")
+    now = now_iso()
+    key = {"source_type": source_type, "contact_id": contact_id}
+    await db.contact_stages.update_one(
+        key,
+        {"$set": {**key, "stage": stage, "updated_at": now,
+                  "updated_by": admin.get("email")}},
+        upsert=True,
+    )
+    return {"success": True, "source_type": source_type, "contact_id": contact_id,
+            "stage": stage, "updated_at": now}
 
 
 @api.get("/admin/attribution/chatgpt-doogie")
