@@ -17,6 +17,7 @@
 // stay pristine.
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AdminShell } from "../App";
 
@@ -63,6 +64,7 @@ const csvEscape = (v) => {
 };
 
 const AdminContacts = () => {
+  const nav = useNavigate();
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [stageCounts, setStageCounts] = useState({});
@@ -352,7 +354,7 @@ const AdminContacts = () => {
               const rowKey = `${r.source_type}:${r.id}`;
               return (
                 <tr key={rowKey} data-testid={`admin-contacts-row-${r.source_type}-${r.id}`}>
-                  <td style={{ whiteSpace: "nowrap" }}>
+                  <td style={{ whiteSpace: "nowrap", cursor: "pointer" }} onClick={() => nav(`/admin/contacts/${r.source_type}/${r.id}`)}>
                     {fmtDate(r.created_at)}
                     {age != null && (
                       <div style={{ fontSize: "0.7rem", color: age <= 1 ? "#059669" : age <= 3 ? "#F59E0B" : "#6B7280" }}>
@@ -360,7 +362,7 @@ const AdminContacts = () => {
                       </div>
                     )}
                   </td>
-                  <td>
+                  <td style={{ cursor: "pointer" }} onClick={() => nav(`/admin/contacts/${r.source_type}/${r.id}`)}>
                     <span style={{
                       display: "inline-block", padding: "0.15rem 0.55rem", borderRadius: 999,
                       background: "#EEF2FF", color: "#3730A3", fontSize: "0.75rem", fontWeight: 600,
@@ -390,7 +392,9 @@ const AdminContacts = () => {
                       </span>
                     )}
                   </td>
-                  <td style={{ fontWeight: 600 }}>{r.full_name || "—"}</td>
+                  <td style={{ fontWeight: 600, cursor: "pointer", color: "#0F2A5B" }} onClick={() => nav(`/admin/contacts/${r.source_type}/${r.id}`)}>
+                    {r.full_name || "—"}
+                  </td>
                   <td>
                     {r.email
                       ? <a href={`mailto:${r.email}`} style={{ color: "#0EA5E9" }}>{r.email}</a>
