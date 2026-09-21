@@ -15,6 +15,39 @@ Build a complex, highly compliant real estate website for British Columbia. The 
 
 ## Implemented so far (Feb 2026 recap)
 
+### Feb 2026 — Command Center Phase 1 · Slices 2, 4, 5 (shipped together)
+
+**Slice 2 · Contact Detail + Timeline** (`/admin/contacts/:source_type/:id`)
+- Backend `GET /api/admin/contacts/{source_type}/{contact_id}` returns `{contact, raw, stage, stage_history[], notes[], emails[], timeline[]}` — one page-load, everything Doug needs to prep for a call. Timeline merges: form submission (from lead created_at), every pipeline stage transition (from new `contact_stage_history` collection), manual notes (from new `contact_notes` collection), and every email fired via `send_email()` (from existing `email_outbox` filtered by recipient address). Sorted newest-first.
+- Backend `POST /api/admin/contacts/{source_type}/{contact_id}/notes` — creates a manual note (author=admin.email, ≤4000 chars, empty rejected). Verified with tests.
+- Backend `PATCH …/stage` now also appends to `contact_stage_history` on every genuine transition (idempotent — duplicate PATCH to same stage does NOT double-append).
+- Frontend `/app/frontend/src/pages/AdminContactDetail.jsx` — contact card (email, phone, CASL badge, unsubscribed flag, raw submission JSON) + note composer + timeline of type={submission, stage_change, note, email} with colored icons + inline error surfacing for failed emails.
+- Row click-through: /admin/contacts Name and Created cells now navigate to detail page.
+- **Doogie chat is deliberately NOT joined** — `chat_messages.content` is redacted at insert time by `redact_pii()`; joining to a contact would require storing PII we chose not to keep. Documented in the endpoint's docstring.
+
+**Slice 4 · Broadcast Email** (`/admin/broadcast`)
+- Backend `POST /api/admin/campaigns/preview` — dry-run: builds recipient pool (CASL-consented + non-unsubscribed only) + runs BCFSA §40 guardrail. Returns `{recipient_count, sample[≤5], bcfsa_refusal, estimated_send_seconds, casl_footer_will_be_appended}`.
+- Backend `POST /api/admin/campaigns` — dispatches background send via existing CASL-compliant `services.email_sender.send_email()` (which already appends RFC-8058 List-Unsubscribe headers + writes to `email_outbox` audit trail). Refuses if BCFSA guardrail fails or zero eligible recipients.
+- Backend `GET /api/admin/campaigns` — lists past campaigns with `live_counts` pulled from `email_outbox` by `related_id` for in-flight visibility.
+- **BCFSA §40 guardrail** (`_bcfsa_guardrail_check`): scans subject+body for MLS# patterns (`R\d{7}`, `V\d{7}`, `F\d{7}`, `C\d{7}`); refuses send if any referenced MLS# is not in `FEATURED_MLS_NUMBERS` env var (default `R3156192`). Doug can add newly-listed MLS numbers to the env var to unlock advertising rights.
+- **CASL guardrails**: recipient pool query hard-filters on `casl_consent=True` + `unsubscribed≠True` + non-empty email; `services.email_sender.send_email()` already appends Doug's real mailing address (`1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5`) + one-click unsubscribe via `List-Unsubscribe` header (RFC 8058) so Gmail/Outlook honour it.
+- Frontend `/app/frontend/src/pages/AdminCampaigns.jsx` — composer with source/stage filters + subject + HTML body + `{{first_name}}` merge tag + preview panel showing recipient count + BCFSA refusal banner + confirm modal. Auto-refreshes every 6s while any campaign is in-flight.
+- URL is `/admin/broadcast` (not `/admin/campaigns` — that pre-existing route hosts the drip-email stats dashboard, kept untouched to avoid regression).
+
+**Slice 5 · Attribution & Conversion Dashboard** (`/admin/reports`)
+- Backend `GET /api/admin/reports/summary?period={7d|30d|90d|365d}` — aggregates every lead-facing collection into one payload: `{totals, funnel, avg_time_to_first_touch_hours, top_sources, top_listing_views, daily_series, recent_campaigns}`.
+- Metrics: rolling-window leads by source_type + `source` string, all-time pipeline funnel (from `contact_stages`), avg hours from lead-submission to first stage transition (from `contact_stage_history`), most-viewed Doug-listings from `listing_analytics`, recent campaign performance.
+- Frontend `/app/frontend/src/pages/AdminReports.jsx` — 5 KPI cards + 4 Recharts (line: leads over time; bar: pipeline funnel; horizontal bar: top sources; horizontal bar: most-viewed listings) + recent campaigns table. Period selector re-fetches.
+
+**Verified**
+- Backend: `testing_agent` created `/app/backend/tests/test_command_center.py` — **21/21 pytest cases PASSED (100%)** covering auth gating (4), Slice 2 detail (5), notes (3), stage history (1), Slice 4 preview (3), send/list (3), Slice 5 reports (5). JUnit XML at `/app/test_reports/pytest/command_center.xml`.
+- Frontend: manual Playwright screenshot pass across all 3 pages (contact detail with timeline, broadcast composer with BCFSA refusal for R9999999, reports with KPIs + 5 chart cards) — all rendering with correct data on 1920×900 viewport.
+
+**Deferred to a future ship (not blockers)**
+- Slice 3 (Twilio speed-to-lead SMS) — waiting on Doug's Twilio SID / Auth Token / from-number / cell.
+- Batch the `db.contact_stages.count_documents` calls in `_campaign_recipient_pool` — flagged by testing_agent as an N+1 pattern in the `stage=="new"` branch. Zero impact at Doug's current volume.
+- `?dry_run=1` param on `POST /admin/campaigns` for cleaner future test isolation.
+
 ### Feb 2026 — Command Center Phase 1 · Slice 1 — Unified `/admin/contacts`
 Ships a single, paginated, filterable view across every lead-capture surface Doug uses today. Foundation for Slices 2-5 (contact detail timeline, Twilio speed-to-lead, Resend broadcast, attribution reports).
 
