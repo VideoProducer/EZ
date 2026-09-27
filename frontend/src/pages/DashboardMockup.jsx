@@ -30,7 +30,6 @@
 import React, { useEffect, useMemo, useRef, useState, useContext, createContext, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { IMG, WhereShouldYouLive, Calculators, DoogieChat, HomepageGlossaryModule } from "../App";
-import TestimonialCarousel from "../components/TestimonialCarousel";
 import DoogieTour from "../components/DoogieTour";
 import DoogieFilterHeader from "../components/DoogieFilterHeader";
 import { FLAGSHIP } from "../config/flagshipListing";
@@ -2561,7 +2560,6 @@ const SearchPanel = () => {
   return (
     <>
       <DashboardFeaturedListing/>
-      <TestimonialCarousel variant="hero" title="What clients say about working with Doug" testId="home-testimonials"/>
       <HeroIntro/>
       <HomepageGlossaryModule/>
       {/* View mode toggle — sits directly above the map/list block. Lets

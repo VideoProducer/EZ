@@ -8,8 +8,8 @@
     <copyright>Copyright EZtoFind.ca — All rights reserved</copyright>
     <managingEditor>info@eztofind.ca (Doug LeMaire, REALTOR®)</managingEditor>
     <webMaster>info@eztofind.ca (Doug LeMaire, REALTOR®)</webMaster>
-    <lastBuildDate>Mon, 21 Sep 2026 18:42:17 +0000</lastBuildDate>
-    <pubDate>Mon, 21 Sep 2026 18:42:17 +0000</pubDate>
+    <lastBuildDate>Sun, 27 Sep 2026 04:02:48 +0000</lastBuildDate>
+    <pubDate>Sun, 27 Sep 2026 04:02:48 +0000</pubDate>
     <ttl>60</ttl>
     <atom:link href="https://eztofind.ca/feed.xml" rel="self" type="application/rss+xml" />
     <image>
@@ -17,6 +17,24 @@
       <title>EZtoFind.ca — BC Real Estate Insights</title>
       <link>https://eztofind.ca</link>
     </image>
+    <item>
+      <title>Form A — Freehold Transfer — BC Real Estate Glossary</title>
+      <link>https://eztofind.ca/glossary/form-a-freehold-transfer</link>
+      <guid isPermaLink="true">https://eztofind.ca/glossary/form-a-freehold-transfer</guid>
+      <pubDate>Mon, 21 Sep 2026 23:27:24 +0000</pubDate>
+      <dc:creator>Doug LeMaire, REALTOR®</dc:creator>
+      <category>Ownership</category>
+      <description>In British Columbia real estate, a Form A is the prescribed Freehold Transfer document used to legally transfer ownership (fee simple estate) of land from seller to buyer and register that change at the Land Title and Survey Authority (LTSA). It is filed in the Land Title Office to complete the change of registered…</description>
+    </item>
+    <item>
+      <title>Parcel Identifier (PID) — BC Real Estate Glossary</title>
+      <link>https://eztofind.ca/glossary/parcel-identifier-pid</link>
+      <guid isPermaLink="true">https://eztofind.ca/glossary/parcel-identifier-pid</guid>
+      <pubDate>Mon, 21 Sep 2026 23:27:24 +0000</pubDate>
+      <dc:creator>Doug LeMaire, REALTOR®</dc:creator>
+      <category>Title &amp; Ownership</category>
+      <description>In BC, the Parcel Identifier (PID) is the permanent parcel identifier under the Land Title Act, used by the Land Title and Survey Authority (LTSA) to uniquely identify a property in the land title register. It is a 9-digit number assigned to every parcel of land and remains the most reliable way to identify a specif…</description>
+    </item>
     <item>
       <title>GST on New / Substantially Renovated Homes — BC Real Estate Glossary</title>
       <link>https://eztofind.ca/glossary/gst-new-homes</link>
@@ -358,24 +376,6 @@
       <dc:creator>Doug LeMaire, REALTOR®</dc:creator>
       <category>Government &amp; Tax</category>
       <description>Property tax in BC is an annual tax levied by municipalities and taxing authorities on the assessed value of real property. Each July 1, BC Assessment establishes an assessed value under the Assessment Act, RSBC 1996, c. 20. In the following calendar year, the municipality (or Surveyor of Taxes in rural areas) sets…</description>
-    </item>
-    <item>
-      <title>Estate Planning (Real Estate Context) — BC Real Estate Glossary</title>
-      <link>https://eztofind.ca/glossary/estate-planning</link>
-      <guid isPermaLink="true">https://eztofind.ca/glossary/estate-planning</guid>
-      <pubDate>Sat, 01 Aug 2026 18:02:19 +0000</pubDate>
-      <dc:creator>Doug LeMaire, REALTOR®</dc:creator>
-      <category>Legal &amp; Title</category>
-      <description>Estate planning in a real estate context is the process of arranging how your real property will be dealt with during your lifetime and after your death. In British Columbia, estate planning commonly considers the Wills, Estates and Succession Act, SBC 2009, c. 13 (WESA), joint tenancy versus tenancy in common, life…</description>
-    </item>
-    <item>
-      <title>Downsizing — BC Real Estate Glossary</title>
-      <link>https://eztofind.ca/glossary/downsizing</link>
-      <guid isPermaLink="true">https://eztofind.ca/glossary/downsizing</guid>
-      <pubDate>Sat, 01 Aug 2026 18:02:19 +0000</pubDate>
-      <dc:creator>Doug LeMaire, REALTOR®</dc:creator>
-      <category>Process &amp; General</category>
-      <description>Downsizing in a real estate context refers to selling a larger residence and purchasing (or renting) a smaller one — commonly a condo, townhome, or smaller detached home — often at a later life stage. Consumers considering downsizing typically research capital-gains treatment on the principal residence, moving costs…</description>
     </item>
   </channel>
 </rss>
