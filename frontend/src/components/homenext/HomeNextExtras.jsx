@@ -54,6 +54,26 @@ export const HomeNextTools = () => (
   </section>
 );
 
+export const HomeNextDoug = () => (
+  <section className="hn-section" data-testid="hn-doug">
+    <div className="hn-wrap">
+      <div className="hn-doug">
+        <img className="hn-doug__photo" src="/images/doug-lemaire.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" data-testid="hn-doug-photo"/>
+        <div>
+          <p className="hn-doug__eyebrow">Your REALTOR®</p>
+          <h2 className="hn-h2">Facts first. REALTOR® when you're ready.</h2>
+          <p>I'm Doug LeMaire, a licensed REALTOR® with Fraser Property Management Realty Services Ltd. For over a decade I've helped people buy and sell across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor to Whistler.</p>
+          <p>EZtoFind.ca is built the way I like to work: informed clients make better decisions, so my job is to make good information easy to find. Browse, ask questions, and reach out only when the time is right.</p>
+          <div className="hn-ctarow">
+            <Link to="/about" className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hn-doug-about">More about Doug</Link>
+            <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid="hn-doug-contact">Talk to Doug</Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
 export const HomeNextFooter = () => (
   <footer className="hn-footer" data-testid="hn-footer">
     <div className="hn-wrap">

@@ -72,6 +72,9 @@ const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMoc
 const ListingMagazine3015 = lazy(() => import("./pages/ListingMagazine3015"));
 const HomeNext = lazy(() => import("./pages/HomeNext"));
 const ValuationNext = lazy(() => import("./pages/ValuationNext"));
+const AboutNext = lazy(() => import("./pages/AboutNext"));
+const LuxuryNext = lazy(() => import("./pages/LuxuryNext"));
+const EquestrianNext = lazy(() => import("./pages/EquestrianNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
@@ -13664,6 +13667,9 @@ function App() {
       {/* Apple-style homepage candidate — preview at /home-next (noindex) until promoted to "/". */}
       <Route path="/home-next" element={<HomeNext/>}/>
       <Route path="/valuation-next" element={<ValuationNext/>}/>
+      <Route path="/about-next" element={<AboutNext/>}/>
+      <Route path="/luxury-next" element={<LuxuryNext/>}/>
+      <Route path="/equestrian-next" element={<EquestrianNext/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>

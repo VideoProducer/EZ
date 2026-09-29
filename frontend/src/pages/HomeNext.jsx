@@ -4,7 +4,8 @@ import "../components/homenext/homeNext.css";
 import { HomeNextNav, HomeNextHero } from "../components/homenext/HomeNextHero";
 import { HomeNextTiles, HomeNextStats } from "../components/homenext/HomeNextTiles";
 import { HomeNextFeatured, HomeNextRegions } from "../components/homenext/HomeNextFeatured";
-import { HomeNextQuote, HomeNextTools, HomeNextFooter, HomeNextSticky } from "../components/homenext/HomeNextExtras";
+import { HomeNextQuote, HomeNextTools, HomeNextDoug, HomeNextFooter, HomeNextSticky } from "../components/homenext/HomeNextExtras";
+import { HnDoogie } from "../components/homenext/HomeNextShared";
 import { DoogieChat } from "../App";
 
 // Preview-only alternative homepage (Apple-style). Lives at /home-next so it
@@ -30,8 +31,10 @@ export default function HomeNext() {
       <main>
         <HomeNextHero/>
         <HomeNextTiles/>
+        <HnDoogie dir="right"/>
         <HomeNextStats/>
         <HomeNextFeatured/>
+        <HomeNextDoug/>
         <HomeNextRegions/>
         <HomeNextQuote/>
         <HomeNextTools/>

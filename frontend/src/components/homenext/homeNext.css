@@ -337,3 +337,97 @@
   .hn-vactions { flex-wrap: wrap; }
   .hn-vnext { flex: 1; }
 }
+
+
+/* ═══ Shared -next building blocks (Home / About / Luxury / Equestrian) ═══ */
+
+/* Page hero (About / Luxury / Equestrian) */
+.hn-phero { padding: clamp(64px, 9vw, 116px) 0 clamp(28px, 4vw, 52px); }
+.hn-phero__eyebrow { font-size: 13px; font-weight: 600; color: var(--hn-gold); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 16px; }
+.hn-phero h1 { font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1.04; font-weight: 700; letter-spacing: -0.035em; margin: 0 0 20px; max-width: 20ch; text-wrap: balance; }
+.hn-phero__sub { font-size: clamp(1.05rem, 1.6vw, 1.4rem); color: var(--hn-grey); line-height: 1.45; margin: 0 0 32px; max-width: 640px; }
+
+/* Identity line */
+.hn-idl { display: flex; align-items: center; gap: 14px; }
+.hn-idl img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; object-position: 50% 28%; box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--hn-line); }
+.hn-idl div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--hn-grey); }
+.hn-idl strong { color: var(--hn-ink); font-size: 14.5px; font-weight: 600; }
+
+/* Light pill (on navy backgrounds) */
+.hn-pill--light { background: #fff; border-color: #fff; color: var(--hn-navy); display: inline-flex; align-items: center; gap: 6px; }
+.hn-pill--light:hover { background: #eef1f6; border-color: #eef1f6; }
+.hn .hn-pill--light { color: var(--hn-navy); }
+
+/* Doug "about" band */
+.hn-doug { display: grid; grid-template-columns: 0.85fr 1.1fr; gap: clamp(32px, 5vw, 72px); align-items: center; }
+.hn-doug__photo { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 22%; border-radius: var(--hn-radius); background: var(--hn-bg-alt); box-shadow: 0 30px 80px rgba(0,0,0,.14); display: block; }
+.hn-doug__eyebrow { font-size: 13px; font-weight: 600; color: var(--hn-gold); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; }
+.hn-doug p { color: var(--hn-grey); font-size: clamp(1rem, 1.25vw, 1.15rem); line-height: 1.65; margin: 0 0 16px; }
+.hn-doug strong { color: var(--hn-ink); }
+
+/* Doogie mascot band */
+.hn-doogie { display: grid; grid-template-columns: auto 1fr; gap: clamp(24px, 4vw, 56px); align-items: center; background: var(--hn-navy); border-radius: var(--hn-radius); padding: clamp(28px, 4vw, 52px); overflow: hidden; }
+.hn-doogie--right { grid-template-columns: auto 1fr; }
+.hn-doogie--left { grid-template-columns: 1fr auto; }
+.hn-doogie--left .hn-doogie__txt { order: -1; }
+.hn-doogie img { width: clamp(150px, 20vw, 240px); height: auto; display: block; filter: drop-shadow(0 16px 34px rgba(0,0,0,.35)); }
+.hn .hn-doogie__txt, .hn .hn-doogie__txt * { color: #fff; }
+.hn-doogie__eyebrow { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; opacity: 0.75; }
+.hn-doogie__txt h2 { margin: 0 0 12px; }
+.hn-doogie__txt > p { font-size: clamp(1rem, 1.3vw, 1.15rem); line-height: 1.55; margin: 0 0 22px; opacity: 0.85; max-width: 60ch; }
+.hn .hn-doogie__txt .hn-pill--light { color: var(--hn-navy); opacity: 1; }
+
+/* Trust badges */
+.hn-badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.hn-badge { text-align: center; padding: 30px 22px; border-radius: var(--hn-radius); border: 1px solid var(--hn-line); background: #fff; }
+.hn-badge__ic { width: 46px; height: 46px; border-radius: 13px; background: var(--hn-bg-alt); color: var(--hn-navy); display: grid; place-items: center; margin: 0 auto 14px; }
+.hn-badge strong { display: block; font-size: 15.5px; color: var(--hn-ink); font-weight: 600; }
+.hn-badge span { display: block; font-size: 13px; color: var(--hn-grey); line-height: 1.45; margin-top: 6px; }
+
+/* Editorial prose (Luxury / Equestrian) */
+.hn-prose { max-width: 720px; }
+.hn-prose p { font-size: clamp(1.05rem, 1.35vw, 1.22rem); line-height: 1.7; color: var(--hn-ink); margin: 0 0 20px; }
+.hn-prose p:last-child { margin-bottom: 0; }
+.hn-prose a { color: var(--hn-navy); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Callout (ALR / verify-before-you-buy) */
+.hn-callout { background: #FFF7E6; border: 1px solid #F1D9A6; border-left: 4px solid var(--hn-gold); border-radius: 14px; padding: 18px 20px; font-size: 14.5px; line-height: 1.6; color: #5a3d00; max-width: 760px; }
+.hn-callout strong { color: #3d2a00; }
+.hn-callout a { color: var(--hn-navy); text-decoration: underline; }
+
+/* Numbered checklist */
+.hn-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.hn-steps li { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; background: #fff; border: 1px solid var(--hn-line); border-radius: 16px; padding: 20px 22px; }
+.hn-steps__n { width: 34px; height: 34px; border-radius: 50%; background: var(--hn-navy); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 14px; }
+.hn-steps h4 { margin: 0 0 4px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.hn-steps p { margin: 0; color: var(--hn-grey); font-size: 14.5px; line-height: 1.55; }
+.hn-steps a { color: var(--hn-navy); text-decoration: underline; }
+
+/* Two-column cards */
+.hn-cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.hn-col { background: var(--hn-bg-alt); border-radius: var(--hn-radius); padding: clamp(28px, 3.5vw, 40px); }
+.hn-col h3 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 10px; }
+.hn-col p { color: var(--hn-grey); margin: 0; line-height: 1.6; font-size: 15px; }
+
+/* CTA row + big navy pill */
+.hn-ctarow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.hn-pill--lg { padding: 13px 26px; font-size: 15px; }
+
+/* Static MLS® chip variant (non-link, corner attribution) */
+.hn-lhero__chip--static { left: auto; right: 16px; bottom: 16px; max-width: none; font-size: 11px; padding: 7px 12px; }
+
+/* Compliance fine print block */
+.hn-fineblock { max-width: 860px; margin: 0 auto; font-size: 12px; color: var(--hn-grey); line-height: 1.7; padding-top: 28px; border-top: 1px solid var(--hn-line); }
+.hn-fineblock a { color: var(--hn-navy); text-decoration: underline; }
+
+@media (max-width: 960px) {
+  .hn-doug { grid-template-columns: 1fr; gap: 28px; }
+  .hn-doug__photo { aspect-ratio: 3 / 2; max-height: 420px; }
+  .hn-doogie, .hn-doogie--left, .hn-doogie--right { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 20px; }
+  .hn-doogie--left .hn-doogie__txt { order: 0; }
+  .hn-doogie__txt > p { margin-left: auto; margin-right: auto; }
+  .hn-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .hn-badges { grid-template-columns: 1fr; }
+}
