@@ -1,25 +1,25 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
-import { Home, Warehouse, Gem, Building2 } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
 import { HnDoogie } from "../components/homenext/HomeNextShared";
 import { IMG, DoogieChat } from "../App";
 
+const API = process.env.REACT_APP_BACKEND_URL;
+
 const STATS = [
   { n: "13 years", l: "BC real estate" },
   { n: "3 regions", l: "worked in person" },
   { n: "Fraser Property Management Realty Services Ltd.", l: "" },
-  { n: "BCFSA #167790", l: "" },
 ];
 
 const WHAT = [
-  { Icon: Home, t: "Detached Homes" },
-  { Icon: Warehouse, t: "Acreages & Equestrians" },
-  { Icon: Gem, t: "Luxury" },
-  { Icon: Building2, t: "Residential Stratas" },
+  { t: "Detached Homes", to: "/listings", path: "/api/listings?property_type=House&sort=price_desc&limit=20" },
+  { t: "Acreages & Equestrians", to: "/specialties/equestrian", path: "/api/listings/equestrian?sort=price_desc&limit=20" },
+  { t: "Luxury", to: "/luxury-next", path: "/api/listings?property_type=House&price_min=3000000&sort=price_desc&limit=20" },
+  { t: "Residential Stratas", to: "/listings", path: "/api/listings?property_type=Apartment&sort=price_desc&limit=20" },
 ];
 
 const REGIONS = [
@@ -31,12 +31,30 @@ const REGIONS = [
 // Preview-only Apple-style About page (Doug-approved concept). Same content
 // spirit as /about — new front end.
 export default function AboutNext() {
+  const [imgs, setImgs] = useState({});
+
   useEffect(() => {
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
     el.setAttribute("content", "noindex, nofollow");
     return () => { el.setAttribute("content", prev); };
+  }, []);
+
+  useEffect(() => {
+    let stop = false;
+    WHAT.forEach(w => {
+      fetch(`${API}${w.path}`).then(r => r.ok ? r.json() : null).then(d => {
+        if (stop || !d) return;
+        const pool = (d.listings || []).filter(l => Array.isArray(l.photos) && l.photos.length).map(l => l.photos[0]);
+        if (pool.length) {
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          const im = new Image(); im.src = pick;
+          setImgs(prev => ({ ...prev, [w.t]: pick }));
+        }
+      }).catch(() => {});
+    });
+    return () => { stop = true; };
   }, []);
 
   return (
@@ -77,11 +95,12 @@ export default function AboutNext() {
           <div className="hn-wrap">
             <h2 className="hn-h2" style={{ marginBottom: 28 }}>What I do.</h2>
             <div className="hn-whatido">
-              {WHAT.map(({ Icon, t }) => (
-                <div className="hn-wtile" key={t} data-testid={`about-what-${t.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
-                  <div className="hn-wtile__ic"><Icon size={24} strokeWidth={1.7}/></div>
-                  <strong>{t}</strong>
-                </div>
+              {WHAT.map(({ t, to }) => (
+                <Link to={to} className="hn-wtile" key={t} data-testid={`about-what-${t.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+                  <div className="hn-wtile__img" style={imgs[t] ? { backgroundImage: `url('${imgs[t]}')` } : undefined}/>
+                  <div className="hn-wtile__shade"/>
+                  <span className="hn-wtile__label">{t}</span>
+                </Link>
               ))}
             </div>
           </div>
