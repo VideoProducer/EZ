@@ -22,7 +22,7 @@ export default function HomeNext() {
   return (
     <div className="hn" data-testid="home-next">
       <Helmet>
-        <title>Find home in BC — EZtoFind.ca · Doug LeMaire, REALTOR®</title>
+        <title>Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home — EZtoFind.ca</title>
         <meta name="robots" content="noindex, nofollow"/>
         <meta name="description" content="Live MLS® listings across British Columbia, a free home value estimate, and Doogie — plain-language answers to BC real estate questions."/>
       </Helmet>

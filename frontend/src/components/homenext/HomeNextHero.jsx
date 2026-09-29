@@ -30,8 +30,7 @@ export const HomeNextHero = () => {
     <section className="hn-hero" data-testid="hn-hero">
       <div className="hn-wrap">
         <p className="hn-hero__eyebrow hn-rise">Live MLS® listings across British Columbia</p>
-        <h1 className="hn-hero__title hn-rise hn-rise-2" data-testid="hn-hero-title">Find home in BC.</h1>
-        <p className="hn-hero__sub hn-rise hn-rise-3">Honest guidance from a BCFSA-licensed REALTOR®. No pressure, no noise — just the information you need.</p>
+        <h1 className="hn-hero__title hn-rise hn-rise-2" data-testid="hn-hero-title">Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home.</h1>
         <form className="hn-search hn-rise hn-rise-4" onSubmit={submit} role="search" data-testid="hn-search">
           <input
             value={q}
