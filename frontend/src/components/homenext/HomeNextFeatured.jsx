@@ -22,14 +22,14 @@ export const HomeNextFeatured = () => {
           {playing ? (
             <iframe
               src={FILM_URL}
-              title={`${FLAGSHIP.address}, ${FLAGSHIP.city} — a short film`}
+              title="Recently sold in Elgin Chantrell, Surrey — a short film"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
               data-testid="hn-featured-iframe"
             />
           ) : (
             <>
-              <img src={FLAGSHIP.hero_image} alt={`${FLAGSHIP.address}, ${FLAGSHIP.community}, ${FLAGSHIP.city}`} loading="lazy" decoding="async"/>
+              <img src={FLAGSHIP.hero_image} alt={`Recently sold home in ${FLAGSHIP.community}, ${FLAGSHIP.city}`} loading="lazy" decoding="async"/>
               <span className="hn-featured__badge">Sold · 10 days</span>
               <button type="button" className="hn-featured__play" aria-label="Play video" data-testid="hn-featured-play">
                 <Play size={28} fill="currentColor" strokeWidth={0} style={{ marginLeft: 4 }}/>
@@ -39,7 +39,7 @@ export const HomeNextFeatured = () => {
         </div>
         <div>
           <p className="hn-featured__eyebrow">Recently sold</p>
-          <h2 className="hn-h2">{FLAGSHIP.address}.<br/>Sold in 10 days.</h2>
+          <h2 className="hn-h2">Sold in 10 days.</h2>
           <p className="hn-lead" style={{ marginBottom: 24 }}>
             {FLAGSHIP.community}, {FLAGSHIP.city}. Listed and represented by Doug LeMaire, REALTOR®. Watch the short film to see how a home is presented — then let's talk about yours.
           </p>
