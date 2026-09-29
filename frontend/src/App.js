@@ -71,6 +71,7 @@ const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMocku
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
 const ListingMagazine3015 = lazy(() => import("./pages/ListingMagazine3015"));
 const HomeNext = lazy(() => import("./pages/HomeNext"));
+const ValuationNext = lazy(() => import("./pages/ValuationNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
@@ -1353,7 +1354,7 @@ const FAV_STORAGE_KEY = "ez_favorites";
 // gtag is actually on window. Wraps every call in try/catch so a broken
 // analytics call NEVER breaks the user-facing flow (form submit, favorite,
 // etc.). PIPA-compliant: consent gate upstream means no fire before opt-in.
-const trackConversion = (event, params = {}) => {
+export const trackConversion = (event, params = {}) => {
   try {
     if (typeof window === "undefined" || typeof window.gtag !== "function") return;
     window.gtag("event", event, {
@@ -13662,6 +13663,7 @@ function App() {
       <Route path="/dashboard" element={<DashboardMockup/>}/>
       {/* Apple-style homepage candidate — preview at /home-next (noindex) until promoted to "/". */}
       <Route path="/home-next" element={<HomeNext/>}/>
+      <Route path="/valuation-next" element={<ValuationNext/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
