@@ -78,6 +78,25 @@ async def record_event(
         logger.warning(f"Analytics buffer write failed: {e}")
 
 
+async def record_impressions(db, listing_keys: list, request_meta: Optional[dict] = None) -> None:
+    """Batch-buffer impression events in ONE insert_many — used off the request path."""
+    if not listing_keys:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    docs = [{
+        "listing_key": k,
+        "event_type": "impression",
+        "participant_id": CREA_PARTICIPANT_ID or None,
+        "occurred_at": now,
+        "flushed_to_crea": False,
+        "request_meta": request_meta or {},
+    } for k in listing_keys if k]
+    try:
+        await db.listing_analytics.insert_many(docs, ordered=False)
+    except Exception as e:
+        logger.warning(f"Analytics batch write failed: {e}")
+
+
 async def flush_to_crea(db) -> dict:
     """Send buffered events to CREA Analytics endpoint. Runs on a schedule.
     Called by APScheduler once CREA_ANALYTICS_ENDPOINT is configured.

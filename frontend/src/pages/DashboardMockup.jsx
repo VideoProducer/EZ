@@ -5942,19 +5942,13 @@ const DashboardFeaturedListing = () => {
         </div>
       </div>
 
-      <div style={{
-        display: "grid", gridTemplateColumns: "minmax(280px, 1.2fr) minmax(260px, 1fr)",
-        gap: 20, alignItems: "stretch",
-      }} className="dash-featured-grid">
-        {/* Image column — 3/2 to match the native aspect ratio of the
-            marketing photography (DSLR 3:2). Photo uses object-fit: contain
-            so the full front elevation is centred and never cropped, even
-            when the user's viewport is a different aspect. min-height is
-            a safety net for browsers that don't honour aspect-ratio on
-            grid items (falls back to a visible frame instead of 0px). */}
+      <div style={{ maxWidth: 960, margin: "0 auto" }} className="dash-featured-grid">
+        {/* Media card — 16:9 to match the Vimeo film's native aspect ratio
+            so the poster/iframe fills the frame without cropping. Photo
+            uses object-fit: contain so the full front elevation is centred. */}
         <div style={{
           position: "relative", background: C.navy, borderRadius: 14,
-          overflow: "hidden", aspectRatio: "1224/920", minHeight: 260,
+          overflow: "hidden", aspectRatio: "16/9", minHeight: 200,
         }}>
           {/* Fire-engine-red "SOLD" banner splash — Feb 2026. Overlays
               the top of the featured card so the closed status reads
@@ -6134,70 +6128,7 @@ const DashboardFeaturedListing = () => {
           )}
         </div>
 
-        {/* Details column */}
-        <div style={{ display: "flex", flexDirection: "column", padding: "2px 4px" }}>
-          <div style={{
-            fontSize: 11, textTransform: "uppercase", letterSpacing: 1.4,
-            fontWeight: 700, color: C.blue, marginBottom: 4,
-          }}>{merged.neighbourhood} · {merged.city}, {merged.province}</div>
-          <h3 style={{
-            fontFamily: "'Playfair Display', serif", fontSize: 22,
-            color: C.navy, margin: "2px 0 6px", lineHeight: 1.2, fontWeight: 800,
-          }} data-testid="dash-featured-address">{merged.address}</h3>
-          <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.5, margin: "0 0 14px" }}>
-            {merged.headline}
-          </p>
-
-          {/* Featured-listing price pill removed per Doug Feb 2026 —
-              MLS® listing page + realtor.ca show the price; homepage
-              intentionally leads with story (Elgin Chantrell address +
-              tagline) not with the number. */}
-
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12,
-          }} data-testid="dash-featured-stats">
-            {[
-              { v: merged.beds, l: "Beds" },
-              { v: `${merged.baths}${merged.half_baths ? "+" + merged.half_baths : ""}`, l: merged.half_baths ? "Full+½" : "Baths" },
-              { v: (merged.sqft || 0).toLocaleString("en-CA"), l: "Sq Ft" },
-              { v: merged.year_built || "—", l: "Built" },
-            ].map((s, i) => (
-              <div key={i} style={{
-                background: "#F5F0E1", borderRadius: 8, padding: "8px 4px", textAlign: "center",
-              }}>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 15, color: C.navy }}>{s.v}</div>
-                <div style={{ fontSize: 9.5, textTransform: "uppercase", letterSpacing: 0.8, color: C.muted, marginTop: 2, fontWeight: 700 }}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{
-            display: "flex", flexWrap: "wrap", gap: "4px 14px",
-            fontSize: 12, color: C.ink, marginBottom: 12,
-            paddingBottom: 12, borderBottom: "1px solid rgba(15,42,91,0.08)",
-          }}>
-            <div><span style={{ color: C.muted }}>Type:</span> <strong>{merged.property_type}</strong></div>
-            {merged.lot_sqft ? <div><span style={{ color: C.muted }}>Lot:</span> <strong>{merged.lot_sqft.toLocaleString("en-CA")} sq ft{(merged.lot_acres || merged.lot_sqft >= 4356) ? ` (${(merged.lot_acres || (merged.lot_sqft / 43560)).toFixed(2)} acre)` : ""}</strong></div> : null}
-          </div>
-
-          <p style={{
-            fontSize: 12.5, lineHeight: 1.55, color: C.ink, marginBottom: 14,
-            display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }} data-testid="dash-featured-description">{merged.description}</p>
-
-          {/* Feb 2026 — "Share this listing" bar (Copy link / Email / WhatsApp /
-              Facebook) removed from the home page featured card at owner
-              request. The `LuxuryShareBar` component definition is retained
-              in this file so it can be re-mounted here (or elsewhere) later
-              without a re-import. */}
-
-          <div style={{
-            fontSize: 10.5, color: C.muted, marginTop: 12, lineHeight: 1.55, fontStyle: "italic",
-          }}>
-            Not intended to solicit or induce an agreement already in place.
-          </div>
-        </div>
+        {/* Details column removed Jun 2026 per Doug — media card only. */}
       </div>
       <ListingPhotoLightbox
         photos={merged.photos}

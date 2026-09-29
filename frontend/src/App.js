@@ -20,23 +20,23 @@ import {
   trackFormView, trackFormStart, trackFieldError, trackFormSubmit,
   trackArticle16Block, trackThankYouView, trackStepComplete, withConversionContext,
 } from "./utils/conversionAnalytics";
-import MyJourney from "./pages/MyJourney";
+const MyJourney = lazy(() => import("./pages/MyJourney"));
 import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
-import AdminContentRelations from "./pages/AdminContentRelations";
+const AdminContentRelations = lazy(() => import("./pages/AdminContentRelations"));
 import SearchPage from "./pages/SearchPage";
-import AdminLeadTriage from "./pages/AdminLeadTriage";
-import AdminContacts from "./pages/AdminContacts";
-import AdminContactDetail from "./pages/AdminContactDetail";
-import AdminEmailCampaigns from "./pages/AdminCampaigns";
-import AdminReports from "./pages/AdminReports";
-import AdminHydrateListing from "./pages/AdminHydrateListing";
-import AdminTestimonials from "./pages/AdminTestimonials";
+const AdminLeadTriage = lazy(() => import("./pages/AdminLeadTriage"));
+const AdminContacts = lazy(() => import("./pages/AdminContacts"));
+const AdminContactDetail = lazy(() => import("./pages/AdminContactDetail"));
+const AdminEmailCampaigns = lazy(() => import("./pages/AdminCampaigns"));
+const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AdminHydrateListing = lazy(() => import("./pages/AdminHydrateListing"));
+const AdminTestimonials = lazy(() => import("./pages/AdminTestimonials"));
 import TestimonialCarousel from "./components/TestimonialCarousel";
 import DashboardMockup from "./pages/DashboardMockup";
-import MarketReport from "./pages/MarketReport"; // route removed 2026-08-08 per Doug; keep import so the component compiles if we re-enable later
-import CompareListings from "./pages/CompareListings";
+// MarketReport route removed 2026-08-08 per Doug — re-add `lazy(() => import("./pages/MarketReport"))` if re-enabled.
+const CompareListings = lazy(() => import("./pages/CompareListings"));
 // Route-lazy the multi-step intake form. VisualAgentDemo is a heavy chunk
 // (~28 KB gzipped) that's embedded below-the-fold on the homepage plus
 // standalone at /visual-agent-demo. Splitting it out means the initial
@@ -85,10 +85,10 @@ const RouteFallback = () => (
   </div>
 );
 import DoogieRelatedChips from "./components/DoogieRelatedChips";
-import AdminSearchAnalytics from "./pages/AdminSearchAnalytics";
+const AdminSearchAnalytics = lazy(() => import("./pages/AdminSearchAnalytics"));
 import Sparkline from "./components/Sparkline";
-import AdminReelAnalytics from "./pages/AdminReelAnalytics";
-import AdminHeatmap from "./pages/AdminHeatmap";
+const AdminReelAnalytics = lazy(() => import("./pages/AdminReelAnalytics"));
+const AdminHeatmap = lazy(() => import("./pages/AdminHeatmap"));
 import Breadcrumbs from "./components/Breadcrumbs";
 import ListingNarration from "./components/ListingNarration";
 import ReferralAsk from "./components/ReferralAsk";
@@ -5413,7 +5413,7 @@ const EquestrianSection = ({ intro }) => {
   };
 
   return (<section className="section" data-testid="equestrian-section"><div className="container-x">
-    <img loading="lazy" decoding="async" src={intro.i} alt="BC Equestrian Properties" style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
+    <img fetchPriority="high" decoding="async" src={intro.i} alt="BC Equestrian Properties" width={1200} height={400} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}}/>
     <div style={{maxWidth:"52rem",marginBottom:"1.5rem"}}>
       <div className="eyebrow">BC's Horse Country</div>
       <h1 className="section-title" data-testid="equestrian-title">Equestrian Properties — British Columbia</h1>
@@ -13652,6 +13652,7 @@ function App() {
         + the listings that were cast. Silent-hides for anonymous
         visitors and for already-converted sessions. */}
     <CastSessionConvertPrompt/>
+    <Suspense fallback={<RouteFallback/>}>
     <Routes>
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home
@@ -13839,6 +13840,7 @@ function App() {
         </AppLayout>
       }/>
     </Routes>
+    </Suspense>
     <PIPACookieBanner/>
   </BrowserRouter>);
 }

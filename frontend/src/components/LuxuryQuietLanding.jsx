@@ -218,8 +218,8 @@ function FilmSection() {
           position: "relative",
           width: "100%",
           maxWidth: 1224,
-          aspectRatio: "1224 / 920",
-          margin: "16px 0 0",
+          aspectRatio: "16 / 9",
+          margin: "16px auto 0",
           background: posterUrl
             ? `#000 url('${posterUrl}') center/cover no-repeat`
             : T.ink,
