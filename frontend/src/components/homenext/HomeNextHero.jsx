@@ -6,7 +6,16 @@ import { HomeNextListingHero } from "./HomeNextListingHero";
 export const HomeNextNav = () => (
   <header className="hn-nav" data-testid="hn-nav">
     <div className="hn-wrap hn-nav__inner">
-      <Link to="/" className="hn-nav__brand" data-testid="hn-nav-brand"><img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async"/></Link>
+      <div className="hn-nav__left">
+        <Link to="/" className="hn-nav__brand" data-testid="hn-nav-brand"><img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async"/></Link>
+        <div className="hn-nav__id" data-testid="hn-nav-identity">
+          <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" width={38} height={38} decoding="async"/>
+          <div>
+            <strong>Doug LeMaire, REALTOR®</strong>
+            <span>Fraser Property Management Realty Services Ltd.</span>
+          </div>
+        </div>
+      </div>
       <nav className="hn-nav__links" aria-label="Primary">
         <Link to="/listings" data-testid="hn-nav-buy">Buy</Link>
         <Link to="/valuation" data-testid="hn-nav-sell">Sell</Link>

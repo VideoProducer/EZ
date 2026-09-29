@@ -16,7 +16,7 @@ export const HomeNextListingHero = () => {
   useEffect(() => {
     let stop = false;
     const params = new URLSearchParams({
-      price_min: "3000000", property_type: "Detached", sort: "newest", limit: "24",
+      price_min: "2000000", property_type: "Detached", sort: "newest", limit: "24",
       region_chip: "Doug's Territory",
       exclude_property_type: EXCL_TYPES, exclude_description_keywords: EXCL_KW,
     });
@@ -62,7 +62,7 @@ export const HomeNextListingHero = () => {
         )}
       </div>
       <div className="hn-hero__caption">
-        {cur ? "Live MLS® listings · Greater Vancouver, Fraser Valley & Sea-to-Sky · detached homes from $3,000,000 · CREA DDF®" : "Greater Vancouver · Fraser Valley · Sea-to-Sky"}
+        {cur ? "Live MLS® listings · Greater Vancouver, Fraser Valley & Sea-to-Sky · detached homes from $2,000,000 · CREA DDF®" : "Greater Vancouver · Fraser Valley · Sea-to-Sky"}
       </div>
     </div>
   );
