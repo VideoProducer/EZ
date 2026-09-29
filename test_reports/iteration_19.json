@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of preview alternative homepage at /home-next. All 21 required checks pass: sticky nav testids + navy CTA (white#fff on navy rgb(15,42,91)), hero title 'Find home in BC.', search submit with 'Surrey' -> /listings?q=Surrey, empty search -> /listings, buying/selling pill CTAs, hero image loads (naturalWidth=1264, src /images/home-next-hero.jpg), all 3 tiles, stats populated from /api/site/counts (52,199 / 240 / 440), featured poster+badge 'Sold · 10 days', play button swaps to Vimeo iframe [hn-featured-iframe], featured CTA -> /valuation, fine print includes 'Not intended to solicit', all 3 region links resolve to /regions/{slug} and pages render, testimonial quote with reviewer name + ★ stars, all 4 tool cards navigate, footer BCFSA #167790 + brokerage 'Fraser Property Management Realty Services Ltd.' + CREA REALTOR®/MLS® notice, legal links present. Mobile 390x844: no horizontal overflow inside .hn (scrollWidth=clientWidth=390), sticky CTA visible at bottom (y=747), 'Find out' link is topmost element at its center (not covered by Doogie floating button) and navigates to /valuation, nav-buy link hidden, brand + CTA visible. Head: title contains 'Find home in BC' and a meta robots 'noindex, nofollow' tag is present. Regression: '/' still renders [data-testid=dash-featured-listing]. No console errors originating from /home-next.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/home-next <head>", "issues": ["Two <meta name=robots> tags coexist on /home-next: the static one from public/index.html ('index, follow, max-image-preview:large, max-snippet:-1') is NOT replaced by react-helmet-async — Helmet only appends a second tag 'noindex, nofollow'. The required noindex tag IS present so the acceptance criterion passes, but conflicting robots directives can confuse crawlers. Suggest adding data-rh='true' handling or setting the index.html placeholder to noindex and letting Helmet override for real pages, or explicitly de-duping."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional / minor) Remove duplicate robots meta on /home-next — index.html carries 'index, follow, ...' and Helmet on HomeNext.jsx adds a second 'noindex, nofollow' rather than replacing it. Both currently render.",
+    "(Pre-existing, not from this iteration) Homepage '/' has two unrelated console warnings from DashboardMockup: React 'fetchpriority' should be 'fetchPriority', and a <span> child inside <option> hydration warning in the beds/baths <select>. Not blocking, but worth cleaning up."
+  ],
+  "critical_code_review_comments": [
+    "HomeNext.jsx imports DoogieChat from '../App'. On mobile the sticky CTA sits above the Doogie float — verified clickable, but this coupling means any change to Doogie z-index in App.js could occlude the sticky bar; consider isolating the float's stacking context.",
+    "HomeNextStats.jsx renders '—' as fallback when /api/site/counts fails — good; no error-state UI otherwise (silent). Acceptable for a marketing page.",
+    "HomeNextQuote returns null when /api/testimonials returns nothing — this makes the section disappear silently; consider a skeleton or default quote.",
+    "HomeNextFeatured.jsx builds Vimeo iframe URL with autoplay=1; on the second play attempt (after regions navigation) autoplay may be blocked by browser policy but flow verified works on first play."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "test_credentials": "none needed",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "HomeNext is composed of HomeNextHero (Nav+Hero), HomeNextTiles+Stats (Stats fetches /api/site/counts), HomeNextFeatured+Regions (Vimeo iframe via play button), HomeNextExtras (Quote fetches /api/testimonials, Tools, Footer, Sticky). All data-testids listed in the review request are present and route as expected. The 'listing card' assertion after /listings?q=Surrey needs a real /listings selector — search bar navigation itself works. Mobile viewport 390x844 verified. Only cosmetic issue is a duplicated robots meta (both index+noindex render on /home-next).",
+  "rca of the issue": "N/A — no bugs found. The duplicated robots meta is caused by public/index.html defining a default 'index, follow' meta that react-helmet-async does not automatically deduplicate against Helmet-managed tags at hydration time in this app; both tags coexist in DOM. Fix: either remove the default from index.html (let Helmet own robots) or add a matching data-rh='true' attribute to the static tag so Helmet can replace it."
+}

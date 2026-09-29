@@ -465,6 +465,12 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 - Note: preview proxy/Cloudflare rewrites `Cache-Control` to no-store on /api; the `public, max-age=300` header on `/listings/equestrian` is harmless there.
 
 
+
+### Jun 2026 — Apple-style homepage candidate at `/home-next` (iteration 19, 21/21 pass)
+- New preview route `/home-next` (lazy, noindex, no AppLayout) — `pages/HomeNext.jsx` + `components/homenext/{HomeNextHero,HomeNextTiles,HomeNextFeatured,HomeNextExtras}.jsx` + `homeNext.css` (all `hn-*` classes/testids).
+- Sections: glass sticky nav → "Find home in BC." hero + search (→ `/listings?q=`) + I'm buying/selling pills + BC landscape (`public/images/home-next-hero.jpg`, AI-generated scenery, not a property) → 3 tiles (search/valuation/Doogie) → live stats (`/api/site/counts`) → SOLD-in-10-days film band (Vimeo 1218107137, FLAGSHIP config) → 3 region cards → single testimonial (`/api/testimonials`) → 4 free tools → compliant footer (BCFSA #, brokerage, CREA trademark, not-intended-to-solicit) → mobile sticky "What's my home worth?" bar → DoogieChat FAB.
+- Backend untouched. Live `/` unchanged. To promote: swap `<Route path="/">` element to `<HomeNext/>` and drop the noindex Helmet/useEffect in HomeNext.jsx.
+
 ---
 
 ## Backlog (P0 → P3)
