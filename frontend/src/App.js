@@ -13662,9 +13662,11 @@ function App() {
       {/* Home page is now the new dashboard mockup shell (Feb 4, 2026 promotion).
           The previous Visual-Agent-based home page is preserved at /classic-home
           for reference or quick rollback via a single-line route swap. */}
-      <Route path="/" element={<DashboardMockup/>}/>
+      {/* Apple-style landing page promoted to "/" (indexable). Previous homepage
+          preserved at /dashboard for reference / single-line rollback. */}
+      <Route path="/" element={<HomeNext isHome/>}/>
       <Route path="/dashboard" element={<DashboardMockup/>}/>
-      {/* Apple-style homepage candidate — preview at /home-next (noindex) until promoted to "/". */}
+      {/* Apple-style homepage — also mirrored at /home-next (noindex preview). */}
       <Route path="/home-next" element={<HomeNext/>}/>
       <Route path="/valuation-next" element={<ValuationNext/>}/>
       <Route path="/about-next" element={<AboutNext/>}/>

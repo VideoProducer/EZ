@@ -8,23 +8,26 @@ import { HomeNextQuote, HomeNextTools, HomeNextDoug, HomeNextFooter, HomeNextSti
 import { HnDoogie } from "../components/homenext/HomeNextShared";
 import { DoogieChat } from "../App";
 
-// Preview-only alternative homepage (Apple-style). Lives at /home-next so it
-// can be compared side-by-side with `/`; noindex until promoted.
-export default function HomeNext() {
-  // The static index.html ships an "index, follow" robots tag; hide it while
-  // this preview route is mounted so crawlers see a single noindex directive.
+// Apple-style landing page. Rendered at `/` (isHome, indexable) and mirrored at
+// /home-next (noindex preview) for side-by-side comparison.
+export default function HomeNext({ isHome = false }) {
+  // The static index.html ships an "index, follow" robots tag. Only the preview
+  // (/home-next) should hide from crawlers; the promoted homepage stays indexable.
   useEffect(() => {
+    if (isHome) return;
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
     el.setAttribute("content", "noindex, nofollow");
     return () => { el.setAttribute("content", prev); };
-  }, []);
+  }, [isHome]);
   return (
     <div className="hn" data-testid="home-next">
       <Helmet>
         <title>Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home — EZtoFind.ca</title>
-        <meta name="robots" content="noindex, nofollow"/>
+        {isHome
+          ? <link rel="canonical" href="https://eztofind.ca/"/>
+          : <meta name="robots" content="noindex, nofollow"/>}
         <meta name="description" content="Live MLS® listings across British Columbia, a free home value estimate, and Doogie — plain-language answers to BC real estate questions."/>
       </Helmet>
       <HomeNextNav/>
