@@ -10,7 +10,7 @@ const TILES = [
   { id: "valuation", to: "/valuation", Icon: Gauge, title: "What's my home worth?",
     body: "A data-backed market estimate from Doug — not an algorithm guessing. Free, no obligation.", cta: "Get an estimate" },
   { id: "doogie", to: "/visual-agent-demo", Icon: MessageCircle, img: "/images/doogie/doogie-brand.png", title: "Ask Doogie.",
-    body: "Plain-language answers to BC real estate questions, with sources. General information, never advice.", cta: "Start a chat" },
+    body: "Plain-language information on BC real estate questions, with sources. General information, never advice.", cta: "Start a chat" },
 ];
 
 export const HomeNextTiles = () => (
