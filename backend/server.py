@@ -1838,9 +1838,9 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     _e_phone   = _html.escape(lead.phone or "—",     quote=True)
     _e_areas   = _html.escape(", ".join(lead.areas or []) or "—", quote=True)
     _e_ptype   = _html.escape(lead.property_type or "—", quote=True)
-    _e_budget  = _html.escape(str(lead.budget) if lead.budget is not None else "—", quote=True)
-    _e_beds    = _html.escape(str(lead.bedrooms) if lead.bedrooms is not None else "—", quote=True)
-    _e_time    = _html.escape(lead.timeframe or "—", quote=True)
+    _e_budget  = _html.escape(lead.budget_range or "—", quote=True)
+    _e_fin     = _html.escape(lead.financing_status or "—", quote=True)
+    _e_time    = _html.escape(lead.timeline or "—", quote=True)
     _e_lang    = _html.escape(lead.form_lang or "en", quote=True)
     _e_notes   = _html.escape(lead.notes or "—", quote=True).replace("\n", "<br/>")
     _e_subj_em = _html.escape(lead.email or "",      quote=True)
@@ -1851,7 +1851,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         f"<strong>Areas of interest:</strong> {_e_areas}<br/>"
         f"<strong>Property type:</strong> {_e_ptype}<br/>"
         f"<strong>Budget:</strong> {_e_budget}<br/>"
-        f"<strong>Bedrooms:</strong> {_e_beds}<br/>"
+        f"<strong>Financing:</strong> {_e_fin}<br/>"
         f"<strong>Timeframe:</strong> {_e_time}<br/>"
         f"<strong>Language:</strong> {_e_lang}</p>"
         f"<p><strong>Notes:</strong><br/>{_e_notes}</p>"
@@ -1865,7 +1865,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     ))
     asyncio.create_task(_send_lead_sms(
         kind=kind, name=lead.full_name or "—", phone=lead.phone or "",
-        detail=(", ".join(lead.areas or []) or "") + (f" · {lead.property_type}" if lead.property_type else ""),
+        detail=(lead.property_type or "") + (f" · {', '.join(lead.areas)}" if lead.areas else ""),
     ))
     # CASL-compliant transactional confirmation to the lead. Fires in the
     # background so submit latency stays sub-second.
@@ -1908,10 +1908,11 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         f"<p><strong>Name:</strong> {lead.full_name}<br/>"
         f"<strong>Email:</strong> {lead.email}<br/>"
         f"<strong>Phone:</strong> {lead.phone or '—'}<br/>"
-        f"<strong>Property address:</strong> {getattr(lead, 'address', '') or '—'}<br/>"
+        f"<strong>Property address:</strong> {getattr(lead, 'property_address', '') or '—'}<br/>"
+        f"<strong>City:</strong> {getattr(lead, 'city', '') or '—'}<br/>"
         f"<strong>Property type:</strong> {getattr(lead, 'property_type', '') or '—'}<br/>"
-        f"<strong>Expected value:</strong> {getattr(lead, 'expected_value', '') or '—'}<br/>"
-        f"<strong>Timeframe:</strong> {getattr(lead, 'timeframe', '') or '—'}<br/>"
+        f"<strong>Expected value:</strong> {getattr(lead, 'estimated_value', '') or '—'}<br/>"
+        f"<strong>Timeframe:</strong> {getattr(lead, 'timeline', '') or '—'}<br/>"
         f"<strong>Language:</strong> {lead.form_lang or 'en'}</p>"
         f"<p><strong>Reason for selling:</strong><br/>{(lead.reason or '—').replace(chr(10), '<br/>')}</p>"
         f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=seller'>Seller Leads → {lead.email}</a></p>"
@@ -1924,7 +1925,7 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     ))
     asyncio.create_task(_send_lead_sms(
         kind="Seller Lead", name=lead.full_name or "—", phone=lead.phone or "",
-        detail=(getattr(lead, "address", "") or "") + (f" · {getattr(lead, 'timeframe', '')}" if getattr(lead, "timeframe", "") else ""),
+        detail=(getattr(lead, "property_address", "") or "") + (f" · {getattr(lead, 'timeline', '')}" if getattr(lead, "timeline", "") else ""),
     ))
     # CASL-compliant transactional confirmation to the lead.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/valuation-or-seller"))
