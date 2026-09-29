@@ -1473,6 +1473,37 @@ INFO_MAILBOX     = "info@eztofind.ca"
 REALTOR_MAILBOX  = "realtor@eztofind.ca"
 REFERRAL_MAILBOX = "referrals@eztofind.ca"
 
+# ─── Twilio speed-to-lead SMS ────────────────────────────────────────────
+# Instant text to Doug's cell the moment a buyer/seller lead is submitted, so
+# he can call back within minutes. All config is env-driven; if any value is
+# missing the helper no-ops silently (SMS is a nice-to-have, never a blocker).
+TWILIO_ACCOUNT_SID   = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN    = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER   = os.environ.get("TWILIO_FROM_NUMBER")
+LEAD_ALERT_TO_NUMBER = os.environ.get("LEAD_ALERT_TO_NUMBER")
+
+async def _send_lead_sms(*, kind: str, name: str, phone: str = "", detail: str = "") -> None:
+    """Fire a speed-to-lead SMS to Doug. Non-fatal: any failure is logged and
+    swallowed so the lead submission always succeeds."""
+    if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER and LEAD_ALERT_TO_NUMBER):
+        logger.info("[twilio] SMS skipped — Twilio env not fully configured")
+        return
+    body = f"🐾 New {kind}: {name}"
+    if phone:
+        body += f" · {phone}"
+    if detail:
+        body += f"\n{detail}"
+    body += "\nView in CRM: https://eztofind.ca/admin/leads"
+    try:
+        from twilio.rest import Client
+        def _send():
+            client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+            return client.messages.create(body=body[:1500], from_=TWILIO_FROM_NUMBER, to=LEAD_ALERT_TO_NUMBER)
+        msg = await asyncio.to_thread(_send)
+        logger.info(f"[twilio] speed-to-lead SMS sent sid={getattr(msg, 'sid', '?')} status={getattr(msg, 'status', '?')}")
+    except Exception as e:
+        logger.warning(f"[twilio] speed-to-lead SMS failed: {e}")
+
 async def _notify_admin_of_lead(
     *, kind: str, to: str, subject: str, body_html: str, related_id: Optional[str] = None
 ):
@@ -1832,6 +1863,10 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         subject=f"🐾 New {kind} — {lead.full_name}" + (f" ({', '.join(lead.areas or [])})" if lead.areas else ""),
         body_html=body,
     ))
+    asyncio.create_task(_send_lead_sms(
+        kind=kind, name=lead.full_name or "—", phone=lead.phone or "",
+        detail=(", ".join(lead.areas or []) or "") + (f" · {lead.property_type}" if lead.property_type else ""),
+    ))
     # CASL-compliant transactional confirmation to the lead. Fires in the
     # background so submit latency stays sub-second.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/buyer"))
@@ -1886,6 +1921,10 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         to=INFO_MAILBOX,
         subject=f"🐾 New Seller Lead — {lead.full_name}",
         body_html=body,
+    ))
+    asyncio.create_task(_send_lead_sms(
+        kind="Seller Lead", name=lead.full_name or "—", phone=lead.phone or "",
+        detail=(getattr(lead, "address", "") or "") + (f" · {getattr(lead, 'timeframe', '')}" if getattr(lead, "timeframe", "") else ""),
     ))
     # CASL-compliant transactional confirmation to the lead.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/valuation-or-seller"))
