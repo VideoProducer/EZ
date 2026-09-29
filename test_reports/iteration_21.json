@@ -1,0 +1,21 @@
+{
+  "summary": "Frontend-only verification of the four Apple-style preview routes (/home-next, /about-next, /luxury-next, /equestrian-next). All required data-testids render and are visible. Brand logo (eztofind-logo-720.png, 720x175) resolves 200 in the nav on every route. Doug headshot resolves (doug-lemaire.jpg on /home-next and /about-next, doug-headshot-2026.jpg inside hn-identity/luxury-identity/equestrian-identity). Doogie mascot band renders on /home-next (hn-doogie + hn-doogie-img pointing-right-transparent.png, 520x520) with CTA hn-doogie-cta href=/visual-agent-demo. About page: about-title 'Doug LeMaire, REALTOR\u00ae', about-photo loaded, 3 badges rendered, about-cta-valuation \u2192 /valuation, about-cta-buyer \u2192 /buyer. Luxury page: luxury-title, luxury-identity, luxury-mediahero rotating hero loaded 12 live CREA DDF\u00ae listings (luxury-mediahero-mls chip present), 3 principles, both cols, luxury-cta-contact \u2192 /contact, luxury-cta-valuation \u2192 /valuation, luxury-compliance fine-print present. Equestrian page: equestrian-title, equestrian-identity, equestrian-mediahero loaded 12 listings, equestrian-callout, all 5 checklist steps, equestrian-doogie band, equestrian-cta-buyer \u2192 /buyer, equestrian-cta-seller \u2192 /valuation, equestrian-compliance present. Compliance footer (hn-footer + hn-crea-notice) renders on all 4 routes. Zero console/pageerror across all pages. No horizontal overflow at 390px width on any of the 4 routes (scrollWidth==clientWidth==390).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "HomeNextNav uses <img width=720 height=175>: intrinsic file size for a nav logo is oversized; the rendered slot is much smaller. Consider serving a smaller logo asset (e.g., 240x58 @2x) to reduce LCP payload on mobile.",
+    "HnListingHero preloads 12 full-size photos via `new Image()` on mount for both /luxury-next and /equestrian-next. This is ~12 large CDN images per page on load; consider preloading only idx and idx+1 and lazy-hydrating the rest as the interval rotates.",
+    "/about-next uses <img> without explicit width/height on about-photo (.hn-doug__photo). Add width/height (or aspect-ratio in CSS) to avoid CLS.",
+    "All four pages call the same document.querySelector('meta[name=\"robots\"]:not([data-rh])') noindex hack in useEffect. Extract to a small useNoindex() hook to DRY across HomeNext/AboutNext/LuxuryNext/EquestrianNext.",
+    "Pre-existing (out of scope but still valid from iteration_20): TURNSTILE token 400 and HnAddressInput dropdown reopen \u2014 not re-verified on this iteration; not applicable to the 4 marketing routes tested."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only)", "frontend": "100% \u2014 all 4 routes pass every acceptance criterion"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "/home-next, /about-next, /luxury-next, /equestrian-next are fully rendering with all documented data-testids and no console errors. Both live rotating heroes (luxury-mediahero, equestrian-mediahero) pull >=12 photos from /api/listings and /api/listings/equestrian in the preview env. If retesting, note that HnListingHero preloads all 12 photos immediately; wait ~4-5s after page load before asserting slide count. Doogie mascot images live at /images/doogie/pointing-{left,right}-transparent.png. Doug photo is at /images/doug-lemaire.jpg for HomeNextDoug/AboutNext and /doug-headshot-2026.jpg for HnIdentity component.",
+  "rca of the issue": "No issues \u2014 all acceptance criteria met."
+}

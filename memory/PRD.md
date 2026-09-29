@@ -481,6 +481,19 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 - Sections: glass sticky nav → "Find home in BC." hero + search (→ `/listings?q=`) + I'm buying/selling pills + BC landscape (`public/images/home-next-hero.jpg`, AI-generated scenery, not a property) → 3 tiles (search/valuation/Doogie) → live stats (`/api/site/counts`) → SOLD-in-10-days film band (Vimeo 1218107137, FLAGSHIP config) → 3 region cards → single testimonial (`/api/testimonials`) → 4 free tools → compliant footer (BCFSA #, brokerage, CREA trademark, not-intended-to-solicit) → mobile sticky "What's my home worth?" bar → DoogieChat FAB.
 - Backend untouched. Live `/` unchanged. To promote: swap `<Route path="/">` element to `<HomeNext/>` and drop the noindex Helmet/useEffect in HomeNext.jsx.
 
+
+### Jun 2026 — /about-next, /luxury-next, /equestrian-next + brand assets on -next pages (iteration 21, 100% pass)
+- Built three new Apple-style preview pages on the `hn-*` design system, all noindex/nofollow, lazy-loaded, wired in `App.js` (lazy imports + `<Route>` for `/about-next`, `/luxury-next`, `/equestrian-next`):
+  - `pages/AboutNext.jsx` — hero + Doug about band (exact headshot `/images/doug-lemaire.jpg`) + 3 trust badges + Doogie band (dir="left") + testimonial + CTA. Copy adapted/proofread from legacy `/about`.
+  - `pages/LuxuryNext.jsx` — hero with `HnIdentity` headshot + live rotating CREA DDF® ≥$3M hero (`HnListingHero`, city+price filters) + "recent work" + 3 principles + pull-quote + Sellers/Buyers cols + invitation CTA + BCFSA/CREA compliance fine-print. Copy from Doug-approved `LuxuryQuietLanding`.
+  - `pages/EquestrianNext.jsx` — hero + identity + rotating `/api/listings/equestrian` hero + ALR "verify before you buy" callout + 5-step buyer checklist + acreage buy/sell cols + Doogie band + full BCFSA/ALC/DDF compliance fine-print.
+- New shared file `components/homenext/HomeNextShared.jsx`: `HnIdentity` (Doug headshot + BCFSA #167790 line), `HnDoogie` (mascot band; `dir` picks pointing-left/right transparent PNG so Doogie always faces the copy), `HnListingHero` (generic rotating live-listings hero taking a `path`).
+- `/home-next` updated per user: added `HomeNextDoug` about band (exact headshot) in `HomeNextExtras.jsx` and an `HnDoogie` mascot band right after the tiles ("Ask Doogie" area), mascot pointing right toward the copy.
+- Brand assets confirmed byte-identical to user's uploads: logo `/brand/eztofind-logo.webp` (MD5 match), headshot `/images/doug-lemaire.jpg` (MD5 match). Doogie mascots use existing transparent cut-outs (`/images/doogie/pointing-{left,right}-transparent.png`), visually identical to the uploaded white-bg versions but web-ready.
+- CSS: appended shared `-next` blocks to `homeNext.css` (`.hn-idl`, `.hn-doug`, `.hn-doogie`, `.hn-badges`, `.hn-prose`, `.hn-callout`, `.hn-steps`, `.hn-cols`, `.hn-fineblock`, `.hn-phero`, `.hn-pill--light/-lg`). Fixed a specificity bug where `.hn-doogie__txt *` white rule hid the light-pill CTA text.
+- Verified: testing_agent iteration_21 = 100% frontend pass on all 4 routes (logo/headshot/Doogie resolve, both live heroes load 12 listings, all CTAs target correct routes, compliance footer + fine-print present, zero console errors, no 390px overflow).
+- Compliance preserved on every new page: BCFSA #167790 + brokerage, CREA DDF® trademark notice (footer), "not intended to solicit", general-info-only Doogie disclaimer, BCFSA Consumer Protection line on Luxury, ALC/water/septic verify-with-authorities language on Equestrian.
+
 ---
 
 ## Backlog (P0 → P3)
