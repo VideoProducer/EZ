@@ -16,12 +16,17 @@ export const HomeNextNav = () => (
           </div>
         </div>
       </div>
+      <input type="checkbox" id="hn-nav-toggle" className="hn-nav__toggle" aria-hidden="true"/>
+      <label htmlFor="hn-nav-toggle" className="hn-nav__burger" aria-label="Open menu" data-testid="hn-nav-burger"><span/><span/><span/></label>
       <nav className="hn-nav__links" aria-label="Primary">
         <Link to="/listings" data-testid="hn-nav-buy">Buy</Link>
         <Link to="/valuation" data-testid="hn-nav-sell">Sell</Link>
+        <Link to="/luxury-next" data-testid="hn-nav-luxury">Luxury</Link>
+        <Link to="/equestrian-next" data-testid="hn-nav-equestrian">Equestrian</Link>
         <Link to="/communities" data-testid="hn-nav-communities">Communities</Link>
         <Link to="/glossary" data-testid="hn-nav-glossary">Glossary</Link>
         <Link to="/visual-agent-demo" data-testid="hn-nav-doogie">Doogie</Link>
+        <Link to="/buyer" className="hn-nav__links-cta" data-testid="hn-nav-cta-mobile">Talk to Doug</Link>
       </nav>
       <Link to="/buyer" className="hn-nav__cta" data-testid="hn-nav-cta">Talk to Doug</Link>
     </div>

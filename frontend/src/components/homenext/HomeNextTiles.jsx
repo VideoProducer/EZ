@@ -9,16 +9,14 @@ const TILES = [
     body: "Every active listing in BC, straight from the CREA DDF® feed. Map, filters, saved searches.", cta: "Search listings" },
   { id: "valuation", to: "/valuation", Icon: Gauge, title: "What's my home worth?",
     body: "A data-backed market estimate from Doug — not an algorithm guessing. Free, no obligation.", cta: "Get an estimate" },
-  { id: "doogie", to: "/visual-agent-demo", Icon: MessageCircle, img: "/images/doogie/doogie-brand.png", title: "Ask Doogie.",
-    body: "Plain-language information on BC real estate questions, with sources. General information, never advice.", cta: "Start a chat" },
 ];
 
 export const HomeNextTiles = () => (
   <section className="hn-section" data-testid="hn-tiles">
     <div className="hn-wrap">
       <div className="hn-center">
-        <h2 className="hn-h2">Three things. Done well.</h2>
-        <p className="hn-lead">Find a home. Know its value. Understand the market.</p>
+        <h2 className="hn-h2">Two ways to start.</h2>
+        <p className="hn-lead">Find a home, or find out what yours is worth.</p>
       </div>
       <div className="hn-tiles">
         {TILES.map(({ id, to, Icon, img, title, body, cta }) => (
