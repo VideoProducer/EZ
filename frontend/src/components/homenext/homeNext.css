@@ -100,6 +100,9 @@
   border-radius: var(--hn-radius); background: var(--hn-bg-alt);
 }
 .hn-hero__caption { font-size: 12px; color: var(--hn-grey); text-align: right; margin-top: 10px; }
+.hn-hero__caprow { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+.hn-hero__caprow .hn-hero__caption { margin-top: 0; text-align: left; flex: 1; min-width: 200px; }
+.hn-hero__caprow .hn-pill { flex-shrink: 0; }
 .hn-lhero {
   position: relative; width: 100%; aspect-ratio: 16 / 8; border-radius: var(--hn-radius);
   overflow: hidden; background: var(--hn-bg-alt) center/cover no-repeat;
@@ -412,9 +415,6 @@
 /* CTA row + big navy pill */
 .hn-ctarow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 .hn-pill--lg { padding: 13px 26px; font-size: 15px; }
-
-/* Static MLS® chip variant (non-link, corner attribution) */
-.hn-lhero__chip--static { left: auto; right: 16px; bottom: 16px; max-width: none; font-size: 11px; padding: 7px 12px; }
 
 /* Compliance fine print block */
 .hn-fineblock { max-width: 860px; margin: 0 auto; font-size: 12px; color: var(--hn-grey); line-height: 1.7; padding-top: 28px; border-top: 1px solid var(--hn-line); }

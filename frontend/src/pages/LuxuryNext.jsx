@@ -49,6 +49,7 @@ export default function LuxuryNext() {
             <HnListingHero
               path={HERO_PATH}
               testId="luxury-mediahero"
+              browse={{ to: "/listings?price_min=3000000&sort=price_desc", label: "Browse luxury listings" }}
               caption="Live MLS® listings · Greater Vancouver, Fraser Valley & Sea-to-Sky · from $3,000,000 · CREA DDF®"
             />
           </div>

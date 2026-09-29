@@ -46,7 +46,8 @@ export const HnDoogie = ({
 
 // Generic rotating hero — live CREA DDF® photos from any listings path.
 // `path` is everything after the API base, e.g. "/api/listings?price_min=…".
-export const HnListingHero = ({ path, caption, fallback = "/images/home-next-hero.jpg", testId = "hn-mediahero" }) => {
+// `browse` (optional) = { to, label } renders a CTA pill under the caption.
+export const HnListingHero = ({ path, caption, browse, fallback = "/images/home-next-hero.jpg", testId = "hn-mediahero" }) => {
   const [pool, setPool] = useState([]);
   const [idx, setIdx] = useState(0);
 
@@ -81,9 +82,10 @@ export const HnListingHero = ({ path, caption, fallback = "/images/home-next-her
         ))}
         <div className="hn-lhero__shade" aria-hidden="true"/>
         {cur && (
-          <div className="hn-lhero__chip hn-lhero__chip--static" data-testid={`${testId}-mls`}>
-            MLS® {cur.mls_number || cur.listing_key}{cur.city ? ` · ${cur.city}` : ""}
-          </div>
+          <Link to={`/listings/${encodeURIComponent(cur.listing_key)}`} className="hn-lhero__chip" data-testid={`${testId}-chip`}>
+            <strong>{typeof cur.list_price === "number" ? `$${cur.list_price.toLocaleString("en-CA")}` : "View listing"}</strong>
+            <span>{cur.city}{cur.mls_number || cur.listing_key ? ` · MLS® ${cur.mls_number || cur.listing_key}` : ""}</span>
+          </Link>
         )}
         {pool.length > 1 && (
           <div className="hn-lhero__dots" aria-hidden="true">
@@ -91,7 +93,12 @@ export const HnListingHero = ({ path, caption, fallback = "/images/home-next-her
           </div>
         )}
       </div>
-      {caption && <div className="hn-hero__caption">{caption}</div>}
+      {(caption || browse) && (
+        <div className="hn-hero__caprow">
+          {caption && <div className="hn-hero__caption">{caption}</div>}
+          {browse && <Link to={browse.to} className="hn-pill hn-pill--navy" data-testid={`${testId}-browse`}>{browse.label} <ArrowRight size={15}/></Link>}
+        </div>
+      )}
     </div>
   );
 };
