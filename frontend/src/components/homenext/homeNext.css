@@ -429,7 +429,7 @@
 
 /* ═══ About-next concept layout ═══ */
 .hn-abouthero { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 5vw, 72px); align-items: center; }
-.hn-abouthero h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.03; font-weight: 700; letter-spacing: -0.035em; margin: 0 0 20px; }
+.hn-abouthero h1, .hn-abouthero h2 { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.03; font-weight: 700; letter-spacing: -0.035em; margin: 0 0 20px; }
 .hn-abouthero .hn-phero__sub { margin-bottom: 28px; }
 .hn-abouthero__photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: 50% 24%; border-radius: var(--hn-radius); background: var(--hn-bg-alt); box-shadow: 0 30px 80px rgba(0,0,0,.16); display: block; }
 .hn-statrow { display: flex; flex-wrap: wrap; align-items: stretch; margin-top: clamp(36px, 5vw, 64px); border-top: 1px solid var(--hn-line); border-bottom: 1px solid var(--hn-line); }
