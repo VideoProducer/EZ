@@ -10,7 +10,7 @@ export const HnIdentity = ({ testId = "hn-identity" }) => (
     <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" width={56} height={56} decoding="async"/>
     <div>
       <strong>Doug LeMaire, REALTOR®</strong>
-      <span>Fraser Property Management Realty Services Ltd. · BCFSA #167790</span>
+      <span>Fraser Property Management Realty Services Ltd.</span>
     </div>
   </div>
 );

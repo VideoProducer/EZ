@@ -61,7 +61,7 @@ export default function LuxuryNext() {
               <h2 className="hn-h2">Recent work.</h2>
             </div>
             <div className="hn-prose" style={{ margin: "0 auto", textAlign: "center" }}>
-              <p>Notable recent transactions include a private acquisition in South Langley exceeding $3 million, and a $3 million residence in Elgin Chantrell, South Surrey, which went from listing to sold in just 10 days.</p>
+              <p>Notable recent transactions include buyer representation on an acquisition exceeding $3 million plus, and seller representation on a $3 million plus residence that went from listing to sold in 10 days.</p>
             </div>
           </div>
         </section>
