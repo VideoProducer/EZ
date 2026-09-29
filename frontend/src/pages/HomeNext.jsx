@@ -31,7 +31,7 @@ export default function HomeNext() {
       <main>
         <HomeNextHero/>
         <HomeNextTiles/>
-        <HnDoogie dir="right"/>
+        <HnDoogie dir="right" imgSrc="/images/doogie/doogie-thinking.png"/>
         <HomeNextStats/>
         <HomeNextFeatured/>
         <HomeNextDoug/>

@@ -19,6 +19,7 @@ export const HnIdentity = ({ testId = "hn-identity" }) => (
 // mascot on the left points right (toward the text); on the right points left.
 export const HnDoogie = ({
   dir = "right",
+  imgSrc,
   eyebrow = "Ask Doogie",
   title = "Doogie provides helpful information.",
   body = "Plain-language information on BC real estate questions — with the statute or source behind each one. General information, never advice.",
@@ -26,12 +27,12 @@ export const HnDoogie = ({
   cta = "Start a chat",
   testId = "hn-doogie",
 }) => {
-  const img = dir === "left" ? "pointing-left-transparent" : "pointing-right-transparent";
+  const img = imgSrc || `/images/doogie/${dir === "left" ? "pointing-left-transparent" : "pointing-right-transparent"}.png`;
   return (
     <section className="hn-section" data-testid={testId}>
       <div className="hn-wrap">
         <div className={`hn-doogie hn-doogie--${dir}`}>
-          <img src={`/images/doogie/${img}.png`} alt="Doogie, the EZtoFind.ca AI helper" loading="lazy" decoding="async" data-testid={`${testId}-img`}/>
+          <img src={img} alt="Doogie, the EZtoFind.ca AI helper" loading="lazy" decoding="async" data-testid={`${testId}-img`}/>
           <div className="hn-doogie__txt">
             <p className="hn-doogie__eyebrow">{eyebrow}</p>
             <h2 className="hn-h2">{title}</h2>
