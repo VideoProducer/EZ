@@ -897,9 +897,8 @@ export default function DashboardMockup({ homeVariant = "search" }) {
                 display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13,
               }}
             >☰ Menu</button>
-            <span style={{ fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: 16, lineHeight: 1 }} data-testid="mobile-header-wordmark">
-              <span style={{ color: "#fff" }}>EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
-            </span>
+            <img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async" data-testid="mobile-header-wordmark"
+              style={{ height: 26, width: "auto", display: "block", filter: "brightness(0) invert(1)" }}/>
           </div>
         )}
         <TopBar section={section} homeVariant={homeVariant}/>
@@ -1063,9 +1062,8 @@ const Sidebar = ({ section, setSection, onAsk, homeVariant }) => {
           onError={e => { e.currentTarget.style.display = "none"; }}
         />
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, lineHeight: 1 }} data-testid="sidebar-wordmark">
-            <span style={{ color: C.brandBlue }}>EZtoFind</span><span style={{ color: C.brandGold }}>.ca</span>
-          </div>
+          <img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async" data-testid="sidebar-wordmark"
+            style={{ height: 34, width: "auto", display: "block", maxWidth: "100%" }}/>
           <div style={{ fontSize: 10, color: C.navy, marginTop: 4, fontWeight: 700, lineHeight: 1.2 }}>Doug LeMaire · REALTOR®</div>
           <div style={{ fontSize: 9, color: C.muted, marginTop: 2, lineHeight: 1.2 }}>Fraser Property Management Realty Services Ltd</div>
           <img

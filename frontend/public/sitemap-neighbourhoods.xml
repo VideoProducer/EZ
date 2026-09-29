@@ -1670,18 +1670,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/chemainus/n/chemainus</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Chemainus, Chemainus, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Chemainus, Chemainus — BC Neighbourhood</image:title>
-      <image:geo_location>Chemainus, Chemainus, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/nanaimo/n/north-jingle-pot</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -1694,15 +1682,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/penticton/n/main-south</loc>
+    <loc>https://eztofind.ca/community/chemainus/n/chemainus</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Main South, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Main South, Penticton — BC Neighbourhood</image:title>
-      <image:geo_location>Main South, Penticton, British Columbia, Canada</image:geo_location>
+      <image:caption>Chemainus, Chemainus, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Chemainus, Chemainus — BC Neighbourhood</image:title>
+      <image:geo_location>Chemainus, Chemainus, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1715,6 +1703,18 @@
       <image:caption>Sunriver, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Sunriver, Sooke — BC Neighbourhood</image:title>
       <image:geo_location>Sunriver, Sooke, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/penticton/n/main-south</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Main South, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Main South, Penticton — BC Neighbourhood</image:title>
+      <image:geo_location>Main South, Penticton, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1886,15 +1886,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/saanich/n/arbutus</loc>
+    <loc>https://eztofind.ca/community/castlegar/n/ootischenia</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Arbutus, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Arbutus, Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>Arbutus, Saanich, British Columbia, Canada</image:geo_location>
+      <image:caption>Ootischenia, Castlegar, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Ootischenia, Castlegar — BC Neighbourhood</image:title>
+      <image:geo_location>Ootischenia, Castlegar, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1910,15 +1910,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/castlegar/n/ootischenia</loc>
+    <loc>https://eztofind.ca/community/saanich/n/arbutus</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Ootischenia, Castlegar, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Ootischenia, Castlegar — BC Neighbourhood</image:title>
-      <image:geo_location>Ootischenia, Castlegar, British Columbia, Canada</image:geo_location>
+      <image:caption>Arbutus, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Arbutus, Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>Arbutus, Saanich, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2474,18 +2474,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langford/n/luxton</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Luxton, Langford, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Luxton, Langford — BC Neighbourhood</image:title>
-      <image:geo_location>Luxton, Langford, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/duncan/n/west-duncan</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -2495,6 +2483,18 @@
       <image:caption>West Duncan, Duncan, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>West Duncan, Duncan — BC Neighbourhood</image:title>
       <image:geo_location>West Duncan, Duncan, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/langford/n/luxton</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Luxton, Langford, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Luxton, Langford — BC Neighbourhood</image:title>
+      <image:geo_location>Luxton, Langford, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2714,15 +2714,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/victoria/n/downtown</loc>
+    <loc>https://eztofind.ca/community/kelowna/n/springfield-spall</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Downtown, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Downtown, Victoria — BC Neighbourhood</image:title>
-      <image:geo_location>Downtown, Victoria, British Columbia, Canada</image:geo_location>
+      <image:caption>Springfield/Spall, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Springfield/Spall, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>Springfield/Spall, Kelowna, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -2738,15 +2738,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/springfield-spall</loc>
+    <loc>https://eztofind.ca/community/victoria/n/downtown</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Springfield/Spall, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Springfield/Spall, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>Springfield/Spall, Kelowna, British Columbia, Canada</image:geo_location>
+      <image:caption>Downtown, Victoria, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Downtown, Victoria — BC Neighbourhood</image:title>
+      <image:geo_location>Downtown, Victoria, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -3782,18 +3782,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/comox/n/comox-peninsula</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Comox Peninsula, Comox, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Comox Peninsula, Comox — BC Neighbourhood</image:title>
-      <image:geo_location>Comox Peninsula, Comox, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/kamloops/n/south-kamloops</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -3803,6 +3791,18 @@
       <image:caption>South Kamloops, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>South Kamloops, Kamloops — BC Neighbourhood</image:title>
       <image:geo_location>South Kamloops, Kamloops, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/comox/n/comox-peninsula</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Comox Peninsula, Comox, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Comox Peninsula, Comox — BC Neighbourhood</image:title>
+      <image:geo_location>Comox Peninsula, Comox, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4334,18 +4334,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/langford/n/westhills</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Westhills, Langford, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Westhills, Langford — BC Neighbourhood</image:title>
-      <image:geo_location>Westhills, Langford, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/saanich/n/swan-lake</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -4355,6 +4343,18 @@
       <image:caption>Swan Lake, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Swan Lake, Saanich — BC Neighbourhood</image:title>
       <image:geo_location>Swan Lake, Saanich, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/langford/n/westhills</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Westhills, Langford, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Westhills, Langford — BC Neighbourhood</image:title>
+      <image:geo_location>Westhills, Langford, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4766,18 +4766,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/edgewater/n/invermere-rural</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Invermere Rural, Edgewater, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Invermere Rural, Edgewater — BC Neighbourhood</image:title>
-      <image:geo_location>Invermere Rural, Edgewater, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/north-saanich/n/swartz-bay</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -4802,6 +4790,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/edgewater/n/invermere-rural</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Invermere Rural, Edgewater, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Invermere Rural, Edgewater — BC Neighbourhood</image:title>
+      <image:geo_location>Invermere Rural, Edgewater, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/cranbrook/n/cranbrook-north</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -4811,6 +4811,18 @@
       <image:caption>Cranbrook North, Cranbrook, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Cranbrook North, Cranbrook — BC Neighbourhood</image:title>
       <image:geo_location>Cranbrook North, Cranbrook, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/salmo/n/nelson-south-salmo-rural</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Nelson South/Salmo Rural, Salmo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Nelson South/Salmo Rural, Salmo — BC Neighbourhood</image:title>
+      <image:geo_location>Nelson South/Salmo Rural, Salmo, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4871,18 +4883,6 @@
       <image:caption>Bear Mountain, Langford, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Bear Mountain, Langford — BC Neighbourhood</image:title>
       <image:geo_location>Bear Mountain, Langford, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/salmo/n/nelson-south-salmo-rural</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Nelson South/Salmo Rural, Salmo, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Nelson South/Salmo Rural, Salmo — BC Neighbourhood</image:title>
-      <image:geo_location>Nelson South/Salmo Rural, Salmo, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4994,18 +4994,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/cherry-creek-savona</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Cherry Creek/Savona, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Cherry Creek/Savona, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Cherry Creek/Savona, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/lake-country/n/lake-country-south-west</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -5015,6 +5003,18 @@
       <image:caption>Lake Country South West, Lake Country, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Lake Country South West, Lake Country — BC Neighbourhood</image:title>
       <image:geo_location>Lake Country South West, Lake Country, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/cherry-creek-savona</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Cherry Creek/Savona, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Cherry Creek/Savona, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Cherry Creek/Savona, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5258,18 +5258,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sidney/n/sidney-north-east</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Sidney North-East, Sidney, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Sidney North-East, Sidney — BC Neighbourhood</image:title>
-      <image:geo_location>Sidney North-East, Sidney, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/osoyoos/n/osoyoos-rural</loc>
     <lastmod>2026-09-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -5279,6 +5267,18 @@
       <image:caption>Osoyoos Rural, Osoyoos, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Osoyoos Rural, Osoyoos — BC Neighbourhood</image:title>
       <image:geo_location>Osoyoos Rural, Osoyoos, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/sidney/n/sidney-north-east</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Sidney North-East, Sidney, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Sidney North-East, Sidney — BC Neighbourhood</image:title>
+      <image:geo_location>Sidney North-East, Sidney, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

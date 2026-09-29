@@ -10,10 +10,11 @@ export const HnAddressInput = ({ value, onChange, autoFocus = false }) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const box = useRef(null);
+  const picked = useRef("");
 
   useEffect(() => {
     const q = (value || "").trim();
-    if (q.length < 3) { setResults([]); return; }
+    if (q.length < 3 || q === picked.current) { setResults([]); setOpen(false); return; }
     setBusy(true);
     const h = setTimeout(() => {
       fetch(`${API}/api/valuation/geocode?q=${encodeURIComponent(q)}&max_results=5`)
@@ -31,7 +32,7 @@ export const HnAddressInput = ({ value, onChange, autoFocus = false }) => {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const pick = (r) => { setOpen(false); onChange(r.full_address, { locality: r.locality }); };
+  const pick = (r) => { picked.current = r.full_address; setResults([]); setOpen(false); onChange(r.full_address, { locality: r.locality }); };
 
   return (
     <div ref={box} className="hn-addr">

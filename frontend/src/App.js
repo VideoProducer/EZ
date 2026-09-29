@@ -1193,7 +1193,7 @@ const Nav = () => {
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
         <img loading="lazy" decoding="async" src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
-        <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}} data-testid="nav-wordmark"><span><span style={{color:"#0A3D99"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></span>
+        <div><div style={{lineHeight:1,display:"flex",alignItems:"center",gap:"0.5rem"}} data-testid="nav-wordmark"><img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} style={{height:44,width:"auto",display:"block"}} decoding="async"/>
         </div>
         {/* BCFSA prominence requirement: licensed brokerage name must be at
             least 50% of the trade-name/logo size. EZtoFind.ca is 1.4rem, so
@@ -1237,7 +1237,7 @@ const Footer = () => (
       <div>
         <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"1rem"}}>
           <img loading="lazy" decoding="async" src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56,height:56,borderRadius:"50%",border:"2px solid var(--brand-gold)",objectFit:"cover"}}/>
-          <div><div className="font-display" style={{fontSize:"1.3rem",color:"white"}} data-testid="footer-wordmark"><span style={{color:"#fff"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></div>
+          <div><div data-testid="footer-wordmark"><img loading="lazy" decoding="async" src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} style={{height:30,width:"auto",display:"block",filter:"brightness(0) invert(1)"}}/></div>
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
         <p style={{fontSize:"0.88rem",lineHeight:1.6,opacity:0.85}}>EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.</p>

@@ -6,7 +6,7 @@ import { HomeNextListingHero } from "./HomeNextListingHero";
 export const HomeNextNav = () => (
   <header className="hn-nav" data-testid="hn-nav">
     <div className="hn-wrap hn-nav__inner">
-      <Link to="/" className="hn-nav__brand" data-testid="hn-nav-brand">EZtoFind<span>.ca</span></Link>
+      <Link to="/" className="hn-nav__brand" data-testid="hn-nav-brand"><img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async"/></Link>
       <nav className="hn-nav__links" aria-label="Primary">
         <Link to="/listings" data-testid="hn-nav-buy">Buy</Link>
         <Link to="/valuation" data-testid="hn-nav-sell">Sell</Link>

@@ -104,7 +104,7 @@ export const ValuationNextForm = () => {
       setDone(true);
     } catch (x) {
       trackFieldError(ROUTE, "submit", "post_failed");
-      setErr("Something went wrong sending your request. Please check your details and try again.");
+      setErr(x?.response?.data?.detail || "Something went wrong sending your request. Please check your details and try again.");
     } finally { setBusy(false); }
   };
 
@@ -160,9 +160,11 @@ export const ValuationNextForm = () => {
             <input type="checkbox" checked={f.pipa_ack} onChange={e => edit({ pipa_ack: e.target.checked })} required data-testid="vn-pipa-ack"/>
             <span>I acknowledge the <Link to="/privacy">Privacy Policy</Link> (PIPA).</span>
           </label>
-          <TurnstileWidget/>
         </div>
       )}
+
+      {/* Mounted from step 1 so the invisible bot-check token is ready by submit. */}
+      <TurnstileWidget/>
 
       {err && <div className="hn-verr" role="alert" data-testid="vn-error">{err}</div>}
 

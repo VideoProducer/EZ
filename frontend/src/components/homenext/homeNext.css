@@ -39,7 +39,7 @@
 }
 .hn-nav__inner { height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .hn-nav__brand { font-weight: 600; font-size: 17px; letter-spacing: -0.02em; }
-.hn-nav__brand span { color: var(--hn-navy); }
+.hn-nav__brand img { height: 28px; width: auto; display: block; }
 .hn-nav__links { display: flex; gap: 28px; font-size: 13px; color: var(--hn-ink); opacity: 0.85; }
 .hn-nav__links a { transition: opacity 160ms ease; }
 .hn-nav__links a:hover { opacity: 0.55; }

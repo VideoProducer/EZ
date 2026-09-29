@@ -1,0 +1,59 @@
+{
+  "summary": "Full frontend + backend verification of /valuation-next 3-step wizard, /home-next rotating listing hero, and /valuation regression. Positive findings: page/testids all present (hn-nav, vn-title, vn-identity with /doug-headshot-2026.jpg, vn-form, vn-stepper, vn-step-address); empty-address Continue shows vn-error and blocks; DataBC autocomplete populates vn-address-results and vn-address-result-0 fills address; step 2 stepper marks Address done, city-input NOT rendered (city prefilled), property-type + timeline pills toggle aria-checked correctly; vn-currently-listed reveals vn-currently-listed-block and DISABLES Continue; unchecking re-enables; Back returns to step 1 with address retained; step 3 renders name/email/phone/PIPA; submit without PIPA shows correct vn-error text 'Please acknowledge the Privacy Policy to continue.'. Mobile 390x844: no h-overflow, vn-sticky-cta + vn-sticky-call (tel:+16047870851) visible, form usable. /home-next hero: hn-listing-hero + hn-listing-hero-chip render with $price, address+city, MLS® badge, href /listings/<key>; rotation confirmed (West Vancouver $5.18M -> Richmond $3.88M within ~13s); backend feed returns 22 listings, all >= $3M, all cities within Greater Vancouver / Fraser Valley / Sea-to-Sky (West Vancouver, Vancouver, Richmond, Whistler, White Rock, Surrey). /home-next H1 still 'Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home.'. /valuation regression: [data-testid=valuation-form] renders. TWO real issues found — see below.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/leads/seller",
+        "issue": "Returns 400 'Bot check failed — please refresh and try again.' for every submission from /valuation-next (and by extension /valuation) because TURNSTILE_SECRET_KEY is set in backend/.env while the Cloudflare Turnstile widget does not produce a token in the preview/test env (window.__turnstileToken stayed null after 8s on step 3). Verified by direct curl with the exact payload shape the form sends — same 400. This blocks the final vn-done ('Request received.') render and the seller_leads DB write. Impact: end-to-end form submission cannot be verified in this environment.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/valuation/geocode",
+        "issue": "For an exact-civic-number match like '3015 141 St Surrey', DataBC returns the top result with `localityName` missing; backend service (backend/services/bc_data_sources.py line 154) falls back to `p.get('localityType')` and returns `locality: 'City'` (the type descriptor, not the actual municipality). ValuationNextForm then stores city='City' and hides vn-city-input, so the seller lead payload's city field would be literally 'City' rather than 'Surrey'. Fix: prefer localityName; if missing, parse the city out of full_address (`'3015 141 St, Surrey, BC'` → 'Surrey') before returning."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HnAddressInput.jsx",
+        "issue": "After the user clicks an address suggestion (pick), the parent's value changes to r.full_address which re-triggers the debounced useEffect at line 14-26; the fetch re-runs and setOpen(true) re-opens the dropdown. The reopened dropdown is absolutely-positioned and overlaps the Continue (vn-continue) button, so the first user click on Continue is intercepted by whichever dropdown option sits under the cursor — replacing the just-picked address with a different one and leaving the user still on step 1. Reproduced twice in Playwright with force=True clicks failing to advance until Escape + a click elsewhere was injected. Fix: add a `picked` ref (or track lastPickedValue) and skip the refetch/setOpen(true) in the useEffect when the current value equals the last picked full_address; alternatively call setResults([]) inside pick() so the dropdown cannot re-render even if setOpen(true) fires.",
+        "selector": "[data-testid=\"vn-address-input\"] + [data-testid=\"vn-address-results\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Seller-lead submit from /valuation-next",
+        "issue": "Blocked by Turnstile 400 (see backend/critical). vn-done never renders in test env. Could not verify seller_leads DB write or form_route='/valuation-next' persistence end-to-end. Frontend integration wiring (axios POST to `${REACT_APP_BACKEND_URL}/api/leads/seller` with withConversionContext including form_route, representation_eligibility_result, consent_status) is correct per code review; the only missing piece is a real Turnstile token.",
+        "affected_selectors": ["[data-testid=\"vn-submit\"]", "[data-testid=\"vn-done\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "CRITICAL: Unblock preview-env submissions. Either (a) allow TURNSTILE_SECRET_KEY to be unset in the preview env so verify_turnstile() no-ops (see server.py line 1436), or (b) accept the Turnstile test key 1x00000000000000000000AA (which always passes), or (c) allow an env flag like ALLOW_EMPTY_TURNSTILE_FOR_TESTING. Without one of these, no automated lead-submit test can pass on preview and QA cannot confirm form_route='/valuation-next' lands in seller_leads.",
+    "HIGH: Fix HnAddressInput autocomplete dropdown re-opening after pick — the reopened list covers Continue and silently intercepts clicks. Guard the useEffect refetch on a `justPicked` ref or clear `results` inside pick().",
+    "MINOR: Backend geocoder — return the real city name instead of the localityType string. `p.get('localityName') or _extract_city_from_full_address(...)` so downstream forms don't submit city='City'."
+  ],
+  "critical_code_review_comments": [
+    "ValuationNextForm.jsx submit() uses `getTurnstileToken()` synchronously at click time; the TurnstileWidget only mounts when step===2 renders (step 3 UI). If the user completes step 3 in <a few seconds, the widget challenge hasn't returned a token and the POST is guaranteed to 400 in prod-with-secret. Consider mounting TurnstileWidget earlier (e.g., in step 2 already, or preloading on form view) and/or disabling vn-submit until getTurnstileToken() returns non-empty when TURNSTILE_SECRET_KEY is configured.",
+    "HnAddressInput.jsx: pick() sets open=false but doesn't clear results, and the effect at [value] refetches immediately on the picked value, then setOpen(true) re-opens with a fresh list. Design flaw — track picked state.",
+    "ValuationNextForm.jsx step-2 branch relies on `!f.city` to hide vn-city-input; because backend can return locality='City' the check is a false positive and 'City' becomes the submitted city. Either validate f.city is a plausible BC municipality (whitelist from /api/site/counts locality list) or strip literal 'City'/'Unknown' before edit().",
+    "ValuationNextForm.jsx: when currently_listed is true, submit is still allowed to reach the backend if a user somehow bypasses the disabled state (button is only disabled at step 1). Consider also guarding inside submit() with an early return + Article 16 message."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "50% — /api/valuation/geocode + /api/listings pass; /api/leads/seller returns 400 (Turnstile) blocking e2e",
+    "frontend": "85% — all UI + testids + stepper + Article 16 gate + mobile + hero rotation pass; final submit blocked by backend Turnstile 400; autocomplete dropdown-reopens-over-Continue bug interferes with real users"
+  },
+  "seed_data_creation": "none (no seller lead was persisted because the POST 400'd)",
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! not needed — admin lookup was blocked because no seller lead was created due to Turnstile 400.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Environment blocker: TURNSTILE_SECRET_KEY is set in backend/.env so /api/leads/{buyer,seller} 400 without a real Cloudflare token. Turnstile widget does NOT return a token on preview.emergentagent.com — verified window.__turnstileToken=null after 8s and direct curl also 400s with 'Bot check failed'. Ask main agent to unset the secret for the preview env OR accept Cloudflare's always-passes test key '1x00000000000000000000AA' so QA can end-to-end validate lead submission. Autocomplete UX: after clicking a vn-address-result, press Escape and click outside the field before clicking vn-continue in Playwright (force=True alone is insufficient because the dropdown reopens over Continue). Good news: /home-next hero rotation and CREA-DDF feed constraints ($3M+, Greater Vancouver / Fraser Valley / Sea-to-Sky) verified via UI + direct /api/listings call.",
+  "rca of the issue": "1) Seller-lead 400: TURNSTILE_SECRET_KEY environment variable is populated in preview backend/.env so verify_turnstile() at server.py:1432 enforces a real token; the frontend TurnstileWidget cannot obtain one from Cloudflare in the preview iframe/env (widget likely blocked or misconfigured with test key), causing every POST /api/leads/seller to return 400 'Bot check failed'. Fix: either disable the secret in preview or gate the frontend submit-button on token presence and switch to Turnstile test site key + test secret in this env. 2) HnAddressInput dropdown-over-Continue: pick() only calls setOpen(false); the value-change effect refetches and calls setOpen(true) again 300ms later. Fix: guard with a `pickedRef` that skips the effect exactly once after pick, or clear `results` in pick(). 3) locality='City': backend service returns localityType as a fallback for localityName; parse city from full_address instead."
+}

@@ -149,9 +149,17 @@ async def bc_geocoder_autocomplete(query: str, max_results: int = 5) -> Dict[str
         p = f.get("properties", {}) or {}
         geom = f.get("geometry", {}) or {}
         coords = geom.get("coordinates") or [None, None]
+        full_addr = p.get("fullAddress") or p.get("civicAddress") or ""
+        # DataBC omits localityName on some exact civic matches; parse the
+        # municipality out of "3015 141 St, Surrey, BC" rather than falling
+        # back to localityType ("City"), which is a descriptor not a place.
+        locality = p.get("localityName")
+        if not locality:
+            parts = [x.strip() for x in full_addr.split(",")]
+            locality = parts[-2] if len(parts) >= 2 and parts[-1].upper() == "BC" else (parts[-1] if len(parts) >= 2 else None)
         results.append({
-            "full_address": p.get("fullAddress") or p.get("civicAddress") or "",
-            "locality": p.get("localityName") or p.get("localityType"),
+            "full_address": full_addr,
+            "locality": locality,
             "score": p.get("score"),
             "match_type": p.get("matchPrecision"),
             "site_id": p.get("siteID") or p.get("siteId"),
