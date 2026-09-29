@@ -70,6 +70,7 @@ const AdminSacAnalytics = lazy(() => import("./pages/AdminSacAnalytics"));
 const EquestrianLeadMockup = lazy(() => import("./components/EquestrianLeadMockup"));
 const HomepageLeadGenMockup = lazy(() => import("./components/HomepageLeadGenMockup"));
 const ListingMagazine3015 = lazy(() => import("./pages/ListingMagazine3015"));
+const HomeNext = lazy(() => import("./pages/HomeNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
@@ -13659,6 +13660,8 @@ function App() {
           for reference or quick rollback via a single-line route swap. */}
       <Route path="/" element={<DashboardMockup/>}/>
       <Route path="/dashboard" element={<DashboardMockup/>}/>
+      {/* Apple-style homepage candidate — preview at /home-next (noindex) until promoted to "/". */}
+      <Route path="/home-next" element={<HomeNext/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
