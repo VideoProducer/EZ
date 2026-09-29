@@ -20,8 +20,8 @@ export const HnIdentity = ({ testId = "hn-identity" }) => (
 export const HnDoogie = ({
   dir = "right",
   eyebrow = "Ask Doogie",
-  title = "Questions? Doogie has answers.",
-  body = "Plain-language answers to BC real estate questions — with the statute or source behind each one. General information, never advice.",
+  title = "Doogie provides helpful information.",
+  body = "Plain-language information on BC real estate questions — with the statute or source behind each one. General information, never advice.",
   to = "/visual-agent-demo",
   cta = "Start a chat",
   testId = "hn-doogie",

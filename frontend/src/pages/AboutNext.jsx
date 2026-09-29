@@ -129,9 +129,9 @@ export default function AboutNext() {
 
         <HnDoogie
           dir="left"
-          eyebrow="Meet Doogie"
-          title="Doug's AI research helper."
-          body="While you decide whether the time is right to call, Doogie can answer BC real estate questions in plain language — with the statute or source behind each one. General information only, never advice."
+          eyebrow="Ask Doogie"
+          title="Doogie provides helpful information."
+          body="While you decide whether the time is right to call, Doogie shares plain-language information on BC real estate questions — with the statute or source behind each one. General information only, never advice."
           cta="Ask Doogie a question"
         />
 
