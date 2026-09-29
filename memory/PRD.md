@@ -456,6 +456,15 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 - Every listing card links to `/listings/{MLS_ID}` detail page
 - Osoyoos map bug fix: BC-city prefix resolver + debounce
 
+### Jun 2026 — Homepage trim + video fit + listings performance (iteration 18, all tests pass)
+- Homepage featured card (`DashboardMockup.jsx`): details column (address/beds/baths/description) REMOVED per Doug; media card only, full-width, 16:9, max 960px centered.
+- Luxury `FilmSection` (`LuxuryQuietLanding.jsx`): frame 1224/920 → 16:9 (Vimeo 1218107137 is 1280×720) — poster no longer cropped.
+- Perf (frontend): 14 admin/rare pages moved to `React.lazy` + single `<Suspense>` around `<Routes>` in `App.js`. Main bundle 2.26 MB → 1.67 MB (−26%). Equestrian hero img eager + fetchPriority.
+- Perf (backend `server.py`): list endpoints trim `photos` to 6 (`_slim_list_item`, keeps `photo_count`; hero rotator needs ≥6 so DO NOT lower); impression logging batched via `record_impressions` + `asyncio.create_task`; equestrian keyword scan = one alternation regex (`_equestrian_keyword_clause`); `/listings` runs count+find with `asyncio.gather` and caches Equestrian-flavoured queries 5 min in `_EQ_CACHE`; new indexes `(status,created_at)`, `(status,list_price)`, `(status,property_type,created_at|list_price)`. Equestrian `/api/listings` payload 153 KB → 40 KB; cold 1.2 s → 0.75 s, warm 0.18 s.
+- Fixed prebuild inventory drift: glossary count 439 → 440 in `llms.txt`, `llms-full.txt`, `.well-known/ai.json`, `index.html` (build was failing locally).
+- Note: preview proxy/Cloudflare rewrites `Cache-Control` to no-store on /api; the `public, max-age=300` header on `/listings/equestrian` is harmless there.
+
+
 ---
 
 ## Backlog (P0 → P3)

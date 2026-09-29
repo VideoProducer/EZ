@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 18 full-stack verification: (1) Homepage featured section — after a warm/second load renders with SOLD banner + hero card; details column IS removed (dash-featured-address/stats/description all absent); hero is 16:9 (ratio 1.778 at both 1920 and 390) and horizontally centered (left_gap=right_gap=318px inside its section at 1920, max width 960px); video play/close toggles the iframe. (2) Luxury /specialties/luxury film frame is 16:9 (1168×657, ratio 1.778) and clicking it loads luxury-film-iframe. (3) Equestrian landing shows stat-total=974, 7 hero rotation dots (photos>=6 satisfied by the 6-photo trim), 4 sample-* cards; region chip Fraser Valley navigates to /listings?city=…&property_type=Equestrian and cards paint in ~1.32s (68 cards). (4) /listings, /listings?property_type=Equestrian, /listings?city=Surrey all render 54–68 cards. (5) Backend suite (6 tests, all passing): /api/listings?limit=24 trims photos<=6 with photo_count present; /api/listings/equestrian trims photos; equestrian filters+region_chip=200; second cached /api/listings?property_type=Equestrian call was slightly faster; /api/listings/{key} returns the FULL untrimmed photos array (>6). (6) All 9 lazy admin routes plus /compare?demo=1 render real content — no blank pages, no ChunkLoadError, no console errors about undefined components.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "DashboardFeaturedListing (DashboardMockup.jsx)",
+        "issue": "On the very first cold navigation to /, [data-testid=dash-featured-listing] failed to appear within a 20s wait; it only rendered after a page reload (verified twice). Once rendered it is perfect (16:9 hero, centered, no details column, SOLD banner present, video toggle works). Likely a first-paint / data-fetch race between the featured listing fetch and the parent SearchPanel mounting the child. Users hitting the homepage cold may briefly not see the featured card. Not a regression from this iteration's spec but worth noting.",
+        "selector": "[data-testid=\"dash-featured-listing\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_listings_trim.py",
+    "/app/test_reports/pytest/iter18.xml"
+  ],
+  "action_items": [
+    "(Optional) Investigate why /specialties homepage's dash-featured-listing does not paint on the first cold navigation but does after a reload — possibly guard the render on a fetched state rather than requiring the parent SearchPanel to fully mount, or add SSR fallback."
+  ],
+  "critical_code_review_comments": [
+    "React warning still logged on every homepage load: 'Invalid DOM property fetchpriority. Did you mean fetchPriority?' — an <img> somewhere (equestrian hero eager change per spec) is using lowercase attribute in JSX. Change fetchpriority=\"high\" to fetchPriority=\"high\" to silence the console error.",
+    "Hydration warning on homepage: <span> is being rendered inside <option> in DashboardMockup.jsx around line 3006 (the beds/baths select). Wrap the numeric label in {n} directly instead of a <span> to avoid the React hydration warning.",
+    "Some resources 410 Gone in console on homepage — likely stale preloaded assets; safe to ignore but noisy."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100% (6/6)", "frontend": "100% on spec items; 1 non-blocking cold-load quirk" },
+  "seed_data_creation": "none",
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! (not required — admin lazy-route shells render without auth)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Homepage tip: navigate then reload (or wait_until='domcontentloaded' + >=5s + reload) — dash-featured-listing hydrates on the 2nd paint. CREA consent modal 'I Agree — Show Me the Listings' MUST be dismissed after every navigation to /listings, /specialties/*, etc. before selectors resolve. Equestrian cards use data-testid=\"sample-{listing_key}\" (NOT listing-card-*). Region chips are data-testid=\"chip-region-{key}\" (e.g. chip-region-fraser-valley). Backend pytest at /app/backend/tests/test_listings_trim.py covers photo-trim, cache and detail-not-trimmed contract — reuse for regressions.",
+  "rca_of_the_issue": "n/a — no functional bug found in this iteration's scope; the first-load quirk on dash-featured-listing is an ordering/hydration timing issue in the SearchPanel tree, not caused by this iteration's edits."
+}
