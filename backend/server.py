@@ -1482,18 +1482,19 @@ TWILIO_AUTH_TOKEN    = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER   = os.environ.get("TWILIO_FROM_NUMBER")
 LEAD_ALERT_TO_NUMBER = os.environ.get("LEAD_ALERT_TO_NUMBER")
 
-async def _send_lead_sms(*, kind: str, name: str, phone: str = "", detail: str = "") -> None:
+async def _send_lead_sms(*, kind: str, name: str, phone: str = "", detail: str = "", crm_path: str = "/admin") -> None:
     """Fire a speed-to-lead SMS to Doug. Non-fatal: any failure is logged and
     swallowed so the lead submission always succeeds."""
     if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER and LEAD_ALERT_TO_NUMBER):
         logger.info("[twilio] SMS skipped — Twilio env not fully configured")
         return
+    base = os.environ.get("PUBLIC_APP_URL", "https://eztofind.ca").rstrip("/")
     body = f"🐾 New {kind}: {name}"
     if phone:
         body += f" · {phone}"
     if detail:
         body += f"\n{detail}"
-    body += "\nView in CRM: https://eztofind.ca/admin/leads"
+    body += f"\nView in CRM: {base}{crm_path}"
     try:
         from twilio.rest import Client
         def _send():
@@ -1866,6 +1867,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     asyncio.create_task(_send_lead_sms(
         kind=kind, name=lead.full_name or "—", phone=lead.phone or "",
         detail=(lead.property_type or "") + (f" · {', '.join(lead.areas)}" if lead.areas else ""),
+        crm_path="/admin/buyers",
     ))
     # CASL-compliant transactional confirmation to the lead. Fires in the
     # background so submit latency stays sub-second.
@@ -1926,6 +1928,7 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     asyncio.create_task(_send_lead_sms(
         kind="Seller Lead", name=lead.full_name or "—", phone=lead.phone or "",
         detail=(getattr(lead, "property_address", "") or "") + (f" · {getattr(lead, 'timeline', '')}" if getattr(lead, "timeline", "") else ""),
+        crm_path="/admin/sellers",
     ))
     # CASL-compliant transactional confirmation to the lead.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/valuation-or-seller"))
