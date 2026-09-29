@@ -466,6 +466,10 @@ Shipped four ticket audit fixes in one batch — 100% BCFSA / CREA / GVR / CASL 
 
 
 
+### Jun 2026 — /home-next iterations + new headshot
+- `/home-next`: headline → "Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home." (subline removed); featured band shows "Sold in 10 days." (address removed); hero image replaced by `HomeNextListingHero.jsx` — rotating live CREA DDF® detached listings ≥ $3M across BC (`/api/listings?price_min=3000000&property_type=Detached&sort=newest`, 6 s crossfade, price/address/MLS® chip links to `/listings/{key}`, falls back to static landscape).
+- Doug headshot replaced site-wide with the new studio portrait (`LOW RES 2-1_1986.jpg`): saved as `public/images/doug-lemaire.jpg` (full 1200×800) and square face crop written to `public/doug-headshot.jpg` + `public/doug-headshot-2026.jpg`. All 11 source refs to the old `rbfojmea_Linkedin.jpg` URL (App.js ×5, EquestrianLeadMockup, CommunityPageMockupLive, HomepageMockup, prerender_pages.py) now point to `/doug-headshot-2026.jpg`; ~700 prerendered snapshot HTML files sed-updated too. JSON-LD `image` fields use the absolute eztofind.ca URL.
+
 ### Jun 2026 — Apple-style homepage candidate at `/home-next` (iteration 19, 21/21 pass)
 - New preview route `/home-next` (lazy, noindex, no AppLayout) — `pages/HomeNext.jsx` + `components/homenext/{HomeNextHero,HomeNextTiles,HomeNextFeatured,HomeNextExtras}.jsx` + `homeNext.css` (all `hn-*` classes/testids).
 - Sections: glass sticky nav → "Find home in BC." hero + search (→ `/listings?q=`) + I'm buying/selling pills + BC landscape (`public/images/home-next-hero.jpg`, AI-generated scenery, not a property) → 3 tiles (search/valuation/Doogie) → live stats (`/api/site/counts`) → SOLD-in-10-days film band (Vimeo 1218107137, FLAGSHIP config) → 3 region cards → single testimonial (`/api/testimonials`) → 4 free tools → compliant footer (BCFSA #, brokerage, CREA trademark, not-intended-to-solicit) → mobile sticky "What's my home worth?" bar → DoogieChat FAB.

@@ -316,7 +316,7 @@ const DOOGIE_CELEBRATE = "/images/doogie/celebrating.png";
 const DOOGIE_THINKING = "/images/doogie/thinking.webp";
 const DOOGIE_MAGNIFY = "/images/doogie/magnifying.png";
 const DOOGIE_POINT_L_T = "/images/doogie/pointing-left-transparent.webp";
-const DOUG_HEADSHOT = "https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg";
+const DOUG_HEADSHOT = "/doug-headshot-2026.jpg";
 
 // Shared "Authoritative Sources" block — used on glossary + community pages
 const SourcesBlock = ({title, intro, sources, testid}) => (
@@ -1191,7 +1191,7 @@ const Nav = () => {
   return (
     <nav className="nav"><div className="container-x nav-inner">
       <Link to="/" onClick={close} style={{display:"flex",alignItems:"center",gap:"0.75rem",textDecoration:"none"}}>
-        <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
+        <img loading="lazy" decoding="async" src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid var(--brand-gold)"}}/>
         <div><div className="font-display" style={{fontSize:"1.4rem",lineHeight:1,color:"var(--brand-navy)",display:"flex",alignItems:"center",gap:"0.5rem"}} data-testid="nav-wordmark"><span><span style={{color:"#0A3D99"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></span>
         </div>
         {/* BCFSA prominence requirement: licensed brokerage name must be at
@@ -1235,7 +1235,7 @@ const Footer = () => (
     <div className="footer-grid">
       <div>
         <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"1rem"}}>
-          <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56,height:56,borderRadius:"50%",border:"2px solid var(--brand-gold)",objectFit:"cover"}}/>
+          <img loading="lazy" decoding="async" src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" style={{width:56,height:56,borderRadius:"50%",border:"2px solid var(--brand-gold)",objectFit:"cover"}}/>
           <div><div className="font-display" style={{fontSize:"1.3rem",color:"white"}} data-testid="footer-wordmark"><span style={{color:"#fff"}}>EZtoFind</span><span style={{color:"#F9BD00"}}>.ca</span></div>
           <div style={{fontSize:"0.75rem",opacity:0.7}}>Doug LeMaire, REALTOR®</div></div>
         </div>
@@ -2813,7 +2813,7 @@ const Home = () => {
         "@context":"https://schema.org","@type":"RealEstateAgent",
         "@id":"https://eztofind.ca/#doug",
         "name":"Doug LeMaire, REALTOR®",
-        "image":"https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg",
+        "image":"https://eztofind.ca/doug-headshot-2026.jpg",
         "url":"https://eztofind.ca/about",
         "telephone":"+1-604-787-0851",
         "email":"info@eztofind.ca",
@@ -6680,7 +6680,7 @@ const About = () => (<section className="section"><div className="container-x" s
   />
   <div className="eyebrow">About</div><h1 className="section-title">Doug LeMaire, REALTOR®</h1>
   <div style={{display:"flex",gap:"2rem",flexWrap:"wrap",alignItems:"flex-start",marginTop:"2rem"}}>
-    <img loading="lazy" decoding="async" src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
+    <img loading="lazy" decoding="async" src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" style={{width:280,height:340,objectFit:"cover",borderRadius:16,boxShadow:"0 12px 32px rgba(15,42,91,0.15)"}}/>
     <div style={{flex:1,minWidth:280,fontFamily:"Inter,sans-serif",lineHeight:1.75,color:"var(--ink)"}}>
       <p>I'm Doug LeMaire, a licensed REALTOR® with Fraser Property Management Realty Services Ltd. For 13 years I've helped people buy and sell across Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor up to Whistler.</p>
       <p>My work centres on detached homes, acreages and equestrian properties, luxury real estate, residential strata's and probate/estate sales — and it's work I genuinely enjoy.</p>

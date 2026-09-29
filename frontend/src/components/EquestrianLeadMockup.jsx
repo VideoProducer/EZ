@@ -488,7 +488,7 @@ export default function EquestrianLeadMockup() {
           </h1>
 
           <div style={{display:"flex", gap:14, alignItems:"center", flexWrap:"wrap", marginBottom:26}}>
-            <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
+            <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" loading="lazy" decoding="async" style={{width:56, height:56, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover"}}/>
             <div style={{fontSize:"0.9rem", lineHeight:1.4}}>
               <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd.</div>
               <div style={{opacity:0.85, fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · covers Greater Vancouver, Fraser Valley + Sea-to-Sky directly</div>
@@ -836,7 +836,7 @@ function EquestrianLeadForm() {
   return (
     <div id="lead-form" style={{marginTop:56, background:BRAND.navy, color:"white", borderRadius:16, padding:"32px 30px 34px", boxShadow:"0 10px 40px rgba(15,42,91,0.20)"}} data-testid="lead-form">
       <div style={{display:"flex", gap:16, alignItems:"center", flexWrap:"wrap", marginBottom:14}}>
-        <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
+        <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:64, height:64, borderRadius:"50%", border:`2px solid ${BRAND.gold}`, objectFit:"cover", flexShrink:0}}/>
         <div>
           <div style={{fontSize:"0.72rem", letterSpacing:"0.14em", color:BRAND.gold, fontWeight:700}}>SPEAK TO DOUG</div>
           <h2 style={{fontSize:"1.6rem", fontFamily:"'Sora',sans-serif", fontWeight:700, lineHeight:1.15, margin:"4px 0 0"}}>Get the 40-point checklist</h2>

@@ -562,7 +562,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
 
           {isFocus ? (
             <div style={{marginBottom:20,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/rbfojmea_Linkedin.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
+              <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
               <div style={{fontSize:"0.9rem",lineHeight:1.4}}>
                 <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® · covers {community} directly</div>
                 <div style={{opacity:0.85,fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · Fraser Property Management Realty Services Ltd.</div>

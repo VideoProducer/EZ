@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { HomeNextListingHero } from "./HomeNextListingHero";
 
 export const HomeNextNav = () => (
   <header className="hn-nav" data-testid="hn-nav">
@@ -45,19 +46,7 @@ export const HomeNextHero = () => {
           <Link to="/buyer" className="hn-pill" data-testid="hn-cta-buying">I'm buying</Link>
           <Link to="/valuation" className="hn-pill" data-testid="hn-cta-selling">I'm selling</Link>
         </div>
-        <div className="hn-hero__media hn-rise hn-rise-4">
-          <img
-            className="hn-hero__img"
-            src="/images/home-next-hero.jpg"
-            width={1264}
-            height={848}
-            alt="Howe Sound and the Coast Mountains at golden hour, British Columbia"
-            fetchPriority="high"
-            decoding="async"
-            data-testid="hn-hero-image"
-          />
-          <div className="hn-hero__caption">Greater Vancouver · Fraser Valley · Sea-to-Sky</div>
-        </div>
+        <HomeNextListingHero/>
       </div>
     </section>
   );
