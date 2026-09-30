@@ -229,3 +229,23 @@ export const isOutsideFocusArea = (text) => {
   if (t.length < 2) return false;
   return !FOCUS_AREA_CITIES.some(c => t.includes(c));
 };
+
+// Type-ahead suggestions for the Buyer/Seller Insights area fields. Province-wide
+// BC communities so a visitor can pick the exact area in one tap. Title-cased.
+export const BC_COMMUNITY_SUGGESTIONS = [
+  "Vancouver", "West Vancouver", "North Vancouver", "Burnaby", "Richmond",
+  "Surrey", "South Surrey", "White Rock", "Delta", "Tsawwassen", "Ladner",
+  "New Westminster", "Coquitlam", "Port Coquitlam", "Port Moody", "Anmore",
+  "Belcarra", "Maple Ridge", "Pitt Meadows", "Langley", "Cloverdale",
+  "Abbotsford", "Chilliwack", "Mission", "Hope", "Agassiz", "Harrison Hot Springs",
+  "Squamish", "Whistler", "Pemberton", "Bowen Island", "Lions Bay",
+  "Victoria", "Saanich", "Sidney", "Sooke", "Langford", "Colwood", "Oak Bay",
+  "Nanaimo", "Parksville", "Qualicum Beach", "Courtenay", "Comox", "Campbell River",
+  "Port Alberni", "Duncan", "Ladysmith", "Ucluelet", "Tofino",
+  "Kelowna", "West Kelowna", "Vernon", "Penticton", "Osoyoos", "Summerland",
+  "Peachland", "Lake Country", "Salmon Arm", "Kamloops", "Merritt",
+  "Prince George", "Quesnel", "Williams Lake", "Prince Rupert", "Terrace",
+  "Kitimat", "Smithers", "Fort St. John", "Dawson Creek",
+  "Cranbrook", "Nelson", "Castlegar", "Trail", "Rossland", "Revelstoke",
+  "Golden", "Fernie", "Invermere", "Powell River", "Sechelt", "Gibsons",
+];

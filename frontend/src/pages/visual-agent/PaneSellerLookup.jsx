@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Radio, MapPin } from "lucide-react";
-import { C, API, useRotatingRegion } from "./constants";
+import { C, API, useRotatingRegion, BC_COMMUNITY_SUGGESTIONS } from "./constants";
 import { Pill } from "./atoms";
 
 const titleCase = (s) => (s || "").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -84,8 +84,12 @@ export const PaneSellerLookup = ({ focusCity }) => {
             placeholder="Enter a BC city or community (e.g. Kelowna)"
             aria-label="Enter a BC city or community for seller insights"
             data-testid="sellerlookup-area-input"
+            list="seller-bc-communities"
             style={{ flex: 1, border: 0, outline: 0, background: "transparent", fontSize: 13, color: C.navy, minWidth: 0 }}
           />
+          <datalist id="seller-bc-communities">
+            {BC_COMMUNITY_SUGGESTIONS.map((c) => <option key={c} value={c}/>)}
+          </datalist>
         </div>
         <button
           type="submit"

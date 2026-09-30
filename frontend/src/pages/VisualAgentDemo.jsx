@@ -24,7 +24,7 @@ import {
 // /pages/visual-agent/ so this file stays under ~1,800 lines. Nothing behavioural
 // changed during the split; every symbol below is re-imported unchanged.
 import {
-  C, API, DOOGIE, DOOGIE_HEADSHOT,
+  C, API, DOOGIE,
   Pill, Waveform,
   PaneSearch, PaneTour, PaneNeighbourhood,
   PaneBuyerInsights, PaneSellerLookup, PaneQualify,
@@ -1092,30 +1092,22 @@ export default function VisualAgentDemo() {
             transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
             data-testid="visual-agent-avatar"
             style={{
-              width: 96, height: 96, borderRadius: "50%",
-              padding: 4,
-              background: `conic-gradient(from 90deg, ${C.gold}, ${C.blue}, #6C8CFF, ${C.green}, ${C.gold})`,
+              width: 108, height: 108, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
+              background: "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.18), rgba(255,255,255,0.02) 70%)",
               border: "3px solid rgba(255,255,255,0.35)",
             }}
           >
-            <div style={{
-              width: "100%", height: "100%", borderRadius: "50%",
-              background: "#FAF7F0", overflow: "hidden",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "inset 0 2px 8px rgba(15,42,91,0.15)",
-            }}>
-              <img
-                src={DOOGIE_HEADSHOT}
-                alt="Doogie — EZtoFind AI helper"
-                data-testid="doogie-headshot-hero"
-                style={{
-                  width: "108%", height: "108%", objectFit: "cover",
-                  objectPosition: "center 42%", display: "block",
-                }}
-                onError={(e) => { e.currentTarget.style.display = "none"; }}
-              />
-            </div>
+            <img
+              src={DOOGIE.thinking}
+              alt="Doogie — EZtoFind AI helper"
+              data-testid="doogie-headshot-hero"
+              style={{
+                width: 122, height: "auto", display: "block",
+                marginTop: -14, filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.35))",
+              }}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
           </motion.div>
 
           <div style={{ minWidth: 260 }}>
