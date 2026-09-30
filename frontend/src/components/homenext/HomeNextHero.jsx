@@ -35,7 +35,9 @@ export const HomeNextNav = () => {
         <Link to="/equestrian-next" data-testid="hn-nav-equestrian">Equestrian</Link>
         <Link to="/communities" data-testid="hn-nav-communities">Communities</Link>
         <Link to="/glossary" data-testid="hn-nav-glossary">Glossary</Link>
-        <Link to="/visual-agent-demo" data-testid="hn-nav-doogie">Doogie</Link>
+        <Link to="/visual-agent-demo" className="hn-nav__doogie" data-testid="hn-nav-doogie">
+          <img src="/images/doogie/doogie-laptop-hero.png" alt="" aria-hidden="true"/>Doogie
+        </Link>
         <Link to="/buyer" className="hn-nav__links-cta" data-testid="hn-nav-cta-mobile">Talk to Doug</Link>
       </nav>
       <Link to="/buyer" className="hn-nav__cta" data-testid="hn-nav-cta">Talk to Doug</Link>
@@ -55,13 +57,6 @@ export const HomeNextHero = () => {
   return (
     <section className="hn-hero" data-testid="hn-hero">
       <div className="hn-wrap">
-        <img
-          className="hn-hero__mascot hn-rise"
-          src="/images/doogie/doogie-laptop-hero.png"
-          alt="Doogie — the EZtoFind.ca real estate helper"
-          decoding="async"
-          data-testid="hn-hero-mascot"
-        />
         <p className="hn-hero__eyebrow hn-rise">Live MLS® listings across British Columbia</p>
         <h1 className="hn-hero__title hn-rise hn-rise-2" data-testid="hn-hero-title">Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home.</h1>
         <form className="hn-search hn-rise hn-rise-4" onSubmit={submit} role="search" data-testid="hn-search">
