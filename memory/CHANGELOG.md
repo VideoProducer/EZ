@@ -2,6 +2,19 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Area input on Buyer/Seller Insights panes (`/visual-agent-demo`)
+
+**Why**: User reported the "Buyer Insights" and "Seller Insights" scenario panels on `/visual-agent-demo` had no place to enter which BC area/community they wanted insights for (area was only inferred from the top search bar).
+
+**What shipped**
+- `frontend/src/pages/visual-agent/PaneBuyerInsights.jsx` and `PaneSellerLookup.jsx`: added a dedicated area `<form>` (MapPin icon + text input + navy submit button) at the top of each pane. Testids: `buyerinsights-area-input` / `buyerinsights-area-submit` ("Get insights"), `sellerlookup-area-input` / `sellerlookup-area-submit` ("Get seller insights").
+- Effective city = typed area || `focusCity` (search bar) || rotating region. Typing a city + submit re-fetches `GET /api/insights?city=<area>` (live CREA DDF) and updates the header + stat cards. Buyer header now reads "Buyer snapshot · <City>"; seller header "Comparable actives · <City>". Falls back to illustrative rotating figures when a city returns 0 active listings.
+
+**Verification**: testing agent iteration_27.json — 100% frontend pass (inputs present, headers update, Kelowna active=2092 live, Surrey active_comps=4397 live, out-of-area does not crash).
+
+**Still pending (user's earlier image-placement asks, not yet done)**: place "Doogie Laptop" image in the landing-page (`/`) header/hero, and confirm "Doogie Thinking" on `/visual-agent-demo`. Navbar "REALTOR® / Buy" overlap fix + button-consistency check also still open.
+
+
 ## June 2026 — Doogie Interactive Agent (Apple-style) at `/visual-agent-demo-next`
 
 **What shipped**

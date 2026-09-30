@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only verification of the newly added area-input forms on the /visual-agent-demo Buyer Insights and Seller Insights panes. All acceptance criteria passed: inputs and submit buttons present with correct data-testids and labels, headers update to reflect typed city, live CREA DDF stats render (Kelowna active_count=2092, Surrey active_comps=4397, both with 'live' freshness pill), and out-of-area city ('Zzznotacity') does not crash the UI.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/screenshots/buyer_kelowna.png", "/app/test_reports/screenshots/seller_surrey.png"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Visual-agent-demo hero avatar takes ~10-20s to load (lazy chunk). Always click Pause before interacting with scenario tabs. New testids to remember: buyerinsights-area-input, buyerinsights-area-submit ('Get insights'), sellerlookup-area-input, sellerlookup-area-submit ('Get seller insights'). Buyer header format: 'Buyer snapshot · <City>'. Seller header format: 'Comparable actives · <City>'. Backend /api/insights?city=Kelowna returns ~2092 active listings; Surrey returns ~4397.",
+  "test_results_detail": {
+    "hero_load": "PASS",
+    "pause_autoplay": "PASS",
+    "buyerinsights-area-input_present": "PASS",
+    "buyerinsights_submit_label_Get_insights": "PASS",
+    "buyer_header_Kelowna": "PASS (Buyer snapshot · Kelowna, active=2092, live pill)",
+    "sellerlookup-area-input_present": "PASS",
+    "sellerlookup_submit_label_Get_seller_insights": "PASS",
+    "seller_header_Surrey": "PASS (Comparable actives · Surrey, active_comps=4397, live pill)",
+    "out_of_area_no_crash": "PASS"
+  }
+}
