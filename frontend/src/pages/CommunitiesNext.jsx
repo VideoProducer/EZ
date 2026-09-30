@@ -21,15 +21,15 @@ const REGION_META = {
   "Fraser Valley": { img: IMG.fraserValley, weatherSlug: "abbotsford" },
   "Sea-to-Sky": { img: IMG.seaToSky, weatherSlug: "whistler" },
   "Vancouver Island & Gulf Islands": { img: IMG.vancouverIsland, weatherSlug: "victoria" },
-  "Sunshine Coast": { weatherSlug: "sechelt" },
-  "Okanagan": { weatherSlug: "kelowna" },
-  "Southern Interior": { weatherSlug: "kamloops" },
-  "Kootenay": { weatherSlug: "nelson" },
+  "Sunshine Coast": { img: "https://images.pexels.com/photos/16182864/pexels-photo-16182864.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940", weatherSlug: "sechelt" },
+  "Okanagan": { img: "https://images.unsplash.com/photo-1635030955271-570ea77fe8fc?w=1200&q=80", weatherSlug: "kelowna" },
+  "Southern Interior": { img: "https://images.unsplash.com/photo-1721140972905-8f5a8898b9cc?w=1200&q=80", weatherSlug: "kamloops" },
+  "Kootenay": { img: "https://images.unsplash.com/photo-1762161096021-8c610f528c67?w=1200&q=80", weatherSlug: "nelson" },
+  "Northern BC": { img: "https://images.unsplash.com/photo-1626816894318-422017eddfa6?w=1200&q=80", weatherSlug: "prince-george" },
   "Cariboo": { weatherSlug: "williams-lake" },
-  "Northern BC": { weatherSlug: "prince-george" },
   "Central Coast": { weatherSlug: "bella-coola" },
   "Haida Gwaii": { weatherSlug: "masset" },
-};
+};;
 
 // Minimal WMO weather-code → short label (mirrors App.js WMO(), text-only).
 const wmoLabel = (code) => {
@@ -107,7 +107,7 @@ export default function CommunitiesNext() {
   return (
     <div className="hn hn-comm" data-testid="communities-next">
       <Helmet>
-        <title>BC Communities — {total || 240} Community Profiles with Live Climate Data | EZtoFind.ca</title>
+        <title>{`BC Communities — ${total || 240} Community Profiles with Live Climate Data | EZtoFind.ca`}</title>
         <meta name="robots" content="noindex, nofollow" />
         <meta name="description" content="Explore British Columbia community profiles across Greater Vancouver, the Fraser Valley and Sea-to-Sky — each with live climate data, market snapshots and neighbourhood detail." />
       </Helmet>

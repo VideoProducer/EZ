@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of /communities-next Apple-style redesign. Found and fixed one CRITICAL bug (Helmet <title> child interpolation caused an uncaught runtime error that white-screened the entire page with the react-error-overlay). After the one-line fix, ALL functional requirements pass: hero copy, live search, sticky segmented control with 12 regions + All, region filtering, live weather chips on ALL 12 regions, empty/reset state, card navigation to /community/burnaby, 240 total communities across 12 regions, and zero horizontal overflow at 390px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CommunitiesNext <Helmet><title>", "issue": "Helmet requires a single string child in <title>. The original JSX had a string + expression + string child list which triggered 'Invariant Violation: Helmet expects a string as a child of <title>' and rendered a full-screen react-error-overlay, so the /communities-next page was completely unusable in production. Fixed by wrapping the child in a template literal: {`BC Communities — ${total || 240} …`}. This bug also silently affects any deploy since it manifests only at runtime.", "selector": "<title> inside Helmet in CommunitiesNext.jsx line 110", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Sticky segmented control (both desktop and mobile)", "issues": ["Region tab labels are truncated with an ellipsis at their default width (e.g. 'Greater Van', 'Fraser Va', 'Sea-to-S', 'Sunshine C', 'Vancouver Island' → 'Vanc', 'Haida Gu', 'Central C', 'Southern I', 'Okanag', 'Kooter'). Not Apple-like — tab pills should either grow to their content width or be scrolled naturally without mid-word truncation. Recommend removing text-overflow:ellipsis / max-width on .hn-comm-seg__btn and letting the row scroll horizontally (it already scrolls)."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/screenshots/desktop_all.jpg", "/app/test_reports/screenshots/mobile.jpg"],
+  "action_items": [
+    "Review the Helmet <title> fix I applied in /app/frontend/src/pages/CommunitiesNext.jsx (line 110) — keep as template literal or migrate to react-helmet-async's recommended pattern. Consider auditing other Helmet <title> usages in the codebase for the same anti-pattern.",
+    "Design polish: stop truncating segmented-control tab labels — let full region names show; the strip already scrolls horizontally on mobile."
+  ],
+  "critical_code_review_comments": [
+    "Helmet <title> must always receive a single string child (template literal or interpolated string). This class of bug is silent at build time but crashes the page at runtime — worth a lint rule or codemod across the app.",
+    "REGION_META only assigns an image (IMG.*) for 4 regions; the other 8 regions fall back to IMG.bcHero. Visually the bcHero fallback repeats across 8 bands. Consider adding region-specific art for a more cinematic feel.",
+    "RegionWeather makes 12 parallel forecast API calls on mount (one per region). Not a bug, but each is a fresh network hit — cache or debounce if these bands are heavy."
+  ],
+  "updated_files": ["/app/frontend/src/pages/CommunitiesNext.jsx"],
+  "success_rate": {"backend": "N/A (not tested per request)", "frontend": "100% after the Helmet fix (was 0% before — page was white-screened)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Verified: 240 communities across 12 regions; live weather chips populate on all 12 (e.g. Greater Vancouver 11°C · Partly cloudy · live); region filter, search filter, clear, empty state + reset all work; burnaby card navigates to /community/burnaby which loads OK; mobile 390px has 0 horizontal overflow. The only fix I made was the Helmet <title> template-literal wrapping. Design nit: segmented tabs truncate labels with ellipsis.",
+  "rca of the issue": "Root cause: <Helmet><title>BC Communities — {total || 240} Community Profiles ...</title></Helmet> — react-helmet-async parses <title> children and requires a single string. Passing a mixed children array (string, expression, string) triggers 'Invariant Violation: Helmet expects a string as a child of <title>'. Because CommunitiesNext.jsx is lazy-loaded and the crash happens during render, the error surfaces as a react-error-overlay that hides the entire page. Reproduction: open /communities-next → runtime overlay shown, no communities-title testid ever renders. Mitigation applied: wrap children in a template literal so Helmet receives one string."
+}
