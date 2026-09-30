@@ -1044,9 +1044,9 @@ export default function VisualAgentDemo() {
   return (
     <div data-testid="visual-agent-demo-page" style={{ background: C.cream, minHeight: "100vh", paddingBottom: 60 }}>
       <Helmet>
-        <title>Doogie Visual — Interactive Agent Concept · EZtoFind</title>
+        <title>Doogie — Your BC Real Estate Helper · EZtoFind.ca</title>
         <meta name="robots" content="noindex,nofollow"/>
-        <meta name="description" content="Internal concept mockup of an interactive visual agent for BC real estate search, virtual tours, and 24/7 qualification."/>
+        <meta name="description" content="Ask Doogie about active BC listings, neighbourhoods, and real estate terms — general information only, never advice."/>
         {/* Cloudflare Turnstile — needed because /visual-agent-demo is not
             wrapped in AppLayout (which normally loads this globally). */}
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer/>
