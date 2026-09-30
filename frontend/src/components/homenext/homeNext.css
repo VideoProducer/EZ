@@ -497,7 +497,7 @@
 }
 
 /* ── Mobile nav menu (checkbox toggle) ── */
-.hn-nav__toggle { position: absolute; opacity: 0; pointer-events: none; }
+.hn-nav__toggle { display: none; }
 .hn-nav__burger { display: none; }
 .hn-nav__links-cta { display: none; }
 @media (max-width: 960px) {
