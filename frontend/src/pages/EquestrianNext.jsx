@@ -30,7 +30,7 @@ export default function EquestrianNext() {
   return (
     <div className="hn" data-testid="equestrian-next">
       <Helmet>
-        <title>Equestrian & Acreage Properties — British Columbia — EZtoFind.ca</title>
+        <title>Equestrian & Acreage Properties · EZtoFind.ca</title>
         <meta name="robots" content="noindex, nofollow"/>
         <meta name="description" content="Live MLS® listings for horse-friendly acreage across BC, plus a 5-step buyer checklist covering ALR, zoning, water rights, septic and title. Doug LeMaire, REALTOR®."/>
       </Helmet>
