@@ -80,7 +80,7 @@ export default function CommunitiesNext() {
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
-    el.setAttribute("content", "noindex, nofollow");
+    el.setAttribute("content", "index, follow");
     return () => { el.setAttribute("content", prev); };
   }, []);
 
@@ -108,7 +108,7 @@ export default function CommunitiesNext() {
     <div className="hn hn-comm" data-testid="communities-next">
       <Helmet>
         <title>{`BC Communities — ${total || 240} Community Profiles with Live Climate Data | EZtoFind.ca`}</title>
-        <meta name="robots" content="noindex, nofollow" />
+        <meta name="robots" content="index, follow" />
         <meta name="description" content="Explore British Columbia community profiles across Greater Vancouver, the Fraser Valley and Sea-to-Sky — each with live climate data, market snapshots and neighbourhood detail." />
       </Helmet>
       <HomeNextNav />

@@ -1058,30 +1058,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kelowna/n/north-glenmore</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>North Glenmore, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>North Glenmore, Kelowna — BC Neighbourhood</image:title>
-      <image:geo_location>North Glenmore, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/penticton/n/columbia-duncan</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Columbia/Duncan, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Columbia/Duncan, Penticton — BC Neighbourhood</image:title>
-      <image:geo_location>Columbia/Duncan, Penticton, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/tahsis/n/tahsis-zeballos</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -1103,6 +1079,30 @@
       <image:caption>Cranbrook North, Cranbrook, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Cranbrook North, Cranbrook — BC Neighbourhood</image:title>
       <image:geo_location>Cranbrook North, Cranbrook, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kelowna/n/north-glenmore</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>North Glenmore, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>North Glenmore, Kelowna — BC Neighbourhood</image:title>
+      <image:geo_location>North Glenmore, Kelowna, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/penticton/n/columbia-duncan</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Columbia/Duncan, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Columbia/Duncan, Penticton — BC Neighbourhood</image:title>
+      <image:geo_location>Columbia/Duncan, Penticton, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1274,18 +1274,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Eastern Highlands, Highlands, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Eastern Highlands, Highlands — BC Neighbourhood</image:title>
-      <image:geo_location>Eastern Highlands, Highlands, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/spallumcheen/n/armstrong-spall</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -1295,6 +1283,18 @@
       <image:caption>Armstrong/ Spall., Spallumcheen, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Armstrong/ Spall., Spallumcheen — BC Neighbourhood</image:title>
       <image:geo_location>Armstrong/ Spall., Spallumcheen, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/highlands/n/eastern-highlands</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Eastern Highlands, Highlands, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Eastern Highlands, Highlands — BC Neighbourhood</image:title>
+      <image:geo_location>Eastern Highlands, Highlands, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1538,6 +1538,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/oliver/n/oliver-rural</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Oliver Rural, Oliver, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Oliver Rural, Oliver — BC Neighbourhood</image:title>
+      <image:geo_location>Oliver Rural, Oliver, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/creston/n/west-creston</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -1547,18 +1559,6 @@
       <image:caption>West Creston, Creston, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>West Creston, Creston — BC Neighbourhood</image:title>
       <image:geo_location>West Creston, Creston, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/kamloops/n/south-kamloops</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>South Kamloops, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>South Kamloops, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>South Kamloops, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1574,15 +1574,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/oliver/n/oliver-rural</loc>
+    <loc>https://eztofind.ca/community/kamloops/n/south-kamloops</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Oliver Rural, Oliver, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Oliver Rural, Oliver — BC Neighbourhood</image:title>
-      <image:geo_location>Oliver Rural, Oliver, British Columbia, Canada</image:geo_location>
+      <image:caption>South Kamloops, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>South Kamloops, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>South Kamloops, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -1610,18 +1610,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Dawson Creek, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Dawson Creek, Dawson Creek — BC Neighbourhood</image:title>
-      <image:geo_location>Dawson Creek, Dawson Creek, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/salmon-arm/n/ne-salmon-arm</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -1631,6 +1619,18 @@
       <image:caption>NE Salmon Arm, Salmon Arm, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>NE Salmon Arm, Salmon Arm — BC Neighbourhood</image:title>
       <image:geo_location>NE Salmon Arm, Salmon Arm, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Dawson Creek, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Dawson Creek, Dawson Creek — BC Neighbourhood</image:title>
+      <image:geo_location>Dawson Creek, Dawson Creek, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -3326,18 +3326,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/westmount</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Westmount, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Westmount, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Westmount, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/colwood/n/lagoon</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -3347,6 +3335,18 @@
       <image:caption>Lagoon, Colwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Lagoon, Colwood — BC Neighbourhood</image:title>
       <image:geo_location>Lagoon, Colwood, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/westmount</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Westmount, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Westmount, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Westmount, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4010,18 +4010,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/dallas</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Dallas, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Dallas, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Dallas, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/view-royal/n/hospital</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -4043,6 +4031,18 @@
       <image:caption>Wishart North, Colwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Wishart North, Colwood — BC Neighbourhood</image:title>
       <image:geo_location>Wishart North, Colwood, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/dallas</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Dallas, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Dallas, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Dallas, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4094,15 +4094,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek-rural</loc>
+    <loc>https://eztofind.ca/community/metchosin/n/metchosin</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Dawson Creek Rural, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Dawson Creek Rural, Dawson Creek — BC Neighbourhood</image:title>
-      <image:geo_location>Dawson Creek Rural, Dawson Creek, British Columbia, Canada</image:geo_location>
+      <image:caption>Metchosin, Metchosin, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Metchosin, Metchosin — BC Neighbourhood</image:title>
+      <image:geo_location>Metchosin, Metchosin, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4118,15 +4118,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/metchosin/n/metchosin</loc>
+    <loc>https://eztofind.ca/community/dawson-creek/n/dawson-creek-rural</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Metchosin, Metchosin, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Metchosin, Metchosin — BC Neighbourhood</image:title>
-      <image:geo_location>Metchosin, Metchosin, British Columbia, Canada</image:geo_location>
+      <image:caption>Dawson Creek Rural, Dawson Creek, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Dawson Creek Rural, Dawson Creek — BC Neighbourhood</image:title>
+      <image:geo_location>Dawson Creek Rural, Dawson Creek, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4142,15 +4142,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/lake-country/n/lake-country-north-west</loc>
+    <loc>https://eztofind.ca/community/greenwood/n/greenwood</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Lake Country North West, Lake Country, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Lake Country North West, Lake Country — BC Neighbourhood</image:title>
-      <image:geo_location>Lake Country North West, Lake Country, British Columbia, Canada</image:geo_location>
+      <image:caption>Greenwood, Greenwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Greenwood, Greenwood — BC Neighbourhood</image:title>
+      <image:geo_location>Greenwood, Greenwood, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4166,15 +4166,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/greenwood/n/greenwood</loc>
+    <loc>https://eztofind.ca/community/lake-country/n/lake-country-north-west</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Greenwood, Greenwood, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Greenwood, Greenwood — BC Neighbourhood</image:title>
-      <image:geo_location>Greenwood, Greenwood, British Columbia, Canada</image:geo_location>
+      <image:caption>Lake Country North West, Lake Country, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Lake Country North West, Lake Country — BC Neighbourhood</image:title>
+      <image:geo_location>Lake Country North West, Lake Country, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4406,6 +4406,18 @@
     </image:image>
   </url>
   <url>
+    <loc>https://eztofind.ca/community/armstrong/n/armstrong-spall</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Armstrong/ Spall., Armstrong, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Armstrong/ Spall., Armstrong — BC Neighbourhood</image:title>
+      <image:geo_location>Armstrong/ Spall., Armstrong, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
     <loc>https://eztofind.ca/community/kelowna/n/upper-mission</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -4418,15 +4430,15 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/armstrong/n/armstrong-spall</loc>
+    <loc>https://eztofind.ca/community/saanich/n/high-quadra</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
     <image:image>
       <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Armstrong/ Spall., Armstrong, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Armstrong/ Spall., Armstrong — BC Neighbourhood</image:title>
-      <image:geo_location>Armstrong/ Spall., Armstrong, British Columbia, Canada</image:geo_location>
+      <image:caption>High Quadra, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>High Quadra, Saanich — BC Neighbourhood</image:title>
+      <image:geo_location>High Quadra, Saanich, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4451,18 +4463,6 @@
       <image:caption>Lake Country South West, Kelowna, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Lake Country South West, Kelowna — BC Neighbourhood</image:title>
       <image:geo_location>Lake Country South West, Kelowna, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://eztofind.ca/community/saanich/n/high-quadra</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>High Quadra, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>High Quadra, Saanich — BC Neighbourhood</image:title>
-      <image:geo_location>High Quadra, Saanich, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -4682,18 +4682,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/sooke/n/kemp-lake</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Kemp Lake, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Kemp Lake, Sooke — BC Neighbourhood</image:title>
-      <image:geo_location>Kemp Lake, Sooke, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/saanich/n/strawberry-vale</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -4703,6 +4691,18 @@
       <image:caption>Strawberry Vale, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Strawberry Vale, Saanich — BC Neighbourhood</image:title>
       <image:geo_location>Strawberry Vale, Saanich, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/sooke/n/kemp-lake</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Kemp Lake, Sooke, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Kemp Lake, Sooke — BC Neighbourhood</image:title>
+      <image:geo_location>Kemp Lake, Sooke, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5486,18 +5486,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/summerland/n/summerland-rural</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Summerland Rural, Summerland, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Summerland Rural, Summerland — BC Neighbourhood</image:title>
-      <image:geo_location>Summerland Rural, Summerland, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/salmon-arm/n/sw-salmon-arm</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -5507,6 +5495,18 @@
       <image:caption>SW Salmon Arm, Salmon Arm, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>SW Salmon Arm, Salmon Arm — BC Neighbourhood</image:title>
       <image:geo_location>SW Salmon Arm, Salmon Arm, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/summerland/n/summerland-rural</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Summerland Rural, Summerland, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Summerland Rural, Summerland — BC Neighbourhood</image:title>
+      <image:geo_location>Summerland Rural, Summerland, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -5666,18 +5666,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kamloops/n/campbell-creek-deloro</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Campbell Creek/Deloro, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Campbell Creek/Deloro, Kamloops — BC Neighbourhood</image:title>
-      <image:geo_location>Campbell Creek/Deloro, Kamloops, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/penticton/n/main-south</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -5687,6 +5675,18 @@
       <image:caption>Main South, Penticton, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Main South, Penticton — BC Neighbourhood</image:title>
       <image:geo_location>Main South, Penticton, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kamloops/n/campbell-creek-deloro</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Campbell Creek/Deloro, Kamloops, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Campbell Creek/Deloro, Kamloops — BC Neighbourhood</image:title>
+      <image:geo_location>Campbell Creek/Deloro, Kamloops, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>
@@ -6158,18 +6158,6 @@
     </image:image>
   </url>
   <url>
-    <loc>https://eztofind.ca/community/kimberley/n/alpine-resort-area</loc>
-    <lastmod>2026-09-30</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-    <image:image>
-      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
-      <image:caption>Alpine Resort Area, Kimberley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
-      <image:title>Alpine Resort Area, Kimberley — BC Neighbourhood</image:title>
-      <image:geo_location>Alpine Resort Area, Kimberley, British Columbia, Canada</image:geo_location>
-    </image:image>
-  </url>
-  <url>
     <loc>https://eztofind.ca/community/saanich/n/tillicum</loc>
     <lastmod>2026-09-30</lastmod>
     <changefreq>weekly</changefreq>
@@ -6179,6 +6167,18 @@
       <image:caption>Tillicum, Saanich, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
       <image:title>Tillicum, Saanich — BC Neighbourhood</image:title>
       <image:geo_location>Tillicum, Saanich, British Columbia, Canada</image:geo_location>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/community/kimberley/n/alpine-resort-area</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://eztofind.ca/images/doogie-magnifying-glass.png</image:loc>
+      <image:caption>Alpine Resort Area, Kimberley, BC — neighbourhood real estate profile with live MLS® listings on EZtoFind.ca</image:caption>
+      <image:title>Alpine Resort Area, Kimberley — BC Neighbourhood</image:title>
+      <image:geo_location>Alpine Resort Area, Kimberley, British Columbia, Canada</image:geo_location>
     </image:image>
   </url>
   <url>

@@ -37,7 +37,7 @@ export default function AboutNext() {
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
-    el.setAttribute("content", "noindex, nofollow");
+    el.setAttribute("content", "index, follow");
     return () => { el.setAttribute("content", prev); };
   }, []);
 
@@ -61,7 +61,7 @@ export default function AboutNext() {
     <div className="hn" data-testid="about-next">
       <Helmet>
         <title>About Doug LeMaire, REALTOR® — EZtoFind.ca</title>
-        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="robots" content="index, follow"/>
         <meta name="description" content="Meet Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. Thirteen years helping buyers and sellers across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>
       </Helmet>
       <HomeNextNav/>

@@ -207,6 +207,13 @@ export default function AdminHydrateListing() {
   const [tourBusy, setTourBusy] = useState(false);
   const [tourMsg, setTourMsg] = useState("");
 
+  // ── Hide-from-site toggle (Jun 2026) — one-click suppression for sold
+  // listings. Adds/removes the MLS® from the `hidden_listings` collection. ─
+  const [hidden, setHidden] = useState(false);
+  const [hideEnvLocked, setHideEnvLocked] = useState(false);
+  const [hideBusy, setHideBusy] = useState(false);
+  const [hideMsg, setHideMsg] = useState("");
+
   const submit = async (e) => {
     e?.preventDefault();
     const cleaned = (mls || "").trim().toUpperCase();
@@ -301,8 +308,52 @@ export default function AdminHydrateListing() {
       .catch(() => {});
   }, [listing?.city, listing?.community, listing?.listing_key]);
 
-  const saveCommunityOverride = async () => {
+  // Check hide-from-site status whenever a listing loads.
+  React.useEffect(() => {
+    const key = listing?.mls_number || listing?.listing_key;
+    if (!key) return;
+    setHideMsg(""); setHidden(false); setHideEnvLocked(false);
+    axios
+      .get(`${API}/admin/listings/${encodeURIComponent(key)}/visibility`, { withCredentials: true, validateStatus: () => true })
+      .then(r => {
+        if (r.status === 200 && r.data?.ok) {
+          setHidden(!!r.data.hidden);
+          setHideEnvLocked(!!r.data.env_locked);
+        }
+      })
+      .catch(() => {});
+  }, [listing?.mls_number, listing?.listing_key]);
+
+  const toggleHideFromSite = async () => {
     if (!listing) return;
+    const key = listing.mls_number || listing.listing_key;
+    setHideBusy(true); setHideMsg("");
+    try {
+      const r = await axios({
+        method: hidden ? "delete" : "post",
+        url: `${API}/admin/listings/${encodeURIComponent(key)}/hide`,
+        withCredentials: true,
+        validateStatus: () => true,
+      });
+      if (r.status !== 200 || !r.data?.ok) {
+        setHideMsg(`⚠ Failed: ${r.data?.error || r.status}`);
+        return;
+      }
+      setHidden(!!r.data.hidden);
+      setHideEnvLocked(!!r.data.env_locked);
+      if (r.data.hidden && r.data.env_locked && hidden) {
+        setHideMsg("⚠ This MLS® is pinned by server config (HIDDEN_MLS_NUMBERS) and can't be un-hidden from here.");
+      } else {
+        setHideMsg(r.data.hidden ? "✓ Hidden from the public site (removed within ~60s)" : "✓ Now visible on the public site again");
+      }
+    } catch (e) {
+      setHideMsg(`⚠ ${e?.message || e}`);
+    } finally {
+      setHideBusy(false);
+    }
+  };
+
+  const saveCommunityOverride = async () => {    if (!listing) return;
     const key = listing.mls_number || listing.listing_key;
     setCommunityBusy(true); setCommunityMsg("");
     try {
@@ -509,6 +560,55 @@ export default function AdminHydrateListing() {
           <div style={{ marginTop: 12 }}>
             <a href={`/listings/${listing.mls_number || listing.listing_key}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0F2A5B", fontWeight: 600 }}>View on EZtoFind →</a>
           </div>
+        </div>
+      )}
+
+      {/* ── Hide-from-site toggle (Jun 2026) ───────────────────────────
+          One-click suppression for a sold/withdrawn listing. Adds the
+          MLS® to the `hidden_listings` collection so every public query
+          drops it within ~60s. Reversible unless pinned via env var. */}
+      {listing && (
+        <div data-testid="hide-from-site-panel" style={{
+          marginTop: 24, padding: 20, borderRadius: 10,
+          background: hidden ? "#FEF2F2" : "white",
+          border: `1px solid ${hidden ? "#FCA5A5" : "rgba(15,42,91,0.15)"}`,
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>
+            Site visibility
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.72, marginBottom: 12 }}>
+            Status:{" "}
+            <strong data-testid="hide-from-site-status" style={{ color: hidden ? "#991B1B" : "#065F46" }}>
+              {hidden ? "Hidden from the public site" : "Visible on the public site"}
+            </strong>
+            {hideEnvLocked && <span style={{ color: "#991B1B" }}>{" · pinned by server config"}</span>}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              onClick={toggleHideFromSite}
+              disabled={hideBusy || (hidden && hideEnvLocked)}
+              data-testid="hide-from-site-toggle"
+              title={hidden ? "Make this listing public again" : "Remove this sold listing from the public site"}
+              style={{
+                padding: "10px 16px", borderRadius: 8, border: "none",
+                background: hideBusy ? "#94A3B8" : (hidden ? "#065F46" : "#B91C1C"),
+                color: "#fff", fontWeight: 700, fontSize: 13,
+                cursor: (hideBusy || (hidden && hideEnvLocked)) ? "not-allowed" : "pointer",
+                opacity: (hidden && hideEnvLocked) ? 0.6 : 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {hideBusy ? "Saving…" : (hidden ? "Show on site again" : "Hide from site")}
+            </button>
+          </div>
+          {hideMsg && (
+            <div data-testid="hide-from-site-msg" style={{
+              marginTop: 10, padding: "8px 12px", borderRadius: 6,
+              background: hideMsg.startsWith("⚠") ? "#FEE2E2" : "#ECFDF5",
+              color: hideMsg.startsWith("⚠") ? "#991B1B" : "#065F46",
+              fontSize: 13,
+            }}>{hideMsg}</div>
+          )}
         </div>
       )}
 

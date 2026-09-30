@@ -2786,6 +2786,68 @@ async def admin_set_listing_virtual_tour(
     }
 
 
+@api.get("/admin/listings/{key}/visibility")
+async def admin_get_listing_visibility(key: str, _=Depends(verify_admin)):
+    """Report whether a listing is hidden from the public site.
+
+    `hidden` is true if the MLS®/listing key is on the suppression list
+    (env var `HIDDEN_MLS_NUMBERS` OR the `hidden_listings` collection).
+    `env_locked` means it's pinned by the env var and cannot be unhidden
+    from the admin panel (requires a deploy/config change)."""
+    k = (key or "").strip().upper()
+    hidden_all = await _get_hidden_mls()
+    env_locked = k in _HIDDEN_MLS_ENV
+    return {"ok": True, "listing_key": k, "hidden": k in hidden_all, "env_locked": env_locked}
+
+
+@api.post("/admin/listings/{key}/hide")
+async def admin_hide_listing(key: str, _=Depends(verify_admin)):
+    """One-click "Hide from site" — adds the MLS®/listing key to the
+    `hidden_listings` suppression collection so every public listing query
+    (`/api/listings`, detail, similar, by-keys, facets) drops it within
+    ~60s (the `_get_hidden_mls` cache TTL, which we bust immediately here).
+
+    Idempotent. Also flips the local Mongo row's `status` to "Sold" so any
+    cached/detail view renders it as sold rather than active while DDF
+    catches up on the withdrawal."""
+    k = (key or "").strip().upper()
+    if not k:
+        return {"ok": False, "error": "missing_key"}
+    now = now_iso()
+    await db.hidden_listings.update_one(
+        {"listing_key": k},
+        {"$set": {"listing_key": k, "hidden_at": now, "hidden_by": "admin"}},
+        upsert=True,
+    )
+    # Mark the local row sold so it never renders as "Active" anywhere.
+    try:
+        await db.listings.update_many(
+            {"$or": [{"listing_key": k}, {"mls_number": k}]},
+            {"$set": {"status": "Sold"}},
+        )
+    except Exception:
+        pass
+    globals()["_HIDDEN_MLS_CACHE"] = None  # bust the 60s cache immediately
+    return {"ok": True, "listing_key": k, "hidden": True}
+
+
+@api.delete("/admin/listings/{key}/hide")
+async def admin_unhide_listing(key: str, _=Depends(verify_admin)):
+    """Un-hide a listing — removes it from the `hidden_listings` collection.
+
+    Keys pinned via the `HIDDEN_MLS_NUMBERS` env var cannot be un-hidden
+    here (they require a config change); the response flags `env_locked`
+    and reports the listing as still hidden."""
+    k = (key or "").strip().upper()
+    if not k:
+        return {"ok": False, "error": "missing_key"}
+    await db.hidden_listings.delete_one({"listing_key": k})
+    globals()["_HIDDEN_MLS_CACHE"] = None  # bust the 60s cache immediately
+    env_locked = k in _HIDDEN_MLS_ENV
+    return {"ok": True, "listing_key": k, "hidden": env_locked, "env_locked": env_locked}
+
+
+
 @api.get("/admin/sac-analytics")
 async def admin_sac_analytics(_=Depends(verify_admin)):
     """Aggregate every lead attributed to `utm_source=sac` across
@@ -12783,6 +12845,11 @@ async def search_listings(
             {"mls_number":  _mls_lookup},
             {"mls_number":  {"$regex": f"^{re.escape(_mls_lookup)}$", "$options": "i"}},
         ]}
+        # Respect the suppression list even on a direct MLS® paste — a hidden
+        # (sold/withdrawn) listing must never resolve, no matter the entry path.
+        if _hidden_now:
+            _h = list(_hidden_now)
+            mls_query = {"$and": [mls_query, {"listing_key": {"$nin": _h}}, {"mls_number": {"$nin": _h}}]}
         total = await db.listings.count_documents(mls_query)
         cursor = db.listings.find(mls_query, {"_id": 0}).limit(min(limit, 100))
         listings = await cursor.to_list(min(limit, 100))

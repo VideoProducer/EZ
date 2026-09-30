@@ -23,7 +23,7 @@ export default function EquestrianNext() {
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
-    el.setAttribute("content", "noindex, nofollow");
+    el.setAttribute("content", "index, follow");
     return () => { el.setAttribute("content", prev); };
   }, []);
 
@@ -31,7 +31,7 @@ export default function EquestrianNext() {
     <div className="hn" data-testid="equestrian-next">
       <Helmet>
         <title>Equestrian & Acreage Properties · EZtoFind.ca</title>
-        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="robots" content="index, follow"/>
         <meta name="description" content="Live MLS® listings for horse-friendly acreage across BC, plus a 5-step buyer checklist covering ALR, zoning, water rights, septic and title. Doug LeMaire, REALTOR®."/>
       </Helmet>
       <HomeNextNav/>

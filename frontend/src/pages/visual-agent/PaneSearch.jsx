@@ -79,7 +79,7 @@ export const PaneSearch = ({ query, setQuery, committed, onCommit }) => {
         >Search</button>
       </form>
       <div style={{ fontSize: 11, color: "#6B7280", marginTop: -2 }}>
-        Prefer voice? Tap <strong>Ask by voice</strong> at the top-right and just say where you're looking.
+        Prefer voice? Tap the <strong>mic</strong> in the search box and just say where you're looking.
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>

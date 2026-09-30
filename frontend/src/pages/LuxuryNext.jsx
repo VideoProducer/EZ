@@ -27,7 +27,7 @@ export default function LuxuryNext() {
     const el = document.querySelector('meta[name="robots"]:not([data-rh])');
     if (!el) return;
     const prev = el.getAttribute("content");
-    el.setAttribute("content", "noindex, nofollow");
+    el.setAttribute("content", "index, follow");
     return () => { el.setAttribute("content", prev); };
   }, []);
 
@@ -35,7 +35,7 @@ export default function LuxuryNext() {
     <div className="hn" data-testid="luxury-next">
       <Helmet>
         <title>Luxury Real Estate — Greater Vancouver, Fraser Valley & Sea-to-Sky — EZtoFind.ca</title>
-        <meta name="robots" content="noindex, nofollow"/>
+        <meta name="robots" content="index, follow"/>
         <meta name="description" content="Quiet, private representation for significant homes across Greater Vancouver, the Fraser Valley and Sea-to-Sky. Doug LeMaire, REALTOR® — priced with care, presented with restraint."/>
       </Helmet>
       <HomeNextNav/>
