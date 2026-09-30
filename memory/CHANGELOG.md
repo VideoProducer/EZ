@@ -2,6 +2,13 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Tiles centering, Doogie mascot → nav, Kiosk removal
+
+- **"Two ways to start" centering**: the 2 tiles were left-aligned in a 3-col grid; added `.hn-tiles--2` (2 cols capped 380px, `justify-content:center`; stacks full-width ≤960px). `HomeNextTiles.jsx` + `homeNext.css`. Verified iteration_29 (equal 330px gaps at 1440px).
+- **Doogie mascot relocated**: removed the large laptop-Doogie from the home hero; added a small ~30px version beside the "Doogie" top-nav link (`.hn-nav__doogie`). `HomeNextHero.jsx` + `homeNext.css`. Verified iteration_30 (no overflow 1440/1200/390).
+- **Kiosk removed** from `/visual-agent-demo`: deleted the Kiosk button, forced `kioskMode` off, disabled the fullscreen overlay render (`{false && kioskMode && …}`), and dropped `?kiosk=1` from the homepage onboarding tour (`App.js` startTour). Verified iteration_31 (button + overlay absent even on `?kiosk=1`; other controls intact). NOTE: dead kiosk overlay JSX left in place (inert) — optional future cleanup.
+
+
 ## June 2026 — Doogie images, area type-ahead, nav overlap fix
 
 **What shipped**

@@ -1,0 +1,21 @@
+{
+  "summary": "Verified removal of the Kiosk button and kiosk overlay on /visual-agent-demo. Both on the plain URL and on ?kiosk=1, the Kiosk button ([data-testid=visual-agent-kiosk]) is absent, no button labelled 'Kiosk' exists, and the fullscreen overlay ([data-testid=visual-agent-kiosk-overlay]) does not render. The remaining controls (toggle-play, restart, Scripted/Live toggle) render intact and the page loads normally (hero, listings, etc.).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "VisualAgentDemo.jsx uses '{false && kioskMode && (...)}' dead-code guard — works, but the entire kiosk overlay JSX and kioskMode state should be removed outright to reduce dead code and bundle size."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Kiosk removal on /visual-agent-demo is confirmed. Page loads within 1s, hero + controls (Play/Pause, Restart, Scripted/Live, Ask by voice) render correctly. ?kiosk=1 does not activate the overlay (kioskMode forced false). Suggest E1 clean up the remaining dead kiosk overlay JSX in VisualAgentDemo.jsx.",
+  "rca of the issue": "N/A — removal verified."
+}
