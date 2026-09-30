@@ -725,3 +725,8 @@ After next deploy, verify on production:
 - SOLD badge on R3156192 featured listing renders correctly on mobile ✅
 
 
+
+
+---
+### June 2026 — see CHANGELOG.md
+Latest work (Doogie Interactive Agent Apple-style page at `/visual-agent-demo-next`) is logged in `/app/memory/CHANGELOG.md`. PRD kept static below 700-line target; new dated entries go to CHANGELOG.md.

@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only verification of new Apple-style /visual-agent-demo-next page. Page renders (not stuck on Suspense fallback), all required data-testids present, consent gate works, prompt chip populates the Doogie input via ez-doogie-ask CustomEvent, SSE assistant reply streams and renders (verified visually with rich markdown answer + source badge), listing-search query submits and starts rendering, and mobile 390px viewport shows zero horizontal overflow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/visual-agent-demo-next", "issues": ["Minor: Google Fonts preload console warnings (Inter/Playfair) — non-blocking but wastes bandwidth; consider removing unused <link rel=preload> or matching the actually-used font weights."]}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/screenshots/agent_next_desktop.png", "/app/test_reports/screenshots/agent_next_after_send.png", "/app/test_reports/screenshots/agent_next_mobile.png"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "VisualAgentDemoNext.jsx cleanly reuses DoogieChat in embedded mode — good separation of concerns.",
+    "STARTERS -> ask() -> window CustomEvent('ez-doogie-ask') pattern works, but is a slightly loose contract; consider passing a callback prop into DoogieChat instead of relying on a global event for testability.",
+    "Assistant message bubbles do not appear to expose a stable `data-testid` (e.g. doogie-msg-<idx> or doogie-assistant-msg). Adding one would make future automated verification of streaming replies far more reliable — currently testers must fall back to text-content heuristics or screenshots."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% of listed acceptance criteria verified"},
+  "test_credentials": "none required (public preview route)",
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The lazy chunk for VisualAgentDemoNext takes 3-6s to resolve behind the preview proxy — always wait for data-testid='visual-agent-next' with >=20s timeout before asserting render. Assistant message bubbles currently lack a dedicated data-testid, so verify streaming via visible text/screenshot or by counting `.hn-agent` chat elements rather than `[data-testid^=\"doogie-msg-\"]`.",
+  "rca of the issue": "n/a — all listed features passed."
+}
