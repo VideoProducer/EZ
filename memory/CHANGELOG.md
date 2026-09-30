@@ -36,3 +36,10 @@
 **Notes**
 - LESSON: `react-helmet-async` `<title>` must receive a SINGLE string child — never `{`...${x}...`}` split as string+expression+string. Use one template literal. Worth auditing other Helmet titles.
 - Not yet deployed — preview route for Doug's review before promoting to the live `/communities`.
+
+## June 2026 — Back & Home controls on all Apple-style pages
+
+- Added a compact **Back** button (browser `navigate(-1)`) and **Home** link (→ `/`) to the top-left of the shared `HomeNextNav` (`components/homenext/HomeNextHero.jsx`), so they appear on every `-next` page (home, valuation, about, luxury, equestrian, communities, Doogie). Labels on desktop; icon-only pills on mobile (<640px). Styles under `.hn-nav__jump` / `.hn-nav__jumpbtn` in `homeNext.css`.
+- Fixed a latent click-interception bug surfaced by the new Back button: the mobile burger checkbox `.hn-nav__toggle` (position:absolute; opacity:0) overlaid the nav and swallowed real mouse clicks on the Back button. Changed it to `display:none` — the mobile menu still toggles via `label[for]` + `:checked ~ .hn-nav__links`, and the overlay is gone on all viewports.
+- Verified: iteration_25 (found the Back click-interception bug) → iteration_26 (100% pass after fix: Back real-click navigates back, Home → '/', mobile burger still opens/closes, no 390px overflow).
+- Also: Luxury page CTA copy updated — removed "South Surrey"/"Greater Vancouver", now reads "The Lower Mainland, Fraser Valley and Sea to Sky Corridor. No obligation." (`pages/LuxuryNext.jsx`).

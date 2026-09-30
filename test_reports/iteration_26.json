@@ -1,0 +1,33 @@
+{
+  "summary": "Re-verified Back-button real-mouse click fix on HomeNextNav and mobile burger regression. Both work. Back button centroid now resolves to <SPAN> (icon inside button), NOT input.hn-nav__toggle. Real mouse click on Back on /luxury-next navigates back to previous history entry ('/'). Mobile burger still toggles open/close even though checkbox is display:none, via label[for]+ :checked sibling selector.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "N/A",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Fix in /app/frontend/src/components/homenext/homeNext.css (.hn-nav__toggle { display:none }) is verified. Desktop 1920px: on /luxury-next after SPA nav from '/', document.elementFromPoint at Back centroid returns SPAN (inside BUTTON), real mouse click navigates to '/'. Mobile 390px: buy link hidden by default; burger click sets checkbox.checked=true and shows nav-buy; second click closes. No horizontal overflow (scrollW 390 == clientW 390). Back and Home icons remain visible in mobile top bar.",
+  "test_results_detail": {
+    "back_click_topmost_element": {"tag": "SPAN", "cls": "", "id": "", "testid": null},
+    "back_click_url_change": "/luxury-next -> /",
+    "home_link_verified_in_prev_iteration": true,
+    "mobile_burger_buy_before": false,
+    "mobile_burger_buy_after_open": true,
+    "mobile_burger_buy_after_close": false,
+    "checkbox_computed_display": "none",
+    "checkbox_checked_toggle": "false -> true -> false",
+    "mobile_overflow": {"scrollW": 390, "clientW": 390},
+    "mobile_back_visible": true,
+    "mobile_home_visible": true
+  },
+  "rca of the issue": "N/A - fix confirmed. Previously input.hn-nav__toggle absolutely-positioned overlay (opacity:0) intercepted pointer events on desktop. Setting display:none removes it from the hit-testing tree entirely; label click still toggles :checked, so mobile menu CSS `.hn-nav__toggle:checked ~ .hn-nav__links { display:flex }` continues to function."
+}
