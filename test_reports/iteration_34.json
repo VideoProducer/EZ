@@ -1,0 +1,16 @@
+{
+  "summary": "Verified all four asks in this session: (1) noindex→index on /communities, /about, /specialties/luxury, /specialties/equestrian; (2) Doogie page white persistent search bar removed and Doogie embed still functional; (3) admin Hydrate Listing 'Site visibility' panel with hide/show toggle works end-to-end (UI flip + success msg + backend effect confirmed: public search total=0 and detail=410 while hidden, and reappears after unhide via direct MLS search).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/backend_test.py"],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin: doug@eztofind.ca / Doug2026Login! (cookie-based). Used listing MLS/key 1044895 (Port Hardy) fetched via GET /api/listings?limit=1.",
+  "seed_data_creation": "None (used existing DDF listing).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Admin hide flow: login via POST /api/admin/login sets eztoken httpOnly cookie; on /admin/hydrate-listing enter MLS in data-testid=hydrate-mls-input, submit, wait for data-testid=hydrate-success (live DDF, up to 30-45s), then hide-from-site-panel appears with toggle. Endpoints: GET/POST/DELETE /api/admin/listings/{key}/hide + /visibility. Public search excludes hidden; detail returns 410 while hidden. After unhide, generic search may not show it until next DDF sync but ?q={mls} direct MLS search returns it immediately (confirmed total=1).",
+  "rca of the issue": "N/A — no bugs found this iteration."
+}

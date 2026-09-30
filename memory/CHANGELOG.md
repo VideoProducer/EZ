@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Doogie page cleanup + SEO indexing + admin Hide-from-site
+
+**#1 Doogie page (`/visual-agent-demo`, `VisualAgentDemo.jsx`)** — Removed the navy hero banner (title/avatar/pills/waveform/Scripted-Live/Ask-by-voice/Pause/Restart) AND the white persistent search bar. Page now opens: compliance strip → Chat with Doogie embed. Fixed stale "Ask by voice at the top-right" hint in `visual-agent/PaneSearch.jsx` → "Tap the mic in the search box".
+
+**#2 SEO indexing** — Promoted pages `/communities`, `/about`, `/specialties/luxury`, `/specialties/equestrian` switched from `noindex,nofollow` to `index, follow` (both the Helmet meta and the runtime useEffect in each `*Next.jsx`).
+
+**#3 Admin Hide-from-site toggle** — New admin-only endpoints in `server.py` (~L2788): `GET /api/admin/listings/{key}/visibility`, `POST .../hide`, `DELETE .../hide`. Reuses existing `hidden_listings` Mongo collection + `_get_hidden_mls()` cache (busted immediately on toggle). Hiding also sets the local row `status=Sold`. Public exclusion added to the MLS-direct-lookup branch in `search_listings` (was leaking hidden listings on direct MLS paste). UI: "Site visibility" panel + one-click toggle on `AdminHydrateListing.jsx` (data-testid `hide-from-site-panel`/`-status`/`-toggle`/`-msg`). Verified 100% by testing_agent (iteration_34): hidden → public search total=0 + detail HTTP 410; unhide restores via direct MLS search.
+
+
 ## June 2026 — PIPA erasure + PII-access audit log + advertising cleanup
 
 **#1 PII-access audit log (PIPA s.34/35)** — `backend/server.py` `_log_pii_access()` + `pii_access_log` collection. `GET /api/admin/contacts/{type}/{id}` now records each view (admin_email, action, source_type, contact_id, **SHA-256 email hash** — not raw PII, IP, user-agent, timestamp). Append-only.
