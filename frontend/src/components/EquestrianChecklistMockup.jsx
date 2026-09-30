@@ -98,7 +98,7 @@ export default function EquestrianChecklistMockup() {
     zoning: "RS-3 (Rural Residential)",
     alr: "Yes — parcel entirely within ALR",
     farmClass: "Class 9 (Farm) — currently classified",
-    brokerage: "Sample BC Listing Brokerage",
+    brokerage: "Listing Brokerage (see REALTOR.ca)",
   };
 
   return (

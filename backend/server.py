@@ -3741,16 +3741,41 @@ async def _load_lead(source_type: str, contact_id: str) -> tuple[dict, str]:
     return None, ""
 
 
+async def _log_pii_access(request, admin_email, source_type, contact_id, contact_email, action="view"):
+    """PIPA s.34/35 safeguard — append-only audit trail of admin access to lead
+    PII. Stores a SHA-256 hash of the email (never the raw address) so the audit
+    log itself does not duplicate personal information (data minimization)."""
+    import hashlib
+    try:
+        email = (contact_email or "").strip().lower()
+        await db.pii_access_log.insert_one({
+            "accessed_at": datetime.now(timezone.utc).isoformat(),
+            "admin_email": admin_email or "unknown",
+            "action": action,
+            "source_type": source_type,
+            "contact_id": contact_id,
+            "contact_email_hash": (hashlib.sha256(email.encode()).hexdigest() if email else None),
+            "ip": _rate_limit_key(request),
+            "user_agent": (request.headers.get("user-agent") or "")[:300],
+        })
+    except Exception as e:
+        logger.warning(f"[pii_access_log] failed to record access: {e}")
+
+
 @api.get("/admin/contacts/{source_type}/{contact_id}")
 async def get_admin_contact(
     source_type: str, contact_id: str,
-    _=Depends(verify_admin),
+    request: Request,
+    admin=Depends(verify_admin),
 ):
     if source_type not in ("buyer", "seller", "referral"):
         raise HTTPException(400, "source_type must be buyer|seller|referral")
     doc, _kind = await _load_lead(source_type, contact_id)
     if not doc:
         raise HTTPException(404, "Contact not found")
+
+    # PIPA safeguard — record who viewed this contact's PII (append-only).
+    await _log_pii_access(request, admin.get("email"), source_type, contact_id, doc.get("email"), action="view")
 
     # Stage — read the parallel record.
     stage_row = await db.contact_stages.find_one(
@@ -3833,6 +3858,78 @@ async def get_admin_contact(
         "emails": email_rows,
         "timeline": timeline,
     }
+
+
+class PurgeRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@api.post("/admin/contacts/{source_type}/{contact_id}/purge")
+async def purge_admin_contact(
+    source_type: str, contact_id: str,
+    request: Request,
+    body: Optional[PurgeRequest] = None,
+    admin=Depends(verify_admin),
+):
+    """PIPA right-to-erasure (s.23) — permanently destroys a contact's
+    identifying records and writes an immutable destruction attestation.
+
+    Note on email_outbox: sent-message rows are ANONYMIZED (recipient replaced
+    with a one-way hash) rather than deleted, because CASL s.6 and BCFSA impose a
+    separate proof-of-consent / record-keeping retention obligation on messages
+    already sent. We destroy the PII but keep the send event for that audit.
+    """
+    import hashlib
+    if source_type not in ("buyer", "seller", "referral"):
+        raise HTTPException(400, "source_type must be buyer|seller|referral")
+    doc, kind = await _load_lead(source_type, contact_id)
+    if not doc:
+        raise HTTPException(404, "Contact not found")
+
+    email = (doc.get("email") or "").strip().lower()
+    email_hash = hashlib.sha256(email.encode()).hexdigest() if email else None
+    affected: dict = {}
+
+    # 1. The lead record itself (buyer_leads / seller_leads / referral_requests).
+    lead_coll = {"seller": "seller_leads", "buyer": "buyer_leads", "referral": "referral_requests"}[kind]
+    r = await db[lead_coll].delete_many({"id": contact_id})
+    affected[lead_coll] = r.deleted_count
+
+    # 2. Parallel CRM records keyed by (source_type, contact_id).
+    for coll in ("contact_stages", "contact_stage_history", "contact_notes"):
+        r = await db[coll].delete_many({"source_type": source_type, "contact_id": contact_id})
+        affected[coll] = r.deleted_count
+
+    # 3. email_outbox — anonymize recipient, preserve the send event (CASL/BCFSA).
+    outbox_anon = 0
+    if email:
+        rx = {"$regex": f"^{re.escape(email)}$", "$options": "i"}
+        res = await db.email_outbox.update_many(
+            {"to": rx},
+            {"$set": {"to": f"erased:{email_hash[:16]}", "pii_erased": True,
+                      "pii_erased_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        outbox_anon = res.modified_count
+    affected["email_outbox_anonymized"] = outbox_anon
+
+    # 4. Immutable erasure attestation (append-only; contains no raw PII).
+    attestation = {
+        "erased_at": datetime.now(timezone.utc).isoformat(),
+        "admin_email": admin.get("email"),
+        "source_type": source_type,
+        "contact_id": contact_id,
+        "contact_email_hash": email_hash,
+        "reason": (body.reason if body else None) or "PIPA right-to-erasure request",
+        "collections_affected": affected,
+        "ip": _rate_limit_key(request),
+        "attestation": (
+            f"PIPA s.23 erasure — identifying records for contact {contact_id} "
+            f"permanently destroyed; email send-events anonymized for CASL/BCFSA retention."
+        ),
+    }
+    await db.erasure_log.insert_one(dict(attestation))
+    await _log_pii_access(request, admin.get("email"), source_type, contact_id, email, action="erase")
+    return {"ok": True, "erased": True, **attestation}
 
 
 @api.post("/admin/contacts/{source_type}/{contact_id}/notes")

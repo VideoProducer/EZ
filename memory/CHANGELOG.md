@@ -2,6 +2,19 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — PIPA erasure + PII-access audit log + advertising cleanup
+
+**#1 PII-access audit log (PIPA s.34/35)** — `backend/server.py` `_log_pii_access()` + `pii_access_log` collection. `GET /api/admin/contacts/{type}/{id}` now records each view (admin_email, action, source_type, contact_id, **SHA-256 email hash** — not raw PII, IP, user-agent, timestamp). Append-only.
+
+**#2 Right-to-erasure (PIPA s.23)** — new `POST /api/admin/contacts/{source_type}/{contact_id}/purge` (admin-gated). Hard-deletes lead (buyer/seller/referral) + contact_stages + contact_stage_history + contact_notes; **anonymizes** email_outbox recipients (`to` → `erased:<hash>`, `pii_erased=true`) to satisfy CASL s.6/BCFSA send-record retention while removing PII. Writes immutable `erasure_log` attestation (admin, hashed email, per-collection counts, reason, IP). Verified E2E: throwaway lead erased → 404, logs written, zero raw-email leftovers.
+
+**#3 SMS/CASL — N/A by design.** `_notify_lead_sms` (server.py:1476) only texts the operator's own `LEAD_ALERT_TO_NUMBER`, never consumers → no consumer CASL consent/STOP obligation. Documented; must be added if consumer texting is ever introduced.
+
+**#4 Advertising cleanup** — replaced placeholder `"Sample BC Listing Brokerage"` in `EquestrianChecklistMockup.jsx` with DDF-compliant `"Listing Brokerage (see REALTOR.ca)"`. Confirmed BCFSA/CREA trademark + licensee notice renders via both site footers (`AppLayout` App.js:1312 and `HomeNextFooter` HomeNextExtras.jsx:81/95).
+
+Not yet deployed to production.
+
+
 ## June 2026 — Glossary source link-health fix + Last-verified + tighter mapping
 
 **(a) Link-health audit & fixes** — checked all 53 unique glossary source URLs. Government portals (www2.gov.bc.ca, canada.ca, crtc.gc.ca) bot-block server-side requests but are valid in-browser (left unchanged). Fixed 8 genuine 404s in `backend/glossary_sources.py`, each re-verified 200:
