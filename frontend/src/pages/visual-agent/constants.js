@@ -224,6 +224,33 @@ export const FOCUS_AREA_CITIES = [
   "mount currie","lillooet lake",
 ];
 
+// Deterministic illustrative weekly price series for a community's sparkline.
+// The final point is anchored to the community's REAL current median (in $M)
+// from CREA DDF®; the preceding weeks are a stable, community-seeded illustrative
+// path (NOT historical sale data and NOT a forecast). Falls back to ~0.9M.
+export const buildTrendSeries = (seedStr, endValueM, points = 12) => {
+  const end = (typeof endValueM === "number" && endValueM > 0) ? endValueM : 0.9;
+  const s = (seedStr || "bc").toLowerCase();
+  let seed = 7;
+  for (let i = 0; i < s.length; i++) seed = (seed * 31 + s.charCodeAt(i)) % 2147483647;
+  const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const arr = new Array(points);
+  arr[points - 1] = end;
+  for (let i = points - 2; i >= 0; i--) {
+    const delta = (rand() - 0.46) * end * 0.018; // gentle ±~1.8% weekly drift
+    arr[i] = Math.max(end * 0.82, Math.min(end * 1.15, arr[i + 1] - delta));
+  }
+  return arr;
+};
+
+// Parse a display median like "$1.28M" / "$950K" into a numeric $M value.
+export const parseMedianM = (str) => {
+  if (typeof str !== "string") return 0;
+  const num = parseFloat(str.replace(/[^0-9.]/g, ""));
+  if (isNaN(num)) return 0;
+  return /k/i.test(str) ? num / 1000 : num;
+};
+
 export const isOutsideFocusArea = (text) => {
   const t = (text || "").trim().toLowerCase();
   if (t.length < 2) return false;

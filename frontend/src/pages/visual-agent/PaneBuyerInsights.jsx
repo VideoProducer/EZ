@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ShieldCheck, Radio, MapPin } from "lucide-react";
-import { C, API, useRotatingRegion, BC_COMMUNITY_SUGGESTIONS } from "./constants";
+import { C, API, useRotatingRegion, BC_COMMUNITY_SUGGESTIONS, buildTrendSeries, parseMedianM } from "./constants";
 import { Pill } from "./atoms";
 
 const titleCase = (s) => (s || "").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -55,7 +55,8 @@ export const PaneBuyerInsights = ({ focusCity }) => {
   }, [region.city]);
 
   const b = region.buyer;
-  const trend = b.trend;
+  const medianM = (live && live.median_list_price) ? live.median_list_price / 1e6 : (parseMedianM(b.median) || 0.9);
+  const trend = buildTrendSeries(region.city, medianM);
   const minV = Math.min(...trend), maxV = Math.max(...trend);
   const trendW = 260, trendH = 60;
   const pts = trend.map((v, i) => {
@@ -63,7 +64,7 @@ export const PaneBuyerInsights = ({ focusCity }) => {
     const y = trendH - ((v - minV) / (maxV - minV || 1)) * trendH;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
-  const trendArrow = b.direction === "up" ? "▲" : b.direction === "down" ? "▼" : "→";
+  const trendArrow = trend[trend.length - 1] > trend[0] ? "▲" : trend[trend.length - 1] < trend[0] ? "▼" : "→";
 
   const fmtM = (n) => {
     if (!n) return "—";
@@ -140,10 +141,10 @@ export const PaneBuyerInsights = ({ focusCity }) => {
       </div>
 
       {/* 90-day list-price trend sparkline */}
-      <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }}>
+      <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 14 }} data-testid="buyerinsights-sparkline">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>90-day median list price · trend</div>
-          <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Past & present list prices — not a forecast</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>90-day median list price · {region.city}</div>
+          <div style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Illustrative — anchored to today's CREA DDF® median, not a forecast</div>
         </div>
         <svg viewBox={`0 0 ${trendW} ${trendH}`} width="100%" height={trendH + 6} style={{ overflow: "visible" }}>
           <defs>
@@ -163,7 +164,7 @@ export const PaneBuyerInsights = ({ focusCity }) => {
           <circle cx={trendW} cy={trendH - ((trend[trend.length-1] - minV)/(maxV-minV||1))*trendH} r="4" fill={C.gold}/>
         </svg>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#6B7280", marginTop: 2 }}>
-          <span>12 weeks ago · ${minV.toFixed(2)}M</span>
+          <span>~12 weeks ago · ${trend[0].toFixed(2)}M</span>
           <span>Now · ${trend[trend.length-1].toFixed(2)}M {trendArrow}</span>
         </div>
       </div>
