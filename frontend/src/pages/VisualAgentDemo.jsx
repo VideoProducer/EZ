@@ -171,15 +171,7 @@ export default function VisualAgentDemo() {
   // (React state closures were re-triggering the PIPA gate instead of starting the mic).
   const voicePipaAckRef = useRef(false);
   useEffect(() => { voicePipaAckRef.current = voicePipaAck; }, [voicePipaAck]);
-  const [kioskMode, setKioskMode] = useState(() => {
-    // Auto-enter kiosk mode when the URL carries ?kiosk=1 — used by the
-    // homepage onboarding flow to route directly into hands-free tour mode.
-    try {
-      if (typeof window === "undefined") return false;
-      const sp = new URLSearchParams(window.location.search);
-      return sp.get("kiosk") === "1";
-    } catch { return false; }
-  });   // fullscreen voice-only
+  const [kioskMode, setKioskMode] = useState(false);   // kiosk mode removed — always off
   // Kiosk audio — Doogie speaks answers aloud in Kiosk mode via /api/doogie/tts.
   // Speaker defaults ON; user can mute via the speaker toggle in the kiosk overlay.
   // Autoplay policy: the mic tap is a user gesture, so subsequent audio playback
@@ -1198,14 +1190,6 @@ export default function VisualAgentDemo() {
               <button data-testid="visual-agent-restart" onClick={restart} style={btnGhost} aria-label="Restart demo">
                 <RotateCcw size={14}/> Restart
               </button>
-              <button
-                data-testid="visual-agent-kiosk"
-                onClick={() => setKioskMode(true)}
-                style={{ ...btnGhost, background: "rgba(30,79,207,0.25)", border: `1px solid ${C.blue}` }}
-                aria-label="Enter voice-only kiosk mode"
-              >
-                <Maximize2 size={14}/> Kiosk
-              </button>
             </div>
             {voiceError && (
               <div data-testid="voice-error" style={{
@@ -1559,9 +1543,9 @@ export default function VisualAgentDemo() {
         Doogie shares general information — not advice. Full disclosures on our <a href="/compliance" style={{ color: C.blue, fontWeight: 600 }}>Compliance page</a>.
       </div>
 
-      {/* ── Kiosk Mode — fullscreen voice-only view for open-house tablets ─── */}
+      {/* Kiosk Mode removed — overlay disabled */}
       <AnimatePresence>
-        {kioskMode && (
+        {false && kioskMode && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             data-testid="visual-agent-kiosk-overlay"

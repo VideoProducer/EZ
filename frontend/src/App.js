@@ -2591,7 +2591,7 @@ const DoogieOnboarding = () => {
   };
   const startTour = () => {
     dismiss();
-    nav(`/visual-agent-demo?kiosk=1&mode=${encodeURIComponent(mode)}`);
+    nav(`/visual-agent-demo?mode=${encodeURIComponent(mode)}`);
   };
   const pillStyle = (m) => ({
     padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700,

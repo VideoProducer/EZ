@@ -1,0 +1,31 @@
+{
+  "summary": "Verified Doogie mascot relocation on EZtoFind.ca home page. Hero mascot removed; small Doogie image (~30px) now renders inside top-nav Doogie link before text. No horizontal overflow at 1440/1200/390. Mobile burger menu shows Doogie link with image.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_checks": {
+    "hero_mascot_removed": true,
+    "nav_doogie_img_present": true,
+    "img_src": "/images/doogie/doogie-laptop-hero.png",
+    "img_natural_width": 1536,
+    "img_rendered_height_px": 30,
+    "img_before_text": true,
+    "overflow_1440": {"scrollWidth": 1440, "clientWidth": 1440, "overflow": false},
+    "overflow_1200": {"scrollWidth": 1200, "clientWidth": 1200, "overflow": false},
+    "overflow_390": {"scrollWidth": 390, "clientWidth": 390, "overflow": false},
+    "mobile_burger_doogie_visible_with_img": true,
+    "nav_no_overlap_with_brand_1440": "brand right=317.75, first nav link (Buy) left=725.15 — clear gap"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration_30 verified nav-image relocation (hero mascot removed, tiny 30px Doogie image added to nav link). All acceptance criteria met at 1440/1200/390 widths."
+}
