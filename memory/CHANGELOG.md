@@ -20,3 +20,19 @@
 - The internal screenshot tool captures the brief `Loading…` Suspense fallback for this app's lazy routes (returns an early frame regardless of in-script waits). Use the testing agent or `wait_for_selector('[data-testid="visual-agent-next"]', timeout>=20s)` for reliable visual checks.
 - Assistant message bubbles still lack a dedicated `data-testid` (shared component) — optional future improvement for test reliability.
 - Deployed together with the earlier late UI tweaks (mobile hamburger menu, testimonial font, white-eyes Doogie on `/`) that missed the previous deploy.
+
+## June 2026 — Apple-style BC Communities index at `/communities-next`
+
+**What shipped** (backend untouched — same `GET /api/communities` `{region:[names]}` payload)
+- New page `frontend/src/pages/CommunitiesNext.jsx` on the `homenext` design system: hero (eyebrow + "Explore BC communities." + live-count subtitle), Apple pill search field with clear button, glassy sticky region segmented control (All + 12 regions), cinematic per-region image bands, and a responsive grid of typographic community cards linking to the existing `/community/{slug}` detail pages.
+- Honours the page's "live climate data" promise: each region band shows a LIVE current-temperature chip (pulsing green dot) fetched from the existing `GET /api/community/{slug}/forecast` (one representative city per region) — no per-community weather calls.
+- Region bands use real landscape photos: Greater Vancouver / Fraser Valley / Sea-to-Sky / Vancouver Island (existing shared assets), plus curated Unsplash/Pexels shots for Sunshine Coast, Okanagan, Southern Interior, Kootenay, Northern BC. Cariboo / Central Coast / Haida Gwaii use a shared BC default.
+- CSS: `.hn-comm*` block appended to `components/homenext/homeNext.css`. Route `/communities-next` (lazy, noindex preview) added in `App.js`. Live `/communities` page left untouched.
+
+**Verification**
+- iteration_23.json: testing agent found + fixed a CRITICAL `<Helmet><title>` crash (mixed string+expression children white-screened the page) — fixed by wrapping the title in a single template literal. 100% functional pass after fix (240 communities across 12 regions, filter/search/clear/empty, card nav, live weather, zero 390px overflow).
+- iteration_24.json (post design tweaks): 100% — all 13 tabs show full labels (no ellipsis; scrollWidth==clientWidth), 9 distinct region band images confirmed, live weather chips on all 12 regions, desktop tabs wrap to 2 rows / mobile scrolls horizontally, no page overflow. Subjective read: "clean and Apple-like."
+
+**Notes**
+- LESSON: `react-helmet-async` `<title>` must receive a SINGLE string child — never `{`...${x}...`}` split as string+expression+string. Use one template literal. Worth auditing other Helmet titles.
+- Not yet deployed — preview route for Doug's review before promoting to the live `/communities`.
