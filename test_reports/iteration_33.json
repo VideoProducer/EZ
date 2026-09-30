@@ -1,0 +1,48 @@
+{
+  "summary": "Frontend-only test of 90-day price-trend sparkline on /visual-agent-demo Buyer & Seller Insights panes. All acceptance criteria met.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "buyer_sparkline_kelowna": {
+      "sparkline_present": true,
+      "svg_polyline_present": true,
+      "title": "90-day median list price · Kelowna",
+      "now_value": "$0.80M",
+      "start_value": "$0.78M",
+      "label_present": "Illustrative — anchored to today's CREA DDF® median, not a forecast"
+    },
+    "buyer_sparkline_vancouver": {
+      "sparkline_present": true,
+      "title": "90-day median list price · Vancouver",
+      "now_value": "$1.35M",
+      "start_value": "$1.33M",
+      "differs_from_kelowna": true
+    },
+    "seller_sparkline_surrey": {
+      "sparkline_present": true,
+      "svg_polyline_present": true,
+      "title": "90-day median list price · Surrey",
+      "now_value": "$1.05M",
+      "start_value": "$1.04M"
+    },
+    "no_regression": {
+      "stat_cards_render": true,
+      "freshness_pill_render": true,
+      "area_input_render": true,
+      "deep_link_present_vancouver": true,
+      "deep_link_present_surrey": true,
+      "js_errors": "none (only harmless font preload warnings)"
+    }
+  },
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Sparkline verified end-to-end: buyerinsights-sparkline and sellerlookup-sparkline both render <svg><polyline>, titles include city name, 'Now · $X.XXM' anchors to live /api/insights median_list_price/1e6 (Kelowna=$0.80M, Vancouver=$1.35M, Surrey=$1.05M). Community-specific shapes confirmed via distinct start/end values per city. No JS errors. Autoplay was paused before running tests via visual-agent-toggle-play."
+}

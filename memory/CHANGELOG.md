@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — 90-day price-trend sparklines (Buyer + Seller Insights)
+
+- Added `buildTrendSeries(seedStr, endValueM)` + `parseMedianM()` to `visual-agent/constants.js`. Series is community-seeded (stable, distinct per place) and its final "Now" point is anchored to the community's REAL current median from `GET /api/insights` (`median_list_price/1e6`); preceding weeks are illustrative.
+- Buyer pane (`PaneBuyerInsights.jsx`): existing sparkline now anchors to the live median + labelled "Illustrative — anchored to today's CREA DDF® median, not a forecast" (`data-testid=buyerinsights-sparkline`).
+- Seller pane (`PaneSellerLookup.jsx`): added the same sparkline block after the stat cards (`data-testid=sellerlookup-sparkline`).
+- Data note: no real per-community daily series exists (only 2 `market_reports` monthly docs; `price_snapshots`/`community_price_history` empty), so the historical path is illustrative and clearly disclaimed — the current median is real.
+- Verified iteration_33 — 100%: Kelowna $0.80M, Vancouver $1.35M, Surrey $1.05M (match live medians), distinct shapes, no regression.
+
+
 ## June 2026 — Doogie chat on agent page, route promotion, insights deep-link
 
 - **Real Doogie chat on `/visual-agent-demo`**: embedded the working `DoogieChat mode="embedded"` (Claude via Emergent LLM key, multi-turn `session_id`, `POST /api/doogie/chat`) inside `[data-testid=visual-agent-doogie-embed]`, just above the scenario tabs. `VisualAgentDemo.jsx` now imports `DoogieChat` from `../App`. Verified iteration_32 — streamed a full strata-fees reply.
