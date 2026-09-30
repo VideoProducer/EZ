@@ -148,6 +148,7 @@
 
 /* ── Tiles ───────────────────────────────────────────── */
 .hn-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.hn-tiles--2 { grid-template-columns: repeat(2, minmax(0, 380px)); justify-content: center; }
 .hn-tile {
   display: flex; flex-direction: column; gap: 10px;
   background: var(--hn-bg-alt); border-radius: var(--hn-radius);
@@ -255,6 +256,7 @@
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 960px) {
   .hn-tiles, .hn-regions { grid-template-columns: 1fr; }
+  .hn-tiles--2 { grid-template-columns: 1fr; justify-content: stretch; }
   .hn-tools { grid-template-columns: repeat(2, 1fr); }
   .hn-featured { grid-template-columns: 1fr; gap: 28px; }
   .hn-tile { min-height: 0; }

@@ -18,7 +18,7 @@ export const HomeNextTiles = () => (
         <h2 className="hn-h2">Two ways to start.</h2>
         <p className="hn-lead">Find a home, or find out what yours is worth.</p>
       </div>
-      <div className="hn-tiles">
+      <div className="hn-tiles hn-tiles--2">
         {TILES.map(({ id, to, Icon, img, title, body, cta }) => (
           <Link to={to} className="hn-tile" key={id} data-testid={`hn-tile-${id}`}>
             {img
