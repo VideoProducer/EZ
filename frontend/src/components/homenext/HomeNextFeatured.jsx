@@ -45,7 +45,7 @@ export const HomeNextFeatured = () => {
           </p>
           <Link to="/valuation" className="hn-pill hn-pill--navy" data-testid="hn-featured-cta">What's my home worth?</Link>
           <p className="hn-featured__fine">
-            MLS® {FLAGSHIP.mls_number}. Not intended to solicit properties currently listed for sale or buyers under contract with another REALTOR®.
+            Not intended to solicit properties currently listed for sale or buyers under contract with another REALTOR®.
           </p>
         </div>
       </div>
