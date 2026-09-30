@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Apple-style Glossary preview (/glossary-next)
+
+Built the reimagined glossary as a `noindex` preview route (backend untouched):
+- New `pages/GlossaryNext.jsx` at `/glossary-next`; lazy route + `HomeNextNav`/`HomeNextFooter` shell, `homeNext.css`.
+- Wired to the live `GET /api/glossary` (440 real terms) — calm centered hero + big pill search, A–Z jump index (with `#` for numeric terms, greyed inactive letters), dynamic category filter chips, clean term cards (navy term, 3-line definition, warm-gold category/source tag w/ external-link icon) linking to the real `/glossary/{slug}`, sticky letter markers.
+- Muted palette: white / navy / soft-blue accent, gold reserved only for source tags.
+- Verified via Playwright on desktop (1440) + mobile (390): 440 cards, 33 chips, hero, correct title, zero console errors. Not yet redeployed to production.
+
+
 ## June 2026 — Retired the Doogie chat page site-wide
 
 Per user request, fully removed the standalone Doogie chat experience:
