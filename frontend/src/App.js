@@ -75,6 +75,7 @@ const ValuationNext = lazy(() => import("./pages/ValuationNext"));
 const AboutNext = lazy(() => import("./pages/AboutNext"));
 const LuxuryNext = lazy(() => import("./pages/LuxuryNext"));
 const EquestrianNext = lazy(() => import("./pages/EquestrianNext"));
+const VisualAgentDemoNext = lazy(() => import("./pages/VisualAgentDemoNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
@@ -1555,6 +1556,15 @@ export const DoogieChat = ({ mode = "fab" }) => {
     const handler = () => setOpen(true);
     window.addEventListener("ez-open-doogie", handler);
     return () => window.removeEventListener("ez-open-doogie", handler);
+  }, []);
+
+  // Allow the Apple-style /visual-agent-demo-next suggestion chips to drop a
+  // prompt straight into the input via `new CustomEvent("ez-doogie-ask", {detail})`.
+  // Opens the panel and prefills the text so the visitor can review + send.
+  useEffect(() => {
+    const h = (e) => { if (e && e.detail) { setOpen(true); setInput(String(e.detail)); } };
+    window.addEventListener("ez-doogie-ask", h);
+    return () => window.removeEventListener("ez-doogie-ask", h);
   }, []);
 
   // Honor `?ask=<query>` in the URL — search results and external links can
@@ -13672,6 +13682,7 @@ function App() {
       <Route path="/about-next" element={<AboutNext/>}/>
       <Route path="/luxury-next" element={<LuxuryNext/>}/>
       <Route path="/equestrian-next" element={<EquestrianNext/>}/>
+      <Route path="/visual-agent-demo-next" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemoNext/></Suspense>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
