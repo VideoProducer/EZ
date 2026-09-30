@@ -5,7 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
-import { HnIdentity, HnListingHero, HnDoogie } from "../components/homenext/HomeNextShared";
+import { HnIdentity, HnListingHero } from "../components/homenext/HomeNextShared";
 import { DoogieChat } from "../App";
 
 const HERO_PATH = "/api/listings/equestrian?sort=price_asc&limit=24&price_min=2000000";
@@ -90,16 +90,6 @@ export default function EquestrianNext() {
             </div>
           </div>
         </section>
-
-        <HnDoogie
-          dir="left"
-          imgSrc="/images/doogie/doogie-thinking-transparent.png"
-          eyebrow="Ask Doogie"
-          title="Not sure what ALR or a water licence means?"
-          body="Doogie explains BC acreage terms in plain language, with the statute or authority behind each answer. General information only — always verify specifics with the listing REALTOR®, the municipality and the Agricultural Land Commission."
-          cta="Ask Doogie a question"
-          testId="equestrian-doogie"
-        />
 
         <section className="hn-section hn-section--alt" data-testid="equestrian-cta">
           <div className="hn-wrap hn-center">

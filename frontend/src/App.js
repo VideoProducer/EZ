@@ -43,7 +43,6 @@ const CompareListings = lazy(() => import("./pages/CompareListings"));
 // homepage bundle stays lean and LCP hits sooner — the intake UI loads
 // as the user scrolls / navigates. DashboardMockup stays eager because
 // it drives the homepage itself, so lazy-loading it would delay LCP.
-const VisualAgentDemo = lazy(() => import("./pages/VisualAgentDemo"));
 const DoogieGPTPreview = lazy(() => import("./pages/DoogieGPTPreview"));
 // Lead-magnet mockups — print-ready + interactive drafts. Lazy-loaded so
 // they don't bloat the main bundle since they only render on their own routes.
@@ -75,7 +74,6 @@ const ValuationNext = lazy(() => import("./pages/ValuationNext"));
 const AboutNext = lazy(() => import("./pages/AboutNext"));
 const LuxuryNext = lazy(() => import("./pages/LuxuryNext"));
 const EquestrianNext = lazy(() => import("./pages/EquestrianNext"));
-const VisualAgentDemoNext = lazy(() => import("./pages/VisualAgentDemoNext"));
 const CommunitiesNext = lazy(() => import("./pages/CommunitiesNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
@@ -2596,7 +2594,6 @@ const DoogieOnboarding = () => {
   };
   const startTour = () => {
     dismiss();
-    nav(`/visual-agent-demo?mode=${encodeURIComponent(mode)}`);
   };
   const pillStyle = (m) => ({
     padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700,
@@ -2741,20 +2738,6 @@ const DoogieOnboarding = () => {
               }}
             >
               {speaking ? "◼ Stop intro" : `▶ Hear Doogie's 15-second ${mode === "all" ? "" : mode + " "}intro`}
-            </button>
-          )}
-          {showMainFlow && (
-            <button
-              type="button"
-              onClick={startTour}
-              data-testid="home-onboarding-tour"
-              style={{
-                background: "#16A34A", color: "#fff",
-                border: "none", borderRadius: 999, padding: "0.85rem 1.15rem",
-                fontWeight: 700, fontSize: "0.98rem", cursor: "pointer",
-              }}
-            >
-              Start hands-free kiosk tour →
             </button>
           )}
           <button
@@ -2981,16 +2964,6 @@ const Home = () => {
         <img loading="lazy" decoding="async" className="doogie-hero-img" src={DOOGIE_MAGNIFY} alt="Doogie, the EZtoFind.ca golden retriever AI mascot, holding a magnifying glass over a British Columbia MLS® listing — the AI research guide for BC real estate on EZtoFind.ca" itemProp="image" style={{width:"100%",filter:"drop-shadow(0 20px 40px rgba(15,42,91,0.2))"}}/>
       </div>
     </div></section>
-
-    {/* ── Visual Agent embedded on the homepage ──────────────────────────────
-        Below the licensing paragraph. Gives visitors the full unified Doogie
-        experience (search, chat, voice, tours, insights, consultation) without
-        having to click through to /visual-agent-demo. */}
-    <section data-testid="home-visual-agent-embed" style={{background:"#F5F8FF",padding:"0 0 2rem"}}>
-      <Suspense fallback={<RouteFallback/>}>
-        <VisualAgentDemo/>
-      </Suspense>
-    </section>
 
     <section className="section"><div className="container-x">
       <div style={{textAlign:"center",marginBottom:"3rem"}}>
@@ -6433,7 +6406,7 @@ const BuyerForm = () => {
       setErr(t("common.required"));
     }
   };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="buyer-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="buyer-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="buyer-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="buyer-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="buyer-ty-communities">Explore BC communities</Link></div></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Task 14 (Feb 2026) — SEO title/description/canonical for the
         buyer lead-conversion page. Missing before, which meant visitors
@@ -6547,7 +6520,7 @@ const SellerForm = () => {
       setErr(t("common.required"));
     }
   };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="seller-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="seller-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="seller-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="seller-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="seller-ty-communities">Explore BC communities</Link></div></div></section>;
   return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
@@ -7245,7 +7218,7 @@ const CodeOfEthics = () => <Legal title="REALTOR® Code of Ethics" body={<>
   <h3 style={{marginTop:"1.5rem"}}>Concerns about a REALTOR®?</h3>
   <p>Ethics complaints against a REALTOR® in the Greater Vancouver area may be filed with <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>Greater Vancouver REALTORS® (GVR)</a>. Complaints about a licensee's conduct as a real estate licensee may be filed with <a href="https://www.bcfsa.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>BCFSA</a>. See our <Link to="/complaints" style={{color:"var(--brand-blue)"}}>Complaints & Concerns</Link> page.</p>
 </>}/>;
-const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> Doug LeMaire, REALTOR® is a member in good standing of <strong>Greater Vancouver REALTORS® (GVR)</strong> and the <strong>Canadian Real Estate Association (CREA)</strong>, bound by the <Link to="/code-of-ethics" style={{color:"var(--brand-blue)"}}>REALTOR® Code of Ethics and Standards of Business Practice</Link>. This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence. Ethics complaints regarding Doug's conduct should be directed to GVR at <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>gvrealtors.ca</a>.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept at <Link to="/visual-agent-demo" style={{color:"var(--brand-blue)"}}>/visual-agent-demo</Link>) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
+const Compliance = () => <Legal title="Compliance & Disclosures" body={<><p><strong>Licensee Identification (BCFSA Rule 4-2):</strong> Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · 1 – 22374 Lougheed Hwy, Maple Ridge, BC V2X 2T5.</p><p><strong>BCFSA:</strong> Doug LeMaire is a licensed REALTOR® in British Columbia. All advice-giving occurs through licensed practice — never through the Doogie AI.</p><p><strong>CREA / GVR / MLS®:</strong> Doug LeMaire, REALTOR® is a member in good standing of <strong>Greater Vancouver REALTORS® (GVR)</strong> and the <strong>Canadian Real Estate Association (CREA)</strong>, bound by the <Link to="/code-of-ethics" style={{color:"var(--brand-blue)"}}>REALTOR® Code of Ethics and Standards of Business Practice</Link>. This site respects CREA's REALTOR® / MLS® trademark rules. Listings are sourced directly from the CREA Data Distribution Facility (DDF®) under a signed technology-provider agreement, and are refreshed on a compliant cadence. Ethics complaints regarding Doug's conduct should be directed to GVR at <a href="https://www.gvrealtors.ca" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>gvrealtors.ca</a>.</p><p><strong>PIPA:</strong> See <Link to="/privacy">Privacy Policy</Link>.</p><p><strong>CASL:</strong> All marketing communications require explicit opt-in with a working unsubscribe link. No commercial outreach is ever triggered without a ticked consent, express or implied — every send carries a working unsubscribe link and consent metadata is retained for 3 years.</p><p><strong>AI Guardrails:</strong> Doogie is prompted and monitored to never provide advice or property-specific recommendations that could constitute unlicensed real estate practice.</p><h3 style={{marginTop:"2rem"}}>Doogie Voice / Doogie Visual — Data Flow</h3><p>The Doogie chat and voice interface (including the "Doogie Visual" concept) operates strictly within the following compliance boundary:</p><ul style={{paddingLeft:"1.4rem",lineHeight:1.65}}><li><strong>Text chat</strong> — messages sent to <code>/api/doogie/chat</code> are PII-redacted (SIN, credit card, phone, email, postal code, street address are scrubbed) before storage and are automatically purged after 30 days.</li><li><strong>Scripted voice mode</strong> — no microphone is opened; no audio ever leaves your browser.</li><li><strong>Live voice mode</strong> — before your first recording a PIPA §7/§14 disclosure gate appears explaining that your browser's speech-recognition provider (Google in Chrome/Edge, Apple in Safari) transcribes your audio (a cross-border transfer outside Canada). Only the resulting <em>text</em> is sent to EZtoFind and treated identically to text chat above. Audio is never stored by EZtoFind.</li><li><strong>Not a listing</strong> — no listings, offers, contracts, or agency relationships are formed via Doogie under the Real Estate Services Act (RESA). Any actionable step (viewing, offer, contract, valuation) is handled by Doug LeMaire, REALTOR® personally.</li><li><strong>MLS® data</strong> — active BC listings and virtual-tour URLs shown by Doogie are licensed from CREA DDF®, refreshed every 4 hours, and never redistributed beyond the immediate response.</li></ul><p>To request a copy or deletion of your Doogie interaction history, use the <Link to="/privacy/data-request" style={{color:"var(--brand-blue)"}}>self-service data-request tool</Link>. The BCFSA Consumer Protection Line is <strong>1-877-683-9664</strong>.</p></>}/>;
 
 // --- Admin ---
 // SEC-009: The JWT used to live in localStorage where any JS on the page
@@ -9712,7 +9685,7 @@ const Valuation = () => {
       setErr("Please complete required fields and consents.");
     }
   };
-  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to="/listings" className="btn btn-primary" data-testid="valuation-ty-save-search">Save a search</Link><Link to="/communities" className="btn btn-secondary" data-testid="valuation-ty-communities">Explore BC communities</Link><Link to="/visual-agent-demo" className="btn btn-secondary" data-testid="valuation-ty-doogie">Ask Doogie a research question</Link></div></div></section>;
+  if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to="/listings" className="btn btn-primary" data-testid="valuation-ty-save-search">Save a search</Link><Link to="/communities" className="btn btn-secondary" data-testid="valuation-ty-communities">Explore BC communities</Link></div></div></section>;
 
   // ── Form-first ATF (brief Phase B) ──────────────────────────────────
   // Order on mobile (320–390px): IdentityLine → H1 → subhead →
@@ -13689,7 +13662,6 @@ function App() {
       <Route path="/about-next" element={<AboutNext/>}/>
       <Route path="/luxury-next" element={<LuxuryNext/>}/>
       <Route path="/equestrian-next" element={<EquestrianNext/>}/>
-      <Route path="/visual-agent-demo-next" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemoNext/></Suspense>}/>
       <Route path="/communities-next" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
@@ -13784,7 +13756,6 @@ function App() {
       <Route path="/copyright" element={<AppLayout><CopyrightPage/></AppLayout>}/>
       <Route path="/ai-use" element={<AppLayout><AiUsePage/></AppLayout>}/>
       <Route path="/my-journey/:token" element={<MyJourney/>}/>
-      <Route path="/visual-agent-demo" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemo/></Suspense>}/>
       <Route path="/doogie-gpt-preview" element={<Suspense fallback={<RouteFallback/>}><DoogieGPTPreview/></Suspense>}/>
       <Route path="/dashboard-mockup" element={<DashboardMockup/>}/>
       <Route path="/preview/coming-soon" element={<AppLayout><section className="section" style={{padding:0}}><ComingSoonHero mode="preview"/></section></AppLayout>}/>

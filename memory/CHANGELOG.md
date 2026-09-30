@@ -2,6 +2,16 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Retired the Doogie chat page site-wide
+
+Per user request, fully removed the standalone Doogie chat experience:
+- **Routes deleted** → now 404: `/visual-agent-demo` (`VisualAgentDemo.jsx`) and `/visual-agent-demo-next` (`VisualAgentDemoNext.jsx`). Lazy imports removed from `App.js`; page source files left orphaned (unbundled).
+- **Home band removed**: the `HnDoogie` "Ask Doogie / Doogie provides helpful information / Start a chat" section pulled from `HomeNext.jsx` (and its import).
+- **Leftover links cleaned** (no dead links): same `HnDoogie` band removed from `AboutNext.jsx` + `EquestrianNext.jsx`; "Ask Doogie a research question" buttons removed from the buyer/seller/valuation thank-you screens in `App.js`; inline `<VisualAgentDemo/>` embed removed from the legacy `/classic-home` (`Home`) component; the `DoogieOnboarding` "Start hands-free kiosk tour" button (which navigated to the demo) removed; the Compliance disclosure page's dead `/visual-agent-demo` link de-linked (text kept).
+- **Kept**: the site-wide floating `DoogieChat` widget (separate from the retired page) remains on Home/About/Equestrian.
+- Verified via Playwright: both routes return the 404 view; Home/About/Equestrian render with no console errors and no "Doogie provides helpful information" band. NOTE: not yet redeployed to production (eztofind.ca) — needs a redeploy.
+
+
 ## June 2026 — Doogie page cleanup + SEO indexing + admin Hide-from-site
 
 **#1 Doogie page (`/visual-agent-demo`, `VisualAgentDemo.jsx`)** — Removed the navy hero banner (title/avatar/pills/waveform/Scripted-Live/Ask-by-voice/Pause/Restart) AND the white persistent search bar. Page now opens: compliance strip → Chat with Doogie embed. Fixed stale "Ask by voice at the top-right" hint in `visual-agent/PaneSearch.jsx` → "Tap the mic in the search box".

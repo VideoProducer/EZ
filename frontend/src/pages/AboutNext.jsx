@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
-import { HnDoogie } from "../components/homenext/HomeNextShared";
 import { IMG, DoogieChat } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -126,14 +125,6 @@ export default function AboutNext() {
             </div>
           </div>
         </section>
-
-        <HnDoogie
-          dir="left"
-          eyebrow="Ask Doogie"
-          title="Doogie provides helpful information."
-          body="While you decide whether the time is right to call, Doogie shares plain-language information on BC real estate questions — with the statute or source behind each one. General information only, never advice."
-          cta="Ask Doogie a question"
-        />
 
         <section className="hn-section" style={{ paddingTop: 0 }} data-testid="about-compliance">
           <div className="hn-wrap">
