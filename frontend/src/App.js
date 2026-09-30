@@ -76,6 +76,7 @@ const AboutNext = lazy(() => import("./pages/AboutNext"));
 const LuxuryNext = lazy(() => import("./pages/LuxuryNext"));
 const EquestrianNext = lazy(() => import("./pages/EquestrianNext"));
 const VisualAgentDemoNext = lazy(() => import("./pages/VisualAgentDemoNext"));
+const CommunitiesNext = lazy(() => import("./pages/CommunitiesNext"));
 // UnlistedMockupBanner — noindex/nofollow strip for parked preview routes.
 import UnlistedMockupBanner from "./components/UnlistedMockupBanner";
 // TV Display — the big-screen half of TV Pairing (phone stays a remote).
@@ -13683,6 +13684,7 @@ function App() {
       <Route path="/luxury-next" element={<LuxuryNext/>}/>
       <Route path="/equestrian-next" element={<EquestrianNext/>}/>
       <Route path="/visual-agent-demo-next" element={<Suspense fallback={<RouteFallback/>}><VisualAgentDemoNext/></Suspense>}/>
+      <Route path="/communities-next" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
       <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
