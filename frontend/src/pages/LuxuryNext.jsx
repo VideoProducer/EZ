@@ -113,7 +113,7 @@ export default function LuxuryNext() {
           <div className="hn-wrap hn-center">
             <p className="hn-phero__eyebrow" style={{ color: "var(--hn-gold)" }}>An invitation</p>
             <h2 className="hn-h2" style={{ maxWidth: "22ch", marginInline: "auto" }}>If you're thinking of buying or selling a significant home — let's talk.</h2>
-            <p className="hn-lead" style={{ marginInline: "auto" }}>South Surrey, the Fraser Valley, Greater Vancouver, or the Sea-to-Sky Corridor. No obligation.</p>
+            <p className="hn-lead" style={{ marginInline: "auto" }}>The Lower Mainland, Fraser Valley and Sea to Sky Corridor. No obligation.</p>
             <div className="hn-ctarow" style={{ justifyContent: "center" }}>
               <Link to="/contact" className="hn-pill hn-pill--navy hn-pill--lg" data-testid="luxury-cta-contact">Start a conversation</Link>
               <Link to="/valuation" className="hn-pill hn-pill--lg" data-testid="luxury-cta-valuation">What's my home worth?</Link>
