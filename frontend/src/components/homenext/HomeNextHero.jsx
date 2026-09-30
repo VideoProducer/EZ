@@ -35,8 +35,8 @@ export const HomeNextNav = () => {
         <Link to="/specialties/equestrian" data-testid="hn-nav-equestrian">Equestrian</Link>
         <Link to="/communities" data-testid="hn-nav-communities">Communities</Link>
         <Link to="/glossary" data-testid="hn-nav-glossary">Glossary</Link>
-        <Link to="/visual-agent-demo" className="hn-nav__doogie" data-testid="hn-nav-doogie">
-          <img src="/images/doogie/doogie-laptop-hero.png" alt="" aria-hidden="true"/>Doogie
+        <Link to="/visual-agent-demo" className="hn-nav__doogie" data-testid="hn-nav-doogie" aria-label="Doogie — BC real estate helper" title="Doogie — BC real estate helper">
+          <img src="/images/doogie/doogie-laptop-hero.png" alt="" aria-hidden="true"/>
         </Link>
         <Link to="/buyer" className="hn-nav__links-cta" data-testid="hn-nav-cta-mobile">Talk to Doug</Link>
       </nav>

@@ -52,7 +52,6 @@ export const HomeNextListingHero = () => {
           <Link to={`/listings/${encodeURIComponent(cur.listing_key)}`} className="hn-lhero__chip" data-testid="hn-listing-hero-chip">
             <strong>{fmtPrice(cur.list_price)}</strong>
             <span>{cur.internet_display_addr !== false && cur.street_address ? `${cur.street_address}, ` : ""}{cur.city}</span>
-            <span className="hn-lhero__mls">MLS® {cur.mls_number || cur.listing_key}{cur.brokerage_name && !/see REALTOR/i.test(cur.brokerage_name) ? ` · ${cur.brokerage_name}` : ""}</span>
           </Link>
         )}
         {pool.length > 1 && (
