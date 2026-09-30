@@ -2,6 +2,18 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Glossary source link-health fix + Last-verified + tighter mapping
+
+**(a) Link-health audit & fixes** — checked all 53 unique glossary source URLs. Government portals (www2.gov.bc.ca, canada.ca, crtc.gc.ca) bot-block server-side requests but are valid in-browser (left unchanged). Fixed 8 genuine 404s in `backend/glossary_sources.py`, each re-verified 200:
+- Real Estate Services Rules → BC Laws `209_2021`; SVT Act → `18046`; Building Act → `15002`; Manufactured Home Act → `03075_01` (SBC 2003 c.75, old RSBC 1996 c.280 was repealed); BCFSA rules & forms pages → current BCFSA URLs; OSFI B-20 → current guidance-library URL; CREA REALTOR® Code → `/standards-programs/realtor-code/`; CRT strata → `/solution-explorer/strata/`.
+
+**(b) Per-term "Last verified" + tighter keyword→source mapping**
+- Added `SOURCES_LAST_VERIFIED = "2026-09-30"` in `glossary_sources.py`; `GET /api/glossary/{slug}` now returns `sources_last_verified` (per-term override respected). Frontend `SourcesBlock` (App.js) renders a "Source links last verified <date>…" line (`data-testid=sources-last-verified`), passed on the glossary term page.
+- Expanded `TERM_KEYWORD_OVERRIDES` from ~55 to **118** entries (strata, land title, zoning/OCP, tenancy, foreclosure, REDMA/presale, agency, mortgage/CMHC/OSFI, BC Assessment, probate, insurance, etc.) so far more terms resolve to an exact-authority citation instead of a category default. Specific keywords kept ahead of generic ones (first-match wins).
+
+**Verified**: module loads (118 overrides), `/api/glossary/agricultural-land-reserve-alr` & `/strata-lot` return real sources + `sources_last_verified: 2026-09-30`; frontend compiles; glossary term page renders the Authoritative Sources block. Not yet deployed to production.
+
+
 ## June 2026 — 90-day price-trend sparklines (Buyer + Seller Insights)
 
 - Added `buildTrendSeries(seedStr, endValueM)` + `parseMedianM()` to `visual-agent/constants.js`. Series is community-seeded (stable, distinct per place) and its final "Now" point is anchored to the community's REAL current median from `GET /api/insights` (`median_list_price/1e6`); preceding weeks are illustrative.

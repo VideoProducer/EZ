@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 import re
 import httpx
-from glossary_sources import get_sources_for_term
+from glossary_sources import get_sources_for_term, SOURCES_LAST_VERIFIED
 from community_sources import get_community_sources, get_weather_sources
 from bc_stations import get_station_for_community, eccc_station_page_url, eccc_normals_search_url
 
@@ -5622,6 +5622,7 @@ async def get_term(slug: str):
     # regulators, so users see real "well-sourced" verification links.
     t["sources"] = _merge_sources(t.get("sources_override"), t.get("term",""), t.get("category",""))
     t["sources_source"] = "curated+default" if t.get("sources_override") else "default"
+    t["sources_last_verified"] = t.get("sources_last_verified") or SOURCES_LAST_VERIFIED
     return t
 
 @api.get("/glossary/{slug}/related")

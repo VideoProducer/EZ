@@ -20,12 +20,16 @@ from typing import List, Dict
 # ---------- Reusable source records ----------
 BCLAWS = "https://www.bclaws.gov.bc.ca"
 
+# Date the full source URL set was last health-checked / verified against the
+# governing authorities. Surfaced per-term in the API + UI. Update when re-audited.
+SOURCES_LAST_VERIFIED = "2026-09-30"
+
 SRC = {
     # BC statutes (BC Laws deep links)
     "strata_property_act":        {"title": "Strata Property Act (SBC 1998, c. 43)",                  "url": f"{BCLAWS}/civix/document/id/complete/statreg/98043_00",       "publisher": "Province of British Columbia — BC Laws"},
     "strata_property_regulation": {"title": "Strata Property Regulation (BC Reg. 43/2000)",           "url": f"{BCLAWS}/civix/document/id/complete/statreg/43_2000",         "publisher": "Province of British Columbia — BC Laws"},
     "resa":                       {"title": "Real Estate Services Act (SBC 2004, c. 42)",             "url": f"{BCLAWS}/civix/document/id/complete/statreg/04042_01",       "publisher": "Province of British Columbia — BC Laws"},
-    "resa_rules":                 {"title": "Real Estate Services Rules",                             "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/legislation-and-rules",                                     "publisher": "BC Financial Services Authority (BCFSA)"},
+    "resa_rules":                 {"title": "Real Estate Services Rules (B.C. Reg. 209/2021)",        "url": f"{BCLAWS}/civix/document/id/complete/statreg/209_2021",       "publisher": "Province of British Columbia — BC Laws"},
     "land_title_act":             {"title": "Land Title Act (RSBC 1996, c. 250)",                     "url": f"{BCLAWS}/civix/document/id/complete/statreg/96250_00",       "publisher": "Province of British Columbia — BC Laws"},
     "property_law_act":           {"title": "Property Law Act (RSBC 1996, c. 377)",                   "url": f"{BCLAWS}/civix/document/id/complete/statreg/96377_01",       "publisher": "Province of British Columbia — BC Laws"},
     "ptt_act":                    {"title": "Property Transfer Tax Act (RSBC 1996, c. 378)",          "url": f"{BCLAWS}/civix/document/id/complete/statreg/96378_01",       "publisher": "Province of British Columbia — BC Laws"},
@@ -36,16 +40,16 @@ SRC = {
     "pipa":                       {"title": "Personal Information Protection Act (SBC 2003, c. 63)",  "url": f"{BCLAWS}/civix/document/id/complete/statreg/03063_01",       "publisher": "Province of British Columbia — BC Laws"},
     "insurance_act_bc":           {"title": "Insurance Act (RSBC 2012, c. 1)",                        "url": f"{BCLAWS}/civix/document/id/complete/statreg/12001_01",       "publisher": "Province of British Columbia — BC Laws"},
     "financial_institutions_act": {"title": "Financial Institutions Act (RSBC 1996, c. 141)",         "url": f"{BCLAWS}/civix/document/id/complete/statreg/96141_01",       "publisher": "Province of British Columbia — BC Laws"},
-    "svt_act":                    {"title": "Speculation and Vacancy Tax Act (SBC 2018, c. 46)",      "url": f"{BCLAWS}/civix/document/id/complete/statreg/18046_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "svt_act":                    {"title": "Speculation and Vacancy Tax Act (SBC 2018, c. 46)",      "url": f"{BCLAWS}/civix/document/id/complete/statreg/18046",          "publisher": "Province of British Columbia — BC Laws"},
     "hbrp_regulation":            {"title": "Home Buyer Rescission Period Regulation",                "url": "https://www2.gov.bc.ca/gov/content/housing-tenancy/real-estate-in-bc/home-buyer-rescission-period",                                                    "publisher": "Government of British Columbia"},
     "cooperative_association_act":{"title": "Cooperative Association Act (SBC 1999, c. 28)",          "url": f"{BCLAWS}/civix/document/id/complete/statreg/99028_01",       "publisher": "Province of British Columbia — BC Laws"},
-    "manufactured_home_act":      {"title": "Manufactured Home Act (RSBC 1996, c. 280)",              "url": f"{BCLAWS}/civix/document/id/complete/statreg/96280_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "manufactured_home_act":      {"title": "Manufactured Home Act (SBC 2003, c. 75)",               "url": f"{BCLAWS}/civix/document/id/complete/statreg/03075_01",       "publisher": "Province of British Columbia — BC Laws"},
     "homeowner_protection_act":   {"title": "Homeowner Protection Act (SBC 1998, c. 31)",             "url": f"{BCLAWS}/civix/document/id/complete/statreg/98031_01",       "publisher": "Province of British Columbia — BC Laws"},
-    "building_act":               {"title": "Building Act (SBC 2015, c. 2)",                          "url": f"{BCLAWS}/civix/document/id/complete/statreg/15002_01",       "publisher": "Province of British Columbia — BC Laws"},
+    "building_act":               {"title": "Building Act (SBC 2015, c. 2)",                          "url": f"{BCLAWS}/civix/document/id/complete/statreg/15002",          "publisher": "Province of British Columbia — BC Laws"},
     "residential_tenancy_act":    {"title": "Residential Tenancy Act (SBC 2002, c. 78)",              "url": f"{BCLAWS}/civix/document/id/complete/statreg/02078_01",       "publisher": "Province of British Columbia — BC Laws"},
     "gov_bc_rtb":                 {"title": "BC Government — Residential Tenancy Branch",             "url": "https://www2.gov.bc.ca/gov/content/housing-tenancy/residential-tenancies",                                                                          "publisher": "Government of British Columbia"},
     "redma":                      {"title": "Real Estate Development Marketing Act (SBC 2004, c. 41)","url": f"{BCLAWS}/civix/document/id/complete/statreg/04041_01",       "publisher": "Province of British Columbia — BC Laws"},
-    "bcfsa_agency_disclosure":    {"title": "BCFSA — Agency and Disclosure Forms (DoRTS, DoLC)",     "url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources/knowledge-base/forms-and-templates",                                    "publisher": "BC Financial Services Authority (BCFSA)"},
+    "bcfsa_agency_disclosure":    {"title": "BCFSA — Real Estate Professional Resources (DoRTS, DoLC)","url": "https://www.bcfsa.ca/industry-resources/real-estate-professional-resources",                                                                        "publisher": "BC Financial Services Authority (BCFSA)"},
 
     # Federal statutes
     "non_canadians_act":          {"title": "Prohibition on the Purchase of Residential Property by Non-Canadians Act (S.C. 2022, c. 10, s. 235)", "url": "https://laws-lois.justice.gc.ca/eng/acts/P-25.2/",  "publisher": "Justice Laws — Government of Canada"},
@@ -69,7 +73,7 @@ SRC = {
     "gov_bc_probate":             {"title": "BC Government — Wills, Estates and Probate",             "url": "https://www2.gov.bc.ca/gov/content/life-events/death/wills-estates",                                                                                    "publisher": "Government of British Columbia"},
 
     # Federal regulators
-    "osfi_b20":                   {"title": "OSFI Guideline B-20 — Residential Mortgage Underwriting Practices and Procedures", "url": "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/residential-mortgage-underwriting-practices-procedures-guideline-b-20",  "publisher": "Office of the Superintendent of Financial Institutions (OSFI)"},
+    "osfi_b20":                   {"title": "OSFI Guideline B-20 — Residential Mortgage Underwriting Practices and Procedures", "url": "https://www.osfi-bsif.gc.ca/en/guidance/guidance-library/final-revised-guideline-b-20-residential-mortgage-underwriting-practices-procedures",  "publisher": "Office of the Superintendent of Financial Institutions (OSFI)"},
     "bank_of_canada":             {"title": "Bank of Canada",                                          "url": "https://www.bankofcanada.ca",                                    "publisher": "Bank of Canada"},
     "cmhc":                       {"title": "Canada Mortgage and Housing Corporation (CMHC)",         "url": "https://www.cmhc-schl.gc.ca",                                    "publisher": "CMHC — Government of Canada"},
     "cdic":                       {"title": "Canada Deposit Insurance Corporation (CDIC)",            "url": "https://www.cdic.ca",                                            "publisher": "CDIC — Government of Canada"},
@@ -81,10 +85,10 @@ SRC = {
     "insurance_council_bc":       {"title": "Insurance Council of British Columbia",                  "url": "https://www.insurancecouncilofbc.com",                           "publisher": "Insurance Council of BC"},
 
     # Professional
-    "crea":                       {"title": "Canadian Real Estate Association (CREA) — REALTOR® Code of Ethics", "url": "https://www.crea.ca/about/realtor-code/",                        "publisher": "Canadian Real Estate Association"},
+    "crea":                       {"title": "Canadian Real Estate Association (CREA) — REALTOR® Code of Ethics", "url": "https://www.crea.ca/standards-programs/realtor-code/",           "publisher": "Canadian Real Estate Association"},
     "aic":                        {"title": "Appraisal Institute of Canada (AIC)",                   "url": "https://www.aicanada.ca",                                        "publisher": "Appraisal Institute of Canada"},
     "bc_housing":                 {"title": "BC Housing — Licensing & Consumer Services",             "url": "https://www.bchousing.org/licensing-consumer-services",          "publisher": "BC Housing"},
-    "civil_resolution_tribunal":  {"title": "Civil Resolution Tribunal (CRT) — Strata Disputes",     "url": "https://civilresolutionbc.ca/how-the-crt-works/getting-started/strata-property-disputes/",                                                            "publisher": "Civil Resolution Tribunal"},
+    "civil_resolution_tribunal":  {"title": "Civil Resolution Tribunal (CRT) — Strata Disputes",     "url": "https://civilresolutionbc.ca/solution-explorer/strata/",                                                                                             "publisher": "Civil Resolution Tribunal"},
 }
 
 
@@ -390,6 +394,67 @@ TERM_KEYWORD_OVERRIDES: List[tuple] = [
     ("anti-spam",                       [SRC["casl"]]),
     ("cooperative",                     [SRC["cooperative_association_act"]]),
     ("co-op",                           [SRC["cooperative_association_act"]]),
+    # ---- Broader coverage: route more terms to their exact governing authority ----
+    ("strata council",                  [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("strata corporation",              [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("strata lot",                      [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("common property",                 [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("special levy",                    [SRC["strata_property_act"], SRC["gov_bc_strata"], SRC["choa"]]),
+    ("annual general meeting",          [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("strata fee",                      [SRC["strata_property_act"], SRC["gov_bc_strata"]]),
+    ("strata",                          [SRC["strata_property_act"], SRC["gov_bc_strata"], SRC["choa"]]),
+    ("disclosure statement",            [SRC["redma"], SRC["bcfsa"]]),
+    ("presale",                         [SRC["redma"], SRC["bcfsa"]]),
+    ("pre-sale",                        [SRC["redma"], SRC["bcfsa"]]),
+    ("development marketing",           [SRC["redma"], SRC["bcfsa"]]),
+    ("rescission",                      [SRC["hbrp_regulation"], SRC["resa"]]),
+    ("foreclosure",                     [SRC["property_law_act"]]),
+    ("order absolute",                  [SRC["property_law_act"]]),
+    ("order nisi",                      [SRC["property_law_act"]]),
+    ("easement",                        [SRC["land_title_act"], SRC["ltsa"]]),
+    ("right of way",                    [SRC["land_title_act"], SRC["ltsa"]]),
+    ("restrictive covenant",            [SRC["land_title_act"], SRC["ltsa"]]),
+    ("statutory right of way",          [SRC["land_title_act"], SRC["ltsa"]]),
+    ("fee simple",                      [SRC["land_title_act"], SRC["ltsa"]]),
+    ("leasehold",                       [SRC["land_title_act"], SRC["ltsa"]]),
+    ("freehold",                        [SRC["land_title_act"], SRC["ltsa"]]),
+    ("certificate of title",            [SRC["land_title_act"], SRC["ltsa"]]),
+    ("title search",                    [SRC["land_title_act"], SRC["ltsa"]]),
+    ("survey",                          [SRC["ltsa"], SRC["land_title_act"]]),
+    ("subdivision",                     [SRC["local_government_act"], SRC["ltsa"]]),
+    ("zoning",                          [SRC["local_government_act"], SRC["gov_bc_zoning"]]),
+    ("official community plan",         [SRC["local_government_act"], SRC["gov_bc_zoning"]]),
+    ("rezoning",                        [SRC["local_government_act"], SRC["gov_bc_zoning"]]),
+    ("variance",                        [SRC["local_government_act"], SRC["gov_bc_zoning"]]),
+    ("setback",                         [SRC["local_government_act"], SRC["gov_bc_zoning"]]),
+    ("building permit",                 [SRC["building_act"], SRC["gov_bc_building_code"]]),
+    ("occupancy permit",                [SRC["building_act"], SRC["gov_bc_building_code"]]),
+    ("residential tenancy",             [SRC["residential_tenancy_act"], SRC["gov_bc_rtb"]]),
+    ("landlord",                        [SRC["residential_tenancy_act"], SRC["gov_bc_rtb"]]),
+    ("tenant",                          [SRC["residential_tenancy_act"], SRC["gov_bc_rtb"]]),
+    ("assessed value",                  [SRC["bc_assessment"]]),
+    ("assessment roll",                 [SRC["bc_assessment"]]),
+    ("property tax",                    [SRC["bc_assessment"], SRC["gov_bc_home_owner_grant"]]),
+    ("designated agent",                [SRC["resa"], SRC["bcfsa_agency_disclosure"], SRC["bcfsa"]]),
+    ("dual agency",                     [SRC["resa"], SRC["bcfsa_agency_disclosure"], SRC["bcfsa"]]),
+    ("disclosure of representation",    [SRC["resa"], SRC["bcfsa_agency_disclosure"], SRC["bcfsa"]]),
+    ("limited dual agency",             [SRC["resa"], SRC["bcfsa_agency_disclosure"], SRC["bcfsa"]]),
+    ("trust account",                   [SRC["resa"], SRC["bcfsa"]]),
+    ("brokerage",                       [SRC["resa"], SRC["bcfsa"]]),
+    ("commission",                      [SRC["resa"], SRC["bcfsa"]]),
+    ("remuneration",                    [SRC["resa"], SRC["bcfsa"]]),
+    ("mortgage insurance",              [SRC["cmhc"], SRC["osfi_b20"]]),
+    ("amortization",                    [SRC["cmhc"], SRC["osfi_b20"]]),
+    ("down payment",                    [SRC["cmhc"], SRC["osfi_b20"]]),
+    ("deposit insurance",               [SRC["cdic"]]),
+    ("prime rate",                      [SRC["bank_of_canada"]]),
+    ("policy interest rate",            [SRC["bank_of_canada"]]),
+    ("mortgage",                        [SRC["cmhc"], SRC["osfi_b20"], SRC["bank_of_canada"]]),
+    ("appraised value",                 [SRC["aic"], SRC["bc_assessment"]]),
+    ("intestate",                       [SRC["wesa"], SRC["gov_bc_probate"]]),
+    ("executor",                        [SRC["wesa"], SRC["gov_bc_probate"]]),
+    ("title insurance",                 [SRC["insurance_act_bc"], SRC["ibc"], SRC["ltsa"]]),
+    ("insurance",                       [SRC["ibc"], SRC["insurance_council_bc"]]),
 ]
 
 
