@@ -1,12 +1,22 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, Home } from "lucide-react";
 import { HomeNextListingHero } from "./HomeNextListingHero";
 
-export const HomeNextNav = () => (
+export const HomeNextNav = () => {
+  const navigate = useNavigate();
+  return (
   <header className="hn-nav" data-testid="hn-nav">
     <div className="hn-wrap hn-nav__inner">
       <div className="hn-nav__left">
+        <div className="hn-nav__jump" data-testid="hn-nav-jump">
+          <button type="button" onClick={() => navigate(-1)} className="hn-nav__jumpbtn" data-testid="hn-nav-back" aria-label="Go back">
+            <ChevronLeft size={16} strokeWidth={2.2}/><span>Back</span>
+          </button>
+          <Link to="/" className="hn-nav__jumpbtn" data-testid="hn-nav-home" aria-label="Home">
+            <Home size={15} strokeWidth={2.2}/><span>Home</span>
+          </Link>
+        </div>
         <Link to="/" className="hn-nav__brand" data-testid="hn-nav-brand"><img src="/brand/eztofind-logo-720.png" alt="EZtoFind.ca" width={720} height={175} decoding="async"/></Link>
         <div className="hn-nav__id" data-testid="hn-nav-identity">
           <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire, REALTOR®" width={38} height={38} decoding="async"/>
@@ -31,7 +41,8 @@ export const HomeNextNav = () => (
       <Link to="/buyer" className="hn-nav__cta" data-testid="hn-nav-cta">Talk to Doug</Link>
     </div>
   </header>
-);
+  );
+};
 
 export const HomeNextHero = () => {
   const [q, setQ] = useState("");
