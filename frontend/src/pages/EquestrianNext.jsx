@@ -93,6 +93,7 @@ export default function EquestrianNext() {
 
         <HnDoogie
           dir="left"
+          imgSrc="/images/doogie/doogie-thinking-transparent.png"
           eyebrow="Ask Doogie"
           title="Not sure what ALR or a water licence means?"
           body="Doogie explains BC acreage terms in plain language, with the statute or authority behind each answer. General information only — always verify specifics with the listing REALTOR®, the municipality and the Agricultural Land Commission."
