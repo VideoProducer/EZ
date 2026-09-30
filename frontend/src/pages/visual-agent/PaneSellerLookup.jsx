@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { ShieldCheck, Radio, MapPin } from "lucide-react";
 import { C, API, useRotatingRegion, BC_COMMUNITY_SUGGESTIONS } from "./constants";
 import { Pill } from "./atoms";
@@ -97,6 +98,13 @@ export const PaneSellerLookup = ({ focusCity }) => {
           style={{ background: C.navy, color: "#fff", border: 0, padding: "10px 18px", borderRadius: 99, fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(15,42,91,0.25)" }}
         >Get seller insights</button>
       </form>
+      {activeArea && (
+        <Link
+          to={`/listings?city=${encodeURIComponent(region.city)}`}
+          data-testid="sellerlookup-view-listings"
+          style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", color: C.navy, border: `1.5px solid ${C.navy}`, padding: "8px 16px", borderRadius: 99, fontSize: 12.5, fontWeight: 700, textDecoration: "none" }}
+        >View live listings in {region.city} →</Link>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <strong style={{ color: C.navy, fontSize: 14 }}>{headerLabel}</strong>
         <Pill tone="green" data-testid="sellerlookup-freshness">

@@ -31,8 +31,8 @@ export const HomeNextNav = () => {
       <nav className="hn-nav__links" aria-label="Primary">
         <Link to="/listings" data-testid="hn-nav-buy">Buy</Link>
         <Link to="/valuation" data-testid="hn-nav-sell">Sell</Link>
-        <Link to="/luxury-next" data-testid="hn-nav-luxury">Luxury</Link>
-        <Link to="/equestrian-next" data-testid="hn-nav-equestrian">Equestrian</Link>
+        <Link to="/specialties/luxury" data-testid="hn-nav-luxury">Luxury</Link>
+        <Link to="/specialties/equestrian" data-testid="hn-nav-equestrian">Equestrian</Link>
         <Link to="/communities" data-testid="hn-nav-communities">Communities</Link>
         <Link to="/glossary" data-testid="hn-nav-glossary">Glossary</Link>
         <Link to="/visual-agent-demo" className="hn-nav__doogie" data-testid="hn-nav-doogie">

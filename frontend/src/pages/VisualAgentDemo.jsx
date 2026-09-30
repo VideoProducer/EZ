@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
-import { TurnstileWidget, getTurnstileToken, SavedSearchModal, looksLikeListingSearch } from "../App";
+import { TurnstileWidget, getTurnstileToken, SavedSearchModal, looksLikeListingSearch, DoogieChat } from "../App";
 import {
   Mic, MicOff, Video, Search, MapPin, Building2, Sparkles, Play, Pause,
   RotateCcw, ShieldCheck, MessageCircle, ChevronRight, School,
@@ -1471,6 +1471,16 @@ export default function VisualAgentDemo() {
             )}
           </div>
         </form>
+      </div>
+
+      {/* ── Chat with Doogie (live text) ────────────────────────────────────── */}
+      <div id="visual-agent-doogie-embed" data-testid="visual-agent-doogie-embed" style={{ maxWidth: 1200, margin: "22px auto 0", padding: "0 20px", position: "relative", zIndex: 2 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <MessageCircle size={18} color={C.blue}/>
+          <strong style={{ color: C.navy, fontSize: 16 }}>Chat with Doogie</strong>
+          <span style={{ fontSize: 12, color: "#6B7280" }}>Type your question about BC real estate — general information only, never advice.</span>
+        </div>
+        <DoogieChat mode="embedded"/>
       </div>
 
       {/* ── Scenario tabs ─────────────────────────────────────────────────── */}

@@ -13714,7 +13714,7 @@ function App() {
       <Route path="/tv" element={<Suspense fallback={<div style={{minHeight:"100vh",background:"#0F2A5B",color:"#fff",display:"grid",placeItems:"center",fontFamily:"Inter,sans-serif"}}>Loading TV mode…</div>}><TVDisplayPage/></Suspense>}/>
       {/* Family Viewing Party — indexable acquisition landing page. */}
       <Route path="/family-viewing-party" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FamilyViewingParty/></Suspense></AppLayout>}/>
-      <Route path="/communities" element={<AppLayout><Communities/></AppLayout>}/>
+      <Route path="/communities" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>
@@ -13729,7 +13729,8 @@ function App() {
       {/* /regions index unshipped (Feb 2026) — child /regions/:slug pages remain live */}
       <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
-      <Route path="/specialties/equestrian" element={<Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><EquestrianLeadMockup/></Suspense>}/>
+      <Route path="/specialties/equestrian" element={<Suspense fallback={<RouteFallback/>}><EquestrianNext/></Suspense>}/>
+      <Route path="/specialties/luxury" element={<Suspense fallback={<RouteFallback/>}><LuxuryNext/></Suspense>}/>
       <Route path="/specialties/:slug" element={<AppLayout><SpecialtyPage/></AppLayout>}/>
       <Route path="/glossary" element={<AppLayout><GlossaryWithCanary/></AppLayout>}/>
       <Route path="/glossary/a-z" element={<AppLayout><GlossaryAZWithCanary/></AppLayout>}/>
@@ -13761,7 +13762,7 @@ function App() {
       <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
-      <Route path="/about" element={<AppLayout><About/></AppLayout>}/>
+      <Route path="/about" element={<Suspense fallback={<RouteFallback/>}><AboutNext/></Suspense>}/>
       <Route path="/contact" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietContact/></Suspense></AppLayout>}/>
       <Route path="/contact-legacy" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/sac" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><SacLanding/></Suspense></AppLayout>}/>
