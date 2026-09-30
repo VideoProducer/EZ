@@ -46,7 +46,6 @@ export default function EquestrianNext() {
               path={HERO_PATH}
               testId="equestrian-mediahero"
               browse={{ to: "/specialties/equestrian", label: "Browse equestrian listings" }}
-              caption="Live MLS® equestrian & acreage listings across BC · CREA DDF®"
             />
           </div>
         </section>

@@ -61,9 +61,6 @@ export const HomeNextListingHero = () => {
           </div>
         )}
       </div>
-      <div className="hn-hero__caption">
-        {cur ? "Live MLS® listings · Greater Vancouver, Fraser Valley & Sea-to-Sky · detached homes from $2,000,000 · CREA DDF®" : "Greater Vancouver · Fraser Valley · Sea-to-Sky"}
-      </div>
     </div>
   );
 };
