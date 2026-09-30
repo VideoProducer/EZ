@@ -2,6 +2,17 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Doogie images, area type-ahead, nav overlap fix
+
+**What shipped**
+- **Landing hero mascot**: added the transparent "Doogie holding a house-magnifier + EZtoFind.ca laptop" image (`/images/doogie/doogie-laptop-hero.png`, from asset "Doogie Magnifying Glass Transparent.png") centered at the top of the home hero. Component: `components/homenext/HomeNextHero.jsx` (`data-testid=hn-hero-mascot`); CSS `.hn-hero__mascot` in `homeNext.css`.
+- **Thinking Doogie on `/visual-agent-demo`**: the hero avatar now renders the transparent "thinking" Doogie (`DOOGIE.thinking`) instead of the old circular headshot crop. `pages/VisualAgentDemo.jsx` (~line 1087); removed unused `DOOGIE_HEADSHOT` import.
+- **Area type-ahead**: Buyer/Seller Insights area inputs now use a native `<datalist>` of 82 BC communities (`BC_COMMUNITY_SUGGESTIONS` in `visual-agent/constants.js`) — `buyer-bc-communities` / `seller-bc-communities`. Pick a community in one tap.
+- **Nav overlap fix**: `.hn-nav__id` (Doug LeMaire, REALTOR®) now hides at ≤1180px and `.hn-nav__links` gap tightened (18px, `white-space:nowrap`) so it never collides with the Buy/Sell links. `homeNext.css`.
+
+**Verification**: testing agent iteration_28.json — 100% frontend pass. Mascot renders (1536px), no nav overlap at 1440/1200/1024, no horizontal overflow at 390/1024/1200/1440, thinking avatar renders, both datalists expose 82 options incl. Kelowna/Surrey/Victoria/Prince George/Vancouver, header/stat regressions still pass.
+
+
 ## June 2026 — Area input on Buyer/Seller Insights panes (`/visual-agent-demo`)
 
 **Why**: User reported the "Buyer Insights" and "Seller Insights" scenario panels on `/visual-agent-demo` had no place to enter which BC area/community they wanted insights for (area was only inferred from the top search bar).
