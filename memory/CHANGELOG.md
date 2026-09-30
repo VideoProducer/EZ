@@ -2,6 +2,16 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Doogie chat on agent page, route promotion, insights deep-link
+
+- **Real Doogie chat on `/visual-agent-demo`**: embedded the working `DoogieChat mode="embedded"` (Claude via Emergent LLM key, multi-turn `session_id`, `POST /api/doogie/chat`) inside `[data-testid=visual-agent-doogie-embed]`, just above the scenario tabs. `VisualAgentDemo.jsx` now imports `DoogieChat` from `../App`. Verified iteration_32 — streamed a full strata-fees reply.
+- **Preview pages promoted to live routes** (`App.js`): `/communities`→CommunitiesNext, `/about`→AboutNext, `/specialties/luxury`→LuxuryNext, `/specialties/equestrian`→EquestrianNext (all lazy + Suspense/RouteFallback). `-next` URLs kept as aliases. Shared nav (`HomeNextHero.jsx`) canonicalized: Luxury→/specialties/luxury, Equestrian→/specialties/equestrian.
+- **Insights → listings deep-link**: Buyer/Seller Insights panes now show "View live listings in {City} →" (`buyerinsights-view-listings` / `sellerlookup-view-listings`) linking to `/listings?city={City}` once an area is chosen. `PaneBuyerInsights.jsx`, `PaneSellerLookup.jsx`.
+- **Verified**: testing agent iteration_32 — 8/8 frontend PASS (chat, 4 promoted routes, nav hrefs, both deep-links).
+- **Deploy**: redeploy to eztofind.ca dispatched (job f3171ad7) — running async.
+- **Deferred (optional)**: physical deletion of the now-inert kiosk overlay JSX in `VisualAgentDemo.jsx` — skipped to avoid regression risk right before deploy; kiosk is already fully removed from the UX (button gone, overlay never renders even on `?kiosk=1`).
+
+
 ## June 2026 — Tiles centering, Doogie mascot → nav, Kiosk removal
 
 - **"Two ways to start" centering**: the 2 tiles were left-aligned in a 3-col grid; added `.hn-tiles--2` (2 cols capped 380px, `justify-content:center`; stacks full-width ≤960px). `HomeNextTiles.jsx` + `homeNext.css`. Verified iteration_29 (equal 330px gaps at 1440px).

@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only validation of the 4-change 'ship' batch on EZtoFind.ca: Doogie embedded chat on /visual-agent-demo, promoted -next routes (communities/about/luxury/equestrian), nav canonicalization, and insights→listings deep-links (buyer + seller). 8/8 scenarios PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "doogie_chat_on_visual_agent_demo": {
+      "status": "PASS",
+      "notes": "Consent gate present (data-testid=doogie-consent-accept) — accepted programmatically. After sending 'What are strata fees?' the assistant streamed a full reply (~1.2KB) via POST /api/doogie/chat. Reply snippet: '## Strata Fees in BC — Strata fees (sometimes called maintenance fees) are monthly payments made by each owner in a strata corporation — think condos, townhouses, or any multi-unit development governed under BC's Strata Property Act. What do they cover? - Common expenses ... Contingency Reserve Fund (CRF) ... Building insurance ...'"
+    },
+    "route_communities": {"status": "PASS", "notes": "/communities renders with hn-nav (new CommunitiesNext design). No crash."},
+    "route_about": {"status": "PASS", "notes": "/about renders with hn-nav. No crash."},
+    "route_luxury": {"status": "PASS", "notes": "/specialties/luxury renders with hn-nav. No crash."},
+    "route_equestrian": {"status": "PASS", "notes": "/specialties/equestrian renders with hn-nav. No crash."},
+    "nav_links_canonicalization": {"status": "PASS", "notes": "hn-nav-luxury href=/specialties/luxury, hn-nav-equestrian href=/specialties/equestrian."},
+    "buyer_insights_deeplink": {"status": "PASS", "notes": "Typed 'Kelowna' in buyerinsights-area-input, submitted; buyerinsights-view-listings appeared with text 'View live listings in Kelowna →' and href=/listings?city=Kelowna. Navigation confirmed to /listings?city=Kelowna."},
+    "seller_insights_deeplink": {"status": "PASS", "notes": "Typed 'Surrey' in sellerlookup-area-input, submitted; sellerlookup-view-listings href=/listings?city=Surrey. Navigation confirmed."}
+  },
+  "console_warnings": [
+    "PaneBuyerInsights: live insights fetch failed, keeping illustrative stats (TypeError: Failed to fetch). Non-blocking — fallback stats display correctly. Consider verifying the live insights endpoint availability from client-side origin."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PaneBuyerInsights swallows a client-side fetch failure quietly (warning only). Confirm the target endpoint is same-origin/CORS-clean and, if intentional, downgrade the warning to debug to reduce noise.",
+    "App.js is very large (11k+ lines) and exports DoogieChat plus many other components. Consider splitting DoogieChat into its own module to improve maintainability and lazy-load footprint."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100% (8/8)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Doogie embedded chat requires clicking data-testid=doogie-consent-accept once before data-testid=doogie-input becomes visible (embedded mode still gates on consent). Reply arrives via SSE from POST /api/doogie/chat within ~5-10s. Buyer/Seller insights tabs are reached via button:has-text('Buyer Insights'/'Seller Insights'); pause autoplay via data-testid=visual-agent-toggle-play first."
+}
