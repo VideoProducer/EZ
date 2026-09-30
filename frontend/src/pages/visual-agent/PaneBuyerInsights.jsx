@@ -4,16 +4,26 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, Radio } from "lucide-react";
+import { ShieldCheck, Radio, MapPin } from "lucide-react";
 import { C, API, useRotatingRegion } from "./constants";
 import { Pill } from "./atoms";
+
+const titleCase = (s) => (s || "").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export const PaneBuyerInsights = ({ focusCity }) => {
   // If a search has committed to a city (e.g. "Osoyoos"), we scope the live
   // insights to that city. Otherwise we roll a rotating BC region so the
   // idle demo cycles through interesting communities.
   const rotating = useRotatingRegion();
-  const region = focusCity ? { ...rotating, city: focusCity } : rotating;
+  // Visitor-typed area overrides the rotating region and any search-bar city.
+  const [areaInput, setAreaInput] = useState(focusCity || "");
+  const [area, setArea] = useState(focusCity || "");
+  useEffect(() => {
+    if (focusCity) { setArea(focusCity); setAreaInput(focusCity); }
+  }, [focusCity]);
+  const activeArea = (area || focusCity || "").trim();
+  const region = activeArea ? { ...rotating, city: titleCase(activeArea) } : rotating;
+  const headerLabel = activeArea ? region.city : region.label;
   const [freshness, setFreshness] = useState("recently");
   // Real market insights for the currently-rotating region. Falls back to the
   // illustrative rotating figures if the aggregate query returns 0 (e.g. a
@@ -72,8 +82,30 @@ export const PaneBuyerInsights = ({ focusCity }) => {
 
   return (
     <div data-testid="pane-buyerinsights" style={{ display: "grid", gap: 12 }}>
+      <form
+        onSubmit={(e) => { e.preventDefault(); setArea(areaInput.trim()); }}
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}
+        data-testid="buyerinsights-area-form"
+      >
+        <div style={{ flex: "1 1 240px", display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10, padding: "9px 13px", minWidth: 0 }}>
+          <MapPin size={16} color={C.blue}/>
+          <input
+            value={areaInput}
+            onChange={(e) => setAreaInput(e.target.value)}
+            placeholder="Enter a BC city or community (e.g. Kelowna)"
+            aria-label="Enter a BC city or community for buyer insights"
+            data-testid="buyerinsights-area-input"
+            style={{ flex: 1, border: 0, outline: 0, background: "transparent", fontSize: 13, color: C.navy, minWidth: 0 }}
+          />
+        </div>
+        <button
+          type="submit"
+          data-testid="buyerinsights-area-submit"
+          style={{ background: C.navy, color: "#fff", border: 0, padding: "10px 18px", borderRadius: 99, fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(15,42,91,0.25)" }}
+        >Get insights</button>
+      </form>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · {region.label}</strong>
+        <strong style={{ color: C.navy, fontSize: 14 }}>Buyer snapshot · {headerLabel}</strong>
         <Pill tone="green" data-testid="buyerinsights-freshness">
           <Radio size={12}/> Source: CREA DDF® · {live ? "live" : "illustrative"} · updated {freshness}
         </Pill>
