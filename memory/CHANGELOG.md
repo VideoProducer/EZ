@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Apple-style header (HomeNextNav) adopted site-wide
+
+- Replaced the old `<Nav/>` + `<BackHomeBar/>` in `AppLayout` (App.js) with `<HomeNextNav/>` so the compact Apple-style header (Back|Home pills · logo · Doug identity · Buy/Sell/Luxury/Equestrian/Communities/Glossary · "Talk to Doug") now appears on every standard route. The `-next` pages already used it.
+- Made `homeNext.css` global (imported in App.js) and declared the `--hn-*` CSS variables directly on `.hn-nav` so the nav styles/variables resolve without a `.hn` ancestor (avoids breaking its `position:sticky` and the `.hn{min-height:100vh}` gap). CSS is safely scoped under `.hn`/`.hn-*`, no bleed.
+- Per user choice (option a): dropped About / Market Estimate / Relocating / Favorites / Tools / REALTOR® Network from the top nav. BCFSA Licence #167790 stays on the footer; REALTOR® Network link added to `HomeNextFooter` (already present in the main `Footer`).
+- Removed `<BackHomeBar/>` from AppLayout (HomeNextNav carries its own Back|Home pills). Old `Nav`/`BackHomeBar`/`ToolsDropdown` remain defined but unused.
+- Verified via Playwright: `/glossary` + `/listings` render the new sticky header, navy CTA, no old `.nav-links`, footer has realtor-network + 167790, mobile burger = flex, zero console errors. Not yet redeployed.
+
+
 ## June 2026 — Apple-style Glossary preview (/glossary-next)
 
 Built the reimagined glossary as a `noindex` preview route (backend untouched):

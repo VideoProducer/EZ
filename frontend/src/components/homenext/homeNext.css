@@ -30,6 +30,11 @@
 
 /* ── Nav ─────────────────────────────────────────────── */
 .hn-nav {
+  --hn-navy: #0F2A5B; --hn-gold: #C9A44A;
+  --hn-ink: #1d1d1f; --hn-grey: #6e6e73;
+  --hn-line: rgba(0, 0, 0, 0.08); --hn-bg-alt: #f5f5f7;
+  --hn-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Inter", sans-serif;
+  font-family: var(--hn-font); letter-spacing: -0.01em;
   position: sticky; top: 0; z-index: 40;
   height: 64px;
   background: rgba(255, 255, 255, 0.72);

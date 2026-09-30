@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, useSearchParams, useLocation, Navigate } from "react-router-dom";
 import "./App.css";
+import "./components/homenext/homeNext.css";
+import { HomeNextNav } from "./components/homenext/HomeNextHero";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 // SEC-009: send the HttpOnly admin cookie on every same-origin XHR/API call.
@@ -11783,8 +11785,7 @@ const AppLayout = ({children}) => {
     <a href="#main-content" className="skip-to-content" data-testid="skip-to-content">Skip to main content</a>
     <ComplianceStrip/>
     <ConversionStrip/>
-    <Nav/>
-    <BackHomeBar/>
+    <HomeNextNav/>
     <main id="main-content" tabIndex={-1}>{children}</main>
     <Footer/>
     {/* DoogieChat floating FAB retired site-wide — the Visual Agent at
