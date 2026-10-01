@@ -212,7 +212,7 @@ export default function CommunityPageMockup() {
         </div>
 
         {/* ═══════════════ § LIVE LISTINGS PREVIEW ════════════════════ */}
-        <SectionH kicker="§3 · Live inventory">4 sample listings in {c.name}</SectionH>
+        <SectionH kicker="§3 · Live inventory">4 live MLS® listings in {c.name}</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:14}}>
           {c.sampleListings.map(l => (
             <div key={l.key} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:12,overflow:"hidden"}}>

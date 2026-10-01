@@ -2,6 +2,13 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Fix mis-scoped Referral REALTOR® + remove "sample listings" wording
+
+- **Referral CTA scoping**: Added a `FOCUS_HOODS` set (Vancouver neighbourhoods — Kitsilano, Kerrisdale, Point Grey, UBC/University Endowment Lands, etc. — plus key Metro/Fraser Valley sub-areas) mirrored in `App.js` and `CommunityPageMockupLive.jsx`. `isFarmCity()` (listings empty-state, App.js) and `isFocus` (community page) now treat these as IN-AREA. Result: an in-region neighbourhood like Kitsilano shows "Doug represents … directly" (no referral); only genuinely out-of-region places (Kelowna, Victoria, Interior/Island/Kootenays) show the Referral REALTOR® CTA. Verified via Playwright: Kitsilano→directRep, Kelowna→referral.
+- **"sample listings" removed**: Relabeled `{n} sample listings in {community}` → `{n} live MLS® listing(s) in {community}` in `CommunityPageMockupLive.jsx` + `CommunityPageMockup.jsx`. These were always REAL CREA DDF listings (confirmed `using_mock_data=false`, 613 real New Westminster listings) — only the label was wrong. Reworded the dormant `using_mock_data` "DEMO MODE — sample listings" banner in App.js to drop the word "sample."
+- These changes are on the live (non-`-next`) pages; not yet redeployed.
+
+
 ## June 2026 — Apple-style property search preview (/listings-next)
 
 Built the reimagined BC Real Estate Search as a `noindex` preview (backend untouched):

@@ -162,8 +162,38 @@ const FARM_SLUGS = new Set([
   "hope", "kent", "harrison-hot-springs",
   "squamish", "whistler", "pemberton", "lions-bay", "bowen-island",
 ]);
+// Neighbourhoods WITHIN Doug's farm cities (Greater Vancouver / Fraser Valley /
+// Sea-to-Sky). These are IN-AREA — a search for e.g. "Kitsilano" must NOT show a
+// referral CTA, since Kitsilano is part of Vancouver. Mirrors FOCUS_HOODS in
+// CommunityPageMockupLive.jsx.
+const FOCUS_HOODS = new Set([
+  // Vancouver neighbourhoods
+  "kitsilano", "kerrisdale", "west-point-grey", "point-grey", "point-grey-ubc",
+  "dunbar", "dunbar-southlands", "southlands", "marpole", "oakridge",
+  "south-cambie", "cambie", "shaughnessy", "south-granville", "arbutus",
+  "arbutus-ridge", "mount-pleasant", "fairview", "yaletown", "coal-harbour",
+  "west-end", "downtown", "downtown-vancouver", "downtown-eastside", "gastown",
+  "chinatown", "strathcona", "grandview-woodland", "commercial-drive",
+  "hastings-sunrise", "renfrew-collingwood", "victoria-fraserview", "sunset",
+  "kensington-cedar-cottage", "riley-park", "killarney", "champlain-heights",
+  "false-creek", "olympic-village", "main-street", "west-side", "east-side",
+  "east-vancouver",
+  // UBC / University Endowment Lands
+  "university", "ubc", "university-endowment-lands", "uel",
+  // Burnaby
+  "metrotown", "brentwood", "edmonds", "capitol-hill", "burnaby-heights",
+  "deer-lake", "lougheed",
+  // Richmond
+  "steveston", "steveston-village", "brighouse",
+  // North / West Vancouver
+  "lonsdale", "lower-lonsdale", "lynn-valley", "deep-cove", "edgemont",
+  "british-properties", "ambleside", "dundarave", "horseshoe-bay",
+  // Surrey / Tri-Cities
+  "south-surrey", "cloverdale", "fleetwood", "guildford", "newton", "whalley",
+  "burke-mountain", "fort-langley", "walnut-grove", "willoughby",
+]);
 const _cityToSlug = (name) => (name || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-const isFarmCity = (cityName) => FARM_SLUGS.has(_cityToSlug(cityName));
+const isFarmCity = (cityName) => { const s = _cityToSlug(cityName); return FARM_SLUGS.has(s) || FOCUS_HOODS.has(s); };
 
 // Google Maps iframe embed — no API key required for basic q=... embed.
 // Google handles geocoding, so no client-side geocoder or rate limits needed.
@@ -3746,7 +3776,7 @@ const Listings = () => {
         <p className="section-sub" style={{maxWidth:820,margin:"0 auto"}}>Search live MLS® listings across British Columbia. Prices and availability are updated every 4 hours direct from CREA.</p>
         {results.using_mock_data && (
           <div style={{background:"#FEF3C7",border:"1px solid #F59E0B",color:"#92400E",padding:"0.65rem 1rem",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",display:"inline-block",marginTop:"0.75rem",fontWeight:600}} data-testid="mock-data-banner">
-            🟡 DEMO MODE — Showing 15 sample listings. Live CREA DDF® feed will replace these once credentials are provisioned.
+            🟡 Live MLS® feed is briefly reconnecting — results may be limited for a moment. Refresh in a minute for the full live CREA DDF® inventory.
           </div>
         )}
         {nlBanner && (

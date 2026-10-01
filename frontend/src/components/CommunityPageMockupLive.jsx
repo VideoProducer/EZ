@@ -39,6 +39,28 @@ const FOCUS_COMMUNITIES = new Set([
   "hope", "kent", "harrison-hot-springs",
   "squamish", "whistler", "pemberton", "lions-bay", "bowen-island",
 ]);
+// Neighbourhoods inside the farm cities above — IN-AREA (no referral).
+// Mirrors FOCUS_HOODS in App.js.
+const FOCUS_HOODS = new Set([
+  "kitsilano", "kerrisdale", "west-point-grey", "point-grey", "point-grey-ubc",
+  "dunbar", "dunbar-southlands", "southlands", "marpole", "oakridge",
+  "south-cambie", "cambie", "shaughnessy", "south-granville", "arbutus",
+  "arbutus-ridge", "mount-pleasant", "fairview", "yaletown", "coal-harbour",
+  "west-end", "downtown", "downtown-vancouver", "downtown-eastside", "gastown",
+  "chinatown", "strathcona", "grandview-woodland", "commercial-drive",
+  "hastings-sunrise", "renfrew-collingwood", "victoria-fraserview", "sunset",
+  "kensington-cedar-cottage", "riley-park", "killarney", "champlain-heights",
+  "false-creek", "olympic-village", "main-street", "west-side", "east-side",
+  "east-vancouver",
+  "university", "ubc", "university-endowment-lands", "uel",
+  "metrotown", "brentwood", "edmonds", "capitol-hill", "burnaby-heights",
+  "deer-lake", "lougheed",
+  "steveston", "steveston-village", "brighouse",
+  "lonsdale", "lower-lonsdale", "lynn-valley", "deep-cove", "edgemont",
+  "british-properties", "ambleside", "dundarave", "horseshoe-bay",
+  "south-surrey", "cloverdale", "fleetwood", "guildford", "newton", "whalley",
+  "burke-mountain", "fort-langley", "walnut-grove", "willoughby",
+]);
 
 const FALLBACK_SUGGESTIONS = [
   { slug: "maple-ridge", label: "Maple Ridge (in-area)" },
@@ -287,7 +309,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   const stats = data.stats;
   const community = stats?.community || slug.replace(/-/g," ").replace(/\b\w/g, s => s.toUpperCase());
   const region = data.synopsis?.region || data.nearby?.[0]?.region || "British Columbia";
-  const isFocus = FOCUS_COMMUNITIES.has(slug) || FOCUS_REGIONS.has(region);
+  const isFocus = FOCUS_COMMUNITIES.has(slug) || FOCUS_HOODS.has(slug) || FOCUS_REGIONS.has(region);
 
   const median = stats?.median_price ? fmtMoney(stats.median_price) : "—";
   const active = stats?.count ?? 0;
@@ -674,7 +696,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         {/* ── § LIVE LISTINGS ───────────────────────────────────────── */}
-        <SectionH kicker="§3 · Live inventory">{data.listings.length} sample listings in {community}</SectionH>
+        <SectionH kicker="§3 · Live inventory">{data.listings.length} live MLS® listing{data.listings.length === 1 ? "" : "s"} in {community}</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:14}}>
           {data.listings.map(l => {
             const photo = (l.photos && l.photos[0]) || l.primary_photo || null;
