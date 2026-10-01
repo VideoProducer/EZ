@@ -2,6 +2,17 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Apple-style property search preview (/listings-next)
+
+Built the reimagined BC Real Estate Search as a `noindex` preview (backend untouched):
+- New `pages/ListingsNext.jsx` at `/listings-next`; lazy route + `HomeNextNav`/`HomeNextFooter` shell.
+- Wired to live `GET /api/listings` (43,396 homes) with debounced `q`, and filters `city`, `property_type`, `beds_min`, `baths_min`, `price_min`/`price_max`, `sort`; facets from `GET /api/listings/meta/facets`; offset/limit "Show more" pagination. Cards link to `/listing/{listing_key}`.
+- Calm navy hero + big pill search, clean pill-select filters, split view: property-card grid (real CREA DDF® photos, navy price, address, beds·baths·sqft, gold "Source: CREA DDF®" tag, save-heart in localStorage, photo-count badge) + vanilla-Leaflet map with navy price-bubble markers & popups.
+- Map tiles: **Esri World Light Gray Canvas** (keyless, clean Apple-Maps look) — note CARTO basemaps now require an API key, so avoid them.
+- Responsive: ≤900px collapses to single column with a floating List/Map toggle.
+- Verified via Playwright (desktop 1440 + mobile 390): 24 cards, 24 map markers, tiles load, photos load (20/24 above-fold), 7 filters, list/map toggle works, zero horizontal overflow. (One dev-only visual-editor `<span>`-in-`<option>` warning — stripped in production builds.) Not yet redeployed.
+
+
 ## June 2026 — Apple-style header (HomeNextNav) adopted site-wide
 
 - Replaced the old `<Nav/>` + `<BackHomeBar/>` in `AppLayout` (App.js) with `<HomeNextNav/>` so the compact Apple-style header (Back|Home pills · logo · Doug identity · Buy/Sell/Luxury/Equestrian/Communities/Glossary · "Talk to Doug") now appears on every standard route. The `-next` pages already used it.
