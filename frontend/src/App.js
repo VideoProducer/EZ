@@ -5621,6 +5621,20 @@ const RealtorNetwork = () => (
         <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
         <h1 className="section-title" style={{marginBottom:"0.5rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
       </div>
+      {/* Consumer-facing CTA — buyers/sellers who need a REALTOR® OUTSIDE
+          Doug's Greater Vancouver / Fraser Valley / Sea-to-Sky region. This
+          page is otherwise REALTOR®-recruitment; this band routes consumers to
+          the out-of-area referral request so they don't bounce. */}
+      <div className="container-x" style={{maxWidth:"52rem"}}>
+        <div data-testid="realtor-network-consumer-cta" style={{marginTop:"1rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:16,padding:"1.5rem 1.75rem",display:"flex",gap:"1.25rem",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",fontFamily:"Inter,sans-serif",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
+          <div style={{flex:"1 1 300px",minWidth:0}}>
+            <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>Buying or selling outside Greater Vancouver?</div>
+            <div style={{fontSize:"1.25rem",fontWeight:700,marginTop:"0.3rem",lineHeight:1.3}}>Get matched with a vetted local REALTOR® — at no cost to you.</div>
+            <div style={{fontSize:"0.9rem",opacity:0.85,marginTop:"0.4rem",lineHeight:1.55}}>Kelowna, Victoria, Kamloops, the Kootenays, anywhere in BC or beyond — Doug personally connects you with a trusted agent in that market through the CREA Inter-Board Referral network.</div>
+          </div>
+          <Link to="/referral-request" data-testid="realtor-network-referral-btn" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none",whiteSpace:"nowrap",fontWeight:700}}>Request an out-of-area referral →</Link>
+        </div>
+      </div>
     </div>
     {/* BC REALTORS® — top */}
     <RealtorApply/>

@@ -7,6 +7,7 @@ import { Search, Heart, MapPin, BedDouble, Bath, Ruler, X, Map as MapIcon, List 
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
+import { isFarmArea } from "../lib/serviceArea";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const PAGE = 24;
@@ -118,6 +119,11 @@ export default function ListingsNext() {
 
   const inBbox = (l) => !drawBbox || (typeof l.lat === "number" && typeof l.lon === "number" && l.lat >= drawBbox.south && l.lat <= drawBbox.north && l.lon >= drawBbox.west && l.lon <= drawBbox.east);
   const visibleItems = drawBbox ? items.filter(inBbox) : items;
+
+  // Out-of-area detection for the no-results referral CTA. Uses the selected
+  // city, or the free-text query as a fallback, against Doug's service region.
+  const areaTerm = (city || q.trim()).trim();
+  const outOfArea = !drawBbox && !!areaTerm && !isFarmArea(areaTerm);
 
   const closeSave = () => { setSaveOpen(false); setSaveMsg(""); setSaveErr(""); };
   const submitSaveSearch = async () => {
@@ -372,10 +378,28 @@ export default function ListingsNext() {
               ))}
             </div>
           ) : visibleItems.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }} data-testid="ln-empty">
-              <p style={{ fontSize: 18, color: C.navy, fontWeight: 600 }}>No homes match your search.</p>
-              <p>{drawBbox ? "No listings fall inside your drawn area — try a bigger box or clear it." : "Try widening the price range or clearing a filter."}</p>
-            </div>
+            outOfArea ? (
+              <div style={{ textAlign: "center", padding: "48px 24px", maxWidth: 560, margin: "0 auto" }} data-testid="ln-empty-referral">
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.goldBg, display: "grid", placeItems: "center", margin: "0 auto 16px" }}><MapPin size={26} color={C.gold} /></div>
+                <p style={{ fontSize: 20, color: C.navy, fontWeight: 700, margin: "0 0 8px" }}>Searching outside Doug's home turf?</p>
+                <p style={{ color: C.muted, fontSize: 14.5, lineHeight: 1.6, margin: "0 0 20px" }}>
+                  <strong style={{ color: C.ink }}>{areaTerm}</strong> is outside Doug's Greater Vancouver, Fraser Valley &amp; Sea-to-Sky service area — but he can connect you with a vetted local REALTOR® through his BC referral network, <strong style={{ color: C.ink }}>at no cost to you</strong>.
+                </p>
+                <Link
+                  to={`/referral-request?city=${encodeURIComponent(areaTerm)}`}
+                  data-testid="ln-empty-referral-cta"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: "#fff", textDecoration: "none", borderRadius: 999, padding: "13px 26px", fontSize: 15, fontWeight: 700 }}
+                >
+                  Get matched with a local REALTOR® →
+                </Link>
+                <p style={{ color: C.muted, fontSize: 12.5, marginTop: 14 }}>Prefer to keep browsing? Clear the area filter to see all BC listings.</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }} data-testid="ln-empty">
+                <p style={{ fontSize: 18, color: C.navy, fontWeight: 600 }}>No homes match your search.</p>
+                <p>{drawBbox ? "No listings fall inside your drawn area — try a bigger box or clear it." : "Try widening the price range or clearing a filter."}</p>
+              </div>
+            )
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>

@@ -2,6 +2,14 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Out-of-area referral link placement (a + d)
+
+- New shared helper `/app/frontend/src/lib/serviceArea.js` (FARM_SLUGS, FOCUS_HOODS, `isFarmArea`) — mirrors App.js's inline region sets so public pages can detect out-of-area searches.
+- **(a) `/listings` empty-state referral CTA**: when a search for an out-of-area place returns zero homes, show a "Searching outside Doug's home turf?" card → "Get matched with a local REALTOR®" linking to `/referral-request?city=<searched area>` (prefilled). Gated by `isFarmArea` so in-region searches (e.g. Kitsilano) never trigger it; drawn-box empties show the generic message. (`ListingsNext.jsx`, testids `ln-empty-referral`, `ln-empty-referral-cta`)
+- **(d) `/realtor-network` consumer CTA band**: prominent navy band at the top of the (otherwise REALTOR®-recruitment) hub — "Buying or selling outside Greater Vancouver? Get matched with a vetted local REALTOR® — at no cost to you" → "Request an out-of-area referral →" (`/referral-request`). (`App.js` `RealtorNetwork`, testids `realtor-network-consumer-cta`, `realtor-network-referral-btn`)
+- Note: the empty-state CTA only fires on zero-result searches; out-of-area towns that DO have DDF listings are caught by the hub band + footer "REALTOR® Network" link.
+
+
 ## June 2026 — Sunday digest cron, Alert Analytics, Map-Draw search, Community speed
 
 - **Match-Alert Digests (scheduled)**: added `.emergent/crons.yml` → `POST /api/cron/sunday-night-digest` (Sun 6pm America/Vancouver). Cron endpoint checks `WEBHOOK_CRON_SECRET` (new backend/.env key) with `hmac.compare_digest`, dedupes via `cron_runs` + `X-Webhook-Id`, acks 2xx and backgrounds `run_sunday_night_digest`. The save-search modal now opts users into the Sunday brief (`frequency='sunday_night'` → `digest_frequency='sunday_night'`); digest still only emails explicit opt-ins (per user choice). NOTE: cron syncs to **production on the next deploy**.
