@@ -2,6 +2,11 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — /referral-request Apple-style polish (presentation only)
+
+- Scoped a `.ref-apple` wrapper + `<style>` override on the consumer `ReferralRequest` page: white card (`.paper`), hairline rounded 12px inputs/selects/textarea with navy focus, light-grey labels, Playfair navy headline, navy pill primary button. NO logic touched — i18n `t()` keys, Turnstile widget, intent buttons, the "under contract with another REALTOR®" Article-16 block, PIPA consent, and every data-testid are unchanged. Verified via screenshot; both referral flows now feel consistent.
+
+
 ## June 2026 — Slim footer on /realtor-network
 
 - Added `slimFooter` prop to `AppLayout` (renders `HomeNextFooter` instead of the big legacy `Footer`); applied to the `/realtor-network` route so its footer matches the other Apple-style pages. Imported `HomeNextFooter` into App.js. Verified via screenshot.

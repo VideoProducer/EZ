@@ -9956,7 +9956,17 @@ const ReferralRequest = () => {
     }
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, or — where appropriate — a licensed local referral REALTOR<sup>®</sup> on the right board will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p></div></section>;
-  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+  return (<section className="section ref-apple" dir={rtl?"rtl":"ltr"}>
+    <style>{`
+      .ref-apple{background:#fff;}
+      .ref-apple h1.section-title{font-family:'Playfair Display',serif;color:#0F2A5B;}
+      .ref-apple .paper{background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:20px;padding:32px;box-shadow:0 10px 40px rgba(15,42,91,0.07);}
+      .ref-apple .field label{font-size:12.5px;font-weight:600;color:#6e6e73;letter-spacing:0.01em;}
+      .ref-apple .field input,.ref-apple .field select,.ref-apple .field textarea{border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:13px 15px;font-size:15px;background:#fff;color:#1d1d1f;}
+      .ref-apple .field input:focus,.ref-apple .field select:focus,.ref-apple .field textarea:focus{border-color:#0F2A5B;outline:none;}
+      .ref-apple .btn.btn-primary{background:#0F2A5B;border:none;border-radius:999px;padding:14px 28px;font-weight:700;}
+    `}</style>
+    <div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Task 14 (Feb 2026): missing <SEO/> was leaving the browser tab
         title as the homepage default "EZtoFind.ca | BC Real Estate
         Search" — visitors landing here from Doogie's "Referral REALTOR®
