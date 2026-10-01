@@ -2,6 +2,13 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Valuation Apple polish + REALTOR® hero mobile tuning
+
+- Applied `apple-form` class to the `/valuation` (`Valuation`) page — white card, rounded inputs, light-grey labels, navy pill button; Turnstile + compliance + data-testids untouched. Verified via screenshot.
+- Added `.rn-hero`/`.rn-hero__img/__overlay/__body` classes + a `@media (max-width:640px)` block in index.css: taller hero (380px), stronger bottom gradient for legibility, framed handshake (object-position 60%), tighter padding. Verified at 390px (no overflow).
+- `/contact` LEFT AS-IS: it's the bespoke `LuxuryQuietContact.jsx` (own refined "luxury quiet" styling, not the shared `.paper/.field` classes), so `.apple-form` doesn't apply and forcing it would clash. Flagged to user.
+
+
 ## June 2026 — Separate the two referral audiences
 
 - Per Doug: keep consumer vs REALTOR® flows on completely separate pages. Removed the "I'm a buyer or seller" selector card from `/realtor-network`; it's now a single REALTOR®-only handshake hero ("Join Doug's referral network" → #apply, testid `realtor-network-hero`/`rn-apply-cta`). Updated the page SEO title/description to REALTOR®-only.

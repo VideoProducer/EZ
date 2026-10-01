@@ -5639,10 +5639,10 @@ const RealtorNetwork = () => {
         <p style={{color:"#6e6e73",fontSize:"1rem",maxWidth:"34rem",margin:"0 auto",fontFamily:"-apple-system,Inter,sans-serif"}}>Receive qualified buyer &amp; seller referrals from Doug across British Columbia and beyond.</p>
       </div>
       <div className="container-x" style={{maxWidth:"60rem"}}>
-        <div data-testid="realtor-network-hero" style={{position:"relative",borderRadius:20,overflow:"hidden",minHeight:320,display:"flex",flexDirection:"column",justifyContent:"flex-end",boxShadow:"0 14px 34px rgba(15,42,91,0.18)",marginTop:"1.5rem"}}>
-          <img src="https://images.unsplash.com/photo-1672380135241-c024f7fbfa13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjByZWFsJTIwZXN0YXRlJTIwYWdlbnQlMjBoYW5kc2hha2V8ZW58MHx8fHwxNzkwODIyNDYyfDA&ixlib=rb-4.1.0&q=85" alt="REALTOR® handshake" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
-          <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.9) 100%)"}}/>
-          <div style={{position:"relative",padding:"2rem",color:"#fff",fontFamily:"-apple-system,Inter,sans-serif",textAlign:"left",maxWidth:"36rem"}}>
+        <div data-testid="realtor-network-hero" className="rn-hero" style={{position:"relative",borderRadius:20,overflow:"hidden",minHeight:320,display:"flex",flexDirection:"column",justifyContent:"flex-end",boxShadow:"0 14px 34px rgba(15,42,91,0.18)",marginTop:"1.5rem"}}>
+          <img src="https://images.unsplash.com/photo-1672380135241-c024f7fbfa13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjByZWFsJTIwZXN0YXRlJTIwYWdlbnQlMjBoYW5kc2hha2V8ZW58MHx8fHwxNzkwODIyNDYyfDA&ixlib=rb-4.1.0&q=85" alt="REALTOR® handshake" loading="lazy" className="rn-hero__img" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",objectPosition:"center"}}/>
+          <div className="rn-hero__overlay" style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.9) 100%)"}}/>
+          <div className="rn-hero__body" style={{position:"relative",padding:"2rem",color:"#fff",fontFamily:"-apple-system,Inter,sans-serif",textAlign:"left",maxWidth:"36rem"}}>
             <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>For licensed REALTORS®</div>
             <div style={{fontSize:"1.6rem",fontWeight:700,margin:"0.3rem 0 0.5rem",fontFamily:"'Playfair Display',serif"}}>Join Doug's referral network</div>
             <div style={{fontSize:"0.95rem",opacity:0.92,lineHeight:1.55,marginBottom:"1rem"}}>Licensed in BC or another province? Receive qualified referrals from Doug and build lasting relationships — documented on a CREA Inter-Board Referral Agreement.</div>
@@ -9785,7 +9785,7 @@ const Valuation = () => {
   // gate → CASL/PIPA/DoRTS → submit. Educational glossary prose is moved
   // BELOW the form into a progressive-disclosure accordion so it never
   // pushes the first field past the mobile viewport.
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
+  return (<section className="section apple-form"><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Identity line — Doug + brokerage prominently displayed above the
         H1 per RESA / BCFSA best practice (not footer-only). */}
     <ConversionPageSchema route="/valuation" headline="Curious what your home could be worth? — Doug LeMaire, REALTOR®" description="Free BC market estimate from Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; not appraisal advice."/>

@@ -1380,3 +1380,12 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
+
+/* REALTOR® Network hero — mobile fine-tuning: taller tap target, stronger
+   bottom gradient for text legibility, keep handshake framed. */
+@media (max-width: 640px) {
+  .rn-hero { min-height: 380px !important; }
+  .rn-hero__img { object-position: 60% center !important; }
+  .rn-hero__overlay { background: linear-gradient(180deg, rgba(15,42,91,0.15) 0%, rgba(15,42,91,0.55) 45%, rgba(15,42,91,0.95) 100%) !important; }
+  .rn-hero__body { padding: 1.5rem 1.25rem !important; }
+}
