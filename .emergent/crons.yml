@@ -1,0 +1,9 @@
+crons:
+  - name: sunday-digest
+    description: "Emails opted-in savers their weekly new-match + price-drop brief every Sunday 6pm PT"
+    cron: "0 18 * * 0"
+    timezone: "America/Vancouver"
+    endpoint: "{{BASE_URL}}/api/cron/sunday-night-digest"
+    method: POST
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    enabled: true

@@ -275,20 +275,22 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
     try { setSaved(!!localStorage.getItem(`ez_saved_community_${slug}`)); } catch (_) { /* noop */ }
     (async () => {
       try {
-        // Fetch stats first to establish the canonical community name.
-        const statsR = await axios.get(`${API}/api/community/${slug}/stats`).catch(() => null);
-        const city = statsR?.data?.community || slug.replace(/-/g," ").replace(/\b\w/g, s => s.toUpperCase());
-        // Fan out the remaining fetches in parallel.
-        const [synR, hoodsR, nearR, wR, listR] = await Promise.allSettled([
+        // Deslugified guess lets every fetch (including listings) fire in ONE
+        // parallel batch — no stats-first round-trip. If the canonical name
+        // differs, listings are refined in the background below.
+        const cityGuess = slug.replace(/-/g," ").replace(/\b\w/g, s => s.toUpperCase());
+        const [statsR, synR, hoodsR, nearR, wR, listR] = await Promise.allSettled([
+          axios.get(`${API}/api/community/${slug}/stats`),
           axios.get(`${API}/api/community/${slug}/synopsis`),
           axios.get(`${API}/api/community/${slug}/neighbourhoods`),
           axios.get(`${API}/api/community/${slug}/nearby`),
           axios.get(`${API}/api/community/${slug}/weather`),
-          axios.get(`${API}/api/listings`, { params: { city, limit: 4 } }),
+          axios.get(`${API}/api/listings`, { params: { city: cityGuess, limit: 4 } }),
         ]);
         if (cancelled) return;
+        const statsData = statsR.status === "fulfilled" ? statsR.value.data : null;
         setData({
-          stats: statsR?.data || null,
+          stats: statsData,
           synopsis: synR.status === "fulfilled" ? synR.value.data : null,
           neighbourhoods: hoodsR.status === "fulfilled" ? (hoodsR.value.data.neighbourhoods || []) : [],
           referralOnly: hoodsR.status === "fulfilled" ? !!hoodsR.value.data.referral_only : false,
@@ -297,6 +299,13 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           listings: listR.status === "fulfilled" ? (listR.value.data.listings || []) : [],
           listingsTotal: listR.status === "fulfilled" ? (listR.value.data.total || 0) : 0,
         });
+        // Refine listings if the canonical community name differs from the guess.
+        const canonical = statsData?.community;
+        if (canonical && canonical.toLowerCase() !== cityGuess.toLowerCase()) {
+          axios.get(`${API}/api/listings`, { params: { city: canonical, limit: 4 } })
+            .then(r => { if (!cancelled) setData(prev => ({ ...prev, listings: r.data.listings || prev.listings, listingsTotal: r.data.total || prev.listingsTotal })); })
+            .catch(() => {});
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || "Failed to load community data");
       } finally {
@@ -552,8 +561,27 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
       {/* Community picker removed per user request */}
 
       {loading && (
-        <div style={{padding:"80px 20px",textAlign:"center",fontFamily:"Inter,sans-serif",color:BRAND.muted}}>
-          🐾 Loading live data for <strong style={{color:BRAND.navy}}>{community}</strong>…
+        <div data-testid="community-skeleton" style={{maxWidth:"1100px",margin:"0 auto",padding:"28px 20px",fontFamily:"Inter,sans-serif"}}>
+          <div style={{height:14,width:260,background:"#ECE7D8",borderRadius:6,marginBottom:18}} className="ez-sk"/>
+          <div style={{height:44,width:"60%",maxWidth:460,background:"#ECE7D8",borderRadius:10,marginBottom:14}} className="ez-sk"/>
+          <div style={{height:16,width:"80%",background:"#F0EBDC",borderRadius:6,marginBottom:8}} className="ez-sk"/>
+          <div style={{height:16,width:"70%",background:"#F0EBDC",borderRadius:6,marginBottom:28}} className="ez-sk"/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14,marginBottom:28}}>
+            {Array.from({length:4}).map((_,i)=>(<div key={i} style={{height:92,background:"#F0EBDC",borderRadius:14}} className="ez-sk"/>))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:16}}>
+            {Array.from({length:4}).map((_,i)=>(
+              <div key={i} style={{borderRadius:16,overflow:"hidden",border:"1px solid rgba(15,42,91,0.08)"}}>
+                <div style={{height:150,background:"#ECE7D8"}} className="ez-sk"/>
+                <div style={{padding:14}}>
+                  <div style={{height:18,width:"50%",background:"#F0EBDC",borderRadius:6}} className="ez-sk"/>
+                  <div style={{height:12,width:"80%",background:"#F2EEE1",borderRadius:6,marginTop:10}} className="ez-sk"/>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{textAlign:"center",marginTop:26,color:BRAND.muted,fontSize:"0.9rem"}}>🐾 Loading live data for <strong style={{color:BRAND.navy}}>{community}</strong>…</div>
+          <style>{`.ez-sk{position:relative;overflow:hidden}.ez-sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,0.65),transparent);animation:ez-shimmer 1.3s infinite}@keyframes ez-shimmer{100%{transform:translateX(100%)}}`}</style>
         </div>
       )}
 

@@ -56,11 +56,32 @@ def _match_filters(listing: dict, filters: dict) -> bool:
             if (listing.get("beds") or 0) < int(bmin):
                 return False
         except Exception: pass
+    if (bamin := filters.get("baths_min") or filters.get("baths")):
+        try:
+            if (listing.get("baths") or 0) < int(bamin):
+                return False
+        except Exception: pass
+    if (pmin := filters.get("price_min") or filters.get("priceMin")):
+        try:
+            if (listing.get("close_price") or listing.get("list_price") or 0) < float(pmin):
+                return False
+        except Exception: pass
     if (pmax := filters.get("price_max") or filters.get("priceMax")):
         try:
             if (listing.get("close_price") or listing.get("list_price") or 0) > float(pmax):
                 return False
         except Exception: pass
+    # Map-draw rectangle: {"north","south","east","west"} lat/lon box.
+    if (bbox := filters.get("bbox")):
+        try:
+            lat = listing.get("lat"); lon = listing.get("lon")
+            if lat is None or lon is None:
+                return False
+            lat = float(lat); lon = float(lon)
+            if not (float(bbox["south"]) <= lat <= float(bbox["north"]) and float(bbox["west"]) <= lon <= float(bbox["east"])):
+                return False
+        except Exception:
+            return False
     return True
 
 

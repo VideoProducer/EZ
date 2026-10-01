@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Search, Heart, MapPin, BedDouble, Bath, Ruler, X, Map as MapIcon, List as ListIcon, Loader2, Bell } from "lucide-react";
+import { Search, Heart, MapPin, BedDouble, Bath, Ruler, X, Map as MapIcon, List as ListIcon, Loader2, Bell, Square } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
@@ -55,10 +55,12 @@ export default function ListingsNext() {
   const [saveEmail, setSaveEmail] = useState("");
   const [saveCasl, setSaveCasl] = useState(false);
   const [savePipa, setSavePipa] = useState(false);
-  const [saveFreq, setSaveFreq] = useState("instant");
+  const [saveFreq, setSaveFreq] = useState("sunday_night");
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [saveErr, setSaveErr] = useState("");
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawBbox, setDrawBbox] = useState(null);
 
   useEffect(() => {
     fetch(`${API}/listings/meta/facets`).then(r => r.json()).then(setFacets).catch(() => {});
@@ -112,7 +114,10 @@ export default function ListingsNext() {
   };
 
   const reset = () => { setQ(""); setCity(""); setPtype(""); setBeds(""); setBaths(""); setPmin(""); setPmax(""); setSort("newest"); };
-  const hasFilters = q || city || ptype || beds || baths || pmin || pmax;
+  const hasFilters = q || city || ptype || beds || baths || pmin || pmax || drawBbox;
+
+  const inBbox = (l) => !drawBbox || (typeof l.lat === "number" && typeof l.lon === "number" && l.lat >= drawBbox.south && l.lat <= drawBbox.north && l.lon >= drawBbox.west && l.lon <= drawBbox.east);
+  const visibleItems = drawBbox ? items.filter(inBbox) : items;
 
   const closeSave = () => { setSaveOpen(false); setSaveMsg(""); setSaveErr(""); };
   const submitSaveSearch = async () => {
@@ -127,7 +132,8 @@ export default function ListingsNext() {
     if (pmin) filters.price_min = Number(pmin);
     if (pmax) filters.price_max = Number(pmax);
     if (q.trim()) filters.q = q.trim();
-    const label = [city, ptype, beds && `${beds}+ bd`, baths && `${baths}+ ba`, pmin && `from ${abbr(Number(pmin))}`, pmax && `to ${abbr(Number(pmax))}`].filter(Boolean).join(" · ") || "All BC residential listings";
+    if (drawBbox) filters.bbox = { north: drawBbox.north, south: drawBbox.south, east: drawBbox.east, west: drawBbox.west };
+    const label = [city, ptype, beds && `${beds}+ bd`, baths && `${baths}+ ba`, pmin && `from ${abbr(Number(pmin))}`, pmax && `to ${abbr(Number(pmax))}`, drawBbox && "map area"].filter(Boolean).join(" · ") || "All BC residential listings";
     try {
       const res = await fetch(`${API}/saved-searches`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -162,7 +168,7 @@ export default function ListingsNext() {
     if (!map || !lg) return;
     lg.clearLayers();
     const pts = [];
-    items.forEach((l) => {
+    visibleItems.forEach((l) => {
       if (typeof l.lat !== "number" || typeof l.lon !== "number") return;
       const isActive = l.listing_key === activeKey;
       const icon = L.divIcon({
@@ -184,10 +190,48 @@ export default function ListingsNext() {
       m.on("mouseover", () => setActiveKey(l.listing_key));
       pts.push([l.lat, l.lon]);
     });
-    if (pts.length) {
+    if (pts.length && !drawBbox) {
       try { map.fitBounds(pts, { padding: [40, 40], maxZoom: 13 }); } catch { /* noop */ }
     }
-  }, [items, activeKey]);
+  }, [items, activeKey, drawBbox]);
+
+  // ── Rectangle "draw area" tool ────────────────────────────────
+  const bboxLayer = useRef(null);
+  useEffect(() => {
+    const map = mapObj.current;
+    if (!map || !drawMode) return;
+    map.dragging.disable();
+    map.getContainer().style.cursor = "crosshair";
+    let startPt = null, rect = null;
+    const onDown = (e) => { startPt = e.latlng; if (rect) { map.removeLayer(rect); } rect = L.rectangle([startPt, startPt], { color: C.navy, weight: 2, fillOpacity: 0.08 }).addTo(map); };
+    const onMove = (e) => { if (startPt && rect) rect.setBounds(L.latLngBounds(startPt, e.latlng)); };
+    const onUp = (e) => {
+      if (!startPt) return;
+      const b = L.latLngBounds(startPt, e.latlng);
+      if (rect) { map.removeLayer(rect); rect = null; }
+      startPt = null;
+      setDrawBbox({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+      setDrawMode(false);
+    };
+    map.on("mousedown", onDown); map.on("mousemove", onMove); map.on("mouseup", onUp);
+    return () => {
+      map.off("mousedown", onDown); map.off("mousemove", onMove); map.off("mouseup", onUp);
+      if (rect) map.removeLayer(rect);
+      map.dragging.enable();
+      map.getContainer().style.cursor = "";
+    };
+  }, [drawMode]);
+
+  // Persisted drawn-area rectangle overlay.
+  useEffect(() => {
+    const map = mapObj.current;
+    if (!map) return;
+    if (bboxLayer.current) { map.removeLayer(bboxLayer.current); bboxLayer.current = null; }
+    if (drawBbox) {
+      bboxLayer.current = L.rectangle([[drawBbox.south, drawBbox.west], [drawBbox.north, drawBbox.east]], { color: C.gold, weight: 2, dashArray: "6 4", fillColor: C.gold, fillOpacity: 0.07 }).addTo(map);
+      try { map.fitBounds(bboxLayer.current.getBounds(), { padding: [30, 30], maxZoom: 14 }); } catch { /* noop */ }
+    }
+  }, [drawBbox]);
 
   useEffect(() => {
     if (mapObj.current) setTimeout(() => mapObj.current.invalidateSize(), 250);
@@ -283,12 +327,19 @@ export default function ListingsNext() {
         </div>
       </section>
 
-      {/* Result count + mobile toggle */}
-      <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      {/* Result count + draw / mobile toggle */}
+      <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span data-testid="ln-count" style={{ color: C.muted, fontSize: 14 }}>
-          {loading ? "Searching…" : `${total.toLocaleString()} ${total === 1 ? "home" : "homes"} in British Columbia`}
+          {loading ? "Searching…" : drawBbox ? `${visibleItems.length.toLocaleString()} ${visibleItems.length === 1 ? "home" : "homes"} in your drawn area` : `${total.toLocaleString()} ${total === 1 ? "home" : "homes"} in British Columbia`}
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            data-testid="ln-draw-toggle"
+            onClick={() => { if (drawBbox) { setDrawBbox(null); setDrawMode(false); } else { setDrawMode((m) => !m); setMobileMap(true); } }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: drawBbox || drawMode ? C.navy : "#fff", color: drawBbox || drawMode ? "#fff" : C.navy, border: `1px solid ${C.navy}`, borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            {drawBbox ? <><X size={15} /> Clear area</> : <><Square size={15} /> <span className="ln-save-label">{drawMode ? "Drag a box on the map…" : "Draw area"}</span></>}
+          </button>
           <button
             data-testid="ln-save-search"
             onClick={() => { setSaveOpen(true); setSaveMsg(""); setSaveErr(""); }}
@@ -320,15 +371,15 @@ export default function ListingsNext() {
                 </div>
               ))}
             </div>
-          ) : items.length === 0 ? (
+          ) : visibleItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: "70px 0", color: C.muted }} data-testid="ln-empty">
               <p style={{ fontSize: 18, color: C.navy, fontWeight: 600 }}>No homes match your search.</p>
-              <p>Try widening the price range or clearing a filter.</p>
+              <p>{drawBbox ? "No listings fall inside your drawn area — try a bigger box or clear it." : "Try widening the price range or clearing a filter."}</p>
             </div>
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
-                {items.map((l) => {
+                {visibleItems.map((l) => {
                   const photo = (l.photos && l.photos[0]) || "";
                   const addr = l.unparsed_address || l.street_address || [l.city, l.region].filter(Boolean).join(", ");
                   const isSaved = saved.has(l.listing_key);
@@ -418,15 +469,11 @@ export default function ListingsNext() {
               <>
                 <p style={{ textTransform: "uppercase", letterSpacing: "0.16em", fontSize: 11, fontWeight: 700, color: C.blue, margin: "0 0 6px" }}>New-match alerts</p>
                 <h3 style={{ color: C.navy, fontSize: 22, margin: "0 0 6px", fontFamily: "'Playfair Display', serif" }}>Save this search</h3>
-                <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.55, margin: "0 0 18px" }}>We'll email you when new BC MLS® listings match your filters. Confirm once by email — unsubscribe anytime.</p>
+                <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.55, margin: "0 0 18px" }}>We'll email you a <strong>weekly Sunday-evening brief</strong> with new BC MLS® listings that match {drawBbox ? "your drawn map area" : "your filters"}, plus any price drops. Confirm once by email — unsubscribe anytime.</p>
                 <input data-testid="ln-save-email" type="email" value={saveEmail} onChange={(e) => setSaveEmail(e.target.value)} placeholder="you@example.com" style={{ width: "100%", padding: "13px 16px", fontSize: 15, border: `1px solid ${C.line}`, borderRadius: 12, outline: "none", color: C.navy, fontFamily: "inherit", boxSizing: "border-box" }} />
-                <label style={{ display: "block", fontSize: 12.5, color: C.ink, margin: "12px 0 0" }}>How often?
-                  <select data-testid="ln-save-freq" value={saveFreq} onChange={(e) => setSaveFreq(e.target.value)} style={{ width: "100%", marginTop: 4, padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 10, fontFamily: "inherit", fontSize: 14, boxSizing: "border-box" }}>
-                    <option value="instant">As they happen</option>
-                    <option value="daily">Daily digest</option>
-                    <option value="weekly">Weekly digest</option>
-                  </select>
-                </label>
+                <div data-testid="ln-save-freqnote" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px 12px", background: C.goldBg, border: "1px solid #E6D9A8", borderRadius: 10, fontSize: 12.5, color: C.navy, fontWeight: 600 }}>
+                  <Bell size={15} color={C.gold} /> Weekly brief — sent every Sunday evening
+                </div>
                 <label style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 12.5, color: C.ink, margin: "14px 0 0", lineHeight: 1.5, cursor: "pointer" }}>
                   <input data-testid="ln-save-casl" type="checkbox" checked={saveCasl} onChange={(e) => setSaveCasl(e.target.checked)} style={{ marginTop: 2 }} />
                   <span>I agree to receive listing-alert emails from EZtoFind.ca (Doug LeMaire, REALTOR®). I can withdraw consent anytime. <span style={{ color: C.muted }}>(CASL)</span></span>

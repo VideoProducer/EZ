@@ -13497,9 +13497,99 @@ const ReferralRequestsPanel = ({ headers }) => {
   );
 };
 
+const SavedSearchAnalyticsPanel = ({ headers }) => {
+  const [days, setDays] = useState(90);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    axios.get(`${API}/admin/saved-searches/analytics?days=${days}`, { headers })
+      .then(r => { if (alive) setData(r.data); })
+      .catch(() => { if (alive) setData(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [days]);
+  const label = { fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
+  const big = { fontSize: "1.6rem", fontWeight: 700, color: "var(--brand-navy)" };
+  const byArea = data?.by_area || [];
+  const maxCount = byArea.reduce((m, c) => Math.max(m, c.count), 0) || 1;
+  const recent = data?.recent || [];
+  return (
+    <div data-testid="saved-search-analytics-panel" style={{ fontFamily: "Inter,sans-serif", marginTop: "2.5rem", paddingTop: "2rem", borderTop: "2px solid rgba(15,42,91,0.1)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h2 style={{ margin: 0 }} data-testid="alert-analytics-title">🔔 Listing-Alert Analytics</h2>
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0.35rem 0 0", maxWidth: "42rem" }}>Saved-search signups, double-opt-in confirmation rate, Sunday-brief opt-ins, briefs sent, and where demand is coming from. These are the searchers you're turning into repeat leads.</p>
+        </div>
+        <select data-testid="alert-analytics-days" value={days} onChange={e => setDays(Number(e.target.value))} style={{ padding: "0.5rem 0.75rem", borderRadius: 8, border: "1px solid rgba(15,42,91,0.2)", fontFamily: "inherit" }}>
+          <option value={30}>Last 30 days</option>
+          <option value={90}>Last 90 days</option>
+          <option value={180}>Last 180 days</option>
+          <option value={365}>Last 365 days</option>
+        </select>
+      </div>
+
+      {loading ? <p style={{ marginTop: "1.5rem" }}>Loading alert analytics…</p> : !data ? <p style={{ marginTop: "1.5rem", color: "#DC2626" }}>Couldn't load alert data.</p> : (
+      <>
+        <div className="grid-4" style={{ gap: "0.75rem", marginTop: "1.25rem" }}>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-total"><div style={label}>Total saved searches</div><div style={big}>{data.total}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-active"><div style={label}>Confirmed &amp; active</div><div style={{ ...big, color: "#059669" }}>{data.active}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-confrate"><div style={label}>Confirmation rate</div><div style={{ ...big, color: "var(--brand-blue)" }}>{data.confirmation_rate}%</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-sunday"><div style={label}>Sunday-brief opt-ins</div><div style={{ ...big, color: "#F59E0B" }}>{data.sunday_optins}</div></div>
+        </div>
+        <div className="grid-4" style={{ gap: "0.75rem", marginTop: "0.75rem" }}>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-pending"><div style={label}>Pending (unconfirmed)</div><div style={{ ...big, fontSize: "1.3rem" }}>{data.pending}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-new"><div style={label}>New in last {data.window_days}d</div><div style={{ ...big, fontSize: "1.3rem" }}>{data.new_in_window}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-sent"><div style={label}>Briefs sent</div><div style={{ ...big, fontSize: "1.3rem" }}>{data.digests_sent}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="ss-unsub"><div style={label}>Unsubscribed</div><div style={{ ...big, fontSize: "1.3rem", color: "#DC2626" }}>{data.unsubscribed}</div></div>
+        </div>
+
+        <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Demand by area</h3>
+        {byArea.length === 0 ? <p style={{ color: "var(--muted)" }}>No saved searches yet.</p> : (
+          <div className="paper" style={{ padding: "1.25rem" }} data-testid="ss-by-area">
+            {byArea.map(c => (
+              <div key={c.area} style={{ marginBottom: "0.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", marginBottom: "0.25rem" }}>
+                  <span style={{ fontWeight: 600 }}>{c.area}</span><span style={{ color: "var(--muted)" }}>{c.count}</span>
+                </div>
+                <div style={{ height: 8, background: "rgba(15,42,91,0.08)", borderRadius: 99 }}>
+                  <div style={{ width: `${(c.count / maxCount) * 100}%`, height: "100%", background: "#F59E0B", borderRadius: 99 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Recent signups</h3>
+        {recent.length === 0 ? <p style={{ color: "var(--muted)" }}>No recent signups.</p> : (
+          <div style={{ overflowX: "auto" }} data-testid="ss-recent">
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <thead><tr style={{ background: "var(--paper)", textAlign: "left" }}>
+                <th style={{ padding: "0.6rem" }}>Date</th><th style={{ padding: "0.6rem" }}>Email</th><th style={{ padding: "0.6rem" }}>Search</th><th style={{ padding: "0.6rem" }}>Status</th>
+              </tr></thead>
+              <tbody>
+                {recent.map((r, i) => (
+                  <tr key={i} style={{ borderTop: "1px solid rgba(15,42,91,0.08)" }}>
+                    <td style={{ padding: "0.6rem", whiteSpace: "nowrap" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-CA") : "—"}</td>
+                    <td style={{ padding: "0.6rem" }}>{r.email || "—"}</td>
+                    <td style={{ padding: "0.6rem" }}>{r.label || "—"}</td>
+                    <td style={{ padding: "0.6rem" }}><span style={{ display: "inline-block", padding: "0.15rem 0.55rem", borderRadius: 99, fontSize: "0.72rem", fontWeight: 700, background: r.status === "verified" ? "#DCFCE7" : "#FEF3C7", color: r.status === "verified" ? "#059669" : "#B45309" }}>{r.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+      )}
+    </div>
+  );
+};
+
 const AdminReferralRequests = () => {
   const { headers } = useAdmin();
-  return <AdminShell active="referral-requests"><ReferralRequestsPanel headers={headers}/></AdminShell>;
+  return <AdminShell active="referral-requests"><ReferralRequestsPanel headers={headers}/><SavedSearchAnalyticsPanel headers={headers}/></AdminShell>;
 };
 
 const AdminReferrals = () => {

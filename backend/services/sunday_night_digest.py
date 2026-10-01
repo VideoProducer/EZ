@@ -177,7 +177,8 @@ async def run_sunday_night_digest(db, base_url: str = "https://eztofind.ca") -> 
     active_cursor = db.listings.find(
         {"status": "Active"},
         {"_id": 0, "listing_key": 1, "city": 1, "region": 1, "beds": 1, "baths": 1,
-         "property_type": 1, "list_price": 1, "list_date": 1, "modification_ts": 1},
+         "property_type": 1, "list_price": 1, "list_date": 1, "modification_ts": 1,
+         "lat": 1, "lon": 1},
     )
     active = [d async for d in active_cursor]
 

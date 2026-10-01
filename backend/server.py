@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse, HTMLResponse, Response, JSONRes
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os, json, uuid, logging, bcrypt, jwt, asyncio, hashlib, urllib.parse
+import os, json, uuid, logging, bcrypt, jwt, asyncio, hashlib, urllib.parse, hmac
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal, Dict, Any
@@ -2250,6 +2250,61 @@ async def admin_run_matcher(request: Request, _=Depends(verify_admin)):
     return await run_matcher(db, _public_base_url(request))
 
 
+@api.get("/admin/saved-searches/analytics")
+async def admin_saved_search_analytics(days: int = 90, _=Depends(verify_admin)):
+    """Dashboard feed: saved-search (listing-alert) signups, double-opt-in
+    confirmation rate, Sunday-brief opt-ins, digests sent, and demand by area.
+    Powers the Alert Analytics panel beside the referral dashboard."""
+    def _mask(e):
+        if not e or "@" not in e:
+            return e or ""
+        name, dom = e.split("@", 1)
+        return (name[:2] + "***") + "@" + dom
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    total = pending = verified = unsubscribed = active = new_in_window = sunday_optins = digests_sent = 0
+    by_area = {}
+    recent_list = []
+    cursor = db.saved_searches.find({}, {"_id": 0, "verification_token": 0, "unsubscribe_token": 0, "snapshot_prices": 0})
+    async for s in cursor:
+        total += 1
+        status = s.get("status") or "pending"
+        if status == "pending": pending += 1
+        elif status == "verified": verified += 1
+        is_unsub = bool(s.get("unsubscribed_at"))
+        if is_unsub: unsubscribed += 1
+        if status == "verified" and not is_unsub: active += 1
+        if (s.get("created_at") or "") >= since: new_in_window += 1
+        if s.get("digest_frequency") == "sunday_night": sunday_optins += 1
+        digests_sent += int(s.get("notified_count") or 0)
+        filters = s.get("filters") or {}
+        area = filters.get("city") or (s.get("label") or "Any area")
+        by_area[area] = by_area.get(area, 0) + 1
+        recent_list.append({
+            "email": _mask(s.get("email", "")),
+            "label": s.get("label") or "",
+            "status": status,
+            "frequency": s.get("frequency") or "",
+            "created_at": s.get("created_at") or "",
+        })
+    recent_list.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    by_area_sorted = sorted([{"area": a, "count": n} for a, n in by_area.items()], key=lambda x: x["count"], reverse=True)[:15]
+    confirmation_rate = round((verified / total) * 100) if total else 0
+    return {
+        "window_days": days,
+        "total": total,
+        "pending": pending,
+        "verified": verified,
+        "active": active,
+        "unsubscribed": unsubscribed,
+        "new_in_window": new_in_window,
+        "sunday_optins": sunday_optins,
+        "digests_sent": digests_sent,
+        "confirmation_rate": confirmation_rate,
+        "by_area": by_area_sorted,
+        "recent": recent_list[:30],
+    }
+
+
 # ============================================================
 # USER FAVORITES — ❤️  save individual listings
 # ============================================================
@@ -3491,6 +3546,34 @@ async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
     from services.sunday_night_digest import run_sunday_night_digest
     result = await run_sunday_night_digest(db)
     return {"ok": True, **result}
+
+
+@api.post("/cron/sunday-night-digest")
+async def cron_sunday_night_digest(request: Request):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(401, "Unauthorized")
+    run_id = request.headers.get("x-webhook-id") or ""
+    if run_id:
+        try:
+            await db.cron_runs.insert_one({"_id": run_id, "kind": "sunday_night_digest", "at": now_iso()})
+        except Exception:
+            return {"status": "duplicate", "run_id": run_id}
+    base = _public_base_url(request)
+
+    async def _bg():
+        try:
+            from services.sunday_night_digest import run_sunday_night_digest
+            res = await run_sunday_night_digest(db, base)
+            logger.info(f"cron sunday_night_digest done: {res}")
+        except Exception as e:
+            logger.error(f"cron sunday_night_digest failed: {e}")
+
+    asyncio.create_task(_bg())
+    return {"status": "accepted"}
 
 
 @api.get("/admin/referrals/requests-summary")
