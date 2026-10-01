@@ -23,8 +23,8 @@ def _load_base_url():
     return v.rstrip("/")
 
 BASE_URL = _load_base_url()
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "Doug2026Login!"
+ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "Doug2026Login!")
 
 
 @pytest.fixture(scope="module")

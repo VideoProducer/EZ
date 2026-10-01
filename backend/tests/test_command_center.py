@@ -14,8 +14,8 @@ import requests
 from datetime import datetime, timezone, timedelta
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://proptech-hub-111.preview.emergentagent.com").rstrip("/")
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "Doug2026Login!"
+ADMIN_EMAIL = os.environ.get("TEST_ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("TEST_ADMIN_PASSWORD", "Doug2026Login!")
 
 
 # ─── fixtures ───────────────────────────────────────────────────────────

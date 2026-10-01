@@ -130,7 +130,7 @@ export const AnswerFirstMeta = ({ dateModified, source, testId = "aeo-meta" }) =
         human = d.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
       }
     }
-  } catch (_) {}
+  } catch (_) { /* unparseable date — fall back to raw value */ }
   return (
     <div
       data-testid={testId}
