@@ -2,6 +2,14 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Out-of-area results banner, "Other BC Areas" nav, referral-click tie-in + deploy
+
+- **(b) Results banner** on `/listings`: when an out-of-area search DOES return listings (Kelowna, Victoria…), a slim dismissible strip appears above results — "Looking in <area> — outside Doug's region? … Get a referral →" (`ln-ooa-banner`). Resets when the area changes.
+- **Nav entry**: added "Other BC Areas" → `/realtor-network` to the global HomeNextNav (`hn-nav-other-areas`).
+- **Referral-click tie-in**: the `/listings` referral CTAs (empty-state + banner) now POST `/api/analytics/referral-click` with the (title-cased) searched city, so they flow into the referral dashboard's click-interest. Relabeled that dashboard section to "Referral-link clicks by searched city". Verified: a Kelowna banner click appeared in `click_interest_by_city` (30-day window).
+- **Deployed** to eztofind.ca (redeploy). Prod requires `WEBHOOK_CRON_SECRET`; the Sunday cron syncs on deploy.
+
+
 ## June 2026 — Out-of-area referral link placement (a + d)
 
 - New shared helper `/app/frontend/src/lib/serviceArea.js` (FARM_SLUGS, FOCUS_HOODS, `isFarmArea`) — mirrors App.js's inline region sets so public pages can detect out-of-area searches.

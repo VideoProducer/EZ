@@ -13478,7 +13478,8 @@ const ReferralRequestsPanel = ({ headers }) => {
 
         {clicks.length > 0 && (
           <>
-            <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Click interest (pre-form intent · last {data.window_days} days)</h3>
+            <h3 style={{ marginTop: "2rem", marginBottom: "0.25rem" }}>Referral-link clicks by searched city (last {data.window_days} days)</h3>
+            <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: "0 0 0.75rem" }}>Out-of-area visitors who clicked a "Get a referral" CTA — from map search, community pages and the referral hub. Pre-form intent: where to grow next.</p>
             <div className="paper" style={{ padding: "1rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }} data-testid="rr-clicks-list">
               {clicks.map(c => <span key={c.city} style={{ padding: "0.3rem 0.7rem", borderRadius: 99, background: "#FFF4DF", border: "1px solid #F3D79A", fontSize: "0.82rem", fontWeight: 600 }}>{c.city} · {c.clicks}</span>)}
             </div>

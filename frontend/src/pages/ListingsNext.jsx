@@ -124,6 +124,22 @@ export default function ListingsNext() {
   // city, or the free-text query as a fallback, against Doug's service region.
   const areaTerm = (city || q.trim()).trim();
   const outOfArea = !drawBbox && !!areaTerm && !isFarmArea(areaTerm);
+  const [bannerClosed, setBannerClosed] = useState(false);
+  useEffect(() => { setBannerClosed(false); }, [areaTerm]);
+
+  const logReferralClick = (source) => {
+    if (!areaTerm) return;
+    try {
+      let sid = localStorage.getItem("ez_session_id");
+      if (!sid) { sid = (crypto?.randomUUID?.() || String(Date.now())); localStorage.setItem("ez_session_id", sid); }
+      const titleArea = areaTerm.replace(/\b\w/g, (c) => c.toUpperCase());
+      fetch(`${API}/analytics/referral-click`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ community: titleArea, slug: areaTerm.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""), source, session_id: sid }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch { /* non-fatal */ }
+  };
 
   const closeSave = () => { setSaveOpen(false); setSaveMsg(""); setSaveErr(""); };
   const submitSaveSearch = async () => {
@@ -333,6 +349,30 @@ export default function ListingsNext() {
         </div>
       </section>
 
+      {/* Slim out-of-area referral strip — shown when an out-of-area search DOES
+          return listings (Kelowna / Victoria etc.), catching searchers the
+          no-results card can't. Dismissible; resets when the area changes. */}
+      {outOfArea && !loading && visibleItems.length > 0 && !bannerClosed && (
+        <div data-testid="ln-ooa-banner" style={{ maxWidth: 1360, margin: "0 auto", padding: "12px 20px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "linear-gradient(135deg, rgba(15,42,91,0.05), rgba(184,134,11,0.08))", border: "1px solid #E6D9A8", borderRadius: 14, padding: "12px 16px" }}>
+            <MapPin size={18} color={C.gold} style={{ flexShrink: 0 }} />
+            <span style={{ flex: "1 1 280px", minWidth: 0, fontSize: 13.5, color: C.ink, lineHeight: 1.45 }}>
+              Looking in <strong style={{ color: C.navy }}>{areaTerm}</strong> — outside Doug's region? He can connect you with a vetted local REALTOR®, <strong>at no cost to you</strong>.
+            </span>
+            <Link
+              to={`/referral-request?city=${encodeURIComponent(areaTerm)}`}
+              data-testid="ln-ooa-banner-cta"
+              onClick={() => logReferralClick("listings-banner")}
+              style={{ background: C.navy, color: "#fff", textDecoration: "none", borderRadius: 999, padding: "9px 18px", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}
+            >
+              Get a referral →
+            </Link>
+            <button onClick={() => setBannerClosed(true)} data-testid="ln-ooa-banner-close" aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, display: "flex", flexShrink: 0 }}>
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Result count + draw / mobile toggle */}
       <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <span data-testid="ln-count" style={{ color: C.muted, fontSize: 14 }}>
@@ -388,6 +428,7 @@ export default function ListingsNext() {
                 <Link
                   to={`/referral-request?city=${encodeURIComponent(areaTerm)}`}
                   data-testid="ln-empty-referral-cta"
+                  onClick={() => logReferralClick("listings-empty")}
                   style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: "#fff", textDecoration: "none", borderRadius: 999, padding: "13px 26px", fontSize: 15, fontWeight: 700 }}
                 >
                   Get matched with a local REALTOR® →
