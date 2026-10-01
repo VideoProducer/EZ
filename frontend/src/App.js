@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Link, NavLink, useParams, useNavigate, us
 import "./App.css";
 import "./components/homenext/homeNext.css";
 import { HomeNextNav } from "./components/homenext/HomeNextHero";
+import { HomeNextFooter } from "./components/homenext/HomeNextExtras";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
 // SEC-009: send the HttpOnly admin cookie on every same-origin XHR/API call.
@@ -11860,7 +11861,7 @@ const BetaWelcome = () => {
   );
 };
 
-const AppLayout = ({children}) => {
+const AppLayout = ({children, slimFooter}) => {
   // WCAG SC 3.1.1 — keep <html lang> in sync with the user's chosen Doogie
   // language so screen readers pronounce content correctly.
   useEffect(() => {
@@ -11877,7 +11878,7 @@ const AppLayout = ({children}) => {
     <ComplianceStrip/>
     <HomeNextNav/>
     <main id="main-content" tabIndex={-1}>{children}</main>
-    <Footer/>
+    {slimFooter ? <HomeNextFooter/> : <Footer/>}
     {/* DoogieChat floating FAB retired site-wide — the Visual Agent at
         /visual-agent-demo is now the single unified entry point for Doogie
         (chat, voice, search, tours, insights, consultation). */}
@@ -14030,7 +14031,7 @@ function App() {
       <Route path="/referral-request" element={<AppLayout><ReferralRequest/></AppLayout>}/>
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
-      <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
+      <Route path="/realtor-network" element={<AppLayout slimFooter><RealtorNetwork/></AppLayout>}/>
       <Route path="/join" element={<Navigate to="/realtor-network#apply" replace/>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<Suspense fallback={<RouteFallback/>}><AboutNext/></Suspense>}/>

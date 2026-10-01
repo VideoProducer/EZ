@@ -2,6 +2,11 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Slim footer on /realtor-network
+
+- Added `slimFooter` prop to `AppLayout` (renders `HomeNextFooter` instead of the big legacy `Footer`); applied to the `/realtor-network` route so its footer matches the other Apple-style pages. Imported `HomeNextFooter` into App.js. Verified via screenshot.
+
+
 ## June 2026 — /realtor-network Apple-style redesign + title fix
 
 - Fixed missing `<title>` on `/realtor-network` (was inheriting site default "BC Real Estate Search"); added `<SEO>` → "Join Doug's BC REALTOR® Referral Network — Out-of-Area Referrals | EZtoFind.ca".
