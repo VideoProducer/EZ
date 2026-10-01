@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Search, Heart, MapPin, BedDouble, Bath, Ruler, X, Map as MapIcon, List as ListIcon, Loader2 } from "lucide-react";
+import { Search, Heart, MapPin, BedDouble, Bath, Ruler, X, Map as MapIcon, List as ListIcon, Loader2, Bell } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
@@ -29,17 +29,11 @@ const full = (n) => (n ? `$${Number(n).toLocaleString()}` : "Price on request");
 const SAVED_KEY = "ez_next_saved";
 
 export default function ListingsNext() {
-  useEffect(() => {
-    const el = document.querySelector('meta[name="robots"]:not([data-rh])');
-    if (!el) return;
-    const prev = el.getAttribute("content");
-    el.setAttribute("content", "noindex, nofollow");
-    return () => el.setAttribute("content", prev);
-  }, []);
+  const [sp] = useSearchParams();
 
   const [facets, setFacets] = useState({ cities: [], property_types: [], regions: [] });
-  const [q, setQ] = useState("");
-  const [city, setCity] = useState("");
+  const [q, setQ] = useState(() => sp.get("q") || "");
+  const [city, setCity] = useState(() => sp.get("city") || "");
   const [ptype, setPtype] = useState("");
   const [beds, setBeds] = useState("");
   const [baths, setBaths] = useState("");
@@ -57,6 +51,14 @@ export default function ListingsNext() {
     try { return new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || "[]")); } catch { return new Set(); }
   });
   const [activeKey, setActiveKey] = useState(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveEmail, setSaveEmail] = useState("");
+  const [saveCasl, setSaveCasl] = useState(false);
+  const [savePipa, setSavePipa] = useState(false);
+  const [saveFreq, setSaveFreq] = useState("instant");
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [saveErr, setSaveErr] = useState("");
 
   useEffect(() => {
     fetch(`${API}/listings/meta/facets`).then(r => r.json()).then(setFacets).catch(() => {});
@@ -111,6 +113,32 @@ export default function ListingsNext() {
 
   const reset = () => { setQ(""); setCity(""); setPtype(""); setBeds(""); setBaths(""); setPmin(""); setPmax(""); setSort("newest"); };
   const hasFilters = q || city || ptype || beds || baths || pmin || pmax;
+
+  const closeSave = () => { setSaveOpen(false); setSaveMsg(""); setSaveErr(""); };
+  const submitSaveSearch = async () => {
+    if (!saveEmail.trim()) { setSaveErr("Please enter your email."); return; }
+    if (!saveCasl || !savePipa) { setSaveErr("Please check both consent boxes."); return; }
+    setSaveBusy(true); setSaveErr("");
+    const filters = {};
+    if (city) filters.city = city;
+    if (ptype) filters.property_type = ptype;
+    if (beds) filters.beds_min = Number(beds);
+    if (baths) filters.baths_min = Number(baths);
+    if (pmin) filters.price_min = Number(pmin);
+    if (pmax) filters.price_max = Number(pmax);
+    if (q.trim()) filters.q = q.trim();
+    const label = [city, ptype, beds && `${beds}+ bd`, baths && `${baths}+ ba`, pmin && `from ${abbr(Number(pmin))}`, pmax && `to ${abbr(Number(pmax))}`].filter(Boolean).join(" · ") || "All BC residential listings";
+    try {
+      const res = await fetch(`${API}/saved-searches`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: saveEmail.trim(), filters, label, casl_consent: true, pipa_ack: true, frequency: saveFreq }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Something went wrong — please try again.");
+      setSaveMsg(data.message || "Almost done — check your inbox to confirm your alerts.");
+    } catch (e) { setSaveErr(e.message || "Something went wrong."); }
+    finally { setSaveBusy(false); }
+  };
 
   // ── Leaflet map ───────────────────────────────────────────────
   const mapEl = useRef(null);
@@ -176,9 +204,10 @@ export default function ListingsNext() {
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }} data-testid="listings-next">
       <Helmet>
-        <title>BC Real Estate Search — EZtoFind.ca</title>
-        <meta name="robots" content="noindex, nofollow" />
-        <meta name="description" content="Search live BC MLS® listings — a calm, simple way to find your place in British Columbia." />
+        <title>Search BC MLS® Real Estate Listings — Homes for Sale in British Columbia | EZtoFind.ca</title>
+        <meta name="robots" content="index, follow" />
+        <meta name="description" content="Search live BC MLS® real estate listings — homes, condos and acreages for sale across British Columbia. A calm, simple way to find your place, powered by the CREA DDF® feed." />
+        <link rel="canonical" href="https://eztofind.ca/listings" />
       </Helmet>
       <HomeNextNav />
 
@@ -255,18 +284,27 @@ export default function ListingsNext() {
       </section>
 
       {/* Result count + mobile toggle */}
-      <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ maxWidth: 1360, margin: "0 auto", padding: "16px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <span data-testid="ln-count" style={{ color: C.muted, fontSize: 14 }}>
           {loading ? "Searching…" : `${total.toLocaleString()} ${total === 1 ? "home" : "homes"} in British Columbia`}
         </span>
-        <button
-          data-testid="ln-mobile-toggle"
-          onClick={() => setMobileMap((v) => !v)}
-          className="ln-mobile-only"
-          style={{ display: "none", alignItems: "center", gap: 6, background: C.navy, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-        >
-          {mobileMap ? <><ListIcon size={15} /> List</> : <><MapIcon size={15} /> Map</>}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            data-testid="ln-save-search"
+            onClick={() => { setSaveOpen(true); setSaveMsg(""); setSaveErr(""); }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: C.goldBg, color: C.navy, border: "1px solid #E6D9A8", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            <Bell size={15} /> <span className="ln-save-label">Save this search & get alerts</span>
+          </button>
+          <button
+            data-testid="ln-mobile-toggle"
+            onClick={() => setMobileMap((v) => !v)}
+            className="ln-mobile-only"
+            style={{ display: "none", alignItems: "center", gap: 6, background: C.navy, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            {mobileMap ? <><ListIcon size={15} /> List</> : <><MapIcon size={15} /> Map</>}
+          </button>
+        </div>
       </div>
 
       {/* Split view */}
@@ -365,6 +403,48 @@ export default function ListingsNext() {
         </div>
       </div>
 
+      {saveOpen && (
+        <div data-testid="ln-save-modal" onClick={closeSave} style={{ position: "fixed", inset: 0, background: "rgba(15,42,91,0.45)", backdropFilter: "blur(4px)", display: "grid", placeItems: "center", zIndex: 1000, padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, background: "#fff", borderRadius: 20, padding: "28px 26px", boxShadow: "0 30px 80px rgba(0,0,0,0.3)", fontFamily: "-apple-system, sans-serif", position: "relative" }}>
+            <button onClick={closeSave} data-testid="ln-save-close" aria-label="Close" style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: C.muted }}><X size={20} /></button>
+            {saveMsg ? (
+              <div data-testid="ln-save-success" style={{ textAlign: "center", padding: "12px 0" }}>
+                <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.goldBg, display: "grid", placeItems: "center", margin: "0 auto 14px" }}><Bell size={24} color={C.gold} /></div>
+                <h3 style={{ color: C.navy, fontSize: 20, margin: "0 0 8px" }}>Check your inbox</h3>
+                <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6, margin: 0 }}>{saveMsg}</p>
+                <button onClick={closeSave} style={{ marginTop: 20, background: C.navy, color: "#fff", border: "none", borderRadius: 999, padding: "11px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <p style={{ textTransform: "uppercase", letterSpacing: "0.16em", fontSize: 11, fontWeight: 700, color: C.blue, margin: "0 0 6px" }}>New-match alerts</p>
+                <h3 style={{ color: C.navy, fontSize: 22, margin: "0 0 6px", fontFamily: "'Playfair Display', serif" }}>Save this search</h3>
+                <p style={{ color: C.muted, fontSize: 13.5, lineHeight: 1.55, margin: "0 0 18px" }}>We'll email you when new BC MLS® listings match your filters. Confirm once by email — unsubscribe anytime.</p>
+                <input data-testid="ln-save-email" type="email" value={saveEmail} onChange={(e) => setSaveEmail(e.target.value)} placeholder="you@example.com" style={{ width: "100%", padding: "13px 16px", fontSize: 15, border: `1px solid ${C.line}`, borderRadius: 12, outline: "none", color: C.navy, fontFamily: "inherit", boxSizing: "border-box" }} />
+                <label style={{ display: "block", fontSize: 12.5, color: C.ink, margin: "12px 0 0" }}>How often?
+                  <select data-testid="ln-save-freq" value={saveFreq} onChange={(e) => setSaveFreq(e.target.value)} style={{ width: "100%", marginTop: 4, padding: "10px 12px", border: `1px solid ${C.line}`, borderRadius: 10, fontFamily: "inherit", fontSize: 14, boxSizing: "border-box" }}>
+                    <option value="instant">As they happen</option>
+                    <option value="daily">Daily digest</option>
+                    <option value="weekly">Weekly digest</option>
+                  </select>
+                </label>
+                <label style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 12.5, color: C.ink, margin: "14px 0 0", lineHeight: 1.5, cursor: "pointer" }}>
+                  <input data-testid="ln-save-casl" type="checkbox" checked={saveCasl} onChange={(e) => setSaveCasl(e.target.checked)} style={{ marginTop: 2 }} />
+                  <span>I agree to receive listing-alert emails from EZtoFind.ca (Doug LeMaire, REALTOR®). I can withdraw consent anytime. <span style={{ color: C.muted }}>(CASL)</span></span>
+                </label>
+                <label style={{ display: "flex", gap: 9, alignItems: "flex-start", fontSize: 12.5, color: C.ink, margin: "10px 0 0", lineHeight: 1.5, cursor: "pointer" }}>
+                  <input data-testid="ln-save-pipa" type="checkbox" checked={savePipa} onChange={(e) => setSavePipa(e.target.checked)} style={{ marginTop: 2 }} />
+                  <span>I acknowledge my email is used only to send these alerts, per the <Link to="/privacy" target="_blank" style={{ color: C.blue }}>Privacy Policy (PIPA)</Link>.</span>
+                </label>
+                {saveErr && <p data-testid="ln-save-error" style={{ color: "#DC2626", fontSize: 13, margin: "10px 0 0" }}>{saveErr}</p>}
+                <button data-testid="ln-save-submit" onClick={submitSaveSearch} disabled={saveBusy} style={{ width: "100%", marginTop: 16, background: C.navy, color: "#fff", border: "none", borderRadius: 999, padding: "13px", fontSize: 15, fontWeight: 700, cursor: saveBusy ? "default" : "pointer", opacity: saveBusy ? 0.7 : 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  {saveBusy ? <><Loader2 size={16} className="ln-spin" /> Saving…</> : "Save search & notify me"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <HomeNextFooter />
 
       <style>{`
@@ -377,6 +457,7 @@ export default function ListingsNext() {
           .ln-split[data-view="map"] .ln-cards { display: none; }
           .ln-split[data-view="list"] .ln-mapwrap { display: none; }
           .ln-mobile-only { display: inline-flex !important; }
+          .ln-save-label { display: none; }
         }
       `}</style>
     </div>

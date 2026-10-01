@@ -7336,6 +7336,7 @@ export const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/hydrate-listing")} className={active==="hydrate-listing"?"active":""} data-testid="admin-nav-hydrate-listing">🛰️ Hydrate Listing</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/testimonials")} className={active==="testimonials"?"active":""} data-testid="admin-nav-testimonials">🌟 Testimonials</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referrals")} className={active==="referrals"?"active":""} data-testid="admin-nav-referrals">💰 Referrals</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/referral-requests")} className={active==="referral-requests"?"active":""} data-testid="admin-nav-referral-requests">📥 Referral Requests</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/lead-triage")} className={active==="lead-triage"?"active":""} data-testid="admin-nav-lead-triage">🎯 Lead Triage</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/contacts")} className={active==="contacts"?"active":""} data-testid="admin-nav-contacts">📇 Contacts</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/broadcast")} className={active==="broadcast"?"active":""} data-testid="admin-nav-campaigns">✉️ Broadcast</a>
@@ -13402,6 +13403,105 @@ const STATUS_COLORS = {
 };
 const fmtMoney = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("en-CA", { maximumFractionDigits: 0 });
 
+const ReferralRequestsPanel = ({ headers }) => {
+  const [days, setDays] = useState(90);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    axios.get(`${API}/admin/referrals/requests-summary?days=${days}`, { headers })
+      .then(r => { if (alive) setData(r.data); })
+      .catch(() => { if (alive) setData(null); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [days]);
+  const label = { fontSize: "0.72rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 };
+  const big = { fontSize: "1.6rem", fontWeight: 700, color: "var(--brand-navy)" };
+  const byCity = data?.by_city || [];
+  const maxCount = byCity.reduce((m, c) => Math.max(m, c.count), 0) || 1;
+  const clicks = data?.click_interest_by_city || [];
+  const recent = data?.recent || [];
+  return (
+    <div data-testid="referral-requests-panel" style={{ fontFamily: "Inter,sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+        <div>
+          <h2 style={{ margin: 0 }} data-testid="referral-requests-title">📥 Out-of-Area Referral Requests</h2>
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem", margin: "0.35rem 0 0", maxWidth: "42rem" }}>Leads who asked to be connected with a REALTOR® outside Doug's Greater Vancouver / Fraser Valley / Sea-to-Sky farm. Captured via the referral form — track demand by city before deciding where to grow the referral network.</p>
+        </div>
+        <select data-testid="referral-requests-days" value={days} onChange={e => setDays(Number(e.target.value))} style={{ padding: "0.5rem 0.75rem", borderRadius: 8, border: "1px solid rgba(15,42,91,0.2)", fontFamily: "inherit" }}>
+          <option value={30}>Last 30 days</option>
+          <option value={90}>Last 90 days</option>
+          <option value={180}>Last 180 days</option>
+          <option value={365}>Last 365 days</option>
+        </select>
+      </div>
+
+      {loading ? <p style={{ marginTop: "1.5rem" }}>Loading referral requests…</p> : !data ? <p style={{ marginTop: "1.5rem", color: "#DC2626" }}>Couldn't load referral data.</p> : (
+      <>
+        <div className="grid-4" style={{ gap: "0.75rem", marginTop: "1.25rem" }}>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="rr-total"><div style={label}>Total requests (all time)</div><div style={big}>{data.total_requests}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="rr-window"><div style={label}>In last {data.window_days} days</div><div style={{ ...big, color: "var(--brand-blue)" }}>{data.requests_in_window}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="rr-cities"><div style={label}>Unique cities</div><div style={{ ...big, color: "#059669" }}>{data.unique_cities}</div></div>
+          <div className="paper" style={{ padding: "1rem" }} data-testid="rr-clicks"><div style={label}>Click-interest cities</div><div style={{ ...big, color: "#F59E0B" }}>{clicks.length}</div></div>
+        </div>
+
+        <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Requests by city</h3>
+        {byCity.length === 0 ? <p style={{ color: "var(--muted)" }}>No out-of-area referral requests yet.</p> : (
+          <div className="paper" style={{ padding: "1.25rem" }} data-testid="rr-by-city">
+            {byCity.map(c => (
+              <div key={c.city} style={{ marginBottom: "0.75rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", marginBottom: "0.25rem" }}>
+                  <span style={{ fontWeight: 600 }}>{c.city}</span><span style={{ color: "var(--muted)" }}>{c.count}</span>
+                </div>
+                <div style={{ height: 8, background: "rgba(15,42,91,0.08)", borderRadius: 99 }}>
+                  <div style={{ width: `${(c.count / maxCount) * 100}%`, height: "100%", background: "var(--brand-navy)", borderRadius: 99 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {clicks.length > 0 && (
+          <>
+            <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Click interest (pre-form intent · last {data.window_days} days)</h3>
+            <div className="paper" style={{ padding: "1rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.5rem" }} data-testid="rr-clicks-list">
+              {clicks.map(c => <span key={c.city} style={{ padding: "0.3rem 0.7rem", borderRadius: 99, background: "#FFF4DF", border: "1px solid #F3D79A", fontSize: "0.82rem", fontWeight: 600 }}>{c.city} · {c.clicks}</span>)}
+            </div>
+          </>
+        )}
+
+        <h3 style={{ marginTop: "2rem", marginBottom: "0.75rem" }}>Recent requests</h3>
+        {recent.length === 0 ? <p style={{ color: "var(--muted)" }}>No recent requests.</p> : (
+          <div style={{ overflowX: "auto" }} data-testid="rr-recent">
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <thead><tr style={{ background: "var(--paper)", textAlign: "left" }}>
+                <th style={{ padding: "0.6rem" }}>Date</th><th style={{ padding: "0.6rem" }}>Name</th><th style={{ padding: "0.6rem" }}>City</th><th style={{ padding: "0.6rem" }}>Type</th>
+              </tr></thead>
+              <tbody>
+                {recent.map((r, i) => (
+                  <tr key={i} style={{ borderTop: "1px solid rgba(15,42,91,0.08)" }}>
+                    <td style={{ padding: "0.6rem", whiteSpace: "nowrap" }}>{r.created_at ? new Date(r.created_at).toLocaleDateString("en-CA") : "—"}</td>
+                    <td style={{ padding: "0.6rem" }}>{r.name || "—"}</td>
+                    <td style={{ padding: "0.6rem" }}>{r.city || "—"}</td>
+                    <td style={{ padding: "0.6rem", textTransform: "capitalize" }}>{r.kind}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </>
+      )}
+    </div>
+  );
+};
+
+const AdminReferralRequests = () => {
+  const { headers } = useAdmin();
+  return <AdminShell active="referral-requests"><ReferralRequestsPanel headers={headers}/></AdminShell>;
+};
+
 const AdminReferrals = () => {
   const { headers } = useAdmin();
   const [items, setItems] = useState([]);
@@ -13416,6 +13516,7 @@ const AdminReferrals = () => {
   });
   const [editingId, setEditingId] = useState(null);
   const [editStatus, setEditStatus] = useState({ status:"", note:"", actual_sale_price:"", referral_fee_amount:"", closed_date:"", paid_date:"" });
+  const [tab, setTab] = useState("network");
 
   const load = async () => {
     setLoading(true);
@@ -13475,6 +13576,12 @@ const AdminReferrals = () => {
 
   return (
     <AdminShell active="referrals">
+      <div style={{display:"flex",gap:"0.5rem",marginBottom:"1.25rem",borderBottom:"1px solid rgba(15,42,91,0.1)"}} data-testid="admin-referrals-tabs">
+        <button onClick={()=>setTab("network")} data-testid="admin-referrals-tab-network" style={{background:"none",border:"none",borderBottom:tab==="network"?"2px solid var(--brand-navy)":"2px solid transparent",padding:"0.5rem 0.25rem",marginRight:"1rem",cursor:"pointer",fontWeight:700,fontFamily:"Inter,sans-serif",color:tab==="network"?"var(--brand-navy)":"var(--muted)"}}>💰 Referral Network</button>
+        <button onClick={()=>setTab("requests")} data-testid="admin-referrals-tab-requests" style={{background:"none",border:"none",borderBottom:tab==="requests"?"2px solid var(--brand-navy)":"2px solid transparent",padding:"0.5rem 0.25rem",cursor:"pointer",fontWeight:700,fontFamily:"Inter,sans-serif",color:tab==="requests"?"var(--brand-navy)":"var(--muted)"}}>📥 Incoming Requests</button>
+      </div>
+      {tab === "requests" ? <ReferralRequestsPanel headers={headers}/> : (
+      <>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"1rem"}}>
         <h2 style={{margin:0}} data-testid="admin-referrals-title">💰 Referral Network Tracker</h2>
         <button className="btn btn-primary" onClick={()=>setShowNew(v=>!v)} data-testid="admin-referrals-new-btn">+ New Referral</button>
@@ -13608,6 +13715,8 @@ const AdminReferrals = () => {
       <div className="notice" style={{marginTop:"2rem",background:"#F0F4FB",fontFamily:"Inter,sans-serif",fontSize:"0.85rem"}}>
         <strong>Model A referral notes:</strong> Referrals are typically documented on a CREA Inter-Board Referral Agreement (or equivalent province-to-province agreement). The receiving REALTOR® pays the referral fee to Doug's brokerage at closing. All referral disclosures are made to the consumer at the time of introduction — no undisclosed referral fees are ever accepted.
       </div>
+      </>
+      )}
     </AdminShell>
   );
 };
@@ -13696,10 +13805,10 @@ function App() {
       <Route path="/equestrian-next" element={<EquestrianNext/>}/>
       <Route path="/communities-next" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/glossary-next" element={<Suspense fallback={<RouteFallback/>}><GlossaryNext/></Suspense>}/>
-      <Route path="/listings-next" element={<Suspense fallback={<RouteFallback/>}><ListingsNext/></Suspense>}/>
+      <Route path="/listings-next" element={<Navigate to="/listings" replace/>}/>
       <Route path="/preview-dashboard" element={<DashboardMockup homeVariant="dashboard"/>}/>
       <Route path="/classic-home" element={<AppLayout><HomeSchema/><Home/><Canary phrase={CANARY_HOME} testId="canary-home"/></AppLayout>}/>
-      <Route path="/listings" element={<AppLayout><Listings/></AppLayout>}/>
+      <Route path="/listings" element={<Suspense fallback={<RouteFallback/>}><ListingsNext/></Suspense>}/>
       <Route path="/listing/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
       {/* Alias — the dashboard ListingCard + shared URLs use the plural form. */}
       <Route path="/listings/:key" element={<AppLayout><ListingDetail/></AppLayout>}/>
@@ -13818,6 +13927,7 @@ function App() {
       <Route path="/admin/relations" element={<AdminShell active="relations"><AdminContentRelationsWrapper/></AdminShell>}/>
       <Route path="/admin/search-analytics" element={<AdminShell active="search-analytics"><AdminSearchAnalyticsWrapper/></AdminShell>}/>
       <Route path="/admin/referrals" element={<AdminReferrals/>}/>
+      <Route path="/admin/referral-requests" element={<AdminReferralRequests/>}/>
       <Route path="/admin/buyers" element={<AdminList title="Buyer Leads" url="/admin/leads/buyer" active="buyers" exportKind="buyer" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["phone","Phone"],["property_type","Type"],["budget_range","Budget"],["timeline","Timeline"],["working_with_realtor","W/ REALTOR®?"]]}/>}/>
       <Route path="/admin/sellers" element={<AdminList title="Seller Leads" url="/admin/leads/seller" active="sellers" exportKind="seller" cols={[["created_at","Date"],["full_name","Name"],["email","Email"],["city","City"],["property_type","Type"],["timeline","Timeline"],["estimated_value","Value"]]}/>}/>
       <Route path="/admin/lead-triage" element={<AdminLeadTriage AdminShell={AdminShell}/>}/>
