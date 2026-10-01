@@ -1346,3 +1346,37 @@ textarea:focus-visible,
   .btn { padding: 0.65rem 1rem; font-size: 0.9rem; }
 }
 
+
+/* Apple-style lead-form polish — scoped to pages that add .apple-form.
+   Presentation only; markup/logic/compliance untouched. */
+.apple-form { background: #fff; }
+.apple-form h1.section-title { font-family: 'Playfair Display', serif; color: #0F2A5B; }
+.apple-form .paper {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 10px 40px rgba(15,42,91,0.07);
+}
+.apple-form .field label { font-size: 12.5px; font-weight: 600; color: #6e6e73; letter-spacing: 0.01em; }
+.apple-form .field input,
+.apple-form .field select,
+.apple-form .field textarea {
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-size: 15px;
+  background: #fff;
+  color: #1d1d1f;
+}
+.apple-form .field input:focus,
+.apple-form .field select:focus,
+.apple-form .field textarea:focus { border-color: #0F2A5B; outline: none; }
+.apple-form .btn.btn-primary {
+  background: #0F2A5B;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-weight: 700;
+}
+

@@ -5634,24 +5634,31 @@ const RealtorNetwork = () => {
       <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
         <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
         <h1 className="section-title" style={{marginBottom:"0.75rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
-        {/* Two-choice chooser: consumers want a referral; REALTORS® want to join. */}
-        <div data-testid="realtor-network-chooser" style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
-          <Link to="/referral-request" className="btn btn-outline" data-testid="rn-choose-consumer">I'm a buyer/seller — get a referral</Link>
-          <a href="#apply" className="btn btn-primary" data-testid="rn-choose-realtor">I'm a REALTOR® — apply to join ↓</a>
-        </div>
+        {/* Two large image-backed selector cards: consumer vs REALTOR®. */}
+        <p style={{color:"#6e6e73",fontSize:"1rem",maxWidth:"34rem",margin:"0 auto",fontFamily:"-apple-system,Inter,sans-serif"}}>Tell us who you are — we'll take you to the right place.</p>
       </div>
-      {/* Consumer-facing CTA — buyers/sellers who need a REALTOR® OUTSIDE
-          Doug's Greater Vancouver / Fraser Valley / Sea-to-Sky region. This
-          page is otherwise REALTOR®-recruitment; this band routes consumers to
-          the out-of-area referral request so they don't bounce. */}
-      <div className="container-x" style={{maxWidth:"52rem"}}>
-        <div data-testid="realtor-network-consumer-cta" style={{marginTop:"1.25rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:16,padding:"1.5rem 1.75rem",display:"flex",gap:"1.25rem",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",fontFamily:"Inter,sans-serif",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
-          <div style={{flex:"1 1 300px",minWidth:0}}>
-            <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>Buying or selling outside Greater Vancouver?</div>
-            <div style={{fontSize:"1.25rem",fontWeight:700,marginTop:"0.3rem",lineHeight:1.3}}>Get matched with a vetted local REALTOR® — at no cost to you.</div>
-            <div style={{fontSize:"0.9rem",opacity:0.85,marginTop:"0.4rem",lineHeight:1.55}}>Kelowna, Victoria, Kamloops, the Kootenays, anywhere in BC or beyond — Doug personally connects you with a trusted agent in that market through the CREA Inter-Board Referral network.</div>
-          </div>
-          <Link to="/referral-request" data-testid="realtor-network-referral-btn" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none",whiteSpace:"nowrap",fontWeight:700}}>Request an out-of-area referral →</Link>
+      <div className="container-x" style={{maxWidth:"60rem"}}>
+        <div data-testid="realtor-network-chooser" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:"1.25rem",marginTop:"1.5rem"}}>
+          <Link to="/referral-request" data-testid="rn-choose-consumer" style={{position:"relative",borderRadius:20,overflow:"hidden",minHeight:300,display:"flex",flexDirection:"column",justifyContent:"flex-end",textDecoration:"none",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
+            <img src="https://images.unsplash.com/photo-1713980057151-8cb2b21362f3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHx3ZXN0JTIwY29hc3QlMjBtb2Rlcm4lMjBCQyUyMGhvbWUlMjBleHRlcmlvciUyMGR1c2t8ZW58MHx8fHwxNzkwODIyNDYyfDA&ixlib=rb-4.1.0&q=85" alt="West Coast BC home" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.88) 100%)"}}/>
+            <div style={{position:"relative",padding:"1.75rem",color:"#fff",fontFamily:"-apple-system,Inter,sans-serif",textAlign:"left"}}>
+              <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>Buying or selling</div>
+              <div style={{fontSize:"1.4rem",fontWeight:700,margin:"0.3rem 0 0.4rem",fontFamily:"'Playfair Display',serif"}}>I'm a buyer or seller</div>
+              <div style={{fontSize:"0.9rem",opacity:0.9,lineHeight:1.5}}>Outside Greater Vancouver? Get matched with a vetted local REALTOR® — at no cost to you.</div>
+              <div style={{marginTop:"0.9rem",display:"inline-flex",alignItems:"center",gap:6,fontWeight:700,fontSize:"0.95rem"}}>Get a referral →</div>
+            </div>
+          </Link>
+          <a href="#apply" data-testid="rn-choose-realtor" style={{position:"relative",borderRadius:20,overflow:"hidden",minHeight:300,display:"flex",flexDirection:"column",justifyContent:"flex-end",textDecoration:"none",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
+            <img src="https://images.unsplash.com/photo-1672380135241-c024f7fbfa13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjByZWFsJTIwZXN0YXRlJTIwYWdlbnQlMjBoYW5kc2hha2V8ZW58MHx8fHwxNzkwODIyNDYyfDA&ixlib=rb-4.1.0&q=85" alt="REALTOR® handshake" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}/>
+            <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.88) 100%)"}}/>
+            <div style={{position:"relative",padding:"1.75rem",color:"#fff",fontFamily:"-apple-system,Inter,sans-serif",textAlign:"left"}}>
+              <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>Licensed agent</div>
+              <div style={{fontSize:"1.4rem",fontWeight:700,margin:"0.3rem 0 0.4rem",fontFamily:"'Playfair Display',serif"}}>I'm a REALTOR®</div>
+              <div style={{fontSize:"0.9rem",opacity:0.9,lineHeight:1.5}}>Join Doug's BC & out-of-province referral network and receive qualified referrals.</div>
+              <div style={{marginTop:"0.9rem",display:"inline-flex",alignItems:"center",gap:6,fontWeight:700,fontSize:"0.95rem"}}>Apply to join ↓</div>
+            </div>
+          </a>
         </div>
       </div>
     </div>
@@ -6475,7 +6482,7 @@ const BuyerForm = () => {
     }
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="buyer-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="buyer-ty-communities">Explore BC communities</Link></div></div></section>;
-  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+  return (<section className="section apple-form" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Task 14 (Feb 2026) — SEO title/description/canonical for the
         buyer lead-conversion page. Missing before, which meant visitors
         landing here from Doogie or Google Ads saw the homepage tab
@@ -6589,7 +6596,7 @@ const SellerForm = () => {
     }
   };
   if(done) return <section className="section"><div className="container-x" style={{maxWidth:"36rem",textAlign:"center"}}><img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{width:200,margin:"0 auto"}} alt="Doogie"/><h1 className="section-title">Request received</h1><p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p><p style={{fontFamily:"Inter,sans-serif",fontSize:"0.88rem",color:"var(--muted)",lineHeight:1.65,maxWidth:"32rem",margin:"1rem auto 0"}}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p><div style={{display:"flex",gap:"0.6rem",justifyContent:"center",flexWrap:"wrap",marginTop:"1.5rem"}}><Link to={`/listings${qs}`} className="btn btn-primary" data-testid="seller-ty-save-search">Save a search</Link><Link to={`/communities${qs}`} className="btn btn-secondary" data-testid="seller-ty-communities">Explore BC communities</Link></div></div></section>;
-  return (<section className="section" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
+  return (<section className="section apple-form" dir={rtl?"rtl":"ltr"}><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* HowTo JSON-LD — Google rich card for "how to sell a house in BC" queries. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify({
       "@context":"https://schema.org","@type":"HowTo",
@@ -6774,6 +6781,7 @@ const About = () => (<section className="section"><div className="container-x" s
       <p>My work centres on detached homes, acreages and equestrian properties, luxury real estate, residential strata's and probate/estate sales — and it's work I genuinely enjoy.</p>
       <p style={{marginTop:"1.25rem"}}><strong>EZtoFind.ca — BC real estate, easy to find. Facts first. REALTOR® when you're ready.</strong> The site is built to give buyers and sellers straight answers, plain-language terminology, and the facts on the buying and selling process anywhere in the province. It reflects how I like to work: informed clients make better decisions, and my job is to make good information easy to find.</p>
       <p style={{marginTop:"1.25rem"}}>If you're buying or selling in Greater Vancouver, the Fraser Valley, or Sea-to-Sky, I'd be glad to help. For enquiries beyond my service area, I can connect you with a licensed REALTOR®. Ask to be referred through our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral REALTOR®</Link> link.</p>
+      <p style={{marginTop:"1.25rem",fontSize:"0.92rem",color:"var(--muted)"}}>Are you a REALTOR® licensed outside BC? <Link to="/realtor-network#apply" data-testid="about-realtor-join" style={{color:"var(--brand-blue)",fontWeight:600}}>Join my referral network →</Link></p>
     </div>
   </div>
   <div style={{display:"flex",justifyContent:"center",gap:"2rem",marginTop:"3rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",textAlign:"center",alignItems:"stretch"}} data-testid="about-trust-badges">

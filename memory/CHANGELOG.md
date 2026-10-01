@@ -2,6 +2,14 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Selector cards, About note, buyer/seller Apple polish + deploy
+
+- **Selector cards**: replaced the `/realtor-network` text chooser + consumer band with two large image-backed cards (coastal BC home → "I'm a buyer or seller" → /referral-request; handshake → "I'm a REALTOR®" → #apply), navy gradient overlay, Playfair labels. testids `rn-choose-consumer`/`rn-choose-realtor` preserved.
+- **About note**: added subtle "Are you a REALTOR® licensed outside BC? Join my referral network →" line (→ /realtor-network#apply, `about-realtor-join`) to the About Doug page.
+- **Buyer/Seller Apple polish**: added reusable `.apple-form` rules to index.css and applied `apple-form` class to `BuyerForm` + `SellerForm` sections (white card, rounded inputs, light-grey labels, Playfair headline, navy pill). Presentation only — all i18n, Turnstile, compliance notices, PIPA, data-testids untouched.
+- Verified via screenshots (cards, buyer form); deployed to eztofind.ca.
+
+
 ## June 2026 — /referral-request Apple-style polish (presentation only)
 
 - Scoped a `.ref-apple` wrapper + `<style>` override on the consumer `ReferralRequest` page: white card (`.paper`), hairline rounded 12px inputs/selects/textarea with navy focus, light-grey labels, Playfair navy headline, navy pill primary button. NO logic touched — i18n `t()` keys, Turnstile widget, intent buttons, the "under contract with another REALTOR®" Article-16 block, PIPA consent, and every data-testid are unchanged. Verified via screenshot; both referral flows now feel consistent.
