@@ -248,7 +248,8 @@
 .hn-footer strong { color: var(--hn-ink); font-weight: 600; }
 
 /* ── Equestrian province-wide search ─────────────────── */
-.eq-search__chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin: 8px auto 28px; max-width: 920px; }
+.eq-search__chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin: 8px auto 14px; max-width: 920px; }
+.eq-search__filters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin: 0 auto 28px; max-width: 920px; }
 .eq-chip { appearance: none; border: 1px solid var(--hn-line); background: #fff; color: var(--hn-ink); font: 600 13px/1 inherit; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
 .eq-chip:hover { border-color: var(--hn-navy); }
 .eq-chip--on { background: var(--hn-navy); border-color: var(--hn-navy); color: #fff; }

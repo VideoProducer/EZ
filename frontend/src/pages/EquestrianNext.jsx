@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
@@ -22,19 +22,42 @@ const CRITERIA = [
 ];
 
 const REGIONS = ["Anywhere", "Lower Mainland", "Fraser Valley", "Sea-to-Sky", "Okanagan", "Vancouver Island", "Kootenays", "Northern BC"];
+const PRICE_MIN = [["", "Any price"], ["500000", "$500k+"], ["1000000", "$1M+"], ["2000000", "$2M+"], ["3000000", "$3M+"], ["5000000", "$5M+"]];
+const ACRES_MIN = [["", "Any size"], ["2", "2+ ac"], ["5", "5+ ac"], ["10", "10+ ac"], ["20", "20+ ac"], ["40", "40+ ac"]];
 
 // Province-wide equestrian + acreage MLS® search (live CREA DDF® feed).
+// Filters are deep-linkable via URL params so a shared link lands pre-filtered.
 function EquestrianSearch() {
-  const [region, setRegion] = useState("Anywhere");
-  const [sort, setSort] = useState("newest");
+  const [sp, setSp] = useSearchParams();
+  const region = REGIONS.includes(sp.get("region")) ? sp.get("region") : "Anywhere";
+  const sort = ["newest", "price_asc", "price_desc"].includes(sp.get("sort")) ? sp.get("sort") : "newest";
+  const pmin = sp.get("pmin") || "";
+  const acres = sp.get("acres") || "";
+  const arena = sp.get("arena") === "1";
+  const alr = sp.get("alr") === "1";
+
   const [listings, setListings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Update one or more URL params (preserving the rest); clears falsy values.
+  const patch = (next) => {
+    const p = new URLSearchParams(sp);
+    Object.entries(next).forEach(([k, v]) => {
+      if (v === "" || v == null || v === false) p.delete(k);
+      else p.set(k, v === true ? "1" : v);
+    });
+    setSp(p, { replace: true });
+  };
+
   useEffect(() => {
     let stop = false;
     setLoading(true);
-    const url = `${API}/api/listings/equestrian?region_chip=${encodeURIComponent(region)}&sort=${encodeURIComponent(sort)}&limit=24`;
+    let url = `${API}/api/listings/equestrian?region_chip=${encodeURIComponent(region)}&sort=${encodeURIComponent(sort)}&limit=24`;
+    if (pmin) url += `&price_min=${encodeURIComponent(pmin)}`;
+    if (acres) url += `&min_acres=${encodeURIComponent(acres)}`;
+    if (arena) url += `&has_arena=true`;
+    if (alr) url += `&alr_only=true`;
     fetch(url)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -45,7 +68,7 @@ function EquestrianSearch() {
       })
       .catch(() => { if (!stop) { setListings([]); setTotal(0); setLoading(false); } });
     return () => { stop = true; };
-  }, [region, sort]);
+  }, [region, sort, pmin, acres, arena, alr]);
 
   const fmt = (p) => (typeof p === "number" ? `$${p.toLocaleString("en-CA")}` : "Contact for price");
 
@@ -54,7 +77,7 @@ function EquestrianSearch() {
       <div className="hn-wrap">
         <div className="hn-center">
           <h2 className="hn-h2">Search equestrian &amp; acreage listings across BC.</h2>
-          <p className="hn-lead" style={{ marginInline: "auto" }}>Live CREA DDF® MLS® listings for horse-friendly acreage province-wide. Filter by region, then open any listing for full details.</p>
+          <p className="hn-lead" style={{ marginInline: "auto" }}>Live CREA DDF® MLS® listings for horse-friendly acreage province-wide. Filter by region, price, size and features — then open any listing for full details.</p>
         </div>
 
         <div className="eq-search__chips" data-testid="equestrian-search-chips">
@@ -62,20 +85,25 @@ function EquestrianSearch() {
             <button
               key={r}
               type="button"
-              onClick={() => setRegion(r)}
+              onClick={() => patch({ region: r === "Anywhere" ? "" : r })}
               className={`eq-chip${region === r ? " eq-chip--on" : ""}`}
               data-testid={`equestrian-region-${r.toLowerCase().replace(/[^a-z]+/g, "-")}`}
             >
               {r === "Anywhere" ? "All BC" : r}
             </button>
           ))}
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="eq-sort"
-            data-testid="equestrian-sort"
-            aria-label="Sort listings"
-          >
+        </div>
+
+        <div className="eq-search__filters" data-testid="equestrian-search-filters">
+          <select value={pmin} onChange={(e) => patch({ pmin: e.target.value })} className="eq-sort" data-testid="equestrian-price-min" aria-label="Minimum price">
+            {PRICE_MIN.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <select value={acres} onChange={(e) => patch({ acres: e.target.value })} className="eq-sort" data-testid="equestrian-acres-min" aria-label="Minimum acreage">
+            {ACRES_MIN.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <button type="button" onClick={() => patch({ arena: !arena })} className={`eq-chip${arena ? " eq-chip--on" : ""}`} data-testid="equestrian-toggle-arena">Has arena / ring</button>
+          <button type="button" onClick={() => patch({ alr: !alr })} className={`eq-chip${alr ? " eq-chip--on" : ""}`} data-testid="equestrian-toggle-alr">In ALR</button>
+          <select value={sort} onChange={(e) => patch({ sort: e.target.value === "newest" ? "" : e.target.value })} className="eq-sort" data-testid="equestrian-sort" aria-label="Sort listings">
             <option value="newest">Newest</option>
             <option value="price_asc">Price ↑</option>
             <option value="price_desc">Price ↓</option>
@@ -85,7 +113,7 @@ function EquestrianSearch() {
         {loading ? (
           <p className="hn-lead" style={{ textAlign: "center" }} data-testid="equestrian-search-loading">Loading listings…</p>
         ) : listings.length === 0 ? (
-          <p className="hn-lead" style={{ textAlign: "center" }} data-testid="equestrian-search-empty">No equestrian listings found in this region right now. Try “All BC”.</p>
+          <p className="hn-lead" style={{ textAlign: "center" }} data-testid="equestrian-search-empty">No equestrian listings match these filters right now. Try widening your region, price or size.</p>
         ) : (
           <>
             <p className="eq-count" data-testid="equestrian-search-count">
