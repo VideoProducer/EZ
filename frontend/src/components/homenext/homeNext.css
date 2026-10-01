@@ -111,6 +111,7 @@
 .hn-search button:hover { transform: scale(1.06); background: #163a7a; }
 .hn-hero__pills { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
 .hn-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   font-size: 14px; font-weight: 500; padding: 10px 20px; border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.16); color: var(--hn-ink); background: #fff;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
