@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Promote Apple-style search to /listings, save-search lead capture, referral dashboard, deploy
+
+- **Promoted search**: `/listings` now renders the Apple-style `ListingsNext` (was legacy `Listings`). Page is now `index, follow` with SEO title "Search BC MLS® Real Estate Listings — Homes for Sale in British Columbia | EZtoFind.ca" + canonical `https://eztofind.ca/listings`. `/listings-next` now `<Navigate replace>` → `/listings`. `ListingsNext` reads `?q=` and `?city=` from the URL (hero/band/footer links work unchanged). Legacy `Listings` component left defined but unrouted. (`App.js` routes ~13699-13703; `ListingsNext.jsx`)
+- **Save-search lead capture**: "Save this search & get alerts" button (`data-testid=ln-save-search`) in the results bar opens a modal (`ln-save-modal`) — email + frequency (instant/daily/weekly) + CASL consent + PIPA ack checkboxes. Posts current filters to the existing double-opt-in `POST /api/saved-searches`; shows inbox-confirmation success state. Validation blocks submit without both consents. (`ListingsNext.jsx`)
+- **Referral Tracking Dashboard**: new `ReferralRequestsPanel` reading `GET /api/admin/referrals/requests-summary?days=` (metric cards: total/in-window/unique-cities/click-interest; by-city bars; click-interest chips; recent table; 30/90/180/365 day selector). Available BOTH as standalone page `/admin/referral-requests` (new sidebar nav `admin-nav-referral-requests`) AND as an "Incoming Requests" tab inside `/admin/referrals` (default tab "Referral Network"). (`App.js`: panel + `AdminReferralRequests` defined before `AdminReferrals`; tab state in `AdminReferrals`)
+- **Verified**: frontend testing agent 100% (7/7 flows) — `/app/test_reports/iteration_35.json`; backend summary endpoint curl-verified. Deployed to eztofind.ca.
+- Note: pre-existing non-blocking console hydration warning (`<span>` inside `<option>` from visual-editor instrumentation) persists app-wide; not introduced here.
+
+
 ## June 2026 — Home-page search placement for traffic & leads
 
 - **`<title>`** on `/` set to the keyword-rich `Search BC MLS® Real Estate Listings — Live CREA DDF® Feed | EZtoFind.ca` (`/listings` already had it).

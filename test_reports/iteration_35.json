@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only verification of EZtoFind listings promotion, save-search modal, and Referral Requests admin dashboard. All 7 target flows verified passing against live preview URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/listings ListingsNext", "issues": ["Console hydration warning: <span> cannot be a child of <option> (ListingsNext.jsx line 258). Caused by visual-editor instrumentation injecting <span data-ve-dynamic> inside <option>. Not functionally breaking but produces repeated console errors on every page load."]}
+    ]
+  },
+  "verified_flows": [
+    "/listings-next -> redirects to /listings and renders data-testid=listings-next",
+    "/listings renders listings-next with ln-search, ln-count, ln-map, ln-save-search",
+    "/listings?q=Kelowna pre-fills search input with 'Kelowna'",
+    "Save Search modal opens; submitting without consent shows ln-save-error 'Please check both consent boxes.' and does NOT submit",
+    "Submitting with CASL+PIPA checked -> ln-save-success 'Check your inbox' confirmation shown (POST /api/saved-searches succeeded)",
+    "/admin/referral-requests standalone page renders referral-requests-panel with rr-total, rr-window, rr-cities, rr-clicks (=3), days selector; switching to Last 365 days refetches and shows Kelowna/Victoria/Nelson chips",
+    "Sidebar nav admin-nav-referral-requests navigates to /admin/referral-requests",
+    "/admin/referrals tabs: admin-referrals-tabs present; default Network tab shows tracker; clicking Incoming Requests tab renders referral-requests-panel; switching back hides it"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Low priority: Fix hydration warning in ListingsNext.jsx around line 258 — the beds <option> content is being wrapped in a <span> by the editor instrumentation. Consider using plain static text for option children or disabling the dynamic wrapper for <option> elements."
+  ],
+  "critical_code_review_comments": [
+    "Visual-editor instrumentation injects <span> inside <option> which React treats as invalid HTML and will cause hydration mismatches in SSR builds."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100%"},
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! at /admin/login (worked)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All data-testids wired correctly. Save-search POST succeeded end-to-end with double opt-in confirmation. Click-interest cities present for 365-day window (Kelowna 7, Victoria 3, Nelson 1). Only observation is a non-blocking console hydration warning from visual-editor spans injected inside <option> in ListingsNext.jsx line 258."
+}
