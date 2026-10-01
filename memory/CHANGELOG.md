@@ -2,6 +2,12 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Separate the two referral audiences
+
+- Per Doug: keep consumer vs REALTOR® flows on completely separate pages. Removed the "I'm a buyer or seller" selector card from `/realtor-network`; it's now a single REALTOR®-only handshake hero ("Join Doug's referral network" → #apply, testid `realtor-network-hero`/`rn-apply-cta`). Updated the page SEO title/description to REALTOR®-only.
+- Repointed the "Other BC Areas" top-nav item from `/realtor-network` → `/referral-request` so consumers land on the consumer page. REALTOR® discovery stays via footer "Join the REALTOR® Network". Verified via screenshot.
+
+
 ## June 2026 — Selector cards, About note, buyer/seller Apple polish + deploy
 
 - **Selector cards**: replaced the `/realtor-network` text chooser + consumer band with two large image-backed cards (coastal BC home → "I'm a buyer or seller" → /referral-request; handshake → "I'm a REALTOR®" → #apply), navy gradient overlay, Playfair labels. testids `rn-choose-consumer`/`rn-choose-realtor` preserved.

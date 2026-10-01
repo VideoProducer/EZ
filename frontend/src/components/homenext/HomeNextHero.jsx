@@ -34,7 +34,7 @@ export const HomeNextNav = () => {
         <Link to="/specialties/luxury" data-testid="hn-nav-luxury">Luxury</Link>
         <Link to="/specialties/equestrian" data-testid="hn-nav-equestrian">Equestrian</Link>
         <Link to="/communities" data-testid="hn-nav-communities">Communities</Link>
-        <Link to="/realtor-network" data-testid="hn-nav-other-areas">Other BC Areas</Link>
+        <Link to="/referral-request" data-testid="hn-nav-other-areas">Other BC Areas</Link>
         <Link to="/glossary" data-testid="hn-nav-glossary">Glossary</Link>
         <Link to="/buyer" className="hn-nav__links-cta" data-testid="hn-nav-cta-mobile">Talk to Doug</Link>
       </nav>
