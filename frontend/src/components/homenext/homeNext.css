@@ -247,6 +247,25 @@
 .hn-footer p { margin: 0 0 10px; max-width: 900px; }
 .hn-footer strong { color: var(--hn-ink); font-weight: 600; }
 
+/* ── Equestrian province-wide search ─────────────────── */
+.eq-search__chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin: 8px auto 28px; max-width: 920px; }
+.eq-chip { appearance: none; border: 1px solid var(--hn-line); background: #fff; color: var(--hn-ink); font: 600 13px/1 inherit; padding: 9px 16px; border-radius: 999px; cursor: pointer; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+.eq-chip:hover { border-color: var(--hn-navy); }
+.eq-chip--on { background: var(--hn-navy); border-color: var(--hn-navy); color: #fff; }
+.eq-sort { margin-left: 4px; border: 1px solid var(--hn-line); background: #fff; color: var(--hn-ink); font: 600 13px/1 inherit; padding: 9px 12px; border-radius: 999px; cursor: pointer; }
+.eq-count { text-align: center; color: var(--hn-grey); font-size: 14px; margin: 0 0 20px; }
+.eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.eq-card { display: block; text-decoration: none; background: #fff; border: 1px solid var(--hn-line); border-radius: 18px; overflow: hidden; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.eq-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(15, 42, 91, 0.12); border-color: var(--hn-navy); }
+.eq-card__img { aspect-ratio: 4 / 3; background-size: cover; background-position: center; background-color: #eef1f5; }
+.eq-card__body { padding: 16px 18px 18px; }
+.eq-card__price { color: var(--hn-ink); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.eq-card__addr { color: var(--hn-ink); font-size: 14px; margin-top: 4px; }
+.eq-card__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--hn-grey); font-size: 13px; margin-top: 8px; }
+.eq-card__mls { color: var(--hn-grey); font-size: 12px; margin-top: 8px; }
+@media (max-width: 520px) { .eq-grid { grid-template-columns: 1fr; } }
+
+
 /* ── Sticky mobile CTA ───────────────────────────────── */
 .hn-sticky { display: none; }
 

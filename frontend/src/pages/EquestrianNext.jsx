@@ -1,21 +1,135 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
 import { HnIdentity, HnListingHero } from "../components/homenext/HomeNextShared";
 import { DoogieChat } from "../App";
 
+const API = process.env.REACT_APP_BACKEND_URL;
 const HERO_PATH = "/api/listings/equestrian?sort=price_asc&limit=24&price_min=2000000";
 
-const STEPS = [
-  { t: "ALR status", s: "Many BC horse properties sit inside the Agricultural Land Reserve. Verify status against the BC Agricultural Land Commission map before you write an offer." },
-  { t: "Municipal zoning", s: "Confirm — in writing — that the zone permits stables and your specific livestock. Watch for statutory building schemes and restrictive covenants." },
-  { t: "Water rights", s: "Most BC domestic wells authorize household use only. Livestock watering may need a separate Water Sustainability Act authorization." },
-  { t: "Septic capacity", s: "Barns, staff quarters and secondary dwellings often require an engineered system. Confirm with a BC Registered Onsite Wastewater Practitioner (ROWP)." },
-  { t: "Title search & covenants", s: "Pull a current title from the Land Title and Survey Authority. Legacy covenants prohibiting livestock are common in older Fraser Valley subdivisions." },
+// What to look at before buying a BC horse property — Doug's local criteria.
+const CRITERIA = [
+  { t: "ALR status", s: "Most Fraser Valley and many Sea-to-Sky horse properties are in the Agricultural Land Reserve. That protects farm use and generally allows barns, stables, and arenas as farm buildings — but it limits house size, extra dwellings, subdivision, and non-farm commercial use. Ask the listing agent, then check the ALC map." },
+  { t: "Zoning", s: "Look for rural or agricultural zones (Langley RU-1, RU-3 and similar; regional district rural zones in Squamish and Pemberton). Confirm livestock is a permitted use, and whether a commercial boarding or riding school needs a separate approval." },
+  { t: "Animal limits and setbacks", s: "Municipalities often cap horses by lot size and require barn and manure setbacks from property lines and wells. Don\u2019t assume \u201cacreage\u201d means unlimited horses." },
+  { t: "Usable land, not just titled acres", s: "Steep, treed, or floodplain land doesn\u2019t count as turnout. Fraser Valley buyers look for flat, drained pasture. Sea-to-Sky lots are often sloped — usable paddock area matters more than total acreage." },
+  { t: "Water", s: "Private wells should be checked for flow. A rough planning figure is about 30\u201350 litres per horse per day, plus irrigation. City water is a plus in parts of Langley and Maple Ridge." },
+  { t: "Services", s: "Septic vs sewer, power (200 amp, sometimes 3-phase for an arena), and driveway access for hay trucks and trailers." },
 ];
+
+const REGIONS = ["Anywhere", "Lower Mainland", "Fraser Valley", "Sea-to-Sky", "Okanagan", "Vancouver Island", "Kootenays", "Northern BC"];
+
+// Province-wide equestrian + acreage MLS® search (live CREA DDF® feed).
+function EquestrianSearch() {
+  const [region, setRegion] = useState("Anywhere");
+  const [sort, setSort] = useState("newest");
+  const [listings, setListings] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let stop = false;
+    setLoading(true);
+    const url = `${API}/api/listings/equestrian?region_chip=${encodeURIComponent(region)}&sort=${encodeURIComponent(sort)}&limit=24`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (stop) return;
+        setListings((d && d.listings) || []);
+        setTotal((d && (d.total ?? (d.listings || []).length)) || 0);
+        setLoading(false);
+      })
+      .catch(() => { if (!stop) { setListings([]); setTotal(0); setLoading(false); } });
+    return () => { stop = true; };
+  }, [region, sort]);
+
+  const fmt = (p) => (typeof p === "number" ? `$${p.toLocaleString("en-CA")}` : "Contact for price");
+
+  return (
+    <section className="hn-section hn-section--alt" data-testid="equestrian-search">
+      <div className="hn-wrap">
+        <div className="hn-center">
+          <h2 className="hn-h2">Search equestrian &amp; acreage listings across BC.</h2>
+          <p className="hn-lead" style={{ marginInline: "auto" }}>Live CREA DDF® MLS® listings for horse-friendly acreage province-wide. Filter by region, then open any listing for full details.</p>
+        </div>
+
+        <div className="eq-search__chips" data-testid="equestrian-search-chips">
+          {REGIONS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRegion(r)}
+              className={`eq-chip${region === r ? " eq-chip--on" : ""}`}
+              data-testid={`equestrian-region-${r.toLowerCase().replace(/[^a-z]+/g, "-")}`}
+            >
+              {r === "Anywhere" ? "All BC" : r}
+            </button>
+          ))}
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            className="eq-sort"
+            data-testid="equestrian-sort"
+            aria-label="Sort listings"
+          >
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price ↑</option>
+            <option value="price_desc">Price ↓</option>
+          </select>
+        </div>
+
+        {loading ? (
+          <p className="hn-lead" style={{ textAlign: "center" }} data-testid="equestrian-search-loading">Loading listings…</p>
+        ) : listings.length === 0 ? (
+          <p className="hn-lead" style={{ textAlign: "center" }} data-testid="equestrian-search-empty">No equestrian listings found in this region right now. Try “All BC”.</p>
+        ) : (
+          <>
+            <p className="eq-count" data-testid="equestrian-search-count">
+              {total.toLocaleString("en-CA")} equestrian &amp; acreage listing{total === 1 ? "" : "s"}{region !== "Anywhere" ? ` in ${region}` : " across BC"}
+            </p>
+            <div className="eq-grid" data-testid="equestrian-search-grid">
+              {listings.map((l) => {
+                const photo = (l.photos && l.photos[0]) || "/images/home-next-hero.jpg";
+                const addr = l.unparsed_address || l.street_address || [l.city, l.region].filter(Boolean).join(", ");
+                return (
+                  <Link
+                    key={l.listing_key}
+                    to={`/listing/${encodeURIComponent(l.listing_key)}`}
+                    className="eq-card"
+                    data-testid={`equestrian-card-${l.listing_key}`}
+                  >
+                    <div className="eq-card__img" style={{ backgroundImage: `url('${photo}')` }} aria-hidden="true" />
+                    <div className="eq-card__body">
+                      <div className="eq-card__price">{fmt(l.list_price)}</div>
+                      <div className="eq-card__addr">{addr}</div>
+                      <div className="eq-card__meta">
+                        {l.beds != null && <span>{l.beds} bd</span>}
+                        {l.baths != null && <span>{l.baths} ba</span>}
+                        {l.property_type && <span>{l.property_type}</span>}
+                      </div>
+                      <div className="eq-card__mls">
+                        {l.city}{(l.mls_number || l.listing_key) ? ` · MLS® ${l.mls_number || l.listing_key}` : ""}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="hn-center" style={{ marginTop: 28 }}>
+              <Link to="/listings" className="hn-pill hn-pill--navy hn-pill--lg" data-testid="equestrian-search-all">
+                Open the full BC MLS® search <ArrowRight size={15} />
+              </Link>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function EquestrianNext() {
   useEffect(() => {
@@ -31,7 +145,7 @@ export default function EquestrianNext() {
       <Helmet>
         <title>Equestrian & Acreage Properties · EZtoFind.ca</title>
         <meta name="robots" content="index, follow"/>
-        <meta name="description" content="Live MLS® listings for horse-friendly acreage across BC, plus a 5-step buyer checklist covering ALR, zoning, water rights, septic and title. Doug LeMaire, REALTOR®."/>
+        <meta name="description" content="Rotating MLS® listings of equestrian & acreage properties in the Lower Mainland, Fraser Valley & Sea-to-Sky, plus Doug's buyer criteria (ALR, zoning, water, usable land) and a province-wide BC equestrian listing search."/>
       </Helmet>
       <HomeNextNav/>
       <main>
@@ -48,22 +162,25 @@ export default function EquestrianNext() {
           </div>
         </section>
 
-        <section className="hn-section hn-section--alt" data-testid="equestrian-checklist">
+        <section className="hn-section hn-section--alt" data-testid="equestrian-criteria">
           <div className="hn-wrap">
             <div className="hn-center">
-              <h2 className="hn-h2">The 5-step buyer checklist.</h2>
-              <p className="hn-lead" style={{ marginInline: "auto" }}>Every horse property in BC needs these five verifications. Skip one and you may end up with a lot you can't legally keep animals on.</p>
+              <h2 className="hn-h2">How to read a BC horse property.</h2>
+              <p className="hn-lead" style={{ marginInline: "auto" }}>The rotating MLS® listings above are equestrian &amp; acreage properties in the Lower Mainland, Fraser Valley, and Sea-to-Sky Corridor only. Here's the criteria Doug uses to judge whether an acreage is a genuine, legal horse property.</p>
             </div>
             <ol className="hn-steps" style={{ maxWidth: 820, margin: "0 auto" }}>
-              {STEPS.map((s, i) => (
-                <li key={s.t} data-testid={`equestrian-step-${i + 1}`}>
+              {CRITERIA.map((c, i) => (
+                <li key={c.t} data-testid={`equestrian-criteria-${i + 1}`}>
                   <span className="hn-steps__n">{i + 1}</span>
-                  <div><h4>{s.t}</h4><p>{s.s}</p></div>
+                  <div><h4>{c.t}</h4><p>{c.s}</p></div>
                 </li>
               ))}
             </ol>
+            <p className="hn-lead" style={{ maxWidth: 820, margin: "28px auto 0" }}>A common local stocking guide is about 1 acre of usable pasture per horse if you buy most of the hay, and more if you want rotational grazing. A 5-acre flat parcel often supports a small private barn (roughly 3–5 horses); commercial boarding needs more land and the right zoning.</p>
           </div>
         </section>
+
+        <EquestrianSearch/>
 
         <section className="hn-section" data-testid="equestrian-cols">
           <div className="hn-wrap">
