@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Sunday digest cron, Alert Analytics, Map-Draw search, Community speed
+
+- **Match-Alert Digests (scheduled)**: added `.emergent/crons.yml` → `POST /api/cron/sunday-night-digest` (Sun 6pm America/Vancouver). Cron endpoint checks `WEBHOOK_CRON_SECRET` (new backend/.env key) with `hmac.compare_digest`, dedupes via `cron_runs` + `X-Webhook-Id`, acks 2xx and backgrounds `run_sunday_night_digest`. The save-search modal now opts users into the Sunday brief (`frequency='sunday_night'` → `digest_frequency='sunday_night'`); digest still only emails explicit opt-ins (per user choice). NOTE: cron syncs to **production on the next deploy**.
+- **Alert Analytics**: new `GET /api/admin/saved-searches/analytics` (totals, confirmed/active, confirmation rate, Sunday opt-ins, briefs sent, pending, unsubscribed, demand-by-area, recent masked signups). New `SavedSearchAnalyticsPanel` renders directly below the referral dashboard on `/admin/referral-requests`.
+- **Map-Draw Search**: on `/listings`, "Draw area" (`ln-draw-toggle`) lets buyers drag a rectangle on the Leaflet map; `visibleItems` filters cards+markers to the box, count shows "N homes in your drawn area". Saving includes `filters.bbox`. `_match_filters` (just_sold_digest.py, shared by Sunday digest) now supports `price_min`, `baths_min`, and `bbox` (lat/lon box); Sunday-digest projection now pulls `lat`/`lon`.
+- **Community Page Speed**: `CommunityPageMockupLive.jsx` now fires all 6 fetches in ONE `Promise.allSettled` batch (deslugified city guess removes the stats-first round-trip; listings refined in background if canonical name differs) and shows a shimmer skeleton (`community-skeleton`) instead of a text loader.
+- **Verified**: testing agent 100% — frontend flows + 6/6 backend pytest (`/app/backend/tests/test_sunday_digest_and_analytics.py`), `/app/test_reports/iteration_36.json`.
+
+
 ## June 2026 — Promote Apple-style search to /listings, save-search lead capture, referral dashboard, deploy
 
 - **Promoted search**: `/listings` now renders the Apple-style `ListingsNext` (was legacy `Listings`). Page is now `index, follow` with SEO title "Search BC MLS® Real Estate Listings — Homes for Sale in British Columbia | EZtoFind.ca" + canonical `https://eztofind.ca/listings`. `/listings-next` now `<Navigate replace>` → `/listings`. `ListingsNext` reads `?q=` and `?city=` from the URL (hero/band/footer links work unchanged). Legacy `Listings` component left defined but unrouted. (`App.js` routes ~13699-13703; `ListingsNext.jsx`)

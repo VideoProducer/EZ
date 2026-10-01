@@ -1,0 +1,42 @@
+{
+  "summary": "End-to-end verification of the Jan 2026 round: Sunday-brief save-search modal, Map Draw rectangle, Alert Analytics admin panel, Community page speed/skeleton, and /listings-next redirect regression. All 4 new features + regression pass. 6/6 backend pytest cases pass against the preview URL.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/listings ListingsNext", "issues": ["Carry-over from iter 35: visual-editor instrumentation injects <span> inside <option> → console hydration warning on load. Non-blocking."]}
+    ]
+  },
+  "verified_flows": [
+    "SAVE-SEARCH (Sunday brief): ln-save-search opens ln-save-modal; ln-save-freqnote reads 'Weekly brief — sent every Sunday evening'; submitting without consents shows ln-save-error 'Please check both consent boxes.' and no POST; checking ln-save-casl + ln-save-pipa + ln-save-submit returns ln-save-success ('Check your inbox') for qa+sunday_<ts>@example.com. Admin GET /api/admin/saved-searches confirms digest_frequency='sunday_night' and filters.bbox persist for the created record.",
+    "MAP DRAW: ln-draw-toggle label flips from 'Draw area' → 'Drag a box on the map…' and view shows ln-map. Simulated mouse down/move/up over Leaflet successfully drew a gold dashed rectangle; ln-count changed from '43,396 homes in British Columbia' to '20 homes in your drawn area'; button changed to 'Clear area'. Clicking 'Clear area' restored BC-wide count 43,396 and label back to 'Draw area'.",
+    "MAP DRAW -> SAVE copy: After drawing, ln-save-modal description reads 'We'll email you a weekly Sunday-evening brief with new BC MLS® listings that match your drawn map area, plus any price drops.' ✓",
+    "ALERT ANALYTICS: /admin/referral-requests shows referral-requests-panel then saved-search-analytics-panel. All testids present with real values — ss-total=9, ss-active=1, ss-confrate=11%, ss-sunday=3, ss-pending=8, ss-new=9, ss-sent=0, ss-unsub=0, ss-by-area shows Vancouver 3 / Kelowna 2 / whistler 1 / Osoyoos 1 / All BC 2, ss-recent table populated with masked emails. alert-analytics-days selector exists with 30/90/180/365 options; switching to 365 refetches without error.",
+    "COMMUNITY SPEED: /community/maple-ridge and /community/kelowna both render community-skeleton while loading, then render full page (hero stats 859 listings / median $1.1M / $129K–$11M range, CREA DDF® live badge, sub-neighbourhoods, TL;DR, etc.). Perceived time to meaningful content ~2–4s on preview.",
+    "REGRESSION: /listings-next 302s to /listings; rr-total, rr-window, rr-cities (0/0/0 all time) and rr-clicks=3 (Kelowna·7, Victoria·3, Nelson·1) still render on /admin/referral-requests.",
+    "BACKEND pytest (6/6 passing): cron/sunday-night-digest rejects missing+wrong bearer with 401; admin/saved-searches/analytics 401 w/o auth, returns full field set at days=90 and days=365; POST /api/saved-searches with frequency='sunday_night' + filters.bbox persists digest_frequency='sunday_night' and filters.bbox in Mongo (verified via admin list)."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_sunday_digest_and_analytics.py",
+    "/app/test_reports/pytest/sunday_digest_analytics.xml"
+  ],
+  "action_items": [
+    "(low) Lingering hydration warning from visual-editor <span> inside <option> on ListingsNext — unchanged from iter 35."
+  ],
+  "critical_code_review_comments": [
+    "cron/sunday-night-digest correctly uses hmac.compare_digest, returns 202-equivalent {status: accepted}, and dedupes with x-webhook-id via cron_runs upsert — good.",
+    "admin saved-searches/analytics masks email in recent[] (good PIPA hygiene) and excludes Mongo _id in projection — good.",
+    "Draw-mode UX: 'Clear area' label persists for an instant after the save modal closes until state propagates — acceptable; not a bug.",
+    "server.py has grown very large (20,107 lines). Future cleanup: split cron, admin-analytics, and saved-search endpoints into dedicated modules."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sunday_digest_and_analytics.py (NEW — 6 tests)"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% (all target flows)"},
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! at /admin/login (works)",
+  "seed_data_creation": "Created 1 TEST saved_search (qa+sunday_<ts>@example.com) via /api/saved-searches with sunday_night + bbox for persistence verification. Status 'pending' (needs double opt-in to leave in DB — safe to prune).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 4 features of the Jan 2026 round are shipping green. Backend regression file: /app/backend/tests/test_sunday_digest_and_analytics.py (uses REACT_APP_BACKEND_URL env or falls back to parsing /app/frontend/.env). Leaflet rectangle drag IS reproducible in Playwright via raw page.mouse down/move(steps)/up over [data-testid=ln-map]. Save-search uses body fields 'casl_consent' and 'pipa_ack' (not consent_casl/consent_pipa) — important for anyone writing more backend tests."
+}
