@@ -20,7 +20,7 @@ import { Calculators } from "../App";
 
 export default function MortgageAffordabilityPage() {
   return (
-    <section className="section" data-testid="mortgage-affordability-page">
+    <section className="section apple-form" data-testid="mortgage-affordability-page">
       <Helmet>
         <title>BC Mortgage Affordability Calculator (2026) — OSFI B-20 Stress Test — EZtoFind.ca</title>
         <meta name="description" content="Free BC mortgage affordability calculator using the OSFI B-20 stress test. Estimate maximum purchase price by income, down payment, and debts. Educational — not mortgage advice."/>

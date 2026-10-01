@@ -2,6 +2,14 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Calculator pages Apple polish + mobile checks + deploy
+
+- Applied `apple-form` class to `/tools/mortgage-affordability` (`MortgageAffordabilityPage`) and `/tools/ptt-estimator` (`PTTEstimator`) — both already used `.paper/.field`, so they now get the white card + rounded inputs + navy pill look. Verified mortgage page via screenshot.
+- Mobile check: `/buyer` verified at 390px — fields stack full-width, rounded inputs, no horizontal overflow. `/seller` shares the same `.apple-form` path.
+- Decision: `/contact` kept as the bespoke `LuxuryQuietContact` luxury design (not restyled) — recommended to Doug.
+- Deployed to eztofind.ca (Valuation polish, mobile hero tuning, audience separation, calculator polish).
+
+
 ## June 2026 — Valuation Apple polish + REALTOR® hero mobile tuning
 
 - Applied `apple-form` class to the `/valuation` (`Valuation`) page — white card, rounded inputs, light-grey labels, navy pill button; Turnstile + compliance + data-testids untouched. Verified via screenshot.

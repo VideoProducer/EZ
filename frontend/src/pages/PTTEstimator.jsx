@@ -72,7 +72,7 @@ export default function PTTEstimator() {
   }, [price, fthb, newBuild, foreign]);
 
   return (
-    <section className="section" data-testid="ptt-estimator">
+    <section className="section apple-form" data-testid="ptt-estimator">
       <Helmet>
         <title>BC Property Transfer Tax Calculator (2026) — PTT, FTHB & New-Build Exemptions — EZtoFind.ca</title>
         <meta name="description" content="Free 2026 BC Property Transfer Tax estimator with First-Time Home Buyer exemption, Newly Built Home exemption, and 20% additional foreign-buyer PTT. Educational only — not tax advice."/>
