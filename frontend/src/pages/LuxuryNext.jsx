@@ -49,7 +49,7 @@ export default function LuxuryNext() {
             <HnListingHero
               path={HERO_PATH}
               testId="luxury-mediahero"
-              browse={{ to: "/listings?price_min=3000000&sort=price_desc", label: "Browse luxury listings" }}
+              browse={{ to: "/listings?property_type=Detached%2CCondo&price_min=3000000&sort=price_desc", label: "Browse luxury listings" }}
             />
           </div>
         </section>

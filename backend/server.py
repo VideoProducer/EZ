@@ -12918,7 +12918,18 @@ async def search_listings(
         # This ensures every chip on /specialties/equestrian returns REAL
         # horse-friendly acreage in the exact selected cities — not just any
         # listing whose description happens to mention "horseshoe" once.
-        if property_type == "Equestrian":
+        # Multi-type support — comma-separated labels (e.g. "Detached,Condo"
+        # from the Luxury "Browse luxury listings" link). OR each type's
+        # synonym set into a single $in so the search returns ONLY those types.
+        if "," in property_type:
+            _parts = [p.strip() for p in property_type.split(",")
+                      if p.strip() and p.strip() not in EXCLUDED_PROPERTY_TYPES]
+            _vals = []
+            for _p in _parts:
+                _vals.extend(_property_type_query(_p).get("$in", []))
+            if _vals:
+                query["property_type"] = {"$in": sorted(set(_vals))}
+        elif property_type == "Equestrian":
             query.setdefault("$and", []).append(_equestrian_keyword_clause())
             query["$and"].append(_equestrian_lot_or_barn_clause())
             query["property_type"] = {"$in": list(EQUESTRIAN_ELIGIBLE_PROPERTY_TYPES)}

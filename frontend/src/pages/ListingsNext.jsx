@@ -35,12 +35,12 @@ export default function ListingsNext() {
   const [facets, setFacets] = useState({ cities: [], property_types: [], regions: [] });
   const [q, setQ] = useState(() => sp.get("q") || "");
   const [city, setCity] = useState(() => sp.get("city") || "");
-  const [ptype, setPtype] = useState("");
-  const [beds, setBeds] = useState("");
-  const [baths, setBaths] = useState("");
-  const [pmin, setPmin] = useState("");
-  const [pmax, setPmax] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [ptype, setPtype] = useState(() => sp.get("property_type") || "");
+  const [beds, setBeds] = useState(() => sp.get("beds_min") || "");
+  const [baths, setBaths] = useState(() => sp.get("baths_min") || "");
+  const [pmin, setPmin] = useState(() => sp.get("price_min") || "");
+  const [pmax, setPmax] = useState(() => sp.get("price_max") || "");
+  const [sort, setSort] = useState(() => sp.get("sort") || "newest");
 
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -317,6 +317,7 @@ export default function ListingsNext() {
             </select>
             <select data-testid="ln-type" value={ptype} onChange={(e) => setPtype(e.target.value)} style={pill} aria-label="Home type">
               <option value="">Any type</option>
+              {ptype.includes(",") && <option value={ptype}>{ptype.split(",").map((s) => s.trim()).join(" & ")}</option>}
               {facets.property_types.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <select data-testid="ln-beds" value={beds} onChange={(e) => setBeds(e.target.value)} style={pill} aria-label="Beds">
