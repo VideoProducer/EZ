@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Home-page search placement for traffic & leads
+
+- **`<title>`** on `/` set to the keyword-rich `Search BC MLS® Real Estate Listings — Live CREA DDF® Feed | EZtoFind.ca` (`/listings` already had it).
+- **Hero** (`HomeNextHero`): eyebrow strengthened to "Search live BC MLS® listings · CREA DDF® feed"; the existing hero search field (routes to `/listings?q=`) is the primary above-the-fold action.
+- **Mid-page band** added in `HomeNext.jsx` after Featured: "Browse BC listings by community" with "Search all listings" → `/listings` and "Browse by community" → `/communities".
+- **Footer**: added "Search BC listings" → `/listings` link (`HomeNextExtras` footer row).
+- Verified in-browser: title, hero search, mid band, footer link all present, zero console errors.
+
+
 ## June 2026 — Header/disclaimer cleanup, region auto-detect, referral API, region images
 
 - **Compliance strip** (App.js `ComplianceStrip`): shrunk from 1.28rem bold to 0.72rem regular-weight — a thin one-line disclaimer at the very top of every page.

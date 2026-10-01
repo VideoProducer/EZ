@@ -54,7 +54,7 @@ export const HomeNextHero = () => {
   return (
     <section className="hn-hero" data-testid="hn-hero">
       <div className="hn-wrap">
-        <p className="hn-hero__eyebrow hn-rise">Live MLS® listings across British Columbia</p>
+        <p className="hn-hero__eyebrow hn-rise">Search live BC MLS® listings · CREA DDF® feed</p>
         <h1 className="hn-hero__title hn-rise hn-rise-2" data-testid="hn-hero-title">Find your Lower Mainland, Fraser Valley, Sea to Sky Corridor home.</h1>
         <form className="hn-search hn-rise hn-rise-4" onSubmit={submit} role="search" data-testid="hn-search">
           <input
