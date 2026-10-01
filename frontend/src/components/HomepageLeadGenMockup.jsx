@@ -248,20 +248,6 @@ export default function HomepageLeadGenMockup({ previewFlagship = FLAGSHIP.activ
           "recognizedBy": { "@type": "Organization", "name": "BC Financial Services Authority (BCFSA)" },
           "identifier": FACTS.bcfsa_licence_brokerage,
         },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "5.0",
-          "reviewCount": TESTIMONIALS.length,
-          "bestRating": "5",
-          "worstRating": "1",
-        },
-        "review": TESTIMONIALS.map(t => ({
-          "@type": "Review",
-          "author": { "@type": "Person", "name": t.author },
-          "reviewRating": { "@type": "Rating", "ratingValue": t.stars, "bestRating": 5, "worstRating": 1 },
-          "reviewBody": t.text,
-          "itemReviewed": { "@id": "https://eztofind.ca/#doug" },
-        })),
       },
       {
         "@type": "ItemList",
