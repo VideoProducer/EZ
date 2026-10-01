@@ -2,6 +2,15 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — REALTOR® sign-up discoverability (a+b+c+e)
+
+- **(b) Two-choice chooser** at the top of `/realtor-network`: "I'm a buyer/seller — get a referral" (→ /referral-request) vs "I'm a REALTOR® — apply to join ↓" (jumps to `#apply`). Wrapped the BC apply form in `<div id="apply">`; added a hash-scroll effect (useLocation) so `#apply` deep-links scroll to the form.
+- **(c) Shareable alias**: `GET /join` → `<Navigate to="/realtor-network#apply">` for LinkedIn/email/outreach. Verified it lands + scrolls to the application form.
+- **(a) Agent footer link**: legacy AppLayout footer "For REALTORS®" relabelled "Join the REALTOR® Network" → `/realtor-network#apply` (`footer-join-network`); HomeNext footer also gained "Join the REALTOR® Network".
+- **(e) Consumer footer link**: HomeNext footer gained "Request a Referral" → /referral-request (legacy footer already had "Referral (Out-of-Area)").
+- Both audiences now have clear, distinct, shareable entry points. Preview-verified; not yet deployed (prior deploy covers earlier work).
+
+
 ## June 2026 — Out-of-area results banner, "Other BC Areas" nav, referral-click tie-in + deploy
 
 - **(b) Results banner** on `/listings`: when an out-of-area search DOES return listings (Kelowna, Victoria…), a slim dismissible strip appears above results — "Looking in <area> — outside Doug's region? … Get a referral →" (`ln-ooa-banner`). Resets when the area changes.

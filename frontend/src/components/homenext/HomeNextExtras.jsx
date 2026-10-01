@@ -88,7 +88,7 @@ export const HomeNextFooter = () => (
           Direct <a href="tel:+16047870851" data-testid="hn-footer-phone">(604) 787-0851</a> · Brokerage <a href="tel:+16044667021">(604) 466-7021</a> · <a href="mailto:info@eztofind.ca">info@eztofind.ca</a>
         </div>
         <nav className="hn-footer__links" aria-label="Legal">
-          <Link to="/listings" data-testid="hn-footer-search">Search BC listings</Link><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/copyright">Copyright</Link><Link to="/ai-use">AI Use</Link><Link to="/about">About Doug</Link><Link to="/realtor-network" data-testid="hn-footer-realtor-network">REALTOR® Network</Link>
+          <Link to="/listings" data-testid="hn-footer-search">Search BC listings</Link><Link to="/privacy">Privacy (PIPA)</Link><Link to="/terms">Terms</Link><Link to="/compliance">Compliance</Link><Link to="/copyright">Copyright</Link><Link to="/ai-use">AI Use</Link><Link to="/about">About Doug</Link><Link to="/referral-request" data-testid="hn-footer-referral">Request a Referral</Link><Link to="/realtor-network#apply" data-testid="hn-footer-realtor-network">Join the REALTOR® Network</Link>
         </nav>
       </div>
       <p>Not intended to solicit properties currently listed for sale or buyers currently under contract with another REALTOR®. Doogie is an AI-assisted helper that provides general information only — never legal, tax or financial advice.</p>

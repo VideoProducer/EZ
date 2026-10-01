@@ -1313,7 +1313,7 @@ const Footer = () => (
         ))}
       </ul></div>
       <div><h4>For REALTORS®</h4><ul>
-        <li><Link to="/realtor-network">REALTOR® Network</Link></li>
+        <li><Link to="/realtor-network#apply" data-testid="footer-join-network">Join the REALTOR® Network</Link></li>
       </ul></div>
       <div><h4>Consumer Protection</h4><ul>
         <li><Link to="/dorts">Disclosure of Representation</Link></li>
@@ -5614,19 +5614,32 @@ const EquestrianSection = ({ intro }) => {
 // from anywhere. BC applicants land in the BC pipeline; OOP applicants land
 // in the interprovincial pipeline. Same admin queue at /admin/realtors handles
 // both. Kept as one URL (/realtor-network) so a single nav item covers both.
-const RealtorNetwork = () => (
+const RealtorNetwork = () => {
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      const el = document.querySelector(hash);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    }
+  }, [hash]);
+  return (
   <>
     <div style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.06))",paddingBottom:"2rem"}}>
       <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
         <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
-        <h1 className="section-title" style={{marginBottom:"0.5rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
+        <h1 className="section-title" style={{marginBottom:"0.75rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
+        {/* Two-choice chooser: consumers want a referral; REALTORS® want to join. */}
+        <div data-testid="realtor-network-chooser" style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
+          <Link to="/referral-request" className="btn btn-outline" data-testid="rn-choose-consumer">I'm a buyer/seller — get a referral</Link>
+          <a href="#apply" className="btn btn-primary" data-testid="rn-choose-realtor">I'm a REALTOR® — apply to join ↓</a>
+        </div>
       </div>
       {/* Consumer-facing CTA — buyers/sellers who need a REALTOR® OUTSIDE
           Doug's Greater Vancouver / Fraser Valley / Sea-to-Sky region. This
           page is otherwise REALTOR®-recruitment; this band routes consumers to
           the out-of-area referral request so they don't bounce. */}
       <div className="container-x" style={{maxWidth:"52rem"}}>
-        <div data-testid="realtor-network-consumer-cta" style={{marginTop:"1rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:16,padding:"1.5rem 1.75rem",display:"flex",gap:"1.25rem",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",fontFamily:"Inter,sans-serif",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
+        <div data-testid="realtor-network-consumer-cta" style={{marginTop:"1.25rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:16,padding:"1.5rem 1.75rem",display:"flex",gap:"1.25rem",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",fontFamily:"Inter,sans-serif",boxShadow:"0 14px 34px rgba(15,42,91,0.18)"}}>
           <div style={{flex:"1 1 300px",minWidth:0}}>
             <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>Buying or selling outside Greater Vancouver?</div>
             <div style={{fontSize:"1.25rem",fontWeight:700,marginTop:"0.3rem",lineHeight:1.3}}>Get matched with a vetted local REALTOR® — at no cost to you.</div>
@@ -5637,7 +5650,7 @@ const RealtorNetwork = () => (
       </div>
     </div>
     {/* BC REALTORS® — top */}
-    <RealtorApply/>
+    <div id="apply"><RealtorApply/></div>
     {/* Visual divider between the two application flows */}
     <div className="container-x" style={{textAlign:"center",padding:"1rem 0"}}>
       <div style={{display:"inline-block",padding:"0.5rem 1.5rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:999,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",fontWeight:600,letterSpacing:"0.05em"}}>OR — LICENSED OUTSIDE BC?</div>
@@ -5645,7 +5658,8 @@ const RealtorNetwork = () => (
     {/* Out-of-Province REALTORS® — bottom */}
     <RealtorApplyOutOfProvince/>
   </>
-);
+  );
+};
 
 // --- Glossary ---
 // across high-value scrape targets (glossary, community, home). Each is
@@ -13986,6 +14000,7 @@ function App() {
       <Route path="/realtors" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtors-outofprovince" element={<Navigate to="/realtor-network" replace/>}/>
       <Route path="/realtor-network" element={<AppLayout><RealtorNetwork/></AppLayout>}/>
+      <Route path="/join" element={<Navigate to="/realtor-network#apply" replace/>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<Suspense fallback={<RouteFallback/>}><AboutNext/></Suspense>}/>
       <Route path="/contact" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietContact/></Suspense></AppLayout>}/>
