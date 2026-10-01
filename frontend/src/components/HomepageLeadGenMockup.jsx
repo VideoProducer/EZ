@@ -465,17 +465,16 @@ export default function HomepageLeadGenMockup({ previewFlagship = FLAGSHIP.activ
         <H2 kicker="Real BC clients">People who trusted Doug</H2>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }} data-testid="testimonials">
           {TESTIMONIALS.map((t, i) => (
-            <blockquote key={i} data-testid={`testimonial-${i}`} itemScope itemType="https://schema.org/Review"
+            <blockquote key={i} data-testid={`testimonial-${i}`}
                         style={{ background: C.paper, border:"1px solid #E5E7EB", borderRadius: 14, padding:"24px 26px", margin: 0 }}>
               <div style={{ color: C.gold, fontSize:"1.1rem", letterSpacing:"0.14em", marginBottom: 10 }} aria-label={`${t.stars} out of 5 stars`}>
-                {"★".repeat(t.stars)}<span itemProp="reviewRating" itemScope itemType="https://schema.org/Rating" style={{ display:"none" }}><meta itemProp="ratingValue" content={String(t.stars)}/><meta itemProp="bestRating" content="5"/></span>
+                {"★".repeat(t.stars)}
               </div>
-              <p itemProp="reviewBody" style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px", fontStyle:"italic" }}>"{t.text}"</p>
+              <p style={{ fontSize:"0.95rem", lineHeight: 1.65, color: C.ink, margin:"0 0 14px", fontStyle:"italic" }}>"{t.text}"</p>
               <div style={{ fontSize:"0.85rem", color: C.navy, fontWeight: 700, background:"transparent" }}>
-                <span itemProp="author" itemScope itemType="https://schema.org/Person"><span itemProp="name">{t.author}</span></span>
+                <span>{t.author}</span>
                 <span style={{ color: C.muted, fontWeight: 500 }}> · {t.label}</span>
               </div>
-              <meta itemProp="itemReviewed" content="Doug LeMaire, REALTOR®"/>
             </blockquote>
           ))}
         </div>
