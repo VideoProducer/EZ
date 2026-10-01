@@ -3422,6 +3422,67 @@ async def referral_click_analytics(_=Depends(verify_admin), days: int = 30):
     }
 
 
+# ── Service-area auto-detect (Jun 2026) ──────────────────────────────
+# Decide whether a city/community/neighbourhood is inside Doug's direct
+# service area (Greater Vancouver / Fraser Valley / Sea-to-Sky) purely from
+# CREA data — no hand-maintained neighbourhood lists. We invert the
+# communities seed (region_group → cities) and, for sub-neighbourhoods not in
+# the seed (e.g. "Kitsilano"), fall back to the parent city carried on live
+# listings whose `city` or `region` matches the place.
+_FOCUS_REGION_GROUPS = {"Greater Vancouver", "Fraser Valley", "Sea-to-Sky"}
+_CITY_TO_REGION_CACHE = None
+
+def _city_region_map():
+    global _CITY_TO_REGION_CACHE
+    if _CITY_TO_REGION_CACHE is None:
+        try:
+            import os as _os
+            seed_path = _os.path.join(_os.path.dirname(__file__), "data", "communities_seed.json")
+            seed = json.loads(open(seed_path).read())
+            m = {}
+            for grp, cities in seed.items():
+                for c in cities:
+                    m[c.strip().lower()] = grp
+            _CITY_TO_REGION_CACHE = m
+        except Exception:
+            _CITY_TO_REGION_CACHE = {}
+    return _CITY_TO_REGION_CACHE
+
+
+@api.get("/service-area")
+async def service_area(place: str = ""):
+    """Given a city / community / neighbourhood, report the CREA region_group
+    and whether it is inside Doug's direct service area. Public, read-only."""
+    p = (place or "").strip()
+    if not p:
+        return {"place": "", "region_group": None, "in_area": False, "resolved_via": "empty"}
+    cmap = _city_region_map()
+    key = p.lower()
+    # 1) direct seed hit (place IS a city)
+    if key in cmap:
+        rg = cmap[key]
+        return {"place": p, "region_group": rg, "in_area": rg in _FOCUS_REGION_GROUPS, "resolved_via": "seed_city"}
+    # 2) neighbourhood → resolve via the parent city on live listings
+    try:
+        rx = {"$regex": f"^{re.escape(p)}$", "$options": "i"}
+        doc = await db.listings.find_one(
+            {"status": "Active", "$or": [{"city": rx}, {"region": rx}]},
+            {"city": 1},
+        )
+        if doc and doc.get("city"):
+            rg = cmap.get(doc["city"].strip().lower())
+            if rg:
+                return {"place": p, "region_group": rg, "in_area": rg in _FOCUS_REGION_GROUPS, "resolved_via": "listing_city"}
+    except Exception:
+        pass
+    # 3) substring match against seed cities (handles "Vancouver — Kitsilano")
+    for city_lc, rg in cmap.items():
+        if city_lc in key or key in city_lc:
+            return {"place": p, "region_group": rg, "in_area": rg in _FOCUS_REGION_GROUPS, "resolved_via": "seed_substring"}
+    return {"place": p, "region_group": None, "in_area": False, "resolved_via": "unknown"}
+
+
+
 @api.post("/admin/sunday-night-digest/run")
 async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
     """Manually trigger the Sunday-Night Digest — combined new-matches
@@ -3430,6 +3491,67 @@ async def admin_run_sunday_night_digest(_=Depends(verify_admin)):
     from services.sunday_night_digest import run_sunday_night_digest
     result = await run_sunday_night_digest(db)
     return {"ok": True, **result}
+
+
+@api.get("/admin/referrals/requests-summary")
+async def admin_referral_requests_summary(days: int = 90, _=Depends(verify_admin)):
+    """Dashboard feed: out-of-area REFERRAL REQUESTS (real leads submitted via
+    /referral-request), counted overall and broken down by target city. These
+    live in buyer_leads/seller_leads with the OUT-OF-AREA REFERRAL REQUEST note
+    marker. Also returns click-interest (referral_click_events) by community."""
+    marker = _REFERRAL_MARKER.upper()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    by_city = {}
+    recent = []
+    total = 0
+    for coll, kind in ((db.buyer_leads, "buyer"), (db.seller_leads, "seller")):
+        try:
+            cursor = coll.find({}, {"notes": 1, "areas": 1, "target_area": 1, "city": 1, "full_name": 1, "created_at": 1, "property_address": 1})
+            async for d in cursor:
+                notes = (d.get("notes") or "").upper()
+                if marker not in notes:
+                    continue
+                total += 1
+                areas = d.get("areas") or []
+                city = (areas[0] if areas else None) or d.get("target_area") or d.get("city") or d.get("property_address") or "Unknown"
+                city = str(city).strip() or "Unknown"
+                by_city[city] = by_city.get(city, 0) + 1
+                recent.append({
+                    "kind": kind,
+                    "city": city,
+                    "name": d.get("full_name") or "",
+                    "created_at": d.get("created_at") or "",
+                })
+        except Exception:
+            continue
+    recent.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    by_city_sorted = sorted(
+        [{"city": c, "count": n} for c, n in by_city.items()],
+        key=lambda x: x["count"], reverse=True,
+    )
+    recent_total = sum(1 for r in recent if (r.get("created_at") or "") >= since)
+    # Click interest (intent before a form is submitted)
+    click_by_city = []
+    try:
+        pipeline = [
+            {"$match": {"created_at": {"$gte": since}}},
+            {"$group": {"_id": "$community", "n": {"$sum": 1}}},
+            {"$sort": {"n": -1}},
+            {"$limit": 25},
+        ]
+        click_by_city = [{"city": (r["_id"] or "unknown"), "clicks": r["n"]} async for r in db.referral_click_events.aggregate(pipeline)]
+    except Exception:
+        click_by_city = []
+    return {
+        "window_days": days,
+        "total_requests": total,
+        "requests_in_window": recent_total,
+        "unique_cities": len(by_city_sorted),
+        "by_city": by_city_sorted,
+        "recent": recent[:40],
+        "click_interest_by_city": click_by_city,
+    }
+
 
 # ── Return-Visit Hero — impression / resume / dismiss analytics ────────────
 # Fired by the personalised HeroIntro in DashboardMockup.jsx whenever a

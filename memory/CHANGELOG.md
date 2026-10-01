@@ -2,6 +2,18 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Header/disclaimer cleanup, region auto-detect, referral API, region images
+
+- **Compliance strip** (App.js `ComplianceStrip`): shrunk from 1.28rem bold to 0.72rem regular-weight — a thin one-line disclaimer at the very top of every page.
+- **Conversion strip removed** site-wide (the "Talk to Doug — What's my home worth? / Tell Doug…" band) — dropped from `AppLayout`.
+- **"§N ·" section markers removed** from all rendered content (17 kickers across `CommunityPageMockup.jsx` + `CommunityPageMockupLive.jsx`); statute refs (§3.1, §9) and code comments untouched.
+- **Region auto-detect (backend)**: new `GET /api/service-area?place=` inverts `communities_seed.json` (+ live-listing parent-city fallback + substring) → `{region_group, in_area}`. Verified: Kitsilano/University/Squamish → in_area true; Kelowna/Victoria/Nelson → false. No neighbourhood hand-listing needed.
+- **Referral dashboard (backend)**: new admin `GET /api/admin/referrals/requests-summary` → total out-of-area referral requests + by-city breakdown (parsed from buyer/seller lead OUT-OF-AREA marker) + `click_interest_by_city` from `referral_click_events`. Verified (shows live click interest: Kelowna 7, Victoria 3, Nelson 1).
+- **Communities region images**: Haida Gwaii / Central Coast / Cariboo had no image and fell back to a wrong "camera" photo; added proper BC imagery (`CommunitiesNext.jsx` REGION map). Verified rendering.
+
+STILL PENDING (from the 4-item request): referral dashboard admin PAGE (frontend, backend ready); promote `/listings-next` → live `/listings` (needs TermsGate + URL params + index + referral empty-state); deploy to production.
+
+
 ## June 2026 — Fix mis-scoped Referral REALTOR® + remove "sample listings" wording
 
 - **Referral CTA scoping**: Added a `FOCUS_HOODS` set (Vancouver neighbourhoods — Kitsilano, Kerrisdale, Point Grey, UBC/University Endowment Lands, etc. — plus key Metro/Fraser Valley sub-areas) mirrored in `App.js` and `CommunityPageMockupLive.jsx`. `isFarmCity()` (listings empty-state, App.js) and `isFocus` (community page) now treat these as IN-AREA. Result: an in-region neighbourhood like Kitsilano shows "Doug represents … directly" (no referral); only genuinely out-of-region places (Kelowna, Victoria, Interior/Island/Kootenays) show the Referral REALTOR® CTA. Verified via Playwright: Kitsilano→directRep, Kelowna→referral.

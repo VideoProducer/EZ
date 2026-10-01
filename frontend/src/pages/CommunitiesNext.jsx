@@ -26,9 +26,9 @@ const REGION_META = {
   "Southern Interior": { img: "https://images.unsplash.com/photo-1721140972905-8f5a8898b9cc?w=1200&q=80", weatherSlug: "kamloops" },
   "Kootenay": { img: "https://images.unsplash.com/photo-1762161096021-8c610f528c67?w=1200&q=80", weatherSlug: "nelson" },
   "Northern BC": { img: "https://images.unsplash.com/photo-1626816894318-422017eddfa6?w=1200&q=80", weatherSlug: "prince-george" },
-  "Cariboo": { weatherSlug: "williams-lake" },
-  "Central Coast": { weatherSlug: "bella-coola" },
-  "Haida Gwaii": { weatherSlug: "masset" },
+  "Cariboo": { img: "https://images.unsplash.com/photo-1598007829291-7f533c554316?w=1200&q=80", weatherSlug: "williams-lake" },
+  "Central Coast": { img: "https://images.unsplash.com/photo-1776802159811-dcb048a405a7?w=1200&q=80", weatherSlug: "bella-coola" },
+  "Haida Gwaii": { img: "https://images.unsplash.com/photo-1675720889999-fa9049c880a0?w=1200&q=80", weatherSlug: "masset" },
 };;
 
 // Minimal WMO weather-code → short label (mirrors App.js WMO(), text-only).

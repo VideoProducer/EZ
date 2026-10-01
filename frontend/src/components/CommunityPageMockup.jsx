@@ -192,7 +192,7 @@ export default function CommunityPageMockup() {
         </div>
 
         {/* ═══════════════ § SPATIAL (MAP + NEIGHBOURHOODS) ═══════════ */}
-        <SectionH kicker="§2 · Spatial context">Where is {c.name} · sub-neighbourhoods</SectionH>
+        <SectionH kicker="Spatial context">Where is {c.name} · sub-neighbourhoods</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
           <div style={{background:"#DCE7F5",borderRadius:12,minHeight:280,display:"flex",alignItems:"center",justifyContent:"center",color:BRAND.navy,fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:"0.9rem",position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",inset:0,background:`url(https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/-122.6/49.22,10.5,0/600x400@2x?access_token=demo) center/cover`,opacity:0.5}}/>
@@ -212,7 +212,7 @@ export default function CommunityPageMockup() {
         </div>
 
         {/* ═══════════════ § LIVE LISTINGS PREVIEW ════════════════════ */}
-        <SectionH kicker="§3 · Live inventory">4 live MLS® listings in {c.name}</SectionH>
+        <SectionH kicker="Live inventory">4 live MLS® listings in {c.name}</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:14}}>
           {c.sampleListings.map(l => (
             <div key={l.key} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:12,overflow:"hidden"}}>
@@ -304,7 +304,7 @@ export default function CommunityPageMockup() {
         </div>
 
         {/* ═══════════════ § SEGMENT-MATCHED LEAD MAGNETS ═════════════ */}
-        <SectionH kicker={c.isFocus ? "§4 · Free resources" : "§4 · Free resources for out-of-province buyers"}>Free guides for {c.name} buyers</SectionH>
+        <SectionH kicker={c.isFocus ? "Free resources" : "Free resources for out-of-province buyers"}>Free guides for {c.name} buyers</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(240px, 1fr))",gap:14}}>
           {(c.isFocus ? [
             { icon:"🏠", title:"First-Time Buyer Grants Cheat-Sheet", blurb:"Every 2026 BC + federal grant that stacks — up to $44K in combined savings." },
@@ -325,11 +325,11 @@ export default function CommunityPageMockup() {
         </div>
 
         {/* ═══════════════ § ABOUT + VIBESCORE + FAQ ══════════════════ */}
-        {/* §5 · 3-step vetted referral process REMOVED per Doug's Feb 2026
+        {/* 3-step vetted referral process REMOVED per Doug's Feb 2026
             review. The soft referral-link approach in the hero (and repeated
             at the bottom of the page) replaces the heavier "vetted process"
             trust block. */}
-        <SectionH kicker="§5 · About">About {c.name}, BC</SectionH>
+        <SectionH kicker="About">About {c.name}, BC</SectionH>
         <p style={{fontSize:"1rem",lineHeight:1.75,color:BRAND.ink,maxWidth:800}}>{c.synopsis}</p>
 
         {/* VibeScore mock */}
@@ -386,7 +386,7 @@ export default function CommunityPageMockup() {
         ))}
 
         {/* ═══════════════ § COMPACT WEATHER STRIP ════════════════════ */}
-        <SectionH kicker="§6 · Climate">Weather &amp; climate</SectionH>
+        <SectionH kicker="Climate">Weather &amp; climate</SectionH>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <StatTile label="Avg high"        value={`${c.climate.avgHi}°C`}       sub="annual"/>
           <StatTile label="Avg low"         value={`${c.climate.avgLo}°C`}       sub="annual"/>
@@ -400,7 +400,7 @@ export default function CommunityPageMockup() {
             Per Doug's Feb 2026 review: no aggressive referral form here.
             Replaced with the same soft "outside Doug's service area" copy
             from the hero and a single "Referral REALTOR® link" button. */}
-        <SectionH kicker="§7 · Get connected">Looking to buy or sell in {c.name}?</SectionH>
+        <SectionH kicker="Get connected">Looking to buy or sell in {c.name}?</SectionH>
         <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
           {/* Doogie head — added Feb 2026 per Doug's review so the referral
               hand-off feels like a warm concierge introduction, not a form
@@ -435,7 +435,7 @@ export default function CommunityPageMockup() {
 
 
         {/* ═══════════════ § NEARBY COMMUNITIES ═══════════════════════ */}
-        <SectionH kicker="§8 · Nearby">Other {c.region} communities</SectionH>
+        <SectionH kicker="Nearby">Other {c.region} communities</SectionH>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {(c.isFocus
             ? ["Pitt Meadows","Coquitlam","Langley","Mission","Port Coquitlam","Surrey"]

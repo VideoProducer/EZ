@@ -10651,7 +10651,7 @@ const HomeSchema = () => {
 
 // --- Compliance strip ---
 const ComplianceStrip = () => (
-  <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.6rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"1.28rem",color:"var(--ink)",fontWeight:700,textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
+  <div className="compliance-strip" style={{background:"#F5F0E1",padding:"0.45rem 1rem",fontFamily:"Inter,sans-serif",fontSize:"0.72rem",lineHeight:1.4,color:"var(--ink)",fontWeight:400,textAlign:"center",borderBottom:"1px solid rgba(15,42,91,0.08)"}}>
     EZtoFind.ca provides general educational information about BC real estate — not legal, tax, financial, or real estate advice. For your own situation, speak with the appropriate licensed professional: a BC lawyer or notary, an accountant or tax professional, a licensed mortgage broker, or a licensed REALTOR®.
   </div>
 );
@@ -11815,7 +11815,6 @@ const AppLayout = ({children}) => {
         focuses this so keyboard users can jump past nav on every page. */}
     <a href="#main-content" className="skip-to-content" data-testid="skip-to-content">Skip to main content</a>
     <ComplianceStrip/>
-    <ConversionStrip/>
     <HomeNextNav/>
     <main id="main-content" tabIndex={-1}>{children}</main>
     <Footer/>

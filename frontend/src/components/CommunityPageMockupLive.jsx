@@ -647,7 +647,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         {/* ── § SPATIAL ─────────────────────────────────────────────── */}
-        <SectionH kicker="§2 · Spatial context">Where is {community} · sub-neighbourhoods</SectionH>
+        <SectionH kicker="Spatial context">Where is {community} · sub-neighbourhoods</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
           <div style={{background:"#DCE7F5",borderRadius:12,minHeight:320,position:"relative",overflow:"hidden"}}>
             <iframe title={`Map of ${community}`} width="100%" height="100%" style={{border:0,minHeight:320}} loading="lazy" src={mapEmbed}/>
@@ -696,7 +696,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         {/* ── § LIVE LISTINGS ───────────────────────────────────────── */}
-        <SectionH kicker="§3 · Live inventory">{data.listings.length} live MLS® listing{data.listings.length === 1 ? "" : "s"} in {community}</SectionH>
+        <SectionH kicker="Live inventory">{data.listings.length} live MLS® listing{data.listings.length === 1 ? "" : "s"} in {community}</SectionH>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:14}}>
           {data.listings.map(l => {
             const photo = (l.photos && l.photos[0]) || l.primary_photo || null;
@@ -732,7 +732,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         {/* ── § ABOUT ───────────────────────────────────────────────── */}
-        <SectionH kicker="§4 · About">About {community}, BC</SectionH>
+        <SectionH kicker="About">About {community}, BC</SectionH>
         {data.synopsis?.synopsis ? (
           <div style={{fontSize:"0.98rem",lineHeight:1.75,color:BRAND.ink,maxWidth:800,whiteSpace:"pre-wrap"}}>
             {data.synopsis.synopsis}
@@ -742,7 +742,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         )}
 
         {/* ── § WEATHER ─────────────────────────────────────────────── */}
-        <SectionH kicker="§5 · Climate">Weather &amp; climate in {community}</SectionH>
+        <SectionH kicker="Climate">Weather &amp; climate in {community}</SectionH>
         {weatherText ? (
           <div style={{background:"white",border:"1px solid #E5E7EB",borderRadius:12,padding:"20px 22px",fontSize:"0.94rem",lineHeight:1.7,color:BRAND.ink,whiteSpace:"pre-wrap",maxWidth:800}}>
             {weatherText}
@@ -761,7 +761,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         <CommunityDemographicsInline slug={slug}/>
 
         {/* ── § FAQ ─────────────────────────────────────────────────── */}
-        <SectionH kicker="§6 · FAQ">Frequently asked about {community}</SectionH>
+        <SectionH kicker="FAQ">Frequently asked about {community}</SectionH>
         <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:820}}>
           {faqs.map((f, i) => (
             <details key={i} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:10,padding:"14px 18px"}} data-testid={`faq-${i}`}>
@@ -774,7 +774,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         {/* ── § GET CONNECTED ───────────────────────────────────────── */}
         {!isFocus && (
           <>
-            <SectionH kicker="§7 · Get connected">Looking to buy or sell in {community}?</SectionH>
+            <SectionH kicker="Get connected">Looking to buy or sell in {community}?</SectionH>
             <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
               <div style={{flex:"1 1 320px"}}>
@@ -788,7 +788,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         )}
         {isFocus && (
           <>
-            <SectionH kicker="§7 · Take the next step">Ready to explore {community}?</SectionH>
+            <SectionH kicker="Take the next step">Ready to explore {community}?</SectionH>
             <div style={{background:BRAND.navy,color:"white",padding:"26px 28px",borderRadius:14}}>
               <div style={{fontSize:"1.15rem",fontFamily:"'Sora',sans-serif",fontWeight:700,lineHeight:1.3}}>Doug represents buyers &amp; sellers in {community} directly.</div>
               <div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -800,7 +800,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         )}
 
         {/* ── § NEARBY ──────────────────────────────────────────────── */}
-        <SectionH kicker="§8 · Nearby">Other {region} communities</SectionH>
+        <SectionH kicker="Nearby">Other {region} communities</SectionH>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {data.nearby.slice(0, 8).map(n => (
             <button key={n.slug} data-testid={`nearby-${n.slug}`} onClick={() => gotoCommunity(n.slug)} style={{padding:"8px 14px",background:"white",border:"1px solid #E5E7EB",borderRadius:999,color:BRAND.navy,fontSize:"0.85rem",fontWeight:600,cursor:"pointer"}}>{n.name} →</button>
