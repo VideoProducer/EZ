@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
@@ -45,17 +44,7 @@ export default function EquestrianNext() {
             <HnListingHero
               path={HERO_PATH}
               testId="equestrian-mediahero"
-              browse={{ to: "/specialties/equestrian", label: "Browse equestrian listings" }}
             />
-          </div>
-        </section>
-
-        <section className="hn-section" style={{ paddingTop: "clamp(40px,5vw,64px)" }} data-testid="equestrian-callout-section">
-          <div className="hn-wrap">
-            <div className="hn-callout" style={{ display: "flex", gap: 14, alignItems: "flex-start", maxWidth: "none" }} data-testid="equestrian-callout">
-              <AlertTriangle size={22} strokeWidth={2} style={{ flexShrink: 0, marginTop: 1, color: "var(--hn-gold)" }}/>
-              <div><strong>Verify before you buy.</strong> A beautiful acreage isn't automatically a legal horse property. Confirm ALR status, zoning, water rights, septic capacity and any registered covenants <em>before</em> you write an offer — the checklist below walks through each one.</div>
-            </div>
           </div>
         </section>
 

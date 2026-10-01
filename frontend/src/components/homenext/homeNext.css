@@ -242,7 +242,8 @@
 .hn-footer { background: var(--hn-bg-alt); border-top: 1px solid var(--hn-line); padding: 48px 0 40px; font-size: 12px; color: var(--hn-grey); line-height: 1.6; }
 .hn-footer__row { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid var(--hn-line); margin-bottom: 20px; }
 .hn-footer__links { display: flex; gap: 18px; flex-wrap: wrap; }
-.hn-footer__links a:hover { color: var(--hn-ink); }
+.hn-footer a { color: var(--hn-grey); }
+.hn-footer a:hover, .hn-footer__links a:hover { color: var(--hn-ink); }
 .hn-footer p { margin: 0 0 10px; max-width: 900px; }
 .hn-footer strong { color: var(--hn-ink); font-weight: 600; }
 

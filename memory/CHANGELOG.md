@@ -282,3 +282,11 @@ Not yet deployed to production.
 - Fixed a latent click-interception bug surfaced by the new Back button: the mobile burger checkbox `.hn-nav__toggle` (position:absolute; opacity:0) overlaid the nav and swallowed real mouse clicks on the Back button. Changed it to `display:none` — the mobile menu still toggles via `label[for]` + `:checked ~ .hn-nav__links`, and the overlay is gone on all viewports.
 - Verified: iteration_25 (found the Back click-interception bug) → iteration_26 (100% pass after fix: Back real-click navigates back, Home → '/', mobile burger still opens/closes, no 390px overflow).
 - Also: Luxury page CTA copy updated — removed "South Surrey"/"Greater Vancouver", now reads "The Lower Mainland, Fraser Valley and Sea to Sky Corridor. No obligation." (`pages/LuxuryNext.jsx`).
+
+## 2026-06 (fork session)
+- Compliance: removed self-serving Review/Rating/author microdata from testimonials in HomepageLeadGenMockup.jsx (CREA trademark + DORTS links confirmed already present in both footers and lead forms).
+- Code review: env-ified hardcoded admin creds in test_command_center.py & test_sunday_digest_and_analytics.py; added comment to a bare catch in answerFirst.jsx. (exec()/circular-import/undefined-vars/localStorage findings were false positives.)
+- SEO: confirmed prerendering is already live (GPTBot gets full content+JSON-LD), meta robots & og:image already centralized. Only remaining gap: sitemap->IndexNow is an in-process loop, not a platform cron (pending user go-ahead).
+- /realtor-network: removed all "referral" wording from hero/title/eyebrow + both apply forms; renamed to "Doug's REALTOR® Network"; removed CREA Inter-Board Referral Agreement reference. Site-wide footer/nav referral links left untouched per Doug.
+- Fixed low-contrast "unseen" footer text: HomeNextFooter links/phone/email were inheriting the dark-footer's light-blue (#DCE3F1); now use readable grey (var(--hn-grey)).
+- /specialties/equestrian: removed "Browse equestrian listings" hero button and the "Verify before you buy" callout section (hero now flows straight into the 5-step checklist). Cleaned unused AlertTriangle import.

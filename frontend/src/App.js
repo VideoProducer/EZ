@@ -5626,17 +5626,17 @@ const RealtorNetwork = () => {
   return (
   <>
     <SEO
-      title="Join Doug's BC & Out-of-Province REALTOR® Referral Network | EZtoFind.ca"
-      description="Licensed REALTOR® in BC or another province? Apply to join Doug LeMaire's referral network and receive qualified buyer & seller referrals, documented on a CREA Inter-Board Referral Agreement."
+      title="Join Doug's BC & Out-of-Province REALTOR® Network | EZtoFind.ca"
+      description="Licensed REALTOR® in BC or another province? Apply to join Doug LeMaire's REALTOR® network and receive qualified buyer & seller client connections across British Columbia and beyond."
       path="/realtor-network"
     />
     <div style={{background:"#FFFFFF",paddingTop:"0.5rem",paddingBottom:"2rem"}}>
       <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
-        <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
+        <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's REALTOR® Network</div>
         <h1 className="section-title" style={{marginBottom:"0.75rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
         {/* REALTOR®-only page. Consumer (buyer/seller) referral lives entirely
             on /referral-request — kept completely separate per Doug. */}
-        <p style={{color:"#6e6e73",fontSize:"1rem",maxWidth:"34rem",margin:"0 auto",fontFamily:"-apple-system,Inter,sans-serif"}}>Receive qualified buyer &amp; seller referrals from Doug across British Columbia and beyond.</p>
+        <p style={{color:"#6e6e73",fontSize:"1rem",maxWidth:"34rem",margin:"0 auto",fontFamily:"-apple-system,Inter,sans-serif"}}>Receive qualified buyer &amp; seller client connections from Doug across British Columbia and beyond.</p>
       </div>
       <div className="container-x" style={{maxWidth:"60rem"}}>
         <div data-testid="realtor-network-hero" className="rn-hero" style={{position:"relative",borderRadius:20,overflow:"hidden",minHeight:320,display:"flex",flexDirection:"column",justifyContent:"flex-end",boxShadow:"0 14px 34px rgba(15,42,91,0.18)",marginTop:"1.5rem"}}>
@@ -5644,8 +5644,8 @@ const RealtorNetwork = () => {
           <div className="rn-hero__overlay" style={{position:"absolute",inset:0,background:"linear-gradient(180deg, rgba(15,42,91,0.05) 0%, rgba(15,42,91,0.9) 100%)"}}/>
           <div className="rn-hero__body" style={{position:"relative",padding:"2rem",color:"#fff",fontFamily:"-apple-system,Inter,sans-serif",textAlign:"left",maxWidth:"36rem"}}>
             <div style={{fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:"0.12em",fontWeight:700,color:"var(--brand-gold)"}}>For licensed REALTORS®</div>
-            <div style={{fontSize:"1.6rem",fontWeight:700,margin:"0.3rem 0 0.5rem",fontFamily:"'Playfair Display',serif"}}>Join Doug's referral network</div>
-            <div style={{fontSize:"0.95rem",opacity:0.92,lineHeight:1.55,marginBottom:"1rem"}}>Licensed in BC or another province? Receive qualified referrals from Doug and build lasting relationships — documented on a CREA Inter-Board Referral Agreement.</div>
+            <div style={{fontSize:"1.6rem",fontWeight:700,margin:"0.3rem 0 0.5rem",fontFamily:"'Playfair Display',serif"}}>Join Doug's REALTOR® network</div>
+            <div style={{fontSize:"0.95rem",opacity:0.92,lineHeight:1.55,marginBottom:"1rem"}}>Licensed in BC or another province? Receive qualified client connections from Doug and build lasting relationships across the province and beyond.</div>
             <a href="#apply" data-testid="rn-apply-cta" style={{display:"inline-flex",alignItems:"center",gap:8,background:"var(--brand-gold)",color:"var(--brand-navy)",borderRadius:999,padding:"12px 26px",fontWeight:700,fontSize:"0.95rem",textDecoration:"none"}}>Apply to join ↓</a>
           </div>
         </div>
@@ -6655,7 +6655,7 @@ const RealtorApply = () => {
   return (<section style={{padding:"44px 20px 56px",background:"#fff",fontFamily:"-apple-system,Inter,sans-serif"}}>
     <div style={{maxWidth:560,margin:"0 auto 28px",textAlign:"center"}}>
       <div style={{textTransform:"uppercase",letterSpacing:"0.16em",fontSize:11,fontWeight:700,color:"#2563EB",marginBottom:10}}>For BC REALTORS® only</div>
-      <h2 style={{fontFamily:"'Playfair Display',serif",color:"#0F2A5B",fontWeight:700,fontSize:"clamp(26px,3.5vw,38px)",lineHeight:1.12,margin:0}}>Join Doug's BC referral network</h2>
+      <h2 style={{fontFamily:"'Playfair Display',serif",color:"#0F2A5B",fontWeight:700,fontSize:"clamp(26px,3.5vw,38px)",lineHeight:1.12,margin:0}}>Join Doug's BC REALTOR® network</h2>
       <p style={{color:"#6e6e73",fontSize:15,lineHeight:1.55,marginTop:12,marginBottom:0}}>Licensed BC REALTOR®? Request to join — Doug personally reviews every application.</p>
     </div>
     {res ? (
@@ -6699,7 +6699,7 @@ const RealtorApplyOutOfProvince = () => {
     <div style={{maxWidth:560,margin:"0 auto 28px",textAlign:"center"}}>
       <div style={{textTransform:"uppercase",letterSpacing:"0.16em",fontSize:11,fontWeight:700,color:"#2563EB",marginBottom:10}}>For REALTORS® outside BC</div>
       <h2 style={{fontFamily:"'Playfair Display',serif",color:"#0F2A5B",fontWeight:700,fontSize:"clamp(24px,3.2vw,34px)",lineHeight:1.12,margin:0}}>Licensed outside British Columbia?</h2>
-      <p style={{color:"#6e6e73",fontSize:15,lineHeight:1.55,marginTop:12,marginBottom:0}}>Join Doug's out-of-province network to receive referrals for clients heading to BC.</p>
+      <p style={{color:"#6e6e73",fontSize:15,lineHeight:1.55,marginTop:12,marginBottom:0}}>Join Doug's out-of-province network to receive qualified client connections for people heading to BC.</p>
     </div>
     {res ? (
       <div style={{...card,textAlign:"center"}} data-testid="realtor-oop-apply-success">
