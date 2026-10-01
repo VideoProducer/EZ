@@ -5624,7 +5624,12 @@ const RealtorNetwork = () => {
   }, [hash]);
   return (
   <>
-    <div style={{background:"linear-gradient(135deg, rgba(15,42,91,0.03), rgba(212,175,55,0.06))",paddingBottom:"2rem"}}>
+    <SEO
+      title="Join Doug's BC REALTOR® Referral Network — Out-of-Area Referrals | EZtoFind.ca"
+      description="Licensed REALTOR® inside or outside BC? Apply to join Doug LeMaire's referral network. Buying or selling outside Greater Vancouver? Request a vetted out-of-area referral at no cost."
+      path="/realtor-network"
+    />
+    <div style={{background:"#FFFFFF",paddingTop:"0.5rem",paddingBottom:"2rem"}}>
       <div className="container-x" style={{textAlign:"center",paddingTop:"2rem"}}>
         <div className="eyebrow" data-testid="realtor-network-eyebrow">Doug's Referral Network</div>
         <h1 className="section-title" style={{marginBottom:"0.75rem"}} data-testid="realtor-network-title">REALTOR® Network</h1>
@@ -5652,8 +5657,8 @@ const RealtorNetwork = () => {
     {/* BC REALTORS® — top */}
     <div id="apply"><RealtorApply/></div>
     {/* Visual divider between the two application flows */}
-    <div className="container-x" style={{textAlign:"center",padding:"1rem 0"}}>
-      <div style={{display:"inline-block",padding:"0.5rem 1.5rem",background:"var(--brand-navy)",color:"#F5F0E1",borderRadius:999,fontFamily:"Inter,sans-serif",fontSize:"0.85rem",fontWeight:600,letterSpacing:"0.05em"}}>OR — LICENSED OUTSIDE BC?</div>
+    <div className="container-x" style={{textAlign:"center",padding:"0.5rem 0 1.5rem"}}>
+      <div style={{display:"inline-block",padding:"0.4rem 1.25rem",background:"#F2F2F4",color:"#6e6e73",borderRadius:999,fontFamily:"-apple-system,Inter,sans-serif",fontSize:"0.78rem",fontWeight:600,letterSpacing:"0.08em"}}>OR — LICENSED OUTSIDE BC?</div>
     </div>
     {/* Out-of-Province REALTORS® — bottom */}
     <RealtorApplyOutOfProvince/>
@@ -6646,29 +6651,42 @@ const SellerForm = () => {
 const RealtorApply = () => {
   const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
   const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply`,f); trackConversion("realtor_application", { application_type: "bc", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img loading="lazy" decoding="async" src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
-    <div className="eyebrow">For BC REALTORS® Only</div><h1 className="section-title">Request to join our BC referral network</h1>
-    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed BC REALTOR®?</p>
-    {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
-      : <form onSubmit={submit} className="paper" data-testid="realtor-apply-form">
-          <div className="form-grid">
-            <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-name"/></div>
-            <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-email"/></div>
-            <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-brokerage"/></div>
-            <div className="field"><label>BCFSA REALTOR® # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-number"/></div>
+  const L={display:"block",fontSize:12.5,fontWeight:600,color:"#6e6e73",marginBottom:6,letterSpacing:"0.01em"};
+  const I={width:"100%",padding:"13px 15px",fontSize:15,borderRadius:12,border:"1px solid rgba(0,0,0,0.12)",outline:"none",background:"#fff",boxSizing:"border-box",fontFamily:"inherit",color:"#1d1d1f"};
+  const radio=(on)=>({flex:1,cursor:"pointer",padding:"11px 14px",border:"1.5px solid "+(on?"#0F2A5B":"rgba(0,0,0,0.12)"),borderRadius:12,background:on?"#EEF3FB":"#fff",display:"flex",alignItems:"center",gap:8,fontWeight:600,fontSize:14,color:"#1d1d1f"});
+  const card={maxWidth:560,margin:"0 auto",background:"#fff",border:"1px solid rgba(0,0,0,0.08)",borderRadius:20,padding:"32px",boxShadow:"0 10px 40px rgba(15,42,91,0.07)"};
+  return (<section style={{padding:"44px 20px 56px",background:"#fff",fontFamily:"-apple-system,Inter,sans-serif"}}>
+    <div style={{maxWidth:560,margin:"0 auto 28px",textAlign:"center"}}>
+      <div style={{textTransform:"uppercase",letterSpacing:"0.16em",fontSize:11,fontWeight:700,color:"#2563EB",marginBottom:10}}>For BC REALTORS® only</div>
+      <h2 style={{fontFamily:"'Playfair Display',serif",color:"#0F2A5B",fontWeight:700,fontSize:"clamp(26px,3.5vw,38px)",lineHeight:1.12,margin:0}}>Join Doug's BC referral network</h2>
+      <p style={{color:"#6e6e73",fontSize:15,lineHeight:1.55,marginTop:12,marginBottom:0}}>Licensed BC REALTOR®? Request to join — Doug personally reviews every application.</p>
+    </div>
+    {res ? (
+      <div style={{...card,textAlign:"center"}} data-testid="realtor-apply-success">
+        <div style={{width:54,height:54,borderRadius:"50%",background:"#E8F5E9",display:"grid",placeItems:"center",margin:"0 auto 14px",fontSize:24,color:"#059669"}}>✓</div>
+        <h3 style={{margin:0,color:"#0F2A5B",fontSize:20}}>Your information has been received.</h3>
+        <p style={{color:"#6e6e73",marginTop:8,marginBottom:0}}>Doug will be in touch shortly.</p>
+      </div>
+    ) : (
+      <form onSubmit={submit} data-testid="realtor-apply-form" style={card}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:16}}>
+          <div><label style={L}>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-name" style={I}/></div>
+          <div><label style={L}>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-email" style={I}/></div>
+          <div><label style={L}>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-brokerage" style={I}/></div>
+          <div><label style={L}>BCFSA REALTOR® # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-number" style={I}/></div>
+        </div>
+        <div style={{marginTop:18}}>
+          <label style={{...L,marginBottom:8}}>Are you a CREA Member? *</label>
+          <div style={{display:"flex",gap:12}}>
+            <label style={radio(f.crea_member===true)}><input type="radio" name="crea_bc" checked={f.crea_member===true} onChange={()=>setF({...f,crea_member:true})} data-testid="realtor-crea-yes"/> Yes</label>
+            <label style={radio(f.crea_member===false)}><input type="radio" name="crea_bc" checked={f.crea_member===false} onChange={()=>setF({...f,crea_member:false})} data-testid="realtor-crea-no"/> No</label>
           </div>
-          <div style={{marginTop:"1.25rem",padding:"1rem",background:"#F7FAFF",borderRadius:8,border:"1px solid rgba(15,42,91,0.12)"}}>
-            <label style={{display:"block",fontWeight:600,marginBottom:"0.5rem",color:"var(--brand-navy)"}}>Are you a CREA Member? *</label>
-            <div style={{display:"flex",gap:"1rem"}}>
-              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===true?"var(--brand-green-dark)":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===true?"#E8F5E9":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_bc" checked={f.crea_member===true} onChange={()=>setF({...f,crea_member:true})} data-testid="realtor-crea-yes"/> ✅ Yes</label>
-              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===false?"#DC2626":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===false?"#FEE2E2":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_bc" checked={f.crea_member===false} onChange={()=>setF({...f,crea_member:false})} data-testid="realtor-crea-no"/> ❌ No</label>
-            </div>
-          </div>
-          {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
-          <button type="submit" className="btn btn-primary" style={{marginTop:"1.25rem"}} data-testid="realtor-submit">Submit</button>
-        </form>}
-  </div></section>);
+        </div>
+        {err && <div style={{marginTop:14,color:"#DC2626",fontSize:13.5}}>{err}</div>}
+        <button type="submit" data-testid="realtor-submit" style={{marginTop:22,width:"100%",background:"#0F2A5B",color:"#fff",border:"none",borderRadius:999,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Apply to join</button>
+      </form>
+    )}
+  </section>);
 };
 
 // --- Out-of-Province REALTOR® network (same shape, different destination + copy) ---
@@ -6676,35 +6694,48 @@ const RealtorApplyOutOfProvince = () => {
   const [f,setF]=useState({full_name:"",email:"",brokerage:"",realtor_number:"",province:"",crea_member:null}); const [res,setRes]=useState(null); const [err,setErr]=useState("");
   const submit=async e=>{e.preventDefault(); setErr(""); if(f.crea_member===null){setErr("Please indicate whether you are a CREA member.");return;} try{ const r=await axios.post(`${API}/realtors/apply-oop`,f); trackConversion("realtor_application", { application_type: "out_of_province", crea_member: f.crea_member }); setRes(r.data);}catch(x){setErr("Try again.");} };
   const PROVINCES = ["Alberta","Saskatchewan","Manitoba","Ontario","Quebec","New Brunswick","Nova Scotia","Prince Edward Island","Newfoundland and Labrador","Yukon","Northwest Territories","Nunavut","Other (International)"];
-  return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
-    <img loading="lazy" decoding="async" src={DOOGIE_POINT_R} alt="Doogie" style={{width:140,marginBottom:"1rem"}}/>
-    <div className="eyebrow">For REALTORS® Outside BC</div><h1 className="section-title">Request to join our out-of-province referral network</h1>
-    <p style={{color:"var(--muted)",fontFamily:"Inter,sans-serif",marginBottom:"1.5rem"}}>Are you a licensed REALTOR® outside British Columbia?</p>
-    {res ? <div className="paper"><h3 style={{marginTop:0}}>Your Information has been received. Doug will be in touch.</h3></div>
-      : <form onSubmit={submit} className="paper" data-testid="realtor-oop-apply-form">
-          <div className="form-grid">
-            <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-oop-name"/></div>
-            <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-oop-email"/></div>
-            <div className="field"><label>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-oop-brokerage"/></div>
-            <div className="field"><label>License # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-oop-number"/></div>
-            <div className="field"><label>Province / Territory *</label>
-              <select required value={f.province} onChange={e=>setF({...f,province:e.target.value})} data-testid="realtor-oop-province">
-                <option value="">Select…</option>
-                {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
+  const L={display:"block",fontSize:12.5,fontWeight:600,color:"#6e6e73",marginBottom:6,letterSpacing:"0.01em"};
+  const I={width:"100%",padding:"13px 15px",fontSize:15,borderRadius:12,border:"1px solid rgba(0,0,0,0.12)",outline:"none",background:"#fff",boxSizing:"border-box",fontFamily:"inherit",color:"#1d1d1f"};
+  const radio=(on)=>({flex:1,cursor:"pointer",padding:"11px 14px",border:"1.5px solid "+(on?"#0F2A5B":"rgba(0,0,0,0.12)"),borderRadius:12,background:on?"#EEF3FB":"#fff",display:"flex",alignItems:"center",gap:8,fontWeight:600,fontSize:14,color:"#1d1d1f"});
+  const card={maxWidth:560,margin:"0 auto",background:"#fff",border:"1px solid rgba(0,0,0,0.08)",borderRadius:20,padding:"32px",boxShadow:"0 10px 40px rgba(15,42,91,0.07)"};
+  return (<section style={{padding:"20px 20px 64px",background:"#fff",fontFamily:"-apple-system,Inter,sans-serif"}}>
+    <div style={{maxWidth:560,margin:"0 auto 28px",textAlign:"center"}}>
+      <div style={{textTransform:"uppercase",letterSpacing:"0.16em",fontSize:11,fontWeight:700,color:"#2563EB",marginBottom:10}}>For REALTORS® outside BC</div>
+      <h2 style={{fontFamily:"'Playfair Display',serif",color:"#0F2A5B",fontWeight:700,fontSize:"clamp(24px,3.2vw,34px)",lineHeight:1.12,margin:0}}>Licensed outside British Columbia?</h2>
+      <p style={{color:"#6e6e73",fontSize:15,lineHeight:1.55,marginTop:12,marginBottom:0}}>Join Doug's out-of-province network to receive referrals for clients heading to BC.</p>
+    </div>
+    {res ? (
+      <div style={{...card,textAlign:"center"}} data-testid="realtor-oop-apply-success">
+        <div style={{width:54,height:54,borderRadius:"50%",background:"#E8F5E9",display:"grid",placeItems:"center",margin:"0 auto 14px",fontSize:24,color:"#059669"}}>✓</div>
+        <h3 style={{margin:0,color:"#0F2A5B",fontSize:20}}>Your information has been received.</h3>
+        <p style={{color:"#6e6e73",marginTop:8,marginBottom:0}}>Doug will be in touch shortly.</p>
+      </div>
+    ) : (
+      <form onSubmit={submit} data-testid="realtor-oop-apply-form" style={card}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:16}}>
+          <div><label style={L}>Full Name *</label><input required value={f.full_name} onChange={e=>setF({...f,full_name:e.target.value})} data-testid="realtor-oop-name" style={I}/></div>
+          <div><label style={L}>Email *</label><input required type="email" value={f.email} onChange={e=>setF({...f,email:e.target.value})} data-testid="realtor-oop-email" style={I}/></div>
+          <div><label style={L}>Brokerage Name *</label><input required value={f.brokerage} onChange={e=>setF({...f,brokerage:e.target.value})} data-testid="realtor-oop-brokerage" style={I}/></div>
+          <div><label style={L}>License # *</label><input required value={f.realtor_number} onChange={e=>setF({...f,realtor_number:e.target.value})} data-testid="realtor-oop-number" style={I}/></div>
+          <div style={{gridColumn:"1 / -1"}}><label style={L}>Province / Territory *</label>
+            <select required value={f.province} onChange={e=>setF({...f,province:e.target.value})} data-testid="realtor-oop-province" style={I}>
+              <option value="">Select…</option>
+              {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
-          <div style={{marginTop:"1.25rem",padding:"1rem",background:"#F7FAFF",borderRadius:8,border:"1px solid rgba(15,42,91,0.12)"}}>
-            <label style={{display:"block",fontWeight:600,marginBottom:"0.5rem",color:"var(--brand-navy)"}}>Are you a CREA Member? *</label>
-            <div style={{display:"flex",gap:"1rem"}}>
-              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===true?"var(--brand-green-dark)":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===true?"#E8F5E9":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_oop" checked={f.crea_member===true} onChange={()=>setF({...f,crea_member:true})} data-testid="realtor-oop-crea-yes"/> ✅ Yes</label>
-              <label style={{flex:1,cursor:"pointer",padding:"0.6rem 1rem",border:"2px solid "+(f.crea_member===false?"#DC2626":"rgba(15,42,91,0.2)"),borderRadius:8,background:f.crea_member===false?"#FEE2E2":"#fff",display:"flex",alignItems:"center",gap:"0.5rem",fontWeight:600}}><input type="radio" name="crea_oop" checked={f.crea_member===false} onChange={()=>setF({...f,crea_member:false})} data-testid="realtor-oop-crea-no"/> ❌ No</label>
-            </div>
+        </div>
+        <div style={{marginTop:18}}>
+          <label style={{...L,marginBottom:8}}>Are you a CREA Member? *</label>
+          <div style={{display:"flex",gap:12}}>
+            <label style={radio(f.crea_member===true)}><input type="radio" name="crea_oop" checked={f.crea_member===true} onChange={()=>setF({...f,crea_member:true})} data-testid="realtor-oop-crea-yes"/> Yes</label>
+            <label style={radio(f.crea_member===false)}><input type="radio" name="crea_oop" checked={f.crea_member===false} onChange={()=>setF({...f,crea_member:false})} data-testid="realtor-oop-crea-no"/> No</label>
           </div>
-          {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
-          <button type="submit" className="btn btn-primary" style={{marginTop:"1.25rem"}} data-testid="realtor-oop-submit">Submit</button>
-        </form>}
-  </div></section>);
+        </div>
+        {err && <div style={{marginTop:14,color:"#DC2626",fontSize:13.5}}>{err}</div>}
+        <button type="submit" data-testid="realtor-oop-submit" style={{marginTop:22,width:"100%",background:"#0F2A5B",color:"#fff",border:"none",borderRadius:999,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Apply to join</button>
+      </form>
+    )}
+  </section>);
 };
 
 const RealtorCredentials = () => {

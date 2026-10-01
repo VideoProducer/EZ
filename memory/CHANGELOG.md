@@ -2,6 +2,12 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — /realtor-network Apple-style redesign + title fix
+
+- Fixed missing `<title>` on `/realtor-network` (was inheriting site default "BC Real Estate Search"); added `<SEO>` → "Join Doug's BC REALTOR® Referral Network — Out-of-Area Referrals | EZtoFind.ca".
+- Reimagined the page frontend Apple-style (backend/forms untouched): whitened hero, restyled `RealtorApply` + `RealtorApplyOutOfProvince` into clean white cards — Playfair headlines, light-grey floating labels, rounded 12px inputs, pill Yes/No CREA selector, navy "Apply to join" pill button, soft shadows. All form fields, state, `data-testid`s and submit endpoints (`/realtors/apply`, `/realtors/apply-oop`) preserved. Subtler grey "OR — LICENSED OUTSIDE BC?" divider. Verified: compiles, no overflow, title correct.
+
+
 ## June 2026 — REALTOR® sign-up discoverability (a+b+c+e)
 
 - **(b) Two-choice chooser** at the top of `/realtor-network`: "I'm a buyer/seller — get a referral" (→ /referral-request) vs "I'm a REALTOR® — apply to join ↓" (jumps to `#apply`). Wrapped the BC apply form in `<div id="apply">`; added a hash-scroll effect (useLocation) so `#apply` deep-links scroll to the form.
