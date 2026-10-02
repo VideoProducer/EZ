@@ -154,6 +154,7 @@ export const AiCitationFooter = ({
           <span itemProp="citation">Cite as (MLA): {mla}</span>
           <span itemProp="citation">Cite as (Chicago): {chicago}</span>
           <span itemProp="citation">Cite as (Inline): {inline}</span>
+          <span itemProp="citation">Cite as (BibTeX): {bibtex}</span>
         </div>
       </>
     );

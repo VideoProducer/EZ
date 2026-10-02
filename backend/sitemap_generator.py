@@ -318,7 +318,7 @@ async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
                 seen.add(key)
                 neighbourhood_img = [{
                     "loc": f"{BASE_URL}/images/doogie-magnifying-glass.png",
-                    "caption": f"{sub_name}, {display_city}, BC — farm sub-neighbourhood profile with market data on EZtoFind.ca",
+                    "caption": f"{sub_name}, {display_city}, BC — sub-neighbourhood profile with market data on EZtoFind.ca",
                     "title": f"{sub_name}, {display_city} — BC Sub-Neighbourhood",
                     "geo": f"{sub_name}, {display_city}, British Columbia, Canada",
                 }]

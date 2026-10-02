@@ -30,7 +30,8 @@ export default function InsightsPage() {
   const item = INSIGHTS_CATALOG[slug];
   if (!item) return <Navigate to="/insights" replace />;
   const url = `${SITE}/insights/${slug}`;
-  const desc = item.intro.slice(0, 260);
+  const _rawDesc = (item.intro || "").replace(/\s+/g, " ").trim();
+  const desc = _rawDesc.length <= 158 ? _rawDesc : _rawDesc.slice(0, 157).replace(/\s+\S*$/, "").replace(/[,;:\-—\s]+$/, "") + "…";
   // Article schema per Article + FAQPage where applicable
   const schema = {
     "@context": "https://schema.org",
@@ -60,14 +61,30 @@ export default function InsightsPage() {
       "acceptedAnswer": { "@type": "Answer", "text": s.body },
     })),
   } : null;
+  const breadcrumb = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": `${SITE}/` },
+      { "@type": "ListItem", "position": 2, "name": "BC Real Estate Insights", "item": `${SITE}/insights` },
+      { "@type": "ListItem", "position": 3, "name": item.title, "item": url },
+    ],
+  };
   return (
     <section className="section">
       <Helmet>
         <title>{`${item.title} | EZtoFind.ca`}</title>
         <meta name="description" content={desc} />
         <link rel="canonical" href={url} />
+        <meta property="og:title" content={`${item.title} | EZtoFind.ca`} />
+        <meta property="og:description" content={desc} />
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={url} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${item.title} | EZtoFind.ca`} />
+        <meta name="twitter:description" content={desc} />
         <script type="application/ld+json">{JSON.stringify(schema)}</script>
         {faqSchema && <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>}
+        <script type="application/ld+json">{JSON.stringify(breadcrumb)}</script>
       </Helmet>
       <div className="container-x" style={{ maxWidth: 900 }}>
         <div style={{ marginBottom: "1rem" }}>

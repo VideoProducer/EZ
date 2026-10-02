@@ -179,9 +179,12 @@ async def render_glossary(db):
         # includes primary keyword + BC locale + Doug's authority signal.
         # Kept under 160 chars for SERP compliance.
         _defn_slice = (defn or f"Learn about {term} in BC real estate.").strip().replace("\n", " ")
+        # Trim the definition at a word boundary (never mid-word) so the
+        # appended authority line reads cleanly and total stays ≤160 chars.
+        _defn_trim = _defn_slice if len(_defn_slice) <= 100 else _defn_slice[:99].rsplit(" ", 1)[0].rstrip(" ,;:-—") + "…"
         desc = (
-            f"{_defn_slice[:120]}"
-            + (" " if _defn_slice and not _defn_slice.endswith(".") else "")
+            f"{_defn_trim}"
+            + (" " if _defn_trim and not _defn_trim.endswith(".") else "")
             + "BCFSA-licensed REALTOR® guidance for BC buyers & sellers."
         )[:160]
 
@@ -402,12 +405,15 @@ async def render_communities(db):
             # 160 chars for SERP compliance.
             _syn_slice = (synopsis or "").strip().replace("\n", " ")
             if _syn_slice:
-                desc = (f"{name}, BC ({region}) — {_syn_slice}")[:160]
+                _full = f"{name}, BC ({region}) — {_syn_slice}"
             else:
-                desc = (
+                _full = (
                     f"{name}, BC ({region}) real estate — live MLS® listings, "
                     f"Environment Canada climate normals, and REALTOR® guidance from Doug LeMaire, BCFSA #167790."
-                )[:160]
+                )
+            # Trim at a word boundary (never mid-word) and add an ellipsis
+            # when shortened, so SERP + og:description read cleanly.
+            desc = _full if len(_full) <= 158 else _full[:157].rsplit(" ", 1)[0].rstrip(" ,;:-—") + "…"
 
             # Schema — Place + BreadcrumbList (Home > Communities > <region> > <name>)
             # Task 7 (Feb 2026): every community page carries an explicit

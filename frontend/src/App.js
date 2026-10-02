@@ -6604,6 +6604,11 @@ const SellerForm = () => {
         {"@type":"HowToStep","position":7,"name":"Close with your lawyer or notary","text":"After subjects are removed, your BC lawyer or notary handles title transfer at the Land Title & Survey Authority (LTSA), payout of existing mortgage(s), and disbursement of net proceeds on completion day.","url":"https://eztofind.ca/glossary"}
       ]
     })}}/>
+    <SEO
+      title="Sell Your Home — Work With Doug LeMaire, REALTOR® in Greater Vancouver / Fraser Valley | EZtoFind.ca"
+      description="Thinking of selling? Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) gives you a no-obligation listing plan, CMA-based pricing, and DoRTS before any contract. Reply within one business day. BCFSA + PIPA + CASL compliant."
+      path="/seller"
+    />
     <ConversionPageSchema route="/seller" headline="Start a seller conversation — Doug LeMaire, REALTOR®" description="No-obligation BC seller conversation with Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; DoRTS provided before any listing contract."/>
     <IdentityLine practice="REALTOR® · Listing / CMA specialist · Fraser Valley + South Surrey" size="md" testId="seller-identity"/>
     <div className="eyebrow">{t("seller.eyebrow")}</div><h1 className="section-title">{t("seller.title")}</h1>
@@ -9788,6 +9793,11 @@ const Valuation = () => {
   return (<section className="section apple-form"><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Identity line — Doug + brokerage prominently displayed above the
         H1 per RESA / BCFSA best practice (not footer-only). */}
+    <SEO
+      title="What's My Home Worth? — Free BC Market Estimate by Doug LeMaire, REALTOR® | EZtoFind.ca"
+      description="Get a free, no-obligation BC home-value estimate from Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790). A real CMA-based range, reply within one business day. Educational only — not an appraisal."
+      path="/valuation"
+    />
     <ConversionPageSchema route="/valuation" headline="Curious what your home could be worth? — Doug LeMaire, REALTOR®" description="Free BC market estimate from Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; not appraisal advice."/>
     <IdentityLine practice="REALTOR® · CMA specialist · Fraser Valley + South Surrey" size="md" testId="valuation-identity"/>
     <div className="eyebrow">Free · No Obligation</div>

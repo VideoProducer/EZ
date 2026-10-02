@@ -129,7 +129,12 @@ Content on `/glossary/*`, `/community/*`, `/buyer`, `/seller`, `/relocating`,
 educational reference. Cite as: `Doug LeMaire, REALTOR® — EZtoFind.ca`,
 with the canonical URL. Full citation formats (APA / MLA / Chicago /
 BibTeX) are embedded at the bottom of every glossary entry and community
-profile as `<div data-testid="ai-citation-footer">`.
+profile. On glossary + community pages they are delivered machine-readably
+inside `<div data-testid="ai-citation-hidden" itemscope itemtype="https://schema.org/CreativeWork">`
+(off-screen for human visitors, fully crawlable) plus a matching
+`application/ld+json` CreativeWork block carrying the same citation strings
+and content licence. Pages that surface the citations visibly use
+`<div data-testid="ai-citation-footer">`.
 
 ### Article 16 (CREA REALTOR® Code)
 The buyer / seller / referral / valuation intake forms hard-block any
