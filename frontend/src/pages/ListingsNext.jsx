@@ -489,6 +489,11 @@ export default function ListingsNext() {
                           {l.baths != null && <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Bath size={14} /> {l.baths} ba</span>}
                           {l.living_area ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Ruler size={14} /> {Number(l.living_area).toLocaleString()} sqft</span> : null}
                         </div>
+                        <div data-testid={`ln-brokerage-${l.listing_key}`} style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.4, marginBottom: 10 }}>
+                          {l.brokerage_name && !/^Listing Brokerage(\s*\(see REALTOR\.ca\))?$/i.test(String(l.brokerage_name).trim())
+                            ? `Listing brokerage: ${l.brokerage_name}`
+                            : "Listing brokerage disclosed on REALTOR.ca"}
+                        </div>
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: C.gold, background: C.goldBg, border: "1px solid #E6D9A8", padding: "4px 10px", borderRadius: 999 }}>
                           Source: CREA DDF®
                         </span>

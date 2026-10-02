@@ -3174,6 +3174,9 @@ const ListingCompliance = ({ listing, compact = false }) => {
 const ListingCard = ({ listing }) => {
   const price = (listing.list_price || 0).toLocaleString("en-CA");
   const photo = (listing.photos && listing.photos[0]) || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200";
+  // CREA DDF®: the listing brokerage must be credited near every listing — cards included.
+  const brokerageStr = String(listing.brokerage_name || "").trim();
+  const hasRealBrokerage = brokerageStr && !/^Listing Brokerage(\s*\(see REALTOR\.ca\))?$/i.test(brokerageStr);
   return (
     <div style={{position:"relative"}}>
     <Link to={`/listing/${listing.listing_key}`} data-testid={`listing-card-${listing.listing_key}`} style={{textDecoration:"none",color:"inherit",display:"block",background:"white",borderRadius:12,overflow:"hidden",border:"1px solid rgba(15,42,91,0.12)",boxShadow:"0 4px 12px rgba(15,42,91,0.06)",transition:"transform 0.15s, box-shadow 0.15s"}}
@@ -3245,6 +3248,9 @@ const ListingCard = ({ listing }) => {
           {listing.living_area_sqft && <span>📐 {listing.living_area_sqft.toLocaleString()} sqft</span>}
         </div>
         {listing.mls_number && <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",marginTop:"0.6rem",paddingTop:"0.55rem",borderTop:"1px solid rgba(15,42,91,0.08)"}}>MLS® #{listing.mls_number}</div>}
+        <div style={{fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.3rem"}} data-testid={`listing-card-brokerage-${listing.listing_key}`}>
+          {hasRealBrokerage ? <>Listing brokerage: {brokerageStr}</> : <>Listing brokerage disclosed on REALTOR.ca</>}
+        </div>
       </div>
     </Link>
     {/* Ask Doogie listing button removed per BCFSA compliance — Doogie cannot
@@ -5053,8 +5059,16 @@ const RegionPage = () => {
   const {slug} = useParams();
   const [communities, setCommunities] = useState({});
   const [activeCount, setActiveCount] = useState(null);
+  const [thumbs, setThumbs] = useState({});
   const d = REGION_DATA[slug];
   useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)).catch(()=>{}); }, []);
+  useEffect(() => {
+    if (!d) return;
+    const cl = (d.serve && d.serve.length) ? d.serve : (communities[d.key] || []);
+    if (!cl.length) return;
+    axios.get(`${API}/community-thumbs`, { params: { cities: cl.join(",") } })
+      .then(r => setThumbs(r.data || {})).catch(() => {});
+  }, [slug, communities]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!d) return;
     const params = (d.serve && d.serve.length)
@@ -5121,10 +5135,15 @@ const RegionPage = () => {
           <div className="rp-grid">
             {list.map(c => {
               const cslug = encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+              const thumb = thumbs[c];
               return (
                 <Link key={c} to={`/community/${cslug}`} state={{ name: c, region: d.key }}
                   className="rp-tile" data-testid={`region-community-${c}`}>
-                  <span>{c}</span><HnArrowRight size={15} aria-hidden="true"/>
+                  <span className="rp-tile__thumb" aria-hidden="true"
+                    style={thumb ? { backgroundImage: `url('${thumb}')` } : undefined}
+                    data-hasimg={thumb ? "1" : "0"}/>
+                  <span className="rp-tile__name">{c}</span>
+                  <HnArrowRight size={15} aria-hidden="true"/>
                 </Link>
               );
             })}

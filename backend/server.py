@@ -3576,6 +3576,62 @@ async def cron_sunday_night_digest(request: Request):
     return {"status": "accepted"}
 
 
+@api.post("/cron/sitemap-indexnow")
+async def cron_sitemap_indexnow(request: Request):
+    """Nightly sitemap + feed.xml regen and IndexNow push.
+    Replaces the old in-process asyncio loop so the ping fires reliably
+    regardless of server restarts. Secret-authenticated like the digest cron;
+    acks immediately and backgrounds the real work."""
+    secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(401, "Unauthorized")
+    run_id = request.headers.get("x-webhook-id") or ""
+    if run_id:
+        try:
+            await db.cron_runs.insert_one({"_id": run_id, "kind": "sitemap_indexnow", "at": now_iso()})
+        except Exception:
+            return {"status": "duplicate", "run_id": run_id}
+
+    async def _bg():
+        try:
+            from sitemap_generator import generate_sitemap
+            from rss_generator import generate_rss
+            from indexnow import notify_indexnow, HOST
+            result = await generate_sitemap(db)
+            try:
+                rss_res = await generate_rss(db)
+                logger.info(f"cron sitemap_indexnow: feed.xml ok ({rss_res.get('total')} items)")
+            except Exception as e:
+                logger.error(f"cron sitemap_indexnow: feed.xml regen failed: {e}")
+            # Fast priority ping — top-level pages + freshest glossary terms & synopses.
+            priority = [
+                f"https://{HOST}/",
+                f"https://{HOST}/communities",
+                f"https://{HOST}/glossary",
+                f"https://{HOST}/listings",
+                f"https://{HOST}/sitemap.xml",
+            ]
+            recent_terms = await db.glossary.find({}, {"slug": 1}).sort("last_curated_at", -1).limit(200).to_list(200)
+            priority += [f"https://{HOST}/glossary/{t['slug']}" for t in recent_terms if t.get("slug")]
+            recent_syn = await db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1).limit(200).to_list(200)
+            priority += [f"https://{HOST}/community/{s['slug']}" for s in recent_syn if s.get("slug")]
+            idx = await notify_indexnow(priority)
+            logger.info(f"cron sitemap_indexnow: regen ok ({result.get('total')} urls) · priority indexnow: {idx.get('count')} pushed / status {idx.get('status_code')}")
+            # Full sitemap-ai.xml push (mirrors the admin manual endpoint + writes audit row).
+            try:
+                full = await _push_sitemap_ai_to_indexnow(trigger="nightly_cron")
+                logger.info(f"cron sitemap_indexnow: sitemap-ai indexnow: {full.get('url_count')} urls / {full.get('batches')} batches / ok={full.get('ok')}")
+            except Exception as e:
+                logger.error(f"cron sitemap_indexnow: sitemap-ai push failed: {e}")
+        except Exception as e:
+            logger.error(f"cron sitemap_indexnow failed: {e}")
+
+    asyncio.create_task(_bg())
+    return {"status": "accepted"}
+
+
 @api.get("/admin/referrals/requests-summary")
 async def admin_referral_requests_summary(days: int = 90, _=Depends(verify_admin)):
     """Dashboard feed: out-of-area REFERRAL REQUESTS (real leads submitted via
@@ -4939,10 +4995,26 @@ async def lead_triage_dashboard(status: Optional[str] = None, _=Depends(verify_a
 
 
 class LeadFollowupUpdate(BaseModel):
+    # Legacy generic checklist keys (kept for backward compatibility with
+    # leads created before the buyer/seller deal checklists shipped).
     contacted: Optional[bool] = None
     meeting_scheduled: Optional[bool] = None
     meeting_held: Optional[bool] = None
     proposal_sent: Optional[bool] = None
+    # Buyer deal-progress checklist
+    needs_confirmed: Optional[bool] = None
+    showings_booked: Optional[bool] = None
+    offer_written: Optional[bool] = None
+    offer_accepted: Optional[bool] = None
+    # Seller deal-progress checklist
+    listing_appt: Optional[bool] = None
+    cma_presented: Optional[bool] = None
+    agreement_signed: Optional[bool] = None
+    live_on_mls: Optional[bool] = None
+    offer_received: Optional[bool] = None
+    # Shared closing steps (buyer + seller)
+    subjects_removed: Optional[bool] = None
+    completion: Optional[bool] = None
     status: Optional[str] = None      # open | won | lost | nurture
     notes: Optional[str] = None
 
@@ -9679,7 +9751,9 @@ async def startup():
             except Exception as e:
                 logger.error(f"nightly_sitemap_loop iteration failed: {e}")
                 await _a.sleep(3600)
-    asyncio.create_task(asyncio.sleep(15 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_sitemap_loop()))
+    # Moved to platform cron → POST /api/cron/sitemap-indexnow (see .emergent/crons.yml).
+    # The in-process loop is disabled to avoid double-firing and restart gaps.
+    # asyncio.create_task(asyncio.sleep(15 * 60)).add_done_callback(lambda _: asyncio.create_task(_nightly_sitemap_loop()))
 
     # ---- Nightly sub-neighbourhood live-count warm-up (03:00 UTC) ----
     # Rebuilds `neighbourhood_live_counts` for every BC community so the
@@ -11988,6 +12062,7 @@ def _sanitize_listing(doc: dict) -> dict:
 # Reused by /api/listings and /api/doogie/mls-search so that a hero query
 # like "Whistler" becomes a STRICT city filter instead of a text-index leak.
 _locality_cache: dict = {"cities": None, "regions": None, "loaded_at": 0.0}
+_thumb_cache: dict = {}
 
 # Common municipal suffixes users type that CREA's DDF feed doesn't distinguish.
 # CREA rolls "Langley City" and "Langley Township" up to just "Langley", so a
@@ -12055,6 +12130,45 @@ async def _get_localities() -> dict:
     _locality_cache["regions"] = regions
     _locality_cache["loaded_at"] = now
     return _locality_cache
+
+
+@api.get("/community-thumbs")
+async def community_thumbs(cities: str = ""):
+    """Return {city_name: cover_photo_url} — one representative active-listing
+    photo per requested community, for the region-page tiles. `cities` is a
+    comma-separated list of community/city names. Cached per-city for 10 min."""
+    import time
+    names = [c.strip() for c in (cities or "").split(",") if c.strip()][:40]
+    if not names:
+        return {}
+    now = time.time()
+    out: dict = {}
+    misses = []
+    for name in names:
+        c = _thumb_cache.get(name.lower())
+        if c and now - c["at"] < 600:
+            if c["url"]:
+                out[name] = c["url"]
+        else:
+            misses.append(name)
+
+    async def _one(name: str):
+        try:
+            doc = await db.listings.find_one(
+                {"status": "Active", "city": _city_query(name), "photos": {"$exists": True, "$ne": []}},
+                {"_id": 0, "photos": {"$slice": 1}},
+                sort=[("synced_at", -1)],
+            )
+            url = (doc.get("photos") or [None])[0] if doc else None
+            _thumb_cache[name.lower()] = {"url": url, "at": now}
+            if url:
+                out[name] = url
+        except Exception as e:
+            logger.warning(f"community_thumbs '{name}' failed: {e}")
+
+    if misses:
+        await asyncio.gather(*[_one(n) for n in misses])
+    return out
 
 # Vancouver & Metro-Vancouver neighbourhoods aren't stored as `city` in the
 # CREA DDF feed (which uses only municipal boundaries), so a bare "Kitsilano"

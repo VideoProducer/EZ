@@ -7,3 +7,12 @@ crons:
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     enabled: true
+
+  - name: sitemap-indexnow
+    description: "Nightly sitemap.xml + feed.xml regen and IndexNow ping so new MLS listings & pages get indexed fast"
+    cron: "0 3 * * *"
+    timezone: "America/Vancouver"
+    endpoint: "{{BASE_URL}}/api/cron/sitemap-indexnow"
+    method: POST
+    # Acks immediately; backgrounds sitemap regen + IndexNow push.
+    enabled: true

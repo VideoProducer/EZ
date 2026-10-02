@@ -22,12 +22,28 @@ const PRIORITY_META = {
   unscored: { emoji: "•",  label: "UNSCORED", bg: "#F3F4F6", fg: "#374151", border: "#9CA3AF" },
 };
 
-const CHECKLIST = [
-  { key: "contacted",         label: "Contacted (call/email)" },
-  { key: "meeting_scheduled", label: "Meeting scheduled" },
-  { key: "meeting_held",      label: "Meeting held" },
-  { key: "proposal_sent",     label: "Proposal / CMA / offer sent" },
+const BUYER_CHECKLIST = [
+  { key: "contacted",       label: "Contacted" },
+  { key: "needs_confirmed", label: "Needs & budget confirmed" },
+  { key: "showings_booked", label: "Showings booked" },
+  { key: "offer_written",   label: "Offer written" },
+  { key: "offer_accepted",  label: "Offer accepted" },
+  { key: "subjects_removed", label: "Subjects removed" },
+  { key: "completion",      label: "Completion & possession" },
 ];
+
+const SELLER_CHECKLIST = [
+  { key: "contacted",        label: "Contacted" },
+  { key: "listing_appt",     label: "Listing appointment set" },
+  { key: "cma_presented",    label: "CMA presented" },
+  { key: "agreement_signed", label: "Listing agreement signed" },
+  { key: "live_on_mls",      label: "Live on MLS®" },
+  { key: "offer_received",   label: "Offer received" },
+  { key: "subjects_removed", label: "Subjects removed" },
+  { key: "completion",       label: "Completion" },
+];
+
+const checklistFor = (kind) => (kind === "seller" ? SELLER_CHECKLIST : BUYER_CHECKLIST);
 
 const STATUS_OPTS = [
   { value: "open",    label: "Open" },
@@ -71,6 +87,7 @@ const LeadCard = ({ lead, onUpdate }) => {
 
   const toggleCheck = (key) => patch({ [key]: !followup[key] });
 
+  const CHECKLIST = checklistFor(kind);
   const completedCount = CHECKLIST.filter(c => followup[c.key]).length;
   const progress = Math.round((completedCount / CHECKLIST.length) * 100);
   const ageColor = age == null ? "#6B7280" : age <= 1 ? "#059669" : age <= 3 ? "#F59E0B" : "#DC2626";
@@ -147,7 +164,7 @@ const LeadCard = ({ lead, onUpdate }) => {
         <>
           {/* Checklist */}
           <div style={{ marginTop: "0.85rem", padding: "0.75rem 0.85rem", background: "#F9FAFB", borderRadius: 6 }}>
-            <div style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "#374151", fontWeight: 700, marginBottom: "0.5rem" }}>Follow-up checklist</div>
+            <div style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "#374151", fontWeight: 700, marginBottom: "0.5rem" }}>{kind === "seller" ? "Seller deal checklist" : "Buyer deal checklist"}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
               {CHECKLIST.map(item => (
                 <label key={item.key} style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontSize: "0.9rem", color: "#1F2937" }}>
