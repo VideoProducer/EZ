@@ -273,11 +273,11 @@
 .rp { background: #fff; }
 .rp-hero { position: relative; height: clamp(360px, 52vh, 560px); overflow: hidden; }
 .rp-hero__img { position: absolute; inset: 0; background-size: cover; background-position: center; }
-.rp-hero__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,16,28,0.15) 0%, rgba(10,16,28,0.0) 32%, rgba(10,16,28,0.08) 60%, rgba(10,16,28,0.72) 100%); }
+.rp-hero__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,16,28,0.25) 0%, rgba(10,16,28,0.10) 20%, rgba(10,16,28,0.32) 42%, rgba(10,16,28,0.64) 62%, rgba(10,16,28,0.88) 82%, rgba(10,16,28,0.96) 100%); }
 .rp-hero__inner { position: absolute; left: 0; right: 0; bottom: clamp(26px, 4vw, 48px); }
-.rp-hero__eyebrow { color: rgba(255,255,255,0.86); font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 8px; }
-.rp-hero__title { color: #fff; font-family: var(--hn-font); font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; font-size: clamp(40px, 6vw, 76px); margin: 0; }
-.rp-hero__sub { color: rgba(255,255,255,0.9); font-size: clamp(15px, 1.6vw, 19px); margin: 12px 0 0; max-width: 40ch; }
+.rp-hero__eyebrow { color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 8px; text-shadow: 0 1px 10px rgba(5,10,20,0.6); }
+.hn .rp-hero__title { color: #fff; font-family: var(--hn-font); font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; font-size: clamp(40px, 6vw, 76px); margin: 0; text-shadow: 0 2px 28px rgba(5,10,20,0.75), 0 2px 8px rgba(5,10,20,0.6); }
+.rp-hero__sub { color: rgba(255,255,255,0.95); font-size: clamp(15px, 1.6vw, 19px); margin: 12px 0 0; max-width: 40ch; text-shadow: 0 1px 12px rgba(5,10,20,0.6); }
 .rp-search { display: flex; align-items: center; gap: 10px; max-width: 680px; margin: 0 auto; background: #fff; border: 1px solid var(--hn-line); border-radius: 999px; padding: 6px 6px 6px 20px; box-shadow: 0 10px 30px rgba(15,42,91,0.08); }
 .rp-search svg { color: var(--hn-grey); flex-shrink: 0; }
 .rp-search input { flex: 1; border: none; outline: none; font-size: 16px; color: var(--hn-ink); background: transparent; padding: 11px 0; }
