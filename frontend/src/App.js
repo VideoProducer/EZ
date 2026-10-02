@@ -5981,11 +5981,13 @@ const Glossary = () => {
       .glx-cathead h3 { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:1.3rem; letter-spacing:-0.01em; margin:0; }
       .glx-cathead span { font-family:Inter,sans-serif; font-size:0.82rem; color:var(--mut); font-weight:500; }
       .glx-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px; }
-      .glx-card { display:flex; align-items:center; justify-content:space-between; gap:12px; text-decoration:none; background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px; color:var(--ink); transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease; box-shadow:0 1px 2px rgba(15,42,91,0.04); animation:glxReveal .45s cubic-bezier(.2,.7,.3,1) both; }
+      .glx-card { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; text-decoration:none; background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px; color:var(--ink); transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease; box-shadow:0 1px 2px rgba(15,42,91,0.04); animation:glxReveal .45s cubic-bezier(.2,.7,.3,1) both; }
       .glx-card:hover { transform:translateY(-3px); box-shadow:0 14px 30px rgba(15,42,91,0.1); border-color:var(--n); }
+      .glx-card__body { min-width:0; }
       .glx-card__t { font-family:Inter,sans-serif; font-weight:600; font-size:1.02rem; color:var(--ink); line-height:1.25; }
-      .glx-card__c { font-family:Inter,sans-serif; font-size:0.7rem; color:var(--n); font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin-top:5px; opacity:0.72; }
-      .glx-card > svg { color:var(--n); flex:0 0 auto; opacity:0.5; transition:transform .16s ease, opacity .16s ease; }
+      .glx-card__d { font-family:Inter,sans-serif; font-size:0.84rem; color:var(--mut); line-height:1.45; margin-top:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+      .glx-card__c { font-family:Inter,sans-serif; font-size:0.7rem; color:var(--n); font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin-top:8px; opacity:0.72; }
+      .glx-card > svg { color:var(--n); flex:0 0 auto; opacity:0.5; margin-top:3px; transition:transform .16s ease, opacity .16s ease; }
       .glx-card:hover > svg { transform:translateX(3px); opacity:1; }
       @keyframes glxReveal { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
       @media (max-width:520px){ .glx-grid{grid-template-columns:1fr} }
@@ -6019,8 +6021,9 @@ const Glossary = () => {
         <div className="glx-grid">
           {byCat[cat].map(t => (
             <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`term-${t.slug}`} className="glx-card">
-              <div>
+              <div className="glx-card__body">
                 <div className="glx-card__t">{t.term}</div>
+                {t.definition && <div className="glx-card__d">{t.definition}</div>}
                 <div className="glx-card__c">{t.category}</div>
               </div>
               <HnArrowRight size={16} aria-hidden="true"/>
@@ -6059,121 +6062,85 @@ const GlossaryAZ = () => {
   Object.values(buckets).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
   const letters = ["#", ...alphabet].filter(l => buckets[l].length > 0);
   return (
-    <section className="section"><div className="container-x">
+    <section className="section"><div className="container-x gxaz">
       <SEO
         title={`BC Real Estate Terms A–Z — ${terms.length} Definitions with BC Statute Citations | EZtoFind.ca`}
         description={`Every British Columbia real-estate term Doug LeMaire, REALTOR® defines, organized A–Z. ${terms.length} entries covering Strata Property Act, PTT, foreclosure, ALR, and more — each with citations to the governing BC statute or regulator.`}
         path="/glossary/a-z"
       />
-      <div style={{textAlign:"center",marginBottom:"1.5rem"}}>
-        <div className="eyebrow">Knowledge Hub · A–Z Index</div>
-        <h1 className="section-title">BC Real Estate Terms A–Z</h1>
-        <p className="section-sub">
+      <style>{`
+        .gxaz { --n:#0F2A5B; --ink:#1D1D1F; --mut:#5B6577; --line:rgba(15,42,91,0.1); }
+        .gxaz-hero { text-align:center; max-width:660px; margin:0 auto 1.6rem; }
+        .gxaz-eyebrow { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--mut); }
+        .gxaz-h1 { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:clamp(2.1rem,4.6vw,3.2rem); letter-spacing:-0.03em; line-height:1.04; margin:0.55rem 0 0.7rem; }
+        .gxaz-sub { font-family:Inter,sans-serif; color:var(--mut); line-height:1.6; font-size:1rem; margin:0 auto; max-width:54ch; }
+        .gxaz-sub a { color:var(--n); font-weight:600; text-decoration:none; border-bottom:1px solid rgba(15,42,91,0.3); }
+        .gxaz-bar { position:sticky; top:64px; z-index:5; background:rgba(255,255,255,0.92); backdrop-filter:blur(12px); padding:14px; border:1px solid var(--line); border-radius:18px; box-shadow:0 6px 20px rgba(15,42,91,0.06); margin-bottom:2.2rem; }
+        .gxaz-search { display:flex; align-items:center; gap:11px; max-width:560px; margin:0 auto 12px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:12px 20px; transition:border-color .2s, box-shadow .2s; }
+        .gxaz-search:focus-within { border-color:var(--n); box-shadow:0 0 0 4px rgba(15,42,91,0.08); }
+        .gxaz-search svg { color:var(--mut); flex:0 0 auto; }
+        .gxaz-search input { border:none; outline:none; background:transparent; width:100%; font-family:Inter,sans-serif; font-size:16px; color:var(--ink); }
+        .gxaz-nav { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+        .gxaz-jump { min-width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; text-decoration:none; background:#fff; color:var(--n); font-family:Inter,sans-serif; font-size:0.9rem; font-weight:700; border:1px solid var(--line); transition:background .15s, color .15s, transform .15s; }
+        .gxaz-jump:hover { background:var(--n); color:#fff; transform:translateY(-1px); }
+        .gxaz-empty { text-align:center; font-family:Inter,sans-serif; color:var(--mut); margin:2.5rem 0; }
+        .gxaz-sec { margin-bottom:2.6rem; scroll-margin-top:120px; }
+        .gxaz-sechead { display:flex; align-items:baseline; gap:12px; border-bottom:1px solid var(--line); padding-bottom:11px; margin-bottom:16px; }
+        .gxaz-letter { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:2rem; letter-spacing:-0.02em; }
+        .gxaz-count { font-family:Inter,sans-serif; font-size:0.84rem; color:var(--mut); font-weight:500; }
+        .gxaz-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px 12px; }
+        .gxaz-term { text-decoration:none; color:var(--ink); padding:11px 14px; border-radius:12px; font-family:Inter,sans-serif; font-size:0.96rem; border:1px solid transparent; transition:background .15s, border-color .15s, transform .15s; display:flex; align-items:center; }
+        .gxaz-term:hover { background:#fff; border-color:var(--line); transform:translateX(3px); color:var(--n); box-shadow:0 2px 10px rgba(15,42,91,0.06); }
+        .gxaz-cta { background:var(--n); border-radius:22px; padding:36px 28px; margin-top:1.6rem; text-align:center; color:#fff; }
+        .gxaz-cta p { margin:0 0 1.1rem; font-family:Inter,sans-serif; opacity:0.85; font-size:0.98rem; }
+        .gxaz-cta .cta-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+        @media (max-width:520px){ .gxaz-grid{grid-template-columns:1fr} }
+      `}</style>
+      <div className="gxaz-hero">
+        <div className="gxaz-eyebrow">Knowledge Hub · A–Z Index</div>
+        <h1 className="gxaz-h1">BC Real Estate Terms A–Z</h1>
+        <p className="gxaz-sub">
           Alphabet-indexed hub of every term in Doug's BC real-estate glossary — {terms.length} definitions,
-          each linked to the governing statute or regulator. Jump to a letter, or
-          <Link to="/glossary" style={{color:"var(--brand-blue)",textDecoration:"underline",marginLeft:4}}>browse by category</Link>.
+          each linked to the governing statute or regulator. Jump to a letter, or{" "}
+          <Link to="/glossary">browse by category</Link>.
         </p>
       </div>
-      {/* Feb 2026 — Sticky search + jump-nav wrapper. On mobile the /glossary/a-z
-          page can be 70k+ pixels tall; without a sticky search input at the
-          top, users have to scroll all the way back to filter. Wrapping the
-          input + letter nav in a single sticky container solves that. */}
-      <div
-        data-testid="glossary-az-sticky-bar"
-        style={{
-          position:"sticky", top:64, zIndex:5,
-          background:"rgba(253,252,248,0.96)", backdropFilter:"blur(10px)",
-          padding:"0.75rem 0.5rem", borderRadius:12,
-          boxShadow:"0 4px 14px rgba(15,42,91,0.06)",
-          marginBottom:"2rem",
-        }}
-      >
-        <input
-          value={q}
-          onChange={e=>setQ(e.target.value)}
-          placeholder={`Filter ${terms.length} terms…`}
-          data-testid="glossary-az-search"
-          aria-label="Filter glossary terms"
-          style={{width:"100%",maxWidth:560,margin:"0 auto 0.6rem",display:"block",padding:"0.7rem 1.1rem",fontFamily:"Inter,sans-serif",fontSize:"16px",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white",boxSizing:"border-box"}}
-        />
-        {/* Alphabet jump-nav. Uses anchor hashes so Google crawls each
-            letter as a separate DOM anchor, and the letter shows in the URL
-            bar when clicked. */}
-        <div
-          data-testid="glossary-az-nav"
-          style={{
-            display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center",
-          }}
-        >
+      <div className="gxaz-bar" data-testid="glossary-az-sticky-bar">
+        <div className="gxaz-search">
+          <HnSearch size={18} aria-hidden="true"/>
+          <input
+            value={q}
+            onChange={e=>setQ(e.target.value)}
+            placeholder={`Filter ${terms.length} terms…`}
+            data-testid="glossary-az-search"
+            aria-label="Filter glossary terms"
+          />
+        </div>
+        <div className="gxaz-nav" data-testid="glossary-az-nav">
           {letters.map(l => (
             <a
               key={l}
               href={`#letter-${l === "#" ? "hash" : l.toLowerCase()}`}
               data-testid={`glossary-az-jump-${l === "#" ? "hash" : l.toLowerCase()}`}
-              style={{
-                minWidth:32, height:32, display:"inline-flex", alignItems:"center", justifyContent:"center",
-                borderRadius:8, textDecoration:"none",
-                background:"transparent", color:"var(--brand-navy)",
-                fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:700,
-                border:"1px solid rgba(15,42,91,0.12)",
-                transition:"all 0.15s ease",
-              }}
-              onMouseEnter={e=>{ e.currentTarget.style.background="var(--brand-navy)"; e.currentTarget.style.color="white"; }}
-              onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; e.currentTarget.style.color="var(--brand-navy)"; }}
+              className="gxaz-jump"
             >{l}</a>
           ))}
         </div>
       </div>
       {filtered.length === 0 && (
-        <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>
-          No terms match your filter.
-        </p>
+        <p className="gxaz-empty">No terms match your filter.</p>
       )}
       {letters.map(l => {
         const anchor = l === "#" ? "hash" : l.toLowerCase();
         return (
-          <div
-            key={l}
-            id={`letter-${anchor}`}
-            data-testid={`glossary-az-section-${anchor}`}
-            style={{marginBottom:"2.5rem", scrollMarginTop:120}}
-          >
-            <h2
-              className="font-display"
-              style={{
-                fontSize:"2.25rem", color:"var(--brand-navy)",
-                borderBottom:"2px solid rgba(15,42,91,0.12)",
-                paddingBottom:"0.4rem", marginBottom:"1rem",
-                display:"flex", alignItems:"baseline", gap:"0.75rem",
-              }}
-            >
-              <span>{l}</span>
-              <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.85rem",color:"var(--muted)",fontWeight:400}}>
-                {buckets[l].length} {buckets[l].length === 1 ? "term" : "terms"}
-              </span>
-            </h2>
-            <div
-              style={{
-                display:"grid",
-                gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",
-                gap:"0.5rem 1rem",
-              }}
-            >
+          <div key={l} id={`letter-${anchor}`} data-testid={`glossary-az-section-${anchor}`} className="gxaz-sec">
+            <div className="gxaz-sechead">
+              <span className="gxaz-letter font-display">{l}</span>
+              <span className="gxaz-count">{buckets[l].length} {buckets[l].length === 1 ? "term" : "terms"}</span>
+            </div>
+            <div className="gxaz-grid">
               {buckets[l].map(t => (
-                <Link
-                  key={t.slug}
-                  to={`/glossary/${t.slug}`}
-                  data-testid={`glossary-az-term-${t.slug}`}
-                  style={{
-                    textDecoration:"none", color:"var(--ink)",
-                    padding:"0.35rem 0.5rem", borderRadius:6,
-                    fontFamily:"Inter,sans-serif", fontSize:"0.95rem",
-                    display:"flex", alignItems:"center", gap:6,
-                    transition:"background 0.15s ease",
-                  }}
-                  onMouseEnter={e=>{ e.currentTarget.style.background="rgba(30,79,207,0.06)"; }}
-                  onMouseLeave={e=>{ e.currentTarget.style.background="transparent"; }}
-                >
+                <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`glossary-az-term-${t.slug}`} className="gxaz-term">
                   <span>{t.term}</span>
                 </Link>
               ))}
@@ -6181,21 +6148,13 @@ const GlossaryAZ = () => {
           </div>
         );
       })}
-      {/* Money-page CTAs at the bottom — every A–Z visitor sees a route
-          back into the conversion funnel. Matches the Feb 2026 OS spec. */}
-      <div style={{
-        background:"rgba(15,42,91,0.04)",
-        borderRadius:16, padding:"1.75rem",
-        marginTop:"1.5rem", textAlign:"center",
-      }}>
-        <p style={{margin:"0 0 0.75rem",fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"0.9rem"}}>
-          Ready to put a term to work?
-        </p>
-        <div style={{display:"flex",gap:"0.75rem",justifyContent:"center",flexWrap:"wrap"}}>
+      <div className="gxaz-cta">
+        <p>Ready to put a term to work?</p>
+        <div className="cta-row">
           <Link to="/valuation" className="btn btn-primary" data-testid="glossary-az-cta-valuation">Try /valuation</Link>
-          <Link to="/buyer" className="btn btn-outline" data-testid="glossary-az-cta-buyer">Start /buyer</Link>
-          <Link to="/seller" className="btn btn-outline" data-testid="glossary-az-cta-seller">Explore /seller</Link>
-          <Link to="/contact" className="btn btn-ghost" data-testid="glossary-az-cta-contact">Contact Doug</Link>
+          <Link to="/buyer" className="btn btn-outline" data-testid="glossary-az-cta-buyer" style={{color:"#fff",borderColor:"rgba(255,255,255,0.6)"}}>Start /buyer</Link>
+          <Link to="/seller" className="btn btn-outline" data-testid="glossary-az-cta-seller" style={{color:"#fff",borderColor:"rgba(255,255,255,0.6)"}}>Explore /seller</Link>
+          <Link to="/contact" className="btn btn-ghost" data-testid="glossary-az-cta-contact" style={{color:"#fff"}}>Contact Doug</Link>
         </div>
       </div>
     </div></section>
@@ -6410,7 +6369,22 @@ const GlossaryTerm = () => {
     }))
   } : null;
 
-  return (<section className="section"><div className="container-x" style={{maxWidth:"48rem"}} itemScope itemType="https://schema.org/Article">
+  return (<section className="section"><div className="container-x gxt" style={{maxWidth:"48rem"}} itemScope itemType="https://schema.org/Article">
+    <style>{`
+      .gxt { --n:#0F2A5B; --ink:#1D1D1F; --mut:#5B6577; --line:rgba(15,42,91,0.1); }
+      .gxt > .eyebrow { font-family:Inter,sans-serif; font-size:0.74rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--n); opacity:0.85; }
+      .gxt > .section-title { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:clamp(2rem,4.6vw,3.1rem); letter-spacing:-0.03em; line-height:1.05; margin:0.4rem 0 0.2rem; }
+      .gxt [itemprop="articleBody"] { font-size:1.08rem !important; line-height:1.78 !important; color:var(--ink) !important; }
+      .gxt .faq { margin-top:0.5rem; }
+      .gxt .faq details { background:#fff; border:1px solid var(--line); border-radius:14px; padding:4px 18px; margin-bottom:10px; box-shadow:0 1px 2px rgba(15,42,91,0.04); transition:border-color .16s, box-shadow .16s; }
+      .gxt .faq details[open] { border-color:rgba(15,42,91,0.22); box-shadow:0 8px 24px rgba(15,42,91,0.07); }
+      .gxt .faq summary { font-family:Inter,sans-serif; font-weight:600; color:var(--ink); padding:14px 0; cursor:pointer; list-style:none; font-size:1rem; }
+      .gxt .faq summary::-webkit-details-marker { display:none; }
+      .gxt .faq summary::before { content:"+"; color:var(--n); font-weight:700; margin-right:10px; display:inline-block; width:14px; }
+      .gxt .faq details[open] summary::before { content:"–"; }
+      .gxt .related-terms-block { background:#F7F9FC; border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin-top:2rem; }
+      .gxt .notice { border-radius:16px; }
+    `}</style>
     <SEO
       title={`What is ${t.term} in British Columbia? Definition, FAQs & BC Statute | EZtoFind.ca`}
       description={(`${t.term} in BC — plain-language definition, ${(t.faqs || []).length ? (t.faqs.length + ' FAQs, ') : ''}governing statute link, and how it affects buyers and sellers. ` + (t.definition || '')).substring(0, 200)}
