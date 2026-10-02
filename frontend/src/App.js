@@ -115,7 +115,7 @@ import TourNarration from "./components/TourNarration";
 import RoomLabelPill from "./components/RoomLabelPill";
 import FeatureSheet from "./components/FeatureSheet";
 import SiteWideSchema from "./components/SiteWideSchema";
-import { Box as CubeIcon, Play as PlayIcon, ArrowRight as HnArrowRight, Search as HnSearch, ChevronDown as HnChevronDown } from "lucide-react";
+import { Box as CubeIcon, Play as PlayIcon, ArrowRight as HnArrowRight, Search as HnSearch, ChevronDown as HnChevronDown, Home as HnHome, MessageCircle as HnMessage } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -7272,7 +7272,7 @@ const Relocating = () => {
   const nav = useNavigate();
   return (
     <section className="section" style={{fontFamily:"Inter,sans-serif"}}>
-      <div className="container-x" style={{maxWidth:"58rem"}}>
+      <div className="container-x rlc" style={{maxWidth:"58rem"}}>
         <SEO
           title="Relocating to British Columbia — A Consumer Guide by Doug LeMaire, REALTOR® | EZtoFind.ca"
           description="Thinking of moving to British Columbia? Compare BC regions, cost of living, PTT, the Foreign Buyer Ban, weather, lifestyle, and start your home search with an AI-assisted MLS® tool. Written by a licensed BC REALTOR®."
@@ -7299,8 +7299,46 @@ const Relocating = () => {
           ]
         })}</script></Helmet>
 
-        <div className="eyebrow">Consumer Guide</div>
-        <h1 className="section-title" data-testid="relocating-title" style={{fontSize:"clamp(1.5rem, 3.2vw, 2.1rem)",lineHeight:1.3}}>
+        <style>{`
+          .rlc { --n:#0F2A5B; --ink:#1D1D1F; --mut:#5B6577; --line:rgba(15,42,91,0.1); --gold:#C9A24B; }
+          .rlc-eyebrow { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--mut); }
+          .rlc-h1 { font-family:Inter,sans-serif; font-weight:400; color:var(--mut); font-size:clamp(1.02rem,1.7vw,1.2rem); line-height:1.55; letter-spacing:0; margin:0.65rem 0 0; max-width:42ch; }
+          .rlc-h1 strong { display:block; font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:clamp(2.3rem,5.5vw,3.6rem); line-height:1.02; letter-spacing:-0.03em; margin-bottom:0.65rem; }
+          .rlc-quiz { margin:2rem 0 1rem; }
+          .rlc-sec { margin-top:3rem; animation:rlcReveal .5s cubic-bezier(.2,.7,.3,1) both; }
+          .rlc-h2 { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:clamp(1.4rem,2.6vw,1.85rem); letter-spacing:-0.02em; margin:0 0 0.35rem; }
+          .rlc-sec > p { color:var(--mut); line-height:1.7; margin:0.4rem 0 1.1rem; max-width:64ch; font-family:Inter,sans-serif; }
+          .rlc-list { list-style:none; margin:0; padding:0; border-top:1px solid var(--line); }
+          .rlc-list li { padding:14px 2px; border-bottom:1px solid var(--line); line-height:1.6; color:var(--ink); font-size:0.98rem; font-family:Inter,sans-serif; }
+          .rlc-list--cost li { display:flex; justify-content:space-between; align-items:baseline; gap:14px; }
+          .rlc-list--cost li strong { color:var(--n); white-space:nowrap; font-family:Sora,sans-serif; }
+          .rlc-list a { color:var(--n); font-weight:600; text-decoration:none; border-bottom:1px solid rgba(15,42,91,0.28); transition:border-color .15s; }
+          .rlc-list a:hover { border-color:var(--n); }
+          .rlc-note { font-family:Inter,sans-serif; font-size:0.84rem; color:var(--mut); font-style:italic; margin-top:0.95rem; }
+          .rlc-tools { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:1.2rem; }
+          .rlc-tool { display:block; width:100%; text-align:left; text-decoration:none; background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px; color:var(--ink); font-family:inherit; cursor:pointer; transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease; box-shadow:0 1px 2px rgba(15,42,91,0.04); animation:rlcReveal .5s cubic-bezier(.2,.7,.3,1) both; }
+          .rlc-tool:nth-child(1){animation-delay:.04s} .rlc-tool:nth-child(2){animation-delay:.1s} .rlc-tool:nth-child(3){animation-delay:.16s}
+          .rlc-tool:hover { transform:translateY(-3px); box-shadow:0 16px 34px rgba(15,42,91,0.1); border-color:var(--n); }
+          .rlc-tool__icon { width:46px; height:46px; border-radius:13px; background:rgba(15,42,91,0.06); color:var(--n); display:flex; align-items:center; justify-content:center; }
+          .rlc-tool__t { font-family:Sora,sans-serif; font-weight:700; color:var(--n); margin-top:15px; font-size:1.05rem; }
+          .rlc-tool__d { font-family:Inter,sans-serif; font-size:0.86rem; color:var(--mut); margin-top:6px; line-height:1.5; }
+          .rlc-cta { margin-top:3rem; background:var(--n); border-radius:24px; padding:44px 32px; text-align:center; color:#fff; }
+          .rlc-cta h2 { font-family:Sora,sans-serif; font-weight:700; font-size:clamp(1.4rem,2.6vw,1.85rem); margin:0 0 0.6rem; color:#fff; }
+          .rlc-cta p { font-family:Inter,sans-serif; opacity:0.88; line-height:1.7; max-width:54ch; margin:0 auto 1.6rem; font-size:0.95rem; }
+          .rlc-cta__btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+          .rlc-btn { display:inline-block; text-decoration:none; font-family:Inter,sans-serif; font-weight:700; font-size:0.95rem; padding:14px 26px; border-radius:999px; transition:transform .15s ease, box-shadow .15s ease, background .2s ease, border-color .2s ease; }
+          .rlc-btn--gold { background:var(--gold); color:var(--n); box-shadow:0 10px 24px rgba(0,0,0,0.2); }
+          .rlc-btn--gold:hover { transform:translateY(-2px); box-shadow:0 16px 32px rgba(0,0,0,0.26); }
+          .rlc-btn--ghost { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,0.5); }
+          .rlc-btn--ghost:hover { border-color:#fff; background:rgba(255,255,255,0.08); }
+          .rlc-footer { font-family:Inter,sans-serif; margin:2rem auto 0; font-size:0.8rem; color:var(--mut); font-style:italic; text-align:center; line-height:1.6; max-width:64ch; }
+          @keyframes rlcReveal { from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:translateY(0)} }
+          @media (max-width:760px){ .rlc-tools{grid-template-columns:1fr} }
+          @media (prefers-reduced-motion:reduce){ .rlc-sec,.rlc-tool{animation:none} }
+        `}</style>
+
+        <div className="rlc-eyebrow">Consumer Guide</div>
+        <h1 className="rlc-h1" data-testid="relocating-title">
           <strong>Welcome to British Columbia.</strong> Whether you're moving from another Canadian province, returning to Canada, staying in or considering BC as your first home in the country — this page is a starting point, not the whole picture.
         </h1>
 
@@ -7309,85 +7347,92 @@ const Relocating = () => {
             supporting knowledge sections.  Everything below the quiz
             (region grid, taxes, cost-of-living, immigration, etc.) is
             still available for readers who want to research first. */}
-        <div style={{ margin: "1.75rem -1rem 2rem", padding: 0 }}>
+        <div className="rlc-quiz">
           <CommunityFinderQuiz/>
         </div>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>1. Understand the tax picture</h2>
-        <p>BC has some of Canada's most nuanced housing taxes. Foreign buyers face additional layers. Skim these before you make an offer:</p>
-        <ul style={{lineHeight:1.9}}>
-          <li><Link to="/glossary/property-transfer-tax-ptt" style={{color:"var(--brand-blue)"}}>Property Transfer Tax (PTT)</Link> — payable by every BC buyer at closing. Tiered rates + first-time buyer / newly-built exemptions.</li>
-          <li><Link to="/glossary/additional-property-transfer-tax-foreign-buyer-ptt" style={{color:"var(--brand-blue)"}}>Additional Property Transfer Tax (Foreign Buyer PTT)</Link> — 20% BC surtax on foreign national purchases in specified regions.</li>
-          <li><Link to="/glossary/foreign-buyer-ban-federal-act" style={{color:"var(--brand-blue)"}}>Foreign Buyer Ban (Federal Act)</Link> — the federal prohibition on most non-Canadian residential purchases, extended through January 1, 2027.</li>
-          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>Speculation and Vacancy Tax (SVT)</Link> — annual 0.5–3% for owners who leave BC homes vacant, with a declaration filed every March.</li>
-          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>BC Home Flipping Tax</Link> — anti-flipping tax on homes sold within 2 years of purchase, with divorce/hardship/newly-built exemptions.</li>
-          <li><Link to="/glossary" style={{color:"var(--brand-blue)"}}>Empty Homes Tax (Vancouver only)</Link> — separate 3% City of Vancouver tax on vacant properties within municipal boundaries.</li>
-        </ul>
+        <section className="rlc-sec">
+          <h2 className="rlc-h2">Understand the tax picture</h2>
+          <p>BC has some of Canada's most nuanced housing taxes. Foreign buyers face additional layers. Skim these before you make an offer:</p>
+          <ul className="rlc-list">
+            <li><Link to="/glossary/property-transfer-tax-ptt">Property Transfer Tax (PTT)</Link> — payable by every BC buyer at closing. Tiered rates + first-time buyer / newly-built exemptions.</li>
+            <li><Link to="/glossary/additional-property-transfer-tax-foreign-buyer-ptt">Additional Property Transfer Tax (Foreign Buyer PTT)</Link> — 20% BC surtax on foreign national purchases in specified regions.</li>
+            <li><Link to="/glossary/foreign-buyer-ban-federal-act">Foreign Buyer Ban (Federal Act)</Link> — the federal prohibition on most non-Canadian residential purchases, extended through January 1, 2027.</li>
+            <li><Link to="/glossary">Speculation and Vacancy Tax (SVT)</Link> — annual 0.5–3% for owners who leave BC homes vacant, with a declaration filed every March.</li>
+            <li><Link to="/glossary">BC Home Flipping Tax</Link> — anti-flipping tax on homes sold within 2 years of purchase, with divorce/hardship/newly-built exemptions.</li>
+            <li><Link to="/glossary">Empty Homes Tax (Vancouver only)</Link> — separate 3% City of Vancouver tax on vacant properties within municipal boundaries.</li>
+          </ul>
+        </section>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>2. Cost-of-living benchmarks</h2>
-        <p>Median BC sale prices vary wildly. Here's a rough 2026 snapshot to calibrate expectations:</p>
-        <ul style={{lineHeight:1.9}}>
-          <li>Greater Vancouver detached: <strong>~$2.0M+ median</strong> (West Vancouver + Vancouver West Side higher)</li>
-          <li>Greater Vancouver condo: <strong>~$780K median</strong></li>
-          <li>Fraser Valley detached: <strong>~$1.4M median</strong></li>
-          <li>Kelowna / Okanagan detached: <strong>~$950K median</strong></li>
-          <li>Victoria / Greater Victoria: <strong>~$1.15M median</strong></li>
-          <li>Kamloops / Interior: <strong>~$620K median</strong></li>
-          <li>Nelson / Kootenays: <strong>~$680K median</strong></li>
-          <li>Prince George / Northern BC: <strong>~$450K median</strong></li>
-        </ul>
-        <p style={{marginTop:"1rem",fontSize:"0.88rem",color:"var(--muted)",fontStyle:"italic"}}>Median values reflect early-2026 MLS® snapshot data from your live listing feed and shift week-to-week. Use the search tool for current figures.</p>
+        <section className="rlc-sec">
+          <h2 className="rlc-h2">Cost-of-living benchmarks</h2>
+          <p>Median BC sale prices vary wildly. Here's a rough 2026 snapshot to calibrate expectations:</p>
+          <ul className="rlc-list rlc-list--cost">
+            <li><span>Greater Vancouver detached (West Vancouver + Vancouver West Side higher)</span><strong>~$2.0M+ median</strong></li>
+            <li><span>Greater Vancouver condo</span><strong>~$780K median</strong></li>
+            <li><span>Fraser Valley detached</span><strong>~$1.4M median</strong></li>
+            <li><span>Kelowna / Okanagan detached</span><strong>~$950K median</strong></li>
+            <li><span>Victoria / Greater Victoria</span><strong>~$1.15M median</strong></li>
+            <li><span>Kamloops / Interior</span><strong>~$620K median</strong></li>
+            <li><span>Nelson / Kootenays</span><strong>~$680K median</strong></li>
+            <li><span>Prince George / Northern BC</span><strong>~$450K median</strong></li>
+          </ul>
+          <p className="rlc-note">Median values reflect early-2026 MLS® snapshot data from your live listing feed and shift week-to-week. Use the search tool for current figures.</p>
+        </section>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>3. Immigration + banking + insurance essentials</h2>
-        <p>BC-side realities you'll want to line up before or shortly after arrival:</p>
-        <ul style={{lineHeight:1.9}}>
-          <li><strong>PR / work-permit status</strong> — dictates whether you're eligible to purchase under the federal ban and at what tax rate.</li>
-          <li><strong>Canadian banking relationship</strong> — most lenders require 3–12 months of Canadian banking history before offering a competitive mortgage.</li>
-          <li><strong>Down-payment source rules</strong> — Canadian FINTRAC + BCFSA anti-money-laundering rules require documented source of funds. Start gathering paperwork early.</li>
-          <li><strong>Home insurance</strong> — wildfire + flood zones affect premiums heavily in BC. Get a quote before you finalize a purchase.</li>
-          <li><strong>ICBC auto insurance</strong> — BC's provincial auto insurance monopoly. Register within days of arrival if you're bringing a vehicle.</li>
-          <li><strong>MSP (BC health)</strong> — enrol immediately; there's a 3-month wait for coverage as a new resident.</li>
-          <li><strong>Notary + lawyer</strong> — required for the actual property closing. Retain one before signing an offer.</li>
-        </ul>
+        <section className="rlc-sec">
+          <h2 className="rlc-h2">Immigration + banking + insurance essentials</h2>
+          <p>BC-side realities you'll want to line up before or shortly after arrival:</p>
+          <ul className="rlc-list">
+            <li><strong>PR / work-permit status</strong> — dictates whether you're eligible to purchase under the federal ban and at what tax rate.</li>
+            <li><strong>Canadian banking relationship</strong> — most lenders require 3–12 months of Canadian banking history before offering a competitive mortgage.</li>
+            <li><strong>Down-payment source rules</strong> — Canadian FINTRAC + BCFSA anti-money-laundering rules require documented source of funds. Start gathering paperwork early.</li>
+            <li><strong>Home insurance</strong> — wildfire + flood zones affect premiums heavily in BC. Get a quote before you finalize a purchase.</li>
+            <li><strong>ICBC auto insurance</strong> — BC's provincial auto insurance monopoly. Register within days of arrival if you're bringing a vehicle.</li>
+            <li><strong>MSP (BC health)</strong> — enrol immediately; there's a 3-month wait for coverage as a new resident.</li>
+            <li><strong>Notary + lawyer</strong> — required for the actual property closing. Retain one before signing an offer.</li>
+          </ul>
+        </section>
 
-        <h2 style={{marginTop:"2.5rem",fontSize:"1.65rem"}}>4. Start your search</h2>
-        <p style={{marginTop:"0.5rem"}}>Once you have a rough region in mind, use one of these three tools. All are free — no signup required to browse.</p>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"0.85rem",marginTop:"1rem"}} data-testid="relocating-tools">
-          <Link to="/listings" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
-            <div style={{fontSize:"1.5rem"}}>🔍</div>
-            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Live MLS® Search</div>
-            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>~46,000 residential BC listings, filterable by city, price, beds, and property type.</div>
-          </Link>
-          <Link to="/valuation" className="paper" style={{textDecoration:"none",color:"var(--ink)",background:"#FDFCF8"}}>
-            <div style={{fontSize:"1.5rem"}}>🏠</div>
-            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Market Estimate</div>
-            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>Selling your current home to fund the move? Get a REALTOR®-reviewed BC-side valuation.</div>
-          </Link>
-          <button
-            type="button"
-            data-testid="relocating-ask-doogie"
-            onClick={() => { localStorage.setItem("ez_doogie_prefill","I'm relocating to BC — help me figure out where to start."); nav("/"); setTimeout(() => window.scrollTo({top:0}), 200); }}
-            className="paper"
-            style={{textAlign:"left",cursor:"pointer",border:"1px solid rgba(15,42,91,0.08)",background:"#FDFCF8"}}
-          >
-            <div style={{fontSize:"1.5rem"}}>💬</div>
-            <div style={{fontFamily:"Sora,sans-serif",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.4rem"}}>Ask Doogie</div>
-            <div style={{fontSize:"0.85rem",color:"var(--muted)",marginTop:"0.35rem"}}>AI assistant trained on BC real estate, taxes, and communities. Speaks 6 languages.</div>
-          </button>
-        </div>
+        <section className="rlc-sec">
+          <h2 className="rlc-h2">Start your search</h2>
+          <p>Once you have a rough region in mind, use one of these three tools. All are free — no signup required to browse.</p>
+          <div className="rlc-tools" data-testid="relocating-tools">
+            <Link to="/listings" className="rlc-tool">
+              <span className="rlc-tool__icon"><HnSearch size={22} aria-hidden="true"/></span>
+              <div className="rlc-tool__t">Live MLS® Search</div>
+              <div className="rlc-tool__d">~46,000 residential BC listings, filterable by city, price, beds, and property type.</div>
+            </Link>
+            <Link to="/valuation" className="rlc-tool">
+              <span className="rlc-tool__icon"><HnHome size={22} aria-hidden="true"/></span>
+              <div className="rlc-tool__t">Market Estimate</div>
+              <div className="rlc-tool__d">Selling your current home to fund the move? Get a REALTOR®-reviewed BC-side valuation.</div>
+            </Link>
+            <button
+              type="button"
+              data-testid="relocating-ask-doogie"
+              onClick={() => { localStorage.setItem("ez_doogie_prefill","I'm relocating to BC — help me figure out where to start."); nav("/"); setTimeout(() => window.scrollTo({top:0}), 200); }}
+              className="rlc-tool"
+            >
+              <span className="rlc-tool__icon"><HnMessage size={22} aria-hidden="true"/></span>
+              <div className="rlc-tool__t">Ask Doogie</div>
+              <div className="rlc-tool__d">AI assistant trained on BC real estate, taxes, and communities. Speaks 6 languages.</div>
+            </button>
+          </div>
+        </section>
 
-        <div className="paper" style={{marginTop:"2.5rem",background:"var(--brand-navy)",color:"#fff",textAlign:"center"}}>
-          <h2 style={{fontSize:"1.4rem",marginTop:0,color:"#fff"}}>Ready to talk to a REALTOR®?</h2>
-          <p style={{fontSize:"0.95rem",lineHeight:1.7,opacity:0.9,marginBottom:"1.25rem"}}>
+        <div className="rlc-cta">
+          <h2>Ready to talk to a REALTOR®?</h2>
+          <p>
             If you're relocating to Doug's direct service area — <strong>Greater Vancouver, Fraser Valley, or Sea-to-Sky</strong> — start with the Buyer form. If you're relocating anywhere else in BC, Doug will personally match you with a local REALTOR®.
           </p>
-          <div style={{display:"flex",gap:"0.8rem",justifyContent:"center",flexWrap:"wrap"}}>
-            <Link to="/buyer" data-testid="relocating-buyer-cta" className="btn btn-primary" style={{background:"var(--brand-gold)",color:"var(--brand-navy)",border:"none"}}>I'm Moving to Doug's Area</Link>
-            <Link to="/referral-request" data-testid="relocating-referral-cta" className="btn btn-outline" style={{color:"#fff",borderColor:"#fff"}}>I'm Moving Elsewhere in BC</Link>
+          <div className="rlc-cta__btns">
+            <Link to="/buyer" data-testid="relocating-buyer-cta" className="rlc-btn rlc-btn--gold">I'm Moving to Doug's Area</Link>
+            <Link to="/referral-request" data-testid="relocating-referral-cta" className="rlc-btn rlc-btn--ghost">I'm Moving Elsewhere in BC</Link>
           </div>
         </div>
 
-        <p style={{marginTop:"2rem",fontSize:"0.8rem",color:"var(--muted)",fontStyle:"italic",textAlign:"center"}}>
+        <p className="rlc-footer">
           This page is general information only. Nothing here is financial, legal, immigration, tax, or real-estate advice. Consult a licensed REALTOR®, lawyer, notary, accountant, or mortgage broker before making decisions. Content reviewed by Doug LeMaire, REALTOR® — BCFSA-licensed under Fraser Property Management Realty Services Ltd.
         </p>
       </div>
