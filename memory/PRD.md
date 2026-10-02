@@ -18,17 +18,17 @@ OpenAI TTS/Whisper (Emergent key), Claude Sonnet Vision (Emergent key), Gemini N
 See `/app/memory/test_credentials.md` (Admin: doug@eztofind.ca).
 
 ## Implemented (recent)
-- 2026-06: Fixed region hero title readability — root cause was `.hn h1` global rule overriding `.rp-hero__title` color to dark #1d1d1f. Bumped specificity to `.hn .rp-hero__title` (white), deepened `.rp-hero__shade` gradient, added text-shadows to eyebrow/title/sub. Applies to ALL `/regions/*` pages. Verified Greater Vancouver, Fraser Valley, Sea-to-Sky (title color now rgb(255,255,255)).
+- 2026-06: **Sitemap→IndexNow nightly cron** — new secret-authed `POST /api/cron/sitemap-indexnow` (Bearer `WEBHOOK_CRON_SECRET`, X-Webhook-Id dedupe, acks 200 + backgrounds work). Added to `.emergent/crons.yml` (03:00 America/Vancouver). Disabled the fragile in-process asyncio nightly loop in server.py. Verified: regen 1732 URLs, 405 priority + 2481 AI URLs pushed, status 200.
+- 2026-06: **Region tile thumbnails** — new `GET /api/community-thumbs?cities=a,b,c` returns {city: cover_photo} (one representative Active DDF listing photo per community, 10-min cache). RegionPage tiles now render the photo; CSS `.rp-tile` reworked to a thumb+name+arrow card. Verified live.
+- 2026-06: **DDF brokerage attribution on cards** — added "Listing brokerage: …" / "disclosed on REALTOR.ca" line to both listing cards (App.js `ListingCard` + `ListingsNext.jsx` grid card). Brokerage name is correctly mapped from DDF `ListOfficeName` in services/ddf_sync.py. Verified.
+- 2026-06: **Buyer/Seller deal checklists** — Lead Triage checklist split by lead kind. Buyer (7 steps), Seller (8 steps); shared `subjects_removed`/`completion`. Backend `LeadFollowupUpdate` extended with all new boolean keys; PUT merges them. Testing agent: 100% backend+frontend pass (iteration_37). Regression suite at `/app/backend/tests/test_lead_triage_checklist.py`.
+- 2026-06: Fixed region hero title readability — root cause was `.hn h1` global rule overriding `.rp-hero__title` color to dark #1d1d1f. Bumped specificity to `.hn .rp-hero__title` (white), deepened `.rp-hero__shade` gradient, added text-shadows. Applies to ALL `/regions/*` pages.
 - Region landing pages rebuilt (Apple-style, live stats, photo grids); Fraser Valley whitelisted to Abbotsford/Chilliwack/Mission/Harrison Hot Springs.
 - Hero rotators use live MLS photos (Home/Equestrian/Luxury).
 - Equestrian province-wide search grid + facility checklist; Luxury CTA → Detached/Condos $3M+.
 - SEO audit fixes (dup H1 removed, schema, sitemap captions, snapshot truncation, breadcrumbs).
 
 ## Backlog
-- P1: Schedule Sitemap→IndexNow via `.emergent/crons.yml` (`/api/cron/refresh-sitemap`); remove fragile in-process asyncio loop.
 - P1: Privacy counsel sign-off + multi-language privacy policy.
-- P2: Buyer/Seller deal checklists in admin panel (needs user clarification on wording/placement).
 - P2: Historical median backfill (2015-2025 BC data).
 - P2: Optional Non-MLS hub `/homes-for-sale/{community}`.
-- P3: Community photo thumbnails on region page text tiles.
-- Verify DDF iframe listing-brokerage attribution (CREA compliance).

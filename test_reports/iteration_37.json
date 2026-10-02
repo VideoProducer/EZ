@@ -1,0 +1,24 @@
+{
+  "summary": "Verified new BUYER/SELLER deal-progress checklists in Admin Lead Triage. Backend: PUT /api/admin/leads/{kind}/{lead_id}/followup accepts and merges all new boolean keys (needs_confirmed, showings_booked, offer_written, offer_accepted, listing_appt, cma_presented, agreement_signed, live_on_mls, offer_received, subjects_removed, completion) plus regression status+notes. Frontend: buyer card renders exact 7 steps with heading 'Buyer deal checklist', seller card renders exact 8 steps with heading 'Seller deal checklist', toggles call PUT, show '✓ saved', and persist across refresh. All checks GREEN.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_lead_triage_checklist.py",
+    "/app/test_reports/pytest/triage_checklist.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is ~20K lines and should be split into focused modules — flagged in prior iterations, not blocking this feature.",
+    "LeadFollowupUpdate: 'subjects_removed' and 'completion' are intentionally shared between buyer and seller — correctly modeled as single fields."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_lead_triage_checklist.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Inserted one TEST buyer lead (id 8dadf56e-68bb-4f43-b8d5-7dbc141ff618) and one TEST seller lead (id d75c91d7-d473-4b4e-b2bd-22b72871336c) directly in Mongo (buyer_leads/seller_leads) since the public forms are Turnstile-gated. Both tagged with warm triage so they appear in /admin/lead-triage.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Seed buyer/seller leads from this run are still in DB; followup state was last toggled via tests (status=nurture, notes='TEST_regression notes', various checklist booleans flipped). Clean them up before testing fresh lead-creation flows. Backend test file /app/backend/tests/test_lead_triage_checklist.py is reusable regression suite. Fixtures auto-skip if no leads present, so re-seed if DB is cleared.",
+  "rca of the issue": "N/A — no issues found."
+}
