@@ -103,99 +103,167 @@ export default function BCBuyerCostCalculator() {
         <meta name="robots" content="index,follow"/>
       </Helmet>
 
-      <div className="container-x" style={{ maxWidth: "42rem" }}>
+      <style>{`
+        .bcc-wrap { --bcc-navy:#0F2A5B; --bcc-ink:#1D1D1F; --bcc-muted:#6B7280; --bcc-line:rgba(15,42,91,0.09); --bcc-green:#047857; }
+        .bcc-eyebrow { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--bcc-muted); }
+        .bcc-h1 { font-family:Sora,"Helvetica Neue",Arial,sans-serif; font-weight:700; letter-spacing:-0.03em; color:var(--bcc-ink); font-size:clamp(2rem,4.2vw,2.9rem); line-height:1.05; margin:0.5rem 0 0.75rem; }
+        .bcc-intro { font-family:Inter,sans-serif; color:var(--bcc-muted); line-height:1.7; max-width:46ch; font-size:1.02rem; }
+        .bcc-grid { display:grid; grid-template-columns:1fr 1.08fr; gap:22px; margin-top:2rem; align-items:start; }
+        .bcc-card { background:#fff; border:1px solid var(--bcc-line); border-radius:22px; padding:28px; box-shadow:0 1px 2px rgba(15,42,91,0.04), 0 18px 48px rgba(15,42,91,0.06); }
+        .bcc-card__eyebrow { font-family:Inter,sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--bcc-muted); margin-bottom:0.9rem; }
+        .bcc-pricebox { display:flex; align-items:center; gap:4px; border:1px solid var(--bcc-line); border-radius:16px; padding:14px 18px; background:#FAFBFD; transition:border-color .2s ease, box-shadow .2s ease; }
+        .bcc-pricebox:focus-within { border-color:var(--bcc-navy); box-shadow:0 0 0 4px rgba(15,42,91,0.08); }
+        .bcc-pricebox span { font-family:Sora,sans-serif; font-weight:700; font-size:clamp(1.8rem,3.5vw,2.4rem); color:var(--bcc-ink); line-height:1; }
+        .bcc-priceinput { border:none; outline:none; background:transparent; width:100%; font-family:Sora,sans-serif; font-weight:700; font-size:clamp(1.8rem,3.5vw,2.4rem); color:var(--bcc-ink); line-height:1; letter-spacing:-0.02em; -moz-appearance:textfield; }
+        .bcc-priceinput::-webkit-outer-spin-button, .bcc-priceinput::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        .bcc-fieldlabel { font-family:Inter,sans-serif; font-size:0.82rem; color:var(--bcc-muted); margin-bottom:0.55rem; display:block; }
+        .bcc-toggles { margin-top:1.4rem; border-top:1px solid var(--bcc-line); }
+        .bcc-togrow { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 0; border-bottom:1px solid var(--bcc-line); }
+        .bcc-togrow:last-child { border-bottom:none; }
+        .bcc-togtext { font-family:Inter,sans-serif; }
+        .bcc-togtext b { display:block; font-weight:600; font-size:0.98rem; color:var(--bcc-ink); }
+        .bcc-togtext small { color:var(--bcc-muted); font-size:0.8rem; }
+        .bcc-sw { position:relative; width:50px; height:30px; flex:0 0 auto; }
+        .bcc-sw input { position:absolute; inset:0; opacity:0; margin:0; width:100%; height:100%; cursor:pointer; z-index:2; }
+        .bcc-sw .track { position:absolute; inset:0; background:#DEE3EC; border-radius:999px; transition:background .28s cubic-bezier(.4,.2,.2,1); }
+        .bcc-sw .thumb { position:absolute; top:3px; left:3px; width:24px; height:24px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.22); transition:transform .28s cubic-bezier(.4,.2,.2,1); }
+        .bcc-sw input:checked ~ .track { background:var(--bcc-navy); }
+        .bcc-sw input:checked ~ .thumb { transform:translateX(20px); }
+        .bcc-results { }
+        .bcc-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:11px 0; font-family:Inter,sans-serif; font-size:0.96rem; color:var(--bcc-ink); border-bottom:1px solid var(--bcc-line); }
+        .bcc-row.green { color:var(--bcc-green); }
+        .bcc-row a { color:var(--bcc-navy); text-decoration:none; border-bottom:1px solid rgba(15,42,91,0.25); }
+        .bcc-row a:hover { border-color:var(--bcc-navy); }
+        .bcc-row--sub { border-bottom:none; padding-bottom:4px; }
+        .bcc-row--sub b { color:var(--bcc-ink); font-weight:700; font-size:1.02rem; }
+        .bcc-subhead { font-family:Inter,sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--bcc-muted); margin:1.1rem 0 0.2rem; }
+        .bcc-row--minor { font-size:0.88rem; color:var(--bcc-muted); padding:8px 0; }
+        .bcc-total { margin-top:1.4rem; background:var(--bcc-navy); border-radius:18px; padding:22px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; box-shadow:0 14px 36px rgba(15,42,91,0.22); }
+        .bcc-total__label { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.72); }
+        .bcc-total__num { font-family:Sora,sans-serif; font-weight:700; font-size:clamp(1.5rem,3.2vw,2rem); color:#F5D48A; letter-spacing:-0.01em; line-height:1.1; }
+        .bcc-reveal { animation:bccReveal .34s cubic-bezier(.2,.7,.3,1) both; }
+        @keyframes bccReveal { from { opacity:0; transform:translateY(-7px); } to { opacity:1; transform:translateY(0); } }
+        .bcc-ctas { margin-top:1.5rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+        @media (max-width:860px){ .bcc-grid { grid-template-columns:1fr; } }
+        @media (prefers-reduced-motion:reduce){ .bcc-reveal { animation:none; } }
+      `}</style>
+
+      <div className="container-x bcc-wrap" style={{ maxWidth: "62rem" }}>
         <IdentityLine practice="REALTOR® · Educational calculator (not tax or legal advice)" size="md" testId="calc-identity"/>
-        <div className="eyebrow">Free BC calculator</div>
-        <h1 className="section-title">BC Buyer Cost Calculator (2026)</h1>
-        <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "1.25rem" }}>
-          Estimate <strong>Property Transfer Tax</strong>, <strong>First-Time Home Buyer</strong> exemption, <strong>GST on new construction</strong>, legal + inspection, and total closing costs for any BC purchase.
-          All math runs in your browser — nothing is stored or sent to Doug.
+        <div className="bcc-eyebrow">Free BC calculator</div>
+        <h1 className="bcc-h1">BC Buyer Cost Calculator <span style={{ color: "var(--bcc-muted)", fontWeight: 600 }}>(2026)</span></h1>
+        <p className="bcc-intro">
+          Estimate your <strong>Property Transfer Tax</strong>, First-Time Home Buyer exemption, GST on new construction, legal &amp; inspection, and total closing costs for any BC purchase — instantly.
+          Everything runs in your browser; nothing is stored or sent to Doug.
         </p>
 
-        <div className="paper" style={{ padding: "1.25rem" }}>
-          <div className="field">
-            <label htmlFor="calc-price">BC purchase price</label>
-            <input
-              id="calc-price"
-              type="number"
-              min="0"
-              step="10000"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value) || 0)}
-              data-testid="calc-price"
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.85rem" }}>
-            <label className="check"><input type="checkbox" checked={fthb} onChange={(e) => { setFthb(e.target.checked); if (e.target.checked) setNewBuild(false); }} data-testid="calc-fthb"/> First-Time Home Buyer (BC FTHB program)</label>
-            <label className="check"><input type="checkbox" checked={newBuild} onChange={(e) => { setNewBuild(e.target.checked); if (e.target.checked) setFthb(false); }} data-testid="calc-newbuild"/> Newly built home (never lived-in)</label>
-          </div>
-
-          <hr style={{ margin: "1.25rem 0", border: "none", borderTop: "1px solid rgba(15,42,91,0.1)" }}/>
-
-          <div data-testid="calc-results" style={{ fontFamily: "Inter,sans-serif", fontSize: "0.95rem", lineHeight: 1.75 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span><Link to="/glossary/property-transfer-tax" style={{ color: "var(--brand-blue)" }}>Property Transfer Tax</Link> (gross):</span>
-              <strong data-testid="calc-ptt-gross">{fmt(calc.ptt_gross)}</strong>
-            </div>
-            {fthb && (
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#065F46" }}>
-                <span><Link to="/glossary/first-time-home-buyers-program" style={{ color: "var(--brand-blue)" }}>FTHB waiver</Link>:</span>
-                <strong data-testid="calc-fthb-waiver">− {fmt(calc.fthb_waiver)}</strong>
-              </div>
-            )}
-            {newBuild && !fthb && (
-              <div style={{ display: "flex", justifyContent: "space-between", color: "#065F46" }}>
-                <span>New-build partial exemption:</span>
-                <strong>− {fmt(calc.nb_waiver)}</strong>
-              </div>
-            )}
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(15,42,91,0.1)", paddingTop: "0.5rem", marginTop: "0.3rem" }}>
-              <span><strong>PTT payable:</strong></span>
-              <strong data-testid="calc-ptt-net" style={{ color: "#0F2A5B" }}>{fmt(calc.ptt_net)}</strong>
+        <div className="bcc-grid">
+          {/* LEFT — inputs */}
+          <div className="bcc-card" data-testid="calc-inputs">
+            <div className="bcc-card__eyebrow">Your purchase</div>
+            <label className="bcc-fieldlabel" htmlFor="calc-price">BC purchase price</label>
+            <div className="bcc-pricebox">
+              <span>$</span>
+              <input
+                id="calc-price"
+                className="bcc-priceinput"
+                type="number"
+                min="0"
+                step="10000"
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value) || 0)}
+                data-testid="calc-price"
+              />
             </div>
 
-            {newBuild && (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.5rem" }}>
-                  <span><Link to="/glossary/gst-new-housing-rebate" style={{ color: "var(--brand-blue)" }}>GST 5%</Link>:</span>
-                  <span>{fmt(calc.gst.gst)}</span>
+            <div className="bcc-toggles">
+              <div className="bcc-togrow">
+                <div className="bcc-togtext">
+                  <b>First-time home buyer</b>
+                  <small>BC FTHB program</small>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#065F46" }}>
-                  <span>GST New Housing Rebate:</span>
-                  <span>− {fmt(calc.gst.rebate)}</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span><strong>GST net:</strong></span>
-                  <strong data-testid="calc-gst-net">{fmt(calc.gst.net)}</strong>
-                </div>
-              </>
-            )}
-
-            <hr style={{ margin: "0.75rem 0", border: "none", borderTop: "1px dashed rgba(15,42,91,0.15)" }}/>
-            <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>Other estimated closing costs (range):</div>
-            {Object.values(OTHER).map((o) => (
-              <div key={o.label} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--muted)" }}>
-                <span>{o.label}</span>
-                <span>{fmt(o.low)} – {fmt(o.high)}</span>
+                <label className="bcc-sw">
+                  <input type="checkbox" checked={fthb} onChange={(e) => { setFthb(e.target.checked); if (e.target.checked) setNewBuild(false); }} data-testid="calc-fthb" aria-label="First-Time Home Buyer"/>
+                  <span className="track" aria-hidden="true"/>
+                  <span className="thumb" aria-hidden="true"/>
+                </label>
               </div>
-            ))}
+              <div className="bcc-togrow">
+                <div className="bcc-togtext">
+                  <b>Newly built home</b>
+                  <small>Never lived-in</small>
+                </div>
+                <label className="bcc-sw">
+                  <input type="checkbox" checked={newBuild} onChange={(e) => { setNewBuild(e.target.checked); if (e.target.checked) setFthb(false); }} data-testid="calc-newbuild" aria-label="Newly built home"/>
+                  <span className="track" aria-hidden="true"/>
+                  <span className="thumb" aria-hidden="true"/>
+                </label>
+              </div>
+            </div>
+          </div>
 
-            <div style={{
-              marginTop: "1rem", padding: "0.85rem 1rem", borderRadius: 8,
-              background: "#0F2A5B", color: "#F5D48A",
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              flexWrap: "wrap", gap: "0.35rem",
-            }}>
-              <span style={{ fontFamily: "Sora,sans-serif", fontSize: "0.95rem", fontWeight: 700 }}>Estimated total closing costs</span>
-              <strong data-testid="calc-total" style={{ fontFamily: "Sora,sans-serif", fontSize: "1.1rem" }}>{fmt(calc.est_low)} – {fmt(calc.est_high)}</strong>
+          {/* RIGHT — results */}
+          <div className="bcc-card">
+            <div className="bcc-card__eyebrow">Estimated costs</div>
+            <div data-testid="calc-results" className="bcc-results">
+              <div className="bcc-row">
+                <span><Link to="/glossary/property-transfer-tax">Property Transfer Tax</Link> (gross)</span>
+                <strong data-testid="calc-ptt-gross">{fmt(calc.ptt_gross)}</strong>
+              </div>
+              {fthb && (
+                <div className="bcc-row green bcc-reveal">
+                  <span><Link to="/glossary/first-time-home-buyers-program">FTHB waiver</Link></span>
+                  <strong data-testid="calc-fthb-waiver">− {fmt(calc.fthb_waiver)}</strong>
+                </div>
+              )}
+              {newBuild && !fthb && (
+                <div className="bcc-row green bcc-reveal">
+                  <span>New-build partial exemption</span>
+                  <strong>− {fmt(calc.nb_waiver)}</strong>
+                </div>
+              )}
+              <div className="bcc-row bcc-row--sub">
+                <b>PTT payable</b>
+                <b data-testid="calc-ptt-net" style={{ color: "var(--bcc-navy)" }}>{fmt(calc.ptt_net)}</b>
+              </div>
+
+              {newBuild && (
+                <div className="bcc-reveal">
+                  <div className="bcc-row">
+                    <span><Link to="/glossary/gst-new-housing-rebate">GST 5%</Link></span>
+                    <span>{fmt(calc.gst.gst)}</span>
+                  </div>
+                  <div className="bcc-row green">
+                    <span>GST New Housing Rebate</span>
+                    <span>− {fmt(calc.gst.rebate)}</span>
+                  </div>
+                  <div className="bcc-row bcc-row--sub">
+                    <b>GST net</b>
+                    <b data-testid="calc-gst-net">{fmt(calc.gst.net)}</b>
+                  </div>
+                </div>
+              )}
+
+              <div className="bcc-subhead">Other estimated closing costs</div>
+              {Object.values(OTHER).map((o) => (
+                <div key={o.label} className="bcc-row bcc-row--minor">
+                  <span>{o.label}</span>
+                  <span style={{ whiteSpace: "nowrap" }}>{fmt(o.low)} – {fmt(o.high)}</span>
+                </div>
+              ))}
+
+              <div className="bcc-total">
+                <span className="bcc-total__label">Estimated total closing costs</span>
+                <strong data-testid="calc-total" className="bcc-total__num">{fmt(calc.est_low)} – {fmt(calc.est_high)}</strong>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Compliance strip — mandatory before any onward CTA. */}
         <div className="paper" data-testid="calc-compliance" style={{
-          marginTop: "1.25rem", background: "#F0F4FB",
-          borderColor: "rgba(15,42,91,0.15)", padding: "1rem 1.15rem",
+          marginTop: "1.4rem", background: "#F0F4FB", borderRadius: 18,
+          borderColor: "rgba(15,42,91,0.12)", padding: "1.1rem 1.25rem",
           fontFamily: "Inter,sans-serif", fontSize: "0.82rem", lineHeight: 1.6, color: "var(--muted)",
         }}>
           <strong style={{ color: "#0F2A5B" }}>Not tax or legal advice.</strong> Rates verified for BC 2026 at time of build; the province and CRA may adjust thresholds. Verify totals with your lawyer / notary before firming an offer. Full-time BC residency, use as principal residence, and citizenship rules apply to some exemptions.
@@ -203,11 +271,7 @@ export default function BCBuyerCostCalculator() {
         </div>
 
         {/* Contextual CTA — soft, only if in-market. */}
-        <div style={{
-          marginTop: "1.25rem", display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "0.75rem",
-        }}>
+        <div className="bcc-ctas">
           <Link
             to="/buyer?utm_source=calculator&utm_medium=bc-cost-calc&utm_campaign=buyer-cta"
             className="btn btn-primary"
