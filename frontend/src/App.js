@@ -5954,35 +5954,78 @@ const Glossary = () => {
   filtered.forEach(t => { const c = t.category || "Other"; (byCat[c] = byCat[c] || []).push(t); });
   Object.values(byCat).forEach(arr => arr.sort((a,b) => a.term.localeCompare(b.term)));
   const orderedCats = Object.keys(byCat).sort((a,b) => a.localeCompare(b));
-  return (<section className="section"><div className="container-x">
+  return (<section className="section"><div className="container-x glx">
     <SEO
       title="BC Real Estate Glossary — 439 Terms with Authoritative Sources | EZtoFind.ca"
       description="Comprehensive glossary of 439 British Columbia real estate terms, each with 10 FAQs and links to the governing BC statute or regulator. Strata Property Act, PTT, foreclosure, ALR, and more."
       path="/glossary"
     />
-    <div style={{textAlign:"center",marginBottom:"2rem"}}><div className="eyebrow">Knowledge Hub</div><h1 className="section-title">BC Real Estate Glossary</h1><p className="section-sub">Term's you may encounter buying or selling in British Columbia — with 10 FAQs per term.</p>
-      <div style={{marginTop:"1rem"}}>
-        <Link to="/glossary/a-z" data-testid="glossary-view-az" style={{
-          display:"inline-flex", alignItems:"center", gap:6,
-          padding:"0.5rem 1rem", borderRadius:999,
-          background:"var(--brand-navy)", color:"white",
-          fontFamily:"Inter,sans-serif", fontSize:"0.9rem", fontWeight:600,
-          textDecoration:"none",
-        }}>View A–Z Index →</Link>
-      </div>
+    <style>{`
+      .glx { --n:#0F2A5B; --ink:#1D1D1F; --mut:#5B6577; --line:rgba(15,42,91,0.1); }
+      .glx-hero { text-align:center; max-width:660px; margin:0 auto; }
+      .glx-eyebrow { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--mut); }
+      .glx-h1 { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:clamp(2.2rem,5vw,3.4rem); letter-spacing:-0.03em; line-height:1.03; margin:0.6rem 0 0.7rem; }
+      .glx-sub { font-family:Inter,sans-serif; color:var(--mut); line-height:1.6; font-size:1.02rem; margin:0 auto; max-width:50ch; }
+      .glx-stat { display:inline-flex; align-items:center; gap:7px; margin-top:1.1rem; padding:7px 16px; border-radius:999px; background:rgba(15,42,91,0.05); color:var(--n); font-family:Inter,sans-serif; font-size:0.82rem; font-weight:600; }
+      .glx-stat b { font-family:Sora,sans-serif; }
+      .glx-searchwrap { max-width:620px; margin:1.9rem auto 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center; }
+      .glx-search { flex:1 1 360px; display:flex; align-items:center; gap:11px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:14px 22px; box-shadow:0 2px 12px rgba(15,42,91,0.05); transition:border-color .2s, box-shadow .2s; }
+      .glx-search:focus-within { border-color:var(--n); box-shadow:0 0 0 4px rgba(15,42,91,0.08); }
+      .glx-search > svg { color:var(--mut); flex:0 0 auto; }
+      .glx-search input { border:none; outline:none; background:transparent; width:100%; font-family:Inter,sans-serif; font-size:1rem; color:var(--ink); }
+      .glx-az { flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:12px 20px; border-radius:999px; border:1.5px solid var(--n); color:var(--n); background:#fff; font-family:Inter,sans-serif; font-size:0.9rem; font-weight:700; text-decoration:none; transition:background .2s, color .2s; white-space:nowrap; }
+      .glx-az:hover { background:var(--n); color:#fff; }
+      .glx-empty { text-align:center; font-family:Inter,sans-serif; color:var(--mut); margin:2.5rem 0; }
+      .glx-cat { margin-top:2.8rem; }
+      .glx-cathead { display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--line); padding-bottom:11px; margin-bottom:16px; }
+      .glx-cathead h3 { font-family:Sora,sans-serif; font-weight:700; color:var(--ink); font-size:1.3rem; letter-spacing:-0.01em; margin:0; }
+      .glx-cathead span { font-family:Inter,sans-serif; font-size:0.82rem; color:var(--mut); font-weight:500; }
+      .glx-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:12px; }
+      .glx-card { display:flex; align-items:center; justify-content:space-between; gap:12px; text-decoration:none; background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px 18px; color:var(--ink); transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease; box-shadow:0 1px 2px rgba(15,42,91,0.04); animation:glxReveal .45s cubic-bezier(.2,.7,.3,1) both; }
+      .glx-card:hover { transform:translateY(-3px); box-shadow:0 14px 30px rgba(15,42,91,0.1); border-color:var(--n); }
+      .glx-card__t { font-family:Inter,sans-serif; font-weight:600; font-size:1.02rem; color:var(--ink); line-height:1.25; }
+      .glx-card__c { font-family:Inter,sans-serif; font-size:0.7rem; color:var(--n); font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin-top:5px; opacity:0.72; }
+      .glx-card > svg { color:var(--n); flex:0 0 auto; opacity:0.5; transition:transform .16s ease, opacity .16s ease; }
+      .glx-card:hover > svg { transform:translateX(3px); opacity:1; }
+      @keyframes glxReveal { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+      @media (max-width:520px){ .glx-grid{grid-template-columns:1fr} }
+      @media (prefers-reduced-motion:reduce){ .glx-card{animation:none} }
+    `}</style>
+
+    <div className="glx-hero">
+      <div className="glx-eyebrow">Knowledge Hub</div>
+      <h1 className="glx-h1">BC Real Estate Glossary</h1>
+      <p className="glx-sub">Every term you may meet buying or selling in British Columbia — each with 10 FAQs and links to the governing BC statute or regulator.</p>
+      {terms.length > 0 && (
+        <div className="glx-stat"><b>{terms.length}</b> terms · authoritative sources</div>
+      )}
     </div>
-    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search glossary — term, definition, or category…" style={{width:"100%",maxWidth:560,margin:"0 auto 3rem",display:"block",padding:"0.9rem 1.25rem",fontFamily:"Inter,sans-serif",fontSize:"1rem",border:"2px solid rgba(15,42,91,0.15)",borderRadius:999,outline:"none",background:"white"}} data-testid="glossary-search"/>
-    {filtered.length===0 && <p style={{textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>No terms match your search.</p>}
+
+    <div className="glx-searchwrap">
+      <div className="glx-search">
+        <HnSearch size={18} aria-hidden="true"/>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search a term, definition, or category…" data-testid="glossary-search" aria-label="Search the glossary"/>
+      </div>
+      <Link to="/glossary/a-z" data-testid="glossary-view-az" className="glx-az">View A–Z index <HnArrowRight size={15} aria-hidden="true"/></Link>
+    </div>
+
+    {filtered.length===0 && <p className="glx-empty">No terms match your search.</p>}
     {orderedCats.map(cat => (
-      <div key={cat} style={{marginBottom:"2.5rem"}} data-testid={`glossary-cat-${cat.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}>
-        <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"0.75rem",color:"var(--brand-navy)"}}>
-          {cat} <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.8rem",color:"var(--muted)",fontWeight:400}}>({byCat[cat].length})</span>
-        </h3>
-        <div className="glossary-list">
-          {byCat[cat].map(t => <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`term-${t.slug}`}>
-            <div><div style={{fontWeight:600,fontSize:"1.05rem",fontFamily:"Inter,sans-serif"}}>{t.term}</div><div className="cat">{t.category}</div></div>
-            <span style={{color:"var(--brand-blue)"}}>→</span>
-          </Link>)}
+      <div key={cat} className="glx-cat" data-testid={`glossary-cat-${cat.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}>
+        <div className="glx-cathead">
+          <h3 className="font-display">{cat}</h3>
+          <span>{byCat[cat].length} {byCat[cat].length === 1 ? "term" : "terms"}</span>
+        </div>
+        <div className="glx-grid">
+          {byCat[cat].map(t => (
+            <Link key={t.slug} to={`/glossary/${t.slug}`} data-testid={`term-${t.slug}`} className="glx-card">
+              <div>
+                <div className="glx-card__t">{t.term}</div>
+                <div className="glx-card__c">{t.category}</div>
+              </div>
+              <HnArrowRight size={16} aria-hidden="true"/>
+            </Link>
+          ))}
         </div>
       </div>
     ))}
