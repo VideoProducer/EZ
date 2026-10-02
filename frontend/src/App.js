@@ -115,7 +115,7 @@ import TourNarration from "./components/TourNarration";
 import RoomLabelPill from "./components/RoomLabelPill";
 import FeatureSheet from "./components/FeatureSheet";
 import SiteWideSchema from "./components/SiteWideSchema";
-import { Box as CubeIcon, Play as PlayIcon } from "lucide-react";
+import { Box as CubeIcon, Play as PlayIcon, ArrowRight as HnArrowRight, Search as HnSearch } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -5025,29 +5025,122 @@ const REGION_DATA = {
   "vancouver-island": {title:"Vancouver Island & Gulf Islands", img:IMG.vancouverIsland, key:"Vancouver Island & Gulf Islands", referral:true, copy:"Vancouver Island — from Victoria's heritage character to Tofino's surf coast, Nanaimo's growing urban core, and the retirement-friendly Comox Valley. Includes the Gulf Islands (Salt Spring, Galiano, Mayne, Pender, Saturna) with their unique zoning and community trust boundaries. Vancouver Island is outside Doug's primary practice area — but EZtoFind.ca's referral network connects you with a BC-licensed REALTOR® active in the specific community you're interested in. No cost to you; the receiving REALTOR® pays a referral fee to Doug at closing."}
 };
 
+const RegionSearchBar = ({ regionKey }) => {
+  const nav = useNavigate();
+  const [q, setQ] = useState("");
+  const go = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams({ region_group: regionKey });
+    if (q.trim()) params.set("q", q.trim());
+    nav(`/listings?${params.toString()}`);
+  };
+  return (
+    <form className="rp-search" onSubmit={go} data-testid="region-search">
+      <HnSearch size={18} aria-hidden="true" />
+      <input value={q} onChange={(e) => setQ(e.target.value)}
+        placeholder="Search a city, neighbourhood or MLS® number"
+        aria-label="Search listings in this region" data-testid="region-search-input" />
+      <button type="submit" className="rp-search__btn" aria-label="Search" data-testid="region-search-submit">
+        <HnArrowRight size={18} />
+      </button>
+    </form>
+  );
+};
+
 const RegionPage = () => {
   const {slug} = useParams();
   const [communities, setCommunities] = useState({});
-  useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)); }, []);
+  const [activeCount, setActiveCount] = useState(null);
   const d = REGION_DATA[slug];
+  useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)).catch(()=>{}); }, []);
+  useEffect(() => {
+    if (!d) return;
+    axios.get(`${API}/listings`, { params: { region_group: d.key, limit: 1 } })
+      .then(r => setActiveCount(typeof r.data?.total === "number" ? r.data.total : null))
+      .catch(() => {});
+  }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
   if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/">Back to Home</Link></div>;
   const list = communities[d.key] || [];
-  return (<section className="section"><div className="container-x">
-    <img loading="lazy" decoding="async" src={d.img} alt={`${d.title} — ${d.copy.slice(0,140)}`} style={{width:"100%",height:400,objectFit:"cover",borderRadius:16,marginBottom:"2rem"}} width="1200" height="400" itemProp="image"/>
-    <div style={{maxWidth:"46rem"}}>
-      <div className="eyebrow">{d.referral ? "Referral Network Coverage" : "Focus Area"}</div>
-      <h1 className="section-title">{d.title}</h1>
-      <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7,marginBottom:"2rem"}}>{d.copy}</p>
-      {d.referral && <div className="notice" style={{background:"#F5F0E1",borderColor:"var(--brand-gold)",marginBottom:"2rem",fontFamily:"Inter,sans-serif"}} data-testid="referral-region-notice"><strong>How the referral works:</strong> Submit our <Link to="/referral-request" style={{color:"var(--brand-blue)",fontWeight:600}}>Referral Request form</Link> with your city and property criteria. Doug's team matches you with a BC-licensed REALTOR® active in that community, introduces you by email, and steps aside. You work directly with the local REALTOR® — same pricing, better local knowledge.</div>}
+  return (
+    <div className="hn rp" data-testid={`region-page-${slug}`}>
+      <SEO
+        title={`${d.title} Real Estate — Homes, Communities & MLS® Listings | EZtoFind.ca`}
+        description={d.copy.slice(0, 155)}
+        path={`/regions/${slug}`}
+        image={d.img}
+      />
+      <section className="rp-hero" data-testid="region-hero">
+        <div className="rp-hero__img" style={{ backgroundImage: `url('${d.img}')` }} role="img" aria-label={d.title}/>
+        <div className="rp-hero__shade" aria-hidden="true"/>
+        <div className="rp-hero__inner hn-wrap">
+          <p className="rp-hero__eyebrow">{d.referral ? "Referral Network Coverage" : "Focus Area"}</p>
+          <h1 className="rp-hero__title" data-testid="region-title">{d.title}</h1>
+          <p className="rp-hero__sub">{d.referral
+            ? "Matched with a BC-licensed REALTOR® in the community you want."
+            : `${list.length} communities · every MLS® listing, the simple way.`}</p>
+        </div>
+      </section>
+
+      <section className="hn-section" style={{ paddingTop: 28, paddingBottom: 0 }}>
+        <div className="hn-wrap">
+          {d.referral
+            ? <div className="hn-center"><Link to="/referral-request" className="hn-pill hn-pill--navy hn-pill--lg" data-testid="referral-cta">Request a Referral <HnArrowRight size={15}/></Link></div>
+            : <RegionSearchBar regionKey={d.key}/>}
+        </div>
+      </section>
+
+      <section className="hn-section" style={{ paddingTop: 28, paddingBottom: 0 }} data-testid="region-stats">
+        <div className="hn-wrap">
+          <div className="rp-stats">
+            <div className="rp-stat" data-testid="region-stat-communities"><strong>{list.length || "—"}</strong><span>communities</span></div>
+            <div className="rp-stat" data-testid="region-stat-active"><strong>{activeCount != null ? activeCount.toLocaleString("en-CA") : "—"}</strong><span>active MLS® listings</span></div>
+            <div className="rp-stat" data-testid="region-stat-updated"><strong>Daily</strong><span>CREA DDF® updates</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="hn-section" style={{ paddingTop: 24, paddingBottom: 0 }}>
+        <div className="hn-wrap">
+          <p className="rp-copy">{d.copy}</p>
+          {d.referral && (
+            <div className="rp-notice" data-testid="referral-region-notice">
+              <strong>How the referral works:</strong> Submit our <Link to="/referral-request">Referral Request form</Link> with your city and property criteria. Doug's team matches you with a BC-licensed REALTOR® active in that community, introduces you by email, and steps aside. You work directly with the local REALTOR® — same pricing, better local knowledge.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="hn-section hn-section--alt" data-testid="region-communities">
+        <div className="hn-wrap">
+          <div className="hn-center"><h2 className="hn-h2">{d.referral ? "Communities covered by our network" : "Communities we serve"}</h2></div>
+          <div className="rp-grid">
+            {list.map(c => {
+              const cslug = encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+              return (
+                <Link key={c} to={`/community/${cslug}`} state={{ name: c, region: d.key }}
+                  className="rp-tile" data-testid={`region-community-${c}`}>
+                  <span>{c}</span><HnArrowRight size={15} aria-hidden="true"/>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {!d.referral && (
+        <section className="hn-section" data-testid="region-cta">
+          <div className="hn-wrap hn-center">
+            <h2 className="hn-h2">Ready when you are.</h2>
+            <div className="hn-ctarow" style={{ justifyContent: "center" }}>
+              <Link to={`/listings?region_group=${encodeURIComponent(d.key)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid={`region-view-listings-${slug}`}>View {d.title} listings <HnArrowRight size={15}/></Link>
+              <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid={`region-buying-${slug}`}>I'm buying here</Link>
+              <Link to="/seller" className="hn-pill hn-pill--lg" data-testid={`region-selling-${slug}`}>I'm selling here</Link>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
-    <h3 className="font-display" style={{fontSize:"1.5rem",marginBottom:"1rem"}}>{d.referral ? "Communities covered by our network" : "Communities we serve"}</h3>
-    <div className="chip-grid">{list.map(c => <Link key={c} to={`/community/${encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g,"-"))}`} state={{name:c, region:d.key}} className="chip" style={{textDecoration:"none",cursor:"pointer"}} data-testid={`region-community-${c}`}>{c}</Link>)}</div>
-    <div style={{marginTop:"3rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
-      {d.referral
-        ? <Link to="/referral-request" className="btn btn-primary" data-testid="referral-cta">Request a Referral</Link>
-        : <><Link to={`/listings?region_group=${encodeURIComponent(d.key)}`} className="btn btn-primary" data-testid={`region-view-listings-${slug}`}>View Listings</Link><Link to="/buyer" className="btn btn-outline" data-testid={`region-buying-${slug}`}>I'm Buying Here</Link><Link to="/seller" className="btn btn-green" data-testid={`region-selling-${slug}`}>I'm Selling Here</Link></>}
-    </div>
-  </div></section>);
+  );
 };
 
 // --- Specialties ---
@@ -14015,7 +14108,7 @@ function App() {
       <Route path="/neighbourhoods" element={<AppLayout><Communities/></AppLayout>}/>
       <Route path="/neighbourhood/:slug" element={<AppLayout><CommunityPage/><Canary phrase={CANARY_COMMUNITY} testId="canary-neighbourhood-legacy"/></AppLayout>}/>
       {/* /regions index unshipped (Feb 2026) — child /regions/:slug pages remain live */}
-      <Route path="/regions/:slug" element={<AppLayout><RegionPage/></AppLayout>}/>
+      <Route path="/regions/:slug" element={<AppLayout slimFooter><RegionPage/></AppLayout>}/>
       <Route path="/specialties" element={<AppLayout><SpecialtiesIndex/></AppLayout>}/>
       <Route path="/specialties/equestrian" element={<Suspense fallback={<RouteFallback/>}><EquestrianNext/></Suspense>}/>
       <Route path="/specialties/luxury" element={<Suspense fallback={<RouteFallback/>}><LuxuryNext/></Suspense>}/>

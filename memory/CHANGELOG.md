@@ -310,3 +310,11 @@ Not yet deployed to production.
 - Equestrian hero: HERO_PATH now /api/listings/equestrian?region_chip=Doug's Territory&sort=newest (122 listings in-territory). Added "Facility checklist once a listing hits the shortlist" section (FACILITY array, 7 items, .hn-checklist CSS) to EquestrianNext.
 - Luxury hero: HERO_PATH now /api/listings?property_type=Detached,Condo&price_min=3000000&region_chip=Doug's Territory&sort=price_desc (1717 listings). Replaced hardcoded CITIES list.
 - Verified desktop + mobile (390px, no overflow). Preview only — needs redeploy to go live.
+
+## 2026-06 Apple-style region page template
+- Rebuilt RegionPage (App.js) into Apple-style template: full-bleed hero w/ overlaid region title + eyebrow + subline, frosted RegionSearchBar, 3-tile stats strip (communities count, live active MLS count via /api/listings?region_group, Daily DDF), centered intro copy, "Communities we serve" tile grid (rp-tile), CTA row. Referral regions keep referral CTA + notice.
+- Reuses existing data only: REGION_DATA + /api/communities + region_group count. Back end untouched.
+- Fixed ListingsNext to honor region_group + region_chip URL params in buildParams (previously dropped — region View-Listings links + region search now filter correctly).
+- Added proper SEO (title/desc/og:image) per region page (was generic "EZtoFind.ca | BC Real Estate Search").
+- Route /regions/:slug now uses AppLayout slimFooter (hn footer). Added .rp-* CSS to homeNext.css. Added ArrowRight/Search lucide imports to App.js.
+- Verified GV (21/19400), Sea-to-Sky (5/651) desktop + mobile, no overflow. Preview only — needs redeploy.

@@ -41,6 +41,8 @@ export default function ListingsNext() {
   const [pmin, setPmin] = useState(() => sp.get("price_min") || "");
   const [pmax, setPmax] = useState(() => sp.get("price_max") || "");
   const [sort, setSort] = useState(() => sp.get("sort") || "newest");
+  const regionGroup = sp.get("region_group") || "";
+  const regionChip = sp.get("region_chip") || "";
 
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
@@ -71,6 +73,8 @@ export default function ListingsNext() {
     const p = new URLSearchParams();
     if (q.trim()) p.set("q", q.trim());
     if (city) p.set("city", city);
+    if (regionGroup) p.set("region_group", regionGroup);
+    if (regionChip) p.set("region_chip", regionChip);
     if (ptype) p.set("property_type", ptype);
     if (beds) p.set("beds_min", beds);
     if (baths) p.set("baths_min", baths);
@@ -80,7 +84,7 @@ export default function ListingsNext() {
     p.set("limit", String(PAGE));
     p.set("offset", String(off));
     return p.toString();
-  }, [q, city, ptype, beds, baths, pmin, pmax, sort]);
+  }, [q, city, regionGroup, regionChip, ptype, beds, baths, pmin, pmax, sort]);
 
   // Fetch (reset) whenever filters change — debounced for the text query.
   useEffect(() => {
