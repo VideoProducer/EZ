@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 const API = process.env.REACT_APP_BACKEND_URL;
-const FALLBACK = "/images/home-next-hero.jpg";
 const EXCL_TYPES = "Vacant Land,Lot,Land,Agriculture,Farm,Residential Commercial Mix,Mixed Use";
 const EXCL_KW = "land\\s+assembl|development\\s+potential|development\\s+opportunity|development\\s+site|developer'?s?\\s+alert|developer'?s?\\s+dream|future\\s+development|holding\\s+propert|rezoning\\s+potential|subdivid|densification|OCP\\s+designat|investment\\s+land|investment\\s+holding|land\\s+banking|revenue\\s+propert";
 
@@ -42,7 +41,7 @@ export const HomeNextListingHero = () => {
   const cur = pool[idx];
   return (
     <div className="hn-hero__media hn-rise hn-rise-4" data-testid="hn-listing-hero">
-      <div className="hn-lhero" style={{ backgroundImage: `url('${FALLBACK}')` }}>
+      <div className="hn-lhero" style={{ backgroundColor: "#141a24", backgroundImage: cur ? `url('${cur.photos[0]}')` : "none" }}>
         {pool.map((l, i) => (
           <div key={l.listing_key} className="hn-lhero__slide" aria-hidden={i !== idx}
             style={{ backgroundImage: `url('${l.photos[0]}')`, opacity: i === idx ? 1 : 0 }}/>

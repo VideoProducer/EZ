@@ -303,3 +303,10 @@ Not yet deployed to production.
 - P2: InsightsPage.jsx — added og:title/og:description/og:type/twitter, word-boundary description, and BreadcrumbList schema. Verified live.
 - Non-issues confirmed (no action): robots.txt bot policy correct; /ai.json root unreferenced (canonical /.well-known/ai.json valid); sitemap lastmod varied; lead capture (Turnstile + Article 16 on buyer/seller/valuation, contact form+phone, referral Turnstile) all present; schema types all present; snapshot canonicals → SPA.
 - Note: repeated Doogie mascot image in sitemap left as intentional branding (region hero images exist for a future per-region swap if desired). Sitemap + snapshot artifacts regenerate on deploy/boot.
+
+## 2026-06 listing hero + feed updates
+- Removed static landscape fallback (/images/home-next-hero.jpg) from all 3 rotating heroes (HomeNextListingHero + shared HnListingHero). Base layer now uses the current live listing photo (neutral #141a24 before load) — first visible image is the first MLS listing.
+- Home hero: confirmed region_chip="Doug's Territory" (Greater Vancouver + Fraser Valley + Sea-to-Sky).
+- Equestrian hero: HERO_PATH now /api/listings/equestrian?region_chip=Doug's Territory&sort=newest (122 listings in-territory). Added "Facility checklist once a listing hits the shortlist" section (FACILITY array, 7 items, .hn-checklist CSS) to EquestrianNext.
+- Luxury hero: HERO_PATH now /api/listings?property_type=Detached,Condo&price_min=3000000&region_chip=Doug's Territory&sort=price_desc (1717 listings). Replaced hardcoded CITIES list.
+- Verified desktop + mobile (390px, no overflow). Preview only — needs redeploy to go live.

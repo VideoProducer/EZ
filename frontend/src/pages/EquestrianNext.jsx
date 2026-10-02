@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
@@ -9,7 +9,18 @@ import { HnIdentity, HnListingHero } from "../components/homenext/HomeNextShared
 import { DoogieChat } from "../App";
 
 const API = process.env.REACT_APP_BACKEND_URL;
-const HERO_PATH = "/api/listings/equestrian?sort=price_asc&limit=24&price_min=2000000";
+const HERO_PATH = `/api/listings/equestrian?region_chip=${encodeURIComponent("Doug's Territory")}&sort=newest&limit=24`;
+
+// Things MLS photos rarely show — Doug checks these in person before you commit.
+const FACILITY = [
+  "Stalls around 12×12, with ventilation and a dedicated tack room.",
+  "Safe fencing (not barbed wire) and separate paddocks.",
+  "Arena footing and drainage — a covered arena is a major price driver in Langley.",
+  "Manure storage that meets setbacks.",
+  "Trailer parking and a proper turnaround.",
+  "Ride-out access: Campbell Valley trails, Rainbow Ridge in Whonnock, and Squamish or Pemberton valley trails.",
+  "Proximity to vets, feed, and show venues (Thunderbird Show Park is a Langley reference point).",
+];
 
 // What to look at before buying a BC horse property — Doug's local criteria.
 const CRITERIA = [
@@ -205,6 +216,23 @@ export default function EquestrianNext() {
               ))}
             </ol>
             <p className="hn-lead" style={{ maxWidth: 820, margin: "28px auto 0" }}>A common local stocking guide is about 1 acre of usable pasture per horse if you buy most of the hay, and more if you want rotational grazing. A 5-acre flat parcel often supports a small private barn (roughly 3–5 horses); commercial boarding needs more land and the right zoning.</p>
+          </div>
+        </section>
+
+        <section className="hn-section" data-testid="equestrian-facility">
+          <div className="hn-wrap">
+            <div className="hn-center">
+              <h2 className="hn-h2">Facility checklist once a listing hits the shortlist.</h2>
+              <p className="hn-lead" style={{ marginInline: "auto" }}>MLS photos rarely show this clearly — so these are the things Doug looks at in person before you commit to a horse property.</p>
+            </div>
+            <ul className="hn-checklist" style={{ maxWidth: 820, margin: "0 auto" }}>
+              {FACILITY.map((f, i) => (
+                <li key={i} data-testid={`equestrian-facility-${i + 1}`}>
+                  <Check size={18} strokeWidth={2.4} aria-hidden="true"/>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 

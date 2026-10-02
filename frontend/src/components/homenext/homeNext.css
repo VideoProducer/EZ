@@ -265,6 +265,9 @@
 .eq-card__addr { color: var(--hn-ink); font-size: 14px; margin-top: 4px; }
 .eq-card__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--hn-grey); font-size: 13px; margin-top: 8px; }
 .eq-card__mls { color: var(--hn-grey); font-size: 12px; margin-top: 8px; }
+.hn-checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.hn-checklist li { display: flex; gap: 12px; align-items: flex-start; color: var(--hn-ink); font-size: 15px; line-height: 1.55; }
+.hn-checklist li svg { flex-shrink: 0; margin-top: 2px; color: var(--hn-navy); }
 @media (max-width: 520px) { .eq-grid { grid-template-columns: 1fr; } }
 
 

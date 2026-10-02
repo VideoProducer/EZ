@@ -76,7 +76,7 @@ export const HnListingHero = ({ path, caption, browse, fallback = "/images/home-
   const cur = pool[idx];
   return (
     <div className="hn-hero__media" data-testid={testId}>
-      <div className="hn-lhero" style={{ backgroundImage: `url('${fallback}')` }}>
+      <div className="hn-lhero" style={{ backgroundColor: "#141a24", backgroundImage: cur ? `url('${cur.photos[0]}')` : "none" }}>
         {pool.map((l, i) => (
           <div key={l.listing_key} className="hn-lhero__slide" aria-hidden={i !== idx}
             style={{ backgroundImage: `url('${l.photos[0]}')`, opacity: i === idx ? 1 : 0 }}/>

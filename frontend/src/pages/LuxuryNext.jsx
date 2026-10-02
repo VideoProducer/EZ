@@ -7,14 +7,10 @@ import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
 import { HnIdentity, HnListingHero } from "../components/homenext/HomeNextShared";
 import { DoogieChat } from "../App";
 
-// Live CREA DDF® luxury pool ≥ $3M across Doug's corridors.
-const CITIES = [
-  "Vancouver", "West Vancouver", "North Vancouver", "Burnaby", "Whistler",
-  "White Rock", "Surrey", "Langley", "Delta", "Richmond", "Coquitlam",
-  "Port Moody", "Squamish", "Pemberton",
-].map(encodeURIComponent).join(",");
+// Live CREA DDF® luxury pool — detached homes + condos ≥ $3M across Doug's corridors
+// (Greater Vancouver + Fraser Valley + Sea-to-Sky).
 const EXCL_TYPES = "Vacant Land,Lot,Land,Agriculture,Farm,Residential Commercial Mix,Mixed Use";
-const HERO_PATH = `/api/listings?price_min=3000000&city=${CITIES}&exclude_property_type=${encodeURIComponent(EXCL_TYPES)}&sort=price_desc&limit=24`;
+const HERO_PATH = `/api/listings?property_type=Detached%2CCondo&price_min=3000000&region_chip=${encodeURIComponent("Doug's Territory")}&exclude_property_type=${encodeURIComponent(EXCL_TYPES)}&sort=price_desc&limit=24`;
 
 const PRINCIPLES = [
   { t: "Pricing the market can respect on day one.", s: "A number that invites offers instead of resistance — grounded in recent comparable sales, not wishful thinking." },
