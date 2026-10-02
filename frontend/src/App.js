@@ -115,7 +115,7 @@ import TourNarration from "./components/TourNarration";
 import RoomLabelPill from "./components/RoomLabelPill";
 import FeatureSheet from "./components/FeatureSheet";
 import SiteWideSchema from "./components/SiteWideSchema";
-import { Box as CubeIcon, Play as PlayIcon, ArrowRight as HnArrowRight, Search as HnSearch } from "lucide-react";
+import { Box as CubeIcon, Play as PlayIcon, ArrowRight as HnArrowRight, Search as HnSearch, ChevronDown as HnChevronDown } from "lucide-react";
 import { JOURNEY_TEMPLATES, JOURNEY_TEMPLATES_ORDER, resolveStage } from "./journey_templates";
 
 // DOMPurify wrapper for HTML that comes from LLM output (Doogie chat, community
@@ -10249,106 +10249,171 @@ const AffordabilityCalculator = () => {
   if (propType && propType !== "Any") linkParams.set("property_type", propType);
   const listingsHref = `/listings?${linkParams.toString()}`;
 
-  const FieldBox = ({label, prefix, children, hint}) => (
-    <div style={{flex:"1 1 240px",minWidth:220}}>
-      <label style={{fontFamily:"Inter,sans-serif",fontWeight:600,color:"var(--brand-navy)",fontSize:"0.9rem",display:"block",marginBottom:"0.4rem"}}>{label}</label>
-      <div style={{position:"relative",background:"rgba(240,244,251,0.5)",border:"1px solid rgba(15,42,91,0.1)",borderRadius:999,padding:"0.85rem 1rem 0.85rem 2.4rem",fontFamily:"Inter,sans-serif"}}>
-        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"var(--muted)",fontSize:"1rem"}}>{prefix}</span>
-        {children}
-      </div>
-      {hint && <div style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:"0.25rem",fontFamily:"Inter,sans-serif"}}>{hint}</div>}
-    </div>
-  );
+  const tiles = [
+    {l:"Max mortgage",   v:fmtDollar(Math.max(0, maxMortgage)),         t:"afford-max-mortgage"},
+    {l:"Down payment",   v:fmtDollar(downPmt),                          t:"afford-down-display"},
+    {l:"Monthly payment",v:fmtDollar(Math.max(0, monthlyPmtAtContract)),t:"afford-monthly", hint:`at ${rate}%`},
+    {l:"BC PTT",         v:fmtDollar(Math.max(0, netPTT)),              t:"afford-ptt",     hint: ftb ? "after FTB exemption" : ""},
+    {l:"Closing costs",  v:fmtDollar(closingCostsFixed),                t:"afford-closing", hint:"legal + inspection est."},
+    {l:"Cash at closing",v:fmtDollar(downPmt + totalClosing),           t:"afford-cash",    hint:"down + PTT + closing"},
+  ];
+  const affordNum = fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000));
 
   return (
-    <div className="paper" data-testid="afford-calculator" style={{background:"#F7FAFF"}}>
-      <div style={{display:"flex",justifyContent:"center",marginBottom:"1.25rem"}}>
-        <img loading="lazy" decoding="async" src={DOOGIE_POINT_L_T} alt="Doogie" style={{width:72,height:72,borderRadius:"50%",background:"#fff",border:"3px solid var(--brand-gold)",objectFit:"cover"}}/>
-      </div>
+    <div className="afc-wrap" data-testid="afford-calculator">
+      <style>{`
+        .afc-wrap { --n:#0F2A5B; --ink:#1D1D1F; --mut:#6B7280; --line:rgba(15,42,91,0.09); --green:#047857; }
+        .afc-grid { display:grid; grid-template-columns:1fr 1.05fr; gap:22px; align-items:start; }
+        .afc-card { background:#fff; border:1px solid var(--line); border-radius:22px; padding:26px; box-shadow:0 1px 2px rgba(15,42,91,0.04), 0 18px 48px rgba(15,42,91,0.06); }
+        .afc-eyebrow { font-family:Inter,sans-serif; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--mut); margin-bottom:1.1rem; }
+        .afc-field { padding:14px 0; border-bottom:1px solid var(--line); }
+        .afc-field:first-of-type { padding-top:0; }
+        .afc-field:last-of-type { border-bottom:none; padding-bottom:0; }
+        .afc-field--row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+        .afc-lbl { font-family:Inter,sans-serif; font-size:0.82rem; color:var(--mut); display:block; margin-bottom:0.5rem; }
+        .afc-rowlbl { font-family:Inter,sans-serif; font-size:0.96rem; color:var(--ink); font-weight:600; }
+        .afc-rowlbl small { display:block; font-weight:400; color:var(--mut); font-size:0.78rem; margin-top:2px; }
+        .afc-inp { display:flex; align-items:center; gap:7px; border:1px solid var(--line); border-radius:14px; padding:12px 15px; background:#FAFBFD; transition:border-color .2s, box-shadow .2s; }
+        .afc-inp--sm { padding:9px 13px; }
+        .afc-inp:focus-within { border-color:var(--n); box-shadow:0 0 0 4px rgba(15,42,91,0.08); }
+        .afc-pre { font-family:Sora,sans-serif; color:var(--mut); font-size:1.05rem; font-weight:600; flex:0 0 auto; }
+        .afc-inp input, .afc-inp select { border:none; outline:none; background:transparent; width:100%; font-family:Inter,sans-serif; font-size:1.02rem; color:var(--ink); -webkit-appearance:none; appearance:none; }
+        .afc-inp input::-webkit-outer-spin-button, .afc-inp input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+        .afc-inp select { cursor:pointer; }
+        .afc-chev { flex:0 0 auto; color:var(--mut); }
+        .afc-hint { font-family:Inter,sans-serif; font-size:0.74rem; color:var(--mut); margin-top:0.45rem; }
+        .afc-sw { position:relative; width:50px; height:30px; flex:0 0 auto; }
+        .afc-sw input { position:absolute; inset:0; opacity:0; margin:0; width:100%; height:100%; cursor:pointer; z-index:2; }
+        .afc-sw .track { position:absolute; inset:0; background:#DEE3EC; border-radius:999px; transition:background .28s cubic-bezier(.4,.2,.2,1); }
+        .afc-sw .thumb { position:absolute; top:3px; left:3px; width:24px; height:24px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.22); transition:transform .28s cubic-bezier(.4,.2,.2,1); }
+        .afc-sw input:checked ~ .track { background:var(--n); }
+        .afc-sw input:checked ~ .thumb { transform:translateX(20px); }
+        .afc-hero { padding-bottom:18px; border-bottom:1px solid var(--line); }
+        .afc-hero__label { font-family:Inter,sans-serif; font-size:0.78rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--mut); }
+        .afc-hero__num { font-family:Sora,sans-serif; font-weight:700; color:var(--n); font-size:clamp(2.3rem,6vw,3.5rem); line-height:1.02; letter-spacing:-0.02em; margin:6px 0 10px; overflow-wrap:anywhere; word-break:break-word; }
+        .afc-hero__sub { font-family:Inter,sans-serif; font-size:0.84rem; color:var(--mut); line-height:1.55; max-width:46ch; }
+        .afc-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; }
+        .afc-tile { background:#F7F9FC; border:1px solid var(--line); border-radius:14px; padding:14px 12px; animation:afcReveal .42s cubic-bezier(.2,.7,.3,1) both; }
+        .afc-tile:nth-child(1){animation-delay:.03s} .afc-tile:nth-child(2){animation-delay:.08s} .afc-tile:nth-child(3){animation-delay:.13s}
+        .afc-tile:nth-child(4){animation-delay:.18s} .afc-tile:nth-child(5){animation-delay:.23s} .afc-tile:nth-child(6){animation-delay:.28s}
+        .afc-tile__l { font-family:Inter,sans-serif; font-size:0.64rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--mut); }
+        .afc-tile__v { font-family:Sora,sans-serif; font-size:1.18rem; font-weight:700; color:var(--n); margin-top:5px; line-height:1.15; }
+        .afc-tile__h { font-family:Inter,sans-serif; font-size:0.66rem; color:var(--mut); margin-top:3px; }
+        @keyframes afcReveal { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+        .afc-cta { display:block; text-align:center; margin-top:20px; background:var(--n); color:#fff; font-family:Inter,sans-serif; font-weight:700; font-size:0.98rem; padding:15px 20px; border-radius:999px; text-decoration:none; transition:transform .15s ease, box-shadow .15s ease; box-shadow:0 10px 26px rgba(15,42,91,0.22); }
+        .afc-cta:hover { transform:translateY(-2px); box-shadow:0 16px 34px rgba(15,42,91,0.28); }
+        .afc-disclaimer { font-family:Inter,sans-serif; font-size:0.74rem; color:var(--mut); line-height:1.55; margin:16px 0 0; }
+        .afc-disclaimer a { color:var(--n); }
+        @media (max-width:860px){ .afc-grid{grid-template-columns:1fr} }
+        @media (max-width:430px){ .afc-tiles{grid-template-columns:repeat(2,1fr)} }
+        @media (prefers-reduced-motion:reduce){ .afc-tile{animation:none} }
+      `}</style>
 
-      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem"}}>
-        <FieldBox label="Annual household income" prefix="$" hint="Before tax, all earners combined">
-          <input value={income} onChange={onMoney(setIncome)} inputMode="numeric" aria-label="Annual household income before tax, in Canadian dollars" data-testid="afford-income" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
-        </FieldBox>
-        <FieldBox label="Down payment saved" prefix="$" hint="Cash on hand for down payment">
-          <input value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" aria-label="Down payment saved, in Canadian dollars" data-testid="afford-down" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
-        </FieldBox>
-      </div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem"}}>
-        <FieldBox label="Monthly debt payments" prefix="$" hint="Car, credit cards, student loans">
-          <input value={debtsStr} onChange={onMoney(setDebtsStr)} inputMode="numeric" aria-label="Monthly debt payments, in Canadian dollars" data-testid="afford-debts" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
-        </FieldBox>
-        <FieldBox label="Preferred community" prefix="📍" hint="Optional — we'll match listings">
-          <select value={community} onChange={e=>setCommunity(e.target.value)} aria-label="Preferred BC community" data-testid="afford-community" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
-            <option value="">Any BC community</option>
-            {comms.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </FieldBox>
-      </div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:"1rem",marginTop:"1rem",alignItems:"center"}}>
-        <FieldBox label="Property type" prefix="🏡" hint="">
-          <select value={propType} onChange={e=>setPropType(e.target.value)} data-testid="afford-type" aria-label="Property type" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)",appearance:"none"}}>
-            <option>Any</option>
-            <option>Detached</option>
-            <option>Condo</option>
-            <option>Townhouse</option>
-            <option>Acreage</option>
-          </select>
-        </FieldBox>
-        <FieldBox label="Contract interest rate (%)" prefix="%" hint={`Stress-tested at ${qualRate.toFixed(2)}% (OSFI B-20)`}>
-          <input type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="afford-rate" aria-label="Contract interest rate percent" style={{border:"none",outline:"none",background:"transparent",width:"100%",fontSize:"1rem",fontFamily:"Inter,sans-serif",color:"var(--ink)"}}/>
-        </FieldBox>
-      </div>
-      <div style={{marginTop:"1rem",display:"flex",gap:"1.25rem",flexWrap:"wrap",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",alignItems:"center"}}>
-        <label style={{display:"flex",alignItems:"center",gap:"0.5rem",cursor:"pointer"}}>
-          <input type="checkbox" checked={ftb} onChange={e=>setFtb(e.target.checked)} data-testid="afford-ftb"/>
-          <span>I'm a first-time home buyer (BC PTT exemption)</span>
-        </label>
-        <label style={{display:"flex",alignItems:"center",gap:"0.5rem"}}>
-          <span>Amortization:</span>
-          <select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="afford-amort" style={{padding:"0.4rem 0.6rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.15)"}}>
-            <option value={15}>15 yrs</option>
-            <option value={20}>20 yrs</option>
-            <option value={25}>25 yrs</option>
-            <option value={30}>30 yrs</option>
-          </select>
-        </label>
-      </div>
+      <div className="afc-grid">
+        {/* LEFT — inputs */}
+        <div className="afc-card">
+          <div className="afc-eyebrow">Your finances</div>
 
-      {/* Big result card */}
-      <div style={{background:"linear-gradient(135deg,#0F2A5B 0%,#1E4180 100%)",color:"#fff",borderRadius:14,marginTop:"1.5rem",padding:"1.5rem 1.25rem",fontFamily:"Inter,sans-serif",textAlign:"center",boxShadow:"0 10px 24px rgba(15,42,91,0.18)"}}>
-        <div style={{fontSize:"0.78rem",letterSpacing:"0.08em",textTransform:"uppercase",opacity:0.75,fontWeight:600}}>You can afford up to</div>
-        <div data-testid="afford-max-price" style={{fontFamily:"Sora,sans-serif",fontSize:"clamp(1.6rem, 9vw, 3rem)",fontWeight:700,margin:"0.35rem 0",lineHeight:1.05,letterSpacing:"-0.01em",overflowWrap:"anywhere",wordBreak:"break-word"}}>{fmtDollar(Math.max(0, Math.floor(priceCap/1000)*1000))}</div>
-        <div style={{fontSize:"0.9rem",opacity:0.85}}>Based on BC stress test at qualifying rate {qualRate.toFixed(2)}% — OSFI B-20 rule: the greater of your contract rate + 2% or the 5.25% floor.</div>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:"0.75rem",marginTop:"1rem",fontFamily:"Inter,sans-serif"}}>
-        {[
-          {l:"Max mortgage",   v:fmtDollar(Math.max(0, maxMortgage)),        t:"afford-max-mortgage"},
-          {l:"Down payment",   v:fmtDollar(downPmt),                          t:"afford-down-display"},
-          {l:"Monthly payment",v:fmtDollar(Math.max(0, monthlyPmtAtContract)),t:"afford-monthly", hint:`at ${rate}%`},
-          {l:"BC PTT",         v:fmtDollar(Math.max(0, netPTT)),              t:"afford-ptt",     hint: ftb ? "after FTB exemption" : ""},
-          {l:"Closing costs",  v:fmtDollar(closingCostsFixed),                t:"afford-closing", hint:"legal + inspection est."},
-          {l:"Cash at closing",v:fmtDollar(downPmt + totalClosing),           t:"afford-cash",    hint:"down + PTT + closing"},
-        ].map(x => (
-          <div key={x.l} style={{background:"#F0F4FB",borderRadius:10,padding:"0.85rem 0.6rem",textAlign:"center"}}>
-            <div style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.04em",color:"var(--muted)",textTransform:"uppercase"}}>{x.l}</div>
-            <div data-testid={x.t} style={{fontSize:"1.1rem",fontWeight:700,color:"var(--brand-navy)",marginTop:"0.25rem",lineHeight:1.15}}>{x.v}</div>
-            {x.hint && <div style={{fontSize:"0.65rem",color:"var(--muted)",marginTop:"0.15rem"}}>{x.hint}</div>}
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-income">Annual household income</label>
+            <div className="afc-inp"><span className="afc-pre">$</span>
+              <input id="afford-income" value={income} onChange={onMoney(setIncome)} inputMode="numeric" aria-label="Annual household income before tax, in Canadian dollars" data-testid="afford-income"/>
+            </div>
+            <div className="afc-hint">Before tax, all earners combined</div>
           </div>
-        ))}
-      </div>
 
-      {/* CTAs */}
-      <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",marginTop:"1.25rem"}}>
-        <Link to={listingsHref} className="btn btn-primary" data-testid="afford-see-listings" style={{flex:"1 1 240px",textAlign:"center",textDecoration:"none"}}>
-          🏡 Show me listings under {fmtDollar(Math.floor(priceCap/1000)*1000)}
-        </Link>
-      </div>
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-down">Down payment saved</label>
+            <div className="afc-inp"><span className="afc-pre">$</span>
+              <input id="afford-down" value={downStr} onChange={onMoney(setDownStr)} inputMode="numeric" aria-label="Down payment saved, in Canadian dollars" data-testid="afford-down"/>
+            </div>
+            <div className="afc-hint">Cash on hand for down payment</div>
+          </div>
 
-      <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.75rem",color:"var(--muted)",lineHeight:1.55,marginTop:"1rem",marginBottom:0,textAlign:"center"}}>
-        Educational estimate only. Actual approval depends on your lender's assessment of credit, employment, down-payment source, and CMHC insurance eligibility. BC PTT calculation follows current statute; the FTB exemption is a linear approximation of the sliding scale (verify at <a href="https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax" target="_blank" rel="noopener noreferrer" style={{color:"var(--brand-blue)"}}>gov.bc.ca ↗</a>). Speak to a licensed mortgage broker before making an offer.
-      </p>
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-debts">Monthly debt payments</label>
+            <div className="afc-inp"><span className="afc-pre">$</span>
+              <input id="afford-debts" value={debtsStr} onChange={onMoney(setDebtsStr)} inputMode="numeric" aria-label="Monthly debt payments, in Canadian dollars" data-testid="afford-debts"/>
+            </div>
+            <div className="afc-hint">Car, credit cards, student loans</div>
+          </div>
+
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-community">Preferred community</label>
+            <div className="afc-inp">
+              <select id="afford-community" value={community} onChange={e=>setCommunity(e.target.value)} aria-label="Preferred BC community" data-testid="afford-community">
+                <option value="">Any BC community</option>
+                {comms.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <HnChevronDown size={16} className="afc-chev" aria-hidden="true"/>
+            </div>
+            <div className="afc-hint">Optional — we'll match listings</div>
+          </div>
+
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-type">Property type</label>
+            <div className="afc-inp">
+              <select id="afford-type" value={propType} onChange={e=>setPropType(e.target.value)} data-testid="afford-type" aria-label="Property type">
+                <option>Any</option><option>Detached</option><option>Condo</option><option>Townhouse</option><option>Acreage</option>
+              </select>
+              <HnChevronDown size={16} className="afc-chev" aria-hidden="true"/>
+            </div>
+          </div>
+
+          <div className="afc-field">
+            <label className="afc-lbl" htmlFor="afford-rate">Contract interest rate (%)</label>
+            <div className="afc-inp"><span className="afc-pre">%</span>
+              <input id="afford-rate" type="number" step="0.05" value={rate} onChange={e=>setRate(+e.target.value||0)} data-testid="afford-rate" aria-label="Contract interest rate percent"/>
+            </div>
+            <div className="afc-hint">Stress-tested at {qualRate.toFixed(2)}% (OSFI B-20)</div>
+          </div>
+
+          <div className="afc-field afc-field--row">
+            <span className="afc-rowlbl">First-time home buyer<small>BC PTT exemption</small></span>
+            <label className="afc-sw">
+              <input type="checkbox" checked={ftb} onChange={e=>setFtb(e.target.checked)} data-testid="afford-ftb" aria-label="First-time home buyer"/>
+              <span className="track" aria-hidden="true"/><span className="thumb" aria-hidden="true"/>
+            </label>
+          </div>
+
+          <div className="afc-field afc-field--row">
+            <span className="afc-rowlbl">Amortization</span>
+            <div className="afc-inp afc-inp--sm" style={{width:140}}>
+              <select value={amort} onChange={e=>setAmort(+e.target.value)} data-testid="afford-amort" aria-label="Amortization in years">
+                <option value={15}>15 years</option><option value={20}>20 years</option><option value={25}>25 years</option><option value={30}>30 years</option>
+              </select>
+              <HnChevronDown size={16} className="afc-chev" aria-hidden="true"/>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT — results */}
+        <div className="afc-card">
+          <div className="afc-hero">
+            <div className="afc-hero__label">You can afford up to</div>
+            <div data-testid="afford-max-price" className="afc-hero__num">{affordNum}</div>
+            <div className="afc-hero__sub">Qualified at the {qualRate.toFixed(2)}% stress-test rate — OSFI B-20: the greater of your contract rate + 2% or the 5.25% floor.</div>
+          </div>
+
+          <div className="afc-tiles">
+            {tiles.map(x => (
+              <div key={x.l} className="afc-tile">
+                <div className="afc-tile__l">{x.l}</div>
+                <div data-testid={x.t} className="afc-tile__v">{x.v}</div>
+                {x.hint && <div className="afc-tile__h">{x.hint}</div>}
+              </div>
+            ))}
+          </div>
+
+          <Link to={listingsHref} className="afc-cta" data-testid="afford-see-listings">
+            Show me listings under {affordNum}
+          </Link>
+
+          <p className="afc-disclaimer">
+            Educational estimate only. Actual approval depends on your lender's assessment of credit, employment, down-payment source, and CMHC insurance eligibility. BC PTT follows current statute; the FTB exemption is a linear approximation of the sliding scale (verify at <a href="https://www2.gov.bc.ca/gov/content/taxes/property-taxes/property-transfer-tax" target="_blank" rel="noopener noreferrer">gov.bc.ca ↗</a>). Speak to a licensed mortgage broker before making an offer.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
