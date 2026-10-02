@@ -64,7 +64,7 @@
 .hn-nav__links a { transition: opacity 160ms ease; white-space: nowrap; }
 .hn-nav__links a:hover { opacity: 0.55; }
 /* Hide the licensee identity block before the links can collide with it. */
-@media (max-width: 1180px) { .hn-nav__id { display: none; } }
+@media (min-width: 961px) and (max-width: 1180px) { .hn-nav__id { display: none; } }
 /* Doogie nav link — small mascot badge beside the label. */
 .hn-nav__doogie { display: inline-flex; align-items: center; gap: 6px; }
 .hn-nav__doogie img { height: 30px; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(15,42,91,0.18)); }
@@ -320,7 +320,12 @@
   .hn-tools { grid-template-columns: repeat(2, 1fr); }
   .hn-featured { grid-template-columns: 1fr; gap: 28px; }
   .hn-tile { min-height: 0; }
-  .hn-nav__id { display: none; }
+  /* Keep Doug's headshot + name + brokerage visible on mobile — wrap it onto
+     its own full-width line beneath the logo/back/home row. */
+  .hn-nav__left { flex-wrap: wrap; row-gap: 10px; }
+  .hn-nav__id { display: flex !important; flex-basis: 100%; width: 100%; padding-left: 0; margin-top: 2px; border-left: none; }
+  .hn-nav__id strong { white-space: normal; }
+  .hn-nav__id span { white-space: normal; }
 }
 @media (max-width: 640px) {
   .hn-wrap { width: calc(100% - 32px); }
