@@ -5020,17 +5020,19 @@ const ListingDetail = () => {
 
 const REGION_DATA = {
   "greater-vancouver": {title:"Greater Vancouver", img:IMG.vancouver, key:"Greater Vancouver", copy:"The Greater Vancouver market spans 22 municipalities, from downtown Vancouver highrises to West Vancouver waterfront estates and the sprawling suburbs of Surrey and Coquitlam. It's Canada's most valuable real estate corridor — and one of the most tightly regulated. Doug's local expertise means you get someone who reads Form B's daily and knows every community's zoning quirks."},
-  "fraser-valley": {title:"Fraser Valley", img:IMG.fraserValley, key:"Fraser Valley", copy:"The Fraser Valley — Langley, Abbotsford, Chilliwack, Mission — is BC's fastest-growing residential region. Detached homes, acreages, and family communities are the heart of the market. Doug specializes in equestrian and estate acreage properties across the Valley."},
+  "fraser-valley": {title:"Fraser Valley", img:IMG.fraserValley, key:"Fraser Valley", serve:["Abbotsford","Chilliwack","Mission","Harrison Hot Springs"], copy:"In the Fraser Valley, Doug works Abbotsford, Chilliwack, Mission and Harrison Hot Springs — detached homes, acreages, equestrian and estate properties, and family communities. It's one of BC's fastest-growing residential regions, and the ALR, zoning and water questions out here reward a REALTOR® who knows the ground."},
   "sea-to-sky": {title:"Sea-to-Sky Corridor", img:IMG.seaToSky, key:"Sea-to-Sky", copy:"Squamish, Whistler, Pemberton — the Sea-to-Sky corridor blends mountain lifestyle with world-class recreation. Recreational homes, luxury chalets, and primary residences with a view. Financing, zoning, and STR rules here differ significantly from Metro Van."},
   "vancouver-island": {title:"Vancouver Island & Gulf Islands", img:IMG.vancouverIsland, key:"Vancouver Island & Gulf Islands", referral:true, copy:"Vancouver Island — from Victoria's heritage character to Tofino's surf coast, Nanaimo's growing urban core, and the retirement-friendly Comox Valley. Includes the Gulf Islands (Salt Spring, Galiano, Mayne, Pender, Saturna) with their unique zoning and community trust boundaries. Vancouver Island is outside Doug's primary practice area — but EZtoFind.ca's referral network connects you with a BC-licensed REALTOR® active in the specific community you're interested in. No cost to you; the receiving REALTOR® pays a referral fee to Doug at closing."}
 };
 
-const RegionSearchBar = ({ regionKey }) => {
+const RegionSearchBar = ({ regionKey, serveCities }) => {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   const go = (e) => {
     e.preventDefault();
-    const params = new URLSearchParams({ region_group: regionKey });
+    const params = new URLSearchParams(
+      serveCities && serveCities.length ? { city: serveCities.join(",") } : { region_group: regionKey }
+    );
     if (q.trim()) params.set("q", q.trim());
     nav(`/listings?${params.toString()}`);
   };
@@ -5055,12 +5057,15 @@ const RegionPage = () => {
   useEffect(() => { axios.get(`${API}/communities`).then(r => setCommunities(r.data)).catch(()=>{}); }, []);
   useEffect(() => {
     if (!d) return;
-    axios.get(`${API}/listings`, { params: { region_group: d.key, limit: 1 } })
+    const params = (d.serve && d.serve.length)
+      ? { city: d.serve.join(","), limit: 1 }
+      : { region_group: d.key, limit: 1 };
+    axios.get(`${API}/listings`, { params })
       .then(r => setActiveCount(typeof r.data?.total === "number" ? r.data.total : null))
       .catch(() => {});
   }, [slug]); // eslint-disable-line react-hooks/exhaustive-deps
   if(!d) return <div className="section container-x"><h2>Region not found</h2><Link to="/">Back to Home</Link></div>;
-  const list = communities[d.key] || [];
+  const list = (d.serve && d.serve.length) ? d.serve : (communities[d.key] || []);
   return (
     <div className="hn rp" data-testid={`region-page-${slug}`}>
       <SEO
@@ -5085,7 +5090,7 @@ const RegionPage = () => {
         <div className="hn-wrap">
           {d.referral
             ? <div className="hn-center"><Link to="/referral-request" className="hn-pill hn-pill--navy hn-pill--lg" data-testid="referral-cta">Request a Referral <HnArrowRight size={15}/></Link></div>
-            : <RegionSearchBar regionKey={d.key}/>}
+            : <RegionSearchBar regionKey={d.key} serveCities={d.serve}/>}
         </div>
       </section>
 
@@ -5132,7 +5137,7 @@ const RegionPage = () => {
           <div className="hn-wrap hn-center">
             <h2 className="hn-h2">Ready when you are.</h2>
             <div className="hn-ctarow" style={{ justifyContent: "center" }}>
-              <Link to={`/listings?region_group=${encodeURIComponent(d.key)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid={`region-view-listings-${slug}`}>View {d.title} listings <HnArrowRight size={15}/></Link>
+              <Link to={(d.serve && d.serve.length) ? `/listings?city=${encodeURIComponent(d.serve.join(","))}` : `/listings?region_group=${encodeURIComponent(d.key)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid={`region-view-listings-${slug}`}>View {d.title} listings <HnArrowRight size={15}/></Link>
               <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid={`region-buying-${slug}`}>I'm buying here</Link>
               <Link to="/seller" className="hn-pill hn-pill--lg" data-testid={`region-selling-${slug}`}>I'm selling here</Link>
             </div>
