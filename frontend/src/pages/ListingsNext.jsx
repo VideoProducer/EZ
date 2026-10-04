@@ -8,6 +8,7 @@ import "../components/homenext/homeNext.css";
 import { HomeNextNav } from "../components/homenext/HomeNextHero";
 import { HomeNextFooter } from "../components/homenext/HomeNextExtras";
 import { isFarmArea } from "../lib/serviceArea";
+import ListingGlossaryTerms from "../components/ListingGlossaryTerms";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const PAGE = 24;
@@ -448,14 +449,17 @@ export default function ListingsNext() {
             )
           ) : (
             <>
+              <div data-testid="listings-glossary-disclaimer" style={{ fontFamily: "Inter, sans-serif", fontSize: 12.5, color: C.muted, lineHeight: 1.5, margin: "0 0 16px", padding: "10px 14px", background: C.goldBg, borderRadius: 10, border: "1px solid #E6D9A8" }}>
+                Any glossary terms shown on a card are general BC real-estate definitions that may relate to that property type — for information only, not advice, a recommendation, or an opinion about any property or its value. Verify all details with the listing brokerage.
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
                 {visibleItems.map((l) => {
                   const photo = (l.photos && l.photos[0]) || "";
                   const addr = l.unparsed_address || l.street_address || [l.city, l.region].filter(Boolean).join(", ");
                   const isSaved = saved.has(l.listing_key);
                   return (
+                    <div key={l.listing_key}>
                     <Link
-                      key={l.listing_key}
                       to={`/listing/${l.listing_key}`}
                       data-testid={`ln-card-${l.listing_key}`}
                       onMouseEnter={() => setActiveKey(l.listing_key)}
@@ -499,6 +503,8 @@ export default function ListingsNext() {
                         </span>
                       </div>
                     </Link>
+                    <ListingGlossaryTerms listing={l} variant="compact"/>
+                    </div>
                   );
                 })}
               </div>
