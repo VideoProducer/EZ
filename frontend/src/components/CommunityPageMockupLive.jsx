@@ -279,26 +279,34 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         // parallel batch — no stats-first round-trip. If the canonical name
         // differs, listings are refined in the background below.
         const cityGuess = slug.replace(/-/g," ").replace(/\b\w/g, s => s.toUpperCase());
-        const [statsR, synR, hoodsR, nearR, wR, listR] = await Promise.allSettled([
+        // Critical above-the-fold batch — flip the page out of the full-page
+        // skeleton as soon as these return. Neighbourhoods + weather are slower
+        // and secondary, so they stream in afterwards instead of blocking the
+        // whole page (previously the slowest of 6 calls gated everything).
+        const [statsR, synR, nearR, listR] = await Promise.allSettled([
           axios.get(`${API}/api/community/${slug}/stats`),
           axios.get(`${API}/api/community/${slug}/synopsis`),
-          axios.get(`${API}/api/community/${slug}/neighbourhoods`),
           axios.get(`${API}/api/community/${slug}/nearby`),
-          axios.get(`${API}/api/community/${slug}/weather`),
           axios.get(`${API}/api/listings`, { params: { city: cityGuess, limit: 4 } }),
         ]);
         if (cancelled) return;
         const statsData = statsR.status === "fulfilled" ? statsR.value.data : null;
-        setData({
+        setData(prev => ({
+          ...prev,
           stats: statsData,
           synopsis: synR.status === "fulfilled" ? synR.value.data : null,
-          neighbourhoods: hoodsR.status === "fulfilled" ? (hoodsR.value.data.neighbourhoods || []) : [],
-          referralOnly: hoodsR.status === "fulfilled" ? !!hoodsR.value.data.referral_only : false,
           nearby: nearR.status === "fulfilled" ? (nearR.value.data.items || []) : [],
-          weather: wR.status === "fulfilled" ? wR.value.data : null,
           listings: listR.status === "fulfilled" ? (listR.value.data.listings || []) : [],
           listingsTotal: listR.status === "fulfilled" ? (listR.value.data.total || 0) : 0,
-        });
+        }));
+        setLoading(false);
+        // Secondary (slower) data — stream in without blocking the page.
+        axios.get(`${API}/api/community/${slug}/neighbourhoods`)
+          .then(r => { if (!cancelled) setData(prev => ({ ...prev, neighbourhoods: r.data.neighbourhoods || [], referralOnly: !!r.data.referral_only })); })
+          .catch(() => {});
+        axios.get(`${API}/api/community/${slug}/weather`)
+          .then(r => { if (!cancelled) setData(prev => ({ ...prev, weather: r.data })); })
+          .catch(() => {});
         // Refine listings if the canonical community name differs from the guess.
         const canonical = statsData?.community;
         if (canonical && canonical.toLowerCase() !== cityGuess.toLowerCase()) {

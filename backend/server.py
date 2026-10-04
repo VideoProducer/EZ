@@ -7956,6 +7956,27 @@ def _resolve_community(slug: str):
                 return c, r
     return None, None
 
+# ── In-memory TTL cache for hot aggregate community endpoints ──────────────
+# /community/{slug}/stats and /neighbourhoods run list aggregations on every
+# community-page load. The underlying MLS aggregates don't change second to
+# second, so a short per-worker TTL makes repeat loads instant without staling
+# the market snapshot. (nearby already has its own cache.)
+_COMMUNITY_AGG_CACHE: dict = {}
+_COMMUNITY_AGG_TTL = 300.0  # seconds (5 min)
+
+def _comm_cache_get(key):
+    hit = _COMMUNITY_AGG_CACHE.get(key)
+    if hit and hit[0] > datetime.now(timezone.utc).timestamp():
+        return hit[1]
+    if hit:
+        _COMMUNITY_AGG_CACHE.pop(key, None)
+    return None
+
+def _comm_cache_set(key, value):
+    _COMMUNITY_AGG_CACHE[key] = (datetime.now(timezone.utc).timestamp() + _COMMUNITY_AGG_TTL, value)
+    return value
+
+
 @api.get("/community/{slug}/neighbourhoods")
 async def community_neighbourhoods(slug: str):
     """Return the list of sub-neighbourhoods for the given community.
@@ -7976,6 +7997,10 @@ async def community_neighbourhoods(slug: str):
     name, region = _resolve_community(slug)
     if not name:
         raise HTTPException(404, "Community not found")
+    _ck = f"hoods:{slug}"
+    _cached = _comm_cache_get(_ck)
+    if _cached is not None:
+        return _cached
     pipeline = [
         {"$match": {
             "status": "Active",
@@ -8171,13 +8196,13 @@ async def community_neighbourhoods(slug: str):
                 it["count"] = counts_map[it["slug"]]
     except Exception as e:
         logger.warning(f"neighbourhoods count enrichment failed for {slug}: {e}")
-    return {
+    return _comm_cache_set(_ck, {
         "community": name,
         "region": region,
         "count": len(items),
         "neighbourhoods": items,
         "referral_only": referral_only,
-    }
+    })
 
 
 # ── Wave 1 auto-pick — top N sub-neighbourhoods across all focus communities ─
@@ -8246,6 +8271,10 @@ async def community_stats(slug: str):
     name, region = _resolve_community(slug)
     if not name:
         raise HTTPException(404, "Community not found")
+    _ck = f"stats:{slug}"
+    _cached = _comm_cache_get(_ck)
+    if _cached is not None:
+        return _cached
     match = {
         "status": "Active",
         "city": _city_query(name),
@@ -8267,10 +8296,10 @@ async def community_stats(slug: str):
         doc = row
         break
     if not doc:
-        return {"community": name, "count": 0, "median_price": None, "min_price": None, "max_price": None, "updated_at": now_iso()}
+        return _comm_cache_set(_ck, {"community": name, "count": 0, "median_price": None, "min_price": None, "max_price": None, "updated_at": now_iso()})
     prices = sorted([p for p in doc.get("prices") or [] if p])
     median = prices[len(prices)//2] if prices else None
-    return {
+    return _comm_cache_set(_ck, {
         "community": name,
         "slug": slug,
         "count": doc.get("count", 0),
@@ -8278,7 +8307,7 @@ async def community_stats(slug: str):
         "min_price": doc.get("min_price"),
         "max_price": doc.get("max_price"),
         "updated_at": now_iso(),
-    }
+    })
 
 
 # =============== COMMUNITY MATCHER (Where Should You Live?) ===============
