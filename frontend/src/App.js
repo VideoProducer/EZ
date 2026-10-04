@@ -1638,8 +1638,16 @@ export const DoogieChat = ({ mode = "fab" }) => {
       // Only personalize if user has consented to Personalization ("session") cookies
       const rawPrefs = localStorage.getItem("ez_cookie_prefs");
       if (rawPrefs) { const p = JSON.parse(rawPrefs); if (p && p.session === false) return defaultMsg; }
-      const lc = JSON.parse(localStorage.getItem("ez_last_community") || "null");
-      const ls = JSON.parse(localStorage.getItem("ez_last_search") || "null");
+      // Recency gate: a stored last-community/last-search only drives the
+      // "Welcome back about {X}" greeting if it was seen in the last 2 hours.
+      // Otherwise it goes stale ("references Valemount every time") so we fall
+      // back to the fresh default greeting.
+      const RECENT_MS = 2 * 60 * 60 * 1000;
+      const _isRecent = (iso) => { try { return iso && (Date.now() - new Date(iso).getTime()) < RECENT_MS; } catch { return false; } };
+      const lcRaw = JSON.parse(localStorage.getItem("ez_last_community") || "null");
+      const lsRaw = JSON.parse(localStorage.getItem("ez_last_search") || "null");
+      const lc = (lcRaw && _isRecent(lcRaw.at)) ? lcRaw : null;
+      const ls = (lsRaw && _isRecent(lsRaw.at)) ? lsRaw : null;
       const favs = JSON.parse(localStorage.getItem("ez_favorites") || "[]");
       if (lc && lc.name) {
         let msg = `Welcome back! 🐾 Any new questions about ${lc.name}?`;

@@ -1,0 +1,27 @@
+{
+  "summary": "Full regression pass for iteration 39: SEO homes-for-sale hubs, saved-search preview + social proof + email-preview toggle, Doogie save → double opt-in done state, internal links on community/region pages, English-only invariant, and smoke pages. 4/4 pytest backend tests passed and all frontend assertions passed via Playwright.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_hfs_and_preview.py",
+    "/app/test_reports/pytest/iter39.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "frontend/src/App.js is monolithic (>10k lines) — the HomesForSale component, SaveSearchButton and RegionPage should be split into their own modules under src/pages/ for maintainability.",
+    "The `_render_saved_search_email` helper builds HTML via string concatenation with inline styles — fine for now, but consider a tiny template function with escape() for address fields even though CREA DDF data is trusted, to defend against future input sources."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_hfs_and_preview.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100% (all task assertions passed)"},
+  "test_credentials": "Not required for this regression.",
+  "seed_data_creation": "None (used live CREA DDF feed).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified data on this run — Langley hub: 1,432 active, $974,950 median; Surrey hub: 4,397 active, $1,049,000 median; Langley Townhouse+suite preview active_count=104 (matches social-proof text '104 active listings match right now'). new_this_week was 0 everywhere (expected per task note). Each sample item in /api/saved-searches/preview includes the `just_listed` boolean key. The /homes-for-sale/zzz-not-real invalid slug renders 'Homes for sale in Zzz Not Real, BC' with 0 active + '—' median — does not crash. Community/Surrey has the community-homes-for-sale-link; /regions/fraser-valley has 4 region-hfs-* pills (Abbotsford, Chilliwack, Mission, +1). English-only invariant holds (no doogie-lang-select; /buyer?lang=fa renders English LTR). No horizontal overflow at 1920 or 390 on either hub. All critical flows: Doogie search → listings → save-open → social-proof → preview-toggle → preview card → email+consent → submit → done state all worked end-to-end."
+}
