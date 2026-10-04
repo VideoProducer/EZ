@@ -42,10 +42,10 @@ export const ListingGlossaryTerms = ({ listing, variant = "full" }) => {
   return (
     <div data-testid="listing-glossary-primer" style={{ marginTop: "1rem", padding: "16px 18px", background: "rgba(15,42,91,0.04)", borderRadius: 10 }}>
       <div style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, color: "var(--brand-navy)", fontSize: "1rem", marginBottom: "0.35rem" }} data-testid="listing-glossary-title">
-        Terms to know for this property
+        BC real-estate glossary terms
       </div>
-      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.8rem", color: "var(--muted)", margin: "0 0 0.85rem", lineHeight: 1.5 }}>
-        Plain-language definitions for this property type — tap any term for the full BC glossary entry.
+      <p style={{ fontFamily: "Inter, sans-serif", fontSize: "0.78rem", color: "var(--muted)", margin: "0 0 0.85rem", lineHeight: 1.5 }} data-testid="listing-glossary-disclaimer">
+        General definitions that may relate to this property type, for information only — not advice, a recommendation, or an opinion about this property or its value. Verify all details with the listing brokerage and consult a licensed professional before acting.
       </p>
       {groups.map((g) => (
         <div key={g.key} data-testid={`listing-glossary-group-${g.key}`} style={{ marginBottom: "0.75rem" }}>

@@ -8,11 +8,10 @@
 // listing detail page and Doogie cards so the logic lives in exactly one place.
 
 export const GROUP_LABELS = {
-  equestrian: "Equestrian terms",
-  acreage: "Acreage & rural terms",
-  luxury: "Luxury terms",
-  strata: "Strata terms",
-  baseline: "Closing costs",
+  equestrian: "Equestrian glossary terms",
+  acreage: "Acreage & rural glossary terms",
+  strata: "Strata glossary terms",
+  baseline: "Common closing-cost terms",
 };
 
 // specialty key -> [ [slug, label], ... ]  (slugs verified against the live glossary)
@@ -38,6 +37,9 @@ export const SPECIALTY_TERMS = {
     ["timber-value", "Timber Value"],
   ],
   luxury: [
+    // NOTE: intentionally NOT auto-applied per-listing — see classifyListing().
+    // Price-tier ("luxury") is a subjective value characterisation prohibited
+    // by BCFSA/CREA/GVR, so these terms are never surfaced on a specific listing.
     ["luxury-property", "Luxury Property"],
     ["entry-price-for-luxury-segment", "Entry Price for Luxury Segment"],
     ["micro-market-luxury", "Micro-market (Luxury)"],
@@ -62,16 +64,21 @@ export const BASELINE_TERMS = [
   ["2-5-10-home-warranty", "2-5-10 Home Warranty"],
 ];
 
-const SPECIALTY_ORDER = ["equestrian", "acreage", "luxury", "strata"];
-const LUXURY_PRICE_THRESHOLD = 3000000; // matches server-side luxury heatmap definition
+const SPECIALTY_ORDER = ["equestrian", "acreage", "strata"];
 const EQUESTRIAN_RE = /(^|\W)(horse|equestrian|barn|stable|paddock|corral|stall|riding arena|riding ring|pasture|bridle|hay)/;
 const STRATA_PT_RE = /(condo|apartment|townhouse|town house|\brow\b|strata|duplex|co-?op|manufactured on strata)/;
 
+// Specialties are derived ONLY from objective listing facts the brokerage
+// supplied (property_type, ownership structure, lot size, and keywords the
+// listing description itself uses). We deliberately do NOT infer a "luxury"
+// (or any value/market-tier) bucket from price — that would be a subjective
+// characterisation of the property, which BCFSA/CREA/GVR rules prohibit. This
+// module only MATCHES relevant glossary definitions; it never characterises,
+// rates, advises, or opines on a specific property.
 export function classifyListing(listing) {
   if (!listing) return [];
   const out = [];
   const pt = (listing.property_type || "").toLowerCase();
-  const price = Number(listing.list_price) || 0;
   const feats = Array.isArray(listing.features) ? listing.features.join(" ") : (listing.features || "");
   const text = (pt + " " + feats + " " + (listing.description || "")).toLowerCase();
 
@@ -87,7 +94,6 @@ export function classifyListing(listing) {
 
   if (EQUESTRIAN_RE.test(text)) out.push("equestrian");
   if (pt.includes("acreage") || pt.includes("farm") || pt.includes("ranch") || /\brural\b/.test(pt) || acres >= 1) out.push("acreage");
-  if (price >= LUXURY_PRICE_THRESHOLD) out.push("luxury");
   if (STRATA_PT_RE.test(pt)) out.push("strata");
   return out;
 }
