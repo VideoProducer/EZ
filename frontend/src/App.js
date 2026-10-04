@@ -5284,6 +5284,25 @@ const RegionPage = () => {
         </div>
       </section>
 
+      {!d.referral && list.length > 0 && (
+        <section className="hn-section" style={{paddingTop:0}} data-testid="region-homes-for-sale">
+          <div className="hn-wrap">
+            <div className="hn-center"><h2 className="hn-h2">Homes for sale by community</h2></div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem 0.75rem",justifyContent:"center",marginTop:"1.25rem"}}>
+              {list.map(c => {
+                const cslug = encodeURIComponent(c.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+                return (
+                  <Link key={c} to={`/homes-for-sale/${cslug}`} data-testid={`region-hfs-${c}`}
+                    className="hn-pill" style={{fontSize:"0.82rem"}}>
+                    Homes for sale in {c}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {!d.referral && (
         <section className="hn-section" data-testid="region-cta">
           <div className="hn-wrap hn-center">

@@ -16324,13 +16324,35 @@ async def _narrate_mls_results(user_query: str, filters: dict, listings: list, t
         return None
 
 
+def _listing_is_just_listed(l: dict, hours: int = 48) -> bool:
+    """True if a listing first appeared within the last `hours` (default 48h),
+    using list_date / created_at / synced_at (whichever parses)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    for f in ("list_date", "created_at", "synced_at"):
+        v = l.get(f)
+        if not v:
+            continue
+        try:
+            dv = datetime.fromisoformat(str(v).replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            continue
+        if dv >= cutoff:
+            return True
+    return False
+
+
 def _render_saved_search_email(new_listings: list, base: str, unsub_url: str = "") -> tuple[str, str]:
     """Render the saved-search alert email (returns html, text). Shared by the
-    alert cron AND the public preview endpoint so the two stay byte-identical."""
+    alert cron AND the public preview endpoint so the two stay byte-identical.
+    Listings first seen in the last 48h get a "🆕 Just listed" badge."""
     base = (base or "").rstrip("/")
-    rows = "".join([f"<li style='margin:6px 0'>{(l.get('address') or 'Address on request')} — "
-                    f"${int(l.get('list_price') or 0):,} · {l.get('beds','?')} bed · {l.get('city','')}</li>"
-                    for l in new_listings])
+    def _row(l):
+        badge = ("<span style='display:inline-block;background:#16A34A;color:#fff;font-size:0.68em;font-weight:800;"
+                 "padding:1px 7px;border-radius:999px;margin-right:6px;vertical-align:middle;letter-spacing:0.04em'>🆕 JUST LISTED</span>"
+                 if _listing_is_just_listed(l) else "")
+        return (f"<li style='margin:6px 0'>{badge}{(l.get('address') or 'Address on request')} — "
+                f"${int(l.get('list_price') or 0):,} · {l.get('beds','?')} bed · {l.get('city','')}</li>")
+    rows = "".join([_row(l) for l in new_listings])
     n = len(new_listings)
     html = (f"<h2 style='color:#0F2A5B;font-family:sans-serif'>New BC listings match your saved search</h2>"
             f"<ul style='font-family:sans-serif;color:#1d1d1f'>{rows}</ul>"
@@ -16459,6 +16481,7 @@ async def preview_saved_search(request: Request, payload: dict):
         "beds": l.get("beds"),
         "city": l.get("city") or "",
         "property_type": l.get("property_type") or "",
+        "just_listed": _listing_is_just_listed(l),
     } for l in sample]
     return {
         "active_count": int(active_count),
