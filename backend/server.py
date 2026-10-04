@@ -16138,6 +16138,67 @@ def _build_mls_query(filters: dict) -> dict:
             query["$and"] = clauses
     return query
 
+MLS_SEARCH_COMPLIANCE = (
+    "Listings come from the live CREA DDF® feed and are shown for information only — "
+    "verify every detail with the listing brokerage before acting. If you're already working "
+    "with a REALTOR®, this is information, not solicitation. "
+    "Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790)."
+)
+
+
+async def _narrate_mls_results(user_query: str, filters: dict, listings: list, total: int) -> Optional[str]:
+    """P1 — grounded natural-language narration of an MLS® result set. Claude
+    narrates ONLY the structured facts we pass (count + a few card highlights);
+    it never sees listing remarks and is told never to invent a home, price, or
+    feature — CREA DDF® Rule 3.1 safe. Uses the Emergent LLM key via make_chat
+    (same path as Doogie chat). Returns None on any failure so the caller falls
+    back to the deterministic template summary."""
+    if total <= 0 or not listings:
+        return None
+
+    def _one(l):
+        bits = []
+        if l.get("list_price"): bits.append(f"${int(l['list_price']):,}")
+        if l.get("beds") is not None: bits.append(f"{l['beds']} bed")
+        if l.get("baths") is not None: bits.append(f"{l['baths']} bath")
+        if l.get("property_type"): bits.append(str(l["property_type"]))
+        where = l.get("community") or l.get("city")
+        if where: bits.append(f"in {where}")
+        return " · ".join(bits)
+
+    facts = {
+        "user_asked": user_query,
+        "total_matches": total,
+        "showing": len(listings),
+        "highlights": [_one(l) for l in listings[:3]],
+    }
+    sys = (
+        "You are Doogie, a warm, concise BC real-estate assistant. Narrate an MLS® search "
+        "result set using ONLY the facts in the JSON. NEVER invent a listing, price, bedroom "
+        "count, or feature not present in the facts. Don't list every home — state the count and "
+        "mention 1-2 standouts (e.g. best value or most beds). 45 words max, friendly, no emojis, "
+        "no markdown headings. End by inviting them to tap a card for details or refine their "
+        "search. If total is larger than what's shown, note they're seeing the top few."
+    )
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"mls-narr-{abs(hash(user_query)) % 100000}",
+            system_message=sys,
+        ).with_model("anthropic", "claude-haiku-4-5-20251001")
+        buf = ""
+        async for ev in chat.stream_message(UserMessage(text=json.dumps(facts)[:1500])):
+            if isinstance(ev, TextDelta):
+                buf += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        txt = buf.strip()
+        return txt or None
+    except Exception as e:
+        logger.warning(f"_narrate_mls_results failed: {e}")
+        return None
+
+
 @api.post("/doogie/mls-search")
 @_limiter.limit("30/minute")
 async def doogie_mls_search(request: Request, payload: dict):
@@ -16271,12 +16332,20 @@ async def doogie_mls_search(request: Request, payload: dict):
     else:
         summary = hood_prefix + f"I found {total} matching {criteria.strip()} — showing the top 6. Refine your search on the full listings page for more."
 
+    # P1 — let the model NARRATE the grounded result set instead of the template.
+    # Strictly grounded (facts-only); falls back to the template above on any failure.
+    if total > 0:
+        narration = await _narrate_mls_results(q, filters, listings, total)
+        if narration:
+            summary = (hood_prefix + narration) if hood_prefix else narration
+
     return {
         "intent_matched": True,
         "filters": filters,
         "count": total,
         "listings": listings,
         "summary": summary,
+        "compliance": MLS_SEARCH_COMPLIANCE,
         "using_mock_data": not _ddf_ready(),
     }
 

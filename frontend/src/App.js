@@ -1795,7 +1795,7 @@ export const DoogieChat = ({ mode = "fab" }) => {
         if (mls && mls.intent_matched && mls.listings && mls.listings.length > 0) {
           setMsgs(m => {
             const c = [...m];
-            c[c.length-1] = { role:"assistant", type:"listings", summary: mls.summary, listings: mls.listings, filters: mls.filters, count: mls.count, using_mock: mls.using_mock_data };
+            c[c.length-1] = { role:"assistant", type:"listings", summary: mls.summary, listings: mls.listings, filters: mls.filters, count: mls.count, compliance: mls.compliance, using_mock: mls.using_mock_data };
             return c;
           });
         } else {
@@ -1918,6 +1918,7 @@ export const DoogieChat = ({ mode = "fab" }) => {
               </Link>
             )}
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
+            {m.compliance && <div data-testid={`doogie-listings-compliance-${i}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",paddingTop:"0.5rem",borderTop:"1px solid rgba(15,42,91,0.08)",lineHeight:1.5}}>{m.compliance}</div>}
           </div>);
         }
         return <div key={i} className={`msg ${m.role}`}>{m.content ? <><span dangerouslySetInnerHTML={{__html: safeHtml(renderChatContent(m.content, lang))}}/>{m.role==="assistant" && Array.isArray(m.citations) && m.citations.length > 0 && (
