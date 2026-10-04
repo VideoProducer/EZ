@@ -15,6 +15,7 @@ axios.defaults.withCredentials = true;
 import DOMPurify from "dompurify";
 import { useT, normalizeLang, langQS, isRTL } from "./i18n";
 import { POPULAR_GLOSSARY_TERMS, GlossaryPageProvider, GlossaryProse } from "./utils/glossary";
+import ListingGlossaryTerms from "./components/ListingGlossaryTerms";
 import { buildTLDR, TLDRBlock, KeyPointsBlock, AnswerFirstMeta, ComplianceStrip as AEOComplianceStrip } from "./utils/answerFirst";
 import { IdentityLine } from "./components/IdentityLine";
 import ConversionStrip from "./components/ConversionStrip";
@@ -1513,6 +1514,7 @@ const DoogieListingCard = ({ listing }) => {
     <div style={{position:"absolute",top:8,right:8,zIndex:2}}>
       <FavoriteButton listingKey={listing.listing_key} currentPrice={listing.list_price} size="sm"/>
     </div>
+    <ListingGlossaryTerms listing={listing} variant="compact"/>
     </div>
   );
 };
@@ -5024,10 +5026,8 @@ const ListingDetail = () => {
           </div>
           <h2 style={{fontSize:"1.35rem",marginTop:"2rem"}}>About This Property</h2>
           <p style={{fontFamily:"Inter,sans-serif",lineHeight:1.7,color:"var(--ink)"}} data-testid="listing-description">{listing.description}</p>
-          {/* Term-linked buyer-cost primer — first mention of PTT/GST/etc auto-links to glossary (Feb 2026). */}
-          <div data-testid="listing-glossary-primer" style={{marginTop:"1rem",padding:"14px 18px",background:"rgba(15,42,91,0.04)",borderRadius:8,fontFamily:"Inter,sans-serif",fontSize:"0.86rem",lineHeight:1.65,color:"var(--muted)"}}>
-            <GlossaryProse text={"Typical closing considerations for this property: Property Transfer Tax at completion (with the First Time Home Buyers' Program if eligible), GST New Housing Rebate on new construction, and — for strata units — a fresh Form B — Strata Information Certificate reviewed before Subject Removal. New builds carry the 2-5-10 Home Warranty. Rural acreages may fall inside the Agricultural Land Reserve. Your monthly payment turns on your Amortization Period and the OSFI B-20 stress test."}/>
-          </div>
+          {/* Contextual glossary terms matched to this listing's type (equestrian / acreage / luxury / strata) + baseline closing costs (June 2026). */}
+          <ListingGlossaryTerms listing={listing} variant="full"/>
           <FeatureSheet listing={listing}/>
           {listing.virtual_tour_embed?.url && (
             <div style={{marginTop:"1.75rem"}} data-testid="listing-virtual-tour">
