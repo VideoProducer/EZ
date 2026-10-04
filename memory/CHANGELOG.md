@@ -2,6 +2,18 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Apple-style redesign of community / city / neighbourhood pages (frontend-only)
+
+- Scope: `/community/:slug` (city/town, `CommunityPageMockupLive.jsx`) + `/community/:slug/n/:nSlug` (neighbourhood, inline `NeighbourhoodPage` in `App.js`). `/communities` index (`CommunitiesNext.jsx`) already matched the target aesthetic → left unchanged. Backend untouched; all data fetching, routes, data-testids and CTAs preserved.
+- Palette: retired gold (#F5A623) → single calm accent (Apple blue #0066CC / navy #0F2A5B). Ink #1D1D1F, muted #86868B, canvas #FBFBFD. Fonts unified to SF Pro system stack (removed Sora/Playfair from these components).
+- City hero: replaced harsh dark-navy gradient box with a calmer photo hero (soft bottom scrim) + always-present region photo (new `REGION_HERO`/`DEFAULT_HERO` fallbacks). Stat strip → frosted glass metric bar; `DATA SOURCE` green emoji → Lucide CheckCircle2. Primary CTA → white pill w/ ArrowUpRight.
+- Emojis retired site-wide on these pages (🏡🐾🤝🎥🟢📍) → Lucide icons (MapPin, Users, Video, ArrowRight, CheckCircle2, ArrowUpRight).
+- Demographics card: replaced raw `<pre>{JSON.stringify(...)}</pre>` dump with a clean auto-parsed stat-tile grid (+ graceful "synchronizing" fallback).
+- Land-use layers, FAQ accordion, sub-neighbourhood grid, listing cards, referral/buyer-seller CTA blocks all restyled to white cards / hairline borders / 22px radius / navy pills.
+- Neighbourhood page: market snapshot → clean white Apple card (SF font, ink numbers); emojis removed.
+- Verified: testing_agent iteration_40.json = 100% frontend pass (focus + out-of-area city, neighbourhood, index; desktop + 390px mobile; no overflow, no raw JSON, no emojis). Note: `nhb-faq` is conditional on a reviewed synopsis (content-driven, pre-existing).
+
+
 ## June 2026 — Calculator pages Apple polish + mobile checks + deploy
 
 - Applied `apple-form` class to `/tools/mortgage-affordability` (`MortgageAffordabilityPage`) and `/tools/ptt-estimator` (`PTTEstimator`) — both already used `.paper/.field`, so they now get the white card + rounded inputs + navy pill look. Verified mortgage page via screenshot.

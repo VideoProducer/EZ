@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only Apple-style restyle verification of /communities, /community/:slug (in-area + out-of-area) and /community/:slug/n/:nSlug. All critical data-testids, CTAs, hero stat strip, demographics-as-stat-tiles, and no-emoji requirements verified across desktop + 390px mobile. No horizontal overflow. No JS/page errors. No raw JSON demographics dump.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_checks": [
+    "/communities loads: 240 community cards, 13 region tabs, search box filters.",
+    "/community/maple-ridge: H1 'Maple Ridge, BC', Doug agent line, 4-metric stat strip (ACTIVE LISTINGS/MEDIAN LIST/PRICE RANGE/DATA SOURCE with CREA DDF live), hero-view-listings pill links to /listings?city=Maple%20Ridge.",
+    "/community/maple-ridge: 12 neighbourhood-* cards, 4 listing-* cards, Weather / BC Land-Use / Demographics sections render; demographics is stat-tile style (0 <pre> JSON dumps). FAQ-0 expands. focus-buying + focus-selling CTAs present.",
+    "/community/kelowna (out-of-area): hero-referral-link present, bottom-referral-link links to /referral-request?city=Kelowna, 0 emojis found on the page.",
+    "/community/vancouver/n/kitsilano: nhb-market-snapshot renders clean white card with Active listings / Price range / Median; nhb-view-listings href /listings?city=Vancouver&region=Kitsilano; 'Back to Vancouver' button present; H1 'Kitsilano'; 0 emojis.",
+    "Mobile 390px: no horizontal overflow on Maple Ridge or Kitsilano (scrollWidth==clientWidth==390)."
+  ],
+  "observations": [
+    "nhb-faq data-testid not present on /community/vancouver/n/kitsilano — synopsis shows 'awaiting review by Doug LeMaire, REALTOR\u00ae before publication', suggesting FAQ is suppressed until synopsis is reviewed. Content-driven, not a code bug. If product expects nhb-faq to always render (e.g. with a placeholder), main agent should confirm."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% (all required checks passed)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Apple-style restyle verified at iteration 40. If future changes touch neighbourhood pages, note that nhb-faq is conditional on synopsis being reviewed — Kitsilano currently has no FAQ because synopsis is pending review."
+}
