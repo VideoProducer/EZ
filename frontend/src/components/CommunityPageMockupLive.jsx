@@ -417,6 +417,24 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   const weatherText = data.weather?.weather || null;
   const heroBackdrop = HERO_BACKDROP[slug] || REGION_HERO[region] || DEFAULT_HERO;
 
+  // Hero backdrop rotates through real MLS® listing photos for this area;
+  // falls back to the region/default photo when no listing imagery exists.
+  const heroPhotos = useMemo(() => {
+    const pics = (data.listings || [])
+      .map(l => (l.photos && l.photos[0]) || l.primary_photo)
+      .filter(Boolean);
+    return [...new Set(pics)];
+  }, [data.listings]);
+  const heroSlides = heroPhotos.length ? heroPhotos : [heroBackdrop];
+  const [heroIdx, setHeroIdx] = useState(0);
+  useEffect(() => {
+    setHeroIdx(0);
+    if (heroSlides.length <= 1) return;
+    const id = setInterval(() => setHeroIdx(i => (i + 1) % heroSlides.length), 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroSlides.length, slug]);
+
   // Auto-generated FAQ from live data.
   const faqs = useMemo(() => {
     const out = [];
@@ -641,10 +659,26 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         <div style={{
-          borderRadius:22,overflow:"hidden",position:"relative",
-          background:`linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.26) 45%, rgba(0,0,0,0.10) 100%), url(${heroBackdrop}) center/cover`,
+          borderRadius:22,overflow:"hidden",position:"relative",background:BRAND.navy,
           color:"#fff",padding:"40px 34px",minHeight:300,display:"flex",flexDirection:"column",justifyContent:"flex-end",
         }}>
+          {/* Rotating real-listing photos for this area (crossfade) */}
+          {heroSlides.map((src, i) => (
+            <div key={`${src}-${i}`} aria-hidden="true" style={{
+              position:"absolute",inset:0,backgroundImage:`url(${src})`,
+              backgroundSize:"cover",backgroundPosition:"center",
+              opacity:i === heroIdx ? 1 : 0,transition:"opacity 1.2s ease-in-out",
+            }}/>
+          ))}
+          <div aria-hidden="true" style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.64) 0%, rgba(0,0,0,0.28) 45%, rgba(0,0,0,0.12) 100%)"}}/>
+          {heroPhotos.length > 1 && (
+            <div style={{position:"absolute",top:16,right:18,display:"flex",gap:6,zIndex:2}} data-testid="hero-photo-dots">
+              {heroSlides.map((_, i) => (
+                <span key={i} style={{width:i === heroIdx ? 18 : 6,height:6,borderRadius:999,background:i === heroIdx ? "#fff" : "rgba(255,255,255,0.5)",transition:"width 0.4s ease, background 0.4s ease"}}/>
+              ))}
+            </div>
+          )}
+          <div style={{position:"relative",zIndex:1,display:"flex",flexDirection:"column"}}>
           <div style={{fontSize:"0.72rem",letterSpacing:"0.14em",textTransform:"uppercase",fontWeight:600,opacity:0.92}}>{region}</div>
           <h1 style={{fontSize:"clamp(2.1rem,5vw,3.4rem)",fontFamily:SF,fontWeight:700,letterSpacing:"-0.03em",margin:"6px 0 14px",lineHeight:1.05}}>{community}, BC</h1>
 
@@ -676,6 +710,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
 
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:"#fff",color:BRAND.navy,border:"none",padding:"13px 24px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none",display:"inline-flex",alignItems:"center",gap:7}}>View {active.toLocaleString()} listings <ArrowUpRight size={17} strokeWidth={2.2}/></Link>
+          </div>
           </div>
         </div>
 

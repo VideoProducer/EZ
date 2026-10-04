@@ -2,6 +2,11 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — City hero rotates through real MLS® listing photos
+
+- `CommunityPageMockupLive.jsx`: the hero backdrop now rotates through actual live CREA DDF® listing photos for that community (`data.listings[].photos[0]`), crossfading every 5s with page-dot indicators (top-right). Falls back to the region/default photo only when a community has no listing imagery. Applies to every `/community/:slug` (all communities/towns/cities). Verified live: Pemberton (Sea-to-Sky, desktop) + Surrey (Greater Vancouver, mobile 390px, no overflow) both loading real ddfcdn.realtor.ca photos.
+
+
 ## June 2026 — Referral copy edit on community/city/neighbourhood pages
 
 - TL;DR block (`CommunityPageMockupLive.jsx`): removed the out-of-area sentence "Doug LeMaire, REALTOR® refers out-of-area buyers to a local {community} REALTOR® at no cost." In-area still shows "Doug LeMaire, REALTOR® covers {community} directly."
