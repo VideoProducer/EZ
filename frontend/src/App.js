@@ -542,12 +542,12 @@ const NeighbourhoodPage = () => {
           color:"var(--ink)",
         }}
       >
-        As a smaller BC community, {d.neighbourhood} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
+        This is outside of Doug's region, however an introduction to a licensed REALTOR® is available.{" "}
         <Link
           to={`/referral-request?city=${encodeURIComponent(d.community)}&neighbourhood=${encodeURIComponent(d.neighbourhood)}`}
           style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}}
           data-testid="nhb-referral-link"
-        >Referral REALTOR® link</Link>.
+        >Request an introduction</Link>.
       </div>
     )}
     <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.02rem",lineHeight:1.7}}>

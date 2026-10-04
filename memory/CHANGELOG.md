@@ -2,6 +2,14 @@
 
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
+## June 2026 — Referral copy edit on community/city/neighbourhood pages
+
+- TL;DR block (`CommunityPageMockupLive.jsx`): removed the out-of-area sentence "Doug LeMaire, REALTOR® refers out-of-area buyers to a local {community} REALTOR® at no cost." In-area still shows "Doug LeMaire, REALTOR® covers {community} directly."
+- Replaced the out-of-area referral line everywhere it appeared (city hero card, bottom "Get connected" block, and neighbourhood-page referral banner in `App.js`) with the exact approved wording: "This is outside of Doug's region, however an introduction to a licensed REALTOR® is available." Buttons/links now read "Request an introduction".
+- Retired the old "A vetted introduction … available at no cost" / "refers out-of-area … at no cost" phrasing from all visible community copy. (JSON-LD service description left factual/unchanged; legacy `/neighbourhood/:slug` component not in scope.)
+- Verified live on /community/powell-river (hero + TL;DR via DOM text extraction).
+
+
 ## June 2026 — Apple-style redesign of community / city / neighbourhood pages (frontend-only)
 
 - Scope: `/community/:slug` (city/town, `CommunityPageMockupLive.jsx`) + `/community/:slug/n/:nSlug` (neighbourhood, inline `NeighbourhoodPage` in `App.js`). `/communities` index (`CommunitiesNext.jsx`) already matched the target aesthetic → left unchanged. Backend untouched; all data fetching, routes, data-testids and CTAs preserved.

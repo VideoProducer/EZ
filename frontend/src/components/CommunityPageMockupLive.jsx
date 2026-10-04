@@ -660,8 +660,8 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
             <div style={{marginBottom:20,background:"rgba(255,255,255,0.14)",padding:"14px 18px",borderRadius:16,backdropFilter:"blur(14px) saturate(180%)",display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",border:"1px solid rgba(255,255,255,0.18)"}}>
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:56,height:56,flexShrink:0,objectFit:"contain"}}/>
               <div style={{fontSize:"0.9rem",lineHeight:1.55,flex:"1 1 320px"}}>
-                {community} is outside Doug's direct service area. A vetted introduction to a licensed local REALTOR® is available at no cost.{" "}
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("hero")} data-testid="hero-referral-link" style={{color:"#fff",fontWeight:600,textDecoration:"underline",whiteSpace:"nowrap"}}>Request introduction →</Link>
+                This is outside of Doug's region, however an introduction to a licensed REALTOR® is available.{" "}
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("hero")} data-testid="hero-referral-link" style={{color:"#fff",fontWeight:600,textDecoration:"underline",whiteSpace:"nowrap"}}>Request an introduction →</Link>
               </div>
             </div>
           )}
@@ -683,7 +683,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
             LLM overviews grab a clean, ≤65-word answer to "What is buying
             in {community} like?" as the direct AI answer. */}
         <TLDRBlock
-          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B. Doug LeMaire, REALTOR® ${isFocus ? "covers " + community + " directly" : "refers out-of-area buyers to a local " + community + " REALTOR® at no cost"}.`}
+          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B.${isFocus ? " Doug LeMaire, REALTOR® covers " + community + " directly." : ""}`}
           testId="community-tldr"
         />
 
@@ -845,9 +845,9 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
               <div style={{flex:"1 1 320px"}}>
                 <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
-                  As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas. A vetted introduction to a BCFSA-licensed local REALTOR® is available at no cost to you — you approve each introduction.
+                  This is outside of Doug's region, however an introduction to a licensed REALTOR® is available.
                 </div>
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("section7")} data-testid="bottom-referral-link" style={{display:"inline-flex",alignItems:"center",gap:7,background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",textDecoration:"none"}}>Request vetted introduction <ArrowRight size={16} strokeWidth={2.2}/></Link>
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("section7")} data-testid="bottom-referral-link" style={{display:"inline-flex",alignItems:"center",gap:7,background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",textDecoration:"none"}}>Request an introduction <ArrowRight size={16} strokeWidth={2.2}/></Link>
               </div>
             </div>
           </>
