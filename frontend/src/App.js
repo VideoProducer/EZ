@@ -5314,38 +5314,27 @@ const HOMES_FAQ = (city) => [
 
 const HomesForSale = () => {
   const { slug } = useParams();
-  const [meta, setMeta] = useState(null);   // {name, region} | "notfound" | null
   const [snap, setSnap] = useState(null);
+  // City name is derived SYNCHRONOUSLY from the slug so the page (hero, FAQ,
+  // CTAs, disclaimers) renders instantly with no async gate — the on-demand
+  // bot prerender then captures fully-rendered HTML every time. Live stats
+  // below are a graceful enhancement: if the DDF® feed is momentarily
+  // unreachable they show "—", which also keeps any cached snapshot free of
+  // frozen MLS®-derived figures (BCFSA "not misleading" + CREA-safe).
+  const city = (slug || "").split("-").map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(" ").trim();
   useEffect(() => {
+    if (!city) return;
     let ok = true;
-    axios.get(`${API}/communities`).then(r => {
-      const data = r.data || {};
-      let found = null;
-      for (const [region, names] of Object.entries(data)) {
-        for (const n of names) {
-          const s = n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-          if (s === slug) { found = { name: n, region }; break; }
-        }
-        if (found) break;
-      }
-      if (ok) setMeta(found || "notfound");
-    }).catch(() => { if (ok) setMeta("notfound"); });
+    axios.get(`${API}/insights`, { params: { city } }).then(r => { if (ok) setSnap(r.data); }).catch(() => {});
     return () => { ok = false; };
-  }, [slug]);
-  useEffect(() => {
-    if (!meta || meta === "notfound") return;
-    axios.get(`${API}/insights`, { params: { city: meta.name } }).then(r => setSnap(r.data)).catch(() => {});
-  }, [meta]);
+  }, [city]);
 
-  if (meta === "notfound") return (
+  if (!city) return (
     <div className="section container-x" style={{minHeight:"50vh",paddingTop:"3rem"}}>
       <h2 style={{fontFamily:"'Sora',sans-serif"}}>Community not found</h2>
       <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>Browse all BC communities →</Link>
     </div>
   );
-  if (!meta) return <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>;
-
-  const city = meta.name;
   const money = (v) => (v == null ? "—" : `$${Math.round(v).toLocaleString("en-CA")}`);
   const faqs = HOMES_FAQ(city);
   const faqSchema = { "@context":"https://schema.org", "@type":"FAQPage", mainEntity: faqs.map(f => ({ "@type":"Question", name:f.q, acceptedAnswer:{ "@type":"Answer", text:f.a } })) };

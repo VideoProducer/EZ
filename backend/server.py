@@ -10672,6 +10672,16 @@ async def admin_prerender_warm(_=Depends(verify_admin)):
     async for s in db.community_synopses.find({}, {"slug": 1}).sort("last_reviewed_at", -1):
         if s.get("slug"):
             paths.append(f"/community/{s['slug']}")
+    # Homes-for-sale SEO hubs — pre-warm from the community seed so first bot
+    # hits land on a cache HIT (fully-rendered HTML) rather than a cold MISS.
+    try:
+        _comms = json.loads((ROOT_DIR / "data" / "communities_seed.json").read_text())
+        for _names in _comms.values():
+            for _name in _names:
+                _hslug = re.sub(r"[^a-z0-9]+", "-", _name.lower()).strip("-")
+                paths.append(f"/homes-for-sale/{_hslug}")
+    except Exception:
+        pass
     async for l in db.listings.find({"status": "Active"}, {"listing_key": 1}).sort("modification_ts", -1).limit(100):
         if l.get("listing_key"):
             paths.append(f"/listing/{l['listing_key']}")

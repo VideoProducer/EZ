@@ -902,6 +902,7 @@ def write_snapshots_sitemap():
         # Higher for lead-capture conversion routes so bots prioritise them.
         "": ("weekly", "0.9"),               # /snapshot/{slug}.html (conversion pages)
         "insights": ("weekly", "0.8"),
+        "homes-for-sale": ("daily", "0.8"),
         "glossary": ("weekly", "0.7"),
         "community": ("weekly", "0.7"),
     }
@@ -934,6 +935,112 @@ def write_snapshots_sitemap():
     return len(urls)
 
 
+async def render_homes_for_sale(db):
+    """Prerender /homes-for-sale/{slug} SEO hubs for non-JS crawlers + AI bots.
+
+    COMPLIANCE (BCFSA / CREA DDF® / GVR): the snapshot carries ONLY evergreen
+    content — hero, FAQ, CTAs, cross-links, DDF® attribution, the information-
+    only / not-an-appraisal disclaimer, and full licensee identification. It
+    deliberately does NOT bake in live MLS®-derived figures (active counts,
+    median list price), because a static snapshot would freeze and cache those
+    statistics and could show stale numbers to an engine that quotes them. The
+    live figures render client-side for real visitors; bots are handed the
+    keyword-rich static shell plus links into the live /listings search."""
+    comms = json.loads(Path("/app/backend/data/communities_seed.json").read_text())
+    total = sum(len(v) for v in comms.values())
+    print(f"Rendering {total} homes-for-sale hub snapshots…")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    count = 0
+    for region, names in comms.items():
+        region_slug = re.sub(r'[^a-z0-9]+', '-', region.lower()).strip('-')
+        for name in names:
+            slug = slugify(name)
+            canonical = f"{SITE}/homes-for-sale/{slug}"
+            title = f"Homes for Sale in {name}, BC — Live MLS® Listings | EZtoFind.ca"
+            desc = (f"Browse homes for sale in {name}, British Columbia. Live active-listing counts, "
+                    f"median list price and price range from the CREA DDF® feed, updated daily. "
+                    f"Search MLS® listings with Doug LeMaire, REALTOR® (BCFSA #167790).")
+            desc = desc if len(desc) <= 300 else desc[:299]
+
+            faqs = [
+                (f"How many homes are for sale in {name}, BC?",
+                 f"The number of active residential MLS® listings in {name} updates live from the CREA DDF® feed on EZtoFind.ca. The market snapshot on this page shows today's active-listing count, price range, and median list price for {name}."),
+                (f"What is the median list price in {name}?",
+                 f"EZtoFind.ca shows the current median list price of active {name} listings, sourced live from the CREA DDF® feed. Median figures move with the market, so check the snapshot on the page for today's number."),
+                (f"How do I search {name} real estate listings?",
+                 f"Open the live MLS® search filtered to {name}, or ask Doogie in plain words (for example \"3-bed townhouse in {name} under $900k\"). Every listing comes straight from the CREA DDF® feed."),
+                (f"Who do I contact to buy a home in {name}?",
+                 f"Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) can help. Submit the buyer form and Doug replies within one business day. Submitting a form does not create a REALTOR®-client relationship until a formal DoRTS is provided."),
+            ]
+            faq_schema = {
+                "@context": "https://schema.org", "@type": "FAQPage",
+                "mainEntity": [{"@type": "Question", "name": q,
+                                "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faqs],
+            }
+            breadcrumb_schema = {
+                "@context": "https://schema.org", "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{SITE}/"},
+                    {"@type": "ListItem", "position": 2, "name": "BC Communities", "item": f"{SITE}/communities"},
+                    {"@type": "ListItem", "position": 3, "name": f"Homes for Sale in {name}", "item": canonical},
+                ],
+            }
+            schema_blocks = (
+                f'<script type="application/ld+json">{json.dumps(faq_schema)}</script>'
+                f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>'
+            )
+
+            body_html = f'<div class="eyebrow">Homes for Sale</div><h1>Homes for sale in {esc(name)}, BC</h1>'
+            body_html += (f'<p style="font-size:0.78rem;color:#6B7280;margin:0.35rem 0 1rem;font-style:italic">'
+                          f'Last reviewed: <time datetime="{today}">{today}</time></p>')
+            body_html += (f'<p>Looking for homes for sale in <b>{esc(name)}</b>, British Columbia? EZtoFind.ca lists every '
+                          f'active {esc(name)} property from the CREA Data Distribution Facility (DDF®) — refreshed daily. '
+                          f'The live market snapshot (active-listing count, median list price, price range and average days on '
+                          f'market) loads on the page, and you can open the full MLS® search filtered to {esc(name)} at any time.</p>')
+            body_html += (f'<p><a href="/listings?city={esc(name)}" style="color:#0EA5E9;font-weight:700;text-decoration:none">'
+                          f'→ Search live {esc(name)} MLS® listings</a> &nbsp;·&nbsp; '
+                          f'<a href="/community/{esc(slug)}" style="color:#0EA5E9;font-weight:700;text-decoration:none">'
+                          f'{esc(name)} community profile</a></p>')
+
+            body_html += '<h2>Buying in ' + esc(name) + ' — FAQ</h2><div class="faq">'
+            for q, a in faqs:
+                body_html += f'<details open><summary>{esc(q)}</summary><p>{esc(a)}</p></details>'
+            body_html += '</div>'
+
+            # Cross-links
+            body_html += (
+                f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">More BC Real Estate</div>'
+                f'<ul style="list-style:none;padding:0;margin:0">'
+                f'<li><a href="/community/{esc(slug)}">{esc(name)}, BC community profile →</a></li>'
+                f'<li><a href="/listings?city={esc(name)}">Live MLS® listings in {esc(name)}, BC →</a></li>'
+                f'<li><a href="/regions/{region_slug}">{esc(region)} region overview →</a></li>'
+                f'<li><a href="/buyer">Start a buyer enquiry with Doug LeMaire, REALTOR® →</a></li>'
+                f'</ul></div>'
+            )
+            # Compliance block (CREA DDF® attribution + information-only + licensee ID)
+            body_html += (
+                f'<div class="disclaimer">Listings and market figures come from the live CREA DDF® feed and are shown '
+                f'for information only — not an appraisal or opinion of value. Verify every detail with the listing '
+                f'brokerage before acting. If you are already working with a REALTOR®, this is information, not solicitation. '
+                f'Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA #167790.</div>'
+            )
+
+            head_data = {
+                "title": esc(title),
+                "description": esc(desc.replace("\n", " ")),
+                "canonical": canonical,
+                "og_type": "website",
+                "og_image": f"{SITE}/images/og-default.png",
+                "schema_blocks": schema_blocks,
+            }
+            page = HEADER_HTML.format(**head_data) + body_html + FOOTER_HTML
+            out_dir = PUBLIC_DIR / "snapshot" / "homes-for-sale"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / f"{slug}.html").write_text(page, encoding="utf-8")
+            count += 1
+    print(f"  ✓ {count} homes-for-sale snapshots written to {PUBLIC_DIR}/snapshot/homes-for-sale/")
+
+
 async def main():
     import sys
     sys.path.insert(0, '/app/backend')
@@ -942,6 +1049,7 @@ async def main():
     print(f"Prerender starting · {datetime.now(timezone.utc).isoformat()}")
     await render_glossary(db)
     await render_communities(db)
+    await render_homes_for_sale(db)
     await render_insights(db)
     await render_conversion_pages()
     write_snapshots_sitemap()

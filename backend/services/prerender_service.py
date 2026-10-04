@@ -145,7 +145,7 @@ def is_prerenderable(path: str) -> bool:
 def ttl_for(path: str) -> int:
     """Return cache TTL (seconds) for the given path."""
     p = path.split("?", 1)[0].split("#", 1)[0].lower()
-    if p.startswith("/listing") or p.startswith("/listings/") or p.startswith("/property/"):
+    if p.startswith("/listing") or p.startswith("/listings/") or p.startswith("/property/") or p.startswith("/homes-for-sale"):
         return TTL_LISTING
     if p.startswith("/community") or p.startswith("/communities") or p.startswith("/neighbourhood"):
         return TTL_COMMUNITY
@@ -156,7 +156,7 @@ def ttl_for(path: str) -> int:
 
 def _path_kind(path: str) -> str:
     p = path.split("?", 1)[0].lower()
-    if p.startswith("/listing") or p.startswith("/property"):
+    if p.startswith("/listing") or p.startswith("/property") or p.startswith("/homes-for-sale"):
         return "listing"
     if p.startswith("/community") or p.startswith("/neighbourhood"):
         return "community"
