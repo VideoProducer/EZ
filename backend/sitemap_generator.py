@@ -240,6 +240,21 @@ def _build_communities() -> tuple[str, int, dict]:
                 ))
     return _wrap_urlset(tags, with_image_ns=True), len(tags), slug_by_name
 
+def _build_homes_for_sale() -> tuple[str, int]:
+    """SEO landing hubs — one <url> per community for /homes-for-sale/{slug}.
+    Mirrors the community slug list; these pages target the high-intent
+    'homes for sale in {city}' organic query."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    community_seed = Path("/app/backend/data/communities_seed.json")
+    tags = []
+    if community_seed.exists():
+        comms = json.loads(community_seed.read_text())
+        for region, names in comms.items():
+            for name in names:
+                slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                tags.append(_url_tag(f"{BASE_URL}/homes-for-sale/{slug}", today, "daily", "0.8"))
+    return _wrap_urlset(tags), len(tags)
+
 async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:
     """Emit one <url> per sub-neighbourhood in Doug's farm.
 
@@ -521,6 +536,9 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     communities_xml, community_count, slug_by_name = _build_communities()
     _write(out_dir / "sitemap-communities.xml", communities_xml)
 
+    homes_xml, homes_count = _build_homes_for_sale()
+    _write(out_dir / "sitemap-homes-for-sale.xml", homes_xml)
+
     neighbourhoods_xml, neighbourhood_count = await _build_neighbourhoods(db, slug_by_name)
     _write(out_dir / "sitemap-neighbourhoods.xml", neighbourhoods_xml)
 
@@ -569,6 +587,7 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         ("sitemap-static.xml",         static_count),
         ("sitemap-glossary.xml",       glossary_count),
         ("sitemap-communities.xml",    community_count),
+        ("sitemap-homes-for-sale.xml", homes_count),
         ("sitemap-neighbourhoods.xml", neighbourhood_count),
         ("sitemap-insights.xml",       insights_count),
         ("sitemap-listings.xml",       listings_count),

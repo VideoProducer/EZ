@@ -1545,6 +1545,14 @@ export const SaveSearchButton = ({ filters, idx }) => {
   const [freq, setFreq] = React.useState("daily");
   const [consent, setConsent] = React.useState(false);
   const [status, setStatus] = React.useState("");
+  const [preview, setPreview] = React.useState(null);
+  const [showPreview, setShowPreview] = React.useState(false);
+  const openForm = () => {
+    setOpen(true);
+    if (preview) return;
+    axios.post(`${API}/saved-searches/preview`, { filters: filters || {} })
+      .then(r => setPreview(r.data || null)).catch(() => {});
+  };
   const submit = async () => {
     if (!email.trim() || !consent) { setStatus("Enter your email and tick the consent box."); return; }
     setStatus("saving");
@@ -1562,12 +1570,21 @@ export const SaveSearchButton = ({ filters, idx }) => {
   return (
     <div style={{marginTop:"0.6rem"}}>
       {!open ? (
-        <button type="button" data-testid={`doogie-save-open-${idx}`} onClick={()=>setOpen(true)}
+        <button type="button" data-testid={`doogie-save-open-${idx}`} onClick={openForm}
           style={{fontFamily:"Inter,sans-serif",fontSize:"0.76rem",fontWeight:700,color:"#0F2A5B",background:"#fff",border:"1px solid rgba(15,42,91,0.25)",padding:"0.35rem 0.8rem",borderRadius:999,cursor:"pointer"}}>
           🔔 Save this search &amp; get alerts
         </button>
       ) : (
         <div style={{background:"#F7F9FC",border:"1px solid rgba(15,42,91,0.12)",borderRadius:12,padding:"0.7rem"}}>
+          {preview && (preview.new_this_week > 0 ? (
+            <div data-testid={`doogie-save-socialproof-${idx}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.76rem",fontWeight:700,color:"#0F2A5B",background:"rgba(15,42,91,0.06)",borderRadius:8,padding:"0.45rem 0.6rem",marginBottom:"0.55rem"}}>
+              🔔 {preview.new_this_week.toLocaleString("en-CA")} new listing{preview.new_this_week === 1 ? "" : "s"} matched this search in the last 7 days
+            </div>
+          ) : preview.active_count > 0 ? (
+            <div data-testid={`doogie-save-socialproof-${idx}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.76rem",fontWeight:600,color:"#0F2A5B",background:"rgba(15,42,91,0.06)",borderRadius:8,padding:"0.45rem 0.6rem",marginBottom:"0.55rem"}}>
+              {preview.active_count.toLocaleString("en-CA")} active listing{preview.active_count === 1 ? "" : "s"} match right now
+            </div>
+          ) : null)}
           <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
             data-testid={`doogie-save-email-${idx}`} style={{width:"100%",padding:"0.5rem 0.7rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.2)",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",marginBottom:"0.5rem",boxSizing:"border-box"}}/>
           <select value={freq} onChange={e=>setFreq(e.target.value)} data-testid={`doogie-save-freq-${idx}`}
@@ -1576,6 +1593,19 @@ export const SaveSearchButton = ({ filters, idx }) => {
             <option value="daily">Daily summary</option>
             <option value="weekly">Weekly summary</option>
           </select>
+          {preview && preview.sample && preview.sample.length > 0 && (
+            <>
+              <button type="button" data-testid={`doogie-save-preview-toggle-${idx}`} onClick={()=>setShowPreview(v=>!v)}
+                style={{fontFamily:"Inter,sans-serif",fontSize:"0.74rem",fontWeight:700,color:"#0F2A5B",background:"transparent",border:"none",padding:"0 0 0.5rem",cursor:"pointer",textDecoration:"underline"}}>
+                {showPreview ? "Hide sample alert" : "👁 Preview a sample alert email"}
+              </button>
+              {showPreview && (
+                <div data-testid={`doogie-save-preview-${idx}`}
+                  style={{background:"#fff",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,padding:"0.6rem 0.75rem",marginBottom:"0.55rem",maxHeight:220,overflowY:"auto",fontSize:"0.78rem"}}
+                  dangerouslySetInnerHTML={{__html: preview.email_html}}/>
+              )}
+            </>
+          )}
           <label style={{display:"flex",gap:"0.5rem",alignItems:"flex-start",fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.5rem",cursor:"pointer"}}>
             <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} data-testid={`doogie-save-consent-${idx}`} style={{marginTop:2}}/>
             <span>I agree to receive these alert emails and accept the <Link to="/privacy" style={{color:"#0F2A5B"}}>Privacy Policy</Link> (BC PIPA / CASL). Unsubscribe anytime.</span>
@@ -5266,6 +5296,127 @@ const RegionPage = () => {
           </div>
         </section>
       )}
+    </div>
+  );
+};
+
+// --- Homes for Sale (SEO landing hubs) ---
+// /homes-for-sale/{community} — high-intent organic-search landing pages. Each
+// renders a live CREA DDF® market snapshot for the community, a compliant FAQ
+// (with FAQPage JSON-LD), and CTAs into the real /listings search + /community
+// profile. No raw MLS® redistribution on the hub itself (CREA-safe).
+const HOMES_FAQ = (city) => [
+  { q: `How many homes are for sale in ${city}, BC?`, a: `The number of active residential MLS® listings in ${city} updates live from the CREA DDF® feed on EZtoFind.ca. The market snapshot on this page shows today's active-listing count, price range, and median list price for ${city}.` },
+  { q: `What is the median list price in ${city}?`, a: `EZtoFind.ca shows the current median list price of active ${city} listings, sourced live from the CREA DDF® feed. Median figures move with the market, so check the snapshot above for today's number.` },
+  { q: `How do I search ${city} real estate listings?`, a: `Use the "Search ${city} listings" button to open the full MLS® search filtered to ${city}, or ask Doogie in plain words (for example "3-bed townhouse in ${city} under $900k"). Every listing comes straight from the CREA DDF® feed.` },
+  { q: `Who do I contact to buy a home in ${city}?`, a: `Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) can help. Submit the buyer form and Doug replies within one business day. Submitting a form does not create a REALTOR®-client relationship until a formal DoRTS is provided.` },
+];
+
+const HomesForSale = () => {
+  const { slug } = useParams();
+  const [meta, setMeta] = useState(null);   // {name, region} | "notfound" | null
+  const [snap, setSnap] = useState(null);
+  useEffect(() => {
+    let ok = true;
+    axios.get(`${API}/communities`).then(r => {
+      const data = r.data || {};
+      let found = null;
+      for (const [region, names] of Object.entries(data)) {
+        for (const n of names) {
+          const s = n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+          if (s === slug) { found = { name: n, region }; break; }
+        }
+        if (found) break;
+      }
+      if (ok) setMeta(found || "notfound");
+    }).catch(() => { if (ok) setMeta("notfound"); });
+    return () => { ok = false; };
+  }, [slug]);
+  useEffect(() => {
+    if (!meta || meta === "notfound") return;
+    axios.get(`${API}/insights`, { params: { city: meta.name } }).then(r => setSnap(r.data)).catch(() => {});
+  }, [meta]);
+
+  if (meta === "notfound") return (
+    <div className="section container-x" style={{minHeight:"50vh",paddingTop:"3rem"}}>
+      <h2 style={{fontFamily:"'Sora',sans-serif"}}>Community not found</h2>
+      <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>Browse all BC communities →</Link>
+    </div>
+  );
+  if (!meta) return <div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>;
+
+  const city = meta.name;
+  const money = (v) => (v == null ? "—" : `$${Math.round(v).toLocaleString("en-CA")}`);
+  const faqs = HOMES_FAQ(city);
+  const faqSchema = { "@context":"https://schema.org", "@type":"FAQPage", mainEntity: faqs.map(f => ({ "@type":"Question", name:f.q, acceptedAnswer:{ "@type":"Answer", text:f.a } })) };
+
+  return (
+    <div className="hn" data-testid={`homes-for-sale-${slug}`}>
+      <SEO
+        title={`Homes for Sale in ${city}, BC — Live MLS® Listings | EZtoFind.ca`}
+        description={`Browse homes for sale in ${city}, British Columbia. Live active-listing counts, median list price and price range from the CREA DDF® feed. Search MLS® listings and connect with Doug LeMaire, REALTOR®.`}
+        path={`/homes-for-sale/${slug}`}
+        schema={faqSchema}
+      />
+      <section className="hn-section" style={{paddingBottom:0}}>
+        <div className="hn-wrap">
+          <p style={{fontFamily:"Inter,sans-serif",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",fontSize:"0.78rem",color:"var(--brand-blue)",margin:0}}>Homes for Sale</p>
+          <h1 data-testid="hfs-title" style={{fontFamily:"'Sora',sans-serif",fontWeight:700,letterSpacing:"-0.02em",fontSize:"clamp(2rem,5vw,3.25rem)",color:"#1d1d1f",margin:"0.4rem 0 0.6rem",lineHeight:1.05}}>Homes for sale in {city}, BC</h1>
+          <p className="hn-lead" style={{maxWidth:"46rem"}}>
+            {snap && snap.active_count > 0
+              ? `${snap.active_count.toLocaleString("en-CA")} active MLS® listing${snap.active_count === 1 ? "" : "s"} in ${city} right now — updated daily from the CREA DDF® feed.`
+              : `Live MLS® listings for ${city}, updated daily from the CREA DDF® feed.`}
+          </p>
+          <div className="hn-ctarow" style={{marginTop:"1.25rem"}}>
+            <Link to={`/listings?city=${encodeURIComponent(city)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-search">Search {city} listings <HnArrowRight size={15}/></Link>
+            <Link to={`/community/${slug}`} className="hn-pill hn-pill--lg" data-testid="hfs-community">{city} community profile</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="hn-section" style={{paddingTop:28}} data-testid="hfs-snapshot">
+        <div className="hn-wrap">
+          <div className="hn-center"><h2 className="hn-h2">{city} market snapshot</h2></div>
+          <div className="rp-stats" style={{marginTop:"1.5rem"}}>
+            <div className="rp-stat" data-testid="hfs-stat-active"><strong>{snap && snap.active_count != null ? snap.active_count.toLocaleString("en-CA") : "—"}</strong><span>active listings</span></div>
+            <div className="rp-stat" data-testid="hfs-stat-median"><strong>{snap ? money(snap.median_list_price) : "—"}</strong><span>median list price</span></div>
+            <div className="rp-stat" data-testid="hfs-stat-range"><strong style={{fontSize:"1.15rem"}}>{snap && snap.min_price != null && snap.max_price != null ? `${money(snap.min_price)} – ${money(snap.max_price)}` : "—"}</strong><span>price range</span></div>
+            <div className="rp-stat" data-testid="hfs-stat-dom"><strong>{snap && snap.avg_days_on_market != null ? Math.round(snap.avg_days_on_market) : "—"}</strong><span>avg days on market</span></div>
+          </div>
+          <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"1rem",textAlign:"center",maxWidth:"44rem",marginLeft:"auto",marginRight:"auto"}}>Figures are live aggregates of active listings from the CREA DDF® feed — for information only, not an appraisal or opinion of value. Verify every detail with the listing brokerage.</p>
+        </div>
+      </section>
+
+      <section className="hn-section hn-section--alt" data-testid="hfs-faq">
+        <div className="hn-wrap">
+          <div className="hn-center"><h2 className="hn-h2">Buying in {city} — FAQ</h2></div>
+          <div style={{maxWidth:"46rem",margin:"1.5rem auto 0"}}>
+            {faqs.map((f, i) => (
+              <details key={i} data-testid={`hfs-faq-${i}`} style={{borderBottom:"1px solid rgba(15,42,91,0.12)",padding:"1rem 0"}}>
+                <summary style={{fontFamily:"Inter,sans-serif",fontWeight:700,color:"var(--brand-navy)",cursor:"pointer",fontSize:"1rem"}}>{f.q}</summary>
+                <p style={{fontFamily:"Inter,sans-serif",color:"#374151",marginTop:"0.6rem",lineHeight:1.6}}>{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="hn-section" data-testid="hfs-cta">
+        <div className="hn-wrap hn-center">
+          <h2 className="hn-h2">Ready to see {city} homes?</h2>
+          <div className="hn-ctarow" style={{justifyContent:"center",marginTop:"1rem"}}>
+            <Link to={`/listings?city=${encodeURIComponent(city)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-cta-search">View {city} MLS® listings <HnArrowRight size={15}/></Link>
+            <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid="hfs-cta-buyer">I'm buying in {city}</Link>
+          </div>
+          <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"1.25rem",maxWidth:"44rem",marginLeft:"auto",marginRight:"auto"}}>
+            Listings come from the live CREA DDF® feed and are shown for information only. If you're already working with a REALTOR®, this is information, not solicitation. Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).
+          </p>
+        </div>
+      </section>
+
+      <div className="hn-wrap">
+        <AiCitationFooter title={`Homes for Sale in ${city}, BC`} url={`${SITE_URL}/homes-for-sale/${slug}`} dateModified={new Date().toISOString()} entryType="web" hidden={true}/>
+      </div>
     </div>
   );
 };
@@ -14349,6 +14500,7 @@ function App() {
       {/* Family Viewing Party — indexable acquisition landing page. */}
       <Route path="/family-viewing-party" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FamilyViewingParty/></Suspense></AppLayout>}/>
       <Route path="/communities" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
+      <Route path="/homes-for-sale/:slug" element={<AppLayout><HomesForSale/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>

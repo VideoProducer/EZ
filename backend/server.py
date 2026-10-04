@@ -16314,6 +16314,24 @@ async def _narrate_mls_results(user_query: str, filters: dict, listings: list, t
         return None
 
 
+def _render_saved_search_email(new_listings: list, base: str, unsub_url: str = "") -> tuple[str, str]:
+    """Render the saved-search alert email (returns html, text). Shared by the
+    alert cron AND the public preview endpoint so the two stay byte-identical."""
+    base = (base or "").rstrip("/")
+    rows = "".join([f"<li style='margin:6px 0'>{(l.get('address') or 'Address on request')} — "
+                    f"${int(l.get('list_price') or 0):,} · {l.get('beds','?')} bed · {l.get('city','')}</li>"
+                    for l in new_listings])
+    n = len(new_listings)
+    html = (f"<h2 style='color:#0F2A5B;font-family:sans-serif'>New BC listings match your saved search</h2>"
+            f"<ul style='font-family:sans-serif;color:#1d1d1f'>{rows}</ul>"
+            f"<p><a href='{base}/listings' style='color:#0F2A5B;font-weight:700'>View on EZtoFind.ca →</a></p>"
+            f"<p style='color:#6b7280;font-size:0.8em;font-family:sans-serif'>Listing data from the CREA DDF® feed; verify with the listing brokerage. "
+            f"Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.</p>"
+            + (f"<p style='color:#9ca3af;font-size:0.72em;font-family:sans-serif'><a href='{unsub_url}' style='color:#9ca3af'>Unsubscribe</a></p>" if unsub_url else ""))
+    text = f"{n} new BC listing{'s' if n != 1 else ''} match your saved search. View at {base}/listings"
+    return html, text
+
+
 _CADENCE_HOURS = {"instant": 1, "daily": 23, "weekly": 167}
 
 
@@ -16370,15 +16388,7 @@ async def cron_saved_search_alerts(request: Request):
                 if not new:
                     continue
                 unsub = f"{base}/api/saved-searches/unsubscribe?token={s.get('unsubscribe_token','')}"
-                rows = "".join([f"<li style='margin:6px 0'>{(l.get('address') or 'Address on request')} — "
-                                f"${int(l.get('list_price') or 0):,} · {l.get('beds','?')} bed · {l.get('city','')}</li>"
-                                for l in new])
-                html = (f"<h2 style='color:#0F2A5B;font-family:sans-serif'>New BC listings match your saved search</h2>"
-                        f"<ul style='font-family:sans-serif;color:#1d1d1f'>{rows}</ul>"
-                        f"<p><a href='{base}/listings' style='color:#0F2A5B;font-weight:700'>View on EZtoFind.ca →</a></p>"
-                        f"<p style='color:#6b7280;font-size:0.8em;font-family:sans-serif'>Listing data from the CREA DDF® feed; verify with the listing brokerage. "
-                        f"Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.</p>")
-                text = f"{len(new)} new BC listings match your saved search. View at {base}/listings"
+                html, text = _render_saved_search_email(new, base, unsub)
                 await _se(db, to=s["email"],
                           subject=f"🏡 {len(new)} new BC listing{'s' if len(new) != 1 else ''} match your search",
                           html=html, text=text, kind="commercial", related_id=s.get("id"), unsubscribe_url=unsub)
@@ -16391,6 +16401,61 @@ async def cron_saved_search_alerts(request: Request):
 
     asyncio.create_task(_bg())
     return {"status": "accepted"}
+
+
+@api.post("/saved-searches/preview")
+@_limiter.limit("30/minute")
+async def preview_saved_search(request: Request, payload: dict):
+    """Public preview for the Save-Search form. Returns live match counts, a
+    'new this week' social-proof number, a few sample listings, and the EXACT
+    alert-email HTML the subscriber would receive — so visitors see before they
+    opt in. No PII, no write; read-only against the live listings collection."""
+    filters = payload.get("filters") if isinstance(payload, dict) else None
+    if not isinstance(filters, dict):
+        filters = {}
+    if filters.get("property_type") in EXCLUDED_PROPERTY_TYPES:
+        filters.pop("property_type", None)
+    q = _build_mls_query(filters)
+    proj = {"_id": 0, "listing_key": 1, "address": 1, "list_price": 1, "city": 1,
+            "beds": 1, "property_type": 1, "list_date": 1, "created_at": 1, "synced_at": 1}
+    try:
+        active_count = await db.listings.count_documents(q)
+    except Exception:
+        active_count = 0
+    docs = await db.listings.find(q, proj).sort("list_date", -1).limit(150).to_list(150)
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=7)
+
+    def _piso(v):
+        try:
+            return datetime.fromisoformat(str(v).replace("Z", "+00:00")).astimezone(timezone.utc)
+        except Exception:
+            return None
+
+    def _isnew(l):
+        for f in ("list_date", "created_at", "synced_at"):
+            dv = _piso(l.get(f))
+            if dv and dv >= cutoff:
+                return True
+        return False
+
+    new_this_week = sum(1 for l in docs if _isnew(l))
+    sample = docs[:6]
+    base = _public_base_url(request)
+    html, _text = _render_saved_search_email(sample, base, "")
+    sample_out = [{
+        "address": l.get("address") or "Address on request",
+        "list_price": int(l.get("list_price") or 0),
+        "beds": l.get("beds"),
+        "city": l.get("city") or "",
+        "property_type": l.get("property_type") or "",
+    } for l in sample]
+    return {
+        "active_count": int(active_count),
+        "new_this_week": int(new_this_week),
+        "sample": sample_out,
+        "email_html": html,
+    }
 
 
 @api.post("/doogie/route")
