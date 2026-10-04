@@ -150,11 +150,11 @@ export const AiCitationFooter = ({
             <meta itemProp="name" content={publisher}/>
             <meta itemProp="url" content="https://eztofind.ca"/>
           </span>
-          <span itemProp="citation">Cite as (APA): {apa}</span>
-          <span itemProp="citation">Cite as (MLA): {mla}</span>
-          <span itemProp="citation">Cite as (Chicago): {chicago}</span>
-          <span itemProp="citation">Cite as (Inline): {inline}</span>
-          <span itemProp="citation">Cite as (BibTeX): {bibtex}</span>
+          <meta itemProp="citation" content={`Cite as (APA): ${apa}`}/>
+          <meta itemProp="citation" content={`Cite as (MLA): ${mla}`}/>
+          <meta itemProp="citation" content={`Cite as (Chicago): ${chicago}`}/>
+          <meta itemProp="citation" content={`Cite as (Inline): ${inline}`}/>
+          <meta itemProp="citation" content={`Cite as (BibTeX): ${bibtex}`}/>
         </div>
       </>
     );

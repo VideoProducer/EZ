@@ -2,10 +2,13 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronLeft, Home } from "lucide-react";
 import { HomeNextListingHero } from "./HomeNextListingHero";
+import { ComplianceStrip } from "../ComplianceStrip";
 
 export const HomeNextNav = () => {
   const navigate = useNavigate();
   return (
+  <>
+  <ComplianceStrip/>
   <header className="hn-nav" data-testid="hn-nav">
     <div className="hn-wrap hn-nav__inner">
       <div className="hn-nav__left">
@@ -41,6 +44,7 @@ export const HomeNextNav = () => {
       <Link to="/buyer" className="hn-nav__cta" data-testid="hn-nav-cta">Talk to Doug</Link>
     </div>
   </header>
+  </>
   );
 };
 

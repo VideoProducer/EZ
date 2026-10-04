@@ -16,3 +16,12 @@ crons:
     method: POST
     # Acks immediately; backgrounds sitemap regen + IndexNow push.
     enabled: true
+
+  - name: saved-search-alerts
+    description: "Cadence-aware (instant/daily/weekly) new-match email alerts for verified saved searches"
+    cron: "0 * * * *"
+    timezone: "America/Vancouver"
+    endpoint: "{{BASE_URL}}/api/cron/saved-search-alerts"
+    method: POST
+    # Runs hourly; each search fires only when its cadence window has elapsed.
+    enabled: true

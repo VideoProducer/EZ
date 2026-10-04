@@ -881,7 +881,9 @@ async def doogie_chat(request: Request, body: ChatIn):
     # Compose the system prompt: base + language directives + routing hint.
     # All three sub-steps are pure functions with no side effects, extracted
     # from this endpoint to keep its cyclomatic complexity manageable.
-    lang = (body.language or "en").strip()
+    # English-only site (rollback June 2026): ignore any client-sent language
+    # and always reply in English. `_build_doogie_language_addon("en")` returns "".
+    lang = "en"
     lang_addon = _build_doogie_language_addon(lang)
     routing_hint, routing_meta = await _build_doogie_routing_hint(body.message, session_id)
     system_prompt = DOOGIE_SYSTEM + (
@@ -2108,6 +2110,7 @@ async def create_saved_search(body: SavedSearchIn, request: Request):
         "unsubscribed_at": None,
         "notified_count": 0,
         "last_notified_at": None,
+        "last_alert_at": None,
         **meta,                   # consent_ip, consent_ua, consent_at
     }
     await db.saved_searches.insert_one(doc)
@@ -15656,6 +15659,23 @@ RULES:
     • "vacant land in squamish"           → {"city":"Squamish","property_type":"Land"}
 - If nothing extracted, return {"city":null,"property_type":null,"beds_exact":null,"beds_min":null,"baths_exact":null,"baths_min":null,"price_min":null,"price_max":null,"features":null,"sort":null}."""
 
+def _apply_feature_regex_override(user_query: str, d: dict) -> None:
+    """Populate `features` from the raw query so feature filters still work when
+    the LLM extractor is unavailable. Matched phrases are fed to _features_query,
+    which checks both the structured `features` tag array and the `description`."""
+    q = (user_query or "").lower()
+    words = ["suite", "yard", "garage", "workshop", "shop", "pool", "waterfront",
+             "view", "basement", "fireplace", "acreage", "den", "office"]
+    found = [w for w in words if re.search(r"\b" + re.escape(w), q)]
+    if found:
+        existing = d.get("features") or []
+        seen = {str(f).lower() for f in existing}
+        for f in found:
+            if f not in seen:
+                existing.append(f); seen.add(f)
+        d["features"] = existing
+
+
 async def _extract_listing_filters(user_query: str) -> dict:
     """Use Claude to extract structured search filters from a natural-language query.
     Returns a dict that may include a `features` list — one required phrase per entry."""
@@ -15667,6 +15687,7 @@ async def _extract_listing_filters(user_query: str) -> dict:
         _apply_beds_baths_regex_override(user_query, d)
         _apply_price_regex_override(user_query, d)
         _apply_property_type_regex_override(user_query, d)
+        _apply_feature_regex_override(user_query, d)
         m = re.search(r"\b(?:in|near|around|within)\s+([A-Za-z][a-zA-Z'’.\-]+(?:\s+[A-Za-z][a-zA-Z'’.\-]+){0,2})", _normalize_spoken_numbers(user_query), re.I)
         if m:
             _STOP = {"with","under","over","below","above","less","more","max","maximum","min","minimum",
@@ -15726,6 +15747,7 @@ async def _extract_listing_filters(user_query: str) -> dict:
         _apply_beds_baths_regex_override(user_query, fallback)
         _apply_price_regex_override(user_query, fallback)
         _apply_property_type_regex_override(user_query, fallback)
+        _apply_feature_regex_override(user_query, fallback)
         # Attempt a naïve city grab: capitalized 1-3 word phrases after "in"/"at"/"near"
         m = re.search(r"\b(?:in|at|near|around)\s+([A-Za-z][a-zA-Z]+(?:\s+[A-Za-z][a-zA-Z]+){0,2})", user_query)
         if m:
@@ -16290,6 +16312,104 @@ async def _narrate_mls_results(user_query: str, filters: dict, listings: list, t
     except Exception as e:
         logger.warning(f"_narrate_mls_results failed: {e}")
         return None
+
+
+_CADENCE_HOURS = {"instant": 1, "daily": 23, "weekly": 167}
+
+
+@api.post("/cron/saved-search-alerts")
+async def cron_saved_search_alerts(request: Request):
+    """Cadence-aware new-match alerts for saved searches (instant/daily/weekly).
+    Uses Doogie's richer `_build_mls_query` matcher and a per-search `last_alert_at`
+    so each subscriber only gets listings new since their last alert. Secret-auth
+    like the other crons; acks immediately and backgrounds the work."""
+    secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(401, "Unauthorized")
+    run_id = request.headers.get("x-webhook-id") or ""
+    if run_id:
+        try:
+            await db.cron_runs.insert_one({"_id": run_id, "kind": "saved_search_alerts", "at": now_iso()})
+        except Exception:
+            return {"status": "duplicate"}
+
+    async def _bg():
+        from services.email_sender import send_email as _se
+        def _piso(v):
+            try:
+                return datetime.fromisoformat(str(v).replace("Z", "+00:00")).astimezone(timezone.utc)
+            except Exception:
+                return None
+        now = datetime.now(timezone.utc)
+        base = os.environ.get("PUBLIC_BASE_URL", "https://www.eztofind.ca").rstrip("/")
+        sent = 0
+        cur = db.saved_searches.find({"status": "verified", "unsubscribed_at": None,
+                                      "frequency": {"$in": ["instant", "daily", "weekly"]}})
+        async for s in cur:
+            try:
+                gap = _CADENCE_HOURS.get(s.get("frequency", "instant"), 24)
+                last_dt = _piso(s.get("last_alert_at") or s.get("verified_at") or s.get("created_at"))
+                if last_dt and (now - last_dt).total_seconds() < gap * 3600:
+                    continue
+                cutoff = last_dt or (now - timedelta(days=7))
+                q = _build_mls_query(s.get("filters") or {})
+                docs = await db.listings.find(q, {"_id": 0, "listing_key": 1, "address": 1, "list_price": 1,
+                                                  "city": 1, "beds": 1, "property_type": 1,
+                                                  "list_date": 1, "created_at": 1, "synced_at": 1}
+                                              ).sort("list_date", -1).limit(60).to_list(60)
+                def _isnew(l):
+                    for f in ("list_date", "created_at", "synced_at"):
+                        dv = _piso(l.get(f))
+                        if dv and dv >= cutoff:
+                            return True
+                    return False
+                new = [l for l in docs if _isnew(l)][:12]
+                await db.saved_searches.update_one({"id": s["id"]}, {"$set": {"last_alert_at": now.isoformat()}})
+                if not new:
+                    continue
+                unsub = f"{base}/api/saved-searches/unsubscribe?token={s.get('unsubscribe_token','')}"
+                rows = "".join([f"<li style='margin:6px 0'>{(l.get('address') or 'Address on request')} — "
+                                f"${int(l.get('list_price') or 0):,} · {l.get('beds','?')} bed · {l.get('city','')}</li>"
+                                for l in new])
+                html = (f"<h2 style='color:#0F2A5B;font-family:sans-serif'>New BC listings match your saved search</h2>"
+                        f"<ul style='font-family:sans-serif;color:#1d1d1f'>{rows}</ul>"
+                        f"<p><a href='{base}/listings' style='color:#0F2A5B;font-weight:700'>View on EZtoFind.ca →</a></p>"
+                        f"<p style='color:#6b7280;font-size:0.8em;font-family:sans-serif'>Listing data from the CREA DDF® feed; verify with the listing brokerage. "
+                        f"Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.</p>")
+                text = f"{len(new)} new BC listings match your saved search. View at {base}/listings"
+                await _se(db, to=s["email"],
+                          subject=f"🏡 {len(new)} new BC listing{'s' if len(new) != 1 else ''} match your search",
+                          html=html, text=text, kind="commercial", related_id=s.get("id"), unsubscribe_url=unsub)
+                await db.saved_searches.update_one({"id": s["id"]},
+                                                   {"$inc": {"notified_count": 1}, "$set": {"last_notified_at": now.isoformat()}})
+                sent += 1
+            except Exception as e:
+                logger.warning(f"saved_search_alert {s.get('id')} failed: {e}")
+        logger.info(f"cron saved_search_alerts: {sent} alert email(s) dispatched")
+
+    asyncio.create_task(_bg())
+    return {"status": "accepted"}
+
+
+@api.post("/doogie/route")
+async def doogie_route(request: Request):
+    """Server-side search-vs-chat router (P4). The frontend calls this for
+    messages its fast regex didn't catch; we use the Haiku intent classifier to
+    decide. Keeps routing off brittle client patterns without doubling LLM cost
+    on obvious queries (those still fast-path on the client)."""
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    q = (payload.get("message") or "").strip()
+    if not q:
+        return {"route": "chat"}
+    clf = await _classify_doogie_intent(q, payload.get("session_id") or "route")
+    if clf and clf.get("intent") == "listings" and float(clf.get("confidence") or 0) >= 0.5:
+        return {"route": "listings"}
+    return {"route": "chat"}
 
 
 @api.post("/doogie/mls-search")

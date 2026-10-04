@@ -137,9 +137,10 @@ const safeHtml = (html) => DOMPurify.sanitize(html || "", {
 // ?lang=xx to internal links when it's operating in a non-English language,
 // so the multilingual referral flow still works end-to-end.
 const useFormLang = () => {
-  const [params] = useSearchParams();
-  const raw = params.get("lang") || "en";
-  const lang = normalizeLang(raw);
+  // English-only site (rollback June 2026): `?lang=` is ignored and every
+  // form/page renders in English. The i18n scaffolding is retained but pinned
+  // to "en" so no multilingual UI surfaces anywhere.
+  const lang = "en";
   const t = useT(lang);
   return { lang, t, qs: langQS(lang), rtl: isRTL(lang) };
 };
@@ -308,7 +309,7 @@ const renderChatContent = (raw, lang) => {
 
 // Reusable SEO/meta component — injects per-route <title>, meta description,
 // canonical, OpenGraph, Twitter Card, hreflang alternates, and optional JSON-LD schema.
-const SUPPORTED_LANGS = ["en", "zh-Hant", "zh-Hans", "pa", "fa", "pt-PT"];
+const SUPPORTED_LANGS = ["en"];   // English-only site (rollback June 2026)
 
 const SEO = ({ title, description, path, image, schema }) => {
   const url = `${SITE_URL}${path || ""}`;
@@ -1538,12 +1539,64 @@ const DOOGIE_TRANSLATION_DISCLAIMER = {
   "pt-PT":  "⚠️ Tradução por IA — as respostas do Doogie nesta língua podem conter pequenos erros. Para qualquer decisão que envolva dinheiro, consulte primeiro um profissional.",
 };
 
+export const SaveSearchButton = ({ filters, idx }) => {
+  const [open, setOpen] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [freq, setFreq] = React.useState("daily");
+  const [consent, setConsent] = React.useState(false);
+  const [status, setStatus] = React.useState("");
+  const submit = async () => {
+    if (!email.trim() || !consent) { setStatus("Enter your email and tick the consent box."); return; }
+    setStatus("saving");
+    try {
+      await axios.post(`${API}/saved-searches`, {
+        email: email.trim(), filters: filters || {}, frequency: freq,
+        casl_consent: true, pipa_ack: true, label: "Doogie search",
+      });
+      setStatus("done");
+    } catch (e) { setStatus(e?.response?.data?.detail || "Something went wrong — please try again."); }
+  };
+  if (status === "done") {
+    return <div data-testid={`doogie-save-done-${idx}`} style={{marginTop:"0.6rem",fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"#047857",background:"rgba(4,120,87,0.08)",borderRadius:10,padding:"0.5rem 0.7rem"}}>✅ Check your email to confirm — then we'll send new matches {freq === "instant" ? "as they appear" : freq}.</div>;
+  }
+  return (
+    <div style={{marginTop:"0.6rem"}}>
+      {!open ? (
+        <button type="button" data-testid={`doogie-save-open-${idx}`} onClick={()=>setOpen(true)}
+          style={{fontFamily:"Inter,sans-serif",fontSize:"0.76rem",fontWeight:700,color:"#0F2A5B",background:"#fff",border:"1px solid rgba(15,42,91,0.25)",padding:"0.35rem 0.8rem",borderRadius:999,cursor:"pointer"}}>
+          🔔 Save this search &amp; get alerts
+        </button>
+      ) : (
+        <div style={{background:"#F7F9FC",border:"1px solid rgba(15,42,91,0.12)",borderRadius:12,padding:"0.7rem"}}>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
+            data-testid={`doogie-save-email-${idx}`} style={{width:"100%",padding:"0.5rem 0.7rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.2)",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",marginBottom:"0.5rem",boxSizing:"border-box"}}/>
+          <select value={freq} onChange={e=>setFreq(e.target.value)} data-testid={`doogie-save-freq-${idx}`}
+            style={{width:"100%",padding:"0.5rem 0.7rem",borderRadius:8,border:"1px solid rgba(15,42,91,0.2)",fontFamily:"Inter,sans-serif",fontSize:"0.85rem",marginBottom:"0.5rem"}}>
+            <option value="instant">Email me as soon as new matches appear</option>
+            <option value="daily">Daily summary</option>
+            <option value="weekly">Weekly summary</option>
+          </select>
+          <label style={{display:"flex",gap:"0.5rem",alignItems:"flex-start",fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"var(--muted)",marginBottom:"0.5rem",cursor:"pointer"}}>
+            <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} data-testid={`doogie-save-consent-${idx}`} style={{marginTop:2}}/>
+            <span>I agree to receive these alert emails and accept the <Link to="/privacy" style={{color:"#0F2A5B"}}>Privacy Policy</Link> (BC PIPA / CASL). Unsubscribe anytime.</span>
+          </label>
+          <button type="button" onClick={submit} disabled={status==="saving"} data-testid={`doogie-save-submit-${idx}`}
+            style={{width:"100%",padding:"0.55rem",borderRadius:999,border:"none",background:"#0F2A5B",color:"#fff",fontFamily:"Inter,sans-serif",fontWeight:700,fontSize:"0.82rem",cursor:"pointer",opacity:status==="saving"?0.6:1}}>
+            {status==="saving" ? "Saving…" : "Save & get alerts"}
+          </button>
+          {status && status!=="saving" && <div style={{marginTop:"0.4rem",fontFamily:"Inter,sans-serif",fontSize:"0.72rem",color:"#b91c1c"}}>{status}</div>}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const DoogieChat = ({ mode = "fab" }) => {
   const embedded = mode === "embedded";
   const [open, setOpen] = useState(embedded);   // embedded mode is always open
   const [expanded, setExpanded] = useState(false);   // Doogie panel: normal ↔ maximized
   const [consented, setConsented] = useState(() => localStorage.getItem("ez_doogie_consent") === "1");
-  const [lang, setLang] = useState(() => localStorage.getItem("ez_doogie_lang") || "en");
+  const [lang] = useState("en");   // English-only site (rollback June 2026)
   // --- Personalized greeting for returning visitors ---
   // Reads localStorage (device-only) to see if the user has previously visited
   // a community page. If so, Doogie's opening line references it — creates a
@@ -1819,7 +1872,17 @@ export const DoogieChat = ({ mode = "fab" }) => {
     })();
     const REFINE_REGEX = /\b(make it|change|instead|add|also|only|just|drop|remove|without|no |cheaper|pricier|bigger|smaller|under|over|more|less|beds?|bedrooms?|baths?|bathrooms?|suite|garage|yard|acre|acreage|basement|pool|waterfront|view|price|budget|closer|nearer|near|in |detached|condos?|townhouses?|apartments?)\b/i;
     const isRefine = (forceRefine === true) || (lastWasListings && REFINE_REGEX.test(q));
-    if (looksLikeListingSearch(q) || isRefine) {
+    // P4 — server-side routing: for messages the fast client regex didn't catch
+    // (and that aren't refinements), ask the server classifier whether this is a
+    // listings search before defaulting to chat.
+    let serverRoute = null;
+    if (!isRefine && !looksLikeListingSearch(q)) {
+      try {
+        const rr = await axios.post(`${API}/doogie/route`, { message: q, session_id: sessionId });
+        serverRoute = rr.data?.route || null;
+      } catch { /* non-fatal — fall through to chat */ }
+    }
+    if (looksLikeListingSearch(q) || isRefine || serverRoute === "listings") {
       setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
       try {
         const r = await axios.post(`${API}/doogie/mls-search`, { message: q, session_id: sessionId, refine: isRefine });
@@ -1902,12 +1965,6 @@ export const DoogieChat = ({ mode = "fab" }) => {
           style={{marginLeft:"auto",flexShrink:0,width:36,height:36,borderRadius:8,border:"1px solid rgba(255,255,255,0.35)",background:voiceOut?"rgba(245,166,35,0.35)":"rgba(255,255,255,0.15)",color:"white",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}>
           {voiceOut ? "🔊" : "🔇"}
         </button>
-        <select value={lang} onChange={e=>setLang(e.target.value)} data-testid="doogie-lang-select"
-          title="Chat language"
-          aria-label="Chat language"
-          style={{marginLeft:"0.35rem",flexShrink:0,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",color:"white",borderRadius:8,padding:"0.3rem 0.4rem",fontSize:"0.8rem",cursor:"pointer",fontFamily:"Inter,sans-serif",maxWidth:"85px"}}>
-          {DOOGIE_LANGUAGES.map(l => <option key={l.code} value={l.code} style={{color:"black"}}>{l.label}</option>)}
-        </select>
         {!embedded && <button onClick={()=>setExpanded(e=>!e)} data-testid="doogie-expand" aria-label={expanded?"Restore chat window":"Expand chat window"} title={expanded?"Restore chat window":"Expand chat window"}
           aria-pressed={expanded}
           style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.35)",color:"white",fontSize:"1rem",lineHeight:1,cursor:"pointer",padding:"0 0.55rem",marginLeft:"0.35rem",flexShrink:0,borderRadius:8,fontWeight:700,minWidth:36,minHeight:36,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 120ms"}}
@@ -1961,6 +2018,7 @@ export const DoogieChat = ({ mode = "fab" }) => {
                 ))}
               </div>
             ) : null; })()}
+            {m.count > 0 && <SaveSearchButton filters={m.filters} idx={i}/>}
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
             {m.compliance && <div data-testid={`doogie-listings-compliance-${i}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",paddingTop:"0.5rem",borderTop:"1px solid rgba(15,42,91,0.08)",lineHeight:1.5}}>{m.compliance}</div>}
           </div>);
@@ -12181,7 +12239,6 @@ const AppLayout = ({children, slimFooter}) => {
     {/* Skip-to-content link — WCAG SC 2.4.1 (Bypass Blocks). First Tab keystroke
         focuses this so keyboard users can jump past nav on every page. */}
     <a href="#main-content" className="skip-to-content" data-testid="skip-to-content">Skip to main content</a>
-    <ComplianceStrip/>
     <HomeNextNav/>
     <main id="main-content" tabIndex={-1}>{children}</main>
     {slimFooter ? <HomeNextFooter/> : <Footer/>}
