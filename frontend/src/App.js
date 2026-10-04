@@ -567,7 +567,7 @@ const NeighbourhoodPage = () => {
           to={`/referral-request?city=${encodeURIComponent(d.community)}&neighbourhood=${encodeURIComponent(d.neighbourhood)}`}
           className="btn btn-primary"
           data-testid="nhb-request-referral"
-        >Request a Referral REALTOR® in {d.community}</Link>
+        >Request an introduction</Link>
       ) : (
         <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
       )}
@@ -9850,16 +9850,16 @@ const CommunityPage = () => {
         </p>
       ) : (
         <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",fontSize:"1.05rem",lineHeight:1.7}} data-testid="community-referral-copy">
-          {`As a smaller BC community, ${found} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?`}
+          This is outside of Doug's region, however an introduction to a licensed REALTOR® is available.
           {" "}
-          <Link to={`/referral-request?city=${encodeURIComponent(found)}`} style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}} data-testid="community-referral-link">Referral REALTOR® link</Link>.
+          <Link to={`/referral-request?city=${encodeURIComponent(found)}`} style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}} data-testid="community-referral-link">Request an introduction</Link>.
         </p>
       )}
       <div style={{marginTop:"2rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
         {isFocus ? <>
           <Link to="/buyer" className="btn btn-primary">I'm Buying in {found}</Link>
           <Link to="/seller" className="btn btn-green">I'm Selling in {found}</Link>
-        </> : <Link to={`/referral-request?city=${encodeURIComponent(found)}`} className="btn btn-primary">Request a Referral REALTOR® in {found}</Link>}
+        </> : <Link to={`/referral-request?city=${encodeURIComponent(found)}`} className="btn btn-primary">Request an introduction</Link>}
         <Link to={`/listings?q=${encodeURIComponent(found)}`} className="btn btn-outline" data-testid={`community-view-listings-${slug}`}>View Listings in {found}</Link>
       </div>
       <h2 style={{marginTop:"3rem",fontSize:"1.75rem"}}>About {found}</h2>
