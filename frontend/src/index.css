@@ -596,9 +596,9 @@ footer,
   .doogie-fab { width: 60px; height: 60px; bottom: 1rem; right: 1rem; }
   /* Cookie banner stacks above chat FAB */
   [data-testid="cookie-banner"] { left: 0.5rem !important; right: 0.5rem !important; bottom: 5.5rem !important; max-width: none !important; padding: 0.85rem 1rem !important; font-size: 0.85rem !important; }
-  /* Compliance strip — Feb 2026: bumped from 0.7rem to 0.8rem (11.2px → 12.8px)
-     so BC PIPA compliance copy is readable on mobile without a magnifier. */
-  .compliance-strip { font-size: 0.8rem !important; padding: 0.5rem 1rem !important; line-height: 1.4 !important; }
+  /* Compliance strip — June 2026: condensed on mobile so the full PIPA copy
+     stays present but reads as compact fine print instead of a tall block. */
+  .compliance-strip { font-size: 0.68rem !important; padding: 0.4rem 0.9rem !important; line-height: 1.3 !important; color: rgba(15,42,91,0.72) !important; }
 }
 
 /* Compliance strip — hide long lead-in on mobile + iOS auto-zoom prevention */
@@ -675,7 +675,7 @@ footer,
   /* Filter selects & inputs — bigger tap targets */
   [data-testid="listings-filters"] select, [data-testid="listings-filters"] input { min-height: 44px; }
   /* Compliance strip on tiny phones — smaller text so it fits */
-  .compliance-strip { font-size: 0.85rem !important; padding: 0.5rem 0.8rem !important; }
+  .compliance-strip { font-size: 0.66rem !important; padding: 0.35rem 0.75rem !important; line-height: 1.3 !important; }
   /* Listing card grid — single column on tiny phones for better readability */
   [data-testid="listings-grid"] { grid-template-columns: 1fr !important; }
   /* Listing detail page — smaller H1 */
@@ -1288,15 +1288,16 @@ textarea:focus-visible,
   /* Section titles — keep 1.5rem floor but nudge line-height for readability */
   .section-title { line-height: 1.2 !important; }
 
-  /* Compliance top strip — collapse to one-line summary on mobile.
-     The full disclaimer is repeated in /compliance so nothing is lost.
-     Feb 2026 — font bumped from 0.72rem (11.5px) to 0.8rem (12.8px) so BC
-     PIPA compliance copy is readable on phones without pinch-zooming. */
+  /* Compliance top strip — compact fine print on mobile.
+     The full disclaimer stays present (also repeated in /compliance).
+     June 2026 — shrunk from 0.8rem/1.45 to 0.68rem/1.3 with tighter padding
+     and a softer tone so it reads as a footnote, not a tall banner. */
   .compliance-strip,
   .compliance-banner {
-    padding: 0.5rem 0.9rem !important;
-    font-size: 0.8rem !important;
-    line-height: 1.45 !important;
+    padding: 0.4rem 0.9rem !important;
+    font-size: 0.68rem !important;
+    line-height: 1.3 !important;
+    color: rgba(15,42,91,0.72) !important;
   }
 
   /* CTA strip ("Talk to Doug — What's my home worth? · Tell Doug…") —
