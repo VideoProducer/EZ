@@ -17,7 +17,7 @@ import axios from "axios";
 import { ArrowUpRight, ArrowRight, MapPin, Users, Video, CheckCircle2 } from "lucide-react";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import { GlossaryPageProvider, GlossaryProse } from "../utils/glossary";
-import { TLDRBlock, ComplianceStrip } from "../utils/answerFirst";
+import { ComplianceStrip } from "../utils/answerFirst";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -713,14 +713,6 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           </div>
           </div>
         </div>
-
-        {/* Phase 7 answer-first upgrade — TL;DR at top of the body so
-            LLM overviews grab a clean, ≤65-word answer to "What is buying
-            in {community} like?" as the direct AI answer. */}
-        <TLDRBlock
-          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B.`}
-          testId="community-tldr"
-        />
 
         {/* Task 7 (Feb 2026): visible "Last reviewed" stamp — pairs with
             the JSON-LD dateModified emitted by the SEO block below. When
