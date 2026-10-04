@@ -1776,10 +1776,28 @@ export const DoogieChat = ({ mode = "fab" }) => {
     } catch (err) { alert("Microphone permission is needed for voice input."); }
   };
 
-  const send = async (e) => {
-    e.preventDefault();
-    if(!input.trim() || busy) return;
-    const q = input; setInput(""); setBusy(true);
+  // P3/P4 — context-aware one-tap refinement chips shown under a result set.
+  // Each chip's label IS the refinement query; tapping it re-runs search with
+  // refine:true so the filter merges onto the current set.
+  const refineChips = (f={}) => {
+    const c = [];
+    const beds = f.beds_exact ?? f.beds_min;
+    if (!beds) { c.push("3+ beds"); c.push("4+ beds"); }
+    else if (beds < 5) { c.push(`${beds+1}+ beds`); }
+    if (!f.property_type) { c.push("Detached only"); c.push("Condos only"); c.push("Townhouses only"); }
+    if (!f.price_max) { c.push("Under $800k"); c.push("Under $1 million"); }
+    if (!(f.features||[]).some(x=>/suite/i.test(x))) c.push("With a suite");
+    if (!(f.features||[]).some(x=>/yard/i.test(x))) c.push("With a yard");
+    return c.slice(0,6);
+  };
+
+  const send = async (e, overrideText, forceRefine) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const isOverride = typeof overrideText === "string";
+    const q = isOverride ? overrideText : input;
+    if(!q.trim() || busy) return;
+    if (!isOverride) setInput("");
+    setBusy(true);
     // GA4 engagement event — count *user* messages sent this session. Fire
     // once at message #3 to mark this as an engaged conversation (Google's
     // recommended threshold for "meaningful engagement" is 3+ interactions).
@@ -1799,8 +1817,8 @@ export const DoogieChat = ({ mode = "fab" }) => {
       }
       return false;
     })();
-    const REFINE_REGEX = /\b(make it|change|instead|add|also|only|just|drop|remove|without|no |cheaper|pricier|bigger|smaller|under|over|more|less|bed|bath|suite|garage|yard|acre|basement|pool|waterfront|view|price|budget|closer|nearer|near|in )\b/i;
-    const isRefine = lastWasListings && REFINE_REGEX.test(q);
+    const REFINE_REGEX = /\b(make it|change|instead|add|also|only|just|drop|remove|without|no |cheaper|pricier|bigger|smaller|under|over|more|less|beds?|bedrooms?|baths?|bathrooms?|suite|garage|yard|acre|acreage|basement|pool|waterfront|view|price|budget|closer|nearer|near|in |detached|condos?|townhouses?|apartments?)\b/i;
+    const isRefine = (forceRefine === true) || (lastWasListings && REFINE_REGEX.test(q));
     if (looksLikeListingSearch(q) || isRefine) {
       setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
       try {
@@ -1931,6 +1949,18 @@ export const DoogieChat = ({ mode = "fab" }) => {
                 See all {m.count} matches →
               </Link>
             )}
+            {m.count > 0 && (() => { const chips = refineChips(m.filters); return chips.length > 0 ? (
+              <div data-testid={`doogie-refine-chips-${i}`} style={{display:"flex",gap:"0.4rem",flexWrap:"wrap",marginTop:"0.65rem"}}>
+                <span style={{fontFamily:"Inter,sans-serif",fontSize:"0.68rem",color:"var(--muted)",width:"100%",marginBottom:"0.1rem"}}>Refine:</span>
+                {chips.map(ch => (
+                  <button key={ch} type="button" disabled={busy} onClick={()=>send(null, ch, true)}
+                    data-testid={`doogie-refine-chip-${i}-${ch.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`}
+                    style={{fontFamily:"Inter,sans-serif",fontSize:"0.74rem",fontWeight:600,color:"var(--brand-navy)",background:"#fff",border:"1px solid rgba(15,42,91,0.2)",padding:"0.3rem 0.7rem",borderRadius:999,cursor:busy?"default":"pointer",opacity:busy?0.5:1,whiteSpace:"nowrap"}}>
+                    {ch}
+                  </button>
+                ))}
+              </div>
+            ) : null; })()}
             {m.using_mock && <div style={{fontSize:"0.68rem",color:"var(--muted)",marginTop:"0.4rem",fontStyle:"italic"}}>Demo data — real CREA DDF® feed pending credentials.</div>}
             {m.compliance && <div data-testid={`doogie-listings-compliance-${i}`} style={{fontFamily:"Inter,sans-serif",fontSize:"0.66rem",color:"var(--muted)",marginTop:"0.5rem",paddingTop:"0.5rem",borderTop:"1px solid rgba(15,42,91,0.08)",lineHeight:1.5}}>{m.compliance}</div>}
           </div>);

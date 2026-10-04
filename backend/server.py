@@ -16239,8 +16239,19 @@ async def _narrate_mls_results(user_query: str, filters: dict, listings: list, t
         if where: bits.append(f"in {where}")
         return " · ".join(bits)
 
+    beds = filters.get("beds_exact") or filters.get("beds_min")
+    crit = {
+        "city": filters.get("city"),
+        "region": filters.get("region"),
+        "property_type": filters.get("property_type"),
+        "beds": beds,
+        "price_max": filters.get("price_max"),
+        "price_min": filters.get("price_min"),
+        "features": filters.get("features"),
+    }
     facts = {
         "user_asked": user_query,
+        "active_criteria": {k: v for k, v in crit.items() if v not in (None, "", [])},
         "total_matches": total,
         "showing": len(listings),
         "highlights": [_one(l) for l in listings[:3]],
@@ -16256,6 +16267,8 @@ async def _narrate_mls_results(user_query: str, filters: dict, listings: list, t
         "- NEVER invent a listing, price, bedroom count, or feature not present in the JSON.\n"
         "- Only neutral facts are allowed: how many matched, the price range (lowest to highest shown), "
         "the community/area, and bed/bath counts.\n"
+        "- Describe the search using 'active_criteria' (city, property_type, beds, price). If a specific "
+        "city is set, name it — never say 'in BC' when a city is present.\n"
         "Write 1-2 plain sentences, 40 words max, friendly but factual, no emojis, no markdown. "
         "If total is larger than what's shown, say they're seeing the first few. "
         "End with a neutral invitation such as 'Tap any card for full details, or tell me how to refine the search.'"
