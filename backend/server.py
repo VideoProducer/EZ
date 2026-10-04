@@ -16138,6 +16138,51 @@ def _build_mls_query(filters: dict) -> dict:
             query["$and"] = clauses
     return query
 
+_search_state_ttl_ready = False
+_REMOVE_CUE = re.compile(r"\b(drop|remove|without|no longer|forget|clear|get rid of|take off)\b", re.I)
+
+
+def _merge_search_filters(prior: dict, new: dict, raw_query: str) -> dict:
+    """P3 — merge a refinement turn's new filters onto the prior search.
+    New non-empty scalar fields override; features union; explicit removal
+    cues ('drop/remove/without…') clear the matching field."""
+    merged = {k: v for k, v in (prior or {}).items() if not str(k).startswith("_")}
+    for key in ("city", "region", "property_type", "sort"):
+        if new.get(key):
+            merged[key] = new[key]
+    if new.get("beds_exact") is not None:
+        merged["beds_exact"] = new["beds_exact"]; merged.pop("beds_min", None)
+    elif new.get("beds_min") is not None:
+        merged["beds_min"] = new["beds_min"]; merged.pop("beds_exact", None)
+    if new.get("baths_exact") is not None:
+        merged["baths_exact"] = new["baths_exact"]; merged.pop("baths_min", None)
+    elif new.get("baths_min") is not None:
+        merged["baths_min"] = new["baths_min"]; merged.pop("baths_exact", None)
+    if new.get("price_max") is not None:
+        merged["price_max"] = new["price_max"]
+    if new.get("price_min") is not None:
+        merged["price_min"] = new["price_min"]
+    if new.get("features"):
+        base = merged.get("features") or []
+        seen = {f.lower() for f in base}
+        for f in new["features"]:
+            if f.lower() not in seen:
+                base.append(f); seen.add(f.lower())
+        merged["features"] = base
+    rq = (raw_query or "").lower()
+    if _REMOVE_CUE.search(rq):
+        if re.search(r"(price|budget|cap|\bmax\b)", rq):
+            merged.pop("price_max", None); merged.pop("price_min", None)
+        if re.search(r"\bbed", rq):
+            merged.pop("beds_exact", None); merged.pop("beds_min", None)
+        if re.search(r"\bbath", rq):
+            merged.pop("baths_exact", None); merged.pop("baths_min", None)
+        if merged.get("features"):
+            merged["features"] = [f for f in merged["features"] if f.lower() not in rq]
+    # Clean empty/None so the emptiness guard behaves.
+    return {k: v for k, v in merged.items() if v not in (None, "", [])}
+
+
 MLS_SEARCH_COMPLIANCE = (
     "Listings come from the live CREA DDF® feed and are shown for information only — "
     "verify every detail with the listing brokerage before acting. If you're already working "
@@ -16223,6 +16268,15 @@ async def doogie_mls_search(request: Request, payload: dict):
     if not q or len(q) > 500:
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": ""}
 
+    refine = bool(payload.get("refine"))
+    global _search_state_ttl_ready
+    if not _search_state_ttl_ready:
+        try:
+            await db.doogie_search_state.create_index("updated_at", expireAfterSeconds=86400)
+        except Exception:
+            pass
+        _search_state_ttl_ready = True
+
     filters = await _extract_listing_filters(q)
 
     # Neighborhood-nickname detection. Locals search by shorthand ("Kits",
@@ -16278,8 +16332,29 @@ async def doogie_mls_search(request: Request, payload: dict):
             if loc.get("city"):   filters["city"] = loc["city"]
             if loc.get("region"): filters["region"] = loc["region"]
 
+    # P3 — conversational refinement: when the frontend flags a refine turn,
+    # merge this query's deltas onto the session's prior search.
+    applied_refine = False
+    if refine:
+        prior_doc = await db.doogie_search_state.find_one({"_id": session_id})
+        prior = (prior_doc or {}).get("filters") or {}
+        if prior:
+            filters = _merge_search_filters(prior, filters, q)
+            applied_refine = True
+
     if not any(v for v in filters.values() if v not in (None, "", [])):
         return {"intent_matched": False, "listings": [], "count": 0, "filters": {}, "summary": "No clear listing search criteria found."}
+
+    # Persist the (possibly merged) filter set so the next turn can refine it.
+    try:
+        await db.doogie_search_state.update_one(
+            {"_id": session_id},
+            {"$set": {"filters": {k: v for k, v in filters.items() if not str(k).startswith("_")},
+                      "updated_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+    except Exception:
+        pass
 
     query: dict = {"status": "Active", "property_type": {"$nin": list(EXCLUDED_PROPERTY_TYPES)}, "list_price": {"$gt": 0}}
     if filters.get("city"):          query["city"] = _city_query(filters["city"])
@@ -16353,6 +16428,7 @@ async def doogie_mls_search(request: Request, payload: dict):
         "listings": listings,
         "summary": summary,
         "compliance": MLS_SEARCH_COMPLIANCE,
+        "refined": applied_refine,
         "using_mock_data": not _ddf_ready(),
     }
 

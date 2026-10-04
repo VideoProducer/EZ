@@ -1787,10 +1787,21 @@ export const DoogieChat = ({ mode = "fab" }) => {
 
     // LISTING SEARCH INTENT: skip the conversational chat entirely and only show listing results.
     // This avoids Doogie explaining "how to search" alongside the actual results.
-    if (looksLikeListingSearch(q)) {
+    // P3 — if the previous assistant turn was a listings result, treat a follow-up
+    // that looks like a refinement ("make it 4 beds", "add a suite", "only in Surrey",
+    // "drop the price cap") as a refine turn and merge it onto the prior search.
+    const lastWasListings = (() => {
+      for (let k = msgs.length - 1; k >= 0; k--) {
+        if (msgs[k].role === "assistant") return msgs[k].type === "listings";
+      }
+      return false;
+    })();
+    const REFINE_REGEX = /\b(make it|change|instead|add|also|only|just|drop|remove|without|no |cheaper|pricier|bigger|smaller|under|over|more|less|bed|bath|suite|garage|yard|acre|basement|pool|waterfront|view|price|budget|closer|nearer|near|in )\b/i;
+    const isRefine = lastWasListings && REFINE_REGEX.test(q);
+    if (looksLikeListingSearch(q) || isRefine) {
       setMsgs(m => [...m, {role:"user",content:q}, {role:"assistant",content:"🐾 Sniffing around for listings…"}]);
       try {
-        const r = await axios.post(`${API}/doogie/mls-search`, { message: q });
+        const r = await axios.post(`${API}/doogie/mls-search`, { message: q, session_id: sessionId, refine: isRefine });
         const mls = r.data;
         if (mls && mls.intent_matched && mls.listings && mls.listings.length > 0) {
           setMsgs(m => {
