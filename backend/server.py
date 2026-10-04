@@ -15667,8 +15667,17 @@ async def _extract_listing_filters(user_query: str) -> dict:
         _apply_beds_baths_regex_override(user_query, d)
         _apply_price_regex_override(user_query, d)
         _apply_property_type_regex_override(user_query, d)
-        m = re.search(r"\b(?:in|at|near|around)\s+([A-Za-z][a-zA-Z]+(?:\s+[A-Za-z][a-zA-Z]+){0,2})", user_query)
-        if m: d["city"] = m.group(1).strip().title()
+        m = re.search(r"\b(?:in|near|around|within)\s+([A-Za-z][a-zA-Z'’.\-]+(?:\s+[A-Za-z][a-zA-Z'’.\-]+){0,2})", _normalize_spoken_numbers(user_query), re.I)
+        if m:
+            _STOP = {"with","under","over","below","above","less","more","max","maximum","min","minimum",
+                     "for","that","and","but","the","a","an","near","around","plus","priced","costing",
+                     "between","from","to","or","no","without","up","at","least","around","budget","price",
+                     "one","two","three","four","five","six","seven","eight","nine","ten","half","million","thousand"}
+            words = m.group(1).strip().split()
+            while words and words[-1].lower() in _STOP:
+                words.pop()
+            if words:
+                d["city"] = " ".join(words).title()
         return d
 
     if not ANTHROPIC_API_KEY:
@@ -15826,13 +15835,32 @@ def _parse_price_token(num_str: str, suffix: Optional[str]) -> Optional[int]:
     return int(round(n))
 
 
+_WORD_NUM = {"zero":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9,
+             "ten":10,"eleven":11,"twelve":12,"thirteen":13,"fourteen":14,"fifteen":15,"twenty":20}
+
+def _normalize_spoken_numbers(text: str) -> str:
+    """Convert spelled-out money phrases to digits so the price regex can read
+    them: 'one point five million' → '1.5 million', 'one and a half million' →
+    '1.5 million', 'half a million' → '0.5 million', 'a million' → '1 million'."""
+    t = (text or "").lower()
+    nums = "|".join(_WORD_NUM.keys())
+    t = re.sub(rf"\b({nums})\s+and\s+a\s+half\b", lambda m: str(_WORD_NUM[m.group(1)] + 0.5), t)
+    t = re.sub(r"\bhalf\s+a\b", "0.5", t)
+    t = re.sub(rf"\b({nums})\s+point\s+({nums})\b",
+               lambda m: f"{_WORD_NUM[m.group(1)]}.{_WORD_NUM[m.group(2)]}", t)
+    t = re.sub(rf"\b({nums})\s+(million|thousand|k|m|mil)\b",
+               lambda m: f"{_WORD_NUM[m.group(1)]} {m.group(2)}", t)
+    t = re.sub(r"\ba\s+(million|thousand)\b", r"1 \1", t)
+    return t
+
+
 def _apply_price_regex_override(raw_query: str, parsed: dict) -> None:
     """Mutate `parsed` in place with `price_min`/`price_max` when the raw text
     contains recognisable price phrasing that the LLM missed. Order of checks
     matters — range patterns must be tried BEFORE unbounded ones."""
     if not raw_query:
         return
-    q = raw_query.lower()
+    q = _normalize_spoken_numbers(raw_query.lower())
 
     # 1. RANGE: "between $1M and $1.5M" | "$500K to $800K" | "from 500k to 800k" | "$500K-$800K"
     range_pat = re.compile(

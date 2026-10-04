@@ -1378,6 +1378,9 @@ const LISTING_INTENT_REGEX = new RegExp(
     // Price-cap phrases
     "\\b(under|below|less\\s+than|max|up\\s+to)\\s*\\$?\\s*\\d",
     "\\$\\s*\\d.*(m|mil|million|k|thousand)\\b",
+    // Feature / property-type cues (search-first routing)
+    "\\b(acreage|waterfront|penthouse|duplex|rancher|bungalow|half[- ]?duplex)\\b",
+    "\\bwith\\s+a?\\s*(suite|yard|garage|view|basement|pool|shop|barn|workshop|legal\\s+suite)\\b",
   ].join("|"),
   "i"
 );
@@ -1547,7 +1550,7 @@ export const DoogieChat = ({ mode = "fab" }) => {
   // "Doogie remembers me" moment without any server-side identification.
   // PIPA/BCFSA/CASL-safe: no personal data crosses to the server.
   const _initialGreeting = () => {
-    const defaultMsg = "Hi! I'm Doogie 🐾 EZtoFind's AI helper. Ask me about BC real estate terms, our services, or how the site works. You can also ask me to find listings — try \"4-bedroom homes in Whistler\" or \"condos in Vancouver under $800K\".";
+    const defaultMsg = "Hi! I'm Doogie 🐾 — search BC's live MLS® in plain words. Try \"3-bed townhouse in Langley under $900k\", \"condos in Vancouver with a view\", then refine with \"only 2 beds\" or \"add a suite\". I can also answer BC real-estate questions.";
     try {
       // Only personalize if user has consented to Personalization ("session") cookies
       const rawPrefs = localStorage.getItem("ez_cookie_prefs");
@@ -1952,7 +1955,7 @@ export const DoogieChat = ({ mode = "fab" }) => {
           style={{width:44,height:44,borderRadius:"50%",border:"1px solid rgba(15,42,91,0.15)",background:listening?"#DC2626":transcribing?"#F5A623":"#F5F0E1",color:(listening||transcribing)?"#fff":"var(--brand-navy)",cursor:transcribing?"wait":"pointer",fontSize:"1.15rem",flexShrink:0,opacity:transcribing?0.85:1}}>
           {listening ? "⏺" : transcribing ? "⏳" : "🎤"}
         </button>
-        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "🔴 Listening — speak now" : transcribing ? "Transcribing your voice…" : "Ask about a BC real estate term or topic…"} data-testid="doogie-input" style={{flex:1}}/>
+        <input value={input} onChange={e=>setInput(e.target.value)} placeholder={listening ? "🔴 Listening — speak now" : transcribing ? "Transcribing your voice…" : "Search listings or ask — e.g. 3-bed in Langley under $900k"} data-testid="doogie-input" style={{flex:1}}/>
         <button type="submit" disabled={busy} data-testid="doogie-send">Send</button>
       </form>
       </>}
