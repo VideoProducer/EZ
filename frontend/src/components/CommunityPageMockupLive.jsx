@@ -14,17 +14,33 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
+import { ArrowUpRight, ArrowRight, MapPin, Users, Video, CheckCircle2 } from "lucide-react";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import { GlossaryPageProvider, GlossaryProse } from "../utils/glossary";
 import { TLDRBlock, ComplianceStrip } from "../utils/answerFirst";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+// Apple-minimalist system font stack (SF Pro on Apple devices, graceful fallback).
+const SF = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif";
+// Apple HIG palette — gold retired, single calm blue/navy accent.
 const BRAND = {
-  navy: "#0F2A5B", gold: "#F5A623", cream: "#F5F0E1",
-  ink: "#1F2937", muted: "#6B7280", green: "#059669",
-  blue: "#1E40AF", paper: "#FAFAF7", brass: "#C6A359",
+  navy: "#0F2A5B", gold: "#0066CC", cream: "#F5F5F7",
+  ink: "#1D1D1F", muted: "#86868B", green: "#248A3D",
+  blue: "#0066CC", paper: "#FBFBFD", brass: "#0F2A5B",
 };
+// Region → calm hero photo. Falls back to a neutral BC landscape so every
+// community gets a photo-forward (but light-handled) hero.
+const REGION_HERO = {
+  "Fraser Valley": "/images/regions/fraser-valley.webp",
+  "Sea-to-Sky": "/images/regions/sea-to-sky.webp",
+  "Sea to Sky": "/images/regions/sea-to-sky.webp",
+  "Greater Vancouver": "https://images.unsplash.com/photo-1647655806923-e8202f4f2b8c?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400",
+  "Metro Vancouver": "https://images.unsplash.com/photo-1647655806923-e8202f4f2b8c?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400",
+  "Vancouver": "https://images.unsplash.com/photo-1647655806923-e8202f4f2b8c?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400",
+  "Okanagan": "https://images.unsplash.com/photo-1635030955271-570ea77fe8fc?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400",
+};
+const DEFAULT_HERO = "https://images.unsplash.com/photo-1615700920267-ab9642ba7114?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
 
 // Doug's direct service area — everything else is out-of-area referral flow.
 const FOCUS_REGIONS = new Set([
@@ -132,9 +148,9 @@ const Chip = ({ children, tone = "navy" }) => (
   }}>{children}</span>
 );
 const SectionH = ({ children, kicker }) => (
-  <div style={{marginTop:48,marginBottom:16}}>
-    {kicker && <div style={{fontSize:"0.72rem",letterSpacing:"0.14em",color:BRAND.gold,fontWeight:700}}>{kicker.toUpperCase()}</div>}
-    <div style={{fontSize:"1.7rem",fontFamily:"'Sora',sans-serif",fontWeight:700,color:BRAND.navy,lineHeight:1.15,marginTop:4}}>{children}</div>
+  <div style={{marginTop:56,marginBottom:18}}>
+    {kicker && <div style={{fontSize:"0.72rem",letterSpacing:"0.14em",color:BRAND.muted,fontWeight:600,textTransform:"uppercase"}}>{kicker}</div>}
+    <div style={{fontSize:"1.75rem",fontFamily:SF,fontWeight:600,letterSpacing:"-0.025em",color:BRAND.ink,lineHeight:1.15,marginTop:6}}>{children}</div>
   </div>
 );
 const fmtMoney = (n) => {
@@ -169,8 +185,8 @@ function CommunityLayersInline({ slug }) {
     </div>
   );
   return (
-    <div data-testid="community-layers-card" style={{marginTop:20, padding:"18px 20px 14px", background:"#F7FAFF", border:"1px solid rgba(15,42,91,0.15)", borderRadius:14, maxWidth:820}}>
-      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.15rem", color:BRAND.navy, fontWeight:700}}>BC Land-Use Layers</div>
+    <div data-testid="community-layers-card" style={{marginTop:20, padding:"22px 24px 18px", background:"#fff", border:"1px solid rgba(0,0,0,0.08)", borderRadius:22, maxWidth:820, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
+      <div style={{fontFamily:SF, fontSize:"1.15rem", color:BRAND.ink, fontWeight:600, letterSpacing:"-0.02em"}}>BC Land-Use Layers</div>
       <div style={{fontSize:"0.78rem", color:BRAND.muted, marginTop:4, marginBottom:6, lineHeight:1.55}}>
         Point-intersect at the community's canonical centroid ({data.point?.lat?.toFixed(3)}, {data.point?.lng?.toFixed(3)}). General information / estimate only.
       </div>
@@ -192,19 +208,35 @@ function CommunityDemographicsInline({ slug }) {
     return () => { alive = false; };
   }, [slug]);
   if (!data) return null;
+  // Flatten the raw Statistics Canada payload into clean primitive metric tiles
+  // (replaces the old raw-JSON <pre> dump). Never renders objects/arrays.
+  const raw = data.raw || {};
+  const prettyKey = (k) => String(k).replace(/[_\-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const prettyVal = (v) => (typeof v === "number" ? v.toLocaleString("en-CA") : String(v));
+  const entries = Object.entries(raw)
+    .filter(([, v]) => (typeof v === "string" || typeof v === "number") && String(v).trim() !== "")
+    .slice(0, 8);
+  const hasData = data.available !== false && entries.length > 0;
   return (
-    <div data-testid="community-demographics-card" style={{marginTop:16, padding:"16px 20px", background:"#F5F0E1", border:"1px solid rgba(218,191,122,0.35)", borderRadius:14, maxWidth:820}}>
-      <div style={{fontFamily:"'Playfair Display', serif", fontSize:"1.15rem", color:BRAND.navy, fontWeight:700}}>Community Demographics</div>
-      {data.available === false ? (
-        <div style={{fontSize:"0.87rem", color:BRAND.muted, marginTop:6, lineHeight:1.6}}>
-          {data.note || "Being locked in from the Statistics Canada 2021 Census. Check back shortly."}
+    <div data-testid="community-demographics-card" style={{marginTop:16, padding:"22px 24px", background:"#fff", border:"1px solid rgba(0,0,0,0.08)", borderRadius:22, maxWidth:820, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
+      <div style={{fontFamily:SF, fontSize:"1.15rem", color:BRAND.ink, fontWeight:600, letterSpacing:"-0.02em", display:"flex", alignItems:"center", gap:8}}>
+        <Users size={18} strokeWidth={1.9} style={{color:BRAND.blue}}/> Community Demographics
+      </div>
+      {!hasData ? (
+        <div style={{fontSize:"0.9rem", color:BRAND.muted, marginTop:10, lineHeight:1.6}}>
+          {data.note || "2021 Statistics Canada profile synchronizing for this geographic area. Check back shortly."}
         </div>
       ) : (
-        <pre style={{fontSize:"0.78rem", color:BRAND.ink, background:"#fff", padding:"10px", borderRadius:8, overflow:"auto", maxHeight:180, marginTop:8}}>
-          {JSON.stringify(data.raw, null, 2).slice(0, 800)}
-        </pre>
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:14, marginTop:16}}>
+          {entries.map(([k, v]) => (
+            <div key={k} style={{padding:"14px 16px", background:BRAND.paper, borderRadius:14, border:"1px solid rgba(0,0,0,0.05)"}}>
+              <div style={{fontSize:"0.66rem", letterSpacing:"0.06em", textTransform:"uppercase", color:BRAND.muted, fontWeight:600}}>{prettyKey(k)}</div>
+              <div style={{fontSize:"1.3rem", fontFamily:SF, fontWeight:700, letterSpacing:"-0.03em", color:BRAND.ink, marginTop:4}}>{prettyVal(v)}</div>
+            </div>
+          ))}
+        </div>
       )}
-      <div style={{marginTop:10, fontSize:"0.7rem", color:BRAND.muted, fontStyle:"italic", lineHeight:1.55}}>
+      <div style={{marginTop:14, fontSize:"0.7rem", color:BRAND.muted, fontStyle:"italic", lineHeight:1.55}}>
         Source: {data.attribution || "Statistics Canada"} · Retrieved {new Date(data.fetch_date).toLocaleDateString("en-CA")}
       </div>
     </div>
@@ -383,7 +415,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   }, [data.listings, community]);
 
   const weatherText = data.weather?.weather || null;
-  const heroBackdrop = HERO_BACKDROP[slug] || null;
+  const heroBackdrop = HERO_BACKDROP[slug] || REGION_HERO[region] || DEFAULT_HERO;
 
   // Auto-generated FAQ from live data.
   const faqs = useMemo(() => {
@@ -541,7 +573,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
   };
 
   return (
-    <div style={{background:"#F5F5F0",minHeight:"100vh"}} data-testid="community-page-mockup-live">
+    <div style={{background:"#FBFBFD",minHeight:"100vh"}} data-testid="community-page-mockup-live">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc}/>
@@ -588,7 +620,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
               </div>
             ))}
           </div>
-          <div style={{textAlign:"center",marginTop:26,color:BRAND.muted,fontSize:"0.9rem"}}>🐾 Loading live data for <strong style={{color:BRAND.navy}}>{community}</strong>…</div>
+          <div style={{textAlign:"center",marginTop:26,color:BRAND.muted,fontSize:"0.9rem"}}>Loading live data for <strong style={{color:BRAND.navy}}>{community}</strong>…</div>
           <style>{`.ez-sk{position:relative;overflow:hidden}.ez-sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,0.65),transparent);animation:ez-shimmer 1.3s infinite}@keyframes ez-shimmer{100%{transform:translateX(100%)}}`}</style>
         </div>
       )}
@@ -609,46 +641,41 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         </div>
 
         <div style={{
-          borderRadius:16,overflow:"hidden",position:"relative",
-          background: heroBackdrop
-            ? `linear-gradient(135deg, rgba(15,42,91,0.88) 0%, rgba(15,42,91,0.62) 100%), url(${heroBackdrop}) center/cover`
-            : `linear-gradient(135deg, #0F2A5B 0%, #1E40AF 100%)`,
-          color:"white",padding:"36px 32px",minHeight:280,
+          borderRadius:22,overflow:"hidden",position:"relative",
+          background:`linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.26) 45%, rgba(0,0,0,0.10) 100%), url(${heroBackdrop}) center/cover`,
+          color:"#fff",padding:"40px 34px",minHeight:300,display:"flex",flexDirection:"column",justifyContent:"flex-end",
         }}>
-          <div style={{fontSize:"0.75rem",letterSpacing:"0.16em",color:BRAND.gold,fontWeight:700}}>{region.toUpperCase()}</div>
-          <h1 style={{fontSize:"clamp(2rem,5vw,3.2rem)",fontFamily:"'Sora',sans-serif",fontWeight:800,margin:"6px 0 10px",lineHeight:1.05}}>{community}, BC</h1>
+          <div style={{fontSize:"0.72rem",letterSpacing:"0.14em",textTransform:"uppercase",fontWeight:600,opacity:0.92}}>{region}</div>
+          <h1 style={{fontSize:"clamp(2.1rem,5vw,3.4rem)",fontFamily:SF,fontWeight:700,letterSpacing:"-0.03em",margin:"6px 0 14px",lineHeight:1.05}}>{community}, BC</h1>
 
           {isFocus ? (
             <div style={{marginBottom:20,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${BRAND.gold}`,objectFit:"cover"}}/>
+              <img src="/doug-headshot-2026.jpg" alt="Doug LeMaire" loading="lazy" decoding="async" style={{width:46,height:46,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.7)",objectFit:"cover"}}/>
               <div style={{fontSize:"0.9rem",lineHeight:1.4}}>
-                <div style={{fontWeight:700}}>Doug LeMaire, REALTOR® · covers {community} directly</div>
-                <div style={{opacity:0.85,fontSize:"0.82rem"}}>BCFSA-licensed · 13 years · Fraser Property Management Realty Services Ltd.</div>
+                <div style={{fontWeight:600}}>Doug LeMaire, REALTOR® · covers {community} directly</div>
+                <div style={{opacity:0.82,fontSize:"0.8rem"}}>BCFSA Licence #167790 · Fraser Property Management Realty Services Ltd.</div>
               </div>
             </div>
           ) : (
-            <div style={{marginBottom:20,background:"rgba(255,255,255,0.10)",padding:"14px 18px",borderRadius:10,backdropFilter:"blur(4px)",display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:64,height:64,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.35))"}}/>
-              <div style={{fontSize:"0.92rem",lineHeight:1.55,flex:"1 1 340px"}}>
-                Would you like Doug to connect you with a {community} REALTOR®?{" "}
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("hero")} data-testid="hero-referral-link" style={{color:BRAND.gold,fontWeight:700,textDecoration:"underline",whiteSpace:"nowrap"}}>Referral REALTOR® link →</Link>
+            <div style={{marginBottom:20,background:"rgba(255,255,255,0.14)",padding:"14px 18px",borderRadius:16,backdropFilter:"blur(14px) saturate(180%)",display:"flex",gap:14,alignItems:"center",flexWrap:"wrap",border:"1px solid rgba(255,255,255,0.18)"}}>
+              <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" onError={e => e.currentTarget.style.display="none"} style={{width:56,height:56,flexShrink:0,objectFit:"contain"}}/>
+              <div style={{fontSize:"0.9rem",lineHeight:1.55,flex:"1 1 320px"}}>
+                {community} is outside Doug's direct service area. A vetted introduction to a licensed local REALTOR® is available at no cost.{" "}
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("hero")} data-testid="hero-referral-link" style={{color:"#fff",fontWeight:600,textDecoration:"underline",whiteSpace:"nowrap"}}>Request introduction →</Link>
               </div>
             </div>
           )}
 
           {/* Live inventory strip */}
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:22,background:"rgba(255,255,255,0.10)",padding:"12px 16px",borderRadius:10}}>
-            <div><div style={{fontSize:"0.65rem",opacity:0.8}}>ACTIVE LISTINGS</div><div style={{fontSize:"1.35rem",fontFamily:"'Sora',sans-serif",fontWeight:700}}>{active.toLocaleString()}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,0.25)"}}/>
-            <div><div style={{fontSize:"0.65rem",opacity:0.8}}>MEDIAN LIST</div><div style={{fontSize:"1.35rem",fontFamily:"'Sora',sans-serif",fontWeight:700}}>{median}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,0.25)"}}/>
-            <div><div style={{fontSize:"0.65rem",opacity:0.8}}>PRICE RANGE</div><div style={{fontSize:"1.35rem",fontFamily:"'Sora',sans-serif",fontWeight:700}}>{priceRange}</div></div>
-            <div style={{width:1,background:"rgba(255,255,255,0.25)"}}/>
-            <div><div style={{fontSize:"0.65rem",opacity:0.8}}>DATA SOURCE</div><div style={{fontSize:"1.05rem",fontFamily:"'Sora',sans-serif",fontWeight:700}}>🟢 CREA DDF® live</div></div>
+          <div style={{display:"flex",gap:18,flexWrap:"wrap",marginBottom:22,background:"rgba(255,255,255,0.12)",padding:"16px 20px",borderRadius:18,backdropFilter:"blur(14px) saturate(180%)",border:"1px solid rgba(255,255,255,0.16)"}}>
+            <div style={{flex:"1 1 110px"}}><div style={{fontSize:"0.62rem",letterSpacing:"0.08em",opacity:0.85,fontWeight:600}}>ACTIVE LISTINGS</div><div style={{fontSize:"1.6rem",fontFamily:SF,fontWeight:700,letterSpacing:"-0.03em",marginTop:3}}>{active.toLocaleString()}</div></div>
+            <div style={{flex:"1 1 110px"}}><div style={{fontSize:"0.62rem",letterSpacing:"0.08em",opacity:0.85,fontWeight:600}}>MEDIAN LIST</div><div style={{fontSize:"1.6rem",fontFamily:SF,fontWeight:700,letterSpacing:"-0.03em",marginTop:3}}>{median}</div></div>
+            <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.62rem",letterSpacing:"0.08em",opacity:0.85,fontWeight:600}}>PRICE RANGE</div><div style={{fontSize:"1.6rem",fontFamily:SF,fontWeight:700,letterSpacing:"-0.03em",marginTop:3}}>{priceRange}</div></div>
+            <div style={{flex:"1 1 140px"}}><div style={{fontSize:"0.62rem",letterSpacing:"0.08em",opacity:0.85,fontWeight:600}}>DATA SOURCE</div><div style={{fontSize:"0.95rem",fontFamily:SF,fontWeight:600,marginTop:7,display:"inline-flex",alignItems:"center",gap:6}}><CheckCircle2 size={16} strokeWidth={2.2}/> CREA DDF® live</div></div>
           </div>
 
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"13px 22px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none"}}>🏡 View {active.toLocaleString()} listings</Link>
+            <Link to={`/listings?city=${encodeURIComponent(community)}`} data-testid="hero-view-listings" style={{background:"#fff",color:BRAND.navy,border:"none",padding:"13px 24px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",cursor:"pointer",textDecoration:"none",display:"inline-flex",alignItems:"center",gap:7}}>View {active.toLocaleString()} listings <ArrowUpRight size={17} strokeWidth={2.2}/></Link>
           </div>
         </div>
 
@@ -717,7 +744,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
                       e.currentTarget.style.background = n.kind === "referral" ? "rgba(198,163,89,0.06)" : "white";
                     }}
                   >
-                    {n.kind === "referral" ? "🤝" : "📍"} {n.name} <span style={{fontSize:"0.7rem",color:BRAND.navy,marginLeft:4}}>→</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:6}}>{n.kind === "referral" ? <Users size={14} strokeWidth={1.8}/> : <MapPin size={14} strokeWidth={1.8}/>} {n.name} <ArrowRight size={13} strokeWidth={2} style={{color:BRAND.muted}}/></span>
                     {n.kind === "live" && n.count > 0 && (
                       <div style={{fontSize:"0.7rem",color:BRAND.muted,fontWeight:400,marginTop:1}}>{n.count} listings · median {fmtMoney(n.median_price)}</div>
                     )}
@@ -749,11 +776,11 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
                     backgroundColor: "#DBE3F0",
                   }}>
                     {l.has_virtual_tour && (
-                      <div style={{position:"absolute",top:8,right:8,background:"rgba(15,42,91,0.9)",color:"white",padding:"3px 8px",borderRadius:6,fontSize:"0.65rem",fontWeight:700,letterSpacing:"0.04em"}}>🎥 TOUR</div>
+                      <div style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(8px)",color:"white",padding:"4px 9px",borderRadius:999,fontSize:"0.65rem",fontWeight:600,letterSpacing:"0.02em",display:"inline-flex",alignItems:"center",gap:4}}><Video size={12} strokeWidth={2}/> Tour</div>
                     )}
                   </div>
                   <div style={{padding:"12px 14px"}}>
-                    <div style={{fontSize:"1.1rem",fontFamily:"'Sora',sans-serif",fontWeight:700,color:BRAND.navy}}>{fmtMoney(l.list_price)}</div>
+                    <div style={{fontSize:"1.1rem",fontFamily:SF,fontWeight:700,letterSpacing:"-0.02em",color:BRAND.navy}}>{fmtMoney(l.list_price)}</div>
                     <div style={{fontSize:"0.82rem",color:BRAND.ink,marginTop:2}}>{l.beds||"—"}bd · {l.baths||"—"}ba{sqft ? ` · ${sqft.toLocaleString()} sqft` : ""}</div>
                     <div style={{fontSize:"0.78rem",color:BRAND.muted,marginTop:4}}>{l.street_address || l.unparsed_address || l.city}</div>
                     <div style={{marginTop:6}}><Chip>{l.property_type || "Home"}</Chip></div>
@@ -803,9 +830,9 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         <SectionH kicker="FAQ">Frequently asked about {community}</SectionH>
         <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:820}}>
           {faqs.map((f, i) => (
-            <details key={i} style={{background:"white",border:"1px solid #E5E7EB",borderRadius:10,padding:"14px 18px"}} data-testid={`faq-${i}`}>
-              <summary style={{fontSize:"0.95rem",fontWeight:700,color:BRAND.navy,cursor:"pointer",fontFamily:"'Sora',sans-serif"}}>{f.q}</summary>
-              <div style={{marginTop:10,fontSize:"0.9rem",lineHeight:1.65,color:BRAND.ink}}>{f.a}</div>
+            <details key={i} style={{background:"white",border:"1px solid rgba(0,0,0,0.08)",borderRadius:14,padding:"16px 20px"}} data-testid={`faq-${i}`}>
+              <summary style={{fontSize:"0.95rem",fontWeight:600,color:BRAND.ink,cursor:"pointer",fontFamily:SF,letterSpacing:"-0.01em"}}>{f.q}</summary>
+              <div style={{marginTop:10,fontSize:"0.9rem",lineHeight:1.65,color:BRAND.muted}}>{f.a}</div>
             </details>
           ))}
         </div>
@@ -814,13 +841,13 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         {!isFocus && (
           <>
             <SectionH kicker="Get connected">Looking to buy or sell in {community}?</SectionH>
-            <div style={{background:"white",border:`1px solid ${BRAND.gold}`,padding:"22px 24px",borderRadius:14,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{background:"#F5F5F7",border:"1px solid rgba(0,0,0,0.08)",padding:"24px 26px",borderRadius:22,display:"flex",gap:20,alignItems:"center",flexWrap:"wrap"}}>
               <img src="/doogie/head.webp" alt="Doogie · Doug's real-estate concierge" loading="lazy" decoding="async" data-testid="get-connected-doogie" onError={e => e.currentTarget.style.display="none"} style={{width:96,height:96,flexShrink:0,objectFit:"contain",filter:"drop-shadow(0 4px 10px rgba(15,42,91,0.18))"}}/>
               <div style={{flex:"1 1 320px"}}>
                 <div style={{fontSize:"1rem",color:BRAND.ink,lineHeight:1.65,marginBottom:16}}>
-                  As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you! 🐾 Would you like Doug to connect you with a licensed REALTOR® in that area?
+                  As a smaller BC community, <strong>{community}</strong> falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas. A vetted introduction to a BCFSA-licensed local REALTOR® is available at no cost to you — you approve each introduction.
                 </div>
-                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("section7")} data-testid="bottom-referral-link" style={{display:"inline-block",background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:700,fontSize:"0.95rem",textDecoration:"none"}}>🤝 Referral REALTOR® link →</Link>
+                <Link to={`/referral-request?city=${encodeURIComponent(community)}`} onClick={() => trackReferralClick("section7")} data-testid="bottom-referral-link" style={{display:"inline-flex",alignItems:"center",gap:7,background:BRAND.navy,color:"white",padding:"12px 24px",borderRadius:999,fontWeight:600,fontSize:"0.95rem",textDecoration:"none"}}>Request vetted introduction <ArrowRight size={16} strokeWidth={2.2}/></Link>
               </div>
             </div>
           </>
@@ -828,11 +855,11 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
         {isFocus && (
           <>
             <SectionH kicker="Take the next step">Ready to explore {community}?</SectionH>
-            <div style={{background:BRAND.navy,color:"white",padding:"26px 28px",borderRadius:14}}>
-              <div style={{fontSize:"1.15rem",fontFamily:"'Sora',sans-serif",fontWeight:700,lineHeight:1.3}}>Doug represents buyers &amp; sellers in {community} directly.</div>
-              <div style={{marginTop:16,display:"flex",gap:10,flexWrap:"wrap"}}>
-                <Link to={`/buyer-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-buying" style={{background:BRAND.gold,color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",textDecoration:"none"}}>I'm Buying in {community}</Link>
-                <Link to={`/seller-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-selling" style={{background:"white",color:BRAND.navy,border:"none",padding:"11px 20px",borderRadius:999,fontWeight:700,fontSize:"0.92rem",textDecoration:"none"}}>I'm Selling in {community}</Link>
+            <div style={{background:BRAND.navy,color:"white",padding:"28px 30px",borderRadius:22}}>
+              <div style={{fontSize:"1.2rem",fontFamily:SF,fontWeight:600,letterSpacing:"-0.02em",lineHeight:1.3}}>Doug represents buyers &amp; sellers in {community} directly.</div>
+              <div style={{marginTop:18,display:"flex",gap:10,flexWrap:"wrap"}}>
+                <Link to={`/buyer-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-buying" style={{background:"white",color:BRAND.navy,border:"none",padding:"12px 22px",borderRadius:999,fontWeight:600,fontSize:"0.92rem",textDecoration:"none"}}>I'm Buying in {community}</Link>
+                <Link to={`/seller-consultation?city=${encodeURIComponent(community)}`} data-testid="focus-selling" style={{background:"rgba(255,255,255,0.14)",color:"white",border:"1px solid rgba(255,255,255,0.25)",padding:"12px 22px",borderRadius:999,fontWeight:600,fontSize:"0.92rem",textDecoration:"none",backdropFilter:"blur(8px)"}}>I'm Selling in {community}</Link>
               </div>
             </div>
           </>

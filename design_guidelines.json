@@ -1,0 +1,312 @@
+{
+  "theme_strategy": {
+    "philosophy": "Apple Minimalist Real Estate (Jony Ive / Alan Dye precision meets Swiss typography). Pure clarity, serene whites, refined neutrals, and surgical contrast. Retires all gratuitous gold/yellow (#F5A623) accents and dark muddy gradients in favor of Apple Action Blue (#0066CC / #0071E3), deep Apple Ink (#1D1D1F), warm aluminum tinting (#F5F5F7), and calm photography with breathable negative space.",
+    "color_palette": {
+      "mode": "Light Apple Human Interface (high clarity, calm, compliant)",
+      "primary_action": "#0066CC",
+      "primary_action_hover": "#0077ED",
+      "primary_action_active": "#0055B3",
+      "primary_navy": "#0F2A5B",
+      "ink_primary": "#1D1D1F",
+      "ink_secondary": "#424245",
+      "ink_tertiary": "#86868B",
+      "background_canvas": "#FFFFFF",
+      "background_secondary": "#F5F5F7",
+      "background_card": "#FFFFFF",
+      "background_subtle": "#FBFBFD",
+      "border_hairline": "rgba(0, 0, 0, 0.08)",
+      "border_card": "rgba(0, 0, 0, 0.10)",
+      "border_hover": "rgba(0, 102, 204, 0.35)",
+      "badge_live_green_bg": "rgba(52, 199, 89, 0.12)",
+      "badge_live_green_text": "#248A3D",
+      "badge_referral_bg": "rgba(15, 42, 91, 0.06)",
+      "badge_referral_text": "#0F2A5B",
+      "glass_backdrop": "rgba(255, 255, 255, 0.80)",
+      "glass_blur": "blur(20px) saturate(180%)"
+    },
+    "retirement_of_gold": {
+      "verdict": "RETIRE completely from primary CTAs, text highlights, and borders. Apple does not use high-saturation amber/gold for core interactions. The previous #F5A623 felt like a discount sales banner. Replace all primary action buttons with Apple Solid Navy (#0F2A5B) or Apple Action Blue (#0066CC) pill buttons. For out-of-area referral flags, use refined subtle slate/navy chips instead of loud gold/brass outlines."
+    }
+  },
+  "typography_system": {
+    "font_family_stack": "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Inter', sans-serif",
+    "font_family_mono": "'SF Mono', Monaco, Menlo, 'Courier New', monospace",
+    "tracking_rules": {
+      "hero_title": "tracking-[-0.035em]",
+      "section_heading": "tracking-[-0.025em]",
+      "sub_heading": "tracking-[-0.015em]",
+      "eyebrow_kicker": "tracking-[0.14em] uppercase font-semibold text-[11px] sm:text-[12px]",
+      "body_text": "tracking-[-0.01em] leading-relaxed text-[16px] sm:text-[17px]",
+      "stat_number": "tracking-[-0.04em] font-semibold"
+    },
+    "scale": {
+      "h1_hero": "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.06]",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-semibold leading-[1.12]",
+      "h3_card": "text-xl sm:text-2xl font-semibold leading-[1.2]",
+      "h4_sub": "text-base sm:text-lg font-medium leading-[1.3]",
+      "body": "text-[15px] sm:text-[17px] text-[#424245] leading-[1.5]",
+      "caption": "text-[12px] sm:text-[13px] text-[#86868B] leading-[1.4]",
+      "eyebrow": "text-[11px] sm:text-[12px] uppercase tracking-[0.14em] font-medium text-[#86868B]"
+    }
+  },
+  "spacing_and_layout": {
+    "grid_modes": "Bento Grid Mode A (Asymmetric Tetris) for visual storytelling, Mode B (High Density) for demographic metrics & land use tables",
+    "horizontal_constraint": "max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8",
+    "section_vertical_rhythm": "py-16 sm:py-20 lg:py-24",
+    "card_radius": "rounded-[22px]",
+    "button_radius": "rounded-full (Apple pill shape)",
+    "chip_radius": "rounded-full px-3 py-1 text-xs font-medium"
+  },
+  "page_blueprints": {
+    "page_1_communities_index": {
+      "route": "/communities",
+      "design_goal": "Cinematic directory of British Columbia regions with Apple-level quiet confidence.",
+      "components": [
+        {
+          "name": "CommunitiesHero",
+          "style": "Spacious off-white background (#FBFBFD), generous 80px top padding. Small uppercase kicker 'BRITISH COLUMBIA · 240 PROFILES', large SF Pro H1 'Explore BC communities.', calm subline, and an edge-rounded floating pill search bar with 20px blur backdrop.",
+          "search_input": "Full rounded-full pill (h-14), 1px solid rgba(0,0,0,0.08), inner shadow soft, clean Search icon in #86868B, clear (x) button on entry."
+        },
+        {
+          "name": "StickyRegionSegmentedControl",
+          "style": "Sticky at top-16 z-30 bg-white/80 backdrop-blur-xl border-b border-black/[0.06] py-3. Horizontal scroller with rounded-full pill buttons: active state is Apple Dark Navy (#0F2A5B) text-white shadow-sm, inactive is #F5F5F7 text-[#1D1D1F] hover:bg-black/5. Displays live match count on right."
+        },
+        {
+          "name": "RegionBandHeader",
+          "style": "16:6 aspect ratio panoramic photo band with subtle dark vignette gradient (linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%)). Overlay never exceeds 50% opacity. Features Region Title in white SF Pro Display, community count badge, and a live WMO climate pill with pulsing emerald indicator."
+        },
+        {
+          "name": "CommunityCardGrid",
+          "style": "Apple tile grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4. Each card is clean white (#FFFFFF) with a 1px border of rgba(0,0,0,0.06), 18px border radius, p-4 sm:p-5. Subtle lift on hover (-translate-y-1, box-shadow: 0 12px 28px rgba(0,0,0,0.05)), arrow icon transitions into view."
+        }
+      ]
+    },
+    "page_2_city_town_detail": {
+      "route": "/community/:slug",
+      "design_goal": "Transform the previously dense, emoji-heavy, dark gradient city page into a serene, factual, Apple-grade editorial document.",
+      "sections_order_and_treatments": [
+        {
+          "section": "1. Breadcrumb",
+          "treatment": "Clean, understated horizontal trail with Lucide ChevronRight (size 13). Font size 13px, color #86868B, active page #1D1D1F font-medium. Uses Breadcrumbs.jsx with schema.org BreadcrumbList."
+        },
+        {
+          "section": "2. Calm Hero & Stat Strip",
+          "treatment": "REPLACE the harsh dark navy photo box with an Apple dual-zone hero: A high-key, airy panoramic region photography card with 22px border radius, subtle scrim, and floating frosted glass info chip OR clean light parchment container (#F5F5F7). Region kicker in uppercase tracking-[0.14em]. H1 '{community}, BC' in SF Pro Display (font-bold text-4xl sm:text-5xl).",
+          "stat_strip_refinement": "Transform the old cramped box into a 4-column Apple Metric Bar: Each metric has an uppercase micro-label in #86868B (11px, tracking-[0.08em]), followed by a massive, crisp number in SF Pro Bold (text-2xl sm:text-3xl #1D1D1F). The fourth item 'DATA SOURCE' replaces the green emoji dot with an elegant Lucide CheckCircle2 in #248A3D accompanied by 'CREA DDF® Live Verified'.",
+          "primary_cta": "Replace gold pill with Apple Solid Navy (#0F2A5B) pill button: 'View {active} listings' with Lucide ArrowUpRight icon."
+        },
+        {
+          "section": "3. Agent / Concierge Status Card",
+          "treatment": "Differentiate in-area vs out-of-area without loud yellow. In-area (Doug LeMaire direct representation): crisp 48px round portrait, white background card, subtle hairline border, 'Doug LeMaire, REALTOR® · Covers {community} directly · BCFSA Licence #167790'. Out-of-area: Doogie concierge illustration in a dedicated frosted pill card with clean copy and an understated blue-link CTA 'Request vetted introduction →'."
+        },
+        {
+          "section": "4. TL;DR Direct Answer Card",
+          "treatment": "Apple Callout Style: Crisp white card with soft left accent bar (3px solid #0066CC) or subtle blue tint (#F5F8FF), rounded-[18px], p-6. Heading 'At a Glance' with Lucide Sparkles or Info icon. Maximum 60-word concise synopsis for AI search grounding and fast scanning."
+        },
+        {
+          "section": "5. Last Reviewed Date & Term-Linked Intro",
+          "treatment": "Subtle italicized meta stamp: 'Last reviewed: March 2026 · Sourced from public records'. Followed by glossary prose where real estate terms (PTT, ALR, Form B) have clean underline tags that reveal definition tooltips on hover."
+        },
+        {
+          "section": "6. Spatial Context (Map + Sub-Neighbourhood Grid)",
+          "treatment": "Two-column 50/50 layout on desktop. Left: interactive map iframe nested in a 20px rounded frame with hairline border. Right: Scrollable grid of sub-neighbourhood cards. REVISE icons: replace 🤝 and 📍 with Lucide MapPin and ArrowRight. Live inventory chips display subtle badges '12 listings · $1.2M median'. Referral neighbourhoods display a quiet 'Referral network' chip in #0F2A5B/0.08."
+        },
+        {
+          "section": "7. Live Inventory (4-Card MLS Grid)",
+          "treatment": "Apple Product Grid: 4 cards with 16:10 photography, 18px rounded corners, crisp white background, border 1px solid rgba(0,0,0,0.06). Virtual tour tag becomes a frosted glass pill 'Virtual Tour' with Lucide Video. Price in bold SF Pro Display, followed by Bed/Bath/SqFt stats separated by middle dots (·) and address in muted secondary text."
+        },
+        {
+          "section": "8. Long-form About & Climate Narrative",
+          "treatment": "Typography-first layout: 68ch maximum reading width, font-size 17px, line-height 1.65. Climate section uses an Apple Weather style card (#FBFBFD) with Lucide CloudSun or Thermometer icon, citing Environment and Climate Change Canada with an official source link."
+        },
+        {
+          "section": "9. BC Land-Use Layers Card",
+          "treatment": "REPLACE raw look with an Apple Settings-style table: Clean 3-row card (Municipal boundary, Agricultural Land Reserve [ALR], Mapped floodplain). Each row features a title, a crisp status badge (Yes / No / Centroid Intersect), and subtle disclaimer text. Footer notes DataBC OpenMaps WFS attribution."
+        },
+        {
+          "section": "10. Community Demographics Card",
+          "treatment": "REPLACE the raw JSON <pre> dump! Render an Apple Health/Stats key-value grid or 4-tile demographic summary: Population, Median Age, Household Size, Dwelling Types. Clean numbers in SF Pro Bold with source badge 'Statistics Canada 2021 Census'."
+        },
+        {
+          "section": "11. FAQ Accordion",
+          "treatment": "Use Radix / Shadcn Accordion styled with Apple elegance: white surface, subtle horizontal separator line (1px rgba(0,0,0,0.06)), no heavy border frames. Chevron rotates smoothly. Font-medium question, 15px muted answer."
+        },
+        {
+          "section": "12. Next Step / Referral Action Block",
+          "treatment": "In-area: Rich deep navy card (#0F2A5B) with white text, providing twin Apple pill buttons: 'I'm Buying in {community}' (White pill, navy text) and 'I'm Selling in {community}' (Translucent glass pill). Out-of-area: Calm light stone card (#F5F5F7) featuring Doogie concierge, factual explanation of BC referral network, and single navy CTA button."
+        },
+        {
+          "section": "13. Nearby Communities & Compliance Strip",
+          "treatment": "Pill chips of adjacent communities with Lucide ArrowRight. Strictly factual BCFSA, CREA DDF®, and PIPA compliance disclaimer in 12px neutral text with appropriate trademark credits."
+        }
+      ]
+    },
+    "page_3_neighbourhood_detail": {
+      "route": "/community/:slug/n/:nSlug",
+      "design_goal": "Micro-community snapshot adhering to the exact same Apple design system.",
+      "sections_order_and_treatments": [
+        {
+          "section": "1. Breadcrumb",
+          "treatment": "Home › Communities › {Region} › {City} › {Neighbourhood} (visible trail + JSON-LD)."
+        },
+        {
+          "section": "2. Neighbourhood Title & Action Header",
+          "treatment": "SF Pro Display H1 '{Neighbourhood}', subtitle 'Sub-neighbourhood in {City}, BC'. Two action pills: 'View Neighbourhood Listings' (Navy) and 'Request Agent Guidance' (Outlined Pill)."
+        },
+        {
+          "section": "3. Market Snapshot Bar",
+          "treatment": "Compact 3-metric strip: Active Listings in Sub-area, City Median Comparison, Property Types Available."
+        },
+        {
+          "section": "4. Factual Synopsis & Local FAQ",
+          "treatment": "High-readability prose block (max-w-[700px]) with verified municipal/school boundary context. Followed by 2-3 localized FAQ items in Apple accordion format."
+        }
+      ]
+    }
+  },
+  "component_replacements_and_iconography": {
+    "emoji_retirement_table": [
+      {
+        "emoji": "🏡",
+        "replacement": "Lucide 'Home' or remove if redundant beside listings text"
+      },
+      {
+        "emoji": "🐾",
+        "replacement": "Retain only for Doogie brand mascot moments; eliminate from section headers or stat bars"
+      },
+      {
+        "emoji": "🤝",
+        "replacement": "Lucide 'Users2' or 'Share2' with refined text 'Licensed BC REALTOR® Referral'"
+      },
+      {
+        "emoji": "🎥",
+        "replacement": "Lucide 'Video' inside a frosted glass pill badge"
+      },
+      {
+        "emoji": "🟢",
+        "replacement": "Apple pulse indicator: 7px round dot with CSS pulse or Lucide 'CheckCircle2' in #248A3D"
+      },
+      {
+        "emoji": "📍",
+        "replacement": "Lucide 'MapPin' (15px, strokeWidth 1.8)"
+      }
+    ],
+    "button_system": {
+      "primary_navy": "bg-[#0F2A5B] hover:bg-[#163A7A] text-white px-6 py-3 rounded-full font-medium text-[15px] transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-sm",
+      "primary_blue": "bg-[#0066CC] hover:bg-[#0077ED] text-white px-6 py-3 rounded-full font-medium text-[15px] transition-transform hover:-translate-y-0.5 active:translate-y-0 shadow-sm",
+      "secondary_light": "bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] px-5 py-2.5 rounded-full font-medium text-[14px] transition-colors",
+      "secondary_white": "bg-white hover:bg-[#F5F5F7] text-[#0F2A5B] border border-black/10 px-5 py-2.5 rounded-full font-medium text-[14px] transition-all",
+      "subtle_chip": "bg-black/[0.04] hover:bg-black/[0.08] text-[#1D1D1F] px-3.5 py-1.5 rounded-full text-[13px] font-medium inline-flex items-center gap-1.5 transition-colors"
+    },
+    "card_surfaces": {
+      "standard": "bg-white rounded-[22px] border border-black/[0.08] p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)]",
+      "frosted": "bg-white/80 backdrop-blur-xl rounded-[22px] border border-black/[0.08] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.06)]",
+      "interactive_lift": "transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:border-black/15"
+    }
+  },
+  "demographics_component_specification": {
+    "problem": "The current page has an unstyled JSON dump: <pre>{JSON.stringify(data.raw, null, 2)}</pre>",
+    "solution_design": "Render an Apple Activity/Metrics 4-box layout parsing the census attributes gracefully",
+    "structure": [
+      {
+        "field": "Population & Growth",
+        "icon": "Users",
+        "description": "Total residents recorded in Statistics Canada 2021 Census"
+      },
+      {
+        "field": "Median Household Income",
+        "icon": "DollarSign",
+        "description": "Census benchmark for local economic stability"
+      },
+      {
+        "field": "Private Dwellings",
+        "icon": "Building2",
+        "description": "Total occupied private dwellings across community"
+      },
+      {
+        "field": "Average Household Size",
+        "icon": "Home",
+        "description": "Persons per private household"
+      }
+    ],
+    "fallback_state": "If raw JSON is present, parse key keys (population, total_private_dwellings, median_age) into metric chips; if unavailable, display a calm Apple notice: '2021 Statistics Canada profile synchronizing for this geographic centroid.'"
+  },
+  "land_use_layers_specification": {
+    "structure": "3 horizontal rows with subtle border-t border-black/[0.06]",
+    "rows": [
+      {
+        "id": "muni",
+        "label": "Municipal Boundary",
+        "icon": "Building",
+        "status_rendering": "Green chip 'Inside Jurisdiction' or 'Unincorporated / Regional District'"
+      },
+      {
+        "id": "alr",
+        "label": "Agricultural Land Reserve (ALR)",
+        "icon": "Wheat",
+        "status_rendering": "Amber/Slate badge 'Intersecting ALR - Subject to ALC Act' or 'Outside Reserve'"
+      },
+      {
+        "id": "flood",
+        "label": "Historical Mapped Floodplain",
+        "icon": "ShieldAlert",
+        "status_rendering": "Subtle indicator 'Designated 200-Year Flood Construction Level Area' or 'No Intersect at Centroid'"
+      }
+    ],
+    "footer": "Official DataBC OpenMaps WFS Layer Intersect · For informational purposes only"
+  },
+  "curated_image_assets": {
+    "vancouver_hero": {
+      "url": "https://images.unsplash.com/photo-1647655806923-e8202f4f2b8c?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
+      "description": "False Creek waterfront and Vancouver skyline at golden hour",
+      "category": "hero_region_vancouver"
+    },
+    "sea_to_sky_whistler": {
+      "url": "https://images.unsplash.com/photo-1615700920267-ab9642ba7114?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
+      "description": "Snow covered alpine peak and pristine lake in BC Sea-to-Sky",
+      "category": "hero_region_sea_to_sky"
+    },
+    "fraser_valley_okanagan": {
+      "url": "https://images.unsplash.com/photo-1635030955271-570ea77fe8fc?crop=entropy&cs=srgb&fm=jpg&q=85&w=1200",
+      "description": "Okanagan valley and vineyard panorama",
+      "category": "hero_region_interior"
+    },
+    "modern_listing_sample": {
+      "url": "https://images.unsplash.com/photo-1724582586529-62622e50c0b3?crop=entropy&cs=srgb&fm=jpg&q=85&w=800",
+      "description": "Minimalist modern living space with floor to ceiling windows",
+      "category": "listing_fallback_photo"
+    }
+  },
+  "mobile_responsiveness_390px": {
+    "viewport_rules": [
+      "Stack all 2-column spatial context grids to 1-column on screens below 768px.",
+      "The 4-metric market stat strip converts into a 2x2 clean metric grid with hairline dividers on mobile, ensuring no horizontal overflow.",
+      "Breadcrumbs allow horizontal gentle wrap with text-[12px] to fit 390px iPhone width (e.g. iPhone 13/14/15/16 Pro).",
+      "Sub-neighbourhood cards expand to full-width or 2-column compact pills (padding 10px 14px) with minimum 44px tap targets.",
+      "Listing photo aspect-ratio stays locked to 16:10 with lazy loading.",
+      "Action buttons must be full width on mobile or stacked with 10px vertical gap."
+    ]
+  },
+  "compliance_and_legal_rules": {
+    "bcfsa_crea_guidelines": [
+      "Copy must remain 100% factual. DO NOT add marketing superlatives ('best neighbourhood', 'ultimate luxury', 'top performing market').",
+      "In-area communities must state: 'Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA Licence #167790'.",
+      "Out-of-area communities must state: 'This community is outside Doug LeMaire\\'s direct service area. A vetted introduction to a BCFSA-licensed local REALTOR® is available at $0 cost to the consumer. Consumer approves each introduction.'",
+      "All MLS® listing cards and counts must attribute: 'MLS® data sourced from CREA DDF® (Data Distribution Facility). REALTOR®, REALTORS® and MLS® are trademarks of CREA.'",
+      "Climate statistics must attribute: 'Environment and Climate Change Canada / Open-Meteo 30-year climate normals.'",
+      "All interactive buttons and links must maintain explicit data-testid attributes for test automation."
+    ]
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
+    "rules": [
+      "Do NOT use dark gradients as page backgrounds. Apple designs are characterized by pristine light canvas with high-contrast content.",
+      "Retire all occurrences of gold (#F5A623) accents. Replace with Apple Action Blue (#0066CC) or Deep Navy (#0F2A5B).",
+      "Replace emoji icons (🏡, 🐾, 🤝, 🎥, 🟢, 📍) with SVG icons from lucide-react.",
+      "Format demographic data into high-density clean cards; never render unformatted JSON strings.",
+      "Ensure all containers with borders have p-6 or p-8 padding so typography never touches borders.",
+      "Implement responsive classes mobile-first, ensuring flawless 390px iPhone mobile layout.",
+      "Include data-testid on every interactive element (buttons, tabs, inputs, accordion triggers, cards).",
+      "All files are in React .js / .jsx (not .tsx) with Tailwind CSS classes and existing homeNext.css classes where appropriate."
+    ]
+  }
+}

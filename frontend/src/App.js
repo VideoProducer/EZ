@@ -542,7 +542,7 @@ const NeighbourhoodPage = () => {
           color:"var(--ink)",
         }}
       >
-        As a smaller BC community, {d.neighbourhood} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! 🐾 Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
+        As a smaller BC community, {d.neighbourhood} falls outside the Greater Vancouver, Fraser Valley, and Sea-to-Sky Corridor focus areas — but that doesn't mean we can't help you get connected! Would you like to be connected with a licensed REALTOR® in that area through Doug's referral network?{" "}
         <Link
           to={`/referral-request?city=${encodeURIComponent(d.community)}&neighbourhood=${encodeURIComponent(d.neighbourhood)}`}
           style={{color:"var(--brand-blue)",fontWeight:600,textDecoration:"underline"}}
@@ -555,10 +555,10 @@ const NeighbourhoodPage = () => {
     </p>
 
     {/* Market snapshot bar — deliberately different from Vibe Score */}
-    <div data-testid="nhb-market-snapshot" style={{marginTop:"1.5rem",display:"flex",gap:"1rem",flexWrap:"wrap",background:"#FDFCF8",border:"1px solid rgba(15,42,91,0.12)",borderRadius:12,padding:"1rem 1.25rem",fontFamily:"Inter,sans-serif"}}>
-      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Active listings</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.6rem",fontWeight:700,color:"var(--brand-navy)"}}>{d.listing_count}</div></div>
-      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Price range</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.15rem",fontWeight:700,color:"var(--brand-navy)"}}>{fmt(d.min_price)} – {fmt(d.max_price)}</div></div>
-      {d.median_price && <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.72rem",color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Median</div><div style={{fontFamily:"Sora,sans-serif",fontSize:"1.6rem",fontWeight:700,color:"var(--brand-navy)"}}>{fmt(d.median_price)}</div></div>}
+    <div data-testid="nhb-market-snapshot" style={{marginTop:"1.5rem",display:"flex",gap:"1.5rem",flexWrap:"wrap",background:"#fff",border:"1px solid rgba(0,0,0,0.08)",borderRadius:18,padding:"1.25rem 1.5rem",fontFamily:"-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif",boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
+      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.68rem",color:"#86868B",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Active listings</div><div style={{fontSize:"1.7rem",fontWeight:700,letterSpacing:"-0.03em",color:"#1D1D1F",marginTop:4}}>{d.listing_count}</div></div>
+      <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.68rem",color:"#86868B",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Price range</div><div style={{fontSize:"1.25rem",fontWeight:700,letterSpacing:"-0.02em",color:"#1D1D1F",marginTop:6}}>{fmt(d.min_price)} – {fmt(d.max_price)}</div></div>
+      {d.median_price && <div style={{flex:"1 1 130px"}}><div style={{fontSize:"0.68rem",color:"#86868B",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Median</div><div style={{fontSize:"1.7rem",fontWeight:700,letterSpacing:"-0.03em",color:"#1D1D1F",marginTop:4}}>{fmt(d.median_price)}</div></div>}
     </div>
 
     <div style={{marginTop:"1.5rem",display:"flex",gap:"1rem",flexWrap:"wrap"}}>
@@ -569,7 +569,7 @@ const NeighbourhoodPage = () => {
           data-testid="nhb-request-referral"
         >Request a Referral REALTOR® in {d.community}</Link>
       ) : (
-        <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">🏡 View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
+        <Link to={`/listings?city=${encodeURIComponent(d.community)}&region=${encodeURIComponent(d.neighbourhood)}`} className="btn btn-primary" data-testid="nhb-view-listings">View {d.listing_count} Listing{d.listing_count===1?"":"s"} in {d.neighbourhood}</Link>
       )}
       <Link to={`/community/${slug}`} className="btn btn-outline">← Back to {d.community}</Link>
     </div>
