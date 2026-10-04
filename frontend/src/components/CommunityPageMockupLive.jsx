@@ -683,7 +683,7 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
             LLM overviews grab a clean, ≤65-word answer to "What is buying
             in {community} like?" as the direct AI answer. */}
         <TLDRBlock
-          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B.${isFocus ? " Doug LeMaire, REALTOR® covers " + community + " directly." : ""}`}
+          text={`${community} is a ${region} community with ${active.toLocaleString()} active MLS® listings today (median ${median}). Buyers typically budget for Property Transfer Tax, GST on new builds, and a 2-5-10 Home Warranty; strata purchasers also review a current Form B.`}
           testId="community-tldr"
         />
 
