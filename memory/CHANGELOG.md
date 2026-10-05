@@ -1,5 +1,10 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Family Viewing Party "Text this to the family" share button
+
+- Added a `ShareFamily` component to the FVP hero (`pages/FamilyViewingParty.jsx`): a "💬 Text this to the family" button (native Web Share sheet on mobile → SMS composer + clipboard fallback on desktop) plus a WhatsApp pill. Both prefill a friendly message + the canonical `/family-viewing-party` URL. Shares the public page only (no PII, CASL-safe). Verified via Playwright: buttons render, WhatsApp href prefilled correctly, no console errors. Needs a redeploy to go live.
+
+
 ## June 2026 — Narration follow-ups (tour caching, warm coverage, progress UI) + redeploy
 
 - **Virtual-tour narration caching:** new `_tour_narration_cache_key` (hash of tour URLs + price + type, prefix `tc1:`) replaces `modified_at` on `/listings/{key}/tour_narration` — same re-sync-churn fix as the walk-through narration. Verified: cold 37.9s, then survives a simulated `modified_at` bump (stays `cached:True`, 0.2s).

@@ -342,6 +342,44 @@ function LeadForm() {
   );
 }
 
+// Organic-sharing hook: let a viewer text/WhatsApp the party to the family in
+// one tap. Prefers the native share sheet (best on mobile), falls back to an
+// SMS composer + clipboard. Shares the public page only — no PII, CASL-safe.
+const ShareFamily = () => {
+  const shareUrl = CANONICAL;
+  const shareText = "Let's tour homes together on the big screen 🍿 Cast any BC MLS® listing from your phone to the TV with EZtoFind's Family Viewing Party:";
+  const fullMsg = `${shareText} ${shareUrl}`;
+  const smsHref = `sms:?&body=${encodeURIComponent(fullMsg)}`;
+  const waHref = `https://wa.me/?text=${encodeURIComponent(fullMsg)}`;
+  const [done, setDone] = useState("");
+  const onShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Family Viewing Party — EZtoFind.ca", text: shareText, url: shareUrl });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    try { await navigator.clipboard.writeText(fullMsg); setDone("copied"); } catch (e) {}
+    window.location.href = smsHref;
+  };
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }} data-testid="fvp-share">
+      <button type="button" onClick={onShare} data-testid="fvp-share-family"
+        style={{ background: "#fff", color: C.navy, border: "none", padding: "0.85rem 1.4rem", borderRadius: 999, cursor: "pointer", fontFamily: "Sora,sans-serif", fontWeight: 800, fontSize: "1rem", boxShadow: "0 6px 16px rgba(0,0,0,0.18)" }}>
+        💬 Text this to the family
+      </button>
+      <a href={waHref} target="_blank" rel="noopener noreferrer" data-testid="fvp-share-whatsapp"
+        style={{ background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", padding: "0.85rem 1.3rem", borderRadius: 999, textDecoration: "none", fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "1rem" }}>
+        WhatsApp
+      </a>
+      {done === "copied" && <span data-testid="fvp-share-copied" style={{ fontSize: "0.8rem", color: "#fff", opacity: 0.9 }}>Link copied ✓</span>}
+    </div>
+  );
+};
+
+
 const inputStyle = {
   padding: "0.7rem 0.85rem", border: `1px solid rgba(15,42,91,0.2)`, borderRadius: 10,
   fontSize: "0.95rem", fontFamily: "Inter,sans-serif", background: "#fff",
@@ -513,6 +551,10 @@ export default function FamilyViewingParty() {
                }}>
               📩 Send me 3 party-ready listings
             </a>
+          </div>
+          <div style={{ marginTop: "0.9rem" }}>
+            <div style={{ fontSize: "0.82rem", fontWeight: 700, opacity: 0.9, marginBottom: "0.5rem" }}>Planning a family night? Invite everyone:</div>
+            <ShareFamily/>
           </div>
           <div style={{ marginTop: "1rem", fontSize: "0.82rem", opacity: 0.85 }}>
             Works on Samsung Tizen · LG WebOS · Chromebook + HDMI · Laptop + HDMI · iPad + HDMI adapter · Apple TV / Chromecast via mirror fallback
