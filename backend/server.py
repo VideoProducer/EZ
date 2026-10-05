@@ -5155,7 +5155,6 @@ async def realtor_apply(body: RealtorInitial, request: Request):
             f"<strong>Brokerage:</strong> {body.brokerage}<br/>"
             f"<strong>REALTOR® #:</strong> {body.realtor_number}</p>"
             f"<p><strong>CREA Member:</strong> {'✅ Yes' if body.crea_member else ('❌ No' if body.crea_member is False else '—')}</p>"
-            f"<p>25% referral fee agreement pending Doug's approval.</p>"
             f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
         ),
         related_id=app_obj.id,
@@ -5196,7 +5195,7 @@ async def realtor_apply_out_of_province(body: RealtorInitial, request: Request):
             f"<strong>License #:</strong> {body.realtor_number}<br/>"
             f"<strong>Province:</strong> {body.province or '—'}</p>"
             f"<p><strong>CREA Member:</strong> {'✅ Yes' if body.crea_member else ('❌ No' if body.crea_member is False else '—')}</p>"
-            f"<p>National referral network — 25% referral fee, bidirectional (BC-exit clients to this partner, BC-inbound clients from this partner).</p>"
+            f"<p>National referral network, bidirectional (BC-exit clients to this partner, BC-inbound clients from this partner).</p>"
             f"<p>Pending your review + signed CREA Inter-Board Referral Agreement.</p>"
             f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
         ),
