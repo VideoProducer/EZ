@@ -1,5 +1,23 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Narration follow-ups (tour caching, warm coverage, progress UI) + redeploy
+
+- **Virtual-tour narration caching:** new `_tour_narration_cache_key` (hash of tour URLs + price + type, prefix `tc1:`) replaces `modified_at` on `/listings/{key}/tour_narration` — same re-sync-churn fix as the walk-through narration. Verified: cold 37.9s, then survives a simulated `modified_at` bump (stays `cached:True`, 0.2s).
+- **Nightly pre-warm expanded:** `_nightly_narration_warm_loop` now warms up to `NIGHTLY_WARM_LIMIT` (default 800, was hardcoded 200) active listings, prioritising Doug's focus-area CITIES (Vancouver, Surrey, Burnaby, Langley, Abbotsford, Whistler, …) then topping up with newest listings elsewhere. Cheap on re-runs thanks to content-stable keys (cache hits ~0.2s). Note: listings' `region` field holds board/city values (not the community-region grouping), so prioritisation is by city prefix-match.
+- **Narration progress indicator:** `ListingNarration.jsx` now shows a spinning icon + cycling friendly status ("Doogie is sniffing around the photos…" → "Writing your walk-through…" → "Warming up his voice…" → "Almost ready…") during the cold generation wait, so it never feels frozen. Uses the existing global `spin` keyframe.
+- **Family Viewing Party:** confirmed working in preview AND production (HTTP 200 both; page renders H1 + lead form; `/api/leads/buyer` wired). No fix needed.
+- **Redeployed to production** (job f3171ad7) to ship all narration fixes live.
+
+
+## June 2026 — Fix: Doogie listing narration slow/"reloads for each property"
+
+- **Root cause:** `get_listing_narration` keyed its cache on `modified_at`. CREA DDF® re-syncs bump `modified_at` on nearly every sync even when nothing visible changed, so every listing's cached narration was invalidated repeatedly → the next viewer triggered a ~30s cold vision regenerate. Nightly warmer only covers top-200, so the long tail was perpetually cold.
+- **Fix 1 (main):** new `_narration_cache_key(listing)` — content-stable key = SHA256 of `photos[:24] + list_price + property_type` (prefix `nc1:`). Narrations now survive churny re-syncs; a genuine photo/price change still busts the cache. Applied to the `/narration` endpoint and the `get_listing` background-warm gate (`server.py` ~13692, ~14060).
+- **Fix 2:** `NARRATION_MAX_PHOTOS` default 24→16 (`services/vision_narration.py`) — cold vision latency 30.5s → 20.6s.
+- **Verified (preview, curl):** cold 20.6s / warm 0.16s; after a simulated `modified_at` bump narration stays `cached:True` (was a 30s cold regen before). TTS path unchanged (prepare instant, audio ~7s cold, cached after). Existing page-load background pre-warm + nightly warmer now persist instead of being wiped daily.
+- **NOTE:** fix is in code/preview — requires a production **redeploy** to take effect live. First view of each listing post-deploy does one ~20s warm, then stays fast permanently.
+
+
 ## June 2026 — Four features: Neighbourhood Guides, Hero Featured Mix, Consent Filters, Email Footer link
 
 - **Neighbourhood "Living-In" Guides** — new dedicated route `/living-in/{slug}` (focus regions only: Greater Vancouver, Fraser Valley, Sea-to-Sky). Claude Sonnet 4.6 generates a structured, BCFSA/CREA-compliant guide (5 fixed sections: overview, getting_around, amenities, climate, housing + 4 research-intent FAQs) as JSON; stored in new `neighbourhood_guides` collection as **unapproved** until Doug reviews/edits/approves. Public endpoint `GET /api/living-in/{slug}` returns approved guide, pending-review note, or out-of-region note. Admin Guides tab (`/admin/approvals` → 📍 Living-In Guides) with editable section/FAQ textareas, Regenerate, Approve & Publish, and "Generate all focus-region guides" (background). FAQPage JSON-LD + distinct `<h2>` sections for AEO/SEO/LLM citation. Cross-linked both ways with `/community/{slug}` and `/homes-for-sale/{slug}` (focus regions). Approved guides emitted to new `sitemap-living-in.xml`. Endpoints: `server.py` ~7960/~11611; component `LivingInGuide` in `App.js` ~5490.

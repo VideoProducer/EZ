@@ -10081,16 +10081,40 @@ async def startup():
                 delay = max(60, int((target - now).total_seconds()))
                 await _a.sleep(delay)
                 try:
+                    # Expanded coverage (was top-200): warm up to NIGHTLY_WARM_LIMIT
+                    # active listings, prioritising Doug's focus-area cities (where
+                    # real visitors actually browse), then topping up with the most
+                    # recently-modified listings elsewhere. Thanks to the content-
+                    # stable narration cache keys, re-runs on unchanged listings are
+                    # cheap cache-hits (~0.2s) — only genuinely new/changed listings
+                    # pay the cold vision cost, so a larger cap stays affordable.
+                    WARM_LIMIT = int(os.environ.get("NIGHTLY_WARM_LIMIT", "800"))
+                    _focus_cities = ["Vancouver","Burnaby","Richmond","Surrey","Coquitlam","Port Coquitlam",
+                                     "Port Moody","Delta","New Westminster","North Vancouver","West Vancouver",
+                                     "Maple Ridge","Pitt Meadows","Langley","Abbotsford","Chilliwack","Mission",
+                                     "Hope","Harrison Hot Springs","Kent","Squamish","Whistler","Pemberton"]
+                    _city_rx = [re.compile(f"^{re.escape(c)}", re.I) for c in _focus_cities]
                     keys = []
-                    async for l in db.listings.find(
-                        {"status": "Active"},
-                        {"listing_key": 1, "virtual_tour_urls": 1, "photos": 1},
-                    ).sort("modification_ts", -1).limit(200):
-                        keys.append({
-                            "key": l.get("listing_key"),
-                            "has_photos": bool(l.get("photos")),
-                            "has_tour": bool(l.get("virtual_tour_urls")),
-                        })
+                    seen = set()
+                    async def _collect(query, cap):
+                        if cap <= 0:
+                            return
+                        async for l in db.listings.find(
+                            query, {"listing_key": 1, "virtual_tour_urls": 1, "photos": 1},
+                        ).sort("modification_ts", -1).limit(cap):
+                            k = l.get("listing_key")
+                            if not k or k in seen:
+                                continue
+                            seen.add(k)
+                            keys.append({
+                                "key": k,
+                                "has_photos": bool(l.get("photos")),
+                                "has_tour": bool(l.get("virtual_tour_urls")),
+                            })
+                    # Pass 1 — focus-area cities (highest-traffic), newest first.
+                    await _collect({"status": "Active", "city": {"$in": _city_rx}}, WARM_LIMIT)
+                    # Pass 2 — fill remaining budget with the newest listings elsewhere.
+                    await _collect({"status": "Active", "city": {"$nin": _city_rx}}, WARM_LIMIT - len(keys))
                     ok = fail = 0
                     async with _ah.ClientSession() as sess:
                         # Sequential — Sonnet vision is expensive, don't fan out.
@@ -13689,7 +13713,7 @@ async def get_listing(request: Request, listing_key: str):
     # narration needs images to be useful).
     try:
         cached = (d.get("doogie_narration") or {})
-        expected_cache_key = str(d.get("modified_at") or d.get("_id"))
+        expected_cache_key = _narration_cache_key(d)
         needs_warm = not cached.get("script") or cached.get("cache_key") != expected_cache_key
         if needs_warm and d.get("photos"):
             asyncio.create_task(_warm_listing_narration_bg(listing_key))
@@ -14058,6 +14082,24 @@ async def _generate_listing_narration(listing: dict, session_id: str) -> dict:
         return _fallback_result(body)
 
 
+def _narration_cache_key(listing: dict) -> str:
+    """Content-stable cache key for Doogie narration. Based ONLY on the inputs
+    that actually change the script/cues (the photo set + price + type), NOT on
+    `modified_at`. CREA DDF® re-syncs bump `modified_at` constantly even when
+    nothing visible changed, which used to invalidate EVERY listing's narration
+    on each sync and force a ~30s cold vision-regenerate on the next view
+    (Doug's "narration reloads for each property"). Keying on content keeps
+    narrations warm across churny re-syncs so repeat/other viewers stay instant,
+    while a genuine photo/price change still correctly busts the cache."""
+    import hashlib
+    photos = listing.get("photos") or []
+    basis = {
+        "p": [str(u) for u in photos[:24]],
+        "price": listing.get("list_price"),
+        "type": listing.get("property_type"),
+    }
+    return "nc1:" + hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:24]
+
 @api.get("/listings/{listing_key}/narration")
 @_limiter.limit("60/minute")
 async def get_listing_narration(request: Request, listing_key: str):
@@ -14066,8 +14108,8 @@ async def get_listing_narration(request: Request, listing_key: str):
     l = await db.listings.find_one({"listing_key": listing_key})
     if not l:
         raise HTTPException(404, "Listing not found")
-    # Cache key includes modified_at so a re-synced listing regenerates.
-    cache_key = str(l.get("modified_at") or l.get("_id"))
+    # Content-stable cache key (survives churny CREA re-syncs; see helper above).
+    cache_key = _narration_cache_key(l)
     cached = (l.get("doogie_narration") or {})
     if cached.get("cache_key") == cache_key and cached.get("script") and cached.get("cues"):
         return {"script": cached["script"], "cues": cached["cues"], "cached": True,
@@ -14188,6 +14230,18 @@ async def _generate_tour_narration(listing: dict, session_id: str) -> str:
         return _spell_out_money_in_script(fallback)
 
 
+def _tour_narration_cache_key(listing: dict) -> str:
+    """Content-stable cache key for the virtual-tour voice-over. Keyed on the
+    tour URL(s) + price + type (the inputs that drive the keyframe script), NOT
+    `modified_at` — same churn fix as `_narration_cache_key`, so tour voiceovers
+    stay warm across CREA re-syncs instead of cold-regenerating (keyframe
+    extraction + vision) on the next view."""
+    import hashlib
+    tours = listing.get("virtual_tour_urls") or []
+    urls = sorted((t.get("url") or "").strip() for t in tours if isinstance(t, dict) and (t.get("url") or "").strip())
+    basis = {"t": urls, "price": listing.get("list_price"), "type": listing.get("property_type")}
+    return "tc1:" + hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:24]
+
 @api.get("/listings/{listing_key}/tour_narration")
 @_limiter.limit("60/minute")
 async def get_listing_tour_narration(request: Request, listing_key: str):
@@ -14205,7 +14259,7 @@ async def get_listing_tour_narration(request: Request, listing_key: str):
     tours = l.get("virtual_tour_urls") or []
     if not any((t.get("url") or "").strip() for t in tours if isinstance(t, dict)):
         raise HTTPException(404, "Listing has no virtual tour")
-    cache_key = str(l.get("modified_at") or l.get("_id"))
+    cache_key = _tour_narration_cache_key(l)
     cached = (l.get("doogie_tour_narration") or {})
     if cached.get("cache_key") == cache_key and cached.get("script"):
         return {

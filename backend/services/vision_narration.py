@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # Cap how many photos we send to Sonnet in one call.  MLS reels above ~24
 # photos are dominated by duplicates (indoor from another angle) so trimming
 # doesn't lose much sync value and keeps latency + cost predictable.
-MAX_PHOTOS = int(os.environ.get("NARRATION_MAX_PHOTOS", "24"))
+MAX_PHOTOS = int(os.environ.get("NARRATION_MAX_PHOTOS", "16"))
 # Downscale each photo before sending — Sonnet vision handles ~1568px well
 # and there's no benefit to sending full-res 4000px MLS masters.
 IMAGE_MAX_EDGE = 1024

@@ -7,7 +7,7 @@
 //  opinion. Ends with a CTA to Doug if the listing is in his service area.
 // ============================================================================
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Play, Pause, StopCircle, VolumeX, Maximize2, X, Share2, Check } from "lucide-react";
+import { Play, Pause, StopCircle, VolumeX, Maximize2, X, Share2, Check, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDoogieMuted, useDoogieSpeed } from "./voicePref";
 import { DoogieTalkingStyle } from "./voicePref";
@@ -68,12 +68,27 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
   const [cues, setCues] = useState([]); // [{sentence, photo_idx}]
   const [photoIdx, setLocalPhotoIdx] = useState(0);
   const [shareStatus, setShareStatus] = useState(""); // "" | "copied" | "failed"
+  const [loadStep, setLoadStep] = useState(0); // cycles friendly status while generating
   const audioRef = useRef(null);
   const objectUrlRef = useRef(null);
   const scriptCacheRef = useRef(null); // last fetched LLM narration bundle
   const muted = useDoogieMuted();
   const speed = useDoogieSpeed();
   const inServiceArea = _isInServiceArea(listing?.city);
+  // Friendly, cycling status while the (cold) narration + voice are generated
+  // in the background so the ~15-20s first-time wait never feels frozen.
+  const LOADING_MSGS = [
+    "Doogie is sniffing around the photos…",
+    "Writing your walk-through…",
+    "Warming up his voice…",
+    "Almost ready — fetching the audio…",
+  ];
+  React.useEffect(() => {
+    if (state !== "loading") { setLoadStep(0); return; }
+    const t = setInterval(() => setLoadStep(s => (s + 1) % LOADING_MSGS.length), 2500);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
   // Reset EVERYTHING when the user navigates to a new listing. Previously
   // we only cleared the script cache — the audio element kept the old blob
   // URL and state="playing"/"paused" persisted, so the next click of Play
@@ -408,7 +423,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
               : state === "playing" ? "Pause narration"
               : state === "paused"  ? "Resume narration"
               : "Have Doogie walk me through this home";
-  const Icon = muted ? VolumeX : (state === "playing" ? Pause : Play);
+  const Icon = muted ? VolumeX : (state === "loading" ? Loader2 : (state === "playing" ? Pause : Play));
 
   return (
     <div style={{ marginTop: "1.25rem" }} data-testid="listing-narration">
@@ -430,7 +445,11 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
             Doogie's narration
           </div>
           <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2, lineHeight: 1.4 }}>
-            A quick voice walk-through of this listing — general info only, never a value opinion.
+            {state === "loading"
+              ? <span data-testid="listing-narration-status" style={{ color: "#0A3D99", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Loader2 size={12} style={{ animation: "spin 0.9s linear infinite" }}/> {LOADING_MSGS[loadStep]}
+                </span>
+              : "A quick voice walk-through of this listing — general info only, never a value opinion."}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -447,7 +466,7 @@ export default function ListingNarration({ listing, onAdvancePhoto, photoCount =
               opacity: state === "loading" ? 0.7 : 1,
             }}
           >
-            <Icon size={14}/> {label}
+            <Icon size={14} style={state === "loading" && !muted ? { animation: "spin 0.9s linear infinite" } : undefined}/> {label}
           </button>
           {(state === "playing" || state === "paused") && (
             <button
