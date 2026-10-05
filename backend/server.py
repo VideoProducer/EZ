@@ -1858,7 +1858,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
         f"<strong>Timeframe:</strong> {_e_time}<br/>"
         f"<strong>Language:</strong> {_e_lang}</p>"
         f"<p><strong>Notes:</strong><br/>{_e_notes}</p>"
-        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=buyer'>Buyer Leads → {_e_subj_em}</a></p>"
+        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/buyers'>Buyer Leads → {_e_subj_em}</a></p>"
     )
     asyncio.create_task(_triage_and_notify_lead(
         kind=kind, collection_name="buyer_leads", lead_id=lead.id,
@@ -1919,7 +1919,7 @@ async def create_seller_lead(lead: SellerLead, request: Request):
         f"<strong>Timeframe:</strong> {getattr(lead, 'timeline', '') or '—'}<br/>"
         f"<strong>Language:</strong> {lead.form_lang or 'en'}</p>"
         f"<p><strong>Reason for selling:</strong><br/>{(lead.reason or '—').replace(chr(10), '<br/>')}</p>"
-        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/leads?type=seller'>Seller Leads → {lead.email}</a></p>"
+        f"<p style='color:#6b7280;font-size:0.85em'>View in CRM: <a href='https://eztofind.ca/admin/sellers'>Seller Leads → {lead.email}</a></p>"
     )
     asyncio.create_task(_triage_and_notify_lead(
         kind="Seller Lead", collection_name="seller_leads", lead_id=lead.id,
@@ -5155,7 +5155,7 @@ async def realtor_apply(body: RealtorInitial, request: Request):
             f"<strong>Brokerage:</strong> {body.brokerage}<br/>"
             f"<strong>REALTOR® #:</strong> {body.realtor_number}</p>"
             f"<p><strong>CREA Member:</strong> {'✅ Yes' if body.crea_member else ('❌ No' if body.crea_member is False else '—')}</p>"
-            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
+            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/realtors'>REALTOR® Applications → {body.email}</a></p>"
         ),
         related_id=app_obj.id,
     ))
@@ -5197,7 +5197,7 @@ async def realtor_apply_out_of_province(body: RealtorInitial, request: Request):
             f"<p><strong>CREA Member:</strong> {'✅ Yes' if body.crea_member else ('❌ No' if body.crea_member is False else '—')}</p>"
             f"<p>National referral network, bidirectional (BC-exit clients to this partner, BC-inbound clients from this partner).</p>"
             f"<p>Pending your review + signed CREA Inter-Board Referral Agreement.</p>"
-            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/leads?type=realtor'>REALTOR® Applications → {body.email}</a></p>"
+            f"<p style='color:#6b7280;font-size:0.85em'>Review in CRM: <a href='https://eztofind.ca/admin/realtors'>REALTOR® Applications → {body.email}</a></p>"
         ),
         related_id=app_obj.id,
     ))
