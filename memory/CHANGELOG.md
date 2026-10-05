@@ -1,5 +1,16 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Privacy Policy audit + site-wide consent enforcement (PIPA/CASL)
+
+- **Audit finding:** the `/privacy` page is NOT empty — it renders fully in both preview and production (~11k chars). The existing policy already covered Privacy Officer, PIPA rights, OIPC link, data residency, detailed retention, CASL consent records, breach, AI-use disclosure.
+- **Added to `/privacy`** (`Privacy` component, `App.js`): ① a visible **Last updated: June 5, 2026** stamp + OIPC BC link; ② an itemized **"What personal information we collect"** list (name/email/phone, form submissions, saved searches + Friday digest email, Doogie chat, **IP address for rate-limiting/CASL proof**, cookies); ③ **"How we use your information"** (respond to inquiry, Friday digest/alerts, referrals, operate/secure/improve site); ④ **"Third-Party Sharing & CREA DDF® Listing Data"** explicitly stating DDF® data is licensed, not sold, and **may not be used to train/fine-tune AI/ML models**; ⑤ explicit **one-click unsubscribe** + `/unsubscribe` link in the CASL section. All additive — no existing content removed. Matches existing Legal design system.
+- **Footer:** both `Footer` and `HomeNextFooter` already link `/privacy` (no change needed).
+- **Consent checkboxes on lead forms:** buyer already had checkbox+link; added `/privacy` **links** to seller/valuation/referral consent labels (checkboxes were already `required`). `/contact` (luxury) and saved-search already gated. 
+- **REALTOR® network applications (BC + out-of-province):** previously had NO consent checkbox. Added an enforced `required` consent checkbox — "By submitting, I agree to the Privacy Policy (PIPA)…" with `/privacy` link + JS gate (`realtor-pipa` / `realtor-oop-pipa` testids). Backend `/realtors/apply` + `/realtors/apply-oop` now require `pipa_ack` (400 if missing) and log the full CASL consent trail via `get_consent_meta()` (consent_ip, consent_ua, consent_at, policy_version) — reusing the existing helper, not a stub.
+- **CASL logging status:** already real (not stubbed) for all `/leads/*` + `/saved-searches`; now extended to realtor applications. Verified: 400 w/o consent, 200 w/ consent, consent metadata persisted in `realtor_applications`.
+
+
+
 (Appended chronologically. PRD.md holds the static problem statement/architecture; this file grows over time.)
 
 ## June 2026 — City hero rotates through real MLS® listing photos

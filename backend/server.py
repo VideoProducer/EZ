@@ -5127,9 +5127,13 @@ class RealtorInitial(BaseModel):
     province: Optional[str] = None
     network_type: Optional[str] = "bc"  # "bc" (in-province partner) or "oop" (out-of-province partner)
     crea_member: Optional[bool] = None  # CREA membership status — required for full REALTOR® designation + MLS® access
+    pipa_ack: Optional[bool] = None       # PIPA privacy-policy acknowledgement (consent gate)
+    casl_consent: Optional[bool] = None   # CASL consent for commercial electronic messages
 
 @api.post("/realtors/apply")
-async def realtor_apply(body: RealtorInitial):
+async def realtor_apply(body: RealtorInitial, request: Request):
+    if not body.pipa_ack:
+        raise HTTPException(400, "Privacy Policy (PIPA) acknowledgement is required.")
     existing = await db.realtor_applications.find_one({"email": body.email})
     if existing:
         # Update existing with any new fields
@@ -5139,6 +5143,7 @@ async def realtor_apply(body: RealtorInitial):
     doc = app_obj.model_dump()
     doc["network_type"] = "bc"
     doc["crea_member"] = body.crea_member
+    doc.update({**get_consent_meta(request), "policy_version": CURRENT_POLICY_VERSION, "pipa_ack": bool(body.pipa_ack), "casl_consent": bool(body.casl_consent)})
     await db.realtor_applications.insert_one(doc)
     logger.info(f"REALTOR APPLICATION → realtor@eztofind.ca: {body.full_name} ({body.email}) — {body.brokerage} — #{body.realtor_number}")
     asyncio.create_task(_notify_admin_of_lead(
@@ -5163,7 +5168,9 @@ async def realtor_apply(body: RealtorInitial):
 DOUG_MAILBOX = "doug@eztofind.ca"
 
 @api.post("/realtors/apply-oop")
-async def realtor_apply_out_of_province(body: RealtorInitial):
+async def realtor_apply_out_of_province(body: RealtorInitial, request: Request):
+    if not body.pipa_ack:
+        raise HTTPException(400, "Privacy Policy (PIPA) acknowledgement is required.")
     existing = await db.realtor_applications.find_one({"email": body.email})
     if existing:
         await db.realtor_applications.update_one(
@@ -5176,6 +5183,7 @@ async def realtor_apply_out_of_province(body: RealtorInitial):
     doc["network_type"] = "oop"
     doc["province"] = body.province or ""
     doc["crea_member"] = body.crea_member
+    doc.update({**get_consent_meta(request), "policy_version": CURRENT_POLICY_VERSION, "pipa_ack": bool(body.pipa_ack), "casl_consent": bool(body.casl_consent)})
     await db.realtor_applications.insert_one(doc)
     logger.info(f"OOP REALTOR APPLICATION → {DOUG_MAILBOX}: {body.full_name} ({body.email}) — {body.brokerage} — {body.province}")
     asyncio.create_task(_notify_admin_of_lead(
