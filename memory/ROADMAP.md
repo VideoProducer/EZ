@@ -62,6 +62,7 @@ These were identified by the Feb 2026 code review. Deferred from launch eve beca
 ---
 
 ## Recently completed (see `PRD.md` changelog for full list)
+- Neighbourhood "Living-In" Guides (/living-in/{slug}, focus regions, AI + admin approval), Hero Featured Mix, Admin Consent date/unsub filters, Digest email /email-preferences link (June 2026)
 - `/homes-for-sale` facet hubs expanded province-wide — all 240 communities, ≥1-matching-listing gate (1478 facet URLs), region-aware referral CTAs (June 2026)
 - Feature Sheet Phase 1 — 2-column public feature sheet under About This Property (Feb 2026)
 - Related Communities geography fix — replaced substring name matching with same-region_group peers (Feb 2026)

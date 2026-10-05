@@ -1,0 +1,20 @@
+{
+  "summary": "Frontend-only validation of 4 new features on EZtoFind.ca. All tests passed: (1) /living-in/maple-ridge renders H1, all 5 section data-testids (overview, getting_around, amenities, climate, housing), living-in-faq, and living-in-cta with 'See Maple Ridge homes for sale' and 'I'm buying in Maple Ridge' CTAs. (2) /living-in/kelowna (out-of-region) renders H1 but shows living-in-unavailable note and no section content. (3) Admin /admin/approvals shows approvals-tab-guides ('📍 Living-In Guides (0)'); clicking it reveals generate-all-guides button and empty-state message ('No pending neighbourhood guides...'). (4) Admin /admin/consent exposes all required testids (consent-search-input, consent-date-from, consent-date-to, consent-unsub-only, consent-search-btn); empty-search triggers consent-err; date-range search returned 78 records in consent-results + admin-consent-table; Clear button appeared; Unsubscribed-only alone returned 0 records without error (consent-results rendered). Homepage hn-listing-hero renders without errors (no Featured tag — expected per task note).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "100%"},
+  "test_credentials": "doug@eztofind.ca / Doug2026Login! (worked)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 4 features working end-to-end via UI. Maple-ridge guide approved and public. Kelowna correctly out-of-region. Admin guides tab shows empty state (0 pending). Consent filters: date-range, unsub-only, and empty-validation all work. Homepage hero renders (no active featured listing).",
+  "rca of the issue": "n/a — no issues found"
+}

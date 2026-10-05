@@ -1,5 +1,14 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Four features: Neighbourhood Guides, Hero Featured Mix, Consent Filters, Email Footer link
+
+- **Neighbourhood "Living-In" Guides** — new dedicated route `/living-in/{slug}` (focus regions only: Greater Vancouver, Fraser Valley, Sea-to-Sky). Claude Sonnet 4.6 generates a structured, BCFSA/CREA-compliant guide (5 fixed sections: overview, getting_around, amenities, climate, housing + 4 research-intent FAQs) as JSON; stored in new `neighbourhood_guides` collection as **unapproved** until Doug reviews/edits/approves. Public endpoint `GET /api/living-in/{slug}` returns approved guide, pending-review note, or out-of-region note. Admin Guides tab (`/admin/approvals` → 📍 Living-In Guides) with editable section/FAQ textareas, Regenerate, Approve & Publish, and "Generate all focus-region guides" (background). FAQPage JSON-LD + distinct `<h2>` sections for AEO/SEO/LLM citation. Cross-linked both ways with `/community/{slug}` and `/homes-for-sale/{slug}` (focus regions). Approved guides emitted to new `sitemap-living-in.xml`. Endpoints: `server.py` ~7960/~11611; component `LivingInGuide` in `App.js` ~5490.
+- **Hero Featured Mix** — `config/flagshipListing.js` now exports `SIGNATURE_MLS` (hand-picked MLS® list, auto-includes active FLAGSHIP) + `getSignatureMlsNumbers()`. `HomeNextListingHero.jsx` fetches those by MLS®, pins up to `SIGNATURE_PIN_LIMIT` (2) active ones to the FRONT of the daily 12-listing rotation with a subtle "Featured" tag (`data-testid hn-listing-hero-featured`). No active signature listing today → behaves exactly as before (safe). Doug adds live MLS® numbers to `SIGNATURE_MLS` to feature them.
+- **Consent Filters** — `/admin/consent` + `/api/admin/consent-search` & `/consent-export` now accept optional `email`, `date_from`, `date_to`, `unsubscribed_only`, `limit`. Admin can browse by date-range and/or unsubscribed-only WITHOUT an email (newest-first, capped 500). Empty filters → 400. UI adds date pickers, unsubscribed-only toggle, Clear button, capped-results notice.
+- **Email Footer link** — `casl_footer_html/text` (email_sender.py) accept an optional `prefs_url`; new `email_prefs_url(email)` builds the signed `/email-preferences?token=` link (JWT scheme matches server `_prefs_token`). Weekly Just-Sold Digest footer now includes "Manage email preferences" alongside one-click unsubscribe (CASL-compliant).
+- Tested: testing_agent `iteration_42.json` (frontend 100%) + backend verified via curl/Playwright (guide generate→approve→public, out-of-region note, consent date-range/unsub/400, sitemap). All copy factual/compliant.
+
+
 ## June 2026 — `/homes-for-sale` facet hubs expanded province-wide (all 240 communities)
 
 - **Scope widened per user ("ship it"):** facet hubs now generate across ALL 12 BC regions / ~240 communities (previously only the 3 focus regions). Same 9 facets: houses, townhouses, condos, acreage, equestrian + under-800k, under-1m, 1m-2m, 2m-plus.
