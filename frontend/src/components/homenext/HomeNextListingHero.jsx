@@ -15,15 +15,23 @@ export const HomeNextListingHero = () => {
   useEffect(() => {
     let stop = false;
     const params = new URLSearchParams({
-      price_min: "2000000", property_type: "Detached", sort: "newest", limit: "24",
+      price_min: "2000000", property_type: "Detached", sort: "newest", limit: "60",
       region_chip: "Doug's Territory",
       exclude_property_type: EXCL_TYPES, exclude_description_keywords: EXCL_KW,
     });
     fetch(`${API}/api/listings?${params}`).then(r => r.ok ? r.json() : null).then(d => {
       if (stop || !d) return;
-      const items = (d.listings || [])
-        .filter(l => Array.isArray(l.photos) && l.photos.length > 0)
-        .slice(0, 12);
+      const all = (d.listings || []).filter(l => Array.isArray(l.photos) && l.photos.length > 0);
+      // Rotate the shown dozen once per day so the hero surfaces fresh live
+      // listings daily, cycling through the full newest pool over time.
+      let items = all;
+      const n = all.length;
+      if (n > 12) {
+        const dayOffset = Math.floor(Date.now() / 86400000) % n;
+        items = all.slice(dayOffset).concat(all.slice(0, dayOffset)).slice(0, 12);
+      } else {
+        items = all.slice(0, 12);
+      }
       items.forEach(l => { const im = new Image(); im.src = l.photos[0]; });
       setPool(items);
     }).catch(() => {});

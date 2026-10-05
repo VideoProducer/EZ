@@ -1,5 +1,11 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Homepage hero: daily-rotating live listings
+
+- `components/homenext/HomeNextListingHero.jsx`: bumped the live `/api/listings` pool from 24→60 (newest, $2M+ detached, Doug's Territory, land/dev excluded) and now shows a **daily-rotating window of 12** (offset = `floor(Date.now()/86400000) % n`). Surfaces a fresh set of real listings each day while cycling through the full pool over time; still live on every page load, no backend cron. Verified: 57 photo-listings in pool, hero renders rotated set (e.g. 3263 Norwood Ave) with 12 dots.
+
+
+
 ## June 2026 — Consent dashboard, policy bump, preference center (PIPA/CASL follow-ups)
 
 - **Policy version bump:** `CURRENT_POLICY_VERSION` → `2026-06-05` (server.py:2063); privacy page "Last updated" already matches. New consents now stamp against the expanded policy. Verified new records carry policy_version 2026-06-05.
