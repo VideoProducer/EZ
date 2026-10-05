@@ -5343,8 +5343,24 @@ const HOMES_FAQ = (city) => [
   { q: `Who do I contact to buy a home in ${city}?`, a: `Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) can help. Submit the buyer form and Doug replies within one business day. Submitting a form does not create a REALTOR®-client relationship until a formal DoRTS is provided.` },
 ];
 
+// Facet variants for /homes-for-sale/{community}/{facet} — property-type and
+// price-band long-tail hubs. All copy stays factual (BCFSA/CREA/GVR/PIPA/CASL):
+// live aggregates only, no superlatives or opinions of value.
+const HFS_FACETS = {
+  "houses":      { kind:"type",  label:"Houses",              noun:"houses",                params:"property_type=Detached" },
+  "townhouses":  { kind:"type",  label:"Townhouses",          noun:"townhouses",            params:"property_type=Townhouse" },
+  "condos":      { kind:"type",  label:"Condos & Apartments", noun:"condos & apartments",   params:"property_type=Apartment" },
+  "acreage":     { kind:"type",  label:"Acreage & Land",      noun:"acreage & land",        params:"q=acreage" },
+  "equestrian":  { kind:"type",  label:"Equestrian",          noun:"equestrian properties", params:"q=equestrian" },
+  "under-800k":  { kind:"price", label:"Under $800K",         noun:"homes under $800,000",  params:"price_max=800000" },
+  "under-1m":    { kind:"price", label:"Under $1M",           noun:"homes under $1,000,000",params:"price_max=1000000" },
+  "1m-2m":       { kind:"price", label:"$1M – $2M",           noun:"homes priced $1M–$2M",  params:"price_min=1000000&price_max=2000000" },
+  "2m-plus":     { kind:"price", label:"$2M+",                noun:"homes $2M and up",      params:"price_min=2000000" },
+};
+
 const HomesForSale = () => {
-  const { slug } = useParams();
+  const { slug, facet } = useParams();
+  const F = (facet && HFS_FACETS[facet]) ? HFS_FACETS[facet] : null;
   const [snap, setSnap] = useState(null);
   // City name is derived SYNCHRONOUSLY from the slug so the page (hero, FAQ,
   // CTAs, disclaimers) renders instantly with no async gate — the on-demand
@@ -5373,22 +5389,30 @@ const HomesForSale = () => {
   return (
     <div className="hn" data-testid={`homes-for-sale-${slug}`}>
       <SEO
-        title={`Homes for Sale in ${city}, BC — Live MLS® Listings | EZtoFind.ca`}
-        description={`Browse homes for sale in ${city}, British Columbia. Live active-listing counts, median list price and price range from the CREA DDF® feed. Search MLS® listings and connect with Doug LeMaire, REALTOR®.`}
-        path={`/homes-for-sale/${slug}`}
+        title={F ? `${F.label} for Sale in ${city}, BC — Live MLS® Listings | EZtoFind.ca` : `Homes for Sale in ${city}, BC — Live MLS® Listings | EZtoFind.ca`}
+        description={F ? `Browse ${F.noun} for sale in ${city}, British Columbia. Live active-listing counts and price data from the CREA DDF® feed. Search MLS® listings and connect with Doug LeMaire, REALTOR®.` : `Browse homes for sale in ${city}, British Columbia. Live active-listing counts, median list price and price range from the CREA DDF® feed. Search MLS® listings and connect with Doug LeMaire, REALTOR®.`}
+        path={F ? `/homes-for-sale/${slug}/${facet}` : `/homes-for-sale/${slug}`}
         schema={faqSchema}
       />
       <section className="hn-section" style={{paddingBottom:0}}>
         <div className="hn-wrap">
           <p style={{fontFamily:"Inter,sans-serif",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",fontSize:"0.78rem",color:"var(--brand-blue)",margin:0}}>Homes for Sale</p>
-          <h1 data-testid="hfs-title" style={{fontFamily:"'Sora',sans-serif",fontWeight:700,letterSpacing:"-0.02em",fontSize:"clamp(2rem,5vw,3.25rem)",color:"#1d1d1f",margin:"0.4rem 0 0.6rem",lineHeight:1.05}}>Homes for sale in {city}, BC</h1>
+          <h1 data-testid="hfs-title" style={{fontFamily:"'Sora',sans-serif",fontWeight:700,letterSpacing:"-0.02em",fontSize:"clamp(2rem,5vw,3.25rem)",color:"#1d1d1f",margin:"0.4rem 0 0.6rem",lineHeight:1.05}}>{F ? `${F.label} for sale in ${city}, BC` : `Homes for sale in ${city}, BC`}</h1>
           <p className="hn-lead" style={{maxWidth:"46rem"}}>
-            {snap && snap.active_count > 0
-              ? `${snap.active_count.toLocaleString("en-CA")} active MLS® listing${snap.active_count === 1 ? "" : "s"} in ${city} right now — updated daily from the CREA DDF® feed.`
-              : `Live MLS® listings for ${city}, updated daily from the CREA DDF® feed.`}
+            {F
+              ? `Live MLS® ${F.noun} in ${city}, updated daily from the CREA DDF® feed.`
+              : (snap && snap.active_count > 0
+                ? `${snap.active_count.toLocaleString("en-CA")} active MLS® listing${snap.active_count === 1 ? "" : "s"} in ${city} right now — updated daily from the CREA DDF® feed.`
+                : `Live MLS® listings for ${city}, updated daily from the CREA DDF® feed.`)}
           </p>
-          <div className="hn-ctarow" style={{marginTop:"1.25rem"}}>
-            <Link to={`/listings?city=${encodeURIComponent(city)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-search">Search {city} listings <HnArrowRight size={15}/></Link>
+          <div className="hn-ctarow" style={{marginTop:"0.9rem",flexWrap:"wrap",gap:"0.5rem"}} data-testid="hfs-facets">
+            <Link to={`/homes-for-sale/${slug}`} className={`hn-pill${!F ? " hn-pill--navy" : ""}`} data-testid="hfs-facet-all">All homes</Link>
+            {Object.entries(HFS_FACETS).map(([fs, fd]) => (
+              <Link key={fs} to={`/homes-for-sale/${slug}/${fs}`} className={`hn-pill${facet === fs ? " hn-pill--navy" : ""}`} data-testid={`hfs-facet-${fs}`}>{fd.label}</Link>
+            ))}
+          </div>
+          <div className="hn-ctarow" style={{marginTop:"1rem"}}>
+            <Link to={`/listings?city=${encodeURIComponent(city)}${F ? `&${F.params}` : ""}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-search">Search {F ? F.label : city} listings <HnArrowRight size={15}/></Link>
             <Link to={`/community/${slug}`} className="hn-pill hn-pill--lg" data-testid="hfs-community">{city} community profile</Link>
           </div>
         </div>
@@ -14589,6 +14613,7 @@ function App() {
       <Route path="/family-viewing-party" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FamilyViewingParty/></Suspense></AppLayout>}/>
       <Route path="/communities" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/homes-for-sale/:slug" element={<AppLayout><HomesForSale/></AppLayout>}/>
+      <Route path="/homes-for-sale/:slug/:facet" element={<AppLayout><HomesForSale/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>

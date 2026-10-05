@@ -62,7 +62,7 @@ export default function SiteWideSchema() {
       },
       // ── Organization entity (the brokerage) ───────────────────────────
       {
-        "@type": ["Organization", "RealEstateAgent"],
+        "@type": ["Organization", "RealEstateAgent", "LocalBusiness"],
         "@id": `${SITE_FACTS.origin}/#organization`,
         "name": SITE_FACTS.brokerage_name,
         "alternateName": "EZtoFind.ca",
@@ -87,10 +87,12 @@ export default function SiteWideSchema() {
           "latitude": SITE_FACTS.brokerage_addr.lat,
           "longitude": SITE_FACTS.brokerage_addr.lng,
         },
-        "areaServed": {
-          "@type": "AdministrativeArea",
-          "name": "British Columbia, Canada",
-        },
+        "areaServed": [
+          { "@type": "AdministrativeArea", "name": "Greater Vancouver, BC" },
+          { "@type": "AdministrativeArea", "name": "Fraser Valley, BC" },
+          { "@type": "AdministrativeArea", "name": "Sea-to-Sky Corridor, BC (to Whistler)" },
+          { "@type": "AdministrativeArea", "name": "British Columbia, Canada" },
+        ],
         "priceRange": "$",
         "founder": { "@id": `${SITE_FACTS.origin}/#doug` },
         "employee":  { "@id": `${SITE_FACTS.origin}/#doug` },

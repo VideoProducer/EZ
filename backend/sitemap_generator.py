@@ -241,11 +241,15 @@ def _build_communities() -> tuple[str, int, dict]:
     return _wrap_urlset(tags, with_image_ns=True), len(tags), slug_by_name
 
 def _build_homes_for_sale() -> tuple[str, int]:
-    """SEO landing hubs — one <url> per community for /homes-for-sale/{slug}.
-    Mirrors the community slug list; these pages target the high-intent
-    'homes for sale in {city}' organic query."""
+    """SEO landing hubs — one <url> per community for /homes-for-sale/{slug},
+    plus property-type + price-band facet hubs (/homes-for-sale/{slug}/{facet})
+    for Doug's focus regions only. Targets high-intent long-tail organic queries."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     community_seed = Path("/app/backend/data/communities_seed.json")
+    # Facet slugs kept in sync with HFS_FACETS in frontend/src/App.js
+    HFS_FACETS = ["houses", "townhouses", "condos", "acreage", "equestrian",
+                  "under-800k", "under-1m", "1m-2m", "2m-plus"]
+    HFS_FOCUS_REGIONS = {"Greater Vancouver", "Fraser Valley", "Sea-to-Sky"}
     tags = []
     if community_seed.exists():
         comms = json.loads(community_seed.read_text())
@@ -253,6 +257,9 @@ def _build_homes_for_sale() -> tuple[str, int]:
             for name in names:
                 slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
                 tags.append(_url_tag(f"{BASE_URL}/homes-for-sale/{slug}", today, "daily", "0.8"))
+                if region in HFS_FOCUS_REGIONS:
+                    for facet in HFS_FACETS:
+                        tags.append(_url_tag(f"{BASE_URL}/homes-for-sale/{slug}/{facet}", today, "daily", "0.7"))
     return _wrap_urlset(tags), len(tags)
 
 async def _build_neighbourhoods(db, slug_by_name: dict) -> tuple[str, int]:

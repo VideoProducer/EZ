@@ -1,5 +1,14 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — SEO technical build (schema + long-tail hub expansion)
+
+- **#3 Schema (shipped):** `SiteWideSchema.jsx` already emitted `RealEstateAgent` (Organization + Person) with `areaServed`/credentials/`sameAs` on every route. Enhanced the brokerage Organization to `["Organization","RealEstateAgent","LocalBusiness"]` and expanded its `areaServed` to Doug's 3 focus regions + BC — now eligible for Google LocalBusiness rich results. Verified on /about (LocalBusiness + RealEstateAgent + 8 areaServed nodes).
+- **#2 Long-tail `/homes-for-sale` hub expansion (shipped):** added `/homes-for-sale/:slug/:facet` route + facet logic in `HomesForSale` (App.js). 9 facets — property types (houses/townhouses/condos/acreage/equestrian) + price bands (under-800k/under-1m/1m-2m/2m-plus). Each facet page has a unique title/meta/self-canonical/H1/lead, facet-filtered `/listings` CTA, and an internal-link chip row. Scoped to Doug's focus regions (Greater Vancouver + Fraser Valley + Sea-to-Sky = 36 communities). `sitemap_generator._build_homes_for_sale` now emits 564 URLs (240 base + 324 facets); non-focus communities get base only. All copy strictly factual/compliant (live CREA DDF® aggregates, no superlatives). Crawlers get these via the existing on-demand Chromium SSR. Verified: facet page renders, sitemap counts, non-focus exclusion.
+- **#1 title/meta/canonical:** confirmed already handled by the existing `SEO`/Helmet system per-template (every page + now every facet has unique title/meta/canonical). No systemic defect found — no blind sweep performed.
+- **#4 Programmatic neighbourhood-guide template:** NOT yet built — larger standalone build (new template + data + routes + prerender + sitemap), queued for a dedicated pass.
+
+
+
 ## June 2026 — Homepage hero: daily-rotating live listings
 
 - `components/homenext/HomeNextListingHero.jsx`: bumped the live `/api/listings` pool from 24→60 (newest, $2M+ detached, Doug's Territory, land/dev excluded) and now shows a **daily-rotating window of 12** (offset = `floor(Date.now()/86400000) % n`). Surfaces a fresh set of real listings each day while cycling through the full pool over time; still live on every page load, no backend cron. Verified: 57 photo-listings in pool, hero renders rotated set (e.g. 3263 Norwood Ave) with 12 dots.
