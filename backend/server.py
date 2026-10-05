@@ -2060,7 +2060,7 @@ class FavoritesSyncIn(BaseModel):
     casl_consent: bool
     pipa_ack: bool
 
-CURRENT_POLICY_VERSION = "2026-02-25"
+CURRENT_POLICY_VERSION = "2026-06-05"
 
 def _public_base_url(request: Request) -> str:
     """Derive the public URL for building verify/unsubscribe links.
@@ -17309,7 +17309,13 @@ async def email_prefs_get(token: str):
     for cid, meta in CAMPAIGN_REGISTRY.items():
         opted_in = await campaign_has_consent(email, cid)
         campaigns.append({"id": cid, "label": meta["label"], "description": meta["description"], "opted_in": opted_in})
-    return {"email": email, "campaigns": campaigns}
+    ss_total = await db.saved_searches.count_documents({"email": email})
+    saved_search_prefs = None
+    if ss_total > 0:
+        alerts_on = await db.saved_searches.count_documents({"email": email, "unsubscribed_at": None, "alerts_enabled": {"$ne": False}}) > 0
+        digest_on = await db.saved_searches.count_documents({"email": email, "unsubscribed_at": None, "digest_enabled": {"$ne": False}}) > 0
+        saved_search_prefs = {"count": ss_total, "alerts_enabled": alerts_on, "digest_enabled": digest_on}
+    return {"email": email, "campaigns": campaigns, "saved_search_prefs": saved_search_prefs}
 
 
 class EmailPrefsUpdate(BaseModel):
@@ -17342,6 +17348,86 @@ async def email_prefs_unsub_all(token: str, request: Request):
     for cid in CAMPAIGN_REGISTRY.keys():
         await campaign_revoke_consent(email, cid, request, reason="global_unsubscribe")
     return {"success": True, "email": email, "unsubscribed": list(CAMPAIGN_REGISTRY.keys())}
+
+
+# ------------- Preference center: independent saved-search toggles -------------
+class SavedSearchPrefUpdate(BaseModel):
+    token: str
+    pref: str   # "alerts" | "digest"
+    enabled: bool
+
+@api.post("/email-preferences/saved-search")
+async def saved_search_prefs_update(body: SavedSearchPrefUpdate, request: Request):
+    """Independently toggle saved-search alerts vs the weekly market digest,
+    across every saved search belonging to the token's email. Lets subscribers
+    keep one and drop the other instead of an all-or-nothing unsubscribe."""
+    email = _prefs_verify(body.token)
+    if not email:
+        raise HTTPException(400, "Invalid preference link.")
+    if body.pref not in ("alerts", "digest"):
+        raise HTTPException(400, "Unknown preference.")
+    field = "alerts_enabled" if body.pref == "alerts" else "digest_enabled"
+    result = await db.saved_searches.update_many(
+        {"email": email},
+        {"$set": {field: bool(body.enabled), f"{field}_updated_at": now_iso()}},
+    )
+    meta = get_consent_meta(request)
+    await db.unsubscribe_log.insert_one({
+        "email": email, "ts": now_iso(),
+        "action": f"saved_search_{body.pref}_{'on' if body.enabled else 'off'}",
+        "reason": "preference_center", "ip": meta.get("consent_ip"),
+    })
+    return {"success": True, "email": email, "pref": body.pref, "enabled": bool(body.enabled), "updated": result.modified_count}
+
+
+# ------------- Admin: consent-record lookup (PIPA access request) -------------
+async def _consent_records_for(email_l: str):
+    """Scan every DSAR collection for an individual's consent trail."""
+    records = []
+    for coll, field in _DSAR_COLLECTIONS:
+        try:
+            async for d in db[coll].find({field: {"$regex": f"^{re.escape(email_l)}$", "$options": "i"}}):
+                records.append({
+                    "collection": coll,
+                    "id": str(d.get("id") or d.get("_id") or ""),
+                    "name": d.get("full_name") or d.get("name") or "",
+                    "email": d.get(field),
+                    "created_at": d.get("created_at") or d.get("submitted_at") or d.get("opt_in_at") or "",
+                    "consent_type": d.get("consent_type"),
+                    "pipa_ack": d.get("pipa_ack"),
+                    "casl_consent": d.get("casl_consent"),
+                    "consent_at": d.get("consent_at") or d.get("casl_consent_at") or d.get("opt_in_at"),
+                    "consent_ip": d.get("consent_ip") or d.get("ip"),
+                    "consent_ua": d.get("consent_ua") or d.get("ua"),
+                    "policy_version": d.get("policy_version"),
+                    "consent_expiry": d.get("consent_expiry"),
+                    "unsubscribed": bool(d.get("unsubscribed") or d.get("unsubscribed_at") or (d.get("status") == "unsubscribed")),
+                    "unsubscribed_at": d.get("unsubscribed_at"),
+                })
+        except Exception as e:
+            logger.warning(f"consent-search {coll} failed: {e}")
+    return records
+
+@api.get("/admin/consent-search")
+async def admin_consent_search(email: str, _=Depends(verify_admin)):
+    email_l = (email or "").strip().lower()
+    if not email_l:
+        raise HTTPException(400, "email required")
+    recs = await _consent_records_for(email_l)
+    return {"email": email_l, "count": len(recs), "records": recs}
+
+@api.get("/admin/consent-export")
+async def admin_consent_export(email: str, _=Depends(verify_admin)):
+    import csv, io
+    email_l = (email or "").strip().lower()
+    if not email_l:
+        raise HTTPException(400, "email required")
+    recs = await _consent_records_for(email_l)
+    cols = ["collection","id","name","email","created_at","consent_type","pipa_ack","casl_consent","consent_at","consent_ip","consent_ua","policy_version","consent_expiry","unsubscribed","unsubscribed_at"]
+    out = io.StringIO(); w = csv.writer(out); w.writerow(cols)
+    for r in recs:
+        w.writerow([r.get(c, "") for c in cols])
+    return Response(content=out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="consent-{email_l}.csv"'})
 
 
 # ------------- Campaign #1: Buyer weekly listing digest -------------

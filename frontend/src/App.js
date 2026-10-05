@@ -7868,6 +7868,7 @@ export const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-log")} className={active==="email-log"?"active":""} data-testid="admin-nav-email-log">📮 Email Log</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-outbox")} className={active==="email-outbox"?"active":""} data-testid="admin-nav-email-outbox">📬 Email Outbox</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/saved-searches")} className={active==="saved-searches"?"active":""} data-testid="admin-nav-saved-searches">🔔 Saved Searches</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consent")} className={active==="consent"?"active":""} data-testid="admin-nav-consent">🛡️ Consent Records</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
@@ -11058,6 +11059,15 @@ const EmailPreferences = () => {
     } catch { alert("Could not unsubscribe. Email info@eztofind.ca for manual removal."); }
     finally { setSaving(null); }
   };
+  const toggleSaved = async (pref, enabled) => {
+    setSaving("ss_"+pref);
+    try {
+      await axios.post(`${API}/email-preferences/saved-search`, { token, pref, enabled });
+      const r = await axios.get(`${API}/email-preferences`, { params: { token } });
+      setState({ loading: false, data: r.data, err: null });
+    } catch { alert("Could not save. Try again or email info@eztofind.ca."); }
+    finally { setSaving(null); }
+  };
   return (<section className="section"><div className="container-x" style={{maxWidth:"42rem"}}>
     <SEO title="Email Preferences — EZtoFind.ca" description="Manage your EZtoFind.ca email preferences under CASL." path="/email-preferences"/>
     <div className="eyebrow">Email preferences</div>
@@ -11087,6 +11097,31 @@ const EmailPreferences = () => {
             </label>
           ))}
         </div>
+        {state.data.saved_search_prefs && (
+          <div style={{marginTop:"1.75rem"}} data-testid="prefs-saved-search">
+            <div style={{fontSize:"0.78rem",textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--muted)",fontWeight:700,marginBottom:"0.6rem"}}>Saved-search emails</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+              <label className="paper" style={{padding:"1rem 1.25rem",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"1rem",cursor: saving==="ss_alerts"?"wait":"pointer"}} data-testid="prefs-row-ss-alerts">
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,color:"var(--brand-navy)"}}>Saved-search alerts</div>
+                  <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.2rem"}}>New MLS® listings matching your saved filters, at your chosen cadence.</div>
+                </div>
+                <input type="checkbox" checked={state.data.saved_search_prefs.alerts_enabled} disabled={saving==="ss_alerts"}
+                  onChange={e => toggleSaved("alerts", e.target.checked)} data-testid="prefs-toggle-ss-alerts"
+                  style={{width:22,height:22,cursor: saving==="ss_alerts"?"wait":"pointer",accentColor:"var(--brand-blue)"}}/>
+              </label>
+              <label className="paper" style={{padding:"1rem 1.25rem",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"1rem",cursor: saving==="ss_digest"?"wait":"pointer"}} data-testid="prefs-row-ss-digest">
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,color:"var(--brand-navy)"}}>Weekly market digest (Friday)</div>
+                  <div style={{fontSize:"0.82rem",color:"var(--muted)",marginTop:"0.2rem"}}>Our weekly Just-Sold &amp; market-update digest for your areas.</div>
+                </div>
+                <input type="checkbox" checked={state.data.saved_search_prefs.digest_enabled} disabled={saving==="ss_digest"}
+                  onChange={e => toggleSaved("digest", e.target.checked)} data-testid="prefs-toggle-ss-digest"
+                  style={{width:22,height:22,cursor: saving==="ss_digest"?"wait":"pointer",accentColor:"var(--brand-blue)"}}/>
+              </label>
+            </div>
+          </div>
+        )}
         <div style={{marginTop:"2rem",padding:"1rem 1.25rem",background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:8}}>
           <div style={{fontWeight:600,color:"#7F1D1D",marginBottom:"0.4rem"}}>Global unsubscribe</div>
           <p style={{fontSize:"0.85rem",color:"#7F1D1D",margin:"0 0 0.75rem"}}>Kill everything at once. You can always re-subscribe here later.</p>
@@ -11099,6 +11134,37 @@ const EmailPreferences = () => {
   </div></section>);
 };
 
+
+// --- Admin: Consent Records (PIPA access request lookup + CSV export) ---
+const AdminConsent = () => {
+  const {headers} = useAdmin();
+  const [email,setEmail]=useState(""); const [data,setData]=useState(null); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  const search = async (e) => { if(e)e.preventDefault(); if(!email.trim())return; setBusy(true); setErr(""); try{ const r=await axios.get(`${API}/admin/consent-search`,{headers,params:{email:email.trim()}}); setData(r.data);}catch(x){setErr("Search failed. Check you're signed in.");}finally{setBusy(false);} };
+  const exportCsv = () => { window.open(`${API}/admin/consent-export?email=${encodeURIComponent(email.trim())}`,"_blank"); };
+  return (<AdminShell active="consent"><div style={{padding:"1rem"}}>
+    <h1 style={{margin:"0 0 0.4rem"}}>🛡️ Consent Records</h1>
+    <p style={{color:"#6e6e73",marginTop:0,maxWidth:640}}>PIPA access request — search every data store for an individual's CASL/PIPA consent trail (IP, user-agent, timestamp, policy version) and export it on request.</p>
+    <form onSubmit={search} style={{display:"flex",gap:10,margin:"1.25rem 0",maxWidth:600,flexWrap:"wrap"}}>
+      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" type="email" data-testid="consent-search-input" style={{flex:"1 1 260px",padding:"11px 14px",borderRadius:10,border:"1px solid rgba(0,0,0,0.15)",fontSize:15}}/>
+      <button type="submit" disabled={busy} data-testid="consent-search-btn" className="btn btn-primary">{busy?"Searching…":"Search"}</button>
+      {data && data.count>0 && <button type="button" onClick={exportCsv} data-testid="consent-export-btn" className="btn btn-ghost">Export CSV</button>}
+    </form>
+    {err && <div style={{color:"#DC2626",marginBottom:"1rem"}} data-testid="consent-err">{err}</div>}
+    {data && (<div data-testid="consent-results">
+      <p style={{color:"#6e6e73"}}><strong>{data.count}</strong> record(s) for <strong>{data.email}</strong></p>
+      {data.count>0 && <div style={{overflowX:"auto"}}><table className="admin-table" data-testid="admin-consent-table"><thead><tr>
+        <th>Collection</th><th>Name</th><th>Consent at</th><th>Type</th><th>PIPA</th><th>CASL</th><th>IP</th><th>Policy</th><th>Unsub?</th>
+      </tr></thead><tbody>
+        {data.records.map((r,i)=>(<tr key={i} data-testid={`consent-row-${i}`}>
+          <td>{r.collection}</td><td>{r.name||"—"}</td><td>{(r.consent_at||"").slice(0,19).replace("T"," ")||"—"}</td>
+          <td>{r.consent_type||"—"}</td><td>{r.pipa_ack?"✓":"—"}</td><td>{r.casl_consent?"✓":"—"}</td>
+          <td style={{fontSize:12}}>{r.consent_ip||"—"}</td><td style={{fontSize:12}}>{r.policy_version||"—"}</td>
+          <td>{r.unsubscribed?"Yes":"No"}</td>
+        </tr>))}
+      </tbody></table></div>}
+    </div>)}
+  </div></AdminShell>);
+};
 
 // --- Unsubscribe (CASL) ---
 const Unsubscribe = () => {
@@ -14637,6 +14703,7 @@ function App() {
       <Route path="/admin/heatmap/equestrian" element={<AdminHeatmap AdminShell={AdminShell} segment="equestrian"/>}/>
       <Route path="/admin/email-outbox" element={<AdminEmailOutbox/>}/>
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
+      <Route path="/admin/consent" element={<AdminConsent/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>

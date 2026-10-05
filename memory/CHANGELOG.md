@@ -1,5 +1,15 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Consent dashboard, policy bump, preference center (PIPA/CASL follow-ups)
+
+- **Policy version bump:** `CURRENT_POLICY_VERSION` → `2026-06-05` (server.py:2063); privacy page "Last updated" already matches. New consents now stamp against the expanded policy. Verified new records carry policy_version 2026-06-05.
+- **Admin Consent Dashboard** (`/admin/consent`, `AdminConsent` in App.js + sidebar nav `admin-nav-consent`): searches every `_DSAR_COLLECTIONS` store by email for an individual's full CASL/PIPA consent trail (type, pipa_ack, casl_consent, consent_at, IP, UA, policy_version, unsubscribed). Endpoints `GET /admin/consent-search` + `GET /admin/consent-export` (CSV), both `verify_admin`-gated (401 without auth, verified). Reuses `_consent_records_for()` helper.
+- **Preference Center** (extends existing `/email-preferences`): added independent **Saved-search alerts** and **Weekly market digest (Friday)** toggles so subscribers can keep one and drop the other instead of all-or-nothing unsubscribe. New `saved_searches` booleans `alerts_enabled` / `digest_enabled` (missing = enabled). Endpoint `POST /email-preferences/saved-search`; GET returns `saved_search_prefs`. Logged to `unsubscribe_log`.
+  - **Cron gating:** `alert_matcher` now requires `alerts_enabled != False`; `just_sold_digest` (Friday) + `sunday_night_digest` require `digest_enabled != False`. Verified: toggling digest off drops the search from digest eligibility (0) while alerts stay eligible (1).
+- Verified end-to-end: preference GET/toggle + DB, admin search/export + auth gate, cron eligibility, both new UIs render (public prefs page + admin consent page). "Friday digest" maps to the `weekly_just_sold` digest.
+
+
+
 ## June 2026 — Privacy Policy audit + site-wide consent enforcement (PIPA/CASL)
 
 - **Audit finding:** the `/privacy` page is NOT empty — it renders fully in both preview and production (~11k chars). The existing policy already covered Privacy Officer, PIPA rights, OIPC link, data residency, detailed retention, CASL consent records, breach, AI-use disclosure.

@@ -152,7 +152,7 @@ async def run_matcher(db, public_base_url: str) -> dict:
     Called after each DDF sync completes."""
     now = datetime.now(timezone.utc)
     result = {"searches_checked": 0, "digests_sent": 0, "errors": []}
-    cursor = db.saved_searches.find({"status": "verified", "unsubscribed_at": None})
+    cursor = db.saved_searches.find({"status": "verified", "unsubscribed_at": None, "alerts_enabled": {"$ne": False}})
 
     async for s in cursor:
         result["searches_checked"] += 1

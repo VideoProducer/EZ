@@ -200,6 +200,7 @@ async def run_sunday_night_digest(db, base_url: str = "https://eztofind.ca") -> 
     subs_cursor = db.saved_searches.find({
         "status": "verified",
         "unsubscribed_at": None,
+        "digest_enabled": {"$ne": False},
         "digest_frequency": "sunday_night",
     })
     async for sub in subs_cursor:
