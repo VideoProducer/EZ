@@ -1,5 +1,13 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — `/homes-for-sale` facet hubs expanded province-wide (all 240 communities)
+
+- **Scope widened per user ("ship it"):** facet hubs now generate across ALL 12 BC regions / ~240 communities (previously only the 3 focus regions). Same 9 facets: houses, townhouses, condos, acreage, equestrian + under-800k, under-1m, 1m-2m, 2m-plus.
+- **No thin pages (user choice):** `sitemap_generator._build_homes_for_sale(db)` is now `async` and runs 9 cheap aggregations against live `listings` (mirroring each facet's `/api/listings` CTA params: property_type synonyms, list_price bands, equestrian description-keyword+eligible-type scan) to build per-facet city sets. A facet URL is emitted ONLY when that community has ≥1 matching active listing. Result: 240 base + **1478 facet URLs** (vs 324 before) — empty facets (e.g. condos in rural communities) are skipped. Verified against 52,196 active listings.
+- **Region-aware CTAs (BCFSA "not misleading"):** `HomesForSale` (App.js) now fetches `/api/communities` and computes `isFocus` (same proven pattern as CommunityPage). Focus-region pages keep Doug's direct CTAs (`/buyer`, "I'm buying in {city}"). Out-of-region pages show the compliant referral framing ("…outside of Doug's region, however an introduction to a licensed REALTOR® is available.") with a `/referral-request?city=` CTA, and the "Who do I contact?" FAQ answer switches to the referral/no-DoRTS wording. Verified region mapping (Kelowna/Victoria→referral; Vancouver/Whistler/Surrey/Abbotsford→Doug).
+- Frontend routes already dynamic; bot SSR renders facet paths on-demand (prerender inactive in preview — environmental, works in prod). All copy stays factual/compliant.
+
+
 ## June 2026 — SEO technical build (schema + long-tail hub expansion)
 
 - **#3 Schema (shipped):** `SiteWideSchema.jsx` already emitted `RealEstateAgent` (Organization + Person) with `areaServed`/credentials/`sameAs` on every route. Enhanced the brokerage Organization to `["Organization","RealEstateAgent","LocalBusiness"]` and expanded its `areaServed` to Doug's 3 focus regions + BC — now eligible for Google LocalBusiness rich results. Verified on /about (LocalBusiness + RealEstateAgent + 8 areaServed nodes).

@@ -5336,11 +5336,13 @@ const RegionPage = () => {
 // renders a live CREA DDF® market snapshot for the community, a compliant FAQ
 // (with FAQPage JSON-LD), and CTAs into the real /listings search + /community
 // profile. No raw MLS® redistribution on the hub itself (CREA-safe).
-const HOMES_FAQ = (city) => [
+const HOMES_FAQ = (city, isFocus) => [
   { q: `How many homes are for sale in ${city}, BC?`, a: `The number of active residential MLS® listings in ${city} updates live from the CREA DDF® feed on EZtoFind.ca. The market snapshot on this page shows today's active-listing count, price range, and median list price for ${city}.` },
   { q: `What is the median list price in ${city}?`, a: `EZtoFind.ca shows the current median list price of active ${city} listings, sourced live from the CREA DDF® feed. Median figures move with the market, so check the snapshot above for today's number.` },
   { q: `How do I search ${city} real estate listings?`, a: `Use the "Search ${city} listings" button to open the full MLS® search filtered to ${city}, or ask Doogie in plain words (for example "3-bed townhouse in ${city} under $900k"). Every listing comes straight from the CREA DDF® feed.` },
-  { q: `Who do I contact to buy a home in ${city}?`, a: `Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) can help. Submit the buyer form and Doug replies within one business day. Submitting a form does not create a REALTOR®-client relationship until a formal DoRTS is provided.` },
+  { q: `Who do I contact to buy a home in ${city}?`, a: isFocus === false
+      ? `${city} is outside Doug LeMaire's primary practice area (Greater Vancouver, Fraser Valley, and the Sea-to-Sky Corridor). EZtoFind.ca can introduce you to a BCFSA-licensed REALTOR® active in ${city} at no cost to you — submit the Referral Request form. This is an introduction, not a solicitation, and does not create a REALTOR®-client relationship until the local REALTOR® provides a DoRTS.`
+      : `Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) can help. Submit the buyer form and Doug replies within one business day. Submitting a form does not create a REALTOR®-client relationship until a formal DoRTS is provided.` },
 ];
 
 // Facet variants for /homes-for-sale/{community}/{facet} — property-type and
@@ -5375,6 +5377,20 @@ const HomesForSale = () => {
     axios.get(`${API}/insights`, { params: { city } }).then(r => { if (ok) setSnap(r.data); }).catch(() => {});
     return () => { ok = false; };
   }, [city]);
+  // Region awareness — focus-region communities (Greater Vancouver / Fraser
+  // Valley / Sea-to-Sky) keep Doug's direct CTAs; everywhere else in BC shows
+  // the compliant referral framing (BCFSA "not misleading"): an introduction
+  // to a BCFSA-licensed local REALTOR®, never a direct-representation claim.
+  const [regions, setRegions] = useState(null);
+  useEffect(() => {
+    let ok = true;
+    axios.get(`${API}/communities`).then(r => { if (ok) setRegions(r.data || {}); }).catch(() => {});
+    return () => { ok = false; };
+  }, []);
+  const _normC = (s) => (s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  let hfsRegion = null;
+  if (regions) { for (const [r, list] of Object.entries(regions)) { if ((list || []).some(c => _normC(c) === slug)) { hfsRegion = r; break; } } }
+  const isFocus = regions ? (!!hfsRegion && ["Greater Vancouver", "Fraser Valley", "Sea-to-Sky"].includes(hfsRegion)) : null;
 
   if (!city) return (
     <div className="section container-x" style={{minHeight:"50vh",paddingTop:"3rem"}}>
@@ -5383,7 +5399,7 @@ const HomesForSale = () => {
     </div>
   );
   const money = (v) => (v == null ? "—" : `$${Math.round(v).toLocaleString("en-CA")}`);
-  const faqs = HOMES_FAQ(city);
+  const faqs = HOMES_FAQ(city, isFocus);
   const faqSchema = { "@context":"https://schema.org", "@type":"FAQPage", mainEntity: faqs.map(f => ({ "@type":"Question", name:f.q, acceptedAnswer:{ "@type":"Answer", text:f.a } })) };
 
   return (
@@ -5449,11 +5465,18 @@ const HomesForSale = () => {
         <div className="hn-wrap hn-center">
           <h2 className="hn-h2">Ready to see {city} homes?</h2>
           <div className="hn-ctarow" style={{justifyContent:"center",marginTop:"1rem"}}>
-            <Link to={`/listings?city=${encodeURIComponent(city)}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-cta-search">View {city} MLS® listings <HnArrowRight size={15}/></Link>
-            <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid="hfs-cta-buyer">I'm buying in {city}</Link>
+            <Link to={`/listings?city=${encodeURIComponent(city)}${F ? `&${F.params}` : ""}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-cta-search">View {city} MLS® listings <HnArrowRight size={15}/></Link>
+            {isFocus === true && (
+              <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid="hfs-cta-buyer">I'm buying in {city}</Link>
+            )}
+            {isFocus === false && (
+              <Link to={`/referral-request?city=${encodeURIComponent(city)}`} className="hn-pill hn-pill--lg" data-testid="hfs-cta-referral">Request an introduction</Link>
+            )}
           </div>
           <p style={{fontFamily:"Inter,sans-serif",fontSize:"0.78rem",color:"var(--muted)",marginTop:"1.25rem",maxWidth:"44rem",marginLeft:"auto",marginRight:"auto"}}>
-            Listings come from the live CREA DDF® feed and are shown for information only. If you're already working with a REALTOR®, this is information, not solicitation. Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).
+            {isFocus === false
+              ? `${city} is outside of Doug's region, however an introduction to a licensed REALTOR® is available. Listings come from the live CREA DDF® feed and are shown for information only. Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).`
+              : `Listings come from the live CREA DDF® feed and are shown for information only. If you're already working with a REALTOR®, this is information, not solicitation. Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).`}
           </p>
         </div>
       </section>

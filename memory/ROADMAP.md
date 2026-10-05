@@ -62,6 +62,7 @@ These were identified by the Feb 2026 code review. Deferred from launch eve beca
 ---
 
 ## Recently completed (see `PRD.md` changelog for full list)
+- `/homes-for-sale` facet hubs expanded province-wide — all 240 communities, ≥1-matching-listing gate (1478 facet URLs), region-aware referral CTAs (June 2026)
 - Feature Sheet Phase 1 — 2-column public feature sheet under About This Property (Feb 2026)
 - Related Communities geography fix — replaced substring name matching with same-region_group peers (Feb 2026)
 - Homepage FILTER LISTINGS card — enlarged + single field routes community/MLS/postal/address (Feb 2026)

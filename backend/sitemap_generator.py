@@ -240,16 +240,69 @@ def _build_communities() -> tuple[str, int, dict]:
                 ))
     return _wrap_urlset(tags, with_image_ns=True), len(tags), slug_by_name
 
-def _build_homes_for_sale() -> tuple[str, int]:
-    """SEO landing hubs — one <url> per community for /homes-for-sale/{slug},
-    plus property-type + price-band facet hubs (/homes-for-sale/{slug}/{facet})
-    for Doug's focus regions only. Targets high-intent long-tail organic queries."""
+def _hfs_pt(values: list[str]) -> dict:
+    """Case-insensitive property_type $in, mirroring the backend search synonyms."""
+    return {"$in": [re.compile(f"^{re.escape(v)}$", re.I) for v in values]}
+
+# Equestrian/acreage eligible types + description keyword scan, mirroring the
+# backend equestrian-intent search (server.py _equestrian_* helpers). q=acreage
+# and q=equestrian both resolve to the same intent query, so both facets share it.
+_HFS_EQ_TYPES = ["Equestrian", "Acreage", "Detached", "Single Family", "House",
+                 "Manufactured Home", "Mobile Home", "Farm", "Ranch", "Rural"]
+_HFS_EQ_DESC = re.compile(r"(equestrian|acreage|hobby farm|barn|stable|paddock|riding arena|\bhorse|\bacres?\b)", re.I)
+
+# Facet → Mongo match fragment, kept in sync with HFS_FACETS in frontend/src/App.js.
+# Each fragment mirrors exactly what the facet page's "Search listings" CTA sends
+# to /api/listings (property_type / price_min / price_max / q), so a URL is only
+# emitted when that search would actually return ≥1 active listing (no thin pages).
+HFS_FACET_MATCH = {
+    "houses":      {"property_type": _hfs_pt(["Detached", "House", "Single Family", "Residential Detached"])},
+    "townhouses":  {"property_type": _hfs_pt(["Townhouse", "Row / Townhouse", "Attached", "Row"])},
+    "condos":      {"property_type": _hfs_pt(["Apartment"])},
+    "acreage":     {"property_type": _hfs_pt(_HFS_EQ_TYPES), "description": _HFS_EQ_DESC},
+    "equestrian":  {"property_type": _hfs_pt(_HFS_EQ_TYPES), "description": _HFS_EQ_DESC},
+    "under-800k":  {"list_price": {"$gt": 0, "$lte": 800000}},
+    "under-1m":    {"list_price": {"$gt": 0, "$lte": 1000000}},
+    "1m-2m":       {"list_price": {"$gte": 1000000, "$lte": 2000000}},
+    "2m-plus":     {"list_price": {"$gte": 2000000}},
+}
+
+def _hfs_norm_city(s: str) -> str:
+    s = (s or "").strip().lower()
+    for pre in ("the corporation of ", "city of ", "district of ", "township of ",
+                "village of ", "town of ", "resort municipality of "):
+        if s.startswith(pre):
+            s = s[len(pre):]
+    return re.sub(r"\s+", " ", s).strip()
+
+async def _hfs_cities_for(db, frag: dict) -> set:
+    """Set of normalized city names that have ≥1 active listing matching `frag`."""
+    match = {"status": "Active"}
+    if "list_price" not in frag:
+        match["list_price"] = {"$gt": 0}
+    match.update(frag)
+    match["city"] = {"$nin": ["", None]}
+    cities: set = set()
+    try:
+        async for row in db.listings.aggregate([{"$match": match}, {"$group": {"_id": "$city"}}]):
+            cities.add(_hfs_norm_city(row.get("_id")))
+    except Exception:
+        pass
+    return cities
+
+async def _build_homes_for_sale(db) -> tuple[str, int]:
+    """SEO landing hubs — one <url> per community for /homes-for-sale/{slug}
+    (all 12 BC regions / ~240 communities), plus property-type + price-band facet
+    hubs (/homes-for-sale/{slug}/{facet}). A facet URL is emitted ONLY when the
+    community has ≥1 active MLS® listing matching that facet, so Google never
+    crawls thin/empty faceted pages. Targets high-intent long-tail organic queries."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     community_seed = Path("/app/backend/data/communities_seed.json")
-    # Facet slugs kept in sync with HFS_FACETS in frontend/src/App.js
-    HFS_FACETS = ["houses", "townhouses", "condos", "acreage", "equestrian",
-                  "under-800k", "under-1m", "1m-2m", "2m-plus"]
-    HFS_FOCUS_REGIONS = {"Greater Vancouver", "Fraser Valley", "Sea-to-Sky"}
+    # Pre-compute, per facet, the set of cities that actually have matching live
+    # listings (9 aggregations total — cheap vs. ~2k per-URL count queries).
+    facet_cities: dict = {}
+    for facet, frag in HFS_FACET_MATCH.items():
+        facet_cities[facet] = await _hfs_cities_for(db, frag)
     tags = []
     if community_seed.exists():
         comms = json.loads(community_seed.read_text())
@@ -257,8 +310,9 @@ def _build_homes_for_sale() -> tuple[str, int]:
             for name in names:
                 slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
                 tags.append(_url_tag(f"{BASE_URL}/homes-for-sale/{slug}", today, "daily", "0.8"))
-                if region in HFS_FOCUS_REGIONS:
-                    for facet in HFS_FACETS:
+                ncity = _hfs_norm_city(name)
+                for facet in HFS_FACET_MATCH:
+                    if ncity in facet_cities[facet]:
                         tags.append(_url_tag(f"{BASE_URL}/homes-for-sale/{slug}/{facet}", today, "daily", "0.7"))
     return _wrap_urlset(tags), len(tags)
 
@@ -543,7 +597,7 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     communities_xml, community_count, slug_by_name = _build_communities()
     _write(out_dir / "sitemap-communities.xml", communities_xml)
 
-    homes_xml, homes_count = _build_homes_for_sale()
+    homes_xml, homes_count = await _build_homes_for_sale(db)
     _write(out_dir / "sitemap-homes-for-sale.xml", homes_xml)
 
     neighbourhoods_xml, neighbourhood_count = await _build_neighbourhoods(db, slug_by_name)
