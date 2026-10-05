@@ -1,0 +1,26 @@
+{
+  "summary": "Frontend-only region-aware testing of /homes-for-sale/{community}/{facet} pages. Verified FOCUS vs OUT-OF-REGION CTA & FAQ behavior on 4 city/facet combos, facet pill navigation, and search CTA href params. All assertions passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "vancouver_houses_FOCUS": "PASS - hfs-cta-buyer='I'm buying in Vancouver' present, hfs-cta-referral absent, disclaimer has no 'outside of Doug', FAQ3 mentions Doug LeMaire + buyer form",
+    "kelowna_houses_OUT": "PASS - hfs-cta-referral='Request an introduction' present, hfs-cta-buyer absent, disclaimer contains 'Kelowna is outside of Doug's region, however an introduction to a licensed REALTOR® is available.', FAQ3 references Referral Request form",
+    "victoria_condos_OUT": "PASS - same as Kelowna with Victoria wording; property_type=Apartment correctly set",
+    "abbotsford_condos_FOCUS": "PASS - buyer CTA 'I'm buying in Abbotsford', no referral, Doug named in FAQ3",
+    "facet_pills": "PASS - all 10 pills present (all, houses, townhouses, condos, acreage, equestrian, under-800k, under-1m, 1m-2m, 2m-plus); clicking hfs-facet-condos navigated to /homes-for-sale/vancouver/condos and H1 updated to 'Condos & Apartments for sale in Vancouver, BC'",
+    "search_cta_hrefs": "PASS - /homes-for-sale/vancouver/houses -> /listings?city=Vancouver&property_type=Detached; /homes-for-sale/vancouver/under-800k -> /listings?city=Vancouver&price_max=800000"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Region data is derived from /api/communities (region map). FOCUS regions: Greater Vancouver, Fraser Valley, Sea-to-Sky. isFocus loads async, so wait ~1.5s after networkidle before asserting CTA/FAQ state. Cookie banner appears bottom-left; may need to dismiss with 'Accept all' or 'Got it'. All data-testids used in request (hfs-cta, hfs-cta-buyer, hfs-cta-referral, hfs-faq-3, hfs-title, hfs-search, hfs-facets, hfs-facet-*) are present and working."
+}
