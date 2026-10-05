@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
-from .email_sender import send_email, casl_footer_html, casl_footer_text
+from .email_sender import send_email, casl_footer_html, casl_footer_text, email_prefs_url
 
 logger = logging.getLogger("just_sold_digest")
 
@@ -85,7 +85,7 @@ def _match_filters(listing: dict, filters: dict) -> bool:
     return True
 
 
-def _compose(subscriber: dict, sold: list, unsubscribe_url: str) -> tuple[str, str, str]:
+def _compose(subscriber: dict, sold: list, unsubscribe_url: str, prefs_url: str = None) -> tuple[str, str, str]:
     filters = subscriber.get("filters") or {}
     area_label = filters.get("city") or "British Columbia"
     subject = f"🏡 {len(sold)} home{'s' if len(sold) != 1 else ''} just sold in {area_label} this week"
@@ -127,7 +127,7 @@ def _compose(subscriber: dict, sold: list, unsubscribe_url: str) -> tuple[str, s
       Sale-price bands sourced from CREA DDF® · MLS®, Multiple Listing Service®, and REALTOR® are certification marks owned by The Canadian Real Estate Association. Exact addresses are withheld to respect seller privacy under BC PIPA.
     </div>
   </div>
-  {casl_footer_html(unsubscribe_url)}
+  {casl_footer_html(unsubscribe_url, prefs_url)}
 </div>""".strip()
 
     text = (
@@ -136,7 +136,7 @@ def _compose(subscriber: dict, sold: list, unsubscribe_url: str) -> tuple[str, s
         + "\n".join(rows_text)
         + "\n\nCurious what your home is worth? Reply to this email or book a free 20-minute call with Doug at https://eztofind.ca/market-estimate\n\n"
         + "Sale-price bands sourced from CREA DDF® · MLS®, Multiple Listing Service®, and REALTOR® are certification marks owned by The Canadian Real Estate Association. Exact addresses are withheld to respect seller privacy under BC PIPA.\n"
-        + casl_footer_text(unsubscribe_url)
+        + casl_footer_text(unsubscribe_url, prefs_url)
     )
     return subject, html, text
 
@@ -178,7 +178,8 @@ async def run_weekly_just_sold_digest(db, base_url: str = "https://eztofind.ca")
         if not matches:
             continue
         unsub = f"{base_url}/api/saved-searches/unsubscribe?token={sub.get('unsubscribe_token','')}"
-        subject, html, text = _compose(sub, matches, unsub)
+        prefs = email_prefs_url(sub.get("email", ""))
+        subject, html, text = _compose(sub, matches, unsub, prefs)
         try:
             await send_email(
                 db, to=sub["email"], subject=subject, html=html, text=text,

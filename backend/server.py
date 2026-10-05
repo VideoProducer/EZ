@@ -7890,6 +7890,87 @@ async def community_synopsis(slug: str):
     await db.community_synopses.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "synopsis": synopsis, "approved": False, "ts": now_iso()}, upsert=True)
     return {"community": name, "region": region, "synopsis": "", "source":"pending_review", "note":"This community synopsis is awaiting review by Doug LeMaire, REALTOR® before publication.", "sources": community_srcs}
 
+FOCUS_REGIONS = {"Greater Vancouver", "Fraser Valley", "Sea-to-Sky"}
+
+def _resolve_community(slug: str):
+    """Return (name, region) for a community slug, or (None, None)."""
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    for r, lst in all_comm.items():
+        for c in lst:
+            if _community_slug(c) == slug:
+                return c, r
+    return None, None
+
+async def generate_neighbourhood_guide(name: str, region: str) -> dict:
+    """Generate a factual "what it's like to live in {name}" guide as structured
+    JSON using Claude Sonnet 4.6. BCFSA/CREA-compliant: descriptive only, no
+    advice, no value/market claims, no superlatives, no named businesses."""
+    prompt = f"""Write a factual "what it's like to live in" neighbourhood guide for {name}, a community in the {region} region of British Columbia, Canada.
+
+Return ONLY valid minified JSON (no markdown, no code fences, no commentary) with EXACTLY these keys:
+{{"meta_description":"<150-160 char factual summary for a search snippet>","sections":{{"overview":"...","getting_around":"...","amenities":"...","climate":"...","housing":"..."}},"faqs":[{{"q":"...","a":"..."}},{{"q":"...","a":"..."}},{{"q":"...","a":"..."}},{{"q":"...","a":"..."}}]}}
+
+Each section is plain prose, 2-4 sentences:
+- overview: the setting and general character of living in {name} — urban/suburban/rural, scale, pace of life, geographic setting and nearby centres.
+- getting_around: how people generally get around (major highways/routes, whether transit is available in general terms, approximate drive relationships to nearby centres). No schedules or route numbers.
+- amenities: general CATEGORIES of amenities and recreation (parks, trails, waterfront, shopping categories, community/recreation facilities). Do NOT name any specific business, school, hospital, or park.
+- climate: climate classification and what the seasons are generally like (typical temperature ranges in °C, precipitation, notable seasonal phenomena).
+- housing: the general mix of housing types found in the area and the kinds of households it commonly suits, stated factually.
+
+The 4 FAQs are research-intent questions someone considering moving to {name} would ask, e.g. "What is {name}, BC like to live in?", "What's the weather like in {name}?", "How do you get around {name}?", "What kinds of homes are in {name}?". Answers are 2-3 factual sentences.
+
+STRICT compliance (BCFSA/CREA):
+- Factual and descriptive ONLY. NO advice, NO recommendation on whether to move, buy, or invest.
+- NO real-estate prices, NO market data, NO predictions, NO value/investment claims.
+- NO superlatives ("best","most beautiful","top","ideal") and NO subjective opinions of worth.
+- NO specific business/school/hospital/park names — keep amenities general.
+- Do not fabricate specifics; if unsure, stay general. Accurate, verifiable statements only."""
+    try:
+        chat = make_chat(api_key=EMERGENT_LLM_KEY, session_id=f"guide-{uuid.uuid4()}", system_message="You are a BC real estate content writer producing factual neighbourhood living guides. You output only valid JSON.").with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta): full += ev.content
+            elif isinstance(ev, StreamDone): break
+        raw = full.strip()
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.IGNORECASE).strip()
+        start, end = raw.find("{"), raw.rfind("}")
+        if start != -1 and end != -1:
+            raw = raw[start:end+1]
+        data = json.loads(raw)
+        if not isinstance(data, dict) or "sections" not in data or "faqs" not in data:
+            return {}
+        return data
+    except Exception as e:
+        logger.error(f"Guide gen failed for {name}: {e}")
+        return {}
+
+@api.get("/living-in/{slug}")
+async def living_in_guide(slug: str):
+    """Public neighbourhood guide endpoint. Focus regions only. Returns the
+    approved guide, or a pending/unavailable note. First request on a focus-
+    region community triggers generation (saved unapproved for Doug's review)."""
+    name, region = _resolve_community(slug)
+    if not name:
+        raise HTTPException(404, "Community not found")
+    if region not in FOCUS_REGIONS:
+        return {"community": name, "region": region, "available": False, "source": "out_of_region",
+                "note": "Neighbourhood guides are currently published for Doug LeMaire's focus regions — Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor."}
+    cached = await db.neighbourhood_guides.find_one({"slug": slug}, {"_id": 0})
+    if cached and cached.get("guide"):
+        _dm = cached.get("last_reviewed_at") or cached.get("approved_at") or cached.get("ts")
+        if cached.get("approved"):
+            return {"community": name, "region": region, "available": True, "guide": cached["guide"], "source": "cache", "last_reviewed_at": _dm}
+        return {"community": name, "region": region, "available": False, "source": "pending_review",
+                "note": "This neighbourhood guide is awaiting review by Doug LeMaire, REALTOR® before publication."}
+    guide = await generate_neighbourhood_guide(name, region)
+    if not guide:
+        return {"community": name, "region": region, "available": False, "source": "unavailable",
+                "note": "This neighbourhood guide is being prepared — please check back shortly."}
+    await db.neighbourhood_guides.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "guide": guide, "approved": False, "ts": now_iso()}, upsert=True)
+    return {"community": name, "region": region, "available": False, "source": "pending_review",
+            "note": "This neighbourhood guide is awaiting review by Doug LeMaire, REALTOR® before publication."}
+
+
 async def generate_community_weather(name: str, region: str) -> str:
     """Generate a 150-200 word BC community weather synopsis using Claude Sonnet 4.6."""
     prompt = f"""Write a factual weather and climate synopsis for {name}, a community in the {region} region of British Columbia, Canada.
@@ -11042,7 +11123,8 @@ async def approvals_summary(_=Depends(verify_admin)):
     pending_syn = await db.community_synopses.count_documents({"approved": {"$ne": True}})
     pending_wx = await db.community_weather.count_documents({"approved": {"$ne": True}})
     pending_nhb = await db.neighbourhood_synopses.count_documents({"approved": {"$ne": True}})
-    return {"pending_glossary_faqs": pending_faqs, "pending_synopses": pending_syn, "pending_weather": pending_wx, "pending_neighbourhoods": pending_nhb}
+    pending_guides = await db.neighbourhood_guides.count_documents({"approved": {"$ne": True}})
+    return {"pending_glossary_faqs": pending_faqs, "pending_synopses": pending_syn, "pending_weather": pending_wx, "pending_neighbourhoods": pending_nhb, "pending_guides": pending_guides}
 
 @api.get("/admin/approvals/glossary")
 async def pending_glossary(_=Depends(verify_admin)):
@@ -11527,6 +11609,61 @@ async def regenerate_synopsis(slug: str, _=Depends(verify_admin)):
     s = await generate_community_synopsis(d["name"], d["region"])
     await db.community_synopses.update_one({"slug": slug}, {"$set": {"synopsis": s, "approved": False, "ts": now_iso()}})
     return {"success": True, "synopsis": s}
+
+# ---- Neighbourhood "living-in" guides (focus regions) — AI + Doug approval ----
+@api.get("/admin/approvals/guides")
+async def pending_guides(_=Depends(verify_admin)):
+    return await db.neighbourhood_guides.find({"approved": {"$ne": True}}, {"_id": 0}).sort("ts", -1).to_list(1000)
+
+class ApproveGuide(BaseModel):
+    slug: str
+    guide: Optional[dict] = None
+
+@api.post("/admin/approvals/guides/approve")
+async def approve_guide(body: ApproveGuide, _=Depends(verify_admin)):
+    update = {"approved": True, "approved_at": now_iso(), "last_reviewed_at": now_iso()}
+    if body.guide is not None:
+        update["guide"] = body.guide
+    r = await db.neighbourhood_guides.update_one({"slug": body.slug}, {"$set": update})
+    try:
+        from indexnow import fire_and_log
+        await fire_and_log(db, [f"https://eztofind.ca/living-in/{body.slug}"],
+                           kind="neighbourhood_guide_approved", trigger="admin_approve")
+    except Exception as e:
+        logger.warning(f"IndexNow ping failed for living-in/{body.slug}: {e}")
+    return {"success": True, "modified": r.modified_count}
+
+@api.post("/admin/approvals/guides/{slug}/regenerate")
+async def regenerate_guide(slug: str, _=Depends(verify_admin)):
+    d = await db.neighbourhood_guides.find_one({"slug": slug}, {"_id": 0})
+    if not d:
+        name, region = _resolve_community(slug)
+        if not name or region not in FOCUS_REGIONS:
+            raise HTTPException(404, "Not a focus-region community")
+        d = {"name": name, "region": region}
+    g = await generate_neighbourhood_guide(d["name"], d["region"])
+    await db.neighbourhood_guides.replace_one({"slug": slug}, {"slug": slug, "name": d["name"], "region": d["region"], "guide": g, "approved": False, "ts": now_iso()}, upsert=True)
+    return {"success": True, "guide": g}
+
+@api.post("/admin/approvals/generate-all-guides")
+async def generate_all_guides(_=Depends(verify_admin)):
+    import asyncio
+    all_comm = json.loads((ROOT_DIR/"data"/"communities_seed.json").read_text())
+    targets = [(c, r, _community_slug(c)) for r, lst in all_comm.items() if r in FOCUS_REGIONS for c in lst]
+    async def _run():
+        for name, region, slug in targets:
+            try:
+                existing = await db.neighbourhood_guides.find_one({"slug": slug})
+                if existing and existing.get("guide"):
+                    continue
+                g = await generate_neighbourhood_guide(name, region)
+                if g:
+                    await db.neighbourhood_guides.replace_one({"slug": slug}, {"slug": slug, "name": name, "region": region, "guide": g, "approved": False, "ts": now_iso()}, upsert=True)
+            except Exception as e:
+                logger.warning(f"guide gen-all {slug} failed: {e}")
+    asyncio.create_task(_run())
+    return {"message": f"Generating neighbourhood guides for {len(targets)} focus-region communities in the background. Refresh the Guides tab in a few minutes to review and approve."}
+
 
 class ApproveWeather(BaseModel):
     slug: str
@@ -17380,12 +17517,40 @@ async def saved_search_prefs_update(body: SavedSearchPrefUpdate, request: Reques
 
 
 # ------------- Admin: consent-record lookup (PIPA access request) -------------
-async def _consent_records_for(email_l: str):
-    """Scan every DSAR collection for an individual's consent trail."""
+async def _consent_records_for(email_l: str = None, date_from: str = None,
+                               date_to: str = None, unsubscribed_only: bool = False,
+                               limit: int = 500):
+    """Scan every DSAR collection for consent records. Supports an exact-email
+    lookup (PIPA access request) OR filtered browsing by consent date-range
+    and/or unsubscribed-only status without an email. Results are sorted newest
+    first and capped at `limit` for the no-email browse case."""
+    date_fields = ["consent_at", "casl_consent_at", "opt_in_at", "created_at", "submitted_at"]
+    date_clause = None
+    if date_from or date_to:
+        rng = {}
+        if date_from:
+            rng["$gte"] = date_from
+        if date_to:
+            rng["$lte"] = date_to + "T23:59:59Z"
+        date_clause = {"$or": [{f: rng} for f in date_fields]}
+    unsub_clause = None
+    if unsubscribed_only:
+        unsub_clause = {"$or": [{"unsubscribed": True}, {"unsubscribed_at": {"$ne": None}}, {"status": "unsubscribed"}]}
     records = []
     for coll, field in _DSAR_COLLECTIONS:
+        clauses = []
+        if email_l:
+            clauses.append({field: {"$regex": f"^{re.escape(email_l)}$", "$options": "i"}})
+        if unsub_clause:
+            clauses.append(unsub_clause)
+        if date_clause:
+            clauses.append(date_clause)
+        query = {"$and": clauses} if clauses else {}
         try:
-            async for d in db[coll].find({field: {"$regex": f"^{re.escape(email_l)}$", "$options": "i"}}):
+            cursor = db[coll].find(query)
+            if not email_l:
+                cursor = cursor.limit(limit)
+            async for d in cursor:
                 records.append({
                     "collection": coll,
                     "id": str(d.get("id") or d.get("_id") or ""),
@@ -17405,28 +17570,43 @@ async def _consent_records_for(email_l: str):
                 })
         except Exception as e:
             logger.warning(f"consent-search {coll} failed: {e}")
+    records.sort(key=lambda r: (r.get("consent_at") or r.get("created_at") or ""), reverse=True)
+    if not email_l:
+        records = records[:limit]
     return records
 
 @api.get("/admin/consent-search")
-async def admin_consent_search(email: str, _=Depends(verify_admin)):
-    email_l = (email or "").strip().lower()
-    if not email_l:
-        raise HTTPException(400, "email required")
-    recs = await _consent_records_for(email_l)
-    return {"email": email_l, "count": len(recs), "records": recs}
+async def admin_consent_search(email: str = "", date_from: str = "", date_to: str = "",
+                               unsubscribed_only: bool = False, limit: int = 500,
+                               _=Depends(verify_admin)):
+    email_l = (email or "").strip().lower() or None
+    date_from = (date_from or "").strip() or None
+    date_to = (date_to or "").strip() or None
+    if not email_l and not date_from and not date_to and not unsubscribed_only:
+        raise HTTPException(400, "Provide an email, a date range, or the unsubscribed-only filter")
+    limit = max(1, min(int(limit or 500), 2000))
+    recs = await _consent_records_for(email_l, date_from, date_to, unsubscribed_only, limit)
+    return {"email": email_l or "", "count": len(recs), "records": recs,
+            "capped": (not email_l and len(recs) >= limit)}
 
 @api.get("/admin/consent-export")
-async def admin_consent_export(email: str, _=Depends(verify_admin)):
+async def admin_consent_export(email: str = "", date_from: str = "", date_to: str = "",
+                               unsubscribed_only: bool = False, limit: int = 2000,
+                               _=Depends(verify_admin)):
     import csv, io
-    email_l = (email or "").strip().lower()
-    if not email_l:
-        raise HTTPException(400, "email required")
-    recs = await _consent_records_for(email_l)
+    email_l = (email or "").strip().lower() or None
+    date_from = (date_from or "").strip() or None
+    date_to = (date_to or "").strip() or None
+    if not email_l and not date_from and not date_to and not unsubscribed_only:
+        raise HTTPException(400, "Provide an email, a date range, or the unsubscribed-only filter")
+    limit = max(1, min(int(limit or 2000), 5000))
+    recs = await _consent_records_for(email_l, date_from, date_to, unsubscribed_only, limit)
     cols = ["collection","id","name","email","created_at","consent_type","pipa_ack","casl_consent","consent_at","consent_ip","consent_ua","policy_version","consent_expiry","unsubscribed","unsubscribed_at"]
     out = io.StringIO(); w = csv.writer(out); w.writerow(cols)
     for r in recs:
         w.writerow([r.get(c, "") for c in cols])
-    return Response(content=out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="consent-{email_l}.csv"'})
+    fname = f"consent-{email_l}.csv" if email_l else "consent-records.csv"
+    return Response(content=out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 # ------------- Campaign #1: Buyer weekly listing digest -------------

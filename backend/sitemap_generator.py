@@ -290,6 +290,21 @@ async def _hfs_cities_for(db, frag: dict) -> set:
         pass
     return cities
 
+async def _build_living_in(db) -> tuple[str, int]:
+    """Neighbourhood "living-in" guide hubs — one <url> per APPROVED guide
+    (/living-in/{slug}). Targets research-intent "what's it like to live in…"
+    queries for AEO/SEO/LLM citation. Only approved guides are emitted."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    tags = []
+    try:
+        async for d in db.neighbourhood_guides.find({"approved": True}, {"slug": 1}):
+            slug = d.get("slug")
+            if slug:
+                tags.append(_url_tag(f"{BASE_URL}/living-in/{slug}", today, "monthly", "0.6"))
+    except Exception:
+        pass
+    return _wrap_urlset(tags), len(tags)
+
 async def _build_homes_for_sale(db) -> tuple[str, int]:
     """SEO landing hubs — one <url> per community for /homes-for-sale/{slug}
     (all 12 BC regions / ~240 communities), plus property-type + price-band facet
@@ -600,6 +615,9 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
     homes_xml, homes_count = await _build_homes_for_sale(db)
     _write(out_dir / "sitemap-homes-for-sale.xml", homes_xml)
 
+    living_xml, living_count = await _build_living_in(db)
+    _write(out_dir / "sitemap-living-in.xml", living_xml)
+
     neighbourhoods_xml, neighbourhood_count = await _build_neighbourhoods(db, slug_by_name)
     _write(out_dir / "sitemap-neighbourhoods.xml", neighbourhoods_xml)
 
@@ -649,6 +667,7 @@ async def generate_sitemap(db, output_path: Optional[str] = None) -> dict:
         ("sitemap-glossary.xml",       glossary_count),
         ("sitemap-communities.xml",    community_count),
         ("sitemap-homes-for-sale.xml", homes_count),
+        ("sitemap-living-in.xml",      living_count),
         ("sitemap-neighbourhoods.xml", neighbourhood_count),
         ("sitemap-insights.xml",       insights_count),
         ("sitemap-listings.xml",       listings_count),

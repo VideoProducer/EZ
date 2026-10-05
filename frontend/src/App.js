@@ -5430,6 +5430,9 @@ const HomesForSale = () => {
           <div className="hn-ctarow" style={{marginTop:"1rem"}}>
             <Link to={`/listings?city=${encodeURIComponent(city)}${F ? `&${F.params}` : ""}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="hfs-search">Search {F ? F.label : city} listings <HnArrowRight size={15}/></Link>
             <Link to={`/community/${slug}`} className="hn-pill hn-pill--lg" data-testid="hfs-community">{city} community profile</Link>
+            {isFocus === true && (
+              <Link to={`/living-in/${slug}`} className="hn-pill hn-pill--lg" data-testid="hfs-living-in">Living in {city}</Link>
+            )}
           </div>
         </div>
       </section>
@@ -5484,6 +5487,116 @@ const HomesForSale = () => {
       <div className="hn-wrap">
         <AiCitationFooter title={`Homes for Sale in ${city}, BC`} url={`${SITE_URL}/homes-for-sale/${slug}`} dateModified={new Date().toISOString()} entryType="web" hidden={true}/>
       </div>
+    </div>
+  );
+};
+
+// --- Neighbourhood "living-in" guide (focus regions) — research-intent SEO/AEO hub ---
+const LIVING_SECTION_META = [
+  ["overview", "Overview & setting"],
+  ["getting_around", "Getting around"],
+  ["amenities", "Amenities & recreation"],
+  ["climate", "Climate & seasons"],
+  ["housing", "Housing & who it suits"],
+];
+
+const LivingInGuide = () => {
+  const { slug } = useParams();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const city = (slug || "").split("-").map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(" ").trim();
+  useEffect(() => {
+    if (!slug) return;
+    let ok = true;
+    setLoading(true);
+    axios.get(`${API}/living-in/${slug}`).then(r => { if (ok) { setData(r.data); setLoading(false); } })
+      .catch(() => { if (ok) { setData(null); setLoading(false); } });
+    return () => { ok = false; };
+  }, [slug]);
+
+  const guide = data && data.available ? data.guide : null;
+  const faqs = (guide && Array.isArray(guide.faqs)) ? guide.faqs : [];
+  const faqSchema = faqs.length ? {
+    "@context": "https://schema.org", "@type": "FAQPage",
+    mainEntity: faqs.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  } : null;
+
+  return (
+    <div className="hn" data-testid={`living-in-${slug}`}>
+      <SEO
+        title={`What's It Like to Live in ${city}, BC? — Neighbourhood Guide | EZtoFind.ca`}
+        description={(guide && guide.meta_description) || `A factual neighbourhood guide to living in ${city}, British Columbia — setting, getting around, amenities, climate, and housing. Research ${city} with EZtoFind.ca.`}
+        path={`/living-in/${slug}`}
+        schema={faqSchema}
+      />
+      <section className="hn-section" style={{ paddingBottom: 0 }}>
+        <div className="hn-wrap">
+          <p style={{ fontFamily: "Inter,sans-serif", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", margin: "0 0 0.6rem" }}>Neighbourhood Guide</p>
+          <h1 data-testid="living-in-title" style={{fontFamily:"'Sora',sans-serif",fontWeight:700,letterSpacing:"-0.02em",fontSize:"clamp(2rem,5vw,3.25rem)",color:"#1d1d1f",margin:"0.4rem 0 0.6rem",lineHeight:1.05}}>What's it like to live in {city}, BC?</h1>
+          <p className="hn-lead" style={{ maxWidth: "46rem" }}>{data && data.region ? `${city} is a community in the ${data.region} region of British Columbia.` : `A factual guide to living in ${city}, British Columbia.`}</p>
+          <div className="hn-ctarow" style={{ marginTop: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+            <Link to={`/community/${slug}`} className="hn-pill" data-testid="living-in-community">{city} community profile</Link>
+            <Link to={`/homes-for-sale/${slug}`} className="hn-pill" data-testid="living-in-homes">Homes for sale in {city}</Link>
+          </div>
+        </div>
+      </section>
+
+      {loading && (
+        <section className="hn-section"><div className="hn-wrap"><p className="hn-lead" data-testid="living-in-loading">Loading guide…</p></div></section>
+      )}
+
+      {!loading && !guide && (
+        <section className="hn-section"><div className="hn-wrap" style={{ maxWidth: "46rem" }}>
+          <div data-testid="living-in-unavailable" style={{ background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: 16, padding: "1.5rem 1.75rem" }}>
+            <p style={{ fontFamily: "Inter,sans-serif", color: "#374151", lineHeight: 1.7, margin: 0 }}>{(data && data.note) || "This neighbourhood guide isn't available yet."}</p>
+          </div>
+        </div></section>
+      )}
+
+      {!loading && guide && (
+        <>
+          <section className="hn-section" data-testid="living-in-sections">
+            <div className="hn-wrap" style={{ maxWidth: "48rem" }}>
+              {LIVING_SECTION_META.map(([key, label]) => (guide.sections && guide.sections[key]) ? (
+                <div key={key} style={{ marginBottom: "2rem" }} data-testid={`living-in-section-${key}`}>
+                  <h2 className="hn-h2" style={{ textAlign: "left" }}>{label}</h2>
+                  <p style={{ fontFamily: "Inter,sans-serif", color: "#374151", lineHeight: 1.75, marginTop: "0.6rem" }}>{guide.sections[key]}</p>
+                </div>
+              ) : null)}
+              <PublishedByDoug compact lastReviewed={data.last_reviewed_at} />
+            </div>
+          </section>
+
+          {faqs.length > 0 && (
+            <section className="hn-section hn-section--alt" data-testid="living-in-faq">
+              <div className="hn-wrap">
+                <div className="hn-center"><h2 className="hn-h2">Living in {city} — FAQ</h2></div>
+                <div style={{ maxWidth: "46rem", margin: "1.5rem auto 0" }}>
+                  {faqs.map((f, i) => (
+                    <details key={i} data-testid={`living-in-faq-${i}`} style={{ borderBottom: "1px solid #e5e7eb", padding: "1rem 0" }}>
+                      <summary style={{ fontFamily: "Inter,sans-serif", fontWeight: 600, color: "var(--navy,#0F2A5B)", cursor: "pointer", fontSize: "1rem" }}>{f.q}</summary>
+                      <p style={{ fontFamily: "Inter,sans-serif", color: "#374151", lineHeight: 1.7, marginTop: "0.6rem" }}>{f.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      <section className="hn-section" data-testid="living-in-cta">
+        <div className="hn-wrap hn-center">
+          <h2 className="hn-h2">Thinking about {city}?</h2>
+          <div className="hn-ctarow" style={{ justifyContent: "center", marginTop: "1rem" }}>
+            <Link to={`/homes-for-sale/${slug}`} className="hn-pill hn-pill--navy hn-pill--lg" data-testid="living-in-cta-homes">See {city} homes for sale <HnArrowRight size={15} /></Link>
+            <Link to="/buyer" className="hn-pill hn-pill--lg" data-testid="living-in-cta-buyer">I'm buying in {city}</Link>
+          </div>
+          <p style={{ fontFamily: "Inter,sans-serif", fontSize: "0.78rem", color: "var(--muted)", marginTop: "1.25rem", maxWidth: "44rem", marginLeft: "auto", marginRight: "auto" }}>
+            This guide is general information about {city}, BC — not advice, and not an opinion of property value. For real estate guidance specific to {city}, contact Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. (BCFSA #167790).
+          </p>
+        </div>
+      </section>
     </div>
   );
 };
@@ -11186,24 +11299,56 @@ const EmailPreferences = () => {
 const AdminConsent = () => {
   const {headers} = useAdmin();
   const [email,setEmail]=useState(""); const [data,setData]=useState(null); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
-  const search = async (e) => { if(e)e.preventDefault(); if(!email.trim())return; setBusy(true); setErr(""); try{ const r=await axios.get(`${API}/admin/consent-search`,{headers,params:{email:email.trim()}}); setData(r.data);}catch(x){setErr("Search failed. Check you're signed in.");}finally{setBusy(false);} };
-  const exportCsv = () => { window.open(`${API}/admin/consent-export?email=${encodeURIComponent(email.trim())}`,"_blank"); };
+  const [dateFrom,setDateFrom]=useState(""); const [dateTo,setDateTo]=useState(""); const [unsubOnly,setUnsubOnly]=useState(false);
+  const hasFilter = () => email.trim() || dateFrom || dateTo || unsubOnly;
+  const buildParams = () => {
+    const p = {};
+    if(email.trim()) p.email = email.trim();
+    if(dateFrom) p.date_from = dateFrom;
+    if(dateTo) p.date_to = dateTo;
+    if(unsubOnly) p.unsubscribed_only = true;
+    return p;
+  };
+  const search = async (e) => {
+    if(e)e.preventDefault();
+    if(!hasFilter()){ setErr("Enter an email, pick a date range, or toggle unsubscribed-only."); return; }
+    setBusy(true); setErr("");
+    try{ const r=await axios.get(`${API}/admin/consent-search`,{headers,params:buildParams()}); setData(r.data);}
+    catch(x){setErr(x?.response?.data?.detail || "Search failed. Check you're signed in.");}
+    finally{setBusy(false);}
+  };
+  const exportCsv = () => {
+    const qs = new URLSearchParams(buildParams()).toString();
+    window.open(`${API}/admin/consent-export?${qs}`,"_blank");
+  };
   return (<AdminShell active="consent"><div style={{padding:"1rem"}}>
     <h1 style={{margin:"0 0 0.4rem"}}>🛡️ Consent Records</h1>
-    <p style={{color:"#6e6e73",marginTop:0,maxWidth:640}}>PIPA access request — search every data store for an individual's CASL/PIPA consent trail (IP, user-agent, timestamp, policy version) and export it on request.</p>
-    <form onSubmit={search} style={{display:"flex",gap:10,margin:"1.25rem 0",maxWidth:600,flexWrap:"wrap"}}>
-      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com" type="email" data-testid="consent-search-input" style={{flex:"1 1 260px",padding:"11px 14px",borderRadius:10,border:"1px solid rgba(0,0,0,0.15)",fontSize:15}}/>
+    <p style={{color:"#6e6e73",marginTop:0,maxWidth:680}}>PIPA access request — search by email for an individual's CASL/PIPA consent trail, or browse by consent date-range and/or unsubscribed-only status without an email (newest first, capped at 500).</p>
+    <form onSubmit={search} style={{display:"flex",gap:10,margin:"1.25rem 0 0.5rem",maxWidth:760,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="email@example.com (optional)" type="email" data-testid="consent-search-input" style={{flex:"1 1 240px",padding:"11px 14px",borderRadius:10,border:"1px solid rgba(0,0,0,0.15)",fontSize:15}}/>
       <button type="submit" disabled={busy} data-testid="consent-search-btn" className="btn btn-primary">{busy?"Searching…":"Search"}</button>
       {data && data.count>0 && <button type="button" onClick={exportCsv} data-testid="consent-export-btn" className="btn btn-ghost">Export CSV</button>}
     </form>
+    <div style={{display:"flex",gap:14,margin:"0 0 1.25rem",maxWidth:760,flexWrap:"wrap",alignItems:"center"}}>
+      <label style={{fontSize:13,color:"#6e6e73",display:"flex",alignItems:"center",gap:6}}>From
+        <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} data-testid="consent-date-from" style={{padding:"8px 10px",borderRadius:8,border:"1px solid rgba(0,0,0,0.15)",fontSize:13}}/>
+      </label>
+      <label style={{fontSize:13,color:"#6e6e73",display:"flex",alignItems:"center",gap:6}}>To
+        <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} data-testid="consent-date-to" style={{padding:"8px 10px",borderRadius:8,border:"1px solid rgba(0,0,0,0.15)",fontSize:13}}/>
+      </label>
+      <label style={{fontSize:13,color:"#1d1d1f",display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
+        <input type="checkbox" checked={unsubOnly} onChange={e=>setUnsubOnly(e.target.checked)} data-testid="consent-unsub-only"/> Unsubscribed only
+      </label>
+      {(dateFrom||dateTo||unsubOnly||email) && <button type="button" className="btn btn-ghost" data-testid="consent-clear" onClick={()=>{setEmail("");setDateFrom("");setDateTo("");setUnsubOnly(false);setData(null);}} style={{padding:"0.3rem 0.7rem",fontSize:13}}>Clear</button>}
+    </div>
     {err && <div style={{color:"#DC2626",marginBottom:"1rem"}} data-testid="consent-err">{err}</div>}
     {data && (<div data-testid="consent-results">
-      <p style={{color:"#6e6e73"}}><strong>{data.count}</strong> record(s) for <strong>{data.email}</strong></p>
+      <p style={{color:"#6e6e73"}}><strong>{data.count}</strong> record(s){data.email?<> for <strong>{data.email}</strong></>:" matching your filters"}{data.capped?<span style={{color:"#B45309"}}> — showing the 500 most recent (narrow the date range to see more)</span>:null}</p>
       {data.count>0 && <div style={{overflowX:"auto"}}><table className="admin-table" data-testid="admin-consent-table"><thead><tr>
-        <th>Collection</th><th>Name</th><th>Consent at</th><th>Type</th><th>PIPA</th><th>CASL</th><th>IP</th><th>Policy</th><th>Unsub?</th>
+        <th>Collection</th><th>Email</th><th>Name</th><th>Consent at</th><th>Type</th><th>PIPA</th><th>CASL</th><th>IP</th><th>Policy</th><th>Unsub?</th>
       </tr></thead><tbody>
         {data.records.map((r,i)=>(<tr key={i} data-testid={`consent-row-${i}`}>
-          <td>{r.collection}</td><td>{r.name||"—"}</td><td>{(r.consent_at||"").slice(0,19).replace("T"," ")||"—"}</td>
+          <td>{r.collection}</td><td style={{fontSize:12}}>{r.email||"—"}</td><td>{r.name||"—"}</td><td>{(r.consent_at||r.created_at||"").slice(0,19).replace("T"," ")||"—"}</td>
           <td>{r.consent_type||"—"}</td><td>{r.pipa_ack?"✓":"—"}</td><td>{r.casl_consent?"✓":"—"}</td>
           <td style={{fontSize:12}}>{r.consent_ip||"—"}</td><td style={{fontSize:12}}>{r.policy_version||"—"}</td>
           <td>{r.unsubscribed?"Yes":"No"}</td>
@@ -11661,6 +11806,7 @@ const AdminApprovals = () => {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [edited, setEdited] = useState({});
+  const [guideEdits, setGuideEdits] = useState({});
 
   const loadSummary = async () => {
     const r = await axios.get(`${API}/admin/approvals/summary`, {headers}).catch(()=>({data:{}}));
@@ -11704,6 +11850,20 @@ const AdminApprovals = () => {
   const regenSynopsis = async (slug) => { await axios.post(`${API}/admin/approvals/synopses/${slug}/regenerate`, {}, {headers}); await loadItems("synopses"); };
   const regenWeather = async (slug) => { await axios.post(`${API}/admin/approvals/weather/${slug}/regenerate`, {}, {headers}); await loadItems("weather"); };
   const regenGlossary = async (slug) => { await axios.post(`${API}/admin/approvals/glossary/${slug}/regenerate`, {}, {headers}); await loadItems("glossary"); };
+  const guideField = (slug, item) => guideEdits[slug] || item.guide || {sections:{}, faqs:[]};
+  const setGuideSection = (slug, item, key, val) => { const g = JSON.parse(JSON.stringify(guideField(slug,item))); g.sections = g.sections||{}; g.sections[key]=val; setGuideEdits({...guideEdits,[slug]:g}); };
+  const setGuideFaqAns = (slug, item, i, val) => { const g = JSON.parse(JSON.stringify(guideField(slug,item))); g.faqs=g.faqs||[]; if(g.faqs[i]) g.faqs[i].a=val; setGuideEdits({...guideEdits,[slug]:g}); };
+  const approveGuide = async (slug, item) => {
+    await axios.post(`${API}/admin/approvals/guides/approve`, {slug, guide: guideEdits[slug] || item.guide}, {headers});
+    await loadSummary(); await loadItems("guides");
+  };
+  const regenGuide = async (slug) => { setBusy(true); await axios.post(`${API}/admin/approvals/guides/${slug}/regenerate`, {}, {headers}); setGuideEdits(g=>{const n={...g};delete n[slug];return n;}); await loadItems("guides"); };
+  const generateAllGuides = async () => {
+    if(!window.confirm("Generate neighbourhood 'living-in' guides for every focus-region community (Greater Vancouver, Fraser Valley, Sea-to-Sky) that doesn't have one yet. Runs in the background; refresh the Guides tab in a few minutes to review and approve.")) return;
+    const r = await axios.post(`${API}/admin/approvals/generate-all-guides`, {}, {headers});
+    alert(r.data.message);
+    setTimeout(() => { loadSummary(); if(tab==="guides") loadItems("guides"); }, 3000);
+  };
   const bulkApproveGlossary = async () => {
     if(!window.confirm(`Bulk-approve ALL ${summary.pending_glossary_faqs} pending glossary FAQ sets? Do this only after spot-checking a sample.`)) return;
     await axios.post(`${API}/admin/approvals/glossary/approve-all`, {}, {headers});
@@ -11725,8 +11885,7 @@ const AdminApprovals = () => {
     alert(r.data.message);
     setTimeout(() => { loadSummary(); loadItems(tab); }, 3000);
   };
-  const generateAllGlossary = async () => {
-    if(!window.confirm("Generate FAQs for EVERY glossary term that doesn't have them yet (~394 terms). Runs in the background and takes ~30-60 minutes. Refresh the Glossary tab periodically to see them queued for approval.")) return;
+  const generateAllGlossary = async () => {    if(!window.confirm("Generate FAQs for EVERY glossary term that doesn't have them yet (~394 terms). Runs in the background and takes ~30-60 minutes. Refresh the Glossary tab periodically to see them queued for approval.")) return;
     const r = await axios.post(`${API}/admin/approvals/generate-all-glossary`, {}, {headers});
     alert(r.data.message);
     setTimeout(() => { loadSummary(); if(tab==="glossary") loadItems("glossary"); }, 3000);
@@ -12086,6 +12245,7 @@ const AdminApprovals = () => {
         {key:"synopses", label:`🗺️ Community Synopses (${summary.pending_synopses||0})`},
         {key:"weather", label:`☀️ Weather (${summary.pending_weather||0})`},
         {key:"neighbourhoods", label:`🏘️ Neighbourhoods (${summary.pending_neighbourhoods||0})`},
+        {key:"guides", label:`📍 Living-In Guides (${summary.pending_guides||0})`},
         {key:"glossary", label:`📖 Glossary FAQs (${summary.pending_glossary_faqs||0})`}
       ].map(t => (
         <button key={t.key} onClick={()=>setTab(t.key)} className={tab===t.key?"btn btn-primary":"btn btn-outline"} style={{padding:"0.5rem 1rem",fontSize:"0.9rem"}} data-testid={`approvals-tab-${t.key}`}>{t.label}</button>
@@ -12183,6 +12343,44 @@ const AdminApprovals = () => {
             </details>
           </div>
         ))}
+      </>
+    )}
+
+    {!busy && tab === "guides" && (
+      <>
+        <div className="paper" style={{marginBottom:"1rem",background:"#EEF4FF"}}>
+          <p style={{margin:"0 0 0.75rem",fontSize:"0.9rem"}}><strong>Living-In Guides</strong> — factual "what's it like to live in {`{city}`}" guides for focus-region communities (Greater Vancouver, Fraser Valley, Sea-to-Sky). AI-drafted, published only after you approve. Review each section + FAQ, edit if needed, then Approve.</p>
+          <button onClick={generateAllGuides} className="btn btn-primary" style={{padding:"0.5rem 1rem"}} data-testid="generate-all-guides">✨ Generate all focus-region guides</button>
+        </div>
+        {items.length === 0 ? <p style={{color:"var(--muted)"}} data-testid="guides-empty">✓ No pending neighbourhood guides. Click "Generate all focus-region guides" above to draft them.</p> :
+        items.map(it => {
+          const g = guideField(it.slug, it);
+          return (
+          <div key={it.slug} className="paper" style={{marginBottom:"1rem"}} data-testid={`guide-card-${it.slug}`}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.75rem",flexWrap:"wrap",gap:"0.5rem"}}>
+              <strong style={{fontSize:"1.1rem",color:"var(--brand-navy)"}}>{it.name}, {it.region}</strong>
+              <div style={{display:"flex",gap:"0.5rem"}}>
+                <button onClick={()=>regenGuide(it.slug)} className="btn btn-outline" style={{padding:"0.4rem 0.8rem",fontSize:"0.82rem"}} data-testid={`regen-guide-${it.slug}`}>↻ Regenerate</button>
+                <button onClick={()=>approveGuide(it.slug, it)} className="btn btn-green" style={{padding:"0.4rem 0.8rem",fontSize:"0.82rem"}} data-testid={`approve-guide-${it.slug}`}>✓ Approve &amp; Publish</button>
+              </div>
+            </div>
+            {[["overview","Overview & setting"],["getting_around","Getting around"],["amenities","Amenities & recreation"],["climate","Climate & seasons"],["housing","Housing & who it suits"]].map(([k,label])=>(
+              <div key={k} style={{marginBottom:"0.75rem"}}>
+                <label style={{display:"block",fontSize:"0.8rem",fontWeight:700,color:"var(--brand-blue)",marginBottom:"0.25rem"}}>{label}</label>
+                <textarea value={(g.sections&&g.sections[k])||""} onChange={e=>setGuideSection(it.slug,it,k,e.target.value)} rows={3} style={{width:"100%",fontFamily:"Inter,sans-serif",fontSize:"0.9rem",lineHeight:1.55,padding:"0.6rem",border:"1px solid rgba(15,42,91,0.15)",borderRadius:8,resize:"vertical"}}/>
+              </div>
+            ))}
+            <details style={{marginTop:"0.5rem"}}>
+              <summary style={{cursor:"pointer",fontSize:"0.85rem",color:"var(--brand-blue)"}}>FAQs ({(g.faqs||[]).length})</summary>
+              {(g.faqs||[]).map((f,i)=>(
+                <div key={i} style={{padding:"0.5rem 0",borderBottom:"1px solid rgba(15,42,91,0.06)"}}>
+                  <strong style={{fontSize:"0.86rem"}}>{f.q}</strong>
+                  <textarea value={f.a||""} onChange={e=>setGuideFaqAns(it.slug,it,i,e.target.value)} rows={2} style={{width:"100%",marginTop:"0.3rem",fontFamily:"Inter,sans-serif",fontSize:"0.86rem",lineHeight:1.5,padding:"0.5rem",border:"1px solid rgba(15,42,91,0.12)",borderRadius:6,resize:"vertical"}}/>
+                </div>
+              ))}
+            </details>
+          </div>
+        );})}
       </>
     )}
   </AdminShell>;
@@ -14637,6 +14835,7 @@ function App() {
       <Route path="/communities" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/homes-for-sale/:slug" element={<AppLayout><HomesForSale/></AppLayout>}/>
       <Route path="/homes-for-sale/:slug/:facet" element={<AppLayout><HomesForSale/></AppLayout>}/>
+      <Route path="/living-in/:slug" element={<AppLayout><LivingInGuide/></AppLayout>}/>
       {/* Legacy split slugs — merged into unified 'north-vancouver' page */}
       <Route path="/community/north-vancouver-city" element={<Navigate to="/community/north-vancouver" replace/>}/>
       <Route path="/community/north-vancouver-district" element={<Navigate to="/community/north-vancouver" replace/>}/>

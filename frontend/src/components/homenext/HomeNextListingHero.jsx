@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getSignatureMlsNumbers, SIGNATURE_PIN_LIMIT } from "../../config/flagshipListing";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const EXCL_TYPES = "Vacant Land,Lot,Land,Agriculture,Farm,Residential Commercial Mix,Mixed Use";
@@ -8,6 +9,7 @@ const EXCL_KW = "land\\s+assembl|development\\s+potential|development\\s+opportu
 const fmtPrice = (n) => `$${Number(n || 0).toLocaleString("en-CA")}`;
 
 // Rotating hero — live CREA DDF® detached homes, $3M+, Greater Vancouver + Fraser Valley + Sea-to-Sky.
+// Hand-picked "signature" listings (flagshipListing.js) are pinned to the front and tagged "Featured".
 export const HomeNextListingHero = () => {
   const [pool, setPool] = useState([]);
   const [idx, setIdx] = useState(0);
@@ -19,9 +21,16 @@ export const HomeNextListingHero = () => {
       region_chip: "Doug's Territory",
       exclude_property_type: EXCL_TYPES, exclude_description_keywords: EXCL_KW,
     });
-    fetch(`${API}/api/listings?${params}`).then(r => r.ok ? r.json() : null).then(d => {
-      if (stop || !d) return;
-      const all = (d.listings || []).filter(l => Array.isArray(l.photos) && l.photos.length > 0);
+    const sigNumbers = getSignatureMlsNumbers();
+    const poolP = fetch(`${API}/api/listings?${params}`).then(r => r.ok ? r.json() : null).catch(() => null);
+    const sigP = Promise.all(sigNumbers.map(mls =>
+      fetch(`${API}/api/listings?q=${encodeURIComponent(mls)}&limit=5`)
+        .then(r => r.ok ? r.json() : null).catch(() => null)
+        .then(d => ((d && d.listings) || []).find(l => l.mls_number === mls || l.listing_key === mls) || null)
+    ));
+    Promise.all([poolP, sigP]).then(([d, sigs]) => {
+      if (stop) return;
+      const all = ((d && d.listings) || []).filter(l => Array.isArray(l.photos) && l.photos.length > 0);
       // Rotate the shown dozen once per day so the hero surfaces fresh live
       // listings daily, cycling through the full newest pool over time.
       let items = all;
@@ -32,8 +41,15 @@ export const HomeNextListingHero = () => {
       } else {
         items = all.slice(0, 12);
       }
-      items.forEach(l => { const im = new Image(); im.src = l.photos[0]; });
-      setPool(items);
+      // Pin hand-picked signature listings (active + has photos) to the front.
+      const pinned = (sigs || [])
+        .filter(l => l && Array.isArray(l.photos) && l.photos.length > 0)
+        .slice(0, SIGNATURE_PIN_LIMIT)
+        .map(l => ({ ...l, _featured: true }));
+      const pinnedKeys = new Set(pinned.map(l => l.listing_key));
+      const merged = [...pinned, ...items.filter(l => !pinnedKeys.has(l.listing_key))].slice(0, 12);
+      merged.forEach(l => { const im = new Image(); im.src = l.photos[0]; });
+      setPool(merged);
     }).catch(() => {});
     return () => { stop = true; };
   }, []);
@@ -55,6 +71,9 @@ export const HomeNextListingHero = () => {
             style={{ backgroundImage: `url('${l.photos[0]}')`, opacity: i === idx ? 1 : 0 }}/>
         ))}
         <div className="hn-lhero__shade" aria-hidden="true"/>
+        {cur && cur._featured && (
+          <span data-testid="hn-listing-hero-featured" style={{position:"absolute",top:16,left:16,zIndex:3,background:"rgba(15,42,91,0.92)",color:"#fff",fontFamily:"Inter,sans-serif",fontSize:"0.64rem",fontWeight:700,letterSpacing:"0.09em",textTransform:"uppercase",padding:"5px 11px",borderRadius:999,backdropFilter:"blur(6px)"}}>Featured</span>
+        )}
         {cur && (
           <Link to={`/listings/${encodeURIComponent(cur.listing_key)}`} className="hn-lhero__chip" data-testid="hn-listing-hero-chip">
             <strong>{fmtPrice(cur.list_price)}</strong>

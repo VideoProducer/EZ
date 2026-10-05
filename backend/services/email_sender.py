@@ -27,8 +27,19 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
+import jwt
 
 logger = logging.getLogger("email_sender")
+
+_JWT_SECRET = os.environ.get("JWT_SECRET", "")
+
+
+def email_prefs_url(email: str) -> str:
+    """Build the signed preference-center link for a recipient. Matches the
+    token scheme used by server.py `_prefs_token`/`_prefs_verify` so the same
+    link resolves on the public /email-preferences page."""
+    token = jwt.encode({"email": (email or "").lower(), "sub": "email_prefs"}, _JWT_SECRET, algorithm="HS256")
+    return f"https://eztofind.ca/email-preferences?token={token}"
 
 # CASL identification block (immutable — do NOT strip when composing emails)
 SENDER_NAME    = "Doug LeMaire, REALTOR® · EZtoFind.ca"
@@ -43,8 +54,10 @@ RESEND_REPLY_TO = os.environ.get("RESEND_REPLY_TO", "").strip()
 RESEND_URL     = "https://api.resend.com/emails"
 
 
-def casl_footer_html(unsubscribe_url: str) -> str:
+def casl_footer_html(unsubscribe_url: str, prefs_url: Optional[str] = None) -> str:
     """CASL-mandated footer. Included on EVERY commercial message."""
+    prefs_link = (f' · <a href="{prefs_url}" style="color:#0F2A5B;text-decoration:underline">Manage email preferences</a>'
+                  if prefs_url else "")
     return f"""
 <hr style="margin:2rem 0 1rem;border:none;border-top:1px solid #e5e7eb"/>
 <div style="font-size:12px;color:#6b7280;line-height:1.6;font-family:Inter,Arial,sans-serif">
@@ -52,13 +65,14 @@ def casl_footer_html(unsubscribe_url: str) -> str:
   {SENDER_ORG}<br/>
   {SENDER_ADDRESS} · {SENDER_PHONE} · <a href="mailto:{SENDER_EMAIL}" style="color:#0F2A5B">{SENDER_EMAIL}</a></p>
   <p style="margin:0 0 0.5rem">You are receiving this because you signed up for BC real-estate listing alerts on EZtoFind.ca and confirmed your email address. Under CASL you can opt out of these messages at any time.</p>
-  <p style="margin:0"><a href="{unsubscribe_url}" style="color:#0F2A5B;text-decoration:underline">Unsubscribe with one click</a> · <a href="https://eztofind.ca/privacy" style="color:#0F2A5B;text-decoration:underline">Privacy Policy (PIPA)</a></p>
+  <p style="margin:0"><a href="{unsubscribe_url}" style="color:#0F2A5B;text-decoration:underline">Unsubscribe with one click</a>{prefs_link} · <a href="https://eztofind.ca/privacy" style="color:#0F2A5B;text-decoration:underline">Privacy Policy (PIPA)</a></p>
 </div>
 """.strip()
 
 
-def casl_footer_text(unsubscribe_url: str) -> str:
+def casl_footer_text(unsubscribe_url: str, prefs_url: Optional[str] = None) -> str:
     """Plain-text version of the CASL footer."""
+    prefs_line = f"Manage email preferences: {prefs_url}\n" if prefs_url else ""
     return (
         f"\n\n---\n"
         f"{SENDER_NAME}\n"
@@ -68,6 +82,7 @@ def casl_footer_text(unsubscribe_url: str) -> str:
         f"on EZtoFind.ca and confirmed your email address. Under CASL you can opt out "
         f"at any time.\n\n"
         f"Unsubscribe with one click: {unsubscribe_url}\n"
+        f"{prefs_line}"
         f"Privacy Policy (PIPA): https://eztofind.ca/privacy\n"
     )
 

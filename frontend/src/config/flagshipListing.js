@@ -41,6 +41,20 @@ export const FLAGSHIP = {
   realtor_ca_url: "https://www.realtor.ca/real-estate/30162312/3015-141-street-surrey",
 };
 
+// Hand-picked "signature" listings pinned into the homepage hero rotation.
+// Add live GVR/CREA MLS® numbers as strings (e.g. "R1234567"). Up to
+// SIGNATURE_PIN_LIMIT currently-active ones are pinned to the FRONT of the
+// daily-rotating 12 and tagged "Featured". FLAGSHIP.mls_number is auto-added
+// while FLAGSHIP.active is true. Inactive/suppressed MLS® numbers are skipped.
+export const SIGNATURE_MLS = [];
+export const SIGNATURE_PIN_LIMIT = 2;
+export const getSignatureMlsNumbers = () => {
+  const list = [...SIGNATURE_MLS];
+  if (FLAGSHIP.active && FLAGSHIP.mls_number) list.unshift(FLAGSHIP.mls_number);
+  return Array.from(new Set(list.filter(Boolean)));
+};
+
+
 export const isFlagshipRibbonActive = () => {
   if (!FLAGSHIP.active) return false;
   const now = Date.now();

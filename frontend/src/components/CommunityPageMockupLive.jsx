@@ -817,6 +817,11 @@ export default function CommunityPageMockupLive({ live = false } = {}) {
           <div style={{marginTop:10}}>
             <Link to={`/homes-for-sale/${slug}`} data-testid="community-homes-for-sale-link" style={{color:BRAND.navy,fontWeight:600,fontSize:"0.88rem",textDecoration:"underline"}}>Homes for sale in {community}, BC — market snapshot & FAQ →</Link>
           </div>
+          {isFocus && (
+            <div style={{marginTop:8}}>
+              <Link to={`/living-in/${slug}`} data-testid="community-living-in-link" style={{color:BRAND.navy,fontWeight:600,fontSize:"0.88rem",textDecoration:"underline"}}>What's it like to live in {community}, BC? — neighbourhood guide →</Link>
+            </div>
+          )}
         </div>
 
         {/* ── § ABOUT ───────────────────────────────────────────────── */}
