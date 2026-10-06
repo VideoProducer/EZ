@@ -5211,6 +5211,147 @@ async def export_consent_record(kind: str, lead_id: str, _=Depends(verify_admin)
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+# =============== CONTENT STUDIO (1-click social posts) ===============
+# Admin-only. Generates ready-to-copy social captions for a live CREA DDF®
+# listing. Strictly factual (BCFSA/CREA): no superlatives, opinions, value
+# claims, or advice. Doug reviews/edits, then copies into his own accounts.
+# This never auto-posts anywhere.
+
+CONTENT_STUDIO_DISCLOSURE = (
+    "Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd.\n"
+    "Listing data via CREA DDF®. MLS®, Multiple Listing Service® and the REALTOR® "
+    "trademarks are owned by The Canadian Real Estate Association (CREA). "
+    "Information is believed accurate but not guaranteed and is for information only — "
+    "not an appraisal or opinion of value. If you are already working with a REALTOR®, "
+    "this is information, not solicitation."
+)
+
+class ContentStudioRequest(BaseModel):
+    listing_key: str
+
+def _listing_facts_for_caption(l: dict) -> dict:
+    """Pull ONLY objective, brokerage-supplied facts for caption grounding."""
+    price = l.get("list_price")
+    try:
+        price_str = f"${int(price):,}" if price else None
+    except Exception:
+        price_str = None
+    beds = l.get("beds")
+    baths = l.get("baths") or l.get("bathrooms")
+    area = l.get("living_area")
+    area_units = l.get("living_area_units") or "sq ft"
+    feats = l.get("features") or []
+    if isinstance(feats, str):
+        feats = [feats]
+    return {
+        "address": l.get("unparsed_address") or l.get("street_address"),
+        "city": l.get("city"),
+        "region": l.get("region"),
+        "property_type": l.get("property_type"),
+        "price": price_str,
+        "beds": beds if beds else None,
+        "baths": baths if baths else None,
+        "living_area": f"{area} {area_units}" if area else None,
+        "year_built": l.get("year_built"),
+        "lot_size": (f"{l.get('lot_size_area')} {l.get('lot_size_units')}"
+                     if l.get("lot_size_area") else None),
+        "features": [str(f) for f in feats][:8],
+        "mls_number": l.get("mls_number"),
+    }
+
+async def _content_studio_generate(facts: dict) -> dict:
+    """Ask Claude for per-platform captions grounded ONLY in `facts`. Returns
+    {facebook, instagram, x_linkedin, hashtags:[...]} or {} on failure."""
+    fact_lines = []
+    for k, v in facts.items():
+        if v in (None, "", []):
+            continue
+        label = k.replace("_", " ").title()
+        if isinstance(v, list):
+            v = ", ".join(v)
+        fact_lines.append(f"- {label}: {v}")
+    facts_block = "\n".join(fact_lines)
+    prompt = (
+        "Write social media captions announcing this BC real estate listing is on the market. "
+        "Use ONLY the facts below — never invent a detail, a feature, a view, a school, or a neighbourhood claim.\n\n"
+        f"FACTS:\n{facts_block}\n\n"
+        "Produce a JSON object with EXACTLY these keys:\n"
+        '  "facebook": a 2-3 sentence caption (warm, factual, no hashtags inside),\n'
+        '  "instagram": a punchy 1-2 line caption suited to Instagram (no hashtags inside),\n'
+        '  "x_linkedin": a concise caption under 240 characters for X/LinkedIn (no hashtags inside),\n'
+        '  "hashtags": an array of 5-8 relevant, factual hashtags (e.g. city name, property type, "#BCRealEstate", "#MLS"). No superlative hashtags.\n\n'
+        "STRICT COMPLIANCE (BCFSA/CREA/GVR):\n"
+        "- State facts ONLY. NO opinions, NO advice, NO recommendations.\n"
+        "- FORBIDDEN words/claims: best, great, stunning, perfect, ideal, must-see, dream, luxury, "
+        "affordable, deal, value, opportunity, won't last, rare, standout, charming, gorgeous, "
+        "beautiful, amazing — and any comparison or prediction.\n"
+        "- Do NOT characterise price as high/low/fair. Do NOT describe the area's desirability.\n"
+        "- A call-to-action is allowed ONLY as neutral wording like 'View full details and photos on the listing' or 'Message to arrange a viewing.'\n"
+        "- Output ONLY the JSON object, nothing else."
+    )
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"content-studio-{uuid.uuid4()}",
+            system_message="You are a BC real estate marketing writer who outputs only valid JSON and never uses superlatives, opinions, or advice (BCFSA/CREA compliant).",
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta):
+                full += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip(), flags=re.IGNORECASE).strip()
+        s, e = raw.find("{"), raw.rfind("}")
+        if s != -1 and e != -1:
+            raw = raw[s:e+1]
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            return {}
+        ht = data.get("hashtags") or []
+        if isinstance(ht, str):
+            ht = [h.strip() for h in ht.replace(",", " ").split() if h.strip()]
+        data["hashtags"] = [("#" + h.lstrip("#")) for h in ht][:8]
+        return {
+            "facebook": str(data.get("facebook") or "").strip(),
+            "instagram": str(data.get("instagram") or "").strip(),
+            "x_linkedin": str(data.get("x_linkedin") or "").strip(),
+            "hashtags": data["hashtags"],
+        }
+    except Exception as ex:
+        logger.error(f"Content Studio generation failed: {ex}")
+        return {}
+
+@api.post("/admin/content-studio/generate")
+async def content_studio_generate(body: ContentStudioRequest, _=Depends(verify_admin)):
+    """Generate factual, ready-to-copy social captions for one live listing."""
+    key = (body.listing_key or "").strip()
+    if not key:
+        raise HTTPException(400, "listing_key is required")
+    listing = await db.listings.find_one(
+        {"$or": [{"listing_key": key}, {"mls_number": key}]}, {"_id": 0}
+    )
+    if not listing:
+        raise HTTPException(404, "Listing not found")
+    facts = _listing_facts_for_caption(listing)
+    captions = await _content_studio_generate(facts)
+    if not captions:
+        raise HTTPException(502, "Caption generation is temporarily unavailable. Please try again.")
+    photos = listing.get("photos") or []
+    return {
+        "listing_key": listing.get("listing_key"),
+        "mls_number": listing.get("mls_number"),
+        "facts": facts,
+        "captions": captions,
+        "disclosure": CONTENT_STUDIO_DISCLOSURE,
+        "listing_brokerage": listing.get("brokerage_name"),
+        "photo_url": photos[0] if photos else None,
+        "photo_count": len(photos),
+        "realtor_ca_url": listing.get("realtor_ca_url"),
+        "listing_path": f"/listings?q={listing.get('mls_number') or key}",
+    }
+
+
 # =============== REALTOR REFERRAL NETWORK ===============
 class RealtorInitial(BaseModel):
     full_name: str

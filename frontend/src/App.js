@@ -8033,6 +8033,7 @@ export const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consent")} className={active==="consent"?"active":""} data-testid="admin-nav-consent">🛡️ Consent Records</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/attribution")} className={active==="attribution"?"active":""} data-testid="admin-nav-attribution">🎯 Lead Attribution</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/content-studio")} className={active==="content-studio"?"active":""} data-testid="admin-nav-content-studio">📝 Content Studio</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/faq-audit")} className={active==="faq-audit"?"active":""} data-testid="admin-nav-faq-audit">🔍 FAQ Audit</a>
@@ -11299,6 +11300,84 @@ const EmailPreferences = () => {
 
 
 // --- Admin: Consent Records (PIPA access request lookup + CSV export) ---
+const AdminContentStudio = () => {
+  const {headers} = useAdmin();
+  const [q,setQ]=useState(""); const [results,setResults]=useState([]); const [searching,setSearching]=useState(false);
+  const [sel,setSel]=useState(null); const [gen,setGen]=useState(null); const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(""); const [copied,setCopied]=useState("");
+  const search = async (e) => {
+    if(e) e.preventDefault();
+    if(!q.trim()) return;
+    setSearching(true); setErr("");
+    try{ const r=await axios.get(`${API}/listings`,{headers,params:{q:q.trim(),limit:12}}); setResults(r.data?.listings||[]); }
+    catch(x){ setErr(x?.response?.data?.detail||"Search failed."); }
+    finally{ setSearching(false); }
+  };
+  const generate = async (l) => {
+    setSel(l); setGen(null); setBusy(true); setErr(""); setCopied("");
+    try{ const r=await axios.post(`${API}/admin/content-studio/generate`,{listing_key:l.listing_key||l.mls_number}); setGen(r.data); }
+    catch(x){ setErr(x?.response?.data?.detail||"Generation failed. Please try again."); }
+    finally{ setBusy(false); }
+  };
+  const copy = async (which, text) => {
+    try{ await navigator.clipboard.writeText(text); setCopied(which); setTimeout(()=>setCopied(""),1800); }
+    catch{ setErr("Couldn't copy — select the text manually."); }
+  };
+  const fullPost = (caption) => gen ? `${caption}\n\n${(gen.captions.hashtags||[]).join(" ")}\n\n${gen.disclosure}` : caption;
+  const Caption = ({label, keyName, text, testid}) => (
+    <div className="paper" style={{marginBottom:14}} data-testid={testid}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <strong style={{color:"#0F2A5B"}}>{label}</strong>
+        <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} onClick={()=>copy(keyName,fullPost(text))} data-testid={`${testid}-copy`}>{copied===keyName?"✓ Copied":"Copy post"}</button>
+      </div>
+      <div style={{whiteSpace:"pre-wrap",fontSize:14,color:"#1d1d1f"}}>{text||"—"}</div>
+    </div>
+  );
+  return (<AdminShell active="content-studio"><div style={{padding:"1rem",maxWidth:900}}>
+    <h1 style={{margin:"0 0 0.4rem"}}>📝 Content Studio</h1>
+    <p style={{color:"#6e6e73",marginTop:0,maxWidth:720}}>Pick a live listing and generate ready-to-copy, BCFSA/CREA-compliant social captions. Review, edit if needed, then paste into your own accounts. Nothing is auto-posted.</p>
+    <form onSubmit={search} style={{display:"flex",gap:8,margin:"1rem 0",flexWrap:"wrap"}}>
+      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by city, MLS® #, or keyword (e.g. Surrey, acreage)" className="input" style={{flex:"1 1 320px",padding:"0.55rem 0.8rem",border:"1px solid #d2d2d7",borderRadius:10}} data-testid="cs-search-input"/>
+      <button type="submit" className="btn btn-primary" data-testid="cs-search-btn" disabled={searching}>{searching?"Searching…":"Search listings"}</button>
+    </form>
+    {err && <div style={{color:"#DC2626",marginBottom:"1rem"}} data-testid="cs-err">{err}</div>}
+    {results.length>0 && !gen && !busy && (<div data-testid="cs-results" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12,marginBottom:"1rem"}}>
+      {results.map((l,i)=>(<div key={l.listing_key||i} className="paper" style={{padding:10,cursor:"pointer"}} onClick={()=>generate(l)} data-testid={`cs-result-${i}`}>
+        {l.photos?.[0] && <img src={l.photos[0]} alt="" style={{width:"100%",height:120,objectFit:"cover",borderRadius:8,marginBottom:6}}/>}
+        <div style={{fontWeight:700,color:"#0F2A5B"}}>{l.list_price?`$${Number(l.list_price).toLocaleString()}`:"—"}</div>
+        <div style={{fontSize:13}}>{l.unparsed_address||l.street_address||"—"}</div>
+        <div style={{fontSize:12,color:"#6e6e73"}}>{[l.city,l.property_type].filter(Boolean).join(" · ")}</div>
+        <button className="btn btn-ghost" style={{marginTop:6,padding:"0.3rem 0.6rem",fontSize:12}}>Generate posts →</button>
+      </div>))}
+    </div>)}
+    {busy && <div style={{color:"#6e6e73"}} data-testid="cs-generating">Generating compliant captions…</div>}
+    {gen && !busy && (<div data-testid="cs-output">
+      <button className="btn btn-ghost" style={{marginBottom:12}} onClick={()=>{setGen(null);setSel(null);}} data-testid="cs-back">← Pick another listing</button>
+      <div className="paper" style={{display:"flex",gap:14,marginBottom:16,alignItems:"center"}}>
+        {gen.photo_url && <img src={gen.photo_url} alt="" style={{width:120,height:90,objectFit:"cover",borderRadius:8}}/>}
+        <div>
+          <div style={{fontWeight:700,color:"#0F2A5B"}}>{gen.facts.price||"—"} · {gen.facts.address||"—"}</div>
+          <div style={{fontSize:13,color:"#6e6e73"}}>{[gen.facts.city,gen.facts.property_type,gen.mls_number&&`MLS® ${gen.mls_number}`].filter(Boolean).join(" · ")}</div>
+          {gen.realtor_ca_url && <a href={gen.realtor_ca_url} target="_blank" rel="noreferrer" style={{fontSize:12}}>View on REALTOR.ca ↗</a>}
+        </div>
+      </div>
+      <Caption label="Facebook" keyName="fb" text={gen.captions.facebook} testid="cs-cap-facebook"/>
+      <Caption label="Instagram" keyName="ig" text={gen.captions.instagram} testid="cs-cap-instagram"/>
+      <Caption label="X / LinkedIn" keyName="xl" text={gen.captions.x_linkedin} testid="cs-cap-xlinkedin"/>
+      <div className="paper" data-testid="cs-hashtags">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <strong style={{color:"#0F2A5B"}}>Hashtags</strong>
+          <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} onClick={()=>copy("ht",(gen.captions.hashtags||[]).join(" "))} data-testid="cs-hashtags-copy">{copied==="ht"?"✓ Copied":"Copy"}</button>
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(gen.captions.hashtags||[]).map((h,i)=>(<span key={i} style={{background:"#eef2ff",color:"#1E4FCF",padding:"2px 8px",borderRadius:999,fontSize:12}}>{h}</span>))}</div>
+      </div>
+      <div className="notice" style={{marginTop:14,fontSize:12,whiteSpace:"pre-wrap"}} data-testid="cs-disclosure"><strong>Required disclosure (included in every copied post):</strong>{"\n"}{gen.disclosure}{gen.listing_brokerage?`\nListing brokerage: ${gen.listing_brokerage} (disclosed on REALTOR.ca).`:""}</div>
+      <p style={{fontSize:12,color:"#6e6e73",marginTop:10}}>These captions use only facts from the CREA DDF® feed. Please review before posting and confirm all details against the listing brokerage.</p>
+    </div>)}
+  </div></AdminShell>);
+};
+
+
 const AdminAttribution = () => {
   const {headers} = useAdmin();
   const [data,setData]=useState(null); const [days,setDays]=useState(90); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
@@ -15009,6 +15088,7 @@ function App() {
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/consent" element={<AdminConsent/>}/>
       <Route path="/admin/attribution" element={<AdminAttribution/>}/>
+      <Route path="/admin/content-studio" element={<AdminContentStudio/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>
