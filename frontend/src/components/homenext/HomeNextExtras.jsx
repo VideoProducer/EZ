@@ -1,29 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 
-const API = process.env.REACT_APP_BACKEND_URL;
 
 export const HomeNextQuote = () => {
-  const [t, setT] = useState(null);
-  useEffect(() => {
-    let stop = false;
-    fetch(`${API}/api/testimonials`).then(r => r.ok ? r.json() : null).then(d => {
-      if (stop || !d?.testimonials?.length) return;
-      setT(d.testimonials.find(x => x.is_featured) || d.testimonials[0]);
-    }).catch(() => {});
-    return () => { stop = true; };
-  }, []);
-  if (!t) return null;
-  const stars = "★".repeat(Math.max(0, Math.min(5, Number(t.rating) || 5)));
   return (
     <section className="hn-section" data-testid="hn-quote">
-      <div className="hn-wrap hn-quote">
-        <blockquote>“{t.text}”</blockquote>
-        <div className="hn-quote__who">
-          <span className="hn-quote__avatar">{(t.reviewer_name || "•").slice(0, 2)}</span>
-          <span>{t.reviewer_name}{t.context ? ` · ${t.context}` : ""}{t.source ? ` · ${t.source} review` : ""}</span>
-          <span className="hn-quote__stars" aria-label={`${stars.length} star rating`}>{stars}</span>
-        </div>
+      <div className="hn-wrap" style={{ display: "flex", justifyContent: "center" }}>
+        <img
+          src="https://customer-assets-lqy194kg.emergentagent.net/job_proptech-hub-111/artifacts/1f79dc00c8c66338_November%20Ad.png"
+          alt="Client review for Doug LeMaire, REALTOR® — EZtoFind.ca. Five-star Google review by MM: Doug went above and beyond, was always available, responsive, knowledgeable and professional. Real People. Real Results."
+          loading="lazy"
+          data-testid="hn-quote-image"
+          style={{ width: "100%", maxWidth: "900px", height: "auto", borderRadius: "16px", display: "block" }}
+        />
       </div>
     </section>
   );
