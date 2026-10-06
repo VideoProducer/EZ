@@ -1,5 +1,20 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Speed-to-lead SMS auto-responder (a) + Lead-source attribution (c)
+
+**(a) Speed-to-lead auto-responder**
+- The lead-confirmation EMAIL to buyers/sellers already existed; added the missing instant **SMS to the lead** via `_send_lead_autoresponse_sms` (server.py, near `_send_lead_sms`). Fires on `/leads/buyer` + `/leads/seller`. CASL-compliant: only sent when the lead gave express `casl_consent` AND left a phone; normalises to E.164 (+1 default), factual copy (no advice/value claims), identifies Doug/EZtoFind, includes "Reply STOP". Non-fatal fire-and-forget. Reuses existing `TWILIO_ACCOUNT_SID/AUTH_TOKEN/FROM_NUMBER` env (already set).
+- NOTE: actual SMS delivery depends on the Twilio number being SMS/A2P-10DLC provisioned on Doug's account. Optional: set `LEAD_ALERT_TO_NUMBER` env to also SMS-alert Doug on every lead (existing `_send_lead_sms`).
+
+**(c) Lead-source attribution + dashboard**
+- Added `utm_source/medium/campaign/term/content + referrer_url + landing_path` to `BuyerLead` & `SellerLead` models (auto-persist via model_dump).
+- Frontend `src/utils/attribution.js`: first-touch capture of UTM + landing path + external referrer, persisted in sessionStorage; `captureAttribution()` runs on app mount, `getAttribution()` spread into every lead POST (buyer, seller, out-of-area referral, Family Viewing Party, Equestrian).
+- New `GET /api/admin/lead-attribution?days=` aggregates buyer+seller leads by source/medium/campaign with recent attributed list.
+- New admin page `/admin/attribution` (`AdminAttribution`) + sidebar link "🎯 Lead Attribution" — stat cards, by-source/medium/campaign tables, recent attributed leads, day-range toggle.
+- Verified: attribution endpoint (direct curl), frontend first-touch persists across navigation, admin dashboard renders authenticated with no errors. Turnstile correctly blocks unauthenticated curl submits.
+- Needs a production redeploy to go live.
+
+
 ## June 2026 — Shareable Feature Showcase page (/showcase)
 
 - New `pages/FeatureShowcase.jsx` at route `/showcase`: a one-tap, social-ready marketing page bundling the three nobody-else-in-BC features — Doogie AI listing narration, Family Viewing Party TV casting, and ask-in-plain-words live MLS® search — each linking to its live demo. Includes a prominent one-tap share row (native Web Share → SMS + WhatsApp + copy-link fallbacks) sharing the `/showcase` URL, OG/Twitter meta, WebPage JSON-LD, and the standard BCFSA/CREA compliance footer. Factual copy only (no value claims/superlatives).

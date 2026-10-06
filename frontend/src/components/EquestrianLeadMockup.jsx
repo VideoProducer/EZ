@@ -32,6 +32,7 @@ import axios from "axios";
 import { Helmet } from "react-helmet-async";
 import UnlistedMockupBanner from "./UnlistedMockupBanner";
 import ReferralAsk from "./ReferralAsk";
+import { getAttribution } from "../utils/attribution";
 import { TurnstileWidget, getTurnstileToken } from "../App";
 import EquestrianRepresentation from "./EquestrianRepresentation";
 
@@ -801,6 +802,7 @@ function EquestrianLeadForm() {
     setBusy(true);
     try {
       await axios.post(`${API}/api/leads/buyer`, {
+        ...getAttribution(),
         ...f,
         areas: f.areas.length ? f.areas : ["Fraser Valley (equestrian)"],
         budget: f.budget ? Number(String(f.budget).replace(/\D/g, "")) : null,

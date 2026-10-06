@@ -7,6 +7,7 @@ import { HomeNextNav } from "./components/homenext/HomeNextHero";
 import { HomeNextFooter } from "./components/homenext/HomeNextExtras";
 import { Helmet } from "react-helmet-async";
 import axios from "axios";
+import { captureAttribution, getAttribution } from "./utils/attribution";
 // SEC-009: send the HttpOnly admin cookie on every same-origin XHR/API call.
 // Default is `false` (no cookies on cross-origin) — flipping to `true` is
 // safe because our CORS allowlist is explicit (not "*") whenever cookies
@@ -7030,7 +7031,7 @@ const BuyerForm = () => {
           consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
         }
       );
-      await axios.post(`${API}/leads/buyer`, enriched);
+      await axios.post(`${API}/leads/buyer`, {...enriched, ...getAttribution()});
       trackFormSubmit("/buyer", { property_type: f.property_type || "Any", budget_range: f.budget_range, timeline: f.timeline });
       trackConversion("generate_lead", { lead_type: "buyer", property_type: f.property_type || "Any", region: (f.areas || [])[0] || "Any", currency: "CAD" });
       setDone(true);
@@ -7144,7 +7145,7 @@ const SellerForm = () => {
           consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
         }
       );
-      await axios.post(`${API}/leads/seller`, enriched);
+      await axios.post(`${API}/leads/seller`, {...enriched, ...getAttribution()});
       trackFormSubmit("/seller", { property_type: f.property_type || "Any", timeline: f.timeline, city: f.city });
       trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", currency: "CAD" });
       setDone(true);
@@ -8030,6 +8031,7 @@ export const AdminShell = ({children,active}) => {
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/email-outbox")} className={active==="email-outbox"?"active":""} data-testid="admin-nav-email-outbox">📬 Email Outbox</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/saved-searches")} className={active==="saved-searches"?"active":""} data-testid="admin-nav-saved-searches">🔔 Saved Searches</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/consent")} className={active==="consent"?"active":""} data-testid="admin-nav-consent">🛡️ Consent Records</a>
+      <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/attribution")} className={active==="attribution"?"active":""} data-testid="admin-nav-attribution">🎯 Lead Attribution</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/approvals")} className={active==="approvals"?"active":""} data-testid="admin-nav-approvals">✅ AI Content Approvals</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/chats")} className={active==="chats"?"active":""} data-testid="admin-nav-chats">💬 Doogie Chat Logs</a>
       <a role="button" tabIndex={0} onKeyDown={(e)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault(); e.currentTarget.click();}}} onClick={()=>nav("/admin/feedback")} className={active==="feedback"?"active":""} data-testid="admin-nav-feedback">💌 Beta Feedback</a>
@@ -10389,7 +10391,7 @@ const Valuation = () => {
           },
         }
       );
-      await axios.post(`${API}/leads/seller`, enriched);
+      await axios.post(`${API}/leads/seller`, {...enriched, ...getAttribution()});
       trackFormSubmit("/valuation", { timeline: f.timeline, property_type: f.property_type, city: f.city });
       trackConversion("home_valuation_request", { timeline: f.timeline, property_type: f.property_type, city: f.city, currently_listed: f.currently_listed, currency: "CAD" });
       trackConversion("seller_lead", { lead_type: "seller", property_type: f.property_type || "Any", source: "valuation_page", currency: "CAD" });
@@ -10570,7 +10572,7 @@ const ReferralRequest = () => {
           }
         );
       }
-      await axios.post(`${API}${path}`, payload);
+      await axios.post(`${API}${path}`, {...payload, ...getAttribution()});
       trackFormSubmit("/referral-request", { region: city, property_type: f.property_type || "Any", intent });
       trackConversion("generate_lead", { lead_type: isSeller ? "seller_referral" : "buyer_referral", property_type: f.property_type || "Any", region: city, currency: "CAD" });
       setDone(true);
@@ -11297,6 +11299,58 @@ const EmailPreferences = () => {
 
 
 // --- Admin: Consent Records (PIPA access request lookup + CSV export) ---
+const AdminAttribution = () => {
+  const {headers} = useAdmin();
+  const [data,setData]=useState(null); const [days,setDays]=useState(90); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
+  const load = async (d) => {
+    setBusy(true); setErr("");
+    try{ const r=await axios.get(`${API}/admin/lead-attribution`,{headers,params:{days:d||days}}); setData(r.data); }
+    catch(x){ setErr(x?.response?.data?.detail || "Failed to load. Check you're signed in."); }
+    finally{ setBusy(false); }
+  };
+  useEffect(()=>{ load(90); /* eslint-disable-next-line */ },[]);
+  const pct = data && data.total_leads ? Math.round((data.attributed_leads/data.total_leads)*100) : 0;
+  const Bar = ({rows,testid}) => (
+    <table className="admin-table" data-testid={testid} style={{width:"100%"}}><tbody>
+      {rows.map((r,i)=>(<tr key={i} data-testid={`${testid}-row-${i}`}>
+        <td style={{width:"60%"}}>{r.key}</td>
+        <td style={{textAlign:"right",fontWeight:700}}>{r.count}</td>
+      </tr>))}
+      {rows.length===0 && <tr><td colSpan={2} style={{color:"#6e6e73"}}>No data yet.</td></tr>}
+    </tbody></table>
+  );
+  return (<AdminShell active="attribution"><div style={{padding:"1rem"}}>
+    <h1 style={{margin:"0 0 0.4rem"}}>🎯 Lead Attribution</h1>
+    <p style={{color:"#6e6e73",marginTop:0,maxWidth:720}}>Where your buyer &amp; seller leads come from. Tag any link you share (e.g. in the Social Agent Community) with <code>?utm_source=socialagent&amp;utm_medium=community</code> and it shows up here.</p>
+    <div style={{display:"flex",gap:8,margin:"1rem 0",alignItems:"center",flexWrap:"wrap"}}>
+      {[30,90,180,365].map(d=>(<button key={d} onClick={()=>{setDays(d);load(d);}} className={days===d?"btn btn-primary":"btn btn-ghost"} data-testid={`attr-days-${d}`} style={{padding:"0.35rem 0.8rem",fontSize:13}}>Last {d}d</button>))}
+    </div>
+    {err && <div style={{color:"#DC2626",marginBottom:"1rem"}} data-testid="attr-err">{err}</div>}
+    {busy && <div style={{color:"#6e6e73"}}>Loading…</div>}
+    {data && !busy && (<div data-testid="attribution-results">
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",margin:"0 0 1.5rem"}}>
+        <div className="paper" style={{flex:"1 1 160px"}}><div style={{fontSize:12,color:"#6e6e73"}}>Total leads</div><div style={{fontSize:28,fontWeight:800,color:"#0F2A5B"}} data-testid="attr-total">{data.total_leads}</div></div>
+        <div className="paper" style={{flex:"1 1 160px"}}><div style={{fontSize:12,color:"#6e6e73"}}>Source-attributed</div><div style={{fontSize:28,fontWeight:800,color:"#0F2A5B"}} data-testid="attr-attributed">{data.attributed_leads} <span style={{fontSize:14,color:"#6e6e73"}}>({pct}%)</span></div></div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16,marginBottom:"1.5rem"}}>
+        <div><h3 style={{margin:"0 0 0.5rem"}}>By source</h3><Bar rows={data.by_source} testid="attr-by-source"/></div>
+        <div><h3 style={{margin:"0 0 0.5rem"}}>By medium</h3><Bar rows={data.by_medium} testid="attr-by-medium"/></div>
+        <div><h3 style={{margin:"0 0 0.5rem"}}>By campaign</h3><Bar rows={data.by_campaign} testid="attr-by-campaign"/></div>
+      </div>
+      <h3 style={{margin:"0 0 0.5rem"}}>Recent attributed leads</h3>
+      <div style={{overflowX:"auto"}}><table className="admin-table" data-testid="attr-recent"><thead><tr>
+        <th>Date</th><th>Type</th><th>Name</th><th>Email</th><th>Source</th><th>Medium</th><th>Campaign</th><th>Landing</th>
+      </tr></thead><tbody>
+        {data.recent.filter(r=>r.utm_source||r.referrer_url).slice(0,50).map((r,i)=>(<tr key={i} data-testid={`attr-recent-row-${i}`}>
+          <td>{(r.created_at||"").slice(0,10)}</td><td>{r.type}</td><td>{r.name||"—"}</td><td style={{fontSize:12}}>{r.email||"—"}</td>
+          <td>{r.utm_source||"—"}</td><td>{r.utm_medium||"—"}</td><td>{r.utm_campaign||"—"}</td><td style={{fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.landing_path||"—"}</td>
+        </tr>))}
+      </tbody></table></div>
+    </div>)}
+  </div></AdminShell>);
+};
+
+
 const AdminConsent = () => {
   const {headers} = useAdmin();
   const [email,setEmail]=useState(""); const [data,setData]=useState(null); const [busy,setBusy]=useState(false); const [err,setErr]=useState("");
@@ -14762,6 +14816,7 @@ const WhereShouldILivePage = () => (
 
 
 function App() {
+  useEffect(() => { captureAttribution(); }, []);
   return (<BrowserRouter>
     {/* Global scroll-to-top on every route change — applies to ALL routes
         including DashboardMockup, VisualAgentDemo, MyJourney (which don't
@@ -14953,6 +15008,7 @@ function App() {
       <Route path="/admin/email-outbox" element={<AdminEmailOutbox/>}/>
       <Route path="/admin/saved-searches" element={<AdminSavedSearches/>}/>
       <Route path="/admin/consent" element={<AdminConsent/>}/>
+      <Route path="/admin/attribution" element={<AdminAttribution/>}/>
       <Route path="/admin/settings/reset" element={<AdminReset/>}/>
       <Route path="/admin/settings/password" element={<AdminChangePassword/>}/>
       <Route path="/admin/approvals" element={<AdminApprovals/>}/>

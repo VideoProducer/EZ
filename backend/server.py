@@ -300,6 +300,13 @@ class BuyerLead(BaseModel):
     form_lang: Optional[str] = "en"
     notes_en: Optional[str] = ""
     sizzle_source: Optional[str] = None      # Community-slug attribution — set when the visitor played a sizzle-reel on a community page before submitting
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_term: Optional[str] = None
+    utm_content: Optional[str] = None
+    referrer_url: Optional[str] = None
+    landing_path: Optional[str] = None
     turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token (validated + stripped server-side)
     created_at: str = Field(default_factory=now_iso)
 
@@ -325,6 +332,13 @@ class SellerLead(BaseModel):
     form_lang: Optional[str] = "en"
     reason_en: Optional[str] = ""
     sizzle_source: Optional[str] = None      # Community-slug attribution
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_term: Optional[str] = None
+    utm_content: Optional[str] = None
+    referrer_url: Optional[str] = None
+    landing_path: Optional[str] = None
     turnstile_token: Optional[str] = ""  # Cloudflare Turnstile bot-check token
     created_at: str = Field(default_factory=now_iso)
 
@@ -1507,6 +1521,42 @@ async def _send_lead_sms(*, kind: str, name: str, phone: str = "", detail: str =
     except Exception as e:
         logger.warning(f"[twilio] speed-to-lead SMS failed: {e}")
 
+async def _send_lead_autoresponse_sms(*, to_phone: str, name: str, casl_consent: bool) -> None:
+    """Instant speed-to-lead SMS to the LEAD (not Doug) acknowledging their
+    request. CASL-compliant: only sent when the lead gave express consent AND
+    left a phone number, factual (no advice / no value claims), identifies the
+    sender, and includes a STOP opt-out. Non-fatal — any failure is swallowed."""
+    phone = (to_phone or "").strip()
+    if not casl_consent or not phone:
+        return
+    if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER):
+        logger.info("[twilio] lead auto-response SMS skipped — Twilio env not configured")
+        return
+    # Normalise to E.164 (assume Canada +1 if a bare 10-digit number was given).
+    digits = re.sub(r"\D", "", phone)
+    if phone.startswith("+"):
+        to_e164 = "+" + digits
+    elif len(digits) == 10:
+        to_e164 = "+1" + digits
+    elif len(digits) == 11 and digits.startswith("1"):
+        to_e164 = "+" + digits
+    else:
+        logger.info(f"[twilio] lead auto-response SMS skipped — unparseable phone")
+        return
+    first = (name or "there").strip().split(" ")[0] or "there"
+    body = (f"Hi {first}, it's Doug LeMaire's team at EZtoFind.ca — thanks for your request. "
+            f"Doug will personally reply within one business day. Browse live BC listings anytime at eztofind.ca. "
+            f"Reply STOP to opt out.")
+    try:
+        from twilio.rest import Client
+        def _send():
+            client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+            return client.messages.create(body=body[:1500], from_=TWILIO_FROM_NUMBER, to=to_e164)
+        msg = await asyncio.to_thread(_send)
+        logger.info(f"[twilio] lead auto-response SMS sent sid={getattr(msg, 'sid', '?')} status={getattr(msg, 'status', '?')}")
+    except Exception as e:
+        logger.warning(f"[twilio] lead auto-response SMS failed: {e}")
+
 async def _notify_admin_of_lead(
     *, kind: str, to: str, subject: str, body_html: str, related_id: Optional[str] = None
 ):
@@ -1874,6 +1924,7 @@ async def create_buyer_lead(lead: BuyerLead, request: Request):
     # CASL-compliant transactional confirmation to the lead. Fires in the
     # background so submit latency stays sub-second.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/buyer"))
+    asyncio.create_task(_send_lead_autoresponse_sms(to_phone=lead.phone or "", name=lead.full_name or "", casl_consent=bool(lead.casl_consent)))
     return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
 
 @api.post("/leads/seller")
@@ -1934,7 +1985,49 @@ async def create_seller_lead(lead: SellerLead, request: Request):
     ))
     # CASL-compliant transactional confirmation to the lead.
     asyncio.create_task(_send_lead_confirmation(lead.email, lead.full_name, "/valuation-or-seller"))
+    asyncio.create_task(_send_lead_autoresponse_sms(to_phone=lead.phone or "", name=lead.full_name or "", casl_consent=bool(lead.casl_consent)))
     return {"success": True, "id": lead.id, "message": "Request received. Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays). Submitting this form does not create a REALTOR®-client relationship."}
+
+@api.get("/admin/lead-attribution")
+async def admin_lead_attribution(days: int = 90, _=Depends(verify_admin)):
+    """Lead-source attribution across buyer + seller leads: counts grouped by
+    utm_source / utm_medium / utm_campaign, plus the most recent attributed
+    leads. Powers the admin Attribution dashboard so Doug can see which
+    channels (e.g. the Social Agent Community) actually produce leads."""
+    from datetime import timedelta
+    since = (datetime.now(timezone.utc) - timedelta(days=max(1, min(days, 730)))).isoformat()
+    by_source, by_medium, by_campaign = {}, {}, {}
+    recent = []
+    total = attributed = 0
+    for cname, label in (("buyer_leads", "Buyer"), ("seller_leads", "Seller")):
+        async for d in db[cname].find(
+            {"created_at": {"$gte": since}},
+            {"created_at": 1, "full_name": 1, "email": 1, "utm_source": 1, "utm_medium": 1,
+             "utm_campaign": 1, "utm_content": 1, "referrer_url": 1, "landing_path": 1, "source": 1},
+        ):
+            total += 1
+            src = (d.get("utm_source") or "").strip() or "(direct / none)"
+            med = (d.get("utm_medium") or "").strip() or "(none)"
+            camp = (d.get("utm_campaign") or "").strip() or "(none)"
+            if d.get("utm_source"):
+                attributed += 1
+            by_source[src] = by_source.get(src, 0) + 1
+            by_medium[med] = by_medium.get(med, 0) + 1
+            by_campaign[camp] = by_campaign.get(camp, 0) + 1
+            recent.append({
+                "type": label, "created_at": d.get("created_at"),
+                "name": d.get("full_name") or "", "email": d.get("email") or "",
+                "utm_source": d.get("utm_source") or "", "utm_medium": d.get("utm_medium") or "",
+                "utm_campaign": d.get("utm_campaign") or "", "referrer_url": d.get("referrer_url") or "",
+                "landing_path": d.get("landing_path") or "",
+            })
+    recent.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    _rank = lambda m: sorted([{"key": k, "count": v} for k, v in m.items()], key=lambda x: -x["count"])
+    return {
+        "days": days, "total_leads": total, "attributed_leads": attributed,
+        "by_source": _rank(by_source), "by_medium": _rank(by_medium),
+        "by_campaign": _rank(by_campaign), "recent": recent[:100],
+    }
 
 # =============== UNSUBSCRIBE (working, updates lead records) ===============
 class UnsubscribeIn(BaseModel):

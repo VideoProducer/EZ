@@ -25,6 +25,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { Helmet } from "react-helmet-async";
 import { TurnstileWidget, getTurnstileToken } from "../App";
+import { getAttribution } from "../utils/attribution";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const CANONICAL = "https://eztofind.ca/family-viewing-party";
@@ -220,6 +221,7 @@ function LeadForm() {
     setState("submitting");
     try {
       await axios.post(`${API}/api/leads/buyer`, {
+        ...getAttribution(),
         full_name: f.name, email: f.email, phone: f.phone,
         property_type: f.property_type || "Any",
         areas: f.areas ? f.areas.split(",").map(x => x.trim()).filter(Boolean) : ["Any"],
