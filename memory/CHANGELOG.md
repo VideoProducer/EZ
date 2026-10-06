@@ -1,5 +1,15 @@
 # EZtoFind.ca — Changelog
 
+## June 2026 — Shareable Feature Showcase page (/showcase)
+
+- New `pages/FeatureShowcase.jsx` at route `/showcase`: a one-tap, social-ready marketing page bundling the three nobody-else-in-BC features — Doogie AI listing narration, Family Viewing Party TV casting, and ask-in-plain-words live MLS® search — each linking to its live demo. Includes a prominent one-tap share row (native Web Share → SMS + WhatsApp + copy-link fallbacks) sharing the `/showcase` URL, OG/Twitter meta, WebPage JSON-LD, and the standard BCFSA/CREA compliance footer. Factual copy only (no value claims/superlatives).
+- Generated a branded OG/preview image (navy+gold TV-cast + phone-remote + AI waveform motif) at `public/og/feature-showcase.jpg` (Gemini 3.1 Flash Image).
+- Added `/showcase` to `STATIC_URLS` (sitemap-static.xml) and a lazy route in App.js.
+- Verified via Playwright: H1, 3 feature cards, share buttons, prefilled WhatsApp link, and OG image file (200) all render; no console errors.
+- KNOWN CAVEAT (pre-existing, site-wide): `public/index.html` ships a static default `og:image` (doogie-og) that react-helmet-async appends to rather than replaces, so bots see a duplicate `og:image` with the default FIRST — meaning Facebook/LinkedIn/Twitter use the default Doogie image as the preview thumbnail, not the per-page banner. Affects every per-page OG on the site, not just /showcase. Proper fix = tested site-wide meta change (add data-rh to index.html defaults + guaranteed global fallback); deferred as a separate task. Share link/buttons/content all work regardless.
+- Needs a production redeploy to go live.
+
+
 ## June 2026 — Family Viewing Party "Text this to the family" share button
 
 - Added a `ShareFamily` component to the FVP hero (`pages/FamilyViewingParty.jsx`): a "💬 Text this to the family" button (native Web Share sheet on mobile → SMS composer + clipboard fallback on desktop) plus a WhatsApp pill. Both prefill a friendly message + the canonical `/family-viewing-party` URL. Shares the public page only (no PII, CASL-safe). Verified via Playwright: buttons render, WhatsApp href prefilled correctly, no console errors. Needs a redeploy to go live.

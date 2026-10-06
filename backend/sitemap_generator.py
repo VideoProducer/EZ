@@ -109,6 +109,7 @@ STATIC_URLS = [
     ("/relocating",        "0.9", "weekly"),
     ("/about",             "0.7", "monthly"),
     ("/realtor-network",   "0.8", "monthly"),
+    ("/showcase",          "0.8", "monthly"),
     ("/referral-request",  "0.9", "weekly"),
     ("/buyer",             "0.9", "weekly"),
     ("/seller",            "0.9", "weekly"),

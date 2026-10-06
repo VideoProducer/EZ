@@ -88,6 +88,7 @@ const TVDisplayPage = lazy(() => import("./pages/TVDisplayPage"));
 // Family Viewing Party — lead-gen landing page that showcases the TV
 // Pairing flow to families wanting to review listings on the big screen.
 const FamilyViewingParty = lazy(() => import("./pages/FamilyViewingParty"));
+const FeatureShowcase = lazy(() => import("./pages/FeatureShowcase"));
 // Reserve a bare loading state used by the Suspense fallback below —
 // same navy background as the shell so users don't see a white flash.
 const RouteFallback = () => (
@@ -14832,6 +14833,7 @@ function App() {
       <Route path="/tv" element={<Suspense fallback={<div style={{minHeight:"100vh",background:"#0F2A5B",color:"#fff",display:"grid",placeItems:"center",fontFamily:"Inter,sans-serif"}}>Loading TV mode…</div>}><TVDisplayPage/></Suspense>}/>
       {/* Family Viewing Party — indexable acquisition landing page. */}
       <Route path="/family-viewing-party" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FamilyViewingParty/></Suspense></AppLayout>}/>
+      <Route path="/showcase" element={<AppLayout><Suspense fallback={<RouteFallback/>}><FeatureShowcase/></Suspense></AppLayout>}/>
       <Route path="/communities" element={<Suspense fallback={<RouteFallback/>}><CommunitiesNext/></Suspense>}/>
       <Route path="/homes-for-sale/:slug" element={<AppLayout><HomesForSale/></AppLayout>}/>
       <Route path="/homes-for-sale/:slug/:facet" element={<AppLayout><HomesForSale/></AppLayout>}/>
