@@ -2,6 +2,49 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 
+export const HomeNextChambers = () => (
+  <section className="hn-section" data-testid="hn-chambers" style={{ textAlign: "center" }}>
+    <div className="hn-wrap">
+      <p style={{ fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6e6e73", margin: "0 0 22px" }}>
+        Proud Member of
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "40px 56px" }}>
+        <a
+          href="https://www.langleychamber.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Greater Langley Chamber of Commerce — member"
+          data-testid="hn-chamber-langley"
+          style={{ display: "inline-flex", alignItems: "center" }}
+        >
+          <img
+            src="/chamber-langley.png"
+            alt="Greater Langley Chamber of Commerce"
+            loading="lazy"
+            style={{ height: 76, width: "auto", objectFit: "contain" }}
+          />
+        </a>
+        <a
+          href="https://swrbot.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Surrey & White Rock Board of Trade — member"
+          data-testid="hn-chamber-swrbot"
+          style={{ display: "inline-flex", alignItems: "center" }}
+        >
+          <img
+            src="/chamber-swrbot.png"
+            alt="Surrey & White Rock Board of Trade — Member"
+            loading="lazy"
+            style={{ height: 104, width: "auto", objectFit: "contain" }}
+          />
+        </a>
+      </div>
+    </div>
+  </section>
+);
+
+
 export const HomeNextQuote = () => {
   return (
     <section className="hn-section" data-testid="hn-quote">

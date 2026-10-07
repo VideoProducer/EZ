@@ -5,7 +5,7 @@ import "../components/homenext/homeNext.css";
 import { HomeNextNav, HomeNextHero } from "../components/homenext/HomeNextHero";
 import { HomeNextTiles, HomeNextStats } from "../components/homenext/HomeNextTiles";
 import { HomeNextFeatured, HomeNextRegions } from "../components/homenext/HomeNextFeatured";
-import { HomeNextQuote, HomeNextTools, HomeNextDoug, HomeNextFooter, HomeNextSticky } from "../components/homenext/HomeNextExtras";
+import { HomeNextQuote, HomeNextTools, HomeNextDoug, HomeNextFooter, HomeNextSticky, HomeNextChambers } from "../components/homenext/HomeNextExtras";
 import { DoogieChat } from "../App";
 
 // Apple-style landing page. Rendered at `/` (isHome, indexable) and mirrored at
@@ -59,6 +59,7 @@ export default function HomeNext({ isHome = false }) {
         <HomeNextQuote/>
         <HomeNextTools/>
       </main>
+      <HomeNextChambers/>
       <HomeNextFooter/>
       <HomeNextSticky/>
       <DoogieChat/>
