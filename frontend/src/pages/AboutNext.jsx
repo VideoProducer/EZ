@@ -61,7 +61,11 @@ export default function AboutNext() {
       <Helmet>
         <title>About Doug LeMaire, REALTOR® — EZtoFind.ca</title>
         <meta name="robots" content="index, follow"/>
-        <meta name="description" content="Meet Doug LeMaire, REALTOR® — Fraser Property Management Realty Services Ltd. Thirteen years helping buyers and sellers across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>
+        <meta name="description" content="Meet Doug LeMaire, REALTOR® — 13 years with BC buyers and sellers across Greater Vancouver, the Fraser Valley and Sea-to-Sky. Educational, facts-first info."/>
+        <meta property="og:title" content="About Doug LeMaire, REALTOR® — EZtoFind.ca"/>
+        <meta property="og:description" content="Meet Doug LeMaire, REALTOR® — 13 years with BC buyers and sellers across Greater Vancouver, the Fraser Valley and Sea-to-Sky. Educational, facts-first info."/>
+        <meta name="twitter:title" content="About Doug LeMaire, REALTOR® — EZtoFind.ca"/>
+        <meta name="twitter:description" content="Meet Doug LeMaire, REALTOR® — 13 years helping BC buyers and sellers across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>
       </Helmet>
       <HomeNextNav/>
       <main>

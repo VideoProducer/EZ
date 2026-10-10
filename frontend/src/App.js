@@ -5202,6 +5202,10 @@ const RegionSearchBar = ({ regionKey, serveCities }) => {
   );
 };
 
+const regionMetaDesc = (title) => {
+  const s = `${title} real estate with Doug LeMaire, REALTOR®: live MLS® listings, community guides and market facts across Greater Vancouver, the Fraser Valley and Sea-to-Sky.`;
+  return s.length <= 160 ? s : s.slice(0, 157).replace(/\s+\S*$/, "") + "…";
+};
 const RegionPage = () => {
   const {slug} = useParams();
   const [communities, setCommunities] = useState({});
@@ -5231,7 +5235,7 @@ const RegionPage = () => {
     <div className="hn rp" data-testid={`region-page-${slug}`}>
       <SEO
         title={`${d.title} Real Estate — Homes, Communities & MLS® Listings | EZtoFind.ca`}
-        description={d.copy.slice(0, 155)}
+        description={regionMetaDesc(d.title)}
         path={`/regions/${slug}`}
         image={d.img}
       />

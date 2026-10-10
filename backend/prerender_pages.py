@@ -863,6 +863,11 @@ async def render_conversion_pages():
             f'<script type="application/ld+json">{json.dumps(article_schema)}</script>'
             f'<script type="application/ld+json">{json.dumps(breadcrumb_schema)}</script>'
         )
+        _is_lead = slug in ("buyer", "seller", "valuation")
+        _practice = (
+            '<p style="font-weight:600;color:#0F2A5B;margin:1.25rem 0 0">'
+            'Doug LeMaire, REALTOR®, serves Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>'
+        ) if _is_lead else ""
         body = (
             f'<div class="eyebrow">{esc(meta["eyebrow"])}</div>'
             f'<h1>{esc(meta["h1"])}</h1>'
@@ -870,8 +875,10 @@ async def render_conversion_pages():
             f'<b>As of</b> <time datetime="{date_modified}">{date_modified}</time></div>'
             f'<p style="font-size:0.78rem;color:#6B7280;margin:0.25rem 0 1rem;font-style:italic">General information only — not legal, tax, financial, or real-estate advice. Verify with a licensed BC professional before acting.</p>'
             f'<p style="font-size:1.05rem;line-height:1.75;color:#1F2937">{esc(meta["body"])}</p>'
+            f'{_practice}'
             f'<div class="sources"><div class="eyebrow" style="margin-bottom:0.85rem">Next Step</div>'
             f'<p style="margin:0"><a href="/{slug}" style="color:#0EA5E9;font-weight:600">{esc(meta["cta"])} →</a></p></div>'
+            f'{optin_form_html(slug) if _is_lead else ""}'
         )
         head_data = {
             "title": esc(meta["title"]),
@@ -1041,6 +1048,151 @@ async def render_homes_for_sale(db):
     print(f"  ✓ {count} homes-for-sale snapshots written to {PUBLIC_DIR}/snapshot/homes-for-sale/")
 
 
+# ── Static opt-in form + home snapshot (SEO/AI-citation task · Jun 2026) ──
+# A CASL-compliant, PIPA-transparent opt-in rendered into the citation
+# snapshots so non-JS crawlers see real form fields. Posts to the
+# honeypot-protected /api/leads/static endpoint. Content is NOT gated behind it.
+def optin_form_html(page: str) -> str:
+    verb = "sell" if page in ("seller", "valuation") else ("buy" if page == "buyer" else "buy or sell")
+    intent = "sell" if page in ("seller", "valuation") else "buy"
+    fld = ("display:block;width:100%;box-sizing:border-box;margin:0.35rem 0 0.9rem;"
+           "padding:0.6rem 0.75rem;border:1px solid #D2D2D7;border-radius:8px;font-size:1rem")
+    chk = "display:flex;gap:0.55rem;align-items:flex-start;margin:0.5rem 0;font-size:0.92rem;color:#374151"
+    return (
+        '<section style="background:#F8FAFC;border:1px solid rgba(15,42,91,0.12);border-radius:16px;'
+        'padding:1.75rem;margin-top:2.25rem" data-testid="optin">'
+        '<h2 style="margin-top:0">Would you like to speak with Doug? No obligation.</h2>'
+        '<p style="font-weight:600;color:#0F2A5B;margin:0 0 0.5rem">'
+        'Doug LeMaire, REALTOR®, serves Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>'
+        '<p style="font-size:0.85rem;color:#6B7280;margin:0 0 1.1rem">'
+        'Why we ask: EZtoFind.ca collects your name and email only to respond to this enquiry '
+        '(PIPA). We don\'t sell your information. If you opt in to updates below, every email '
+        'includes a one-click unsubscribe (CASL).</p>'
+        f'<form method="POST" action="{SITE}/api/leads/static">'
+        f'<input type="hidden" name="page" value="{esc(page)}"/>'
+        f'<input type="hidden" name="intent" value="{intent}"/>'
+        '<input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" '
+        'style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>'
+        f'<label style="font-weight:600;color:#1F2937">Name<input type="text" name="full_name" required style="{fld}"/></label>'
+        f'<label style="font-weight:600;color:#1F2937">Email<input type="email" name="email" required style="{fld}"/></label>'
+        f'<label style="font-weight:600;color:#1F2937">I\'m looking to {verb} in<input type="text" name="interest_area" '
+        f'placeholder="e.g. Surrey, Langley, Squamish" style="{fld}"/></label>'
+        f'<label style="{chk}"><input type="checkbox" name="working_with_realtor" value="on"/>'
+        '<span>I\'m currently represented by another REALTOR® under a written contract.</span></label>'
+        f'<label style="{chk}"><input type="checkbox" name="pipa_ack" value="on" required/>'
+        '<span>I agree EZtoFind.ca may use my information to respond to this enquiry. <b>(required)</b></span></label>'
+        f'<label style="{chk}"><input type="checkbox" name="casl_consent" value="on"/>'
+        '<span>Optional: email me occasional BC market updates. I can unsubscribe anytime.</span></label>'
+        '<button type="submit" style="margin-top:0.75rem;background:#0F2A5B;color:#fff;border:0;'
+        'border-radius:999px;padding:0.7rem 1.6rem;font-size:1rem;font-weight:600;cursor:pointer">'
+        'Send to Doug</button>'
+        '</form>'
+        '<p style="font-size:0.8rem;color:#6B7280;margin:1rem 0 0;font-style:italic">'
+        'Submitting this form is an enquiry only and does not create an agency or client relationship. '
+        'A representation agreement is established in writing. General information only — not advice.</p>'
+        '</section>'
+    )
+
+
+# Combined entity graph for the prerendered home snapshot (mirrors
+# frontend/src/seo/entity.js and /.well-known/ai.json — keep in sync).
+_DOUG_SAMEAS = [
+    "https://maps.app.goo.gl/u8Fx3yDnSCyPUmGr9",
+    "https://www.fraserpropertymanagement.com/",
+    "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790",
+    "https://www.realtor.ca/agent/2126195/doug-lemaire-1-22374-lougheed-hwy-maple-ridge-british-columbia-v2x2t5",
+    "https://www.linkedin.com/in/eztofind/",
+    "https://www.youtube.com/@EZtoFindCA",
+    "https://www.facebook.com/EZtoFind.ca",
+    "https://www.instagram.com/eztofind.ca/",
+    "https://x.com/EZtoFindca",
+]
+DOUG_ENTITY_GRAPH = {
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": ["RealEstateAgent", "LocalBusiness"],
+            "@id": f"{SITE}/#doug",
+            "name": "Doug LeMaire, REALTOR®",
+            "jobTitle": "REALTOR®",
+            "image": f"{SITE}/doug-headshot-2026.jpg",
+            "url": f"{SITE}/about",
+            "telephone": "+1-604-787-0851",
+            "email": "info@eztofind.ca",
+            "priceRange": "$$",
+            "address": {
+                "@type": "PostalAddress", "streetAddress": "1 – 22374 Lougheed Hwy",
+                "addressLocality": "Maple Ridge", "addressRegion": "BC",
+                "postalCode": "V2X 2T5", "addressCountry": "CA",
+            },
+            "worksFor": {"@type": "RealEstateOrganization", "name": "Fraser Property Management Realty Services Ltd."},
+            "areaServed": [
+                {"@type": "AdministrativeArea", "name": "Greater Vancouver, British Columbia"},
+                {"@type": "AdministrativeArea", "name": "Fraser Valley, British Columbia"},
+                {"@type": "AdministrativeArea", "name": "Sea-to-Sky Corridor, British Columbia"},
+            ],
+            "knowsAbout": ["Detached homes", "Luxury real estate", "Equestrian and acreage properties",
+                           "Residential strata", "Probate and estate sales"],
+            "identifier": {"@type": "PropertyValue", "propertyID": "BCFSA Licence Number", "value": "167790",
+                           "url": "https://www.bcfsa.ca/public-resources/registrant-search?keyword=167790"},
+            "description": ("Doug LeMaire, REALTOR® with Fraser Property Management Realty Services Ltd., has spent "
+                            "13 years helping buyers and sellers across Greater Vancouver, the Fraser Valley and the "
+                            "Sea-to-Sky Corridor."),
+            "inLanguage": "en-CA",
+            "sameAs": _DOUG_SAMEAS,
+        },
+        {
+            "@type": "Organization",
+            "@id": f"{SITE}/#organization",
+            "name": "EZtoFind.ca", "url": SITE, "logo": f"{SITE}/images/og-default.png",
+            "founder": {"@id": f"{SITE}/#doug"}, "employee": {"@id": f"{SITE}/#doug"},
+            "areaServed": {"@type": "AdministrativeArea", "name": "British Columbia, Canada"},
+            "description": ("BC real estate information and property-search platform — a statute-cited glossary, "
+                            "community profiles, live CREA DDF® MLS® search, and educational guidance from Doug "
+                            "LeMaire, REALTOR®."),
+            "inLanguage": "en-CA", "sameAs": _DOUG_SAMEAS,
+        },
+    ],
+}
+
+
+async def render_home():
+    """Prerendered home mirror at /snapshot/index.html (canonical → /). Exposes
+    the valuation opt-in form fields in initial HTML for non-JS crawlers and
+    carries the combined RealEstateAgent+LocalBusiness+Organization graph."""
+    canonical = f"{SITE}/"
+    head_data = {
+        "title": "Search BC MLS® Listings — Greater Vancouver, Fraser Valley & Sea-to-Sky | EZtoFind.ca",
+        "description": ("Live CREA DDF® MLS® search, a free educational home-value estimate, community guides and a "
+                        "statute-cited glossary. Doug LeMaire, REALTOR® serves Greater Vancouver, the Fraser Valley "
+                        "& Sea-to-Sky.")[:160],
+        "canonical": canonical,
+        "og_type": "website",
+        "og_image": f"{SITE}/images/og-default.png",
+        "schema_blocks": f'<script type="application/ld+json">{json.dumps(DOUG_ENTITY_GRAPH)}</script>',
+    }
+    body = (
+        '<div class="eyebrow">BC Real Estate — Easy to Find</div>'
+        '<h1>Search BC MLS® Listings — Greater Vancouver, Fraser Valley &amp; Sea-to-Sky</h1>'
+        '<p style="font-weight:600;color:#0F2A5B;margin:0.75rem 0">Doug LeMaire, REALTOR®, serves Greater '
+        'Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>'
+        '<p style="font-size:1.05rem;line-height:1.75">EZtoFind.ca pairs the live CREA DDF® MLS® feed with a '
+        'statute-cited glossary, 240 community profiles and plain-language answers — so you can research BC real '
+        'estate first, and reach a licensed REALTOR® only when you\'re ready. General information only, not advice.</p>'
+        '<p style="margin:1.25rem 0"><a href="/listings" style="color:#0EA5E9;font-weight:700;text-decoration:none">'
+        '→ Search live BC MLS® listings</a> &nbsp;·&nbsp; '
+        '<a href="/valuation" style="color:#0EA5E9;font-weight:700;text-decoration:none">Free home-value estimate</a> '
+        '&nbsp;·&nbsp; <a href="/communities" style="color:#0EA5E9;font-weight:700;text-decoration:none">'
+        'Browse communities</a></p>'
+        + optin_form_html("valuation")
+    )
+    page = HEADER_HTML.format(**head_data) + body + FOOTER_HTML
+    out_dir = PUBLIC_DIR / "snapshot"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "index.html").write_text(page, encoding="utf-8")
+    print(f"  ✓ home snapshot written to {PUBLIC_DIR}/snapshot/index.html")
+
+
 async def main():
     import sys
     sys.path.insert(0, '/app/backend')
@@ -1052,6 +1204,7 @@ async def main():
     await render_homes_for_sale(db)
     await render_insights(db)
     await render_conversion_pages()
+    await render_home()
     write_snapshots_sitemap()
     print("Prerender complete.")
 

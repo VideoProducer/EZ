@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "../components/homenext/homeNext.css";
 import { HomeNextNav, HomeNextHero } from "../components/homenext/HomeNextHero";
 import { HomeNextTiles, HomeNextStats } from "../components/homenext/HomeNextTiles";
@@ -11,6 +11,12 @@ import { DoogieChat } from "../App";
 // Apple-style landing page. Rendered at `/` (isHome, indexable) and mirrored at
 // /home-next (noindex preview) for side-by-side comparison.
 export default function HomeNext({ isHome = false }) {
+  const nav = useNavigate();
+  const [addr, setAddr] = useState("");
+  const handleVal = (e) => {
+    e.preventDefault();
+    nav(addr.trim() ? `/valuation?address=${encodeURIComponent(addr.trim())}` : "/valuation");
+  };
   // The static index.html ships an "index, follow" robots tag. Only the preview
   // (/home-next) should hide from crawlers; the promoted homepage stays indexable.
   useEffect(() => {
@@ -28,11 +34,26 @@ export default function HomeNext({ isHome = false }) {
         {isHome
           ? <link rel="canonical" href="https://eztofind.ca/"/>
           : <meta name="robots" content="noindex, nofollow"/>}
-        <meta name="description" content="Live MLS® listings across British Columbia, a free home value estimate, and Doogie — plain-language answers to BC real estate questions."/>
+        <meta name="description" content="Educational BC real estate: live MLS® search, a free home-value estimate and community guides across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>
+        {isHome && <meta property="og:title" content="Search BC MLS® Real Estate Listings — Live CREA DDF® Feed | EZtoFind.ca"/>}
+        {isHome && <meta property="og:description" content="Educational BC real estate: live MLS® search, a free home-value estimate and community guides across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>}
+        {isHome && <meta name="twitter:title" content="Search BC MLS® Real Estate Listings | EZtoFind.ca"/>}
+        {isHome && <meta name="twitter:description" content="Educational BC real estate: live MLS® search, a free home-value estimate and community guides across Greater Vancouver, the Fraser Valley and Sea-to-Sky."/>}
       </Helmet>
       <HomeNextNav/>
       <main>
         <HomeNextHero/>
+        <section data-testid="home-valuation-cta" style={{ background: "#0F2A5B", color: "#fff", padding: "52px 0" }}>
+          <div className="hn-wrap" style={{ textAlign: "center", maxWidth: 640 }}>
+            <p style={{ textTransform: "uppercase", letterSpacing: "0.14em", fontSize: 13, opacity: 0.75, margin: 0 }}>Free · No obligation</p>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,3.4vw,38px)", margin: "10px 0 8px" }}>What's your BC home worth?</h2>
+            <p style={{ opacity: 0.85, fontSize: 16, lineHeight: 1.6, margin: "0 auto 22px", maxWidth: 520 }}>A REALTOR®-prepared estimate from recent MLS® comparables in your neighbourhood. General educational estimate — not an appraisal.</p>
+            <form onSubmit={handleVal} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }} data-testid="home-valuation-form">
+              <input value={addr} onChange={e => setAddr(e.target.value)} name="address" placeholder="Enter your property address" aria-label="Property address" style={{ flex: "1 1 320px", maxWidth: 420, padding: "0.8rem 1rem", borderRadius: 999, border: "0", fontSize: 16 }} data-testid="home-valuation-address"/>
+              <button type="submit" className="hn-pill hn-pill--lg" style={{ background: "#fff", color: "#0F2A5B", fontWeight: 700 }} data-testid="home-valuation-submit">Get my estimate →</button>
+            </form>
+          </div>
+        </section>
         <HomeNextTiles/>
         <HomeNextStats/>
         <HomeNextFeatured/>

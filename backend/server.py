@@ -1842,6 +1842,90 @@ async def _send_lead_confirmation(to_email: str, full_name: str, form_route: str
     except Exception as e:
         logger.warning(f"lead confirmation email failed for {to_email}: {e}")
 
+@api.post("/leads/static")
+async def create_static_lead(request: Request):
+    """CAPTCHA-free, honeypot-protected lead intake for the static citation
+    snapshots (/buyer, /seller, /valuation and the home mirror). Non-JS
+    crawlers can see and submit these fields. PIPA ack required; CREA
+    Article 16 hard-block respected. Routes into the same buyer_leads /
+    seller_leads collections + email notification as the main SPA forms."""
+    from fastapi.responses import RedirectResponse
+    form = await request.form()
+    def g(k: str) -> str:
+        return (form.get(k) or "").strip()
+    def on(k: str) -> bool:
+        return (form.get(k) or "").strip().lower() in ("on", "true", "1", "yes")
+
+    page = g("page") or "contact"
+    back = f"/{page}"
+
+    # Honeypot — real humans never fill 'company'. Silently accept + drop.
+    if g("company"):
+        return RedirectResponse(url=f"{back}?submitted=1", status_code=303)
+
+    full_name, email = g("full_name"), g("email")
+    if not full_name or not email:
+        return RedirectResponse(url=f"{back}?error=missing", status_code=303)
+    if not on("pipa_ack"):
+        return RedirectResponse(url=f"{back}?error=pipa", status_code=303)
+    # CREA Article 16 — do not solicit clients already under written contract.
+    if on("working_with_realtor"):
+        return RedirectResponse(url=f"{back}?blocked=1", status_code=303)
+
+    intent = g("intent").lower()
+    interest_area = g("interest_area")
+    casl = on("casl_consent")
+    collection_name = "seller_leads" if intent == "sell" else "buyer_leads"
+    lead_id = str(uuid.uuid4())
+    verb = "sell" if intent == "sell" else "buy"
+    notes = f"Static {page} opt-in — looking to {verb}" + (f" in {interest_area}" if interest_area else "") + "."
+    doc = {
+        "id": lead_id,
+        "full_name": full_name,
+        "email": email,
+        "phone": "",
+        "intent": verb,
+        "interest_area": interest_area,
+        "areas": [interest_area] if interest_area else [],
+        "notes": notes,
+        "casl_consent": casl,
+        "pipa_ack": True,
+        "source": f"static_{page}",
+        "status": "new",
+        "created_at": now_iso(),
+        **get_consent_meta(request),
+        **compute_consent_fields(casl, True),
+        "unsubscribed": False,
+    }
+    await db[collection_name].insert_one(doc)
+
+    if casl:
+        try:
+            await campaign_record_consent(email, "welcome_series", request,
+                opt_in_text=f"Static {page} opt-in — I consent to receive commercial electronic messages (CASL).",
+                source=collection_name)
+        except Exception as e:
+            logger.warning(f"[campaigns] static opt-in welcome_series failed: {e}")
+
+    import html as _html
+    body_html = (
+        f"<p><strong>Name:</strong> {_html.escape(full_name, quote=True)}<br/>"
+        f"<strong>Email:</strong> {_html.escape(email, quote=True)}<br/>"
+        f"<strong>Looking to:</strong> {_html.escape(verb, quote=True)}<br/>"
+        f"<strong>Area:</strong> {_html.escape(interest_area or '—', quote=True)}<br/>"
+        f"<strong>Marketing consent (CASL):</strong> {'Yes' if casl else 'No'}<br/>"
+        f"<strong>Source:</strong> static {_html.escape(page, quote=True)} snapshot</p>"
+    )
+    asyncio.create_task(_triage_and_notify_lead(
+        kind="Website Enquiry", collection_name=collection_name, lead_id=lead_id,
+        to=INFO_MAILBOX,
+        subject=f"🐾 New website enquiry — {full_name} ({verb})",
+        body_html=body_html,
+    ))
+    logger.info(f"Static lead ({page}/{verb}) from {email} → {collection_name}")
+    return RedirectResponse(url=f"{back}?submitted=1", status_code=303)
+
+
 @api.post("/leads/buyer")
 async def create_buyer_lead(lead: BuyerLead, request: Request):
     await verify_turnstile(getattr(lead, "turnstile_token", "") or "", request)
