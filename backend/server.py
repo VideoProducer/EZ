@@ -1930,8 +1930,15 @@ async def create_static_lead(request: Request):
                 + (f"\n📞 Tap to call back: {phone}" if phone else "\n(No phone — reply by email)")),
         crm_path="/admin/sellers" if collection_name == "seller_leads" else "/admin/buyers",
     ))
+    # Instant CASL-compliant acknowledgement SMS to the LEAD (only fires when
+    # they gave express consent AND left a phone — helper enforces STOP opt-out).
+    asyncio.create_task(_send_lead_autoresponse_sms(to_phone=phone, name=full_name, casl_consent=casl))
     logger.info(f"Static lead ({page}/{verb}) from {email} → {collection_name}")
-    return RedirectResponse(url="/thank-you?status=submitted", status_code=303)
+    from urllib.parse import quote as _q
+    ty = f"/thank-you?status=submitted&intent={verb}"
+    if interest_area:
+        ty += f"&area={_q(interest_area)}"
+    return RedirectResponse(url=ty, status_code=303)
 
 
 @api.post("/leads/buyer")
@@ -11036,6 +11043,24 @@ async def bot_prerender(path: str, request: Request):
 
     try:
         svc = _gp()
+        # Static-snapshot short-circuit for region pages: serve the prebuilt
+        # /snapshot/regions/{slug}.html, which carries a single clean per-region
+        # og:image + entity schema (no duplicate tags) and needs no live render.
+        # Same facts as the SPA (canonical → SPA) — no cloaking.
+        import re as _re
+        from pathlib import Path as _Path
+        _m = _re.match(r"^/regions/([a-z0-9-]+)/?$", full_path)
+        if _m:
+            _snap = _Path(__file__).resolve().parent.parent / "frontend" / "public" / "snapshot" / "regions" / f"{_m.group(1)}.html"
+            if _snap.exists():
+                _html = _snap.read_text(encoding="utf-8")
+                await svc.log_hit(cache_key, ua, "HIT", 200, 0, "static_region_snapshot")
+                return Response(content=_html, status_code=200, headers={
+                    "X-Prerender-Cache": "HIT",
+                    "X-Prerender-Kind": "region-snapshot",
+                    "Cache-Control": "public, max-age=600, s-maxage=1200",
+                    "Content-Type": "text/html; charset=utf-8",
+                })
         # Fast path: cache lookup only.  Never trigger a synchronous render on
         # the request path — Cloudflare kills the connection at ~2s and cold
         # renders take 3-6s.  On cache miss we schedule a background render
