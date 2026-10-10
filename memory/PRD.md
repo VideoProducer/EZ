@@ -18,6 +18,10 @@ OpenAI TTS/Whisper (Emergent key), Claude Sonnet Vision (Emergent key), Gemini N
 See `/app/memory/test_credentials.md` (Admin: doug@eztofind.ca).
 
 ## Implemented (recent)
+- 2026-06: **Region snapshots + branded Thank-You page + richer SMS alerts.**
+  - **Region snapshots**: new `render_regions()` (prerender_pages.py) writes `/snapshot/regions/{greater-vancouver,fraser-valley,sea-to-sky}.html` — each with its unique `og:image` (`/images/og/{slug}.jpg`), the `RealEstateAgent+LocalBusiness+Organization` `@graph`, canonical → `/regions/{slug}`, educational blurb + practice-area line + opt-in form. Added to `main()` and `sitemap-snapshots.xml` (959 URLs). Same sitemap-mirror pattern as glossary/community snapshots (search-engine mirrors; canonical back to the SPA).
+  - **Thank-You page**: new `pages/ThankYou.jsx` + route `/thank-you` (lazy, noindex). Reads `?status=` → **submitted** (confirmation), **represented** (CREA Article 16 respectful message), **error**. `POST /api/leads/static` now redirects all outcomes to `/thank-you?status=...` (replaced the old `?submitted=1`). Branded with HomeNextNav + footer.
+  - **SMS detail**: static-lead `_send_lead_sms` detail now includes area + intent and an explicit tappable "📞 Tap to call back: {phone}" line (fallback "(No phone — reply by email)"). Verified: submit/represented/error redirects, region OG/schema present, thank-you renders, Twilio 201.
 - 2026-06: **CTA polish + lead SMS + region OG (follow-ups to the SEO task).**
   - Home valuation CTA: reworded to "What's your home worth?", fixed the unreadable dark-on-navy heading (now navy on a soft #F4F8FD→#EAF1FB gradient, balanced + readable), added a CASL+PIPA disclaimer (`data-testid=home-valuation-disclaimer`). Verified desktop + mobile, no overflow.
   - Lead Alerts: `POST /api/leads/static` now captures an optional `phone` and fires `_send_lead_sms(...)` to Doug (same path as the main forms) in addition to the email. Snapshot opt-in forms gained the optional phone field. Verified: Twilio returned 201 / "SMS sent".

@@ -26,6 +26,7 @@ import {
   trackArticle16Block, trackThankYouView, trackStepComplete, withConversionContext,
 } from "./utils/conversionAnalytics";
 const MyJourney = lazy(() => import("./pages/MyJourney"));
+const ThankYou = lazy(() => import("./pages/ThankYou"));
 import PIPACookieBanner from "./components/PIPACookieBanner";
 import AdminComingSoon, { ComingSoonHero } from "./pages/ComingSoon";
 import YouMayAlsoBeLookingFor from "./components/YouMayAlsoBeLookingFor";
@@ -15025,6 +15026,7 @@ function App() {
       <Route path="/join" element={<Navigate to="/realtor-network#apply" replace/>}/>
       <Route path="/realtors/credentials/:id" element={<AppLayout><RealtorCredentials/></AppLayout>}/>
       <Route path="/about" element={<Suspense fallback={<RouteFallback/>}><AboutNext/></Suspense>}/>
+      <Route path="/thank-you" element={<Suspense fallback={<RouteFallback/>}><ThankYou/></Suspense>}/>
       <Route path="/contact" element={<AppLayout><Suspense fallback={<div style={{padding:"3rem",textAlign:"center",fontFamily:"Inter,sans-serif",color:"var(--muted)"}}>Loading…</div>}><LuxuryQuietContact/></Suspense></AppLayout>}/>
       <Route path="/contact-legacy" element={<AppLayout><Contact/></AppLayout>}/>
       <Route path="/sac" element={<AppLayout><Suspense fallback={<div>Loading...</div>}><SacLanding/></Suspense></AppLayout>}/>

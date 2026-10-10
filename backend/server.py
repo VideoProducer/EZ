@@ -1857,20 +1857,19 @@ async def create_static_lead(request: Request):
         return (form.get(k) or "").strip().lower() in ("on", "true", "1", "yes")
 
     page = g("page") or "contact"
-    back = f"/{page}"
 
     # Honeypot — real humans never fill 'company'. Silently accept + drop.
     if g("company"):
-        return RedirectResponse(url=f"{back}?submitted=1", status_code=303)
+        return RedirectResponse(url="/thank-you?status=submitted", status_code=303)
 
     full_name, email = g("full_name"), g("email")
     if not full_name or not email:
-        return RedirectResponse(url=f"{back}?error=missing", status_code=303)
+        return RedirectResponse(url="/thank-you?status=error", status_code=303)
     if not on("pipa_ack"):
-        return RedirectResponse(url=f"{back}?error=pipa", status_code=303)
+        return RedirectResponse(url="/thank-you?status=error", status_code=303)
     # CREA Article 16 — do not solicit clients already under written contract.
     if on("working_with_realtor"):
-        return RedirectResponse(url=f"{back}?blocked=1", status_code=303)
+        return RedirectResponse(url="/thank-you?status=represented", status_code=303)
 
     intent = g("intent").lower()
     interest_area = g("interest_area")
@@ -1927,11 +1926,12 @@ async def create_static_lead(request: Request):
     # when the visitor left phone blank; phone is included when provided.
     asyncio.create_task(_send_lead_sms(
         kind="Website Enquiry", name=full_name, phone=phone,
-        detail=f"Wants to {verb}" + (f" in {interest_area}" if interest_area else "") + f" · via {page}",
+        detail=(f"Wants to {verb}" + (f" in {interest_area}" if interest_area else "") + f" · via {page}"
+                + (f"\n📞 Tap to call back: {phone}" if phone else "\n(No phone — reply by email)")),
         crm_path="/admin/sellers" if collection_name == "seller_leads" else "/admin/buyers",
     ))
     logger.info(f"Static lead ({page}/{verb}) from {email} → {collection_name}")
-    return RedirectResponse(url=f"{back}?submitted=1", status_code=303)
+    return RedirectResponse(url="/thank-you?status=submitted", status_code=303)
 
 
 @api.post("/leads/buyer")

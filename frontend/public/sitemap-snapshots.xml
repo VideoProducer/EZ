@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- EZtoFind.ca · prerendered snapshot sitemap · regenerated 2026-10-10 · 956 URLs (glossary + community + insights + conversion pages) -->
+<!-- EZtoFind.ca · prerendered snapshot sitemap · regenerated 2026-10-10 · 959 URLs (glossary + community + insights + conversion pages) -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://eztofind.ca/snapshot/buyer.html</loc>
@@ -5724,6 +5724,24 @@
     <lastmod>2026-10-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/snapshot/regions/fraser-valley.html</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/snapshot/regions/greater-vancouver.html</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://eztofind.ca/snapshot/regions/sea-to-sky.html</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://eztofind.ca/snapshot/seller.html</loc>

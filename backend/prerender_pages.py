@@ -1194,6 +1194,52 @@ async def render_home():
     print(f"  ✓ home snapshot written to {PUBLIC_DIR}/snapshot/index.html")
 
 
+async def render_regions():
+    """Prerendered snapshots for /regions/* so every social scraper (incl.
+    non-JS Facebook/LinkedIn) gets the correct per-region OG image + the
+    RealEstateAgent+LocalBusiness+Organization graph. Canonical → SPA URL."""
+    REGIONS = [
+        ("greater-vancouver", "Greater Vancouver",
+         "Greater Vancouver (Metro Vancouver) spans Vancouver, Burnaby, Richmond, Surrey, Coquitlam, "
+         "New Westminster, the Tri-Cities and the North Shore on British Columbia's south coast. Housing "
+         "ranges from downtown concrete strata to detached homes and waterfront properties."),
+        ("fraser-valley", "Fraser Valley",
+         "The Fraser Valley stretches east of Metro Vancouver along the Fraser River and includes Surrey, "
+         "Langley, Abbotsford, Chilliwack, Mission and Maple Ridge. It is known for a mix of residential "
+         "neighbourhoods, agricultural land and acreage/equestrian properties."),
+        ("sea-to-sky", "Sea-to-Sky Corridor",
+         "The Sea-to-Sky Corridor follows Highway 99 north from West Vancouver through Squamish, Whistler "
+         "and Pemberton. Property types range from townhomes and chalets to recreational and acreage holdings."),
+    ]
+    out_dir = PUBLIC_DIR / "snapshot" / "regions"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for slug, title, blurb in REGIONS:
+        canonical = f"{SITE}/regions/{slug}"
+        desc = (f"{title} real estate with Doug LeMaire, REALTOR®: live MLS® listings, community guides and "
+                f"market facts across Greater Vancouver, the Fraser Valley and Sea-to-Sky.")[:160]
+        head_data = {
+            "title": f"{title} Real Estate — Homes, Communities & MLS® Listings | EZtoFind.ca",
+            "description": desc,
+            "canonical": canonical,
+            "og_type": "website",
+            "og_image": f"{SITE}/images/og/{slug}.jpg",
+            "schema_blocks": f'<script type="application/ld+json">{json.dumps(DOUG_ENTITY_GRAPH)}</script>',
+        }
+        body = (
+            f'<div class="eyebrow">BC Region</div>'
+            f'<h1>{esc(title)} Real Estate</h1>'
+            '<p style="font-weight:600;color:#0F2A5B;margin:0.75rem 0">Doug LeMaire, REALTOR®, serves Greater '
+            'Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor.</p>'
+            f'<p style="font-size:1.05rem;line-height:1.75;color:#1F2937">{esc(blurb)} General information only, not advice.</p>'
+            f'<p style="margin:1.25rem 0"><a href="/regions/{slug}" style="color:#0EA5E9;font-weight:700;text-decoration:none">'
+            f'→ Explore {esc(title)} communities and live MLS® listings</a></p>'
+            + optin_form_html(f"region-{slug}")
+        )
+        page = HEADER_HTML.format(**head_data) + body + FOOTER_HTML
+        (out_dir / f"{slug}.html").write_text(page, encoding="utf-8")
+    print(f"  ✓ {len(REGIONS)} region snapshots written to {PUBLIC_DIR}/snapshot/regions/")
+
+
 async def main():
     import sys
     sys.path.insert(0, '/app/backend')
@@ -1206,6 +1252,7 @@ async def main():
     await render_insights(db)
     await render_conversion_pages()
     await render_home()
+    await render_regions()
     write_snapshots_sitemap()
     print("Prerender complete.")
 
