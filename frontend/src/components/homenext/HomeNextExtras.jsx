@@ -25,10 +25,10 @@ export const HomeNextChambers = () => (
           />
         </a>
         <a
-          href="https://swrbot.com/"
+          href="https://business.swrbot.com/list/member/doug-lemaire-realtor-48326"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Surrey & White Rock Board of Trade"
+          aria-label="Surrey & White Rock Board of Trade — Doug LeMaire member profile"
           data-testid="hn-chamber-swrbot"
           style={{ display: "inline-flex", alignItems: "center" }}
         >
