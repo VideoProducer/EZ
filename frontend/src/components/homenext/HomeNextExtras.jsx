@@ -10,7 +10,7 @@ export const HomeNextChambers = () => (
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: "40px 56px" }}>
         <a
-          href="https://langleychamber.chambermaster.com/mic/members/details/doug-lemaire-realtor-17582?memid=17582&repid=23290"
+          href="https://business.langleychamber.com/list/member/doug-lemaire-realtor-17582"
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Greater Langley Chamber of Commerce — Doug LeMaire member profile"
