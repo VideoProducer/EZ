@@ -5237,7 +5237,7 @@ const RegionPage = () => {
         title={`${d.title} Real Estate — Homes, Communities & MLS® Listings | EZtoFind.ca`}
         description={regionMetaDesc(d.title)}
         path={`/regions/${slug}`}
-        image={d.img}
+        image={`https://eztofind.ca/images/og/${slug}.jpg`}
       />
       <section className="rp-hero" data-testid="region-hero">
         <div className="rp-hero__img" style={{ backgroundImage: `url('${d.img}')` }} role="img" aria-label={d.title}/>

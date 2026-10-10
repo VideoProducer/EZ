@@ -43,15 +43,16 @@ export default function HomeNext({ isHome = false }) {
       <HomeNextNav/>
       <main>
         <HomeNextHero/>
-        <section data-testid="home-valuation-cta" style={{ background: "#0F2A5B", color: "#fff", padding: "52px 0" }}>
-          <div className="hn-wrap" style={{ textAlign: "center", maxWidth: 640 }}>
-            <p style={{ textTransform: "uppercase", letterSpacing: "0.14em", fontSize: 13, opacity: 0.75, margin: 0 }}>Free · No obligation</p>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,3.4vw,38px)", margin: "10px 0 8px" }}>What's your BC home worth?</h2>
-            <p style={{ opacity: 0.85, fontSize: 16, lineHeight: 1.6, margin: "0 auto 22px", maxWidth: 520 }}>A REALTOR®-prepared estimate from recent MLS® comparables in your neighbourhood. General educational estimate — not an appraisal.</p>
+        <section data-testid="home-valuation-cta" style={{ background: "linear-gradient(180deg,#F4F8FD 0%,#EAF1FB 100%)", borderTop: "1px solid rgba(15,42,91,0.08)", borderBottom: "1px solid rgba(15,42,91,0.08)", padding: "60px 0" }}>
+          <div className="hn-wrap" style={{ textAlign: "center", maxWidth: 620 }}>
+            <p style={{ textTransform: "uppercase", letterSpacing: "0.16em", fontSize: 12, fontWeight: 700, color: "#0EA5E9", margin: 0 }}>Free · No obligation</p>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", color: "#0F2A5B", fontWeight: 700, fontSize: "clamp(28px,3.6vw,40px)", lineHeight: 1.12, margin: "12px 0 10px" }}>What's your home worth?</h2>
+            <p style={{ color: "#51607A", fontSize: 16, lineHeight: 1.6, margin: "0 auto 24px", maxWidth: 500 }}>A REALTOR®-prepared estimate from recent MLS® comparables in your neighbourhood. General educational estimate — not an appraisal.</p>
             <form onSubmit={handleVal} style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }} data-testid="home-valuation-form">
-              <input value={addr} onChange={e => setAddr(e.target.value)} name="address" placeholder="Enter your property address" aria-label="Property address" style={{ flex: "1 1 320px", maxWidth: 420, padding: "0.8rem 1rem", borderRadius: 999, border: "0", fontSize: 16 }} data-testid="home-valuation-address"/>
-              <button type="submit" className="hn-pill hn-pill--lg" style={{ background: "#fff", color: "#0F2A5B", fontWeight: 700 }} data-testid="home-valuation-submit">Get my estimate →</button>
+              <input value={addr} onChange={e => setAddr(e.target.value)} name="address" placeholder="Enter your property address" aria-label="Property address" style={{ flex: "1 1 300px", maxWidth: 400, padding: "0.85rem 1.1rem", borderRadius: 999, border: "1px solid #CBD5E6", background: "#fff", fontSize: 16, color: "#1F2937", boxShadow: "0 1px 2px rgba(15,42,91,0.05)" }} data-testid="home-valuation-address"/>
+              <button type="submit" className="hn-pill hn-pill--lg" style={{ background: "#0F2A5B", color: "#fff", fontWeight: 700, border: 0 }} data-testid="home-valuation-submit">Get my estimate →</button>
             </form>
+            <p style={{ color: "#8A93A6", fontSize: 12, lineHeight: 1.55, margin: "18px auto 0", maxWidth: 520 }} data-testid="home-valuation-disclaimer">By submitting, you agree EZtoFind.ca may use your address and contact details only to respond to your request (PIPA). We never sell your information; any optional market updates include one-click unsubscribe (CASL). This is information, not advice, and submitting does not create a client relationship.</p>
           </div>
         </section>
         <HomeNextTiles/>

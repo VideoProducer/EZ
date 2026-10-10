@@ -1874,6 +1874,7 @@ async def create_static_lead(request: Request):
 
     intent = g("intent").lower()
     interest_area = g("interest_area")
+    phone = g("phone")
     casl = on("casl_consent")
     collection_name = "seller_leads" if intent == "sell" else "buyer_leads"
     lead_id = str(uuid.uuid4())
@@ -1883,7 +1884,7 @@ async def create_static_lead(request: Request):
         "id": lead_id,
         "full_name": full_name,
         "email": email,
-        "phone": "",
+        "phone": phone,
         "intent": verb,
         "interest_area": interest_area,
         "areas": [interest_area] if interest_area else [],
@@ -1921,6 +1922,13 @@ async def create_static_lead(request: Request):
         to=INFO_MAILBOX,
         subject=f"🐾 New website enquiry — {full_name} ({verb})",
         body_html=body_html,
+    ))
+    # Speed-to-lead SMS to Doug (same alert path as the main forms). Fires even
+    # when the visitor left phone blank; phone is included when provided.
+    asyncio.create_task(_send_lead_sms(
+        kind="Website Enquiry", name=full_name, phone=phone,
+        detail=f"Wants to {verb}" + (f" in {interest_area}" if interest_area else "") + f" · via {page}",
+        crm_path="/admin/sellers" if collection_name == "seller_leads" else "/admin/buyers",
     ))
     logger.info(f"Static lead ({page}/{verb}) from {email} → {collection_name}")
     return RedirectResponse(url=f"{back}?submitted=1", status_code=303)

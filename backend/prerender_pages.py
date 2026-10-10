@@ -1075,6 +1075,7 @@ def optin_form_html(page: str) -> str:
         'style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"/>'
         f'<label style="font-weight:600;color:#1F2937">Name<input type="text" name="full_name" required style="{fld}"/></label>'
         f'<label style="font-weight:600;color:#1F2937">Email<input type="email" name="email" required style="{fld}"/></label>'
+        f'<label style="font-weight:600;color:#1F2937">Phone <span style="font-weight:400;color:#6B7280">(optional — for a faster reply)</span><input type="tel" name="phone" style="{fld}"/></label>'
         f'<label style="font-weight:600;color:#1F2937">I\'m looking to {verb} in<input type="text" name="interest_area" '
         f'placeholder="e.g. Surrey, Langley, Squamish" style="{fld}"/></label>'
         f'<label style="{chk}"><input type="checkbox" name="working_with_realtor" value="on"/>'
