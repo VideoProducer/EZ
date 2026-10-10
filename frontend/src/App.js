@@ -3231,6 +3231,16 @@ const MLS_POLICY_VERSION = "1.0";
 const MLS_ACCEPT_KEY = "eztofind_mls_terms_v" + MLS_POLICY_VERSION;
 const TermsGate = ({ children }) => {
   const [accepted, setAccepted] = useState(() => localStorage.getItem(MLS_ACCEPT_KEY) === "yes");
+  // First-impression sequencing: only surface the CREA MLS gate once the
+  // visitor has made a cookie/privacy choice, so the two overlays never
+  // stack on a first visit to a listings page.
+  const [cookieChosen, setCookieChosen] = useState(() => !!localStorage.getItem("ez_cookie"));
+  useEffect(() => {
+    if (cookieChosen) return;
+    const handler = () => setCookieChosen(true);
+    window.addEventListener("ez-cookie-prefs-changed", handler);
+    return () => window.removeEventListener("ez-cookie-prefs-changed", handler);
+  }, [cookieChosen]);
   const nav = useNavigate();
   const accept = async () => {
     localStorage.setItem(MLS_ACCEPT_KEY, "yes");
@@ -3248,6 +3258,11 @@ const TermsGate = ({ children }) => {
     nav("/communities");
   };
   if (accepted) return children;
+  // Hold the CREA gate until the cookie/privacy banner has been answered.
+  // No MLS data is revealed meanwhile — just a neutral placeholder.
+  if (!cookieChosen) return (
+    <section className="section"><div className="container-x" style={{textAlign:"center",padding:"4rem 1rem",fontFamily:"Inter,sans-serif",color:"var(--muted)"}} data-testid="mls-terms-awaiting-cookie">Preparing live MLS® listings…</div></section>
+  );
   return (
     <div data-testid="mls-terms-gate" style={{position:"fixed",inset:0,background:"rgba(15,42,91,0.75)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem",fontFamily:"Inter,sans-serif"}}>
       <div style={{background:"#FDFCF8",maxWidth:520,width:"100%",borderRadius:16,padding:"2rem",boxShadow:"0 20px 60px rgba(0,0,0,0.3)",maxHeight:"92vh",overflowY:"auto"}}>
@@ -7101,6 +7116,7 @@ const BuyerForm = () => {
           form-shortening directive. DoRTS is presented at first substantive
           contact (before formal representation), not at lead-form stage. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="buyer-pipa"/> {t("consent.pipa")} <Link to={`/privacy${qs}`} style={{color:"var(--brand-blue)"}}>›</Link></label></div>
+      <div className="field" style={{marginTop:"0.75rem"}}><label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="buyer-casl"/> <span style={{fontSize:"0.9rem"}}>CASL consent (optional): I agree to receive electronic messages from Doug LeMaire, REALTOR® (e.g. new listings and market updates). I can unsubscribe at any time.</span></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626",marginTop:"1rem"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="buyer-submit">{t("common.submit")}</button>
@@ -7208,6 +7224,7 @@ const SellerForm = () => {
       <div style={{marginTop:"1rem"}} className="field"><label>{t("seller.reason")} ({t("common.optional")})</label><textarea rows="3" value={f.reason} onChange={e=>onFieldEdit({reason:e.target.value})}/></div>
       {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="seller-pipa"/> {t("consent.pipa")} <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy ›</Link></label></div>
+      <div className="field" style={{marginTop:"0.75rem"}}><label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="seller-casl"/> <span style={{fontSize:"0.9rem"}}>CASL consent (optional): I agree to receive electronic messages from Doug LeMaire, REALTOR® (e.g. market updates and selling tips). I can unsubscribe at any time.</span></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="seller-submit">{t("common.submit")}</button>
@@ -10456,7 +10473,8 @@ const Valuation = () => {
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
       {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link>.</div>}
       {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link>.</label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="valuation-pipa"/> I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link>.</label></div>
+      <div className="field" style={{marginTop:"0.75rem"}}><label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="valuation-casl"/> <span style={{fontSize:"0.9rem"}}>CASL consent (optional): I agree to receive electronic messages from Doug LeMaire, REALTOR® (e.g. market updates). I can unsubscribe at any time.</span></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
@@ -10648,7 +10666,8 @@ const ReferralRequest = () => {
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.working_with_realtor} onChange={e=>{ const v=e.target.checked; onFieldEdit({working_with_realtor:v}); if (v) trackArticle16Block("/referral-request"); }} data-testid="referral-under-contract"/> I am currently under contract with another REALTOR®.</label></div>
       {f.working_with_realtor && <div className="notice" data-testid="referral-under-contract-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that you may already be represented by another real-estate professional. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to={`/communities${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to={`/glossary${qs}`} style={{color:"var(--brand-blue)",fontWeight:600}}>BC real-estate glossary</Link>.</div>}
       {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})}/> {t("consent.pipa")} <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy ›</Link></label></div>
+      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="referral-pipa"/> {t("consent.pipa")} <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy ›</Link></label></div>
+      <div className="field" style={{marginTop:"0.75rem"}}><label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e=>onFieldEdit({casl_consent:e.target.checked})} data-testid="referral-casl"/> <span style={{fontSize:"0.9rem"}}>CASL consent (optional): I agree to receive electronic messages from Doug LeMaire, REALTOR® (e.g. new listings and market updates). I can unsubscribe at any time.</span></label></div>
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.working_with_realtor} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.working_with_realtor?0.5:1,cursor:f.working_with_realtor?"not-allowed":"pointer"}} data-testid="referral-submit">{t("ref.submit")}</button>
@@ -11680,6 +11699,10 @@ const CookieBanner = () => {
     const record = { accepted: true, at: new Date().toISOString(), ua: navigator.userAgent, prefs: finalPrefs };
     localStorage.setItem("ez_cookie", JSON.stringify(record));
     localStorage.setItem("ez_cookie_prefs", JSON.stringify(finalPrefs));
+    // This banner already carries the PIPA collection notice, so record the
+    // PIPA acknowledgement too — prevents the fallback <PIPACookieBanner/>
+    // from appearing as a redundant second banner right after this one.
+    try { localStorage.setItem("eztofind_pipa_ack_v1", JSON.stringify({ at: record.at, v: 1, via: "cookie_banner" })); } catch(_){}
     // Broadcast so listeners (PostHog gate, PageViewBeacon) can react without a reload.
     try { window.dispatchEvent(new CustomEvent("ez-cookie-prefs-changed", { detail: finalPrefs })); } catch(_){}
     setShow(false); setShowPrefs(false);
