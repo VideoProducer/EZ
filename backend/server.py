@@ -5325,8 +5325,72 @@ CONTENT_STUDIO_DISCLOSURE = (
     "this is information, not solicitation."
 )
 
+# Model used across the whole A.I. Content System (captions, reel kit, weekly pack).
+CS_MODEL = "claude-opus-5-5"
+
+CS_COMPLIANCE_RULES = (
+    "STRICT COMPLIANCE (BCFSA/CREA/GVR):\n"
+    "- State facts ONLY. NO opinions, NO advice, NO recommendations, NO market predictions or forecasts.\n"
+    "- FORBIDDEN words/claims: best, great, stunning, perfect, ideal, must-see, dream, luxury, "
+    "affordable, deal, value, opportunity, won't last, rare, standout, charming, gorgeous, beautiful, "
+    "amazing — and any comparison or prediction.\n"
+    "- Do NOT characterise price as high/low/fair. Do NOT describe an area's desirability.\n"
+    "- Never invent a detail, a feature, a view, a school, or a neighbourhood claim.\n"
+    "- A call-to-action is allowed ONLY as neutral wording like 'View full details and photos on the listing' "
+    "or 'Message to arrange a viewing.'\n"
+)
+
+def _cs_facts_block(facts: dict) -> str:
+    """Render a facts dict into clean '- Label: value' lines, skipping empties."""
+    lines = []
+    for k, v in facts.items():
+        if v in (None, "", []):
+            continue
+        label = k.replace("_", " ").title()
+        if isinstance(v, list):
+            v = ", ".join(str(x) for x in v)
+        lines.append(f"- {label}: {v}")
+    return "\n".join(lines)
+
+def _cs_norm_hashtags(ht) -> list:
+    if isinstance(ht, str):
+        ht = [h.strip() for h in ht.replace(",", " ").split() if h.strip()]
+    if not isinstance(ht, list):
+        return []
+    return [("#" + str(h).lstrip("#")) for h in ht if str(h).strip()][:8]
+
+async def _cs_llm_json(prompt: str, system_message: str) -> dict:
+    """Run one grounded, JSON-only Content Studio generation via Claude Opus 5.5
+    (Emergent Universal Key). Returns parsed dict or {} on failure."""
+    try:
+        chat = make_chat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"content-studio-{uuid.uuid4()}",
+            system_message=system_message,
+        ).with_model("anthropic", CS_MODEL)
+        full = ""
+        async for ev in chat.stream_message(UserMessage(text=prompt)):
+            if isinstance(ev, TextDelta):
+                full += ev.content
+            elif isinstance(ev, StreamDone):
+                break
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip(), flags=re.IGNORECASE).strip()
+        s, e = raw.find("{"), raw.rfind("}")
+        if s != -1 and e != -1:
+            raw = raw[s:e + 1]
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception as ex:
+        logger.error(f"Content Studio LLM JSON failed: {ex}")
+        return {}
+
+
 class ContentStudioRequest(BaseModel):
     listing_key: str
+
+class WeeklyPackRequest(BaseModel):
+    city: str | None = None
+    listing_key: str | None = None
 
 def _listing_facts_for_caption(l: dict) -> dict:
     """Pull ONLY objective, brokerage-supplied facts for caption grounding."""
@@ -5361,15 +5425,7 @@ def _listing_facts_for_caption(l: dict) -> dict:
 async def _content_studio_generate(facts: dict) -> dict:
     """Ask Claude for per-platform captions grounded ONLY in `facts`. Returns
     {facebook, instagram, x_linkedin, hashtags:[...]} or {} on failure."""
-    fact_lines = []
-    for k, v in facts.items():
-        if v in (None, "", []):
-            continue
-        label = k.replace("_", " ").title()
-        if isinstance(v, list):
-            v = ", ".join(v)
-        fact_lines.append(f"- {label}: {v}")
-    facts_block = "\n".join(fact_lines)
+    facts_block = _cs_facts_block(facts)
     prompt = (
         "Write social media captions announcing this BC real estate listing is on the market. "
         "Use ONLY the facts below — never invent a detail, a feature, a view, a school, or a neighbourhood claim.\n\n"
@@ -5379,47 +5435,22 @@ async def _content_studio_generate(facts: dict) -> dict:
         '  "instagram": a punchy 1-2 line caption suited to Instagram (no hashtags inside),\n'
         '  "x_linkedin": a concise caption under 240 characters for X/LinkedIn (no hashtags inside),\n'
         '  "hashtags": an array of 5-8 relevant, factual hashtags (e.g. city name, property type, "#BCRealEstate", "#MLS"). No superlative hashtags.\n\n'
-        "STRICT COMPLIANCE (BCFSA/CREA/GVR):\n"
-        "- State facts ONLY. NO opinions, NO advice, NO recommendations.\n"
-        "- FORBIDDEN words/claims: best, great, stunning, perfect, ideal, must-see, dream, luxury, "
-        "affordable, deal, value, opportunity, won't last, rare, standout, charming, gorgeous, "
-        "beautiful, amazing — and any comparison or prediction.\n"
-        "- Do NOT characterise price as high/low/fair. Do NOT describe the area's desirability.\n"
-        "- A call-to-action is allowed ONLY as neutral wording like 'View full details and photos on the listing' or 'Message to arrange a viewing.'\n"
+        + CS_COMPLIANCE_RULES +
         "- Output ONLY the JSON object, nothing else."
     )
-    try:
-        chat = make_chat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"content-studio-{uuid.uuid4()}",
-            system_message="You are a BC real estate marketing writer who outputs only valid JSON and never uses superlatives, opinions, or advice (BCFSA/CREA compliant).",
-        ).with_model("anthropic", "claude-sonnet-4-6")
-        full = ""
-        async for ev in chat.stream_message(UserMessage(text=prompt)):
-            if isinstance(ev, TextDelta):
-                full += ev.content
-            elif isinstance(ev, StreamDone):
-                break
-        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", full.strip(), flags=re.IGNORECASE).strip()
-        s, e = raw.find("{"), raw.rfind("}")
-        if s != -1 and e != -1:
-            raw = raw[s:e+1]
-        data = json.loads(raw)
-        if not isinstance(data, dict):
-            return {}
-        ht = data.get("hashtags") or []
-        if isinstance(ht, str):
-            ht = [h.strip() for h in ht.replace(",", " ").split() if h.strip()]
-        data["hashtags"] = [("#" + h.lstrip("#")) for h in ht][:8]
-        return {
-            "facebook": str(data.get("facebook") or "").strip(),
-            "instagram": str(data.get("instagram") or "").strip(),
-            "x_linkedin": str(data.get("x_linkedin") or "").strip(),
-            "hashtags": data["hashtags"],
-        }
-    except Exception as ex:
-        logger.error(f"Content Studio generation failed: {ex}")
+    data = await _cs_llm_json(
+        prompt,
+        "You are a BC real estate marketing writer who outputs only valid JSON and never uses superlatives, opinions, or advice (BCFSA/CREA compliant).",
+    )
+    if not data:
         return {}
+    data["hashtags"] = _cs_norm_hashtags(data.get("hashtags") or [])
+    return {
+        "facebook": str(data.get("facebook") or "").strip(),
+        "instagram": str(data.get("instagram") or "").strip(),
+        "x_linkedin": str(data.get("x_linkedin") or "").strip(),
+        "hashtags": data["hashtags"],
+    }
 
 @api.post("/admin/content-studio/generate")
 async def content_studio_generate(body: ContentStudioRequest, _=Depends(verify_admin)):
@@ -5448,6 +5479,202 @@ async def content_studio_generate(body: ContentStudioRequest, _=Depends(verify_a
         "photo_count": len(photos),
         "realtor_ca_url": listing.get("realtor_ca_url"),
         "listing_path": f"/listings?q={listing.get('mls_number') or key}",
+    }
+
+
+# ---------- Listing-to-Reel kit ----------
+async def _reel_generate(facts: dict, photo_count: int) -> dict:
+    """Generate a short-form vertical video (Reel/TikTok/Shorts) shot plan grounded ONLY in facts."""
+    facts_block = _cs_facts_block(facts)
+    prompt = (
+        "Create a short-form VERTICAL video (Reel / TikTok / Shorts) shot plan for this BC real estate listing. "
+        "Use ONLY the facts below — never invent a room, a feature, a view, or a neighbourhood claim.\n\n"
+        f"FACTS:\n{facts_block}\n"
+        f"Number of listing photos available: {photo_count}\n\n"
+        "Produce a JSON object with EXACTLY these keys:\n"
+        '  "hook": a short on-screen text for the first 3 seconds (factual, no superlatives),\n'
+        '  "duration_seconds": a whole number between 20 and 45,\n'
+        '  "music_vibe": a 3-5 word suggested music mood for the EDIT only (e.g. "calm acoustic", "modern upbeat") — about the video, not the property,\n'
+        '  "scenes": an array of 4-7 objects, each {"shot": what to film (e.g. "Front exterior", "Living area", "Primary bedroom", "End card"), "seconds": a time range like "0-4", "on_screen_text": a short factual caption shown on screen, "voiceover": one short factual sentence to narrate},\n'
+        '  "caption": a 2-3 sentence post caption to accompany the reel (no hashtags inside),\n'
+        '  "hashtags": an array of 5-8 factual hashtags.\n\n'
+        + CS_COMPLIANCE_RULES +
+        "- Shots must be plausible from the facts given. Do NOT name rooms or features that are not in the facts; "
+        "use generic shots (Front exterior, Living area, Kitchen, End card) when unsure.\n"
+        "- The final scene should be a neutral end card (e.g. 'Message to arrange a viewing').\n"
+        "- Output ONLY the JSON object, nothing else."
+    )
+    data = await _cs_llm_json(
+        prompt,
+        "You are a BC real estate video producer who outputs only valid JSON and never uses superlatives, opinions, advice, or invented details (BCFSA/CREA compliant).",
+    )
+    if not data:
+        return {}
+    scenes = []
+    for sc in (data.get("scenes") or []):
+        if not isinstance(sc, dict):
+            continue
+        scenes.append({
+            "shot": str(sc.get("shot") or "").strip(),
+            "seconds": str(sc.get("seconds") or "").strip(),
+            "on_screen_text": str(sc.get("on_screen_text") or "").strip(),
+            "voiceover": str(sc.get("voiceover") or "").strip(),
+        })
+    try:
+        dur = int(float(data.get("duration_seconds") or 30))
+    except Exception:
+        dur = 30
+    dur = max(20, min(45, dur))
+    return {
+        "hook": str(data.get("hook") or "").strip(),
+        "duration_seconds": dur,
+        "music_vibe": str(data.get("music_vibe") or "").strip(),
+        "scenes": scenes[:7],
+        "caption": str(data.get("caption") or "").strip(),
+        "hashtags": _cs_norm_hashtags(data.get("hashtags") or []),
+    }
+
+@api.post("/admin/content-studio/reel")
+async def content_studio_reel(body: ContentStudioRequest, _=Depends(verify_admin)):
+    """Generate a ready-to-shoot, BCFSA/CREA-compliant Reel kit for one live listing."""
+    key = (body.listing_key or "").strip()
+    if not key:
+        raise HTTPException(400, "listing_key is required")
+    listing = await db.listings.find_one(
+        {"$or": [{"listing_key": key}, {"mls_number": key}]}, {"_id": 0}
+    )
+    if not listing:
+        raise HTTPException(404, "Listing not found")
+    facts = _listing_facts_for_caption(listing)
+    photos = listing.get("photos") or []
+    reel = await _reel_generate(facts, len(photos))
+    if not reel:
+        raise HTTPException(502, "Reel generation is temporarily unavailable. Please try again.")
+    return {
+        "listing_key": listing.get("listing_key"),
+        "mls_number": listing.get("mls_number"),
+        "facts": facts,
+        "reel": reel,
+        "disclosure": CONTENT_STUDIO_DISCLOSURE,
+        "listing_brokerage": listing.get("brokerage_name"),
+        "photo_url": photos[0] if photos else None,
+        "photo_count": len(photos),
+        "realtor_ca_url": listing.get("realtor_ca_url"),
+    }
+
+
+# ---------- Weekly Content Pack ----------
+async def _weekly_pack_generate(context_block: str, themes: list) -> dict:
+    """Generate a batch of compliant weekly posts for the themes supplied."""
+    theme_lines = "\n".join(f'  - "{t}"' for t in themes)
+    prompt = (
+        "Create a WEEK of social media posts for a BC REALTOR®. Produce ONE post for each requested theme below, "
+        "grounded ONLY in the CONTEXT facts. For process/glossary themes, write accurate, educational BC real-estate "
+        "information (like a textbook glossary entry) — general facts, never advice tailored to an individual.\n\n"
+        f"CONTEXT:\n{context_block}\n\n"
+        f"REQUESTED THEMES (one post each, in this order):\n{theme_lines}\n\n"
+        "Produce a JSON object with EXACTLY one key:\n"
+        '  "posts": an array where each item is {"theme": the theme name, "body": a 2-4 sentence post (no hashtags inside), "hashtags": an array of 4-7 factual hashtags}.\n\n'
+        + CS_COMPLIANCE_RULES +
+        "- For a market/snapshot post, state only the exact figures provided in CONTEXT and label them 'information only'. "
+        "Do NOT predict, trend, or characterise the market.\n"
+        "- For an education/glossary post, explain the term/process factually and generically.\n"
+        "- Output ONLY the JSON object, nothing else."
+    )
+    data = await _cs_llm_json(
+        prompt,
+        "You are a BC real estate marketing writer who outputs only valid JSON and never uses superlatives, opinions, advice, predictions, or invented details (BCFSA/CREA compliant).",
+    )
+    if not data:
+        return {}
+    posts = []
+    for p in (data.get("posts") or []):
+        if not isinstance(p, dict):
+            continue
+        body = str(p.get("body") or "").strip()
+        if not body:
+            continue
+        posts.append({
+            "theme": str(p.get("theme") or "").strip() or "Post",
+            "body": body,
+            "hashtags": _cs_norm_hashtags(p.get("hashtags") or []),
+        })
+    return {"posts": posts}
+
+@api.post("/admin/content-studio/weekly-pack")
+async def content_studio_weekly_pack(body: WeeklyPackRequest, _=Depends(verify_admin)):
+    """Generate a weekly batch of compliant posts (featured listing, market snapshot,
+    BC process education, and a glossary 'did you know') — all generate-and-copy."""
+    context_parts = []
+    themes = []
+    featured = None
+
+    # Optional featured listing
+    key = (body.listing_key or "").strip()
+    if key:
+        listing = await db.listings.find_one(
+            {"$or": [{"listing_key": key}, {"mls_number": key}]}, {"_id": 0}
+        )
+        if listing:
+            facts = _listing_facts_for_caption(listing)
+            context_parts.append("FEATURED LISTING FACTS:\n" + _cs_facts_block(facts))
+            featured = {
+                "address": facts.get("address"),
+                "city": facts.get("city"),
+                "price": facts.get("price"),
+                "mls_number": facts.get("mls_number"),
+                "photo_url": (listing.get("photos") or [None])[0],
+            }
+            themes.append("Featured listing")
+
+    # Optional live market snapshot for a city
+    city = (body.city or "").strip()
+    snapshot = None
+    if city:
+        try:
+            ins = await market_insights(city=city)
+            if ins and ins.get("active_count"):
+                def _money(v):
+                    try:
+                        return f"${int(v):,}"
+                    except Exception:
+                        return None
+                snapshot = {
+                    "city": ins.get("city") or city,
+                    "active_count": ins.get("active_count"),
+                    "median_list_price": _money(ins.get("median_list_price")),
+                    "min_price": _money(ins.get("min_price")),
+                    "max_price": _money(ins.get("max_price")),
+                }
+                lines = [f"- City: {snapshot['city']}", f"- Active listings: {snapshot['active_count']}"]
+                if snapshot["median_list_price"]:
+                    lines.append(f"- Median list price: {snapshot['median_list_price']}")
+                if snapshot["min_price"] and snapshot["max_price"]:
+                    lines.append(f"- List price range: {snapshot['min_price']} to {snapshot['max_price']}")
+                lines.append("- Source: CREA DDF® (information only, not an appraisal or opinion of value)")
+                context_parts.append("MARKET SNAPSHOT FACTS:\n" + "\n".join(lines))
+                themes.append(f"Market snapshot for {snapshot['city']}")
+        except Exception as ex:
+            logger.error(f"Weekly pack market snapshot failed: {ex}")
+
+    context_parts.append(
+        "AGENT FACTS:\n"
+        "- Agent: Doug LeMaire, REALTOR®, Fraser Property Management Realty Services Ltd.\n"
+        "- Serves Greater Vancouver, the Fraser Valley, and the Sea-to-Sky Corridor."
+    )
+    # Always include two evergreen educational themes
+    themes.append("BC home-buying process education (e.g. Property Transfer Tax, subject removal, deposits)")
+    themes.append("BC real estate glossary 'Did you know' term explainer")
+
+    pack = await _weekly_pack_generate("\n\n".join(context_parts), themes)
+    if not pack.get("posts"):
+        raise HTTPException(502, "Weekly pack generation is temporarily unavailable. Please try again.")
+    return {
+        "city": city or None,
+        "featured": featured,
+        "snapshot": snapshot,
+        "pack": pack,
+        "disclosure": CONTENT_STUDIO_DISCLOSURE,
     }
 
 

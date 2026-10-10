@@ -11307,9 +11307,16 @@ const EmailPreferences = () => {
 // --- Admin: Consent Records (PIPA access request lookup + CSV export) ---
 const AdminContentStudio = () => {
   const {headers} = useAdmin();
+  const [mode,setMode]=useState("captions"); // captions | reel | weekly
   const [q,setQ]=useState(""); const [results,setResults]=useState([]); const [searching,setSearching]=useState(false);
   const [sel,setSel]=useState(null); const [gen,setGen]=useState(null); const [busy,setBusy]=useState(false);
   const [err,setErr]=useState(""); const [copied,setCopied]=useState("");
+  // Weekly pack state
+  const [wkCity,setWkCity]=useState(""); const [wkListing,setWkListing]=useState(null);
+  const [wkPack,setWkPack]=useState(null); const [wkBusy,setWkBusy]=useState(false);
+
+  const switchMode = (m) => { setMode(m); setErr(""); setCopied(""); setGen(null); setSel(null); setResults([]); setQ(""); setWkPack(null); setWkListing(null); };
+
   const search = async (e) => {
     if(e) e.preventDefault();
     if(!q.trim()) return;
@@ -11320,43 +11327,79 @@ const AdminContentStudio = () => {
   };
   const generate = async (l) => {
     setSel(l); setGen(null); setBusy(true); setErr(""); setCopied("");
-    try{ const r=await axios.post(`${API}/admin/content-studio/generate`,{listing_key:l.listing_key||l.mls_number}); setGen(r.data); }
+    const endpoint = mode==="reel" ? "reel" : "generate";
+    try{ const r=await axios.post(`${API}/admin/content-studio/${endpoint}`,{listing_key:l.listing_key||l.mls_number}); setGen(r.data); }
     catch(x){ setErr(x?.response?.data?.detail||"Generation failed. Please try again."); }
     finally{ setBusy(false); }
+  };
+  const generateWeekly = async () => {
+    setWkPack(null); setWkBusy(true); setErr(""); setCopied("");
+    try{
+      const payload={};
+      if(wkCity.trim()) payload.city=wkCity.trim();
+      if(wkListing) payload.listing_key=wkListing.listing_key||wkListing.mls_number;
+      const r=await axios.post(`${API}/admin/content-studio/weekly-pack`,payload); setWkPack(r.data);
+    }catch(x){ setErr(x?.response?.data?.detail||"Weekly pack generation failed. Please try again."); }
+    finally{ setWkBusy(false); }
   };
   const copy = async (which, text) => {
     try{ await navigator.clipboard.writeText(text); setCopied(which); setTimeout(()=>setCopied(""),1800); }
     catch{ setErr("Couldn't copy — select the text manually."); }
   };
-  const fullPost = (caption) => gen ? `${caption}\n\n${(gen.captions.hashtags||[]).join(" ")}\n\n${gen.disclosure}` : caption;
+  const fullPost = (caption, hashtags, disclosure) => {
+    const tags=(hashtags||[]).join(" ");
+    return [caption, tags, disclosure].filter(Boolean).join("\n\n");
+  };
   const Caption = ({label, keyName, text, testid}) => (
     <div className="paper" style={{marginBottom:14}} data-testid={testid}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
         <strong style={{color:"#0F2A5B"}}>{label}</strong>
-        <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} onClick={()=>copy(keyName,fullPost(text))} data-testid={`${testid}-copy`}>{copied===keyName?"✓ Copied":"Copy post"}</button>
+        <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} onClick={()=>copy(keyName,fullPost(text,gen?.captions?.hashtags,gen?.disclosure))} data-testid={`${testid}-copy`}>{copied===keyName?"✓ Copied":"Copy post"}</button>
       </div>
       <div style={{whiteSpace:"pre-wrap",fontSize:14,color:"#1d1d1f"}}>{text||"—"}</div>
     </div>
   );
+  const Tab = ({id,label}) => (
+    <button onClick={()=>switchMode(id)} data-testid={`cs-tab-${id}`}
+      className="btn" style={{padding:"0.45rem 0.9rem",fontSize:13,borderRadius:999,
+        background:mode===id?"#0F2A5B":"#eef2ff",color:mode===id?"#fff":"#1E4FCF",border:"none",fontWeight:600}}>{label}</button>
+  );
+
+  const needsSearch = mode==="captions" || mode==="reel";
+
   return (<AdminShell active="content-studio"><div style={{padding:"1rem",maxWidth:900}}>
     <h1 style={{margin:"0 0 0.4rem"}}>📝 Content Studio</h1>
-    <p style={{color:"#6e6e73",marginTop:0,maxWidth:720}}>Pick a live listing and generate ready-to-copy, BCFSA/CREA-compliant social captions. Review, edit if needed, then paste into your own accounts. Nothing is auto-posted.</p>
-    <form onSubmit={search} style={{display:"flex",gap:8,margin:"1rem 0",flexWrap:"wrap"}}>
-      <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by city, MLS® #, or keyword (e.g. Surrey, acreage)" className="input" style={{flex:"1 1 320px",padding:"0.55rem 0.8rem",border:"1px solid #d2d2d7",borderRadius:10}} data-testid="cs-search-input"/>
-      <button type="submit" className="btn btn-primary" data-testid="cs-search-btn" disabled={searching}>{searching?"Searching…":"Search listings"}</button>
-    </form>
+    <p style={{color:"#6e6e73",marginTop:0,maxWidth:720}}>Generate ready-to-copy, BCFSA/CREA-compliant content. Review, edit if needed, then paste into your own accounts. Nothing is auto-posted.</p>
+
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"1rem 0"}} data-testid="cs-tabs">
+      <Tab id="captions" label="Social Captions"/>
+      <Tab id="reel" label="Listing-to-Reel"/>
+      <Tab id="weekly" label="Weekly Pack"/>
+    </div>
+
+    {needsSearch && (<>
+      <form onSubmit={search} style={{display:"flex",gap:8,margin:"0.5rem 0 1rem",flexWrap:"wrap"}}>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by city, MLS® #, or keyword (e.g. Surrey, acreage)" className="input" style={{flex:"1 1 320px",padding:"0.55rem 0.8rem",border:"1px solid #d2d2d7",borderRadius:10}} data-testid="cs-search-input"/>
+        <button type="submit" className="btn btn-primary" data-testid="cs-search-btn" disabled={searching}>{searching?"Searching…":"Search listings"}</button>
+      </form>
+    </>)}
+
     {err && <div style={{color:"#DC2626",marginBottom:"1rem"}} data-testid="cs-err">{err}</div>}
-    {results.length>0 && !gen && !busy && (<div data-testid="cs-results" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12,marginBottom:"1rem"}}>
+
+    {needsSearch && results.length>0 && !gen && !busy && (<div data-testid="cs-results" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12,marginBottom:"1rem"}}>
       {results.map((l,i)=>(<div key={l.listing_key||i} className="paper" style={{padding:10,cursor:"pointer"}} onClick={()=>generate(l)} data-testid={`cs-result-${i}`}>
         {l.photos?.[0] && <img src={l.photos[0]} alt="" style={{width:"100%",height:120,objectFit:"cover",borderRadius:8,marginBottom:6}}/>}
         <div style={{fontWeight:700,color:"#0F2A5B"}}>{l.list_price?`$${Number(l.list_price).toLocaleString()}`:"—"}</div>
         <div style={{fontSize:13}}>{l.unparsed_address||l.street_address||"—"}</div>
         <div style={{fontSize:12,color:"#6e6e73"}}>{[l.city,l.property_type].filter(Boolean).join(" · ")}</div>
-        <button className="btn btn-ghost" style={{marginTop:6,padding:"0.3rem 0.6rem",fontSize:12}}>Generate posts →</button>
+        <button className="btn btn-ghost" style={{marginTop:6,padding:"0.3rem 0.6rem",fontSize:12}}>{mode==="reel"?"Generate reel →":"Generate posts →"}</button>
       </div>))}
     </div>)}
-    {busy && <div style={{color:"#6e6e73"}} data-testid="cs-generating">Generating compliant captions…</div>}
-    {gen && !busy && (<div data-testid="cs-output">
+
+    {busy && <div style={{color:"#6e6e73"}} data-testid="cs-generating">{mode==="reel"?"Building your compliant reel kit…":"Generating compliant captions…"}</div>}
+
+    {/* CAPTIONS OUTPUT */}
+    {mode==="captions" && gen && !busy && (<div data-testid="cs-output">
       <button className="btn btn-ghost" style={{marginBottom:12}} onClick={()=>{setGen(null);setSel(null);}} data-testid="cs-back">← Pick another listing</button>
       <div className="paper" style={{display:"flex",gap:14,marginBottom:16,alignItems:"center"}}>
         {gen.photo_url && <img src={gen.photo_url} alt="" style={{width:120,height:90,objectFit:"cover",borderRadius:8}}/>}
@@ -11378,6 +11421,96 @@ const AdminContentStudio = () => {
       </div>
       <div className="notice" style={{marginTop:14,fontSize:12,whiteSpace:"pre-wrap"}} data-testid="cs-disclosure"><strong>Required disclosure (included in every copied post):</strong>{"\n"}{gen.disclosure}{gen.listing_brokerage?`\nListing brokerage: ${gen.listing_brokerage} (disclosed on REALTOR.ca).`:""}</div>
       <p style={{fontSize:12,color:"#6e6e73",marginTop:10}}>These captions use only facts from the CREA DDF® feed. Please review before posting and confirm all details against the listing brokerage.</p>
+    </div>)}
+
+    {/* REEL OUTPUT */}
+    {mode==="reel" && gen && !busy && gen.reel && (<div data-testid="cs-reel-output">
+      <button className="btn btn-ghost" style={{marginBottom:12}} onClick={()=>{setGen(null);setSel(null);}} data-testid="cs-reel-back">← Pick another listing</button>
+      <div className="paper" style={{display:"flex",gap:14,marginBottom:16,alignItems:"center"}}>
+        {gen.photo_url && <img src={gen.photo_url} alt="" style={{width:120,height:90,objectFit:"cover",borderRadius:8}}/>}
+        <div>
+          <div style={{fontWeight:700,color:"#0F2A5B"}}>{gen.facts.price||"—"} · {gen.facts.address||"—"}</div>
+          <div style={{fontSize:13,color:"#6e6e73"}}>{[gen.facts.city,gen.facts.property_type,gen.mls_number&&`MLS® ${gen.mls_number}`].filter(Boolean).join(" · ")}</div>
+          <div style={{fontSize:12,color:"#6e6e73"}}>{gen.photo_count} photo{gen.photo_count===1?"":"s"} available · ~{gen.reel.duration_seconds}s reel{gen.reel.music_vibe?` · music: ${gen.reel.music_vibe}`:""}</div>
+        </div>
+      </div>
+
+      <div className="paper" style={{marginBottom:14,background:"#0F2A5B",color:"#fff"}} data-testid="cs-reel-hook">
+        <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:1,opacity:0.8,marginBottom:4}}>Opening hook (first 3s)</div>
+        <div style={{fontSize:18,fontWeight:700}}>{gen.reel.hook||"—"}</div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"0 0 8px"}}>
+        <strong style={{color:"#0F2A5B"}}>🎬 Shot-by-shot storyboard</strong>
+        <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} data-testid="cs-reel-copy-script"
+          onClick={()=>copy("script", gen.reel.scenes.map((s,i)=>`${i+1}. [${s.seconds}] ${s.shot}\n   On-screen: ${s.on_screen_text}\n   Voiceover: ${s.voiceover}`).join("\n\n"))}>{copied==="script"?"✓ Copied":"Copy full script"}</button>
+      </div>
+      {gen.reel.scenes.map((s,i)=>(<div key={i} className="paper" style={{marginBottom:10}} data-testid={`cs-reel-scene-${i}`}>
+        <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+          <span style={{background:"#eef2ff",color:"#1E4FCF",borderRadius:8,padding:"2px 8px",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{s.seconds||`#${i+1}`}</span>
+          <strong style={{color:"#0F2A5B"}}>{s.shot||`Scene ${i+1}`}</strong>
+        </div>
+        {s.on_screen_text && <div style={{fontSize:13,marginTop:6}}><span style={{color:"#6e6e73"}}>On-screen:</span> {s.on_screen_text}</div>}
+        {s.voiceover && <div style={{fontSize:13,marginTop:2}}><span style={{color:"#6e6e73"}}>Voiceover:</span> {s.voiceover}</div>}
+      </div>))}
+
+      <Caption label="Reel caption" keyName="reelcap" text={gen.reel.caption} testid="cs-reel-caption"/>
+      <div className="paper" data-testid="cs-reel-hashtags">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <strong style={{color:"#0F2A5B"}}>Hashtags</strong>
+          <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12}} onClick={()=>copy("reelht",(gen.reel.hashtags||[]).join(" "))} data-testid="cs-reel-hashtags-copy">{copied==="reelht"?"✓ Copied":"Copy"}</button>
+        </div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(gen.reel.hashtags||[]).map((h,i)=>(<span key={i} style={{background:"#eef2ff",color:"#1E4FCF",padding:"2px 8px",borderRadius:999,fontSize:12}}>{h}</span>))}</div>
+      </div>
+      <div className="notice" style={{marginTop:14,fontSize:12,whiteSpace:"pre-wrap"}} data-testid="cs-reel-disclosure"><strong>Required disclosure (include in your caption/first comment):</strong>{"\n"}{gen.disclosure}{gen.listing_brokerage?`\nListing brokerage: ${gen.listing_brokerage} (disclosed on REALTOR.ca).`:""}</div>
+      <p style={{fontSize:12,color:"#6e6e73",marginTop:10}}>This storyboard uses only facts from the CREA DDF® feed. Film only what exists; verify all details against the listing brokerage before posting.</p>
+    </div>)}
+
+    {/* WEEKLY PACK */}
+    {mode==="weekly" && (<div data-testid="cs-weekly">
+      {!wkPack && !wkBusy && (<div className="paper" style={{marginBottom:16}}>
+        <p style={{marginTop:0,color:"#6e6e73",fontSize:14}}>Generate a week of compliant posts in one click: an optional featured listing, an optional live market snapshot, plus two evergreen educational posts (BC buying process + a glossary explainer).</p>
+        <label style={{display:"block",fontSize:13,fontWeight:600,color:"#0F2A5B",marginBottom:4}}>Market snapshot city (optional)</label>
+        <input value={wkCity} onChange={e=>setWkCity(e.target.value)} placeholder="e.g. Surrey, Langley, Squamish" className="input" style={{width:"100%",maxWidth:360,padding:"0.5rem 0.75rem",border:"1px solid #d2d2d7",borderRadius:10,marginBottom:14}} data-testid="cs-weekly-city"/>
+        <div style={{fontSize:13,fontWeight:600,color:"#0F2A5B",marginBottom:4}}>Featured listing (optional)</div>
+        {wkListing ? (
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}} data-testid="cs-weekly-featured">
+            {wkListing.photos?.[0] && <img src={wkListing.photos[0]} alt="" style={{width:72,height:54,objectFit:"cover",borderRadius:8}}/>}
+            <div style={{fontSize:13}}>{wkListing.unparsed_address||wkListing.street_address||wkListing.mls_number}</div>
+            <button className="btn btn-ghost" style={{fontSize:12,padding:"0.2rem 0.5rem"}} onClick={()=>setWkListing(null)} data-testid="cs-weekly-clear-listing">Remove</button>
+          </div>
+        ) : (
+          <form onSubmit={search} style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search a listing to feature (optional)" className="input" style={{flex:"1 1 280px",padding:"0.5rem 0.75rem",border:"1px solid #d2d2d7",borderRadius:10}} data-testid="cs-weekly-search-input"/>
+            <button type="submit" className="btn btn-ghost" data-testid="cs-weekly-search-btn" disabled={searching}>{searching?"…":"Find"}</button>
+          </form>
+        )}
+        {!wkListing && results.length>0 && (<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
+          {results.map((l,i)=>(<div key={l.listing_key||i} className="paper" style={{padding:8,cursor:"pointer"}} onClick={()=>{setWkListing(l);setResults([]);setQ("");}} data-testid={`cs-weekly-result-${i}`}>
+            {l.photos?.[0] && <img src={l.photos[0]} alt="" style={{width:"100%",height:80,objectFit:"cover",borderRadius:6,marginBottom:4}}/>}
+            <div style={{fontSize:12,fontWeight:700,color:"#0F2A5B"}}>{l.list_price?`$${Number(l.list_price).toLocaleString()}`:"—"}</div>
+            <div style={{fontSize:11,color:"#6e6e73"}}>{[l.city,l.property_type].filter(Boolean).join(" · ")}</div>
+          </div>))}
+        </div>)}
+        <button className="btn btn-primary" onClick={generateWeekly} data-testid="cs-weekly-generate">Generate this week's pack →</button>
+      </div>)}
+
+      {wkBusy && <div style={{color:"#6e6e73"}} data-testid="cs-weekly-generating">Writing this week's compliant posts…</div>}
+
+      {wkPack && !wkBusy && (<div data-testid="cs-weekly-output">
+        <button className="btn btn-ghost" style={{marginBottom:12}} onClick={()=>{setWkPack(null);}} data-testid="cs-weekly-back">← Start a new pack</button>
+        {(wkPack.pack?.posts||[]).map((p,i)=>(<div key={i} className="paper" style={{marginBottom:14}} data-testid={`cs-weekly-post-${i}`}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:8}}>
+            <strong style={{color:"#0F2A5B"}}>{i+1}. {p.theme}</strong>
+            <button className="btn btn-primary" style={{padding:"0.3rem 0.7rem",fontSize:12,whiteSpace:"nowrap"}} data-testid={`cs-weekly-post-${i}-copy`}
+              onClick={()=>copy(`wk${i}`, fullPost(p.body, p.hashtags, wkPack.disclosure))}>{copied===`wk${i}`?"✓ Copied":"Copy post"}</button>
+          </div>
+          <div style={{whiteSpace:"pre-wrap",fontSize:14,color:"#1d1d1f",marginBottom:8}}>{p.body}</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{(p.hashtags||[]).map((h,j)=>(<span key={j} style={{background:"#eef2ff",color:"#1E4FCF",padding:"2px 8px",borderRadius:999,fontSize:12}}>{h}</span>))}</div>
+        </div>))}
+        <div className="notice" style={{marginTop:4,fontSize:12,whiteSpace:"pre-wrap"}} data-testid="cs-weekly-disclosure"><strong>Required disclosure (included in every copied post):</strong>{"\n"}{wkPack.disclosure}</div>
+        <p style={{fontSize:12,color:"#6e6e73",marginTop:10}}>Review every post before publishing. Any market figures are information only — not an appraisal or opinion of value.</p>
+      </div>)}
     </div>)}
   </div></AdminShell>);
 };
