@@ -5,10 +5,16 @@ import os
 import re
 import pytest
 import requests
+from pathlib import Path
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except Exception:
+    pass
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://proptech-hub-111.preview.emergentagent.com").rstrip("/")
-ADMIN_EMAIL = "doug@eztofind.ca"
-ADMIN_PASSWORD = "Doug2026Login!"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "doug@eztofind.ca")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 TEST_LISTING_KEY = "30106347"
 
 SUPERLATIVES = [
