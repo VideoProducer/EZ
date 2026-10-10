@@ -1,0 +1,61 @@
+{
+  "summary": "Mobile (390x844) frontend-only QA sweep of EZtoFind.ca public pages. Tested /, /listings, /listing/<id>, /buyer, /seller, /valuation, /regions/greater-vancouver, /community/proptech-hub-111. All pages render WITHOUT horizontal overflow at 390px (window.innerWidth === document.scrollWidth === 390 on every page). Mobile header shows Doug LeMaire identity on a dedicated identity strip below the top bar and the hamburger nav is visible/usable. Hero, valuation CTA band ('What's your home worth?'), region tiles and footer all present on home. Listings page shows 43,396 homes with single-column cards, filter dropdowns (Any area/type/Beds/Baths/Min/Max/Newest), and the general-glossary compliance disclaimer. Lead forms (/buyer, /seller, /valuation) all render with name/email/phone/address/consent checkboxes and an in-bounds Submit button; a Cloudflare Turnstile widget is present. Three real issues worth reporting (none are layout overflow).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ListingsNext filters (and any route rendering the ListingsNext hero)",
+        "issue": "React hydration error logged on EVERY visit to /listings and /listing/*: 'In HTML, <span> cannot be a child of <option>. This will cause a hydration error.' The dev-time x-ve dynamic wrapper is injecting a <span data-ve-dynamic=\"true\" style=\"display:contents\"> inside <option> elements rendered from a static map (file /app/frontend/src/pages/ListingsNext.jsx, line 330, inside the Beds <select>; same pattern likely for Baths/price selects). <option> may only contain text, so this is invalid HTML and triggers React's hydration warning on every mount. Visually the dropdown still works, but this needs the wrapper to skip <option> children or the map to render plain {n}+ without the wrapper.",
+        "selector": "[data-testid=\"ln-beds\"] option, [data-testid=\"ln-baths\"] option",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Listing detail route /listing/:id",
+        "issue": "Direct navigation to /listing/30106347 and /listing/30106368 (both returned by the live /listings grid as href values in <a> tags earlier in the same session) renders 'Listing not found' with a '← Back to all listings' link. Either (a) the listing cards are rendering stale/mismatched hrefs, or (b) the detail route's fetch is not using the same key as the grid. Verify SPA click-through from a fresh listing card actually keeps the id in sync with the detail fetch. (Mobile layout of the Not-Found state itself is fine — no overflow.)",
+        "selector": "a[href^=\"/listing/\"]",
+        "priority": "HIGH"
+      },
+      {
+        "component": "Lead form consent copy (/buyer, /seller, /valuation)",
+        "issue": "Request asks for 'CASL/PIPA consent'. All three forms show the PIPA/BCFSA notice but the string 'CASL' is NOT present anywhere in the rendered body text of /buyer, /seller or /valuation. The electronic-marketing consent checkbox is there but is not labeled 'CASL' — if CASL compliance labeling was intended, add explicit CASL wording to the consent checkbox and/or disclosure.",
+        "selector": "form input[type=\"checkbox\"]",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "/community/proptech-hub-111",
+        "issue": "Page renders fine at 390px (no overflow) but console shows 10x 'Failed to load resource: 404'. Looks like missing community-asset URLs (images or data). Investigate network tab for the exact URLs and ensure fallbacks.",
+        "selector": "section img, link[rel=\"preload\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Home / and other routes on first mobile visit",
+        "issues": [
+          "The PIPA cookie consent banner anchors to the bottom and takes ~230px of vertical real estate at 390x844 — on home it visually overlaps the lower part of the hero/CTA until dismissed. Not an overflow bug but a stacking concern (user has to scroll past or dismiss before they can tap 'What's my home worth? Find out' which is in a sticky bottom bar at the same vertical zone).",
+          "On /listing/* the CREA 'One-time welcome' modal is full-screen and blocks the h1 from being readable until accepted — acceptable UX but main agent should confirm this is the desired first-visit flow."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix hydration error: in /app/frontend/src/pages/ListingsNext.jsx line ~330 (Beds select, likely Baths/price too), prevent the x-ve dynamic wrapper from inserting a <span> inside <option>. Easiest fix: render options with a static expression (e.g. {`${n}+`}) outside the wrapped map, or mark these options with the x-excluded/opt-out attribute so the dev wrapper leaves them alone.",
+    "Investigate why /listing/30106347 and /listing/30106368 return 'Listing not found' when the ids were pulled live from /listings <a href> values. Either the grid hrefs are stale or the detail fetch keys off a different field.",
+    "If CASL compliance is required on the lead forms, add explicit CASL wording to the electronic-marketing consent checkbox label (currently only PIPA is referenced).",
+    "Resolve the 10 404 asset requests on /community/proptech-hub-111."
+  ],
+  "critical_code_review_comments": [
+    "ListingsNext.jsx (~line 330): rendering <span> inside <option> is invalid HTML — root cause is the dev-time dynamic wrapper being applied blanket to array map results. This WILL cause hydration mismatches in production React builds too if the wrapper is not stripped.",
+    "App.js is reported as >15k lines per the frame stack (x-line-number 15082). Strongly recommend splitting routes/components into dedicated files — a single router file this large hurts maintainability and bundle-split boundaries.",
+    "Two separate overlay layers (CREA MLS modal + PIPA cookie banner + per-form 'Got it' privacy notice) can stack on top of each other on first visit to lead-form routes. Consider a single consolidated first-visit onboarding so users are not clicking three dismiss buttons."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only sweep)", "frontend": "No overflow issues on 7/7 tested routes; 2 content issues (stale /listing/:id 404, missing CASL label), 1 hydration warning"},
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Mobile viewport sweep at 390x844 is clean for horizontal overflow across /, /listings, /buyer, /seller, /valuation, /regions/greater-vancouver, /community/proptech-hub-111. Open items to re-verify after fixes: (1) hydration warning on /listings <option> children, (2) /listing/:id direct-URL 404 for ids 30106347 and 30106368 (pull a FRESH id from /listings and verify both click-through AND direct URL work), (3) CASL label on consent checkboxes, (4) 404 asset requests on /community/proptech-hub-111. The CREA modal and PIPA cookie banner both auto-appear on first visit and must be dismissed in automation before interacting with content — use button text 'I Agree', 'Accept all', 'Got it'.",
+  "rca of the issue": "Hydration <span> in <option>: the project uses a dev-time wrapper (x-ve-dynamic / x-file-name attributes) that wraps dynamic JSX expressions in <span style='display:contents'>. For most elements this is harmless, but <option> is a special HTML content model that only accepts text — browsers silently reparse / drop the <span>, which React then detects as a hydration mismatch. Fix is to either (a) exclude <option> children from the wrapper, (b) wrap the whole {[1,2,3,4,5].map(n => <option>...</option>)} list with x-excluded, or (c) hand-write the few options instead of mapping."
+}
