@@ -15055,6 +15055,140 @@ const WhereShouldILivePage = () => (
 );
 
 
+// ═══════════════════════════════════════════════════════════════════
+// INTERNATIONAL / NON-RESIDENT BUYERS — launch-ready landing page.
+// PARKED: hidden behind admin login, noindex, unlinked, off-sitemap.
+// GO-LIVE: once the federal "Prohibition on the Purchase of Residential
+// Property by Non-Canadians Act" has actually expired (currently legislated
+// for Jan 1, 2027), flip INTL_BUYERS_LIVE → true. That single flag makes the
+// page public, indexable, and ready to be linked. No other change needed.
+// ═══════════════════════════════════════════════════════════════════
+const INTL_BUYERS_LIVE = false;
+const INTL_BUYERS_ROUTE = "/international-buyers";
+
+const IntlBuyerForm = () => {
+  const [f, setF] = useState({ full_name: "", email: "", phone: "", country: "", areas: [], property_type: "", budget_range: "", timeline: "", notes: "", casl_consent: false, pipa_ack: false });
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState("");
+  const onEdit = (patch) => setF((p) => ({ ...p, ...patch }));
+  const submit = async (e) => {
+    e.preventDefault(); setErr("");
+    try {
+      const noteParts = [f.country ? `Citizenship / residency: ${f.country}` : "", f.notes].filter(Boolean);
+      const enriched = withConversionContext(
+        {
+          full_name: f.full_name, email: f.email, phone: f.phone,
+          areas: f.areas.length ? f.areas : [f.property_type || "Any"],
+          property_type: f.property_type, budget_range: f.budget_range, timeline: f.timeline,
+          financing_status: "Need information",
+          casl_consent: !!f.casl_consent, pipa_ack: !!f.pipa_ack,
+          notes: noteParts.join(" — "),
+          turnstile_token: getTurnstileToken(),
+        },
+        {
+          form_route: INTL_BUYERS_ROUTE,
+          representation_eligibility_result: "eligible",
+          consent_status: { casl_marketing: !!f.casl_consent, pipa_privacy: !!f.pipa_ack },
+        }
+      );
+      await axios.post(`${API}/leads/buyer`, { ...enriched, ...getAttribution() });
+      setDone(true);
+    } catch (x) {
+      setErr("Something went wrong. Please check the required fields and try again.");
+    }
+  };
+  if (done) return (
+    <div className="container-x" style={{ maxWidth: "36rem", textAlign: "center" }} data-testid="intl-buyer-done">
+      <img loading="lazy" decoding="async" src={DOOGIE_CELEBRATE} style={{ width: 200, margin: "0 auto" }} alt="Doogie" />
+      <h2 className="section-title" style={{ fontSize: "1.6rem" }}>Request received</h2>
+      <p className="section-sub">Thanks for reaching out. Doug LeMaire, REALTOR<sup>®</sup>, will review your request and reply within one business day (Mon–Fri, excluding statutory holidays).</p>
+      <p style={{ fontFamily: "Inter,sans-serif", fontSize: "0.86rem", color: "var(--muted)", lineHeight: 1.65, maxWidth: "32rem", margin: "1rem auto 0" }}>Submitting this form does not create a REALTOR<sup>®</sup>-client relationship. Any representation will be explained in writing before real-estate services are provided.</p>
+    </div>
+  );
+  return (
+    <form onSubmit={submit} className="paper" data-testid="intl-buyer-form">
+      <div className="form-grid">
+        <div className="field"><label>Full name *</label><input required value={f.full_name} onChange={e => onEdit({ full_name: e.target.value })} data-testid="intl-name" /></div>
+        <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e => onEdit({ email: e.target.value })} data-testid="intl-email" /></div>
+        <div className="field"><label>Phone <span style={{ fontWeight: 400, fontSize: "0.78rem", color: "var(--muted)" }}>(optional — include country code)</span></label><input type="tel" value={f.phone} onChange={e => onEdit({ phone: e.target.value })} data-testid="intl-phone" /></div>
+        <div className="field"><label>Citizenship / country of residence <span style={{ fontWeight: 400, fontSize: "0.78rem", color: "var(--muted)" }}>(optional)</span></label><input value={f.country} onChange={e => onEdit({ country: e.target.value })} data-testid="intl-country" /></div>
+        <div className="field"><label>Property type *</label><select required value={f.property_type} onChange={e => onEdit({ property_type: e.target.value })} data-testid="intl-type"><option value="">Select…</option><option value="Detached">Detached house</option><option value="Condo">Condo / apartment</option><option value="Townhouse">Townhouse</option><option value="Luxury">Luxury</option><option value="Equestrian / Acreage">Acreage</option><option value="Recreational">Recreational property</option></select></div>
+        <div className="field"><label>Budget *</label><select required value={f.budget_range} onChange={e => onEdit({ budget_range: e.target.value })} data-testid="intl-budget"><option value="">Select…</option><option value="Under $750K">Under $750K</option><option value="$750K – $1.25M">$750K – $1.25M</option><option value="$1.25M – $2M">$1.25M – $2M</option><option value="$2M – $3M">$2M – $3M</option><option value="$3M – $5M">$3M – $5M</option><option value="$5M+">$5M+</option></select></div>
+        <div className="field"><label>Timeline *</label><select required value={f.timeline} onChange={e => onEdit({ timeline: e.target.value })} data-testid="intl-timeline"><option value="">Select…</option><option value="0-3 months">0–3 months</option><option value="3-6 months">3–6 months</option><option value="6-12 months">6–12 months</option><option value="12+ months">12+ months</option></select></div>
+      </div>
+      <div style={{ marginTop: "1rem" }} className="field"><label>Areas of interest</label><input placeholder="e.g. Vancouver, Richmond, West Vancouver, Kelowna" value={f.areas.join(", ")} onChange={e => onEdit({ areas: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })} data-testid="intl-areas" /></div>
+      <div style={{ marginTop: "1rem" }} className="field"><label>Anything else Doug should know?</label><textarea rows="3" value={f.notes} onChange={e => onEdit({ notes: e.target.value })} data-testid="intl-notes" /></div>
+      <div className="field" style={{ marginTop: "1rem" }}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e => onEdit({ pipa_ack: e.target.checked })} data-testid="intl-pipa" /> I acknowledge the <Link to="/privacy" style={{ color: "var(--brand-blue)" }}>Privacy Policy (PIPA)</Link>.</label></div>
+      <div className="field" style={{ marginTop: "0.75rem" }}><label className="check"><input type="checkbox" checked={f.casl_consent} onChange={e => onEdit({ casl_consent: e.target.checked })} data-testid="intl-casl" /> <span style={{ fontSize: "0.9rem" }}>CASL consent (optional): I agree to receive electronic messages from Doug LeMaire, REALTOR® (e.g. new listings and market updates). I can unsubscribe at any time.</span></label></div>
+      {err && <div className="notice" style={{ background: "#FEE2E2", borderColor: "#DC2626", marginTop: "1rem" }} data-testid="intl-err">{err}</div>}
+      <TurnstileWidget />
+      <button type="submit" className="btn btn-primary" style={{ marginTop: "1.5rem" }} data-testid="intl-submit">Contact Doug</button>
+    </form>
+  );
+};
+
+const InternationalBuyersPage = ({ parked = false }) => (
+  <section className="section apple-form">
+    <SEO
+      title="International & Non-Resident Buyers — Buying Residential Property in BC | EZtoFind.ca"
+      description="Non-Canadians can once again purchase residential real estate in British Columbia. Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd., BCFSA #167790) explains what changed and what BC taxes still apply — information only. Start your BC home search today."
+      path={INTL_BUYERS_ROUTE}
+    />
+    {parked && <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>}
+    <div className="container-x" style={{ maxWidth: "46rem" }} data-testid="intl-buyers-page">
+      <IdentityLine practice="REALTOR® · Buyer representation for international & non-resident purchasers" size="md" testId="intl-identity" />
+      <div className="eyebrow">For non-Canadian & non-resident buyers</div>
+      <h1 className="section-title">Non-Canadians can buy residential property in BC again</h1>
+      <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "1.75rem", fontSize: "1.02rem" }}>
+        The federal <em>Prohibition on the Purchase of Residential Property by Non-Canadians Act</em> has expired. Foreign nationals and non-residents may once again purchase residential real estate in British Columbia. Here is what changed — and the BC and federal taxes that still apply.
+      </p>
+
+      <h2 style={{ fontFamily: "Sora,sans-serif", color: "var(--brand-navy)", fontSize: "1.25rem", margin: "0 0 0.5rem" }}>What changed</h2>
+      <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+        The federal ban (in effect since 2023) restricted most non-Canadians from buying residential property across Canada. With its expiry, that federal prohibition no longer applies. Eligibility and exceptions can change — confirm the current federal rules before you purchase.
+      </p>
+
+      <h2 style={{ fontFamily: "Sora,sans-serif", color: "var(--brand-navy)", fontSize: "1.25rem", margin: "0 0 0.75rem" }}>What still applies in BC</h2>
+      <div className="paper" style={{ marginBottom: "1.5rem", fontFamily: "Inter,sans-serif", lineHeight: 1.65 }}>
+        <p style={{ margin: "0 0 0.75rem" }}><strong>Additional Property Transfer Tax (foreign-buyer PTT)</strong> — a 20% tax applies to residential purchases by foreign nationals in specified BC regions (Metro Vancouver, Capital, Fraser Valley, Central Okanagan, and Nanaimo Regional Districts), on top of the standard Property Transfer Tax.</p>
+        <p style={{ margin: "0 0 0.75rem" }}><strong>Speculation and Vacancy Tax</strong> — an annual tax in taxable BC areas; the rate is higher for foreign owners and satellite families.</p>
+        <p style={{ margin: "0 0 0.75rem" }}><strong>Underused Housing Tax (federal)</strong> — a 1% annual federal tax on vacant or underused residential property owned by non-resident, non-Canadian owners; an annual return may be required even where an exemption applies.</p>
+        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--muted)", fontStyle: "italic" }}>Information only — not legal, tax, or immigration advice. Confirm current rates and whether they apply to your situation with a qualified tax professional and your lawyer or notary.</p>
+      </div>
+
+      <h2 style={{ fontFamily: "Sora,sans-serif", color: "var(--brand-navy)", fontSize: "1.25rem", margin: "0 0 0.5rem" }}>How Doug can help</h2>
+      <ul style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.75, paddingLeft: "1.3rem", marginBottom: "2rem" }}>
+        <li>Buyer representation under BC's <em>Real Estate Services Act</em>, with the Disclosure of Representation in Trading Services provided in writing before services begin.</li>
+        <li>Referrals to licensed BC mortgage brokers, including lenders with newcomer and non-resident programs.</li>
+        <li>Coordination with your lawyer or notary for Property Transfer Tax, title registration, and closing.</li>
+      </ul>
+
+      <h2 style={{ fontFamily: "Sora,sans-serif", color: "var(--brand-navy)", fontSize: "1.25rem", margin: "0 0 0.5rem" }}>Tell Doug what you're looking for</h2>
+      <p style={{ fontFamily: "Inter,sans-serif", color: "var(--muted)", lineHeight: 1.7, marginBottom: "1.25rem" }}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
+      <IntlBuyerForm />
+
+      <p style={{ fontFamily: "Inter,sans-serif", fontSize: "0.82rem", color: "var(--muted)", lineHeight: 1.65, marginTop: "1.5rem" }}>
+        This page is provided for general information only and is not legal, tax, or immigration advice. Submitting this form does not create a REALTOR®-client relationship; representation is explained in writing before real-estate services are provided. Doug LeMaire, REALTOR® · Fraser Property Management Realty Services Ltd. · BCFSA #167790.
+      </p>
+    </div>
+  </section>
+);
+
+const IntlBuyersGate = () => {
+  const isAdmin = typeof window !== "undefined" && !!localStorage.getItem(_ADMIN_MARKER_KEY);
+  if (INTL_BUYERS_LIVE) return <InternationalBuyersPage />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return (
+    <>
+      <div data-testid="intl-parked-banner" style={{ background: "#FEF3C7", borderBottom: "1px solid #D97706", color: "#7C2D12", fontFamily: "Inter,sans-serif", fontSize: "0.86rem", fontWeight: 600, textAlign: "center", padding: "0.55rem 1rem" }}>
+        🔒 PARKED PREVIEW — admin-only, hidden from search &amp; not linked. Launch by setting <code>INTL_BUYERS_LIVE = true</code> once the federal ban has actually expired.
+      </div>
+      <InternationalBuyersPage parked />
+    </>
+  );
+};
+
+
 function App() {
   useEffect(() => { captureAttribution(); }, []);
   return (<BrowserRouter>
@@ -15165,6 +15299,8 @@ function App() {
       {/* <Route path="/market-report" element={<AppLayout><MarketReport/></AppLayout>}/> */}
       {/* <Route path="/market-report/:ym" element={<AppLayout><MarketReport/></AppLayout>}/> */}
       <Route path="/buyer" element={<AppLayout><BuyerForm/></AppLayout>}/>
+      {/* International/non-resident buyers — PARKED (admin-only + noindex) until INTL_BUYERS_LIVE flips true. */}
+      <Route path="/international-buyers" element={<AppLayout><IntlBuyersGate/></AppLayout>}/>
       <Route path="/seller" element={<AppLayout><SellerForm/></AppLayout>}/>
       <Route path="/buying-guide" element={<Navigate to="/buyer" replace/>}/>
       <Route path="/selling-guide" element={<Navigate to="/seller" replace/>}/>
