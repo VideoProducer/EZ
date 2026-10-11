@@ -12,7 +12,7 @@ export const ComplianceStrip = () => (
       background: "#F5F0E1",
       padding: "0.45rem 1rem",
       fontFamily: "Inter,sans-serif",
-      fontSize: "0.72rem",
+      fontSize: "0.785rem",
       lineHeight: 1.4,
       color: "var(--ink)",
       fontWeight: 400,
