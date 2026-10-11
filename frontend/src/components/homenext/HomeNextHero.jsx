@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, ChevronLeft, Home } from "lucide-react";
 import { HomeNextListingHero } from "./HomeNextListingHero";
 import { ComplianceStrip } from "../ComplianceStrip";
 
 export const HomeNextNav = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isHome = pathname === "/";
   return (
   <>
-  <ComplianceStrip/>
+  {isHome && <ComplianceStrip/>}
   <header className="hn-nav" data-testid="hn-nav">
     <div className="hn-wrap hn-nav__inner">
       <div className="hn-nav__left">
