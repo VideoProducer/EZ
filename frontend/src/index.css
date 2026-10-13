@@ -1381,6 +1381,35 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
+/* ── /valuation Apple redesign — scoped to .apple-form.vpage only, so the
+   other .apple-form pages (buyer, seller, mortgage, PTT, intl) are untouched. */
+.apple-form.vpage { background: #F5F5F7; padding-top: clamp(2rem,4vw,3.5rem); padding-bottom: clamp(3rem,6vw,6rem); }
+.apple-form.vpage .container-x { max-width: 680px; }
+.apple-form.vpage h1.section-title { font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 600; letter-spacing: -0.03em; color: #1D1D1F; font-size: clamp(1.9rem,4vw,2.65rem); line-height: 1.14; margin-bottom: 0.6rem; }
+.apple-form.vpage .vp-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #0071E3; background: rgba(0,113,227,0.08); padding: 5px 11px; border-radius: 999px; margin-bottom: 14px; }
+.apple-form.vpage .vp-sub { font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.5; letter-spacing: -0.01em; color: #6E6E73; max-width: 36rem; margin-bottom: 2rem; }
+.apple-form.vpage .paper { background: #fff; border-radius: 24px; padding: clamp(1.4rem,4vw,2.75rem); border: 1px solid rgba(0,0,0,0.07); box-shadow: 0 4px 20px -2px rgba(15,42,91,0.05), 0 20px 48px -12px rgba(15,42,91,0.08); }
+.apple-form.vpage .field { display: flex; flex-direction: column; gap: 6px; }
+.apple-form.vpage .field label { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500; color: #1D1D1F; letter-spacing: -0.005em; }
+.apple-form.vpage .field input,
+.apple-form.vpage .field select,
+.apple-form.vpage .field textarea { border: 1px solid rgba(0,0,0,0.12); border-radius: 12px; height: 48px; padding: 0 14px; font-size: 16px; background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0,0,0,0.02) inset; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+.apple-form.vpage .field textarea { height: auto; min-height: 88px; padding: 12px 14px; line-height: 1.5; }
+.apple-form.vpage .field input:hover,
+.apple-form.vpage .field select:hover { border-color: rgba(0,0,0,0.25); background: #FAFAFC; }
+.apple-form.vpage .field input:focus,
+.apple-form.vpage .field select:focus,
+.apple-form.vpage .field textarea:focus { border-color: #0071E3; box-shadow: 0 0 0 3.5px rgba(0,113,227,0.18); background: #fff; outline: none; }
+.apple-form.vpage .field select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2386868B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-position: right 14px center; background-repeat: no-repeat; padding-right: 36px; cursor: pointer; }
+.apple-form.vpage .vp-group { border-top: 1px solid rgba(0,0,0,0.07); margin-top: 1.75rem; padding-top: 1.6rem; }
+.apple-form.vpage .vp-group:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.apple-form.vpage .vp-group__label { display: block; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #86868B; margin-bottom: 1rem; }
+.apple-form.vpage .check { font-size: 13px; color: #6E6E73; line-height: 1.45; }
+.apple-form.vpage .btn.btn-primary { background: #0F2A5B; border: none; border-radius: 999px; min-height: 52px; padding: 14px 28px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; width: 100%; justify-content: center; box-shadow: 0 4px 14px rgba(15,42,91,0.18); transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s ease, background .2s ease; }
+.apple-form.vpage .btn.btn-primary:hover:not(:disabled) { background: #143775; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,42,91,0.25); }
+.apple-form.vpage .btn.btn-primary:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 8px rgba(15,42,91,0.15); }
+.apple-form.vpage details[data-testid="valuation-what-included"] { background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border: 1px solid rgba(0,0,0,0.06) !important; border-radius: 18px !important; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+
 
 /* REALTOR® Network hero — mobile fine-tuning: taller tap target, stronger
    bottom gradient for text legibility, keep handshake framed. */

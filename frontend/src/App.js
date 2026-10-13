@@ -10433,7 +10433,7 @@ const Valuation = () => {
   // gate → CASL/PIPA/DoRTS → submit. Educational glossary prose is moved
   // BELOW the form into a progressive-disclosure accordion so it never
   // pushes the first field past the mobile viewport.
-  return (<section className="section apple-form"><div className="container-x" style={{maxWidth:"42rem"}}>
+  return (<section className="section apple-form vpage"><div className="container-x" style={{maxWidth:"42rem"}}>
     {/* Identity line — Doug + brokerage prominently displayed above the
         H1 per RESA / BCFSA best practice (not footer-only). */}
     <SEO
@@ -10443,11 +10443,13 @@ const Valuation = () => {
     />
     <ConversionPageSchema route="/valuation" headline="Curious what your home could be worth? — Doug LeMaire, REALTOR®" description="Free BC market estimate from Doug LeMaire, REALTOR® (Fraser Property Management Realty Services Ltd.). Reply within one business day. Educational only; not appraisal advice."/>
     <IdentityLine practice="REALTOR® · CMA specialist · Fraser Valley + South Surrey" size="md" testId="valuation-identity"/>
-    <div className="eyebrow">Free · No Obligation</div>
+    <div className="eyebrow vp-eyebrow">Free · No Obligation</div>
     <h1 className="section-title">Curious what your home could be worth?</h1>
-    <p style={{fontFamily:"Inter,sans-serif",color:"var(--muted)",lineHeight:1.7,marginBottom:"1.5rem"}}>Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
+    <p className="vp-sub">Doug will normally reply within one business day (Mon–Fri, excluding statutory holidays).</p>
     <GlossaryPageProvider>
     <form onSubmit={submit} className="paper" data-testid="valuation-form">
+      <div className="vp-group">
+      <span className="vp-group__label">01 · Property details</span>
       {/* Property Address — first actionable field so mobile users can
           begin the form without scrolling past legal / process copy. */}
       <div className="field"><label>Property Address * <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(BC Geocoder autocomplete)</span></label>
@@ -10462,7 +10464,10 @@ const Valuation = () => {
         <div className="field"><label>City (BC) *</label><input required value={f.city} onChange={e=>onFieldEdit({city:e.target.value})}/></div>
         <div className="field"><label>Property Type</label><select value={f.property_type} onChange={e=>onFieldEdit({property_type:e.target.value})}><option>Detached</option><option>Luxury</option><option>Equestrian / Acreage</option><option>Estate Sale / Probate</option><option>Condo</option><option>Townhouse</option></select></div>
       </div>
-      <div className="form-grid" style={{marginTop:"1rem"}}>
+      </div>
+      <div className="vp-group">
+      <span className="vp-group__label">02 · Contact information</span>
+      <div className="form-grid">
         <div className="field"><label>Full Name *</label><input required value={f.full_name} onChange={e=>onFieldEdit({full_name:e.target.value})}/></div>
         <div className="field"><label>Email *</label><input required type="email" value={f.email} onChange={e=>onFieldEdit({email:e.target.value})}/></div>
       </div>
@@ -10470,8 +10475,11 @@ const Valuation = () => {
         <div className="field"><label>Phone <span style={{fontWeight:400,fontSize:"0.78rem",color:"var(--muted)"}}>(optional — Doug replies faster if you include it)</span></label><input type="tel" value={f.phone} onChange={e=>onFieldEdit({phone:e.target.value})} data-testid="valuation-phone"/></div>
         <div className="field"><label>When are you thinking of selling?</label><select value={f.timeline} onChange={e=>onFieldEdit({timeline:e.target.value})}><option>ASAP</option><option>1-3 months</option><option>3-6 months</option><option>6-12 months</option><option>Just curious</option></select></div>
       </div>
+      </div>
+      <div className="vp-group">
+      <span className="vp-group__label">03 · Verification &amp; consent</span>
       {/* Article 16 hard-block (Feb 2026 P0 audit ticket) — matches /seller pattern. Wording preserved verbatim — MB-approved. */}
-      <div className="field" style={{marginTop:"1rem"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
+      <div className="field" style={{marginTop:"0"}}><label className="check"><input type="checkbox" checked={f.currently_listed} onChange={e=>{ const v=e.target.checked; onFieldEdit({currently_listed:v}); if (v) trackArticle16Block("/valuation"); }} data-testid="valuation-currently-listed"/> The property is currently listed with another REALTOR®.</label></div>
       {f.currently_listed && <div className="notice" data-testid="valuation-currently-listed-block" style={{background:"#FEF3C7",borderColor:"#D97706",marginTop:"0.75rem",fontFamily:"Inter,sans-serif",fontSize:"0.92rem",lineHeight:1.6}}><strong style={{display:"block",fontFamily:"Sora,sans-serif",fontSize:"1rem",marginBottom:"0.35rem",color:"#7C2D12"}}>We can't continue this request through this form</strong>You indicated that your property may already be listed with another REALTOR®. To respect that relationship, EZtoFind cannot provide trading services through this request. You can still use our general BC research resources: <Link to="/communities" style={{color:"var(--brand-blue)",fontWeight:600}}>community profiles</Link> and the <Link to="/glossary" style={{color:"var(--brand-blue)",fontWeight:600}}>439-term BC real-estate glossary</Link>.</div>}
       {/* CASL + DoRTS checkboxes removed per Feb 2026 form-shortening directive. */}
       <div className="field" style={{marginTop:"1rem"}}><label className="check"><input required type="checkbox" checked={f.pipa_ack} onChange={e=>onFieldEdit({pipa_ack:e.target.checked})} data-testid="valuation-pipa"/> I acknowledge the <Link to="/privacy" style={{color:"var(--brand-blue)"}}>Privacy Policy (PIPA)</Link>.</label></div>
@@ -10479,6 +10487,7 @@ const Valuation = () => {
       {err && <div className="notice" style={{background:"#FEE2E2",borderColor:"#DC2626"}}>{err}</div>}
       <TurnstileWidget/>
       <button type="submit" disabled={f.currently_listed} className="btn btn-primary" style={{marginTop:"1.5rem",opacity:f.currently_listed?0.5:1,cursor:f.currently_listed?"not-allowed":"pointer"}} data-testid="valuation-submit">Get My Market Estimate</button>
+      </div>
     </form>
 
     {/* ── Testimonial slot (permissioned quote) ─────────────────────────
